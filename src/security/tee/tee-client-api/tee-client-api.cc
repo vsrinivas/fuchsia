@@ -119,8 +119,8 @@ TEEC_Result CheckGlobalPlatformCompliance(
   }
 
   auto result = fidl::WireCall(device_info)->GetOsInfo();
-  if (!result.ok() || !result.value_NEW().info.has_is_global_platform_compliant() ||
-      !result.value_NEW().info.is_global_platform_compliant()) {
+  if (!result.ok() || !result.value().info.has_is_global_platform_compliant() ||
+      !result.value().info.is_global_platform_compliant()) {
     return TEEC_ERROR_NOT_SUPPORTED;
   }
 
@@ -938,8 +938,8 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return ConvertStatusToResult(status);
   }
 
-  uint32_t out_session_id = result.value_NEW().session_id;
-  fuchsia_tee::wire::OpResult& out_result = result.value_NEW().op_result;
+  uint32_t out_session_id = result.value().session_id;
+  fuchsia_tee::wire::OpResult& out_result = result.value().op_result;
 
   if (!out_result.has_return_code() || !out_result.has_return_origin()) {
     if (returnOrigin) {
@@ -1017,7 +1017,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return ConvertStatusToResult(status);
   }
 
-  fuchsia_tee::wire::OpResult& out_result = result.value_NEW().op_result;
+  fuchsia_tee::wire::OpResult& out_result = result.value().op_result;
 
   if (!out_result.has_return_code() || !out_result.has_return_origin()) {
     if (returnOrigin) {

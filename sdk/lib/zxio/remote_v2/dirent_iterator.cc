@@ -92,7 +92,7 @@ class DirentIteratorImpl {
     if (!result.ok()) {
       return result.status();
     }
-    const auto& res = result.value_NEW();
+    const auto& res = result.value();
     if (res.is_error()) {
       return res.error_value();
     }

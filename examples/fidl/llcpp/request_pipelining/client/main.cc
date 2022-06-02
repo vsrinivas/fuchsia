@@ -32,7 +32,7 @@ int main(int argc, const char** argv) {
             ZX_ASSERT(result.ok());
             // Take the channel to Echo in the response, bind it to the dispatcher, and
             // make an EchoString request on it.
-            fidl::WireSharedClient echo(std::move(result.value_NEW().response), dispatcher);
+            fidl::WireSharedClient echo(std::move(result.value().response), dispatcher);
             echo->EchoString("hello!").ThenExactlyOnce(
                 // Clone |echo| into the callback so that the client
                 // is only destroyed after we receive the response.
@@ -40,7 +40,7 @@ int main(int argc, const char** argv) {
                     fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
                   if (!result.ok())
                     return;
-                  auto* response = result.Unwrap_NEW();
+                  auto* response = result.Unwrap();
                   std::string reply(response->response.data(), response->response.size());
                   std::cout << "Got echo response " << reply << std::endl;
                   if (++num_responses == 2) {
@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
       [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                       result.error().FormatDescription().c_str());
-        std::string reply(result.value_NEW().response.data(), result.value_NEW().response.size());
+        std::string reply(result.value().response.data(), result.value().response.size());
         std::cout << "Got echo response " << reply << std::endl;
         if (++num_responses == 2) {
           loop.Quit();

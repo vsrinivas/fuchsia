@@ -322,7 +322,7 @@ vk::Result VulkanImageCreator::CreateCollection(
       return vk::Result::eErrorInitializationFailed;
     }
 
-    if (result.Unwrap_NEW()->is_error()) {
+    if (result->is_error()) {
       LOG_VERBOSE("RegisterBufferCollection is_err()");
       return vk::Result::eErrorInitializationFailed;
     }
@@ -451,7 +451,7 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     return result.status();
   }
 
-  auto response = result.Unwrap_NEW();
+  auto response = result.Unwrap();
 
   if (response->status != ZX_OK) {
     LOG_VERBOSE("Buffer allocation failed: %d", response->status);

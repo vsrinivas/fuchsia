@@ -84,7 +84,7 @@ void OwnedEventHandler(async_dispatcher_t* dispatcher, fidl::ClientEnd<Echo> cli
   client->EchoString("hello").ThenExactlyOnce(
       [handler_ptr](fidl::WireUnownedResult<Echo::EchoString>& result) {
         ZX_ASSERT(result.ok());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         handler_ptr->OnEchoStringResponse(response);
       });
   got_reply.wait();
@@ -95,7 +95,7 @@ void OwnedEventHandler(async_dispatcher_t* dispatcher, fidl::ClientEnd<Echo> cli
   client->EchoString("hello").ThenExactlyOnce(
       [handler_ptr](fidl::WireUnownedResult<Echo::EchoString>& result) {
         if (result.ok()) {
-          auto* response = result.Unwrap_NEW();
+          auto* response = result.Unwrap();
           handler_ptr->OnEchoStringResponse(response);
         } else {
           // Teardown finished first.

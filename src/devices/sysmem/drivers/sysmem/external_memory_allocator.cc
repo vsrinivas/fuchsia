@@ -23,13 +23,13 @@ ExternalMemoryAllocator::~ExternalMemoryAllocator() { ZX_DEBUG_ASSERT(is_empty()
 zx_status_t ExternalMemoryAllocator::Allocate(uint64_t size, std::optional<std::string> name,
                                               zx::vmo* parent_vmo) {
   auto result = heap_.sync()->AllocateVmo(size);
-  if (!result.ok() || result.value_NEW().s != ZX_OK) {
+  if (!result.ok() || result.value().s != ZX_OK) {
     DRIVER_ERROR("HeapAllocate() failed - status: %d status2: %d", result.status(),
-                 result.value_NEW().s);
+                 result.value().s);
     // sanitize to ZX_ERR_NO_MEMORY regardless of why.
     return ZX_ERR_NO_MEMORY;
   }
-  zx::vmo result_vmo = std::move(result.value_NEW().vmo);
+  zx::vmo result_vmo = std::move(result.value().vmo);
   constexpr const char vmo_name[] = "Sysmem-external-heap";
   result_vmo.set_property(ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
   *parent_vmo = std::move(result_vmo);
@@ -49,13 +49,13 @@ zx_status_t ExternalMemoryAllocator::SetupChildVmo(
   }
 
   auto result = heap_.sync()->CreateResource(std::move(child_vmo_copy), std::move(buffer_settings));
-  if (!result.ok() || result.value_NEW().s != ZX_OK) {
+  if (!result.ok() || result.value().s != ZX_OK) {
     DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", result.status(),
-                 result.value_NEW().s);
+                 result.value().s);
     // sanitize to ZX_ERR_NO_MEMORY regardless of why.
     return ZX_ERR_NO_MEMORY;
   }
-  allocations_[parent_vmo.get()] = result.value_NEW().id;
+  allocations_[parent_vmo.get()] = result.value().id;
   return ZX_OK;
 }
 

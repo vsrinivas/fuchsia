@@ -185,7 +185,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
     auto result2 = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                        ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result2.ok());
-    ASSERT_FALSE(result2.Unwrap_NEW()->is_error());
+    ASSERT_FALSE(result2->is_error());
   }
 
   zx::status<std::unique_ptr<abr::Client>> GetAbrClient() {
@@ -299,7 +299,7 @@ class CurrentSlotUuidTest : public zxtest::Test {
     auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+    ASSERT_FALSE(result->is_error());
   }
 
   fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() { return devmgr_.fshost_svc_dir(); }

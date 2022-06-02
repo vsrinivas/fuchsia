@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
       [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                       result.error().FormatDescription().c_str());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         std::string reply(response->response.data(), response->response.size());
         std::cout << "Got response (result callback): " << reply << std::endl;
         loop.Quit();
@@ -72,8 +72,7 @@ int main(int argc, const char** argv) {
   // then returns a WireResult object for the response.
   fidl::WireResult result_sync = client.sync()->EchoString("hello");
   ZX_ASSERT(result_sync.ok());
-  std::string reply_string(result_sync.Unwrap_NEW()->response.data(),
-                           result_sync.Unwrap_NEW()->response.size());
+  std::string reply_string(result_sync->response.data(), result_sync->response.size());
   std::cout << "Got synchronous response: " << reply_string << std::endl;
 
   // Make a SendString request. The resulting OnString event will be handled by

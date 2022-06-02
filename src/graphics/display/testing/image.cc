@@ -102,7 +102,7 @@ Image* Image::Create(const fidl::WireSyncClient<fhd::Controller>& dc, uint32_t w
     return nullptr;
   }
   auto import_result = dc->ImportBufferCollection(collection_id, zx::channel(display_token_handle));
-  if (!import_result.ok() || import_result.value_NEW().res != ZX_OK) {
+  if (!import_result.ok() || import_result.value().res != ZX_OK) {
     fprintf(stderr, "Failed to import buffer collection\n");
     return nullptr;
   }
@@ -113,7 +113,7 @@ Image* Image::Create(const fidl::WireSyncClient<fhd::Controller>& dc, uint32_t w
   image_config.width = width;
   image_config.type = 0;  // 0 for any image type.
   auto set_constraints_result = dc->SetBufferCollectionConstraints(collection_id, image_config);
-  if (!set_constraints_result.ok() || set_constraints_result.value_NEW().res != ZX_OK) {
+  if (!set_constraints_result.ok() || set_constraints_result.value().res != ZX_OK) {
     fprintf(stderr, "Failed to set constraints\n");
     return nullptr;
   }
@@ -180,7 +180,7 @@ Image* Image::Create(const fidl::WireSyncClient<fhd::Controller>& dc, uint32_t w
   }
 
   auto info_result = collection->WaitForBuffersAllocated();
-  if (!info_result.ok() || info_result.value_NEW().status != ZX_OK) {
+  if (!info_result.ok() || info_result.value().status != ZX_OK) {
     fprintf(stderr, "Failed to wait for buffers allocated: %s",
             info_result.FormatDescription().c_str());
     return nullptr;
@@ -191,7 +191,7 @@ Image* Image::Create(const fidl::WireSyncClient<fhd::Controller>& dc, uint32_t w
     return nullptr;
   }
 
-  auto& buffer_collection_info = info_result.value_NEW().buffer_collection_info;
+  auto& buffer_collection_info = info_result.value().buffer_collection_info;
   uint32_t buffer_size = buffer_collection_info.settings.buffer_settings.size_bytes;
   zx::vmo vmo(std::move(buffer_collection_info.buffers[0].vmo));
 
@@ -466,11 +466,11 @@ bool Image::Import(const fidl::WireSyncClient<fhd::Controller>& dc, image_import
   fhd::wire::ImageConfig image_config;
   GetConfig(&image_config);
   auto import_result = dc->ImportImage(image_config, collection_id_, /*index=*/0);
-  if (!import_result.ok() || import_result.value_NEW().res != ZX_OK) {
+  if (!import_result.ok() || import_result.value().res != ZX_OK) {
     printf("Failed to import image\n");
     return false;
   }
-  info_out->id = import_result.value_NEW().image_id;
+  info_out->id = import_result.value().image_id;
 
   // image has been imported. we can close the connection
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.

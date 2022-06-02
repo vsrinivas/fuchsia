@@ -153,10 +153,10 @@ class Tcs3400Test : public zxtest::Test {
                                Tcs3400FeatureReport* const out_report) {
     const auto response = client->GetFeatureReport();
     ASSERT_TRUE(response.ok());
-    ASSERT_FALSE(response.Unwrap_NEW()->is_error());
-    ASSERT_TRUE(response.Unwrap_NEW()->value()->report.has_sensor());
+    ASSERT_FALSE(response->is_error());
+    ASSERT_TRUE(response->value()->report.has_sensor());
 
-    const auto& report = response.Unwrap_NEW()->value()->report.sensor();
+    const auto& report = response->value()->report.sensor();
     EXPECT_TRUE(report.has_report_interval());
     ASSERT_TRUE(report.has_reporting_state());
 
@@ -249,7 +249,7 @@ TEST_F(Tcs3400Test, GetInputReport) {
   {
     const auto response = SetFeatureReport(client, kEnableAllEvents);
     ASSERT_TRUE(response.ok());
-    EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_FALSE(response->is_error());
   }
 
   fake_i2c_.WaitForLightDataRead();
@@ -258,11 +258,11 @@ TEST_F(Tcs3400Test, GetInputReport) {
     // Wait for the driver's stored values to be updated.
     const auto response = client->GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
     ASSERT_TRUE(response.ok());
-    if (response.Unwrap_NEW()->is_error()) {
+    if (response->is_error()) {
       continue;
     }
 
-    const auto& report = response.Unwrap_NEW()->value()->report;
+    const auto& report = response->value()->report;
 
     ASSERT_TRUE(report.has_sensor());
     ASSERT_TRUE(report.sensor().has_values());
@@ -287,14 +287,14 @@ TEST_F(Tcs3400Test, GetInputReport) {
   {
     const auto response = SetFeatureReport(client, kEnableThresholdEvents);
     ASSERT_TRUE(response.ok());
-    EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_FALSE(response->is_error());
   }
 
   {
     const auto response = client->GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
     ASSERT_TRUE(response.ok());
     // Not supported when only threshold events are enabled.
-    EXPECT_TRUE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(response->is_error());
   }
 
   constexpr Tcs3400FeatureReport kDisableEvents = {
@@ -309,13 +309,13 @@ TEST_F(Tcs3400Test, GetInputReport) {
   {
     const auto response = SetFeatureReport(client, kDisableEvents);
     ASSERT_TRUE(response.ok());
-    EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_FALSE(response->is_error());
   }
 
   {
     const auto response = client->GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
     ASSERT_TRUE(response.ok());
-    EXPECT_TRUE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(response->is_error());
   }
 }
 
@@ -335,7 +335,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
   {
     const auto response = SetFeatureReport(client, kEnableThresholdEvents);
     ASSERT_TRUE(response.ok());
-    EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_FALSE(response->is_error());
   }
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
@@ -357,9 +357,9 @@ TEST_F(Tcs3400Test, GetInputReports) {
   {
     const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
-    ASSERT_TRUE(response.Unwrap_NEW()->is_ok());
+    ASSERT_TRUE(response->is_ok());
 
-    const auto& reports = response.Unwrap_NEW()->value()->reports;
+    const auto& reports = response->value()->reports;
 
     ASSERT_EQ(reports.count(), 1);
     ASSERT_TRUE(reports[0].has_sensor());
@@ -385,9 +385,9 @@ TEST_F(Tcs3400Test, GetInputReports) {
   {
     const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
-    ASSERT_TRUE(response.Unwrap_NEW()->is_ok());
+    ASSERT_TRUE(response->is_ok());
 
-    const auto& reports = response.Unwrap_NEW()->value()->reports;
+    const auto& reports = response->value()->reports;
 
     ASSERT_EQ(reports.count(), 1);
     ASSERT_TRUE(reports[0].has_sensor());
@@ -414,15 +414,15 @@ TEST_F(Tcs3400Test, GetInputReports) {
   {
     const auto response = SetFeatureReport(client, kEnableAllEvents);
     ASSERT_TRUE(response.ok());
-    EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_FALSE(response->is_error());
   }
 
   for (uint32_t report_count = 0; report_count < 10;) {
     const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
-    ASSERT_TRUE(response.Unwrap_NEW()->is_ok());
+    ASSERT_TRUE(response->is_ok());
 
-    for (const auto& report : response.Unwrap_NEW()->value()->reports) {
+    for (const auto& report : response->value()->reports) {
       ASSERT_TRUE(report.has_sensor());
       ASSERT_TRUE(report.sensor().has_values());
       ASSERT_EQ(report.sensor().values().count(), 4);
@@ -451,7 +451,7 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
 
   const auto response = SetFeatureReport(client, kEnableThresholdEvents);
   ASSERT_TRUE(response.ok());
-  EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+  EXPECT_FALSE(response->is_error());
 
   fake_i2c_.WaitForConfiguration();
 
@@ -478,9 +478,9 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
   for (size_t i = 0; i < std::size(kExpectedLightValues);) {
     const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
-    ASSERT_TRUE(response.Unwrap_NEW()->is_ok());
+    ASSERT_TRUE(response->is_ok());
 
-    for (const auto& report : response.Unwrap_NEW()->value()->reports) {
+    for (const auto& report : response->value()->reports) {
       ASSERT_TRUE(report.has_sensor());
       ASSERT_TRUE(report.sensor().has_values());
       ASSERT_EQ(report.sensor().values().count(), 4);
@@ -509,7 +509,7 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
 
   const auto response = SetFeatureReport(client, kEnableThresholdEvents);
   ASSERT_TRUE(response.ok());
-  EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+  EXPECT_FALSE(response->is_error());
 
   constexpr size_t kReaderCount = 5;
 
@@ -531,9 +531,9 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
   for (auto& reader : readers) {
     const auto response = reader->ReadInputReports();
     ASSERT_TRUE(response.ok());
-    ASSERT_TRUE(response.Unwrap_NEW()->is_ok());
+    ASSERT_TRUE(response->is_ok());
 
-    const auto& reports = response.Unwrap_NEW()->value()->reports;
+    const auto& reports = response->value()->reports;
 
     ASSERT_EQ(reports.count(), 1);
     ASSERT_TRUE(reports[0].has_sensor());
@@ -563,7 +563,7 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
   {
     const auto response = SetFeatureReport(client, kEnableThresholdEvents);
     ASSERT_TRUE(response.ok());
-    EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+    EXPECT_FALSE(response->is_error());
   }
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
@@ -583,9 +583,9 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
 
   const auto response = reader->ReadInputReports();
   ASSERT_TRUE(response.ok());
-  ASSERT_TRUE(response.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(response->is_ok());
 
-  const auto& reports = response.Unwrap_NEW()->value()->reports;
+  const auto& reports = response->value()->reports;
 
   ASSERT_EQ(reports.count(), 1);
   ASSERT_TRUE(reports[0].has_sensor());
@@ -604,20 +604,20 @@ TEST_F(Tcs3400Test, GetDescriptor) {
 
   const auto response = client->GetDescriptor();
   ASSERT_TRUE(response.ok());
-  ASSERT_TRUE(response.value_NEW().descriptor.has_device_info());
-  ASSERT_TRUE(response.value_NEW().descriptor.has_sensor());
-  ASSERT_TRUE(response.value_NEW().descriptor.sensor().has_input());
-  ASSERT_EQ(response.value_NEW().descriptor.sensor().input().count(), 1);
-  ASSERT_TRUE(response.value_NEW().descriptor.sensor().input()[0].has_values());
-  ASSERT_EQ(response.value_NEW().descriptor.sensor().input()[0].values().count(), 4);
+  ASSERT_TRUE(response.value().descriptor.has_device_info());
+  ASSERT_TRUE(response.value().descriptor.has_sensor());
+  ASSERT_TRUE(response.value().descriptor.sensor().has_input());
+  ASSERT_EQ(response.value().descriptor.sensor().input().count(), 1);
+  ASSERT_TRUE(response.value().descriptor.sensor().input()[0].has_values());
+  ASSERT_EQ(response.value().descriptor.sensor().input()[0].values().count(), 4);
 
-  EXPECT_EQ(response.value_NEW().descriptor.device_info().vendor_id,
+  EXPECT_EQ(response.value().descriptor.device_info().vendor_id,
             static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
   EXPECT_EQ(
-      response.value_NEW().descriptor.device_info().product_id,
+      response.value().descriptor.device_info().product_id,
       static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kAmsLightSensor));
 
-  const auto& sensor_axes = response.value_NEW().descriptor.sensor().input()[0].values();
+  const auto& sensor_axes = response.value().descriptor.sensor().input()[0].values();
   EXPECT_EQ(sensor_axes[0].type, fuchsia_input_report::wire::SensorType::kLightIlluminance);
   EXPECT_EQ(sensor_axes[1].type, fuchsia_input_report::wire::SensorType::kLightRed);
   EXPECT_EQ(sensor_axes[2].type, fuchsia_input_report::wire::SensorType::kLightGreen);
@@ -630,9 +630,9 @@ TEST_F(Tcs3400Test, GetDescriptor) {
     EXPECT_EQ(axis.axis.unit.exponent, 0);
   }
 
-  ASSERT_TRUE(response.value_NEW().descriptor.sensor().has_feature());
-  ASSERT_EQ(response.value_NEW().descriptor.sensor().feature().count(), 1);
-  const auto& feature_descriptor = response.value_NEW().descriptor.sensor().feature()[0];
+  ASSERT_TRUE(response.value().descriptor.sensor().has_feature());
+  ASSERT_EQ(response.value().descriptor.sensor().feature().count(), 1);
+  const auto& feature_descriptor = response.value().descriptor.sensor().feature()[0];
 
   ASSERT_TRUE(feature_descriptor.has_report_interval());
   ASSERT_TRUE(feature_descriptor.has_supports_reporting_state());
@@ -715,7 +715,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
   };
   const auto response = SetFeatureReport(client, kNewFeatureReport);
   ASSERT_TRUE(response.ok());
-  EXPECT_FALSE(response.Unwrap_NEW()->is_error());
+  EXPECT_FALSE(response->is_error());
 
   fake_i2c_.WaitForConfiguration();
 
@@ -751,7 +751,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
   {
     const auto response = SetFeatureReport(client, kInvalidReportInterval);
     ASSERT_TRUE(response.ok());
-    EXPECT_TRUE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(response->is_error());
   }
 
   Tcs3400FeatureReport report;
@@ -768,7 +768,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
   {
     const auto response = SetFeatureReport(client, kInvalidSensitivity);
     ASSERT_TRUE(response.ok());
-    EXPECT_TRUE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(response->is_error());
   }
 
   ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
@@ -783,7 +783,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
   {
     const auto response = SetFeatureReport(client, kInvalidThresholdHigh);
     ASSERT_TRUE(response.ok());
-    EXPECT_TRUE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(response->is_error());
   }
 
   ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));
@@ -813,7 +813,7 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
   {
     const auto response = client->SetFeatureReport(set_report);
     ASSERT_TRUE(response.ok());
-    EXPECT_TRUE(response.Unwrap_NEW()->is_error());
+    EXPECT_TRUE(response->is_error());
   }
 
   ASSERT_NO_FATAL_FAILURE(GetFeatureReport(client, &report));

@@ -269,7 +269,7 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
       completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
       return;
     }
-    auto& response = result.value_NEW();
+    auto& response = result.value();
     if (response.is_error()) {
       completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kIo);
       return;

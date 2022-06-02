@@ -144,19 +144,19 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   auto guid_result =
       fidl::WireCall(partition_caller.borrow_as<volume::Volume>())->GetInstanceGuid();
   ASSERT_EQ(ZX_OK, guid_result.status());
-  ASSERT_EQ(ZX_OK, guid_result.value_NEW().status);
+  ASSERT_EQ(ZX_OK, guid_result.value().status);
 
   // Query the partition limit for the minfs partition.
   fdio_cpp::UnownedFdioCaller fvm_caller(fvm_fd.get());
   auto limit_result = fidl::WireCall(fvm_caller.borrow_as<volume::VolumeManager>())
-                          ->GetPartitionLimit(*guid_result.value_NEW().guid);
+                          ->GetPartitionLimit(*guid_result.value().guid);
   ASSERT_EQ(ZX_OK, limit_result.status());
-  ASSERT_EQ(ZX_OK, limit_result.value_NEW().status);
+  ASSERT_EQ(ZX_OK, limit_result.value().status);
 
   // The partition limit should match the value set in the integration test fshost configuration
   // (see the BUILD.gn file).
   constexpr uint64_t kMaxRuntimeBytes = 117440512u;
-  EXPECT_EQ(limit_result.value_NEW().slice_count, kMaxRuntimeBytes / kSliceSize);
+  EXPECT_EQ(limit_result.value().slice_count, kMaxRuntimeBytes / kSliceSize);
 }
 
 TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
@@ -215,10 +215,10 @@ TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
   fdio_cpp::UnownedFdioCaller partition_caller(partition_fd.get());
   auto result = fidl::WireCall(partition_caller.borrow_as<volume::Volume>())->GetName();
   ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.value_NEW().status, ZX_OK);
+  ASSERT_EQ(result.value().status, ZX_OK);
 
   // It should be the preferred name.
-  ASSERT_EQ(result.value_NEW().name.get(), kDataPartitionLabel);
+  ASSERT_EQ(result.value().name.get(), kDataPartitionLabel);
 }
 
 TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
@@ -240,8 +240,8 @@ TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
       [query_completion =
            &query_completion](fidl::WireUnownedResult<fuchsia_io::Node::QueryFilesystem>& res) {
         EXPECT_EQ(res.status(), ZX_OK);
-        EXPECT_EQ(res.value_NEW().s, ZX_OK);
-        EXPECT_EQ(res.value_NEW().info->fs_type, VFS_TYPE_BLOBFS);
+        EXPECT_EQ(res.value().s, ZX_OK);
+        EXPECT_EQ(res.value().info->fs_type, VFS_TYPE_BLOBFS);
         sync_completion_signal(query_completion);
       });
 

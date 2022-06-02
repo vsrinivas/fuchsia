@@ -83,9 +83,8 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
 
   auto crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
   auto response = client->GetString("driver-manager.driver-host-crash-policy");
-  if (response.ok() && !response.value_NEW().value.is_null() &&
-      !response.value_NEW().value.empty()) {
-    std::string crash_policy_str(response.value_NEW().value.get());
+  if (response.ok() && !response.value().value.is_null() && !response.value().value.empty()) {
+    std::string crash_policy_str(response.value().value.get());
     if (crash_policy_str == "reboot-system") {
       crash_policy = DriverHostCrashPolicy::kRebootSystem;
     } else if (crash_policy_str == "restart-driver-host") {
@@ -101,22 +100,20 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   std::string root_driver = "";
   {
     auto response = client->GetString("driver_manager.root-driver");
-    if (response.ok() && !response.value_NEW().value.is_null() &&
-        !response.value_NEW().value.empty()) {
-      root_driver =
-          std::string(response.value_NEW().value.data(), response.value_NEW().value.size());
+    if (response.ok() && !response.value().value.is_null() && !response.value().value.empty()) {
+      root_driver = std::string(response.value().value.data(), response.value().value.size());
     }
   }
 
   return {
-      .enable_ephemeral = bool_resp.value_NEW().values[0],
-      .log_to_debuglog = bool_resp.value_NEW().values[1],
-      .require_system = bool_resp.value_NEW().values[2],
-      .suspend_timeout_fallback = bool_resp.value_NEW().values[3],
-      .verbose = bool_resp.value_NEW().values[4],
+      .enable_ephemeral = bool_resp.value().values[0],
+      .log_to_debuglog = bool_resp.value().values[1],
+      .require_system = bool_resp.value().values[2],
+      .suspend_timeout_fallback = bool_resp.value().values[3],
+      .verbose = bool_resp.value().values[4],
       .crash_policy = crash_policy,
       .root_driver = std::move(root_driver),
-      .use_dfv2 = bool_resp.value_NEW().values[5],
+      .use_dfv2 = bool_resp.value().values[5],
   };
 }
 

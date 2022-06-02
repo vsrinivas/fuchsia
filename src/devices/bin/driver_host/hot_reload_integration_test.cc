@@ -80,8 +80,8 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   // Get pid of driver before restarting.
   auto result_before = fidl::WireCall<TestDevice>(zx::unowned(chan_driver))->GetPid();
   ASSERT_OK(result_before.status());
-  ASSERT_FALSE(result_before.Unwrap_NEW()->is_error(), "GetPid failed: %s",
-               zx_status_get_string(result_before.Unwrap_NEW()->error_value()));
+  ASSERT_FALSE(result_before->is_error(), "GetPid failed: %s",
+               zx_status_get_string(result_before->error_value()));
 
   // Need to create a DirWatcher to wait for the device to close.
   fbl::unique_fd fd(
@@ -108,10 +108,10 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
 
   auto result_after = fidl::WireCall<TestDevice>(zx::unowned(chan_driver))->GetPid();
   ASSERT_OK(result_after.status());
-  ASSERT_FALSE(result_after.Unwrap_NEW()->is_error(), "GetPid failed: %s",
-               zx_status_get_string(result_after.Unwrap_NEW()->error_value()));
+  ASSERT_FALSE(result_after->is_error(), "GetPid failed: %s",
+               zx_status_get_string(result_after->error_value()));
 
-  ASSERT_NE(result_before.Unwrap_NEW()->value()->pid, result_after.Unwrap_NEW()->value()->pid);
+  ASSERT_NE(result_before->value()->pid, result_after->value()->pid);
 }
 
 // Test restarting a driver host containing a parent and child driver by calling restart on
@@ -157,8 +157,8 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   // Get pid of parent driver before restarting.
   auto parent_before = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_before.status());
-  ASSERT_FALSE(parent_before.Unwrap_NEW()->is_error(), "GetPid for parent failed: %s",
-               zx_status_get_string(parent_before.Unwrap_NEW()->error_value()));
+  ASSERT_FALSE(parent_before->is_error(), "GetPid for parent failed: %s",
+               zx_status_get_string(parent_before->error_value()));
 
   // Need to create DirWatchers to wait for the device to close.
   fbl::unique_fd fd_watcher(
@@ -186,11 +186,11 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   // Get pid of parent driver after restarting.
   auto parent_after = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_after.status());
-  ASSERT_FALSE(parent_after.Unwrap_NEW()->is_error(), "GetPid for parent failed: %s",
-               zx_status_get_string(parent_after.Unwrap_NEW()->error_value()));
+  ASSERT_FALSE(parent_after->is_error(), "GetPid for parent failed: %s",
+               zx_status_get_string(parent_after->error_value()));
 
   // Check pid of parent has changed.
-  ASSERT_NE(parent_before.Unwrap_NEW()->value()->pid, parent_after.Unwrap_NEW()->value()->pid);
+  ASSERT_NE(parent_before->value()->pid, parent_after->value()->pid);
 
   // Check child has reopened.
   ASSERT_OK(device_watcher::RecursiveWaitForFile(
@@ -251,8 +251,8 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   // Get pid of parent driver before restarting.
   auto parent_before = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_before.status());
-  ASSERT_FALSE(parent_before.Unwrap_NEW()->is_error(), "GetPid for parent failed: %s",
-               zx_status_get_string(parent_before.Unwrap_NEW()->error_value()));
+  ASSERT_FALSE(parent_before->is_error(), "GetPid for parent failed: %s",
+               zx_status_get_string(parent_before->error_value()));
 
   // Restart the driver host of the child driver.
   fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
@@ -274,11 +274,11 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   // Get pid of parent driver after restarting.
   auto parent_after = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_after.status());
-  ASSERT_FALSE(parent_after.Unwrap_NEW()->is_error(), "GetPid for parent failed: %s",
-               zx_status_get_string(parent_after.Unwrap_NEW()->error_value()));
+  ASSERT_FALSE(parent_after->is_error(), "GetPid for parent failed: %s",
+               zx_status_get_string(parent_after->error_value()));
 
   // Check pid of parent has changed.
-  ASSERT_NE(parent_before.Unwrap_NEW()->value()->pid, parent_after.Unwrap_NEW()->value()->pid);
+  ASSERT_NE(parent_before->value()->pid, parent_after->value()->pid);
 
   // Check child has reopened.
   ASSERT_OK(device_watcher::RecursiveWaitForFile(

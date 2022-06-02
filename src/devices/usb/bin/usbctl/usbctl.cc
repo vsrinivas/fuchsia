@@ -188,8 +188,8 @@ static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   if (resp.status() != ZX_OK) {
     return resp.status();
   }
-  if (resp.Unwrap_NEW()->is_error()) {
-    return resp.Unwrap_NEW()->error_value();
+  if (resp->is_error()) {
+    return resp->error_value();
   }
   return ZX_OK;
 }

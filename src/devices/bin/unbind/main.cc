@@ -89,8 +89,8 @@ int main(int argc, char** argv) {
   status = resp.status();
 
   if (status == ZX_OK) {
-    if (resp.Unwrap_NEW()->is_error()) {
-      status = resp.Unwrap_NEW()->error_value();
+    if (resp->is_error()) {
+      status = resp->error_value();
     }
   }
   if (status != ZX_OK) {

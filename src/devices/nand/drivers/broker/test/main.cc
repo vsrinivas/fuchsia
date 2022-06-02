@@ -75,9 +75,9 @@ zx_status_t SetupDriverTestRealm() {
     fprintf(stderr, "Failed to call to Realm:Start: %d", wire_result.status());
     return wire_result.status();
   }
-  if (wire_result.Unwrap_NEW()->is_error()) {
-    fprintf(stderr, "Realm:Start failed: %d", wire_result.Unwrap_NEW()->error_value());
-    return wire_result.Unwrap_NEW()->error_value();
+  if (wire_result->is_error()) {
+    fprintf(stderr, "Realm:Start failed: %d", wire_result->error_value());
+    return wire_result->error_value();
   }
   fbl::unique_fd dir_fd;
   device_watcher::RecursiveWaitForFile(ramdevice_client::RamNand::kBasePath, &dir_fd);

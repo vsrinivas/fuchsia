@@ -226,7 +226,7 @@ TEST(RamNandTest, Unlink) {
   {
     auto result = client->Unlink();
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value_NEW().status);
+    ASSERT_OK(result.value().status);
   }
   ASSERT_OK(ddk.WaitUntilRemove());
 

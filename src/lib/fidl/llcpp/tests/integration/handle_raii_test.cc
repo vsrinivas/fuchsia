@@ -431,7 +431,7 @@ TEST_F(HandleCloseTest, Handle) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value);
+    checker.AddEvent(result.value().value);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -446,7 +446,7 @@ TEST_F(HandleCloseTest, HandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.h);
+    checker.AddEvent(result.value().value.h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -461,7 +461,7 @@ TEST_F(HandleCloseTest, HandleStructStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.s.h);
+    checker.AddEvent(result.value().value.s.h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -476,9 +476,9 @@ TEST_F(HandleCloseTest, MultiFieldStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.h1);
-    checker.AddEvent(result.value_NEW().value.s.h);
-    checker.AddEvent(result.value_NEW().value.h2);
+    checker.AddEvent(result.value().value.h1);
+    checker.AddEvent(result.value().value.s.h);
+    checker.AddEvent(result.value().value.h2);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -493,9 +493,9 @@ TEST_F(HandleCloseTest, MultiArgs) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().h1);
-    checker.AddEvent(result.value_NEW().s.h);
-    checker.AddEvent(result.value_NEW().h2);
+    checker.AddEvent(result.value().h1);
+    checker.AddEvent(result.value().s.h);
+    checker.AddEvent(result.value().h2);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -510,8 +510,8 @@ TEST_F(HandleCloseTest, VectorStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (uint32_t i = 0; i < result.value_NEW().value.v.count(); ++i) {
-      checker.AddEvent(result.value_NEW().value.v[i].h);
+    for (uint32_t i = 0; i < result.value().value.v.count(); ++i) {
+      checker.AddEvent(result.value().value.v[i].h);
     }
   }
 
@@ -527,8 +527,8 @@ TEST_F(HandleCloseTest, ArrayStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (size_t i = 0; i < result.value_NEW().value.a.size(); ++i) {
-      checker.AddEvent(result.value_NEW().value.a[i].h);
+    for (size_t i = 0; i < result.value().value.a.size(); ++i) {
+      checker.AddEvent(result.value().value.a[i].h);
     }
   }
 
@@ -544,8 +544,8 @@ TEST_F(HandleCloseTest, HandleUnion1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.is_h1());
-    checker.AddEvent(result.value_NEW().value.h1());
+    ASSERT_TRUE(result.value().value.is_h1());
+    checker.AddEvent(result.value().value.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -560,8 +560,8 @@ TEST_F(HandleCloseTest, HandleUnion2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.is_h2());
-    checker.AddEvent(result.value_NEW().value.h2().h);
+    ASSERT_TRUE(result.value().value.is_h2());
+    checker.AddEvent(result.value().value.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -576,8 +576,8 @@ TEST_F(HandleCloseTest, HandleUnionStruct1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.u.is_h1());
-    checker.AddEvent(result.value_NEW().value.u.h1());
+    ASSERT_TRUE(result.value().value.u.is_h1());
+    checker.AddEvent(result.value().value.u.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -592,8 +592,8 @@ TEST_F(HandleCloseTest, HandleUnionStruct2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.u.is_h2());
-    checker.AddEvent(result.value_NEW().value.u.h2().h);
+    ASSERT_TRUE(result.value().value.u.is_h2());
+    checker.AddEvent(result.value().value.u.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -618,7 +618,7 @@ TEST_F(HandleCloseTest, HandleTableEvent) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.h1());
+    checker.AddEvent(result.value().value.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -633,7 +633,7 @@ TEST_F(HandleCloseTest, HandleTableHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.h2().h);
+    checker.AddEvent(result.value().value.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -648,8 +648,8 @@ TEST_F(HandleCloseTest, HandleTableAll) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.h1());
-    checker.AddEvent(result.value_NEW().value.h2().h);
+    checker.AddEvent(result.value().value.h1());
+    checker.AddEvent(result.value().value.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -674,7 +674,7 @@ TEST_F(HandleCloseTest, HandleTableStructEvent) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.t.h1());
+    checker.AddEvent(result.value().value.t.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -689,7 +689,7 @@ TEST_F(HandleCloseTest, HandleTableStructHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.t.h2().h);
+    checker.AddEvent(result.value().value.t.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -704,8 +704,8 @@ TEST_F(HandleCloseTest, HandleTableStructAll) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.t.h1());
-    checker.AddEvent(result.value_NEW().value.t.h2().h);
+    checker.AddEvent(result.value().value.t.h1());
+    checker.AddEvent(result.value().value.t.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -730,7 +730,7 @@ TEST_F(HandleCloseTest, OptionalHandleStructDefined) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value->h);
+    checker.AddEvent(result.value().value->h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -755,8 +755,8 @@ TEST_F(HandleCloseTest, OptionalHandleUnion1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.is_h1());
-    checker.AddEvent(result.value_NEW().value.h1());
+    ASSERT_TRUE(result.value().value.is_h1());
+    checker.AddEvent(result.value().value.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -771,8 +771,8 @@ TEST_F(HandleCloseTest, OptionalHandleUnion2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.is_h2());
-    checker.AddEvent(result.value_NEW().value.h2().h);
+    ASSERT_TRUE(result.value().value.is_h2());
+    checker.AddEvent(result.value().value.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -797,8 +797,8 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStruct1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value->u.is_h1());
-    checker.AddEvent(result.value_NEW().value->u.h1());
+    ASSERT_TRUE(result.value().value->u.is_h1());
+    checker.AddEvent(result.value().value->u.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -813,8 +813,8 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStruct2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value->u.is_h2());
-    checker.AddEvent(result.value_NEW().value->u.h2().h);
+    ASSERT_TRUE(result.value().value->u.is_h2());
+    checker.AddEvent(result.value().value->u.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -849,7 +849,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructEvent) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value->t.h1());
+    checker.AddEvent(result.value().value->t.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -864,7 +864,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value->t.h2().h);
+    checker.AddEvent(result.value().value->t.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -879,8 +879,8 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructAll) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value->t.h1());
-    checker.AddEvent(result.value_NEW().value->t.h2().h);
+    checker.AddEvent(result.value().value->t.h1());
+    checker.AddEvent(result.value().value->t.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -905,7 +905,7 @@ TEST_F(HandleCloseTest, HandleStructOptionalStructDefined) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    checker.AddEvent(result.value_NEW().value.s->h);
+    checker.AddEvent(result.value().value.s->h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -930,8 +930,8 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.u.is_h1());
-    checker.AddEvent(result.value_NEW().value.u.h1());
+    ASSERT_TRUE(result.value().value.u.is_h1());
+    checker.AddEvent(result.value().value.u.h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -946,8 +946,8 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value_NEW().value.u.is_h2());
-    checker.AddEvent(result.value_NEW().value.u.h2().h);
+    ASSERT_TRUE(result.value().value.u.is_h2());
+    checker.AddEvent(result.value().value.u.h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -963,8 +963,8 @@ TEST_F(HandleCloseTest, VectorOfHandle) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (uint32_t i = 0; i < result.value_NEW().value.count(); ++i) {
-      checker.AddEvent(result.value_NEW().value[i]);
+    for (uint32_t i = 0; i < result.value().value.count(); ++i) {
+      checker.AddEvent(result.value().value[i]);
     }
   }
 
@@ -983,9 +983,9 @@ TEST_F(HandleCloseTest, VectorOfVectorOfHandle) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (uint32_t i = 0; i < result.value_NEW().value.count(); ++i) {
-      for (uint32_t j = 0; j < result.value_NEW().value[i].count(); ++j) {
-        checker.AddEvent(result.value_NEW().value[i][j]);
+    for (uint32_t i = 0; i < result.value().value.count(); ++i) {
+      for (uint32_t j = 0; j < result.value().value[i].count(); ++j) {
+        checker.AddEvent(result.value().value[i][j]);
       }
     }
   }
@@ -1006,10 +1006,10 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandle) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (uint32_t i = 0; i < result.value_NEW().value.count(); ++i) {
-      for (uint32_t j = 0; j < result.value_NEW().value[i].count(); ++j) {
-        for (uint32_t k = 0; k < result.value_NEW().value[i][j].count(); ++k) {
-          checker.AddEvent(result.value_NEW().value[i][j][k]);
+    for (uint32_t i = 0; i < result.value().value.count(); ++i) {
+      for (uint32_t j = 0; j < result.value().value[i].count(); ++j) {
+        for (uint32_t k = 0; k < result.value().value[i][j].count(); ++k) {
+          checker.AddEvent(result.value().value[i][j][k]);
         }
       }
     }
@@ -1029,8 +1029,8 @@ TEST_F(HandleCloseTest, VectorOfHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (uint32_t i = 0; i < result.value_NEW().value.count(); ++i) {
-      checker.AddEvent(result.value_NEW().value[i].h);
+    for (uint32_t i = 0; i < result.value().value.count(); ++i) {
+      checker.AddEvent(result.value().value[i].h);
     }
   }
 
@@ -1049,9 +1049,9 @@ TEST_F(HandleCloseTest, VectorOfVectorOfHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (uint32_t i = 0; i < result.value_NEW().value.count(); ++i) {
-      for (uint32_t j = 0; j < result.value_NEW().value[i].count(); ++j) {
-        checker.AddEvent(result.value_NEW().value[i][j].h);
+    for (uint32_t i = 0; i < result.value().value.count(); ++i) {
+      for (uint32_t j = 0; j < result.value().value[i].count(); ++j) {
+        checker.AddEvent(result.value().value[i][j].h);
       }
     }
   }
@@ -1073,10 +1073,10 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (uint32_t i = 0; i < result.value_NEW().value.count(); ++i) {
-      for (uint32_t j = 0; j < result.value_NEW().value[i].count(); ++j) {
-        for (uint32_t k = 0; k < result.value_NEW().value[i][j].count(); ++k) {
-          checker.AddEvent(result.value_NEW().value[i][j][k].h);
+    for (uint32_t i = 0; i < result.value().value.count(); ++i) {
+      for (uint32_t j = 0; j < result.value().value[i].count(); ++j) {
+        for (uint32_t k = 0; k < result.value().value[i][j].count(); ++k) {
+          checker.AddEvent(result.value().value[i][j][k].h);
         }
       }
     }
@@ -1095,7 +1095,7 @@ TEST_F(HandleCloseTest, ArrayOfHandle) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item : result.value_NEW().value) {
+    for (auto& item : result.value().value) {
       checker.AddEvent(item);
     }
   }
@@ -1112,7 +1112,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandle) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item1 : result.value_NEW().value) {
+    for (auto& item1 : result.value().value) {
       for (const auto& item2 : item1) {
         checker.AddEvent(item2);
       }
@@ -1131,7 +1131,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandle) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item1 : result.value_NEW().value) {
+    for (auto& item1 : result.value().value) {
       for (const auto& item2 : item1) {
         for (const auto& item3 : item2) {
           checker.AddEvent(item3);
@@ -1152,7 +1152,7 @@ TEST_F(HandleCloseTest, ArrayOfHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item : result.value_NEW().value) {
+    for (auto& item : result.value().value) {
       checker.AddEvent(item.h);
     }
   }
@@ -1169,7 +1169,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item1 : result.value_NEW().value) {
+    for (auto& item1 : result.value().value) {
       for (const auto& item2 : item1) {
         checker.AddEvent(item2.h);
       }
@@ -1188,7 +1188,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandleStruct) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item1 : result.value_NEW().value) {
+    for (auto& item1 : result.value().value) {
       for (const auto& item2 : item1) {
         for (const auto& item3 : item2) {
           checker.AddEvent(item3.h);
@@ -1210,7 +1210,7 @@ TEST_F(HandleCloseTest, Mixed1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item1 : result.value_NEW().value) {
+    for (auto& item1 : result.value().value) {
       for (const auto& item2 : item1) {
         checker.AddEvent(item2);
       }
@@ -1231,7 +1231,7 @@ TEST_F(HandleCloseTest, Mixed2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    for (auto& item1 : result.value_NEW().value) {
+    for (auto& item1 : result.value().value) {
       for (const auto& item2 : item1) {
         checker.AddEvent(item2);
       }

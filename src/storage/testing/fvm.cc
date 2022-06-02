@@ -28,8 +28,8 @@ zx::status<> BindFvm(int fd) {
   auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->Bind("fvm.so");
   auto status = zx::make_status(resp.status());
   if (status.is_ok()) {
-    if (resp.Unwrap_NEW()->is_error()) {
-      status = zx::make_status(resp.Unwrap_NEW()->error_value());
+    if (resp->is_error()) {
+      status = zx::make_status(resp->error_value());
     }
   }
   if (status.is_error()) {

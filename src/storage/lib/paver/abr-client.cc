@@ -83,7 +83,7 @@ bool FindPartitionLabelByGuid(const fbl::unique_fd& devfs_root, const uint8_t* g
     if (!result.ok()) {
       continue;
     }
-    const auto& response = result.value_NEW();
+    const auto& response = result.value();
     if (response.status != ZX_OK) {
       continue;
     }
@@ -96,7 +96,7 @@ bool FindPartitionLabelByGuid(const fbl::unique_fd& devfs_root, const uint8_t* g
       continue;
     }
 
-    const auto& response2 = result2.value_NEW();
+    const auto& response2 = result2.value();
     if (response2.status != ZX_OK) {
       continue;
     }
@@ -160,7 +160,7 @@ zx::status<Configuration> QueryBootConfig(const fbl::unique_fd& devfs_root,
     return zx::error(result.status());
   }
 
-  const auto response = result.Unwrap_NEW();
+  const auto response = result.Unwrap();
   if (!response->values[0].is_null()) {
     return CurrentSlotToConfiguration(response->values[0].get());
   }

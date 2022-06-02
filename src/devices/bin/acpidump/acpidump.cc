@@ -141,7 +141,7 @@ zx_status_t FetchTable(const zx::channel& channel, const TableInfo& table,
   }
 
   // Copy the data into memory.
-  uint32_t size = result.value_NEW().value()->size;
+  uint32_t size = result.value().value()->size;
   auto table_data = fbl::Array<uint8_t>(new uint8_t[size], size);
   if (zx_status_t status = vmo.read(table_data.data(), 0, size); status != ZX_OK) {
     return status;
@@ -244,14 +244,14 @@ zx_status_t AcpiDump(const Args& args) {
             zx_status_get_string(result.status()));
     return result.status();
   }
-  if (result.value_NEW().is_error()) {
+  if (result.value().is_error()) {
     fprintf(stderr, "Call to list ACPI table entries failed: %s.\n",
-            zx_status_get_string(result.value_NEW().error_value()));
-    return result.value_NEW().error_value();
+            zx_status_get_string(result.value().error_value()));
+    return result.value().error_value();
   }
 
   // Print summary if requested.
-  auto& entries = result.value_NEW().value()->entries;
+  auto& entries = result.value().value()->entries;
   if (args.table_names_only) {
     PrintTableNames(entries);
     return 0;

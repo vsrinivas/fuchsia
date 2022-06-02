@@ -321,20 +321,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_foreigntypeinresponseusedthroughco
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() const { return &value(); }
@@ -378,20 +366,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedth
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() const { return &value(); }

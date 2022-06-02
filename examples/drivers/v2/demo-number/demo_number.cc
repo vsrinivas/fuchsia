@@ -76,7 +76,7 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
       return zx::error(result.status());
     }
 
-    std::string path(result.value_NEW().path.data(), result.value_NEW().path.size());
+    std::string path(result.value().path.data(), result.value().path.size());
 
     auto status = outgoing_.AddProtocol<fuchsia_hardware_demo::Demo>(this, Name());
     if (status.status_value() != ZX_OK) {

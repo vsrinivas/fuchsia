@@ -220,7 +220,7 @@ static zx_status_t Read(const fidl::WireSyncClient<fuchsia_hardware_serial::NewD
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  auto& view = result.Unwrap_NEW()->value()->data;
+  auto& view = result->value()->data;
   data->resize(view.count());
   memcpy(data->data(), view.data(), view.count());
   return ZX_OK;

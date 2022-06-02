@@ -103,10 +103,9 @@ ssize_t measure_clk_util(fidl::WireSyncClient<fuchsia_hardware_clock::Device>& c
     return -1;
   }
 
-  std::string name(std::begin(result.Unwrap_NEW()->info.name),
-                   std::end(result.Unwrap_NEW()->info.name));
+  std::string name(std::begin(result->info.name), std::end(result->info.name));
 
-  printf("[%4d][%4ld MHz] %s\n", idx, result.Unwrap_NEW()->info.frequency, name.c_str());
+  printf("[%4d][%4ld MHz] %s\n", idx, result->info.frequency, name.c_str());
   return 0;
 }
 
@@ -136,13 +135,13 @@ ssize_t measure_clk(const char* path, uint32_t idx, bool clk) {
   }
 
   if (clk) {
-    if (idx > clk_count_result.Unwrap_NEW()->count) {
+    if (idx > clk_count_result->count) {
       fprintf(stderr, "ERROR: Invalid clock index.\n");
       return -1;
     }
     return measure_clk_util(client, idx);
   } else {
-    for (uint32_t i = 0; i < clk_count_result.Unwrap_NEW()->count; i++) {
+    for (uint32_t i = 0; i < clk_count_result->count; i++) {
       ssize_t rc = measure_clk_util(client, i);
       if (rc < 0) {
         return rc;

@@ -71,7 +71,7 @@ zx_status_t AudioDeviceStream::Open() {
 
 zx_status_t AudioDeviceStream::GetSupportedFormats(const SupportedFormatsCallback& cb) const {
   auto formats = fidl::WireCall(stream_ch_)->GetSupportedFormats();
-  for (auto& i : formats.value_NEW().supported_formats) {
+  for (auto& i : formats.value().supported_formats) {
     cb(i);
   }
   return ZX_OK;
@@ -92,10 +92,10 @@ zx_status_t AudioDeviceStream::WatchPlugState(
     return state.status();
   }
 
-  if (prop.value_NEW().properties.plug_detect_capabilities() ==
+  if (prop.value().properties.plug_detect_capabilities() ==
       audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify) {
-    out_state->plug_state_time = state.value_NEW().plug_state.plug_state_time();
-    out_state->flags = state.value_NEW().plug_state.plugged() ? AUDIO_PDNF_PLUGGED : 0;
+    out_state->plug_state_time = state.value().plug_state.plug_state_time();
+    out_state->flags = state.value().plug_state.plugged() ? AUDIO_PDNF_PLUGGED : 0;
     out_state->flags |= AUDIO_PDNF_CAN_NOTIFY;
   } else {
     out_state->flags = AUDIO_PDNF_PLUGGED;
@@ -131,9 +131,9 @@ zx_status_t AudioDeviceStream::SetGainParams() {
 zx_status_t AudioDeviceStream::WatchGain(audio_stream_cmd_get_gain_resp_t* out_gain) const {
   auto prop = fidl::WireCall(stream_ch_)->GetProperties();
   if (prop.status() == ZX_OK) {
-    out_gain->min_gain = prop.value_NEW().properties.min_gain_db();
-    out_gain->max_gain = prop.value_NEW().properties.max_gain_db();
-    out_gain->gain_step = prop.value_NEW().properties.gain_step_db();
+    out_gain->min_gain = prop.value().properties.min_gain_db();
+    out_gain->max_gain = prop.value().properties.max_gain_db();
+    out_gain->gain_step = prop.value().properties.gain_step_db();
   } else {
     printf("Failed to get properties to watch gainstate (res %d)\n", prop.status());
     return prop.status();
@@ -141,14 +141,14 @@ zx_status_t AudioDeviceStream::WatchGain(audio_stream_cmd_get_gain_resp_t* out_g
 
   auto gain_state = fidl::WireCall(stream_ch_)->WatchGainState();
   if (gain_state.status() == ZX_OK) {
-    out_gain->cur_gain = gain_state.value_NEW().gain_state.gain_db();
-    out_gain->can_mute = gain_state.value_NEW().gain_state.has_muted();
-    if (gain_state.value_NEW().gain_state.has_muted()) {
-      out_gain->cur_mute = gain_state.value_NEW().gain_state.muted();
+    out_gain->cur_gain = gain_state.value().gain_state.gain_db();
+    out_gain->can_mute = gain_state.value().gain_state.has_muted();
+    if (gain_state.value().gain_state.has_muted()) {
+      out_gain->cur_mute = gain_state.value().gain_state.muted();
     }
-    out_gain->can_agc = gain_state.value_NEW().gain_state.has_agc_enabled();
-    if (gain_state.value_NEW().gain_state.has_agc_enabled()) {
-      out_gain->cur_mute = gain_state.value_NEW().gain_state.agc_enabled();
+    out_gain->can_agc = gain_state.value().gain_state.has_agc_enabled();
+    if (gain_state.value().gain_state.has_agc_enabled()) {
+      out_gain->cur_mute = gain_state.value().gain_state.agc_enabled();
     }
   } else {
     printf("Failed to watch gain state (res %d)\n", gain_state.status());
@@ -162,8 +162,8 @@ zx_status_t AudioDeviceStream::GetUniqueId(audio_stream_cmd_get_unique_id_resp_t
   if (out_id == nullptr)
     return ZX_ERR_INVALID_ARGS;
   auto result = fidl::WireCall(stream_ch_)->GetProperties();
-  memcpy(out_id->unique_id.data, result.value_NEW().properties.unique_id().data(),
-         std::min(result.value_NEW().properties.unique_id().size(), sizeof(out_id->unique_id)));
+  memcpy(out_id->unique_id.data, result.value().properties.unique_id().data(),
+         std::min(result.value().properties.unique_id().size(), sizeof(out_id->unique_id)));
   return ZX_OK;
 }
 
@@ -175,12 +175,12 @@ zx_status_t AudioDeviceStream::GetString(audio_stream_string_id_t id,
   auto result = fidl::WireCall(stream_ch_)->GetProperties();
   switch (id) {
     case AUDIO_STREAM_STR_ID_MANUFACTURER:
-      out_str->strlen = static_cast<uint32_t>(result.value_NEW().properties.manufacturer().size());
-      memcpy(out_str->str, result.value_NEW().properties.manufacturer().data(), out_str->strlen);
+      out_str->strlen = static_cast<uint32_t>(result.value().properties.manufacturer().size());
+      memcpy(out_str->str, result.value().properties.manufacturer().data(), out_str->strlen);
       break;
     case AUDIO_STREAM_STR_ID_PRODUCT:
-      out_str->strlen = static_cast<uint32_t>(result.value_NEW().properties.product().size());
-      memcpy(out_str->str, result.value_NEW().properties.product().data(), out_str->strlen);
+      out_str->strlen = static_cast<uint32_t>(result.value().properties.product().size());
+      memcpy(out_str->str, result.value().properties.product().data(), out_str->strlen);
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
@@ -267,9 +267,9 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   if (result.status() != ZX_OK) {
     return ZX_ERR_BAD_STATE;
   }
-  fifo_depth_ = result.value_NEW().properties.fifo_depth();
-  if (result.value_NEW().properties.has_external_delay()) {
-    external_delay_nsec_ = result.value_NEW().properties.external_delay();
+  fifo_depth_ = result.value().properties.fifo_depth();
+  if (result.value().properties.has_external_delay()) {
+    external_delay_nsec_ = result.value().properties.external_delay();
   }
 
   // TODO(81650): Add support to audio-driver-ctl to interactively activate/deactivate channels.
@@ -295,8 +295,8 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
   // fast_capture_notifications not supported (set to an invalid channel).
   // fast_playback_notifications not supported (set to an invalid channel).
   auto result = fidl::WireCall(rb_ch_)->GetVmo(frames, irqs_per_ring);
-  uint64_t rb_sz = static_cast<uint64_t>(result.Unwrap_NEW()->value()->num_frames) * frame_sz_;
-  rb_vmo_ = std::move(result.Unwrap_NEW()->value()->ring_buffer);
+  uint64_t rb_sz = static_cast<uint64_t>(result->value()->num_frames) * frame_sz_;
+  rb_vmo_ = std::move(result->value()->ring_buffer);
 
   // We have the buffer, fetch the underlying size of the VMO (a rounded up
   // multiple of pages) and sanity check it against the effective size the
@@ -342,7 +342,7 @@ zx_status_t AudioDeviceStream::StartRingBuffer() {
     return ZX_ERR_BAD_STATE;
 
   auto result = fidl::WireCall(rb_ch_)->Start();
-  start_time_ = result.value_NEW().start_time;
+  start_time_ = result.value().start_time;
   return result.status();
 }
 

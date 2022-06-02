@@ -103,7 +103,7 @@ void AmlHdmiDevice::Reset(ResetRequestView request, ResetCompleter::Sync& comple
   // TODO(fxb/69679): Add in Resets
   // reset hdmi related blocks (HIU, HDMI SYS, HDMI_TX)
   // auto reset0_result = display->reset_register_.WriteRegister32(PRESET0_REGISTER, 1 << 19, 1 <<
-  // 19); if ((reset0_result.status() != ZX_OK) || reset0_result.Unwrap_NEW()->is_error()) {
+  // 19); if ((reset0_result.status() != ZX_OK) || reset0_result->is_error()) {
   //   zxlogf(ERROR, "Reset0 Write failed\n");
   // }
 
@@ -113,12 +113,12 @@ void AmlHdmiDevice::Reset(ResetRequestView request, ResetCompleter::Sync& comple
    */
   // auto reset2_result = display->reset_register_.WriteRegister32(PRESET2_REGISTER, 1 << 15, 1 <<
   // 15); // Will mess up hdcp stuff if ((reset2_result.status() != ZX_OK) ||
-  // reset2_result.Unwrap_NEW()->is_error()) {
+  // reset2_result->is_error()) {
   //   zxlogf(ERROR, "Reset2 Write failed\n");
   // }
 
   // auto reset2_result = display->reset_register_.WriteRegister32(PRESET2_REGISTER, 1 << 2, 1 <<
-  // 2); if ((reset2_result.status() != ZX_OK) || reset2_result.Unwrap_NEW()->is_error()) {
+  // 2); if ((reset2_result.status() != ZX_OK) || reset2_result->is_error()) {
   //   zxlogf(ERROR, "Reset2 Write failed\n");
   // }
 

@@ -215,12 +215,12 @@ std::string GetTopologicalPath(int fd) {
                      << zx_status_get_string(resp.status());
     return {};
   }
-  if (resp.Unwrap_NEW()->is_error()) {
+  if (resp->is_error()) {
     FX_LOGS(WARNING) << "Unable to get topological path: "
-                     << zx_status_get_string(resp.Unwrap_NEW()->error_value());
+                     << zx_status_get_string(resp->error_value());
     return {};
   }
-  const auto& path = resp.Unwrap_NEW()->value()->path;
+  const auto& path = resp->value()->path;
   return {path.data(), path.size()};
 }
 
@@ -315,12 +315,11 @@ const std::string& BlockDevice::partition_name() const {
                    << zx_status_get_string(resp.status());
     return partition_name_;
   }
-  if (resp.value_NEW().status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partiton name: "
-                   << zx_status_get_string(resp.value_NEW().status);
+  if (resp.value().status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to get partiton name: " << zx_status_get_string(resp.value().status);
     return partition_name_;
   }
-  partition_name_ = std::string(resp.value_NEW().name.data(), resp.value_NEW().name.size());
+  partition_name_ = std::string(resp.value().name.data(), resp.value().name.size());
   return partition_name_;
 }
 
@@ -354,11 +353,11 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid
   if (response.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error: "
                    << zx_status_get_string(response.status()) << ")";
-  } else if (response.value_NEW().status != ZX_OK) {
+  } else if (response.value().status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition instance GUID: "
-                   << zx_status_get_string(response.value_NEW().status);
+                   << zx_status_get_string(response.value().status);
   } else {
-    *instance_guid_ = *response.value_NEW().guid;
+    *instance_guid_ = *response.value().guid;
   }
   return *instance_guid_;
 }
@@ -377,11 +376,11 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetTypeGuid() c
   if (response.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error: "
                    << zx_status_get_string(response.status()) << ")";
-  } else if (response.value_NEW().status != ZX_OK) {
+  } else if (response.value().status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition type GUID: "
-                   << zx_status_get_string(response.value_NEW().status);
+                   << zx_status_get_string(response.value().status);
   } else {
-    *type_guid_ = *response.value_NEW().guid;
+    *type_guid_ = *response.value().guid;
   }
   return *type_guid_;
 }
@@ -396,8 +395,8 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   if (io_status != ZX_OK) {
     return io_status;
   }
-  if (resp.Unwrap_NEW()->is_error()) {
-    call_status = resp.Unwrap_NEW()->error_value();
+  if (resp->is_error()) {
+    call_status = resp->error_value();
   }
   return call_status;
 }
@@ -496,12 +495,12 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
                    << zx_status_get_string(info_response.status());
     return info_response.status();
   }
-  if (info_response.value_NEW().status != ZX_OK || !info_response.value_NEW().info) {
+  if (info_response.value().status != ZX_OK || !info_response.value().info) {
     FX_LOGS(ERROR) << "FVM info request failed: "
-                   << zx_status_get_string(info_response.value_NEW().status);
-    return info_response.value_NEW().status;
+                   << zx_status_get_string(info_response.value().status);
+    return info_response.value().status;
   }
-  uint64_t slice_size = info_response.value_NEW().info->slice_size;
+  uint64_t slice_size = info_response.value().info->slice_size;
 
   // Set the limit (convert to slice units, rounding down).
   uint64_t max_slice_count = max_byte_size / slice_size;
@@ -509,15 +508,15 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          fvm_caller.borrow_channel()))
           ->SetPartitionLimit(instance_guid, max_slice_count);
-  if (response.status() != ZX_OK || response.value_NEW().status != ZX_OK) {
+  if (response.status() != ZX_OK || response.value().status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to set partition limit for " << topological_path() << " to "
                    << max_byte_size << " bytes (" << max_slice_count << " slices).";
     if (response.status() != ZX_OK) {
       FX_LOGS(ERROR) << "  FIDL error: " << zx_status_get_string(response.status());
       return response.status();
     }
-    FX_LOGS(ERROR) << " FVM error: " << zx_status_get_string(response.value_NEW().status);
-    return response.value_NEW().status;
+    FX_LOGS(ERROR) << " FVM error: " << zx_status_get_string(response.value().status);
+    return response.value().status;
   }
 
   return ZX_OK;
@@ -540,15 +539,15 @@ zx_status_t BlockDevice::SetPartitionName(const std::string& fvm_path, std::stri
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          caller.borrow_channel()))
           ->SetPartitionName(instance_guid, fidl::StringView::FromExternal(name));
-  if (response.status() != ZX_OK || response.Unwrap_NEW()->is_error()) {
+  if (response.status() != ZX_OK || response->is_error()) {
     FX_LOGS(ERROR) << "Unable to set partition name for " << topological_path() << " to '" << name
                    << "'.";
     if (response.status() != ZX_OK) {
       FX_LOGS(ERROR) << "  FIDL error: " << zx_status_get_string(response.status());
       return response.status();
     }
-    FX_LOGS(ERROR) << " FVM error: " << zx_status_get_string(response.Unwrap_NEW()->error_value());
-    return response.Unwrap_NEW()->error_value();
+    FX_LOGS(ERROR) << " FVM error: " << zx_status_get_string(response->error_value());
+    return response->error_value();
   }
 
   return ZX_OK;
@@ -951,9 +950,9 @@ zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format)
       FX_PLOGS(ERROR, res.status()) << "Failed to fsck (FIDL error)";
       return res.status();
     }
-    if (res.value_NEW().is_error()) {
-      FX_PLOGS(ERROR, res.value_NEW().error_value()) << "Fsck failed";
-      return res.value_NEW().error_value();
+    if (res.value().is_error()) {
+      FX_PLOGS(ERROR, res.value().error_value()) << "Fsck failed";
+      return res.value().error_value();
     }
     return ZX_OK;
   } else {
@@ -999,13 +998,13 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
     return query_result.status();
   }
 
-  if (query_result.value_NEW().status != ZX_OK) {
+  if (query_result.value().status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to query FVM information: "
-                   << zx_status_get_string(query_result.value_NEW().status);
-    return query_result.value_NEW().status;
+                   << zx_status_get_string(query_result.value().status);
+    return query_result.value().status;
   }
 
-  const uint64_t slice_size = query_result.value_NEW().manager->slice_size;
+  const uint64_t slice_size = query_result.value().manager->slice_size;
 
   // Free all the existing slices.
   uint64_t slice = 1;
@@ -1021,29 +1020,28 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
       return query_result.status();
     }
 
-    if (query_result.value_NEW().status != ZX_OK) {
+    if (query_result.value().status != ZX_OK) {
       FX_LOGS(ERROR) << "Unable to query slices (slice: " << slice << ", max: " << fvm::kMaxVSlices
-                     << "): " << zx_status_get_string(query_result.value_NEW().status);
-      return query_result.value_NEW().status;
+                     << "): " << zx_status_get_string(query_result.value().status);
+      return query_result.value().status;
     }
 
-    if (query_result.value_NEW().response_count == 0) {
+    if (query_result.value().response_count == 0) {
       break;
     }
 
-    for (uint64_t i = 0; i < query_result.value_NEW().response_count; ++i) {
-      if (query_result.value_NEW().response[i].allocated) {
-        auto shrink_result = fidl::WireCall(volume_client)
-                                 ->Shrink(slice, query_result.value_NEW().response[i].count);
-        if (zx_status_t status = shrink_result.status() == ZX_OK
-                                     ? shrink_result.Unwrap_NEW()->status
-                                     : shrink_result.status();
+    for (uint64_t i = 0; i < query_result.value().response_count; ++i) {
+      if (query_result.value().response[i].allocated) {
+        auto shrink_result =
+            fidl::WireCall(volume_client)->Shrink(slice, query_result.value().response[i].count);
+        if (zx_status_t status =
+                shrink_result.status() == ZX_OK ? shrink_result->status : shrink_result.status();
             status != ZX_OK) {
           FX_LOGS(ERROR) << "Unable to shrink partition: " << zx_status_get_string(status);
           return status;
         }
       }
-      slice += query_result.value_NEW().response[i].count;
+      slice += query_result.value().response[i].count;
     }
   }
 
@@ -1053,14 +1051,14 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
     auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
     if (query_result.status() != ZX_OK)
       return query_result.status();
-    if (query_result.value_NEW().status != ZX_OK)
-      return query_result.value_NEW().status;
+    if (query_result.value().status != ZX_OK)
+      return query_result.value().status;
     // If a size is not specified, limit the size of the data partition so as not to use up all
     // FVM's space (thus limiting blobfs growth).  10% or 24MiB (whichever is larger) should be
     // enough.
     // Due to reserved and over-provisoned area of f2fs, it needs volume size at least 100 MiB.
-    const uint64_t slices_available = query_result.value_NEW().manager->slice_count -
-                                      query_result.value_NEW().manager->assigned_slice_count;
+    const uint64_t slices_available = query_result.value().manager->slice_count -
+                                      query_result.value().manager->assigned_slice_count;
     const uint64_t min_slices = format == fs_management::kDiskFormatF2fs
                                     ? fbl::round_up(kDefaultF2fsMinBytes, slice_size) / slice_size
                                     : 2;
@@ -1078,7 +1076,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
                        << " partition; some functionality may be missing.";
     }
     slice_count = std::min(slices_available,
-                           std::max<uint64_t>(query_result.value_NEW().manager->slice_count / 10,
+                           std::max<uint64_t>(query_result.value().manager->slice_count / 10,
                                               slice_target / slice_size));
   }
   if (topological_path_.find("zxcrypt") != std::string::npos) {
@@ -1091,8 +1089,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
   auto extend_result =
       fidl::WireCall(volume_client)
           ->Extend(1, slice_count - 1);  // Another -1 here because we get the first slice for free.
-  if (zx_status_t status = extend_result.status() == ZX_OK ? extend_result.Unwrap_NEW()->status
-                                                           : extend_result.status();
+  if (zx_status_t status =
+          extend_result.status() == ZX_OK ? extend_result->status : extend_result.status();
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to extend partition (slice_count: " << slice_count
                    << "): " << zx_status_get_string(status);
@@ -1128,9 +1126,9 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
       FX_PLOGS(ERROR, res.status()) << "Failed to format (FIDL error)";
       return res.status();
     }
-    if (res.value_NEW().is_error()) {
-      FX_PLOGS(ERROR, res.value_NEW().error_value()) << "Format failed";
-      return res.value_NEW().error_value();
+    if (res.value().is_error()) {
+      FX_PLOGS(ERROR, res.value().error_value()) << "Format failed";
+      return res.value().error_value();
     }
   } else {
     const std::string binary_path(BinaryPathForFormat(format));

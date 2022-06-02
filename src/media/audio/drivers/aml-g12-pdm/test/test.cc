@@ -123,7 +123,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
 
     auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(frames_req, 0);
     ASSERT_OK(vmo.status());
-    ASSERT_EQ(vmo.Unwrap_NEW()->value()->num_frames, frames_expected);
+    ASSERT_EQ(vmo->value()->num_frames, frames_expected);
 
     stream->DdkAsyncRemove();
     EXPECT_TRUE(tester_.Ok());

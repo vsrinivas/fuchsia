@@ -47,8 +47,8 @@ zx_status_t BindVerityDriver(zx::unowned_channel ramdisk_chan) {
                   ->Bind(::fidl::StringView::FromExternal(kDriverLib));
   rc = resp.status();
   if (rc == ZX_OK) {
-    if (resp.Unwrap_NEW()->is_error()) {
-      rc = resp.Unwrap_NEW()->error_value();
+    if (resp->is_error()) {
+      rc = resp->error_value();
     }
   }
   return rc;

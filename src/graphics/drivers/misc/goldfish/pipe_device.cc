@@ -119,24 +119,22 @@ PipeDevice::~PipeDevice() {
 
 zx_status_t PipeDevice::Bind() {
   auto bti_result = acpi_fidl_.borrow()->GetBti(0);
-  if (!bti_result.ok() || bti_result.Unwrap_NEW()->is_error()) {
-    zx_status_t status =
-        bti_result.ok() ? bti_result.Unwrap_NEW()->error_value() : bti_result.status();
+  if (!bti_result.ok() || bti_result->is_error()) {
+    zx_status_t status = bti_result.ok() ? bti_result->error_value() : bti_result.status();
     zxlogf(ERROR, "%s: GetBti failed: %d", kTag, status);
     return status;
   }
-  bti_ = std::move(bti_result.Unwrap_NEW()->value()->bti);
+  bti_ = std::move(bti_result->value()->bti);
 
   auto mmio_result = acpi_fidl_.borrow()->GetMmio(0);
-  if (!mmio_result.ok() || mmio_result.Unwrap_NEW()->is_error()) {
-    zx_status_t status =
-        mmio_result.ok() ? mmio_result.Unwrap_NEW()->error_value() : mmio_result.status();
+  if (!mmio_result.ok() || mmio_result->is_error()) {
+    zx_status_t status = mmio_result.ok() ? mmio_result->error_value() : mmio_result.status();
     zxlogf(ERROR, "%s: GetMmio failed: %d", kTag, status);
     return status;
   }
 
   fbl::AutoLock lock(&mmio_lock_);
-  auto& mmio = mmio_result.Unwrap_NEW()->value()->mmio;
+  auto& mmio = mmio_result->value()->mmio;
   zx_status_t status = fdf::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
                                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
@@ -153,12 +151,12 @@ zx_status_t PipeDevice::Bind() {
   }
 
   auto irq = acpi_fidl_.borrow()->MapInterrupt(0);
-  if (!irq.ok() || irq.Unwrap_NEW()->is_error()) {
+  if (!irq.ok() || irq->is_error()) {
     zxlogf(ERROR, "%s: map_interrupt failed: %d", kTag,
-           !irq.ok() ? irq.status() : irq.Unwrap_NEW()->error_value());
+           !irq.ok() ? irq.status() : irq->error_value());
     return status;
   }
-  irq_.reset(irq.Unwrap_NEW()->value()->irq.release());
+  irq_.reset(irq->value()->irq.release());
 
   int rc = thrd_create_with_name(
       &irq_thread_, [](void* arg) { return static_cast<PipeDevice*>(arg)->IrqHandler(); }, this,

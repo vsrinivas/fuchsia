@@ -230,22 +230,22 @@ TEST_F(ControllerTest, GetKbdDescriptorTest) {
   auto response = client_->GetDescriptor();
 
   ASSERT_TRUE(response.ok());
-  ASSERT_TRUE(response.value_NEW().descriptor.has_device_info());
-  EXPECT_EQ(response.value_NEW().descriptor.device_info().vendor_id,
+  ASSERT_TRUE(response.value().descriptor.has_device_info());
+  EXPECT_EQ(response.value().descriptor.device_info().vendor_id,
             static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
   EXPECT_EQ(
-      response.value_NEW().descriptor.device_info().product_id,
+      response.value().descriptor.device_info().product_id,
       static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kPcPs2Keyboard));
 
-  ASSERT_TRUE(response.value_NEW().descriptor.has_keyboard());
-  ASSERT_TRUE(response.value_NEW().descriptor.keyboard().has_input());
-  ASSERT_TRUE(response.value_NEW().descriptor.keyboard().input().has_keys3());
-  ASSERT_EQ(response.value_NEW().descriptor.keyboard().input().keys3().count(), 104);
+  ASSERT_TRUE(response.value().descriptor.has_keyboard());
+  ASSERT_TRUE(response.value().descriptor.keyboard().has_input());
+  ASSERT_TRUE(response.value().descriptor.keyboard().input().has_keys3());
+  ASSERT_EQ(response.value().descriptor.keyboard().input().keys3().count(), 104);
 
-  ASSERT_TRUE(response.value_NEW().descriptor.keyboard().has_output());
-  ASSERT_TRUE(response.value_NEW().descriptor.keyboard().output().has_leds());
-  ASSERT_EQ(response.value_NEW().descriptor.keyboard().output().leds().count(), 5);
-  const auto& leds = response.value_NEW().descriptor.keyboard().output().leds();
+  ASSERT_TRUE(response.value().descriptor.keyboard().has_output());
+  ASSERT_TRUE(response.value().descriptor.keyboard().output().has_leds());
+  ASSERT_EQ(response.value().descriptor.keyboard().output().leds().count(), 5);
+  const auto& leds = response.value().descriptor.keyboard().output().leds();
   EXPECT_EQ(leds[0], fuchsia_input_report::wire::LedType::kNumLock);
   EXPECT_EQ(leds[1], fuchsia_input_report::wire::LedType::kCapsLock);
   EXPECT_EQ(leds[2], fuchsia_input_report::wire::LedType::kScrollLock);
@@ -273,8 +273,8 @@ TEST_F(ControllerTest, KeyboardPressTest) {
 
     auto result = reader->ReadInputReports();
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result.value_NEW().is_error());
-    auto& reports = result.value_NEW().value()->reports;
+    ASSERT_FALSE(result.value().is_error());
+    auto& reports = result.value().value()->reports;
 
     ASSERT_EQ(1, reports.count());
 
@@ -292,8 +292,8 @@ TEST_F(ControllerTest, KeyboardPressTest) {
 
     auto result = reader->ReadInputReports();
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result.value_NEW().is_error());
-    auto& reports = result.value_NEW().value()->reports;
+    ASSERT_FALSE(result.value().is_error());
+    auto& reports = result.value().value()->reports;
 
     ASSERT_EQ(1, reports.count());
 
@@ -314,33 +314,33 @@ TEST_F(ControllerTest, GetMouseDescriptorTest) {
   auto response = client_->GetDescriptor();
 
   ASSERT_TRUE(response.ok());
-  ASSERT_TRUE(response.value_NEW().descriptor.has_device_info());
-  EXPECT_EQ(response.value_NEW().descriptor.device_info().vendor_id,
+  ASSERT_TRUE(response.value().descriptor.has_device_info());
+  EXPECT_EQ(response.value().descriptor.device_info().vendor_id,
             static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
-  EXPECT_EQ(response.value_NEW().descriptor.device_info().product_id,
+  EXPECT_EQ(response.value().descriptor.device_info().product_id,
             static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kPcPs2Mouse));
 
-  ASSERT_TRUE(response.value_NEW().descriptor.has_mouse());
-  ASSERT_TRUE(response.value_NEW().descriptor.mouse().has_input());
-  ASSERT_TRUE(response.value_NEW().descriptor.mouse().input().has_buttons());
-  ASSERT_EQ(response.value_NEW().descriptor.mouse().input().buttons().count(), 3);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().buttons()[0], 0x01);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().buttons()[1], 0x02);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().buttons()[2], 0x03);
+  ASSERT_TRUE(response.value().descriptor.has_mouse());
+  ASSERT_TRUE(response.value().descriptor.mouse().has_input());
+  ASSERT_TRUE(response.value().descriptor.mouse().input().has_buttons());
+  ASSERT_EQ(response.value().descriptor.mouse().input().buttons().count(), 3);
+  EXPECT_EQ(response.value().descriptor.mouse().input().buttons()[0], 0x01);
+  EXPECT_EQ(response.value().descriptor.mouse().input().buttons()[1], 0x02);
+  EXPECT_EQ(response.value().descriptor.mouse().input().buttons()[2], 0x03);
 
-  ASSERT_TRUE(response.value_NEW().descriptor.mouse().input().has_movement_x());
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_x().range.min, -127);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_x().range.max, 127);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_x().unit.type,
+  ASSERT_TRUE(response.value().descriptor.mouse().input().has_movement_x());
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_x().range.min, -127);
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_x().range.max, 127);
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_x().unit.type,
             fuchsia_input_report::wire::UnitType::kNone);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_x().unit.exponent, 0);
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_x().unit.exponent, 0);
 
-  ASSERT_TRUE(response.value_NEW().descriptor.mouse().input().has_movement_y());
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_y().range.min, -127);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_y().range.max, 127);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_y().unit.type,
+  ASSERT_TRUE(response.value().descriptor.mouse().input().has_movement_y());
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_y().range.min, -127);
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_y().range.max, 127);
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_y().unit.type,
             fuchsia_input_report::wire::UnitType::kNone);
-  EXPECT_EQ(response.value_NEW().descriptor.mouse().input().movement_y().unit.exponent, 0);
+  EXPECT_EQ(response.value().descriptor.mouse().input().movement_y().unit.exponent, 0);
 }
 
 TEST_F(ControllerTest, MouseMoveTest) {
@@ -366,8 +366,8 @@ TEST_F(ControllerTest, MouseMoveTest) {
 
   auto result = reader->ReadInputReports();
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.value_NEW().is_error());
-  auto& reports = result.value_NEW().value()->reports;
+  ASSERT_FALSE(result.value().is_error());
+  auto& reports = result.value().value()->reports;
 
   ASSERT_EQ(1, reports.count());
 

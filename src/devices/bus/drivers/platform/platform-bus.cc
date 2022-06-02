@@ -449,12 +449,12 @@ zx::status<PlatformBus::BootItemResult> PlatformBus::GetBootItem(uint32_t type, 
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  if (!result.Unwrap_NEW()->payload.is_valid()) {
+  if (!result->payload.is_valid()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
   return zx::ok(PlatformBus::BootItemResult{
-      .vmo = std::move(result.Unwrap_NEW()->payload),
-      .length = result.Unwrap_NEW()->length,
+      .vmo = std::move(result->payload),
+      .length = result->length,
   });
 }
 

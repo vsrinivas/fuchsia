@@ -163,7 +163,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
           res.complete_error(result.status());
           return;
         }
-        zx::status info = DeviceInfo::Create(result.Unwrap_NEW()->info);
+        zx::status info = DeviceInfo::Create(result->info);
         if (info.is_error()) {
           res.complete_error(info.status_value());
         } else {
@@ -196,7 +196,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
             return;
           }
 
-          const auto* open_result = result.Unwrap_NEW();
+          const auto* open_result = result.Unwrap();
           if (open_result->is_error()) {
             res.complete_error(open_result->error_value());
           } else {
@@ -312,8 +312,8 @@ void NetworkDeviceClient::AttachPort(netdev::wire::PortId port_id,
             completer.complete_error(result.status());
             return;
           }
-          if (result.Unwrap_NEW()->is_error()) {
-            completer.complete_error(result.Unwrap_NEW()->error_value());
+          if (result->is_error()) {
+            completer.complete_error(result->error_value());
           } else {
             completer.complete_ok();
           }
@@ -336,8 +336,8 @@ void NetworkDeviceClient::DetachPort(netdev::wire::PortId port_id, ErrorCallback
             completer.complete_error(result.status());
             return;
           }
-          if (result.Unwrap_NEW()->is_error()) {
-            completer.complete_error(result.Unwrap_NEW()->error_value());
+          if (result->is_error()) {
+            completer.complete_error(result->error_value());
           } else {
             completer.complete_ok();
           }
@@ -386,7 +386,7 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
           return;
         }
         zx::status<PortInfoAndMac> info =
-            PortInfoAndMac::Create(result.value_NEW().info, /*unicast_address=*/std::nullopt);
+            PortInfoAndMac::Create(result.value().info, /*unicast_address=*/std::nullopt);
         if (!info.is_ok()) {
           completer.complete_error(info.error_value());
           return;
@@ -424,7 +424,7 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
             return;
           }
 
-          state->result.unicast_address = result.Unwrap_NEW()->address;
+          state->result.unicast_address = result->address;
           completer.complete_ok();
         });
     const fidl::Status result = state->port_client->GetMac(std::move(mac_server));
@@ -465,7 +465,7 @@ void NetworkDeviceClient::GetPorts(PortsCallback callback) {
               completer.complete_error(result.status());
               return;
             }
-            const netdev::wire::DevicePortEvent& event = result.Unwrap_NEW()->event;
+            const netdev::wire::DevicePortEvent& event = result->event;
             switch (event.Which()) {
               case netdev::wire::DevicePortEvent::Tag::kIdle:
                 completer.complete_ok(std::make_pair(std::move(ports), true));
@@ -1143,7 +1143,7 @@ void NetworkDeviceClient::StatusWatchHandle::Watch() {
         if (!result.ok()) {
           return;
         }
-        callback_(result.Unwrap_NEW()->port_status);
+        callback_(result->port_status);
         // Watch again, we only stop watching when StatusWatchHandle is destroyed.
         Watch();
       });

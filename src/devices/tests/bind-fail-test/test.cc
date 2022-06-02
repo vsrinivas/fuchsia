@@ -35,8 +35,8 @@ TEST(BindFailTest, BindFail) {
 
   auto result = sys_dev->Bind(fidl::StringView{kDriver});
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-  ASSERT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace

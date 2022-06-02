@@ -90,19 +90,19 @@ class I2cRegisterBase : public RegisterBase<DerivedType, IntType, PrinterState> 
     if (!response.ok()) {
       return response.status();
     }
-    if (response.value_NEW().is_error()) {
-      return response.value_NEW().error_value();
+    if (response.value().is_error()) {
+      return response.value().error_value();
     }
 
-    if (response.value_NEW().value()->read_data.count() != 1) {
+    if (response.value().value()->read_data.count() != 1) {
       return ZX_ERR_BAD_STATE;
     }
-    if (response.value_NEW().value()->read_data[0].count() != sizeof(IntType)) {
+    if (response.value().value()->read_data[0].count() != sizeof(IntType)) {
       return ZX_ERR_BAD_STATE;
     }
 
     IntType value;
-    memcpy(&value, response.value_NEW().value()->read_data[0].data(), sizeof(value));
+    memcpy(&value, response.value().value()->read_data[0].data(), sizeof(value));
     value = ConvertFromI2cByteOrder(value);
     RegisterBaseType::set_reg_value(value);
     return ZX_OK;
@@ -149,8 +149,8 @@ class I2cRegisterBase : public RegisterBase<DerivedType, IntType, PrinterState> 
     if (!response.ok()) {
       return response.status();
     }
-    if (response.value_NEW().is_error()) {
-      return response.value_NEW().error_value();
+    if (response.value().is_error()) {
+      return response.value().error_value();
     }
     return ZX_OK;
   }

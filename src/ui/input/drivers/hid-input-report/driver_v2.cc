@@ -128,7 +128,7 @@ class InputReportDriver {
                       completer.complete_error(result.status());
                       return;
                     }
-                    auto* response = result.Unwrap_NEW();
+                    auto* response = result.Unwrap();
                     parent_topo_path_ = std::string(response->path.data(), response->path.size());
                     completer.complete_ok();
                   });

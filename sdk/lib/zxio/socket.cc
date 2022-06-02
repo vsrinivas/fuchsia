@@ -39,7 +39,7 @@ class BaseSocket {
     if (!result.ok()) {
       return result.status();
     }
-    const auto& response = result.value_NEW();
+    const auto& response = result.value();
     if (response.is_error()) {
       return response.error_value();
     } else {

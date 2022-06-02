@@ -79,7 +79,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
 
   auto check_status = collection->CheckBuffersAllocated();
-  if (!check_status.ok() || check_status.value_NEW().status != ZX_OK) {
+  if (!check_status.ok() || check_status.value().status != ZX_OK) {
     _completer.Reply(ZX_ERR_SHOULD_WAIT, 0);
     return;
   }
@@ -104,11 +104,11 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   if (use_kernel_framebuffer_) {
     ZX_ASSERT(it->second.kernel.is_valid());
     auto res = it->second.kernel->WaitForBuffersAllocated();
-    if (!res.ok() || res.value_NEW().status != ZX_OK) {
+    if (!res.ok() || res.value().status != ZX_OK) {
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
       return;
     }
-    sysmem::wire::BufferCollectionInfo2& info = res.value_NEW().buffer_collection_info;
+    sysmem::wire::BufferCollectionInfo2& info = res.value().buffer_collection_info;
 
     if (!info.settings.has_image_format_constraints || request->index >= info.buffer_count) {
       _completer.Reply(ZX_ERR_OUT_OF_RANGE, 0);
@@ -807,7 +807,7 @@ void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
   // Check whether buffer has already been allocated for the requested collection id.
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
   auto check_status = collection->CheckBuffersAllocated();
-  if (!check_status.ok() || check_status.value_NEW().status != ZX_OK) {
+  if (!check_status.ok() || check_status.value().status != ZX_OK) {
     _completer.ReplyError(ZX_ERR_SHOULD_WAIT);
     return;
   }

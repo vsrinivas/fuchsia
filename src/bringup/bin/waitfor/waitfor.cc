@@ -124,7 +124,7 @@ zx_status_t expr_topo(const char* arg, int fd) {
             result.FormatDescription().c_str());
     return result.status();
   }
-  const auto* res = result.Unwrap_NEW();
+  const auto* res = result.Unwrap();
   if (res->is_error()) {
     const zx_status_t status = res->error_value();
     fprintf(stderr, "waitfor: warning: failed to get topological path: %s\n",

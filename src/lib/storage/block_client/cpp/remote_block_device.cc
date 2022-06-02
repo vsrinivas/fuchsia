@@ -49,9 +49,9 @@ zx::status<std::string> RemoteBlockDevice::GetDevicePath() const {
                   ->GetTopologicalPath();
   if (auto fidl_error = resp.status(); fidl_error != ZX_OK)
     return zx::error(fidl_error);
-  if (resp.Unwrap_NEW()->is_error())
-    return zx::error(resp.Unwrap_NEW()->error_value());
-  return zx::ok(std::string(resp.Unwrap_NEW()->value()->path.get()));
+  if (resp->is_error())
+    return zx::error(resp->error_value());
+  return zx::ok(std::string(resp->value()->path.get()));
 }
 
 zx_status_t RemoteBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {

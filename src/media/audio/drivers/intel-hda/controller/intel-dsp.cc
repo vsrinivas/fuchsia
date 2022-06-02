@@ -100,16 +100,15 @@ Status IntelDsp::ParseNhlt() {
   if (!result.ok()) {
     return Status(result.status(), result.FormatDescription());
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    return Status(ZX_ERR_INTERNAL, fbl::StringPrintf("NHLT query failed: %d",
-                                                     int(result.Unwrap_NEW()->error_value())));
+  if (result->is_error()) {
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("NHLT query failed: %d", int(result->error_value())));
   }
-  if (!result.Unwrap_NEW()->value()->result.is_resources() ||
-      result.Unwrap_NEW()->value()->result.resources().empty() ||
-      !result.Unwrap_NEW()->value()->result.resources()[0].is_mmio()) {
+  if (!result->value()->result.is_resources() || result->value()->result.resources().empty() ||
+      !result->value()->result.resources()[0].is_mmio()) {
     return Status(ZX_ERR_INTERNAL, "ACPI did not return NHLT resource");
   }
-  auto& resource = result.Unwrap_NEW()->value()->result.resources()[0].mmio();
+  auto& resource = result->value()->result.resources()[0].mmio();
   size_t size = resource.size;
   // Allocate buffer.
   fbl::AllocChecker ac;

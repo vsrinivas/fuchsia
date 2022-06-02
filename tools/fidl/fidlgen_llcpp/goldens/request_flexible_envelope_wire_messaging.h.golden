@@ -611,20 +611,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* operator->() const { return &value(); }
@@ -668,20 +656,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* operator->() const { return &value(); }
@@ -715,20 +691,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* operator->() const { return &value(); }
@@ -772,20 +736,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* operator->() const { return &value(); }

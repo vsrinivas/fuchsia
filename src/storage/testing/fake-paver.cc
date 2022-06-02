@@ -27,10 +27,10 @@ void FakePaver::UseBlockDevice(UseBlockDeviceRequestView request,
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
                                    request->block_device.borrow().channel()))
                     ->GetTopologicalPath();
-  if (!result.ok() || result.Unwrap_NEW()->is_error()) {
+  if (!result.ok() || result->is_error()) {
     return;
   }
-  const auto& path = result.Unwrap_NEW()->value()->path;
+  const auto& path = result->value()->path;
   {
     fbl::AutoLock al(&lock_);
     if (std::string(path.data(), path.size()) != expected_block_device_) {
@@ -206,7 +206,7 @@ void FakePaver::WriteVolumes(WriteVolumesRequestView request,
   }
   fidl::WireSyncClient stream = fidl::BindSyncClient(std::move(request->payload));
   auto result = stream->RegisterVmo(std::move(vmo));
-  status = result.ok() ? result.value_NEW().status : result.status();
+  status = result.ok() ? result.value().status : result.status();
   if (status != ZX_OK) {
     completer.Reply(status);
     return;
@@ -230,7 +230,7 @@ void FakePaver::WriteVolumes(WriteVolumesRequestView request,
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value_NEW();
+        const auto& response = result.value();
         switch (response.result.Which()) {
           case fuchsia_paver::wire::ReadResult::Tag::kErr:
             return response.result.err();

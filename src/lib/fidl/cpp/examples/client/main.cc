@@ -89,7 +89,7 @@ int main(int argc, const char** argv) {
   client.wire()->EchoString("hello").ThenExactlyOnce(
       [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT(result.ok());
-        fidl::WireResponse<fuchsia_examples::Echo::EchoString>& response = result.value_NEW();
+        fidl::WireResponse<fuchsia_examples::Echo::EchoString>& response = result.value();
         std::string reply(response.response.data(), response.response.size());
         std::cout << "(Wire types) got response: " << reply << std::endl;
         loop.Quit();

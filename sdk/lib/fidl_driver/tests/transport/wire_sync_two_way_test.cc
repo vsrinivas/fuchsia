@@ -81,7 +81,7 @@ TEST(DriverTransport, WireTwoWaySync) {
     fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
         client.buffer(*arena)->TwoWay(kRequestPayload);
     ASSERT_TRUE(result.ok());
-    ASSERT_EQ(kResponsePayload, result.Unwrap_NEW()->payload);
+    ASSERT_EQ(kResponsePayload, result->payload);
     ASSERT_EQ(server->fdf_response_arena, result.arena().get());
 
     // TODO(fxbug.dev/92489): If this call and wait is removed, the test will
@@ -140,7 +140,7 @@ TEST(DriverTransport, WireTwoWaySyncViaAsyncClient) {
     fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
         client.sync().buffer(*arena)->TwoWay(kRequestPayload);
     ASSERT_TRUE(result.ok());
-    ASSERT_EQ(kResponsePayload, result.Unwrap_NEW()->payload);
+    ASSERT_EQ(kResponsePayload, result->payload);
     ASSERT_EQ(server->fdf_response_arena, result.arena().get());
 
     // TODO(fxbug.dev/92489): If this call and wait is removed, the test will

@@ -32,7 +32,7 @@ TEST(NameProviderTest, GetDeviceName) {
 
   fidl::WireResult response = fidl::WireCall(client_end.value())->GetDeviceName();
   ASSERT_OK(response.status());
-  const auto* res = response.Unwrap_NEW();
+  const auto* res = response.Unwrap();
   if (res->is_error()) {
     FAIL() << zx_status_get_string(res->error_value());
   }

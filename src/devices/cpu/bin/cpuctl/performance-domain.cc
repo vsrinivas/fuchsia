@@ -45,7 +45,7 @@ std::variant<zx_status_t, CpuPerformanceDomain> CpuPerformanceDomain::CreateFrom
 
 std::pair<zx_status_t, uint64_t> CpuPerformanceDomain::GetNumLogicalCores() {
   auto resp = cpu_client_->GetNumLogicalCores();
-  return std::make_pair(resp.status(), resp.status() == ZX_OK ? resp.value_NEW().count : 0);
+  return std::make_pair(resp.status(), resp.status() == ZX_OK ? resp.value().count : 0);
 }
 
 std::tuple<zx_status_t, uint64_t, cpuctrl::wire::CpuPerformanceStateInfo>
@@ -62,7 +62,7 @@ CpuPerformanceDomain::GetCurrentPerformanceState() {
 
   const auto& pstates = GetPerformanceStates();
 
-  uint64_t current_pstate = resp.value_NEW().out_state;
+  uint64_t current_pstate = resp.value().out_state;
 
   cpuctrl::wire::CpuPerformanceStateInfo pstate_result = kEmptyPstate;
   if (current_pstate >= pstates.size()) {
@@ -84,11 +84,11 @@ CpuPerformanceDomain::GetPerformanceStates() {
   for (uint32_t i = 0; i < kMaxDevicePerformanceStates; i++) {
     auto resp = cpu_client_->GetPerformanceStateInfo(i);
 
-    if (resp.status() != ZX_OK || resp.Unwrap_NEW()->is_error()) {
+    if (resp.status() != ZX_OK || resp->is_error()) {
       continue;
     }
 
-    cached_pstates_.push_back(resp.Unwrap_NEW()->value()->info);
+    cached_pstates_.push_back(resp->value()->info);
   }
 
   return cached_pstates_;
@@ -105,11 +105,11 @@ zx_status_t CpuPerformanceDomain::SetPerformanceState(uint32_t new_performance_s
     return result.status();
   }
 
-  if (result.value_NEW().status != ZX_OK) {
-    return result.value_NEW().status;
+  if (result.value().status != ZX_OK) {
+    return result.value().status;
   }
 
-  if (result.value_NEW().out_state != new_performance_state) {
+  if (result.value().out_state != new_performance_state) {
     return ZX_ERR_INTERNAL;
   }
 

@@ -74,25 +74,23 @@ SyncDevice::~SyncDevice() {
 
 zx_status_t SyncDevice::Bind() {
   auto bti_result = acpi_fidl_.borrow()->GetBti(0);
-  if (!bti_result.ok() || bti_result.Unwrap_NEW()->is_error()) {
-    zx_status_t status =
-        bti_result.ok() ? bti_result.Unwrap_NEW()->error_value() : bti_result.status();
+  if (!bti_result.ok() || bti_result->is_error()) {
+    zx_status_t status = bti_result.ok() ? bti_result->error_value() : bti_result.status();
     zxlogf(ERROR, "GetBti failed: %d %d", status, bti_result.ok());
     return status;
   }
-  bti_ = std::move(bti_result.Unwrap_NEW()->value()->bti);
+  bti_ = std::move(bti_result->value()->bti);
 
   auto mmio_result = acpi_fidl_.borrow()->GetMmio(0);
-  if (!mmio_result.ok() || mmio_result.Unwrap_NEW()->is_error()) {
-    zx_status_t status =
-        mmio_result.ok() ? mmio_result.Unwrap_NEW()->error_value() : mmio_result.status();
+  if (!mmio_result.ok() || mmio_result->is_error()) {
+    zx_status_t status = mmio_result.ok() ? mmio_result->error_value() : mmio_result.status();
     zxlogf(ERROR, "GetMmio failed: %d", status);
     return status;
   }
 
   {
     fbl::AutoLock lock(&mmio_lock_);
-    auto& mmio = mmio_result.Unwrap_NEW()->value()->mmio;
+    auto& mmio = mmio_result->value()->mmio;
     zx_status_t status = fdf::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
                                                  ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
     if (status != ZX_OK) {
@@ -102,12 +100,12 @@ zx_status_t SyncDevice::Bind() {
   }
 
   auto result = acpi_fidl_.borrow()->MapInterrupt(0);
-  if (!result.ok() || result.Unwrap_NEW()->is_error()) {
+  if (!result.ok() || result->is_error()) {
     zxlogf(ERROR, "map_interrupt failed: %d",
-           !result.ok() ? result.status() : result.Unwrap_NEW()->error_value());
+           !result.ok() ? result.status() : result->error_value());
     return result.status();
   }
-  irq_.reset(result.Unwrap_NEW()->value()->irq.release());
+  irq_.reset(result->value()->irq.release());
 
   irq_thread_.emplace(thrd_t{});
   int rc = thrd_create_with_name(

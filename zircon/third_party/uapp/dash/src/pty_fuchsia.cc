@@ -13,9 +13,9 @@ zx_status_t pty_read_events(zx_handle_t handle, uint32_t* out_events) {
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  if (result.value_NEW().status != ZX_OK) {
-    return result.value_NEW().status;
+  if (result.value().status != ZX_OK) {
+    return result.value().status;
   }
-  *out_events = result.value_NEW().events;
+  *out_events = result.value().events;
   return ZX_OK;
 }

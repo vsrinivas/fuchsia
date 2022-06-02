@@ -124,7 +124,7 @@ TEST_F(HealthCheckServiceTest, PopulatedFilesystemPassesChecks) {
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
   // Balance out the OpenValidating() calls above so the node can clean up properly.
   for (auto& file : files) {
@@ -144,7 +144,7 @@ TEST_F(HealthCheckServiceTest, NullBlobPassesChecks) {
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
   // Balance out the OpenValidating() call above so the node can clean up properly.
   file->Close();
@@ -163,7 +163,7 @@ TEST_F(HealthCheckServiceTest, InvalidFileFailsChecks) {
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
-  ASSERT_TRUE(result.Unwrap_NEW()->is_error());
+  ASSERT_TRUE(result->is_error());
 
   // Balance out the OpenValidating() call above so the node can clean up properly.
   file->Close();
@@ -177,7 +177,7 @@ TEST_F(HealthCheckServiceTest, InvalidButClosedFilePassesChecks) {
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client->Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error();
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 }
 
 }  // namespace

@@ -123,15 +123,15 @@ TEST(PbusTest, Enumeration) {
   auto board_info = client->GetBoardName();
   EXPECT_OK(board_info.status());
   EXPECT_TRUE(board_info.ok());
-  EXPECT_BYTES_EQ(board_info.value_NEW().name.cbegin(), "driver-integration-test",
-                  board_info.value_NEW().name.size());
-  EXPECT_EQ(board_info.value_NEW().name.size(), strlen("driver-integration-test"));
+  EXPECT_BYTES_EQ(board_info.value().name.cbegin(), "driver-integration-test",
+                  board_info.value().name.size());
+  EXPECT_EQ(board_info.value().name.size(), strlen("driver-integration-test"));
 
   // Get interrupt controller information.
   auto irq_ctrl_info = client->GetInterruptControllerInfo();
   EXPECT_OK(irq_ctrl_info.status());
   EXPECT_TRUE(irq_ctrl_info.ok());
-  EXPECT_NE(nullptr, irq_ctrl_info.value_NEW().info);
+  EXPECT_NE(nullptr, irq_ctrl_info.value().info);
 
   // Get board revision information.
   auto board_revision = client->GetBoardRevision();

@@ -316,8 +316,8 @@ zx_status_t Device::CreateNode() {
       completer.complete_error(result.error().status());
       return;
     }
-    if (result.Unwrap_NEW()->is_error()) {
-      completer.complete_error(result.Unwrap_NEW()->error_value());
+    if (result->is_error()) {
+      completer.complete_error(result->error_value());
       return;
     }
     completer.complete_ok();

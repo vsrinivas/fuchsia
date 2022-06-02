@@ -183,8 +183,8 @@ TEST_F(AcpiDeviceTest, TestGetBusId) {
 
   auto result = fidl_client_->GetBusId();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-  ASSERT_EQ(result.Unwrap_NEW()->value()->bus_id, 37);
+  ASSERT_TRUE(result->is_ok());
+  ASSERT_EQ(result->value()->bus_id, 37);
 }
 
 TEST_F(AcpiDeviceTest, TestAcquireGlobalLockAccessDenied) {
@@ -198,8 +198,8 @@ TEST_F(AcpiDeviceTest, TestAcquireGlobalLockAccessDenied) {
 
   auto result = fidl_client_->AcquireGlobalLock();
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-  ASSERT_EQ(result.Unwrap_NEW()->error_value(), fuchsia_hardware_acpi::wire::Status::kAccess);
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_hardware_acpi::wire::Status::kAccess);
 }
 
 // _GLK method exists, but returns zero.
@@ -215,8 +215,8 @@ TEST_F(AcpiDeviceTest, TestAcquireGlobalLockAccessDeniedButMethodExists) {
 
   auto result = fidl_client_->AcquireGlobalLock();
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-  ASSERT_EQ(result.Unwrap_NEW()->error_value(), fuchsia_hardware_acpi::wire::Status::kAccess);
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_hardware_acpi::wire::Status::kAccess);
 }
 
 TEST_F(AcpiDeviceTest, TestAcquireGlobalLockImplicitRelease) {
@@ -234,8 +234,7 @@ TEST_F(AcpiDeviceTest, TestAcquireGlobalLockImplicitRelease) {
   {
     auto result = fidl_client_->AcquireGlobalLock();
     ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.Unwrap_NEW()->is_ok(), "ACPI error %d",
-                int(result.Unwrap_NEW()->error_value()));
+    ASSERT_TRUE(result->is_ok(), "ACPI error %d", int(result->error_value()));
 
     std::thread thread([&acquired, &running, this]() {
       sync_completion_signal(&running);
@@ -276,7 +275,7 @@ TEST_F(AcpiDeviceTest, TestInstallNotifyHandler) {
   auto result = fidl_client_->InstallNotifyHandler(
       fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
   hnd->Notify(32);
   sync_completion_wait(&done, ZX_TIME_INFINITE);
@@ -306,7 +305,7 @@ TEST_F(AcpiDeviceTest, TestNotifyHandlerDropsEvents) {
   auto result = fidl_client_->InstallNotifyHandler(
       fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
   zx_status_t status = ZX_OK;
   for (size_t i = 0; i < 2000; i++) {
@@ -349,8 +348,7 @@ TEST_F(AcpiDeviceTest, RemoveAndAddNotifyHandler) {
     auto result = fidl_client_->InstallNotifyHandler(
         fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error(), "error %d",
-                 int(result.Unwrap_NEW()->error_value()));
+    ASSERT_FALSE(result->is_error(), "error %d", int(result->error_value()));
   }
 
   // Destroy the server, which will close the channel.
@@ -367,7 +365,7 @@ TEST_F(AcpiDeviceTest, RemoveAndAddNotifyHandler) {
     auto result = fidl_client_->InstallNotifyHandler(
         fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+    ASSERT_FALSE(result->is_error());
   }
 
   hnd->Notify(32);
@@ -396,7 +394,7 @@ TEST_F(AcpiDeviceTest, ReceiveEventAfterUnbind) {
   auto result = fidl_client_->InstallNotifyHandler(
       fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
   device_async_remove(ptr->zxdev());
   ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(mock_root_.get()));
@@ -420,7 +418,7 @@ TEST_F(AcpiDeviceTest, TestAddressHandlerInstall) {
   auto result = fidl_client_->InstallAddressSpaceHandler(
       fuchsia_hardware_acpi::wire::AddressSpace::kEc, std::move(client));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(result->is_ok());
 }
 
 TEST_F(AcpiDeviceTest, TestAddressHandlerReadWrite) {
@@ -440,7 +438,7 @@ TEST_F(AcpiDeviceTest, TestAddressHandlerReadWrite) {
   auto result = fidl_client_->InstallAddressSpaceHandler(
       fuchsia_hardware_acpi::wire::AddressSpace::kEc, std::move(client));
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(result->is_ok());
 
   server->data_.resize(256, 0);
   UINT64 value = 0xff;

@@ -414,22 +414,22 @@ TEST_F(Gt6853Test, GetDescriptor) {
   auto response = client->GetDescriptor();
 
   ASSERT_TRUE(response.ok());
-  ASSERT_TRUE(response.value_NEW().descriptor.has_device_info());
-  ASSERT_TRUE(response.value_NEW().descriptor.has_touch());
-  ASSERT_TRUE(response.value_NEW().descriptor.touch().has_input());
-  ASSERT_TRUE(response.value_NEW().descriptor.touch().input().has_contacts());
-  ASSERT_TRUE(response.value_NEW().descriptor.touch().input().has_max_contacts());
-  ASSERT_TRUE(response.value_NEW().descriptor.touch().input().has_touch_type());
-  ASSERT_EQ(response.value_NEW().descriptor.touch().input().contacts().count(), 10);
+  ASSERT_TRUE(response.value().descriptor.has_device_info());
+  ASSERT_TRUE(response.value().descriptor.has_touch());
+  ASSERT_TRUE(response.value().descriptor.touch().has_input());
+  ASSERT_TRUE(response.value().descriptor.touch().input().has_contacts());
+  ASSERT_TRUE(response.value().descriptor.touch().input().has_max_contacts());
+  ASSERT_TRUE(response.value().descriptor.touch().input().has_touch_type());
+  ASSERT_EQ(response.value().descriptor.touch().input().contacts().count(), 10);
 
-  EXPECT_EQ(response.value_NEW().descriptor.device_info().vendor_id,
+  EXPECT_EQ(response.value().descriptor.device_info().vendor_id,
             static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle));
-  EXPECT_EQ(response.value_NEW().descriptor.device_info().product_id,
+  EXPECT_EQ(response.value().descriptor.device_info().product_id,
             static_cast<uint32_t>(
                 fuchsia_input_report::wire::VendorGoogleProductId::kFocaltechTouchscreen));
 
   for (size_t i = 0; i < 10; i++) {
-    const auto& contact = response.value_NEW().descriptor.touch().input().contacts()[i];
+    const auto& contact = response.value().descriptor.touch().input().contacts()[i];
     ASSERT_TRUE(contact.has_position_x());
     ASSERT_TRUE(contact.has_position_y());
 
@@ -444,8 +444,8 @@ TEST_F(Gt6853Test, GetDescriptor) {
     EXPECT_EQ(contact.position_y().unit.exponent, 0);
   }
 
-  EXPECT_EQ(response.value_NEW().descriptor.touch().input().max_contacts(), 10);
-  EXPECT_EQ(response.value_NEW().descriptor.touch().input().touch_type(),
+  EXPECT_EQ(response.value().descriptor.touch().input().max_contacts(), 10);
+  EXPECT_EQ(response.value().descriptor.touch().input().touch_type(),
             fuchsia_input_report::wire::TouchType::kTouchscreen);
 }
 
@@ -470,9 +470,9 @@ TEST_F(Gt6853Test, ReadReport) {
 
   const auto response = reader->ReadInputReports();
   ASSERT_TRUE(response.ok());
-  ASSERT_TRUE(response.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(response->is_ok());
 
-  const auto& reports = response.Unwrap_NEW()->value()->reports;
+  const auto& reports = response->value()->reports;
 
   ASSERT_EQ(reports.count(), 1);
   ASSERT_TRUE(reports[0].has_touch());
@@ -730,8 +730,8 @@ TEST_F(Gt6853Test, LatencyMeasurements) {
 
   for (size_t reports = 0; reports < 5;) {
     const auto response = reader->ReadInputReports();
-    if (response.ok() && response.Unwrap_NEW()->is_ok()) {
-      reports += response.Unwrap_NEW()->value()->reports.count();
+    if (response.ok() && response->is_ok()) {
+      reports += response->value()->reports.count();
     }
   }
 

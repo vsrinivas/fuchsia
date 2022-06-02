@@ -398,8 +398,8 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
-  if (response.Unwrap_NEW()->is_error()) {
-    call_status = response.Unwrap_NEW()->error_value();
+  if (response->is_error()) {
+    call_status = response->error_value();
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(coordinator().shutdown_system_state(),
@@ -427,8 +427,8 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
-  if (response.Unwrap_NEW()->is_error()) {
-    call_status = response.Unwrap_NEW()->error_value();
+  if (response->is_error()) {
+    call_status = response->error_value();
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(coordinator().shutdown_system_state(),
@@ -453,8 +453,8 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
 
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
-  if (response.Unwrap_NEW()->is_error()) {
-    call_status = response.Unwrap_NEW()->error_value();
+  if (response->is_error()) {
+    call_status = response->error_value();
   }
   ASSERT_EQ(call_status, ZX_ERR_INVALID_ARGS);
   // Default shutdown_system_state in test is MEXEC.
@@ -513,7 +513,7 @@ class UnsupportedEpitaphMatcher {
   template <typename FidlMethod>
   void operator()(fidl::WireUnownedResult<FidlMethod>& result) {
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value_NEW().s, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(result.value().s, ZX_ERR_NOT_SUPPORTED);
   }
 };
 
@@ -522,8 +522,8 @@ class UnsupportedErrorMatcher {
   template <typename FidlMethod>
   void operator()(fidl::WireUnownedResult<FidlMethod>& result) {
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    ASSERT_STATUS(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_SUPPORTED);
+    ASSERT_TRUE(result->is_error());
+    ASSERT_STATUS(result->error_value(), ZX_ERR_NOT_SUPPORTED);
   }
 };
 
@@ -544,8 +544,8 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
     client->Rename("", std::move(e), "")
         .ThenExactlyOnce([](fidl::WireUnownedResult<fuchsia_io::Directory::Rename>& ret) {
           ASSERT_OK(ret.status());
-          ASSERT_TRUE(ret.Unwrap_NEW()->is_error());
-          ASSERT_EQ(ret.Unwrap_NEW()->error_value(), ZX_ERR_NOT_SUPPORTED);
+          ASSERT_TRUE(ret->is_error());
+          ASSERT_EQ(ret->error_value(), ZX_ERR_NOT_SUPPORTED);
         });
   }
   client->GetToken().ThenExactlyOnce(UnsupportedEpitaphMatcher());

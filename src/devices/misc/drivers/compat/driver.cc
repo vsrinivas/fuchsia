@@ -83,7 +83,7 @@ promise<void, zx_status_t> GetAndAddMetadata(
         if (!result.ok()) {
           return;
         }
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         if (response->is_error()) {
           completer.complete_error(response->error_value());
           return;
@@ -280,7 +280,7 @@ promise<zx::resource, zx_status_t> Driver::GetRootResource(
       completer.complete_error(result.status());
       return;
     }
-    completer.complete_ok(std::move(result.value_NEW().resource));
+    completer.complete_ok(std::move(result.value().resource));
   };
   root_resource->Get().ThenExactlyOnce(std::move(callback));
   return bridge.consumer.promise();
@@ -295,7 +295,7 @@ promise<Driver::FileVmo, zx_status_t> Driver::GetBuffer(
       completer.complete_error(result.status());
       return;
     }
-    const auto* res = result.Unwrap_NEW();
+    const auto* res = result.Unwrap();
     if (res->is_error()) {
       completer.complete_error(res->error_value());
       return;
@@ -366,10 +366,10 @@ result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos)
               url_.data(), result.status_string());
       return error(result.status());
     }
-    if (result.value_NEW().rv != ZX_OK) {
+    if (result.value().rv != ZX_OK) {
       FDF_LOG(ERROR, "Failed to load driver '%s', cloning loader failed with status: %s",
-              url_.data(), zx_status_get_string(result.value_NEW().rv));
-      return error(result.value_NEW().rv);
+              url_.data(), zx_status_get_string(result.value().rv));
+      return error(result.value().rv);
     }
 
     // Start loader.
@@ -500,7 +500,7 @@ promise<void, zx_status_t> Driver::GetDeviceInfo() {
         if (!result.ok()) {
           return;
         }
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         device_.set_topological_path(std::string(response->path.data(), response->path.size()));
         completer.complete_ok();
       });
@@ -557,7 +557,7 @@ zx::status<zx::vmo> Driver::LoadFirmware(Device* device, const char* filename, s
     }
     return zx::error(get_backing_memory_result.status());
   }
-  const auto* res = get_backing_memory_result.Unwrap_NEW();
+  const auto* res = get_backing_memory_result.Unwrap();
   if (res->is_error()) {
     return zx::error(res->error_value());
   }
@@ -646,7 +646,7 @@ zx::status<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const cha
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  fidl::WireResponse response = std::move(result.value_NEW());
+  fidl::WireResponse response = std::move(result.value());
   if (response.status != ZX_OK) {
     return zx::error(response.status);
   }
@@ -669,7 +669,7 @@ zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t d
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  fidl::WireResponse response = std::move(result.value_NEW());
+  fidl::WireResponse response = std::move(result.value());
   if (response.status != ZX_OK) {
     return zx::error(response.status);
   }

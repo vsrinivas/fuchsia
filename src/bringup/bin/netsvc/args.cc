@@ -43,7 +43,7 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
   fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end.value()));
   fidl::WireResult string_resp = client->GetString(fidl::StringView{"netsvc.interface"});
   if (string_resp.ok()) {
-    auto& value = string_resp.Unwrap_NEW()->value;
+    auto& value = string_resp->value;
     out->interface = std::string{value.data(), value.size()};
   }
 
@@ -57,10 +57,10 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
   fidl::WireResult bool_resp =
       client->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
   if (bool_resp.ok()) {
-    out->disable = bool_resp.Unwrap_NEW()->values[0];
-    out->netboot = bool_resp.Unwrap_NEW()->values[1];
-    out->advertise = bool_resp.Unwrap_NEW()->values[2];
-    out->all_features = bool_resp.Unwrap_NEW()->values[3];
+    out->disable = bool_resp->values[0];
+    out->netboot = bool_resp->values[1];
+    out->advertise = bool_resp->values[2];
+    out->all_features = bool_resp->values[3];
   }
 
   int err = ParseCommonArgs(argc, argv, error, &out->interface);

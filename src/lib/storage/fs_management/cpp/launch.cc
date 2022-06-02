@@ -67,7 +67,7 @@ zx_handle_t RetriveWriteOnlyDebuglogHandle() {
     return ZX_HANDLE_INVALID;
   }
 
-  return resp.value_NEW().log.release();
+  return resp.value().log.release();
 }
 
 // Initializes Stdio.

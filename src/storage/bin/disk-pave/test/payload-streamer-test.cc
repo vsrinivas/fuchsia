@@ -56,7 +56,7 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   auto result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(result.status());
-  EXPECT_OK(result.value_NEW().status);
+  EXPECT_OK(result.value().status);
 }
 
 TEST_F(PayloadStreamerTest, RegisterMultipleVmo) {
@@ -65,13 +65,13 @@ TEST_F(PayloadStreamerTest, RegisterMultipleVmo) {
   {
     auto result = client_->RegisterVmo(std::move(vmo));
     ASSERT_OK(result.status());
-    EXPECT_OK(result.value_NEW().status);
+    EXPECT_OK(result.value().status);
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   }
   {
     auto result = client_->RegisterVmo(std::move(vmo));
     ASSERT_OK(result.status());
-    EXPECT_EQ(result.value_NEW().status, ZX_ERR_ALREADY_BOUND);
+    EXPECT_EQ(result.value().status, ZX_ERR_ALREADY_BOUND);
   }
 }
 
@@ -82,7 +82,7 @@ TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
 TEST_F(PayloadStreamerTest, ReadNoVmoRegistered) {
   auto call_result = client_->ReadData();
   ASSERT_OK(call_result.status());
-  const fuchsia_paver::wire::ReadResult& result = call_result.value_NEW().result;
+  const fuchsia_paver::wire::ReadResult& result = call_result.value().result;
   ASSERT_TRUE(result.is_err());
   EXPECT_NE(result.err(), ZX_OK);
 }
@@ -93,16 +93,16 @@ TEST_F(PayloadStreamerTest, ReadData) {
   ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
   auto register_result = client_->RegisterVmo(std::move(dup));
   ASSERT_OK(register_result.status());
-  EXPECT_OK(register_result.value_NEW().status);
+  EXPECT_OK(register_result.value().status);
 
   auto read_result = client_->ReadData();
   ASSERT_OK(read_result.status());
-  ASSERT_TRUE(read_result.value_NEW().result.is_info());
+  ASSERT_TRUE(read_result.value().result.is_info());
 
   char buffer[sizeof(kFileData)] = {};
-  ASSERT_EQ(read_result.value_NEW().result.info().size, sizeof(buffer));
-  ASSERT_OK(vmo.read(buffer, read_result.value_NEW().result.info().offset,
-                     read_result.value_NEW().result.info().size));
+  ASSERT_EQ(read_result.value().result.info().size, sizeof(buffer));
+  ASSERT_OK(vmo.read(buffer, read_result.value().result.info().offset,
+                     read_result.value().result.info().size));
   ASSERT_EQ(memcmp(kFileData, buffer, sizeof(buffer)), 0);
 }
 
@@ -111,24 +111,24 @@ TEST_F(PayloadStreamerTest, ReadEof) {
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   auto register_result = client_->RegisterVmo(std::move(vmo));
   ASSERT_OK(register_result.status());
-  EXPECT_OK(register_result.value_NEW().status);
+  EXPECT_OK(register_result.value().status);
 
   {
     fidl::WireResult<fuchsia_paver::PayloadStream::ReadData> call_result = client_->ReadData();
     ASSERT_OK(call_result.status());
-    ASSERT_TRUE(call_result.value_NEW().result.is_info());
+    ASSERT_TRUE(call_result.value().result.is_info());
   }
 
   {
     auto call_result = client_->ReadData();
     ASSERT_OK(call_result.status());
-    ASSERT_TRUE(call_result.value_NEW().result.is_eof());
+    ASSERT_TRUE(call_result.value().result.is_eof());
   }
 
   {
     auto call_result = client_->ReadData();
     ASSERT_OK(call_result.status());
-    ASSERT_TRUE(call_result.value_NEW().result.is_eof());
+    ASSERT_TRUE(call_result.value().result.is_eof());
   }
 }
 

@@ -2462,18 +2462,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* operator->() const { return &value(); }
@@ -2528,18 +2518,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>* operator->() const { return &value(); }
@@ -2572,18 +2552,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* operator->() const { return &value(); }
@@ -2638,18 +2608,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>* operator->() const { return &value(); }
@@ -2682,18 +2642,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* operator->() const { return &value(); }
@@ -2748,18 +2698,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>* operator->() const { return &value(); }
@@ -2792,18 +2732,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* operator->() const { return &value(); }
@@ -2858,18 +2788,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>* operator->() const { return &value(); }
@@ -2902,18 +2822,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* operator->() const { return &value(); }
@@ -2968,18 +2878,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>* operator->() const { return &value(); }

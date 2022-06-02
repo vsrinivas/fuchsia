@@ -85,12 +85,12 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
   auto result = resolver_client_->Resolve(
       ::fidl::StringView(fidl::StringView::FromExternal(package_url.package_path())),
       std::move(endpoints->server));
-  if (!result.ok() || result.Unwrap_NEW()->is_error()) {
+  if (!result.ok() || result->is_error()) {
     LOGF(ERROR, "Failed to resolve package");
     if (!result.ok()) {
       return zx::error(ZX_ERR_INTERNAL);
     } else {
-      switch (result.Unwrap_NEW()->error_value()) {
+      switch (result->error_value()) {
         case fuchsia_pkg::wire::ResolveError::kIo:
           return zx::error(ZX_ERR_IO);
         case fuchsia_pkg::wire::ResolveError::kAccessDenied:
@@ -141,7 +141,7 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
     LOGF(ERROR, "Failed to get driver vmo: %s", file_res.FormatDescription().c_str());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  const auto* res = file_res.Unwrap_NEW();
+  const auto* res = file_res.Unwrap();
   if (res->is_error()) {
     LOGF(ERROR, "Failed to get driver vmo: %s", zx_status_get_string(res->error_value()));
     return zx::error(ZX_ERR_INTERNAL);

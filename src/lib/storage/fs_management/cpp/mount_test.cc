@@ -46,8 +46,8 @@ void CheckMountedFs(const char* path, const char* fs_name) {
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fidl::WireCall(caller.directory())->QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.value_NEW().s, ZX_OK);
-  fuchsia_io::wire::FilesystemInfo info = *result.value_NEW().info;
+  ASSERT_EQ(result.value().s, ZX_OK);
+  fuchsia_io::wire::FilesystemInfo info = *result.value().info;
   ASSERT_EQ(strncmp(fs_name, reinterpret_cast<char*>(info.name.data()), strlen(fs_name)), 0);
   ASSERT_LE(info.used_nodes, info.total_nodes) << "Used nodes greater than free nodes";
   ASSERT_LE(info.used_bytes, info.total_bytes) << "Used bytes greater than free bytes";
@@ -226,24 +226,24 @@ void GetPartitionSliceCount(fidl::UnownedClientEnd<fuchsia_hardware_block_volume
                             size_t* out_count) {
   auto res = fidl::WireCall(volume)->GetVolumeInfo();
   ASSERT_EQ(res.status(), ZX_OK);
-  ASSERT_EQ(res.value_NEW().status, ZX_OK);
+  ASSERT_EQ(res.value().status, ZX_OK);
 
   size_t allocated_slices = 0;
   std::vector<uint64_t> start_slices = {0};
-  while (start_slices[0] < res.value_NEW().manager->max_virtual_slice) {
+  while (start_slices[0] < res.value().manager->max_virtual_slice) {
     auto res =
         fidl::WireCall(volume)->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(start_slices));
     ASSERT_EQ(res.status(), ZX_OK);
-    ASSERT_EQ(res.value_NEW().status, ZX_OK);
+    ASSERT_EQ(res.value().status, ZX_OK);
 
-    start_slices[0] += res.value_NEW().response[0].count;
-    if (res.value_NEW().response[0].allocated) {
-      allocated_slices += res.value_NEW().response[0].count;
+    start_slices[0] += res.value().response[0].count;
+    if (res.value().response[0].allocated) {
+      allocated_slices += res.value().response[0].count;
     }
   }
 
   // The two methods of getting the partition slice count should agree.
-  ASSERT_EQ(res.value_NEW().volume->partition_slice_count, allocated_slices);
+  ASSERT_EQ(res.value().volume->partition_slice_count, allocated_slices);
 
   *out_count = allocated_slices;
 }

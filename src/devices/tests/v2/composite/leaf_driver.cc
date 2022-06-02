@@ -67,7 +67,7 @@ class LeafDriver {
       FDF_LOG(ERROR, "Failed to call number on %s: %s", path.data(), result.lossy_description());
       return zx::error(result.status());
     }
-    return zx::ok(result.value_NEW().number);
+    return zx::ok(result.value().number);
   }
 
   result<void, zx_status_t> DoWork(const fidl::WireSharedClient<ft::Waiter>& waiter) {

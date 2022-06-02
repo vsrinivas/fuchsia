@@ -422,7 +422,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
                       result.status());
 
     fidl::WireResponse<fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>* response =
-        result.Unwrap_NEW();
+        result.Unwrap();
 
     if (response->status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitForBuffersAllocated failed: %d",
@@ -445,7 +445,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
                       result.status());
 
     fidl::WireResponse<fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>* response =
-        result.Unwrap_NEW();
+        result.Unwrap();
 
     if (response->status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "WaitForBuffersAllocated failed: %d",
@@ -610,7 +610,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
                       result.status());
 
     fidl::WireResponse<fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>* response =
-        result.Unwrap_NEW();
+        result.Unwrap();
 
     if (response->status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",

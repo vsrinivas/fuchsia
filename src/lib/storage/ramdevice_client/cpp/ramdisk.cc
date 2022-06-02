@@ -249,8 +249,8 @@ struct ramdisk_client {
     if (status != ZX_OK) {
       return status;
     }
-    if (resp.Unwrap_NEW()->is_error()) {
-      call_status = resp.Unwrap_NEW()->error_value();
+    if (resp->is_error()) {
+      call_status = resp->error_value();
     }
     return call_status;
   }

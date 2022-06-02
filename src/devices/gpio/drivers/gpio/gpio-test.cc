@@ -71,7 +71,7 @@ TEST_F(GpioTest, TestFidlAll) {
   gpio_impl_.ExpectRead(ZX_OK, 0, 20);
   auto result_read = client->Read();
   EXPECT_OK(result_read.status());
-  EXPECT_EQ(result_read.Unwrap_NEW()->value()->value, 20);
+  EXPECT_EQ(result_read->value()->value, 20);
 
   gpio_impl_.ExpectWrite(ZX_OK, 0, 11);
   auto result_write = client->Write(11);
@@ -88,12 +88,12 @@ TEST_F(GpioTest, TestFidlAll) {
   gpio_impl_.ExpectSetDriveStrength(ZX_OK, 0, 2000, 2000);
   auto result_drivestrength = client->SetDriveStrength(2000);
   EXPECT_OK(result_drivestrength.status());
-  EXPECT_EQ(result_drivestrength.Unwrap_NEW()->value()->actual_ds_ua, 2000);
+  EXPECT_EQ(result_drivestrength->value()->actual_ds_ua, 2000);
 
   gpio_impl_.ExpectGetDriveStrength(ZX_OK, 0, 2000);
   auto result_getds = client->GetDriveStrength();
   EXPECT_OK(result_getds.status());
-  EXPECT_EQ(result_getds.Unwrap_NEW()->value()->result_ua, 2000);
+  EXPECT_EQ(result_getds->value()->result_ua, 2000);
 }
 
 TEST_F(GpioTest, TestBanjoSetDriveStrength) {

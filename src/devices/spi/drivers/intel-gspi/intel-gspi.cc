@@ -105,14 +105,14 @@ void GspiDevice::DdkInit(ddk::InitTxn txn) {
     status = result.status();
     return;
   }
-  if (result.Unwrap_NEW()->is_error()) {
+  if (result->is_error()) {
     // This probably just means that we don't have any children.
     // This is not an error. We should just put the SPI bus into some kind of
     // low-power state.
     return;
   }
 
-  uint32_t bus_id = result.Unwrap_NEW()->value()->bus_id;
+  uint32_t bus_id = result->value()->bus_id;
   zxlogf(INFO, "using SPI bus ID %u", bus_id);
   status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &bus_id, sizeof(bus_id));
 }

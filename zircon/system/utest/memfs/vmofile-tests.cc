@@ -93,7 +93,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     const fidl::WireResult get_result =
         fidl::WireCall(file)->GetBackingMemory(fio::wire::VmoFlags::kRead);
     ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
-    const auto& get_response = get_result.value_NEW();
+    const auto& get_response = get_result.value();
     ASSERT_TRUE(get_response.is_ok(), "%s", zx_status_get_string(get_response.error_value()));
     const zx::vmo& vmo = get_response.value()->vmo;
     ASSERT_TRUE(vmo.is_valid());
@@ -107,7 +107,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
         fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kPrivateClone);
     ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
-    const auto& get_response = get_result.value_NEW();
+    const auto& get_response = get_result.value();
     ASSERT_TRUE(get_response.is_ok(), "%s", zx_status_get_string(get_response.error_value()));
     const zx::vmo& vmo = get_response.value()->vmo;
     ASSERT_TRUE(vmo.is_valid());
@@ -121,7 +121,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
         fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute);
     ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
-    const auto& get_response = get_result.value_NEW();
+    const auto& get_response = get_result.value();
     ASSERT_TRUE(get_response.is_error());
     ASSERT_STATUS(get_response.error_value(), ZX_ERR_ACCESS_DENIED);
   }
@@ -130,7 +130,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
         fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kWrite);
     ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
-    const auto& get_response = get_result.value_NEW();
+    const auto& get_response = get_result.value();
     ASSERT_TRUE(get_response.is_error());
     ASSERT_STATUS(get_response.error_value(), ZX_ERR_ACCESS_DENIED);
   }
@@ -138,7 +138,7 @@ TEST(VmofileTests, test_vmofile_basic) {
   {
     auto describe_result = fidl::WireCall(file)->Describe();
     ASSERT_OK(describe_result.status());
-    fio::wire::NodeInfo* info = &describe_result.Unwrap_NEW()->info;
+    fio::wire::NodeInfo* info = &describe_result->info;
     ASSERT_TRUE(info->is_vmofile());
     ASSERT_EQ(info->vmofile().offset, 0u);
     ASSERT_EQ(info->vmofile().length, 13u);
@@ -150,7 +150,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     const fidl::WireResult seek_result =
         fidl::WireCall(file)->Seek(fio::wire::SeekOrigin::kStart, 7u);
     ASSERT_TRUE(seek_result.ok(), "%s", seek_result.status_string());
-    const fitx::result response = seek_result.value_NEW();
+    const fitx::result response = seek_result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->offset_from_start, 7u);
   }
@@ -178,7 +178,7 @@ TEST(VmofileTests, test_vmofile_exec) {
   ASSERT_OK(client_end.status_value());
   fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
   ASSERT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
-  auto& response = result.value_NEW();
+  auto& response = result.value();
 
   ASSERT_OK(read_exec_vmo.replace_as_executable(std::move(response.resource), &read_exec_vmo));
   ASSERT_OK(vfs->CreateFromVmo(root.get(), "read_exec", read_exec_vmo.get(), 0, 13));
@@ -197,7 +197,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     const fidl::WireResult get_result =
         fidl::WireCall(file)->GetBackingMemory(fio::wire::VmoFlags::kRead);
     ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
-    const auto& get_response = get_result.value_NEW();
+    const auto& get_response = get_result.value();
     ASSERT_TRUE(get_response.is_ok(), "%s", zx_status_get_string(get_response.error_value()));
     const zx::vmo& vmo = get_response.value()->vmo;
     ASSERT_TRUE(vmo.is_valid());
@@ -213,7 +213,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
         fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute);
     ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
-    const auto& get_response = get_result.value_NEW();
+    const auto& get_response = get_result.value();
     ASSERT_TRUE(get_response.is_ok(), "%s", zx_status_get_string(get_response.error_value()));
     const zx::vmo& vmo = get_response.value()->vmo;
     ASSERT_TRUE(vmo.is_valid());
@@ -227,7 +227,7 @@ TEST(VmofileTests, test_vmofile_exec) {
     // Describe should also return a VMO with ZX_RIGHT_EXECUTE.
     auto describe_result = fidl::WireCall(file)->Describe();
     ASSERT_OK(describe_result.status());
-    fio::wire::NodeInfo* info = &describe_result.Unwrap_NEW()->info;
+    fio::wire::NodeInfo* info = &describe_result->info;
     ASSERT_TRUE(info->is_vmofile());
     ASSERT_EQ(info->vmofile().offset, 0u);
     ASSERT_EQ(info->vmofile().length, 13u);

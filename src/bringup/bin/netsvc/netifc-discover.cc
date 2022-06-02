@@ -39,7 +39,7 @@ struct Ethernet {
              result.status_string());
       return std::nullopt;
     }
-    auto& resp = result.value_NEW();
+    auto& resp = result.value();
     if (resp.info.features & fuchsia_hardware_ethernet::wire::Features::kWlan) {
       return std::nullopt;
     }
@@ -134,7 +134,7 @@ struct Netdevice {
             Watch(discovered, watcher, std::move(dev));
           });
 
-          const fuchsia_hardware_network::wire::DevicePortEvent& event = r.value_NEW().event;
+          const fuchsia_hardware_network::wire::DevicePortEvent& event = r.value().event;
           fuchsia_hardware_network::wire::PortId port_id;
           switch (event.Which()) {
             case fuchsia_hardware_network::wire::DevicePortEvent::Tag::kAdded:
@@ -170,7 +170,7 @@ struct Netdevice {
                      port_id.salt, result.FormatDescription().c_str());
               return;
             }
-            const fuchsia_hardware_network::wire::PortInfo& port_info = result.value_NEW().info;
+            const fuchsia_hardware_network::wire::PortInfo& port_info = result.value().info;
             if (!port_info.has_class()) {
               printf("netifc: missing port class in  netdevice port info (%d:%d): %s\n",
                      port_id.base, port_id.salt, result.FormatDescription().c_str());
@@ -219,7 +219,7 @@ struct Netdevice {
                    port_id.salt, result.FormatDescription().c_str());
             return;
           }
-          const fuchsia_net::wire::MacAddress& mac = result.value_NEW().address;
+          const fuchsia_net::wire::MacAddress& mac = result.value().address;
 
           // We have our device, store it and stop watching.
           DiscoveredInterface& discovered_interface = discovered.emplace(DiscoveredInterface{
@@ -263,7 +263,7 @@ std::optional<typename D::Info> netifc_evaluate(cpp17::string_view topological_p
              result.status_string());
       return std::nullopt;
     }
-    auto& resp = result.value_NEW();
+    auto& resp = result.value();
     if (resp.is_error()) {
       printf("netifc: GetTopologicalPath returned error %s: %s\n", filename.c_str(),
              zx_status_get_string(resp.error_value()));

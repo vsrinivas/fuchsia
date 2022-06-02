@@ -66,7 +66,7 @@ class TestFile : public fio::testing::File_TestBase {
     fidl::WireSyncClient<fuchsia_io::File> file(std::move(endpoints->client));
     fidl::WireResult result = file->GetBackingMemory(fuchsia_io::wire::VmoFlags(uint32_t(flags)));
     EXPECT_TRUE(result.ok()) << result.FormatDescription();
-    auto* res = result.Unwrap_NEW();
+    auto* res = result.Unwrap();
     if (res->is_error()) {
       callback(fio::File2_GetBackingMemory_Result::WithErr(std::move(res->error_value())));
     }

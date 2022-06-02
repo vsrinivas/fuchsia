@@ -225,7 +225,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   client->Unbind().ThenExactlyOnce(
       [&](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>& result) {
         ASSERT_OK(result.status());
-        unbind_successful = result.Unwrap_NEW()->is_ok();
+        unbind_successful = result->is_ok();
       });
 
   ASSERT_OK(ctx.loop().RunUntilIdle());

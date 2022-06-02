@@ -58,7 +58,7 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   if (!result.ok()) {
     return ZX_ERR_BAD_STATE;
   }
-  if (result.Unwrap_NEW()->is_error()) {
+  if (result->is_error()) {
     return ZX_ERR_BAD_STATE;
   }
   *out_handle = file->control.TakeClientEnd().TakeChannel().release();

@@ -77,28 +77,8 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
       {{- end }}
     }
 
-    {{ .WireResultBase }}* Unwrap_NEW() {
-      {{- if .Result }}
-        return &result_.value();
-      {{- else }}
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-      {{- end }}
-    }
-    const {{ .WireResultBase }}* Unwrap_NEW() const {
-      {{- if .Result }}
-        return &result_.value();
-      {{- else }}
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-      {{- end }}
-    }
-
     {{ .WireResultBase }}& value() { return *Unwrap(); }
     const {{ .WireResultBase }}& value() const { return *Unwrap(); }
-
-    {{ .WireResultBase }}& value_NEW() { return *Unwrap_NEW(); }
-    const {{ .WireResultBase }}& value_NEW() const { return *Unwrap_NEW(); }
 
     {{ .WireResultBase }}* operator->() { return &value(); }
     const {{ .WireResultBase }}* operator->() const { return &value(); }

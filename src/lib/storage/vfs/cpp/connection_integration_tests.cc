@@ -149,19 +149,19 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnFile) {
   // Use GetFlags to get current flags and rights
   auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
   EXPECT_OK(file_get_result.status());
-  EXPECT_EQ(fio::wire::OpenFlags::kRightReadable, file_get_result.Unwrap_NEW()->flags);
+  EXPECT_EQ(fio::wire::OpenFlags::kRightReadable, file_get_result->flags);
   {
     // Make modifications to flags with SetFlags: Note this only works for kOpenFlagAppend
     // based on posix standard
     auto file_set_result = fidl::WireCall(fc->client)->SetFlags(fio::wire::OpenFlags::kAppend);
-    EXPECT_OK(file_set_result.Unwrap_NEW()->s);
+    EXPECT_OK(file_set_result->s);
   }
   {
     // Check that the new flag is saved
     auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
-    EXPECT_OK(file_get_result.Unwrap_NEW()->s);
+    EXPECT_OK(file_get_result->s);
     EXPECT_EQ(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kAppend,
-              file_get_result.Unwrap_NEW()->flags);
+              file_get_result->flags);
   }
 }
 
@@ -181,18 +181,18 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
 
   // Read/write/read directory flags; same as for file
   auto dir_get_result = fidl::WireCall(dc->client)->GetFlags();
-  EXPECT_OK(dir_get_result.Unwrap_NEW()->s);
+  EXPECT_OK(dir_get_result->s);
   EXPECT_EQ(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
-            dir_get_result.Unwrap_NEW()->flags);
+            dir_get_result->flags);
 
   auto dir_set_result = fidl::WireCall(dc->client)->SetFlags(fio::wire::OpenFlags::kAppend);
-  EXPECT_OK(dir_set_result.Unwrap_NEW()->s);
+  EXPECT_OK(dir_set_result->s);
 
   auto dir_get_result_2 = fidl::WireCall(dc->client)->GetFlags();
-  EXPECT_OK(dir_get_result_2.Unwrap_NEW()->s);
+  EXPECT_OK(dir_get_result_2->s);
   EXPECT_EQ(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable |
                 fio::wire::OpenFlags::kAppend,
-            dir_get_result_2.Unwrap_NEW()->flags);
+            dir_get_result_2->flags);
 }
 
 TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
@@ -218,8 +218,8 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
 
     // Ensure flags match those which we expect.
     auto dir_get_result = fidl::WireCall(dc->client)->GetFlags();
-    EXPECT_OK(dir_get_result.Unwrap_NEW()->s);
-    auto dir_flags = dir_get_result.Unwrap_NEW()->flags;
+    EXPECT_OK(dir_get_result->s);
+    auto dir_flags = dir_get_result->flags;
     EXPECT_TRUE(fio::wire::OpenFlags::kRightReadable & dir_flags);
     // Each POSIX flag should be expanded to its respective right(s).
     if (OPEN_FLAGS &
@@ -237,7 +237,7 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
                            fc->server.TakeChannel().release()));
     auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
     EXPECT_OK(file_get_result.status());
-    EXPECT_EQ(fio::wire::OpenFlags::kRightReadable, file_get_result.Unwrap_NEW()->flags);
+    EXPECT_EQ(fio::wire::OpenFlags::kRightReadable, file_get_result->flags);
   }
 }
 
@@ -258,20 +258,20 @@ TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
     // Use GetFlags to get current flags and rights
     auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
     EXPECT_OK(file_get_result.status());
-    EXPECT_EQ(fio::wire::OpenFlags::kRightReadable, file_get_result.Unwrap_NEW()->flags);
+    EXPECT_EQ(fio::wire::OpenFlags::kRightReadable, file_get_result->flags);
   }
   {
     // Make modifications to flags with SetFlags: Note this only works for kOpenFlagAppend
     // based on posix standard
     auto file_set_result = fidl::WireCall(fc->client)->SetFlags(fio::wire::OpenFlags::kAppend);
-    EXPECT_OK(file_set_result.Unwrap_NEW()->s);
+    EXPECT_OK(file_set_result->s);
   }
   {
     // Check that the new flag is saved
     auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
-    EXPECT_OK(file_get_result.Unwrap_NEW()->s);
+    EXPECT_OK(file_get_result->s);
     EXPECT_EQ(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kAppend,
-              file_get_result.Unwrap_NEW()->flags);
+              file_get_result->flags);
   }
 }
 
@@ -452,8 +452,7 @@ TEST_F(ConnectionClosingTest, ClosingNodeLeadsToClosingServerEndChannel) {
   ASSERT_OK(loop().StartThread());
   auto result = fidl::WireCall(root->client)->Close();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok(), "%s",
-              zx_status_get_string(result.Unwrap_NEW()->error_value()));
+  ASSERT_TRUE(result->is_ok(), "%s", zx_status_get_string(result->error_value()));
 
   observed = ZX_SIGNAL_NONE;
   ASSERT_OK(

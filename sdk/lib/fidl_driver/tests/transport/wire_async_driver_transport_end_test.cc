@@ -62,10 +62,10 @@ TEST(DriverTransport, WireSendDriverClientEnd) {
           [&](fdf::WireUnownedResult<
               ::test_transport::SendDriverTransportEndTest::SendDriverTransportEnd>& result) {
             ASSERT_OK(result.status());
-            ASSERT_TRUE(result.Unwrap_NEW()->c.is_valid());
-            ASSERT_EQ(client_handle, result.Unwrap_NEW()->c.handle()->get());
-            ASSERT_TRUE(result.Unwrap_NEW()->s.is_valid());
-            ASSERT_EQ(server_handle, result.Unwrap_NEW()->s.handle()->get());
+            ASSERT_TRUE(result->c.is_valid());
+            ASSERT_EQ(client_handle, result->c.handle()->get());
+            ASSERT_TRUE(result->s.is_valid());
+            ASSERT_EQ(server_handle, result->s.handle()->get());
             sync_completion_signal(&done);
           });
 

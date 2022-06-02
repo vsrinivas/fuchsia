@@ -596,10 +596,10 @@ ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS
         zxlogf(ERROR, "FIDL Read failed: %s", result.FormatDescription().data());
         return AE_ERROR;
       }
-      if (result.Unwrap_NEW()->is_error()) {
-        return result.Unwrap_NEW()->error_value();
+      if (result->is_error()) {
+        return result->error_value();
       }
-      *value = result.Unwrap_NEW()->value()->value;
+      *value = result->value()->value;
       break;
     }
     case ACPI_WRITE: {
@@ -608,8 +608,8 @@ ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS
         zxlogf(ERROR, "FIDL Write failed: %s", result.FormatDescription().data());
         return AE_ERROR;
       }
-      if (result.Unwrap_NEW()->is_error()) {
-        return result.Unwrap_NEW()->error_value();
+      if (result->is_error()) {
+        return result->error_value();
       }
       break;
     }

@@ -70,8 +70,8 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   client->TwoWay(fidl::StringView(data))
       .ThenExactlyOnce([&done](fidl::WireUnownedResult<Example::TwoWay>& result) {
         ASSERT_OK(result.status());
-        ASSERT_EQ(strlen(data), result.value_NEW().out.size());
-        EXPECT_EQ(0, strncmp(result.value_NEW().out.data(), data, strlen(data)));
+        ASSERT_EQ(strlen(data), result.value().out.size());
+        EXPECT_EQ(0, strncmp(result.value().out.data(), data, strlen(data)));
         sync_completion_signal(&done);
       });
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
@@ -87,7 +87,7 @@ TEST(GenAPITestCase, TwoWayAsyncResponseContext) {
 
     void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
       ASSERT_OK(result.status());
-      auto& out = result.value_NEW().out;
+      auto& out = result.value().out;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
       done_->Signal();
@@ -125,7 +125,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
 
     void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
       ASSERT_OK(result.status());
-      auto& out = result.value_NEW().out;
+      auto& out = result.value().out;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
       sync_completion_signal(done_);
@@ -173,8 +173,8 @@ TEST(GenAPITestCase, TwoWaySyncManaged) {
 
   fidl::WireResult result = client.sync()->TwoWay(fidl::StringView(kData));
   ASSERT_OK(result.status());
-  ASSERT_EQ(strlen(kData), result.value_NEW().out.size());
-  EXPECT_EQ(0, strncmp(result.value_NEW().out.data(), kData, strlen(kData)));
+  ASSERT_EQ(strlen(kData), result.value().out.size());
+  EXPECT_EQ(0, strncmp(result.value().out.data(), kData, strlen(kData)));
   EXPECT_EQ(1, server->two_way_count());
   EXPECT_EQ(0, server->one_way_count());
 }

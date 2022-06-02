@@ -237,7 +237,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
       launcher->CreateWithoutStarting(std::move(launch_info));
   tu_check("process creation", result.status());
 
-  fidl::WireResponse<fprocess::Launcher::CreateWithoutStarting>* response = result.Unwrap_NEW();
+  fidl::WireResponse<fprocess::Launcher::CreateWithoutStarting>* response = result.Unwrap();
   tu_check("fuchsia.process.Launcher#CreateWithoutStarting failed", response->status);
 
   return new springboard(response->data.get());

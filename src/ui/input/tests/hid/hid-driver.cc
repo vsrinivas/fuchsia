@@ -115,7 +115,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
       config, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(kBootMouseReportDesc),
                                                       std::size(kBootMouseReportDesc)));
   ASSERT_OK(result.status());
-  zx::socket hidctl_socket = std::move(result.value_NEW().report_socket);
+  zx::socket hidctl_socket = std::move(result.value().report_socket);
 
   // Open the corresponding /dev/class/input/ device
   fbl::unique_fd fd_device;
@@ -140,8 +140,8 @@ TEST_F(HidDriverTest, BootMouseTest) {
   {
     auto result = client->GetReportsEvent();
     ASSERT_OK(result.status());
-    ASSERT_OK(result.value_NEW().status);
-    report_event = std::move(result.value_NEW().event);
+    ASSERT_OK(result.value().status);
+    report_event = std::move(result.value().event);
   }
 
   // Check that the report comes through
@@ -152,10 +152,10 @@ TEST_F(HidDriverTest, BootMouseTest) {
 
     auto response = client->ReadReport();
     ASSERT_OK(response.status());
-    ASSERT_OK(response.value_NEW().status);
-    ASSERT_EQ(response.value_NEW().data.count(), sizeof(test_report));
+    ASSERT_OK(response.value().status);
+    ASSERT_EQ(response.value().data.count(), sizeof(test_report));
 
-    memcpy(&test_report, response.value_NEW().data.data(), sizeof(test_report));
+    memcpy(&test_report, response.value().data.data(), sizeof(test_report));
     ASSERT_EQ(mouse_report.rel_x, test_report.rel_x);
     ASSERT_EQ(mouse_report.rel_y, test_report.rel_y);
   }
@@ -164,12 +164,12 @@ TEST_F(HidDriverTest, BootMouseTest) {
   {
     auto response = client->GetReportDesc();
     ASSERT_OK(response.status());
-    ASSERT_EQ(response.value_NEW().desc.count(), sizeof(kBootMouseReportDesc));
+    ASSERT_EQ(response.value().desc.count(), sizeof(kBootMouseReportDesc));
     for (size_t i = 0; i < sizeof(kBootMouseReportDesc); i++) {
-      if (kBootMouseReportDesc[i] != response.value_NEW().desc[i]) {
+      if (kBootMouseReportDesc[i] != response.value().desc[i]) {
         printf("Index %ld of the report descriptor doesn't match\n", i);
       }
-      EXPECT_EQ(kBootMouseReportDesc[i], response.value_NEW().desc[i]);
+      EXPECT_EQ(kBootMouseReportDesc[i], response.value().desc[i]);
     }
   }
 }
@@ -185,7 +185,7 @@ TEST_F(HidDriverTest, BootMouseTestInputReport) {
       config, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(kBootMouseReportDesc),
                                                       std::size(kBootMouseReportDesc)));
   ASSERT_OK(result.status());
-  zx::socket hidctl_socket = std::move(result.value_NEW().report_socket);
+  zx::socket hidctl_socket = std::move(result.value().report_socket);
 
   // Open the corresponding /dev/class/input/ device
   fbl::unique_fd fd_device;
@@ -208,10 +208,10 @@ TEST_F(HidDriverTest, BootMouseTestInputReport) {
   {
     auto response = client->GetDescriptor();
     ASSERT_OK(response.status());
-    ASSERT_TRUE(response.value_NEW().descriptor.has_mouse());
-    ASSERT_TRUE(response.value_NEW().descriptor.mouse().has_input());
-    ASSERT_TRUE(response.value_NEW().descriptor.mouse().input().has_movement_x());
-    ASSERT_TRUE(response.value_NEW().descriptor.mouse().input().has_movement_y());
+    ASSERT_TRUE(response.value().descriptor.has_mouse());
+    ASSERT_TRUE(response.value().descriptor.mouse().has_input());
+    ASSERT_TRUE(response.value().descriptor.mouse().input().has_movement_x());
+    ASSERT_TRUE(response.value().descriptor.mouse().input().has_movement_y());
   }
 
   // Send a single mouse report
@@ -225,9 +225,9 @@ TEST_F(HidDriverTest, BootMouseTestInputReport) {
   auto response = reader->ReadInputReports();
   ASSERT_OK(response.status());
   ASSERT_OK(response.status());
-  ASSERT_EQ(1, response.Unwrap_NEW()->value()->reports.count());
-  ASSERT_EQ(50, response.Unwrap_NEW()->value()->reports[0].mouse().movement_x());
-  ASSERT_EQ(100, response.Unwrap_NEW()->value()->reports[0].mouse().movement_y());
+  ASSERT_EQ(1, response->value()->reports.count());
+  ASSERT_EQ(50, response->value()->reports[0].mouse().movement_x());
+  ASSERT_EQ(100, response->value()->reports[0].mouse().movement_y());
 }
 
 }  // namespace

@@ -25,9 +25,8 @@ zx::status<Options> GetBootArguments(const fidl::WireSyncClient<fuchsia_boot::Ar
     printf("console: failed to get boot args: %s\n", zx_status_get_string(resp.status()));
     return zx::error(resp.status());
   }
-  if (resp.Unwrap_NEW()->values.count() != 2) {
-    printf("console: boot args returned incorrect number of results: %zd\n",
-           resp.Unwrap_NEW()->values.count());
+  if (resp->values.count() != 2) {
+    printf("console: boot args returned incorrect number of results: %zd\n", resp->values.count());
     return zx::error(ZX_ERR_INTERNAL);
   }
 
@@ -38,8 +37,8 @@ zx::status<Options> GetBootArguments(const fidl::WireSyncClient<fuchsia_boot::Ar
     return {};
   };
   return zx::ok(Options{
-      .allowed_log_tags = parse_tags(resp.Unwrap_NEW()->values[0]),
-      .denied_log_tags = parse_tags(resp.Unwrap_NEW()->values[1]),
+      .allowed_log_tags = parse_tags(resp->values[0]),
+      .denied_log_tags = parse_tags(resp->values[1]),
   });
 }
 

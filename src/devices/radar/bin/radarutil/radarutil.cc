@@ -215,8 +215,8 @@ zx_status_t RadarUtil::ConnectToDevice(fidl::ClientEnd<BurstReaderProvider> devi
             zx_status_get_string(result.status()));
     return result.status();
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    fprintf(stderr, "Radar device failed to bind: %u\n", result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    fprintf(stderr, "Radar device failed to bind: %u\n", result->error_value());
     return ZX_ERR_INTERNAL;
   }
 
@@ -230,8 +230,7 @@ zx_status_t RadarUtil::RegisterVmos() {
     return burst_size.status();
   }
 
-  burst_buffer_ = fbl::Array(new uint8_t[burst_size.Unwrap_NEW()->burst_size],
-                             burst_size.Unwrap_NEW()->burst_size);
+  burst_buffer_ = fbl::Array(new uint8_t[burst_size->burst_size], burst_size->burst_size);
 
   fidl::Arena allocator;
 
@@ -260,8 +259,8 @@ zx_status_t RadarUtil::RegisterVmos() {
     fprintf(stderr, "Failed to register VMOs: %s\n", zx_status_get_string(result.status()));
     return result.status();
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    fprintf(stderr, "Failed to register VMOs: %d\n", result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    fprintf(stderr, "Failed to register VMOs: %d\n", result->error_value());
     return ZX_ERR_INTERNAL;
   }
 
@@ -282,8 +281,8 @@ zx_status_t RadarUtil::UnregisterVmos() {
     fprintf(stderr, "Failed to register VMOs: %s\n", zx_status_get_string(result.status()));
     return result.status();
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    fprintf(stderr, "Failed to register VMOs: %d\n", result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    fprintf(stderr, "Failed to register VMOs: %d\n", result->error_value());
     return ZX_ERR_INTERNAL;
   }
 

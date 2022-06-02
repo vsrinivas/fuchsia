@@ -207,15 +207,14 @@ void IntelI2cController::GetAcpiConfiguration(const char* name, uint16_t* scl_hc
     return;
   }
 
-  if (result.value_NEW().is_error()) {
-    if (result.value_NEW().error_value() != fuchsia_hardware_acpi::wire::Status::kNotFound) {
-      zxlogf(WARNING, "EvaluateObject('%s') failed: %d", name,
-             int(result.value_NEW().error_value()));
+  if (result.value().is_error()) {
+    if (result.value().error_value() != fuchsia_hardware_acpi::wire::Status::kNotFound) {
+      zxlogf(WARNING, "EvaluateObject('%s') failed: %d", name, int(result.value().error_value()));
     }
     return;
   }
 
-  auto& obj = result.value_NEW().value()->result.object();
+  auto& obj = result.value().value()->result.object();
   if (obj.is_package_val() && obj.package_val().value.count() == 3) {
     auto& package = obj.package_val().value;
     *scl_hcnt = package[0].integer_val();
@@ -279,8 +278,8 @@ zx_status_t IntelI2cController::I2cImplTransact(const uint32_t bus_id, const i2c
 
 uint32_t IntelI2cController::I2cImplGetBusBase() {
   auto result = acpi_->GetBusId();
-  if (result.ok() && result.Unwrap_NEW()->is_ok()) {
-    return result.Unwrap_NEW()->value()->bus_id;
+  if (result.ok() && result->is_ok()) {
+    return result->value()->bus_id;
   }
   return UINT32_MAX;
 }

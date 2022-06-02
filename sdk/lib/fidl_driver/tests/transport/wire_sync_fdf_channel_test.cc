@@ -71,8 +71,8 @@ TEST(DriverTransport, WireSendFdfChannelSync) {
     fdf::WireUnownedResult<test_transport::SendFdfChannelTest::SendFdfChannel> result =
         client.buffer(*arena)->SendFdfChannel(std::move(channel_pair->end0));
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result.Unwrap_NEW()->h.is_valid());
-    ASSERT_EQ(handle, result.Unwrap_NEW()->h.get());
+    ASSERT_TRUE(result->h.is_valid());
+    ASSERT_EQ(handle, result->h.get());
 
     // TODO(fxbug.dev/92489): If this call and wait is removed, the test will
     // flake by leaking |AsyncServerBinding| objects.

@@ -59,7 +59,7 @@ TEST_F(EffectsLoaderV2Test, CreateEffect) {
   ASSERT_TRUE(config_result.ok());
 
   // Check a few fields to make sure the config matches expectations.
-  auto& config = config_result.Unwrap_NEW()->value()->processor_configuration;
+  auto& config = config_result->value()->processor_configuration;
   ASSERT_TRUE(config.has_inputs());
   ASSERT_TRUE(config.has_outputs());
   EXPECT_EQ(config.inputs().count(), 1u);
@@ -83,8 +83,7 @@ TEST_F(EffectsLoaderV2Test, CreateEffect) {
   auto processor = fidl::BindSyncClient(std::move(config.processor()));
   auto result = processor->Process(kNumFrames, fuchsia_audio_effects::wire::ProcessOptions(arena));
   EXPECT_EQ(result.status(), ZX_OK);
-  EXPECT_FALSE(result.Unwrap_NEW()->is_error())
-      << "unexpected failure: " << result.Unwrap_NEW()->error_value();
+  EXPECT_FALSE(result->is_error()) << "unexpected failure: " << result->error_value();
 
   EXPECT_THAT((reinterpret_cast<std::array<float, kNumFrames>&>(output[0])),
               ::testing::Each(::testing::FloatEq(1.0f)));
@@ -97,7 +96,7 @@ TEST_F(EffectsLoaderV2Test, EffectDoesNotExist) {
   auto loader = loader_result.take_value();
   auto result = loader->GetProcessorConfiguration("DoesNotExist");
   ASSERT_TRUE(result.ok());
-  EXPECT_TRUE(result.Unwrap_NEW()->is_error());
+  EXPECT_TRUE(result->is_error());
 }
 
 }  // namespace

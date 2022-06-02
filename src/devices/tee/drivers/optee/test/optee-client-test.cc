@@ -331,7 +331,7 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = optee_client_fidl_->OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().session_id, kDefaultSessionId);
+    EXPECT_EQ(res.value().session_id, kDefaultSessionId);
   }
 
   void TearDown() override {
@@ -387,7 +387,7 @@ TEST_F(OpteeClientTestRpmb, InvalidRequestCommand) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
 
 TEST_F(OpteeClientTestRpmb, RpmbError) {
@@ -408,7 +408,7 @@ TEST_F(OpteeClientTestRpmb, RpmbError) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_ITEM_NOT_FOUND);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_ITEM_NOT_FOUND);
   EXPECT_EQ(req_cnt, 1);
 }
 
@@ -427,7 +427,7 @@ TEST_F(OpteeClientTestRpmb, RpmbCommunicationError) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_COMMUNICATION);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_COMMUNICATION);
 }
 
 TEST_F(OpteeClientTestRpmb, GetDeviceInfo) {
@@ -454,7 +454,7 @@ TEST_F(OpteeClientTestRpmb, GetDeviceInfo) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
 
   RpmbDevInfo *info = reinterpret_cast<RpmbDevInfo *>(GetRxBuffer());
   EXPECT_EQ(info->ret_code, RpmbDevInfo::kRpmbCmdRetOK);
@@ -474,7 +474,7 @@ TEST_F(OpteeClientTestRpmb, GetDeviceInfoWrongFrameSize) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
 
 TEST_F(OpteeClientTestRpmb, InvalidDataRequest) {
@@ -489,7 +489,7 @@ TEST_F(OpteeClientTestRpmb, InvalidDataRequest) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
 
 TEST_F(OpteeClientTestRpmb, InvalidDataRequestFrameSize) {
@@ -504,7 +504,7 @@ TEST_F(OpteeClientTestRpmb, InvalidDataRequestFrameSize) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
 }
 
 TEST_F(OpteeClientTestRpmb, RequestKeyOk) {
@@ -546,7 +546,7 @@ TEST_F(OpteeClientTestRpmb, RequestKeyOk) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 2);
   EXPECT_EQ(memcmp(GetRxBuffer(), kMarker, sizeof(kMarker)), 0);
 }
@@ -569,7 +569,7 @@ TEST_F(OpteeClientTestRpmb, RequestKeyInvalid) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
 }
 
@@ -602,7 +602,7 @@ TEST_F(OpteeClientTestRpmb, RequestWCounterOk) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 1);
   EXPECT_EQ(memcmp(GetRxBuffer(), kMarker, sizeof(kMarker)), 0);
 }
@@ -626,7 +626,7 @@ TEST_F(OpteeClientTestRpmb, RequestWCounterInvalid) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
 }
 
@@ -658,7 +658,7 @@ TEST_F(OpteeClientTestRpmb, ReadDataOk) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 1);
   EXPECT_EQ(memcmp(GetRxBuffer(), kMarker, sizeof(kMarker)), 0);
 }
@@ -682,7 +682,7 @@ TEST_F(OpteeClientTestRpmb, RequestReadInvalid) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
 }
 
@@ -725,7 +725,7 @@ TEST_F(OpteeClientTestRpmb, WriteDataOk) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   EXPECT_EQ(req_cnt, 2);
   EXPECT_EQ(memcmp(GetRxBuffer(), kMarker, sizeof(kMarker)), 0);
 }
@@ -749,7 +749,7 @@ TEST_F(OpteeClientTestRpmb, RequestWriteInvalid) {
   auto res = optee_client_fidl_->InvokeCommand(kDefaultSessionId, kDefaultCommand,
                                                std::move(parameter_set));
   EXPECT_OK(res.status());
-  EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
+  EXPECT_EQ(res.value().op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
 }
 
@@ -882,7 +882,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
                 FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
                 return;
               }
-              auto *resp = result.Unwrap_NEW();
+              auto *resp = result.Unwrap();
               EXPECT_EQ(resp->session_id, cur_sid_);
               sid1 = resp->session_id;
               sync_completion_signal(&completion);
@@ -895,8 +895,8 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = fidl_client2->OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().session_id, cur_sid_);
-    sid2 = res.value_NEW().session_id;
+    EXPECT_EQ(res.value().session_id, cur_sid_);
+    sid2 = res.value().session_id;
   }
 
   sleep_key_ = 1;
@@ -905,7 +905,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = fidl_client2->InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+    EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   }
 
   EXPECT_EQ(invoke_done_cnt_, 1);
@@ -915,7 +915,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = fidl_client2->InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+    EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   }
 
   EXPECT_EQ(invoke_done_cnt_, 2);
@@ -925,7 +925,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = fidl_client2->InvokeCommand(sid2, kNopeCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+    EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   }
 
   EXPECT_EQ(invoke_done_cnt_, 3);
@@ -940,7 +940,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
                 FAIL("InvokeCommand failed: %s", result.error().FormatDescription().c_str());
                 return;
               }
-              auto *resp = result.Unwrap_NEW();
+              auto *resp = result.Unwrap();
               EXPECT_EQ(resp->op_result.return_code(), TEEC_SUCCESS);
               sync_completion_signal(&completion);
             });
@@ -982,7 +982,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
                 FAIL("OpenSession2 failed: %s", result.error().FormatDescription().c_str());
                 return;
               }
-              auto *resp = result.Unwrap_NEW();
+              auto *resp = result.Unwrap();
               EXPECT_EQ(resp->session_id, cur_sid_);
               sid1 = resp->session_id;
               sync_completion_signal(&completion);
@@ -994,8 +994,8 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = fidl_client2->OpenSession2(std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().session_id, cur_sid_);
-    sid2 = res.value_NEW().session_id;
+    EXPECT_EQ(res.value().session_id, cur_sid_);
+    sid2 = res.value().session_id;
   }
 
   sync_completion_reset(&completion);
@@ -1008,7 +1008,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
                 FAIL("InvokeCommand failed: %s", result.error().FormatDescription().c_str());
                 return;
               }
-              auto *resp = result.Unwrap_NEW();
+              auto *resp = result.Unwrap();
               EXPECT_EQ(resp->op_result.return_code(), TEEC_SUCCESS);
               sync_completion_signal(&completion);
             });
@@ -1020,7 +1020,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = fidl_client2->InvokeCommand(sid2, kNopeCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+    EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   }
 
   EXPECT_EQ(invoke_done_cnt_, 1);
@@ -1030,7 +1030,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     auto res = fidl_client2->InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
     EXPECT_OK(res.status());
-    EXPECT_EQ(res.value_NEW().op_result.return_code(), TEEC_SUCCESS);
+    EXPECT_EQ(res.value().op_result.return_code(), TEEC_SUCCESS);
   }
 
   status = sync_completion_wait(&completion, ZX_TIME_INFINITE);

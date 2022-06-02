@@ -67,9 +67,9 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
       fio::wire::WatchMask::kAdded | fio::wire::WatchMask::kExisting | fio::wire::WatchMask::kIdle;
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
                     ->Watch(mask, 0, std::move(endpoints->server));
-  if (result.status() != ZX_OK || result.value_NEW().s != ZX_OK) {
+  if (result.status() != ZX_OK || result.value().s != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create device watcher: outer status=" << result.status()
-                   << " status=" << result.value_NEW().s;
+                   << " status=" << result.value().s;
     return nullptr;
   }
 

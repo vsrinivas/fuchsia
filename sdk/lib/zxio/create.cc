@@ -96,7 +96,7 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
       if (!result.ok()) {
         return result.status();
       }
-      return zxio_create_with_nodeinfo(std::move(node), result.value_NEW().info, storage);
+      return zxio_create_with_nodeinfo(std::move(node), result.value().info, storage);
     }
     case ZX_OBJ_TYPE_LOG: {
       zxio_debuglog_init(storage, zx::debuglog(std::move(handle)));
@@ -212,7 +212,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       if (!result.ok()) {
         return result.status();
       }
-      const auto& response = result.value_NEW();
+      const auto& response = result.value();
       if (response.is_error()) {
         return response.error_value();
       }

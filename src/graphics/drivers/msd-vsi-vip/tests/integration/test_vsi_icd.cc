@@ -20,9 +20,9 @@ TEST(TestIcd, IcdList) {
   auto rsp =
       fidl::WireCall<fuchsia_gpu_magma::IcdLoaderDevice>(test_device.channel())->GetIcdList();
   EXPECT_TRUE(rsp.ok());
-  EXPECT_EQ(rsp.value_NEW().icd_list.count(), 2u);
+  EXPECT_EQ(rsp.value().icd_list.count(), 2u);
 
-  const auto& icd_item = rsp.value_NEW().icd_list[0];
+  const auto& icd_item = rsp.value().icd_list[0];
 
   EXPECT_TRUE(icd_item.has_flags());
   const auto& flags = icd_item.flags();

@@ -25,7 +25,7 @@ TEST(PtyTest, WindowSize) {
   ASSERT_OK(endpoints0.status_value());
   auto result0 = client->OpenClient(0, std::move(endpoints0->server));
   ASSERT_OK(result0.status());
-  ASSERT_OK(result0.Unwrap_NEW()->s);
+  ASSERT_OK(result0->s);
 
   fbl::unique_fd controlling_client;
   ASSERT_OK(fdio_fd_create(endpoints0->client.channel().release(),
@@ -36,7 +36,7 @@ TEST(PtyTest, WindowSize) {
 
   auto result1 = client->OpenClient(1, std::move(endpoints1->server));
   ASSERT_OK(result1.status());
-  ASSERT_OK(result1.Unwrap_NEW()->s);
+  ASSERT_OK(result1->s);
 
   fbl::unique_fd fd;
   ASSERT_OK(fdio_fd_create(endpoints1->client.channel().release(), fd.reset_and_get_address()));

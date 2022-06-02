@@ -25,7 +25,7 @@ zx::status<uint32_t> DoFidlConnections(zx_device_t* dev, const char* fragment) {
     zxlogf(ERROR, "Failed to call number: %s", result.lossy_description());
     return zx::error(result.status());
   }
-  return zx::ok(result.value_NEW().number);
+  return zx::ok(result.value().number);
 }
 
 zx_status_t CompositeDriverV1::Bind(void* ctx, zx_device_t* dev) {

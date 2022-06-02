@@ -22,8 +22,8 @@ TEST(Intel, IcdList) {
   auto rsp =
       fidl::WireCall<fuchsia_gpu_magma::IcdLoaderDevice>(test_device.channel())->GetIcdList();
   EXPECT_TRUE(rsp.ok());
-  EXPECT_EQ(rsp.value_NEW().icd_list.count(), 3u);
-  auto& icd_item = rsp.value_NEW().icd_list[0];
+  EXPECT_EQ(rsp.value().icd_list.count(), 3u);
+  auto& icd_item = rsp.value().icd_list[0];
   EXPECT_TRUE(icd_item.has_flags());
   EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::kSupportsVulkan);
   std::string res_string(icd_item.component_url().get());

@@ -73,7 +73,7 @@ TEST(HeaderCodingTest, TwoWayAsync) {
   client->TwoWay(kMessageString)
       .ThenExactlyOnce([&completion](fidl::WireUnownedResult<Example::TwoWay>& result) {
         ASSERT_TRUE(result.ok());
-        ASSERT_BYTES_EQ(result.value_NEW().out.data(), kMessageString, stringLen(kMessageString));
+        ASSERT_BYTES_EQ(result.value().out.data(), kMessageString, stringLen(kMessageString));
         completion.Signal();
       });
 
@@ -143,7 +143,7 @@ TEST(HeaderCodingTest, TwoWaySync) {
   fidl::WireSyncClient<Example> client(std::move(client_end));
   fidl::WireResult<Example::TwoWay> result = client->TwoWay(kMessageString);
   ASSERT_TRUE(result.ok());
-  ASSERT_BYTES_EQ(result.value_NEW().out.data(), kMessageString, stringLen(kMessageString));
+  ASSERT_BYTES_EQ(result.value().out.data(), kMessageString, stringLen(kMessageString));
 
   th.join();
 }

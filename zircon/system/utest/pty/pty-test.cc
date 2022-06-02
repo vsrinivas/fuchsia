@@ -94,8 +94,8 @@ static zx_status_t open_client(const fbl::unique_fd& fd, uint32_t client_id, int
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  if (result.value_NEW().s != ZX_OK) {
-    return result.value_NEW().s;
+  if (result.value().s != ZX_OK) {
+    return result.value().s;
   }
 
   zx_status_t status = fdio_fd_create(endpoints->client.channel().release(), out_fd);
@@ -176,8 +176,8 @@ TEST(PtyTests, pty_test) {
   auto result1 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
 
   ASSERT_OK(result1.status());
-  ASSERT_OK(result1.value_NEW().status);
-  ASSERT_EQ(result1.value_NEW().events, 0u);
+  ASSERT_OK(result1.value().status);
+  ASSERT_EQ(result1.value().events, 0u);
 
   // write a ctrl-c
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "%s", strerror(errno));
@@ -185,14 +185,14 @@ TEST(PtyTests, pty_test) {
   // should be an event now
   auto result2 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result2.status());
-  ASSERT_OK(result2.value_NEW().status);
-  ASSERT_EQ(result2.value_NEW().events, fpty::wire::kEventInterrupt);
+  ASSERT_OK(result2.value().status);
+  ASSERT_EQ(result2.value().events, fpty::wire::kEventInterrupt);
 
   // should vanish once we read it
   auto result3 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result3.status());
-  ASSERT_OK(result3.value_NEW().status);
-  ASSERT_EQ(result3.value_NEW().events, 0u);
+  ASSERT_OK(result3.value().status);
+  ASSERT_EQ(result3.value().events, 0u);
 
   // write something containing a special char
   // should write up to and including the special char
@@ -202,44 +202,44 @@ TEST(PtyTests, pty_test) {
   ASSERT_SUBSTR(tmp, "hello");
   auto result4 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result4.status());
-  ASSERT_OK(result4.value_NEW().status);
-  ASSERT_EQ(result4.value_NEW().events, fpty::wire::kEventInterrupt);
+  ASSERT_OK(result4.value().status);
+  ASSERT_EQ(result4.value().events, fpty::wire::kEventInterrupt);
 
   auto ws_result1 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->GetWindowSize();
   ASSERT_OK(ws_result1.status());
-  ASSERT_OK(ws_result1.value_NEW().status);
-  ASSERT_EQ(ws_result1.value_NEW().size.width, 0u, "%s", strerror(errno));
-  ASSERT_EQ(ws_result1.value_NEW().size.height, 0u, "%s", strerror(errno));
+  ASSERT_OK(ws_result1.value().status);
+  ASSERT_EQ(ws_result1.value().size.width, 0u, "%s", strerror(errno));
+  ASSERT_EQ(ws_result1.value().size.height, 0u, "%s", strerror(errno));
 
   fpty::wire::WindowSize ws;
   ws.width = 80;
   ws.height = 25;
   auto result5 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->SetWindowSize(ws);
   ASSERT_OK(result5.status());
-  ASSERT_OK(result5.value_NEW().status);
+  ASSERT_OK(result5.value().status);
   auto ws_result2 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->GetWindowSize();
   ASSERT_OK(ws_result2.status());
-  ASSERT_OK(ws_result2.value_NEW().status);
-  ASSERT_EQ(ws_result2.value_NEW().size.width, 80u, "%s", strerror(errno));
-  ASSERT_EQ(ws_result2.value_NEW().size.height, 25u, "%s", strerror(errno));
+  ASSERT_OK(ws_result2.value().status);
+  ASSERT_EQ(ws_result2.value().size.width, 80u, "%s", strerror(errno));
+  ASSERT_EQ(ws_result2.value().size.height, 25u, "%s", strerror(errno));
   auto ws_result3 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(ws_result3.status());
-  ASSERT_OK(ws_result3.value_NEW().status);
-  ASSERT_EQ(ws_result3.value_NEW().events, fpty::wire::kEventWindowSize);
+  ASSERT_OK(ws_result3.value().status);
+  ASSERT_EQ(ws_result3.value().events, fpty::wire::kEventWindowSize);
 
   // verify that we don't get events for special chars in raw mode
   auto result6 =
       fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ClrSetFeature(0, fpty::wire::kFeatureRaw);
   ASSERT_OK(result6.status());
-  ASSERT_OK(result6.value_NEW().status);
-  ASSERT_EQ(result6.value_NEW().features & fpty::wire::kFeatureRaw, fpty::wire::kFeatureRaw);
+  ASSERT_OK(result6.value().status);
+  ASSERT_EQ(result6.value().features & fpty::wire::kFeatureRaw, fpty::wire::kFeatureRaw);
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "%s", strerror(errno));
   ASSERT_EQ(read(pc.get(), tmp, 1), 1, "%s", strerror(errno));
   ASSERT_EQ(tmp[0], '\x03', "%s", strerror(errno));
   auto result7 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result7.status());
-  ASSERT_OK(result7.value_NEW().status);
-  ASSERT_EQ(result7.value_NEW().events, 0u);
+  ASSERT_OK(result7.value().status);
+  ASSERT_EQ(result7.value().events, 0u);
 
   // create a second client
   fbl::unique_fd pc1;
@@ -258,18 +258,18 @@ TEST(PtyTests, pty_test) {
   uint32_t n = 2;
   auto result8 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->MakeActive(n);
   ASSERT_EQ(result8.status(), ZX_OK);
-  ASSERT_STATUS(result8.value_NEW().status, ZX_ERR_NOT_FOUND);
+  ASSERT_STATUS(result8.value().status, ZX_ERR_NOT_FOUND);
 
   // non-controlling client cannot change active client
   auto result9 = fidl::WireCall(pc1_io.borrow_as<fpty::Device>())->MakeActive(n);
   ASSERT_EQ(result9.status(), ZX_OK);
-  ASSERT_STATUS(result9.value_NEW().status, ZX_ERR_ACCESS_DENIED);
+  ASSERT_STATUS(result9.value().status, ZX_ERR_ACCESS_DENIED);
 
   // but controlling client can
   n = 1;
   auto result10 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->MakeActive(n);
   ASSERT_OK(result10.status());
-  ASSERT_OK(result10.value_NEW().status);
+  ASSERT_OK(result10.value().status);
   ASSERT_SIGNALS(fd_signals(pc, 0, zx::time{}), 0);
   ASSERT_SIGNALS(fd_signals(pc1, POLLOUT, zx::time{}), POLLOUT);
   ASSERT_EQ(write(pc1.get(), "test", 4), 4, "%s", strerror(errno));
@@ -282,8 +282,8 @@ TEST(PtyTests, pty_test) {
   ASSERT_SIGNALS(fd_signals(pc, POLLHUP | POLLPRI, zx::time::infinite()), POLLHUP | POLLPRI);
   auto result11 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result11.status());
-  ASSERT_OK(result11.value_NEW().status);
-  ASSERT_EQ(result11.value_NEW().events, fpty::wire::kEventHangup);
+  ASSERT_OK(result11.value().status);
+  ASSERT_EQ(result11.value().events, fpty::wire::kEventHangup);
 
   // verify that server observes departure of last client
   pc_io.reset();

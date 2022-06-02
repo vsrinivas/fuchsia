@@ -178,7 +178,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     if (!result.ok()) {
       return zx::error(result.status());
     }
-    fuchsia_hardware_network::wire::PortInfo& port_info = result.value_NEW().info;
+    fuchsia_hardware_network::wire::PortInfo& port_info = result.value().info;
     if (!port_info.has_id()) {
       return zx::error(ZX_ERR_INTERNAL);
     }
@@ -217,7 +217,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
             fidl::WireUnownedResult<tun::Port::WatchState>& result) mutable {
           if (!result.ok())
             return;
-          fidl::WireResponse<tun::Port::WatchState>* response = result.Unwrap_NEW();
+          fidl::WireResponse<tun::Port::WatchState>* response = result.Unwrap();
           if (response->state.has_session()) {
             complete();
           } else {
@@ -303,7 +303,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
           ADD_FAILURE() << "WriteFrame failed: " << call_result.error();
           return;
         }
-        const fitx::result<zx_status_t>* result = call_result.Unwrap_NEW();
+        const fitx::result<zx_status_t>* result = call_result.Unwrap();
         wrote_frame = true;
         if (result->is_error()) {
           FAIL() << "Failed to write to device " << zx_status_get_string(result->error_value());
@@ -321,7 +321,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
         }
         done = true;
         const ::fitx::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
-            result = call_result.Unwrap_NEW();
+            result = call_result.Unwrap();
         if (result->is_error()) {
           FAIL() << "Failed to read from device " << zx_status_get_string(result->error_value());
         }
@@ -376,7 +376,7 @@ TEST_F(NetDeviceTest, TestEcho) {
               ADD_FAILURE() << "WriteFrame failed: " << call_result.error();
               return;
             }
-            fitx::result<zx_status_t>* result = call_result.Unwrap_NEW();
+            fitx::result<zx_status_t>* result = call_result.Unwrap();
             if (result->is_error()) {
               write_bridge.completer.complete_error(result->error_value());
             }
@@ -421,7 +421,7 @@ TEST_F(NetDeviceTest, TestEcho) {
             return;
           }
           const fitx::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
-              result = call_result.Unwrap_NEW();
+              result = call_result.Unwrap();
           if (result->is_error()) {
             read_bridge.completer.complete_error(result->error_value());
           }
@@ -459,8 +459,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
   {
     fidl::WireResult result = tun_pair.sync()->AddPort(DefaultPairPortConfig());
     ASSERT_OK(result.status());
-    ASSERT_TRUE(result.Unwrap_NEW()->is_ok())
-        << zx_status_get_string(result.Unwrap_NEW()->error_value());
+    ASSERT_TRUE(result->is_ok()) << zx_status_get_string(result->error_value());
   }
   zx::status port_id = GetPortId([&tun_pair](fidl::ServerEnd<netdev::Port> port) {
     return tun_pair->GetLeftPort(kPortId, std::move(port)).status();
@@ -669,7 +668,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
           }
           done = true;
           const fitx::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
-              result = call_result.Unwrap_NEW();
+              result = call_result.Unwrap();
           if (result->is_error()) {
             ADD_FAILURE() << "Read frame failed " << zx_status_get_string(result->error_value());
           }
@@ -795,7 +794,7 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
             ADD_FAILURE() << "WriteFrame failed: " << call_result.error();
             return;
           }
-          const fitx::result<zx_status_t>* result = call_result.Unwrap_NEW();
+          const fitx::result<zx_status_t>* result = call_result.Unwrap();
           zx_status_t status = [&result]() {
             if (result->is_error()) {
               return result->error_value();
@@ -856,7 +855,7 @@ TEST_P(GetPortsTest, GetPortsWithPortCount) {
 
     fidl::WireResult result = fidl::WireCall(client)->GetInfo();
     ASSERT_OK(result.status());
-    const netdev::wire::PortInfo& info = result.value_NEW().info;
+    const netdev::wire::PortInfo& info = result.value().info;
     ASSERT_TRUE(info.has_id());
     expect_ids.insert(PortId{.id = info.id()}.v);
   }

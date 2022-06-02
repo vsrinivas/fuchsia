@@ -279,9 +279,9 @@ zx_status_t TpmDevice::DoCommand(TpmCommand &cmd) {
       zxlogf(ERROR, "FIDL call failed!");
       return result.status();
     }
-    if (result.Unwrap_NEW()->is_error()) {
-      zxlogf(ERROR, "Failed to write: %d", result.Unwrap_NEW()->error_value());
-      return result.Unwrap_NEW()->error_value();
+    if (result->is_error()) {
+      zxlogf(ERROR, "Failed to write: %d", result->error_value());
+      return result->error_value();
     }
 
     buf += burst;
@@ -309,9 +309,9 @@ zx_status_t TpmDevice::DoCommand(TpmCommand &cmd) {
     zxlogf(ERROR, "FIDL call failed!");
     return result.status();
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    zxlogf(ERROR, "Failed to write: %d", result.Unwrap_NEW()->error_value());
-    return result.Unwrap_NEW()->error_value();
+  if (result->is_error()) {
+    zxlogf(ERROR, "Failed to write: %d", result->error_value());
+    return result->error_value();
   }
 
   status = sts.ReadFrom(tpm_);
@@ -385,11 +385,11 @@ zx_status_t TpmDevice::ReadFromFifo(cpp20::span<uint8_t> data) {
         zxlogf(ERROR, "FIDL call failed!");
         return result.status();
       }
-      if (result.Unwrap_NEW()->is_error()) {
-        zxlogf(ERROR, "Failed to read: %d", result.Unwrap_NEW()->error_value());
-        return result.Unwrap_NEW()->error_value();
+      if (result->is_error()) {
+        zxlogf(ERROR, "Failed to read: %d", result->error_value());
+        return result->error_value();
       }
-      auto &received = result.Unwrap_NEW()->value()->data;
+      auto &received = result->value()->data;
 
       memcpy(&data.data()[read], received.data(), received.count());
       read += received.count();

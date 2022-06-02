@@ -39,14 +39,12 @@ class BacklightDevice {
 
   zx_status_t GetBrightnessNormalized(double* brightness) {
     auto response = client_->GetStateNormalized();
-    zx_status_t status =
-        response.ok()
-            ? (response.Unwrap_NEW()->is_error() ? response.Unwrap_NEW()->error_value() : ZX_OK)
-            : response.status();
+    zx_status_t status = response.ok() ? (response->is_error() ? response->error_value() : ZX_OK)
+                                       : response.status();
     if (status != ZX_OK) {
       return status;
     }
-    *brightness = response.Unwrap_NEW()->value()->state.brightness;
+    *brightness = response->value()->state.brightness;
     return status;
   }
 
@@ -55,23 +53,19 @@ class BacklightDevice {
 
     printf("Setting brightness to: %f\n", brightness);
     auto response = client_->SetStateNormalized(state);
-    zx_status_t status =
-        response.ok()
-            ? (response.Unwrap_NEW()->is_error() ? response.Unwrap_NEW()->error_value() : ZX_OK)
-            : response.status();
+    zx_status_t status = response.ok() ? (response->is_error() ? response->error_value() : ZX_OK)
+                                       : response.status();
     return status;
   }
 
   zx_status_t GetBrightnessAbsolute(double* brightness) {
     auto response = client_->GetStateAbsolute();
-    zx_status_t status =
-        response.ok()
-            ? (response.Unwrap_NEW()->is_error() ? response.Unwrap_NEW()->error_value() : ZX_OK)
-            : response.status();
+    zx_status_t status = response.ok() ? (response->is_error() ? response->error_value() : ZX_OK)
+                                       : response.status();
     if (status != ZX_OK) {
       return status;
     }
-    *brightness = response.Unwrap_NEW()->value()->state.brightness;
+    *brightness = response->value()->state.brightness;
     return status;
   }
 
@@ -80,21 +74,17 @@ class BacklightDevice {
 
     printf("Setting brightness to: %f nits\n", brightness);
     auto response = client_->SetStateAbsolute(state);
-    zx_status_t status =
-        response.ok()
-            ? (response.Unwrap_NEW()->is_error() ? response.Unwrap_NEW()->error_value() : ZX_OK)
-            : response.status();
+    zx_status_t status = response.ok() ? (response->is_error() ? response->error_value() : ZX_OK)
+                                       : response.status();
     return status;
   }
 
   zx_status_t GetMaxAbsoluteBrightness(double* brightness) {
     auto response = client_->GetMaxAbsoluteBrightness();
-    zx_status_t status =
-        response.ok()
-            ? (response.Unwrap_NEW()->is_error() ? response.Unwrap_NEW()->error_value() : ZX_OK)
-            : response.status();
+    zx_status_t status = response.ok() ? (response->is_error() ? response->error_value() : ZX_OK)
+                                       : response.status();
     if (status == ZX_OK) {
-      *brightness = response.Unwrap_NEW()->value()->max_brightness;
+      *brightness = response->value()->max_brightness;
     }
     return status;
   }

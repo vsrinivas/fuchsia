@@ -24,9 +24,9 @@ int main() {
             wire_result.status());
     return 1;
   }
-  if (wire_result.value_NEW().is_error()) {
+  if (wire_result.value().is_error()) {
     FX_LOGF(ERROR, "platform_driver_test_realm", "Realm:Start failed: %d",
-            wire_result.value_NEW().error_value());
+            wire_result.value().error_value());
     return 1;
   }
 

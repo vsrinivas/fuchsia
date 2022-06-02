@@ -291,8 +291,8 @@ TEST_F(TpmTest, TestGetDeviceId) {
   auto tpm = GetTpmClient();
   auto result = tpm->GetDeviceId();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-  auto& data = *result.Unwrap_NEW()->value();
+  ASSERT_TRUE(result->is_ok());
+  auto& data = *result->value();
   ASSERT_EQ(data.device_id, kDeviceId);
   ASSERT_EQ(data.vendor_id, kVendorId);
   ASSERT_EQ(data.revision_id, kRevisionId);
@@ -336,11 +336,11 @@ TEST_F(TpmTest, TestSendVendorCommand) {
   auto result = tpm->ExecuteVendorCommand(kTpmVendorCommand,
                                           fidl::VectorView<uint8_t>::FromExternal(&value, 1));
   ASSERT_OK(result.status());
-  if (result.Unwrap_NEW()->is_error()) {
-    ASSERT_OK(result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    ASSERT_OK(result->error_value());
   }
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-  ASSERT_EQ(result.Unwrap_NEW()->value()->result, 0);
-  ASSERT_EQ(result.Unwrap_NEW()->value()->data.count(), 1);
-  ASSERT_EQ(result.Unwrap_NEW()->value()->data[0], 0x32);
+  ASSERT_TRUE(result->is_ok());
+  ASSERT_EQ(result->value()->result, 0);
+  ASSERT_EQ(result->value()->data.count(), 1);
+  ASSERT_EQ(result->value()->data[0], 0x32);
 }

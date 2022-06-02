@@ -72,7 +72,7 @@ __EXPORT zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_ti
 __EXPORT zx_time_t zx_clock_get_monotonic() {
   auto result = fidl::WireCall<fake_clock::FakeClock>(GetService())->Get();
   ZX_ASSERT(result.ok());
-  return result.value_NEW().time;
+  return result.value().time;
 }
 
 __EXPORT zx_time_t zx_deadline_after(zx_duration_t duration) {
@@ -255,6 +255,6 @@ __EXPORT bool create_named_deadline(char* component, size_t component_len, char*
   auto result = fidl::WireCall<fake_clock::FakeClock>(GetService())
                     ->CreateNamedDeadline(std::move(id), duration);
   ZX_ASSERT(result.ok());
-  *out = result.value_NEW().deadline;
+  *out = result.value().deadline;
   return true;
 }

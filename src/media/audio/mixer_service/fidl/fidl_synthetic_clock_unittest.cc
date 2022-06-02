@@ -73,11 +73,11 @@ TEST_F(FidlSyntheticClockTest, CreateClockZxClockIsNotReadable) {
           .Build());
 
   ASSERT_TRUE(result.ok()) << result;
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
-  ASSERT_TRUE(result.Unwrap_NEW()->value()->has_handle());
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+  ASSERT_TRUE(result->value()->has_handle());
 
   // The clock must be unreadable and unwritable.
-  auto zx_clock = std::move(result.Unwrap_NEW()->value()->handle());
+  auto zx_clock = std::move(result->value()->handle());
   zx_info_handle_basic_t info;
   auto status = zx_clock.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   ASSERT_EQ(status, ZX_OK);
@@ -98,20 +98,18 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
-    zx_clock = std::move(result.Unwrap_NEW()->value()->handle());
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    zx_clock = std::move(result->value()->handle());
   }
 
   // Since the clock is monotonic, it should report the same time as the realm.
   const zx::time clock_t0(
       clock_client
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   const zx::time realm_t0(
       realm_client_
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   EXPECT_EQ(clock_t0, realm_t0);
 
@@ -123,7 +121,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
   {
     auto result = realm_client_->AdvanceBy(
@@ -132,19 +130,17 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // The clock should have advanced by 100ms * 1.001 = 100100us.
   const zx::time clock_t1(
       clock_client
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   const zx::time realm_t1(
       realm_client_
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
 
   EXPECT_EQ(clock_t1, clock_t0 + zx::usec(100100));
@@ -161,13 +157,12 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   const zx::time observe_t1(
       observe_client
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
 
   EXPECT_EQ(observe_t1, clock_t1);
@@ -185,8 +180,8 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
-    zx_clock = std::move(result.Unwrap_NEW()->value()->handle());
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    zx_clock = std::move(result->value()->handle());
   }
 
   // Get an observer.
@@ -200,19 +195,17 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // Since the clock is monotonic, it should report the same time as the realm.
   const zx::time observe_t0(
       observe_client
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   const zx::time realm_t0(
       realm_client_
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   EXPECT_EQ(observe_t0, realm_t0);
 
@@ -224,19 +217,17 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // The clock should have advanced by 100ms.
   const zx::time observe_t1(
       observe_client
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   const zx::time realm_t1(
       realm_client_
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
 
   EXPECT_EQ(observe_t1, observe_t0 + zx::msec(100));
@@ -257,19 +248,17 @@ TEST_F(FidlSyntheticClockTest, CreateGraphControlled) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // Since the clock is monotonic, it should report the same time as the realm.
   const zx::time observe_t0(
       observe_client
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   const zx::time realm_t0(
       realm_client_
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   EXPECT_EQ(observe_t0, realm_t0);
 
@@ -281,19 +270,17 @@ TEST_F(FidlSyntheticClockTest, CreateGraphControlled) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // The clock should have advanced by 100ms.
   const zx::time observe_t1(
       observe_client
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
   const zx::time realm_t1(
       realm_client_
           ->Now(fuchsia_audio_mixer::wire::SyntheticClockRealmNowRequest::Builder(arena_).Build())
-          .Unwrap_NEW()
           ->now());
 
   EXPECT_EQ(observe_t1, observe_t0 + zx::msec(100));
@@ -314,8 +301,8 @@ TEST_F(FidlSyntheticClockTest, ForgetClosesChannels) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
-    zx_clock = std::move(result.Unwrap_NEW()->value()->handle());
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    zx_clock = std::move(result->value()->handle());
   }
 
   // Connect an observer in additional to the control.
@@ -332,7 +319,7 @@ TEST_F(FidlSyntheticClockTest, ForgetClosesChannels) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // Forgetting the clock should drop both connections.
@@ -343,7 +330,7 @@ TEST_F(FidlSyntheticClockTest, ForgetClosesChannels) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // Connections are dropped asynchronously, so to avoid test flakes we must poll until the
@@ -373,8 +360,8 @@ TEST_F(FidlSyntheticClockTest, Find) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
-    zx_clock2 = std::move(result.Unwrap_NEW()->value()->handle());
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    zx_clock2 = std::move(result->value()->handle());
   }
 
   // Both clocks should be found and they should be different clocks.
@@ -409,7 +396,7 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnUnadjustableClock) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // Fail because the clock is not adjustable.
@@ -420,8 +407,8 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnUnadjustableClock) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_ACCESS_DENIED);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_ACCESS_DENIED);
   }
 }
 
@@ -438,7 +425,7 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnAdjustableClock) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error()) << result.Unwrap_NEW()->error_value();
+    ASSERT_FALSE(result->is_error()) << result->error_value();
   }
 
   // Fail because we didn't set the rate parameter.
@@ -447,8 +434,8 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnAdjustableClock) {
         fuchsia_audio_mixer::wire::SyntheticClockSetRateRequest::Builder(arena_).Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Fail because rate > 1000 ppm.
@@ -459,8 +446,8 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnAdjustableClock) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Fail because rate < -1000 ppm.
@@ -471,8 +458,8 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnAdjustableClock) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 }
 
@@ -488,8 +475,8 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), CreateClockError::kMissingField);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), CreateClockError::kMissingField);
   }
 
   // Fail because `adjustable` is missing.
@@ -501,8 +488,8 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), CreateClockError::kMissingField);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), CreateClockError::kMissingField);
   }
 
   // Fail because kMonotonicDomain is not adjustable.
@@ -515,9 +502,8 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(),
-              CreateClockError::kMonotonicDomainIsNotAdjustable);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), CreateClockError::kMonotonicDomainIsNotAdjustable);
   }
 }
 
@@ -528,8 +514,8 @@ TEST_F(FidlSyntheticClockTest, ForgetClockFails) {
         fuchsia_audio_mixer::wire::SyntheticClockRealmForgetClockRequest::Builder(arena_).Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Fail because `handle` is unknown.
@@ -540,8 +526,8 @@ TEST_F(FidlSyntheticClockTest, ForgetClockFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_FOUND);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_NOT_FOUND);
   }
 }
 
@@ -557,8 +543,8 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Fail because `observe` is missing.
@@ -569,8 +555,8 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Fail because `handle` is unknown.
@@ -585,8 +571,8 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_FOUND);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_NOT_FOUND);
   }
 }
 
@@ -599,8 +585,8 @@ TEST_F(FidlSyntheticClockTest, AdvanceByFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 
   // Fails because the duration is zero.
@@ -611,8 +597,8 @@ TEST_F(FidlSyntheticClockTest, AdvanceByFails) {
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-    EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_INVALID_ARGS);
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(result->error_value(), ZX_ERR_INVALID_ARGS);
   }
 }
 

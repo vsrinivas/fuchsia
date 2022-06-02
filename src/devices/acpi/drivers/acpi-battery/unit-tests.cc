@@ -133,9 +133,9 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
   void CheckInfo() {
     auto res = source_client_->GetBatteryInfo();
     ASSERT_OK(res.status());
-    ASSERT_OK(res.value_NEW().status);
+    ASSERT_OK(res.value().status);
 
-    auto& info = res.value_NEW().info;
+    auto& info = res.value().info;
     ASSERT_EQ(info.unit, fpower::BatteryUnit::kMw);
     ASSERT_EQ(info.design_capacity, kDesignCapacity);
     ASSERT_EQ(info.last_full_capacity, kLastFullChargeCapacity);
@@ -170,9 +170,9 @@ TEST_F(AcpiBatteryTest, CheckBatteryInfo) { ASSERT_NO_FATAL_FAILURE(CheckInfo())
 TEST_F(AcpiBatteryTest, CheckSourceInfo) {
   auto res = source_client_->GetPowerInfo();
   ASSERT_OK(res.status());
-  ASSERT_OK(res.value_NEW().status);
+  ASSERT_OK(res.value().status);
 
-  auto& info = res.value_NEW().info;
+  auto& info = res.value().info;
   ASSERT_EQ(info.state, fpower::kPowerStateDischarging | fpower::kPowerStateOnline);
   ASSERT_EQ(info.type, fpower::PowerType::kBattery);
 }
@@ -180,9 +180,9 @@ TEST_F(AcpiBatteryTest, CheckSourceInfo) {
 TEST_F(AcpiBatteryTest, CheckDataUpdated) {
   auto res = source_client_->GetStateChangeEvent();
   ASSERT_OK(res.status());
-  ASSERT_OK(res.value_NEW().status);
+  ASSERT_OK(res.value().status);
 
-  auto event = std::move(res.value_NEW().handle);
+  auto event = std::move(res.value().handle);
 
   ASSERT_NO_FATAL_FAILURE(CheckInfo());
 
@@ -204,7 +204,7 @@ TEST_F(AcpiBatteryTest, CheckDataUpdated) {
   {
     auto res = source_client_->GetPowerInfo();
     ASSERT_OK(res.status());
-    ASSERT_OK(res.value_NEW().status);
+    ASSERT_OK(res.value().status);
   }
   ASSERT_STATUS(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite_past(), &pending),
                 ZX_ERR_TIMED_OUT);

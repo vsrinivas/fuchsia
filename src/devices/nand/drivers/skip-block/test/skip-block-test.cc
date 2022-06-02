@@ -215,15 +215,15 @@ class SkipBlockTest : public zxtest::Test {
     ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->Write(std::move(op));
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result.value_NEW().status, expected);
-    *bad_block_grown = result.value_NEW().bad_block_grown;
+    ASSERT_STATUS(result.value().status, expected);
+    *bad_block_grown = result.value().bad_block_grown;
   }
 
   void Read(nand::ReadWriteOperation op, zx_status_t expected = ZX_OK) {
     ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->Read(std::move(op));
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result.value_NEW().status, expected);
+    ASSERT_STATUS(result.value().status, expected);
   }
 
   void WriteBytes(nand::WriteBytesOperation op, bool* bad_block_grown,
@@ -231,15 +231,15 @@ class SkipBlockTest : public zxtest::Test {
     ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->WriteBytes(std::move(op));
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value_NEW().status, expected);
-    *bad_block_grown = result.value_NEW().bad_block_grown;
+    ASSERT_EQ(result.value().status, expected);
+    *bad_block_grown = result.value().bad_block_grown;
   }
 
   void WriteBytesWithoutErase(nand::WriteBytesOperation op, zx_status_t expected = ZX_OK) {
     ASSERT_NO_FAILURES(InitializeFidlClient());
     auto result = client_->WriteBytesWithoutErase(std::move(op));
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result.value_NEW().status, expected);
+    ASSERT_STATUS(result.value().status, expected);
   }
 
   void GetPartitionInfo(nand::PartitionInfo* out, zx_status_t expected = ZX_OK) {
@@ -247,8 +247,8 @@ class SkipBlockTest : public zxtest::Test {
 
     auto result = client_->GetPartitionInfo();
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result.value_NEW().status, expected);
-    *out = result.value_NEW().partition_info;
+    ASSERT_STATUS(result.value().status, expected);
+    *out = result.value().partition_info;
   }
 
   void ValidateWritten(size_t offset, size_t size) {

@@ -100,8 +100,8 @@ zx::status<> InitNativeFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir
   auto res = startup_client->Start(std::move(device), std::move(*start_options_or));
   if (!res.ok())
     return zx::error(res.status());
-  if (res.Unwrap_NEW()->is_error())
-    return zx::error(res.Unwrap_NEW()->error_value());
+  if (res->is_error())
+    return zx::error(res->error_value());
 
   return zx::ok();
 }

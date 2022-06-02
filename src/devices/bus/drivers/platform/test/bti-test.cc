@@ -70,7 +70,7 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
   {
     auto result = client->GetKoid();
     ASSERT_OK(result.status());
-    koid1 = result.value_NEW().koid;
+    koid1 = result.value().koid;
   }
 
   fd.reset(openat(dev_fd.get(), kParentPath, O_DIRECTORY | O_RDONLY));
@@ -94,7 +94,7 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
   {
     auto result = client->GetKoid();
     ASSERT_OK(result.status());
-    koid2 = result.value_NEW().koid;
+    koid2 = result.value().koid;
   }
   ASSERT_EQ(koid1, koid2);
 }

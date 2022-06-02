@@ -38,11 +38,11 @@ int main(int argc, char* argv[]) {
   status = resp.status();
 
   if (status == ZX_OK) {
-    if (resp.Unwrap_NEW()->is_error()) {
-      status = resp.Unwrap_NEW()->error_value();
+    if (resp->is_error()) {
+      status = resp->error_value();
     } else {
-      actual_len = resp.Unwrap_NEW()->value()->path.size();
-      auto& r = *resp.Unwrap_NEW()->value();
+      actual_len = resp->value()->path.size();
+      auto& r = *resp->value();
       memcpy(path, r.path.data(), r.path.size());
     }
   }

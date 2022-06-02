@@ -2094,7 +2094,7 @@ static int fs_stat(int fd, struct statfs* buf) {
   if (result.status() != ZX_OK) {
     return ERROR(result.status());
   }
-  fidl::WireResponse<fuchsia_io::Directory::QueryFilesystem>* response = result.Unwrap_NEW();
+  fidl::WireResponse<fuchsia_io::Directory::QueryFilesystem>* response = result.Unwrap();
   if (response->s != ZX_OK) {
     return ERROR(response->s);
   }

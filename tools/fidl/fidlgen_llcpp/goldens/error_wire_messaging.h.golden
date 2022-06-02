@@ -352,18 +352,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : publi
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() const { return &value(); }
@@ -418,18 +408,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() const { return &value(); }

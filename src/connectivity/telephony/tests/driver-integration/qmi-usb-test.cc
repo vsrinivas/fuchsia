@@ -79,7 +79,7 @@ class UsbQmiTest : public ::gtest::RealLoopFixture {
 
     auto result2 = bus_.virtual_bus()->Disable();
     ASSERT_EQ(result2.status(), ZX_OK);
-    ASSERT_EQ(result2.value_NEW().status, ZX_OK);
+    ASSERT_EQ(result2.value().status, ZX_OK);
   }
 
   USBVirtualBusQmi& GetVirtBus() { return bus_; }
@@ -105,7 +105,7 @@ TEST_F(UsbQmiTest, RequestImei) {
       fidl::WireCall<fuchsia_hardware_telephony_transport::Qmi>(qmi_fdio_caller_.channel())
           ->SetChannel(std::move(channel_remote));
   ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.value_NEW().is_error(), false);
+  ASSERT_EQ(result.value().is_error(), false);
   ASSERT_EQ(zx::port::create(0, &channel_port), ZX_OK);
   channel_local.wait_async(channel_port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
 

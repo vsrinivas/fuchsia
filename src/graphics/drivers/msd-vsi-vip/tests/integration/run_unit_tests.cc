@@ -37,7 +37,7 @@ TEST(UnitTests, UnitTests) {
   auto result = fidl::WireCall<fuchsia_gpu_magma::TestDevice>(test_base->channel()->borrow())
                     ->GetUnitTestStatus();
   EXPECT_EQ(ZX_OK, result.status()) << "Device connection lost, check syslog for any errors.";
-  EXPECT_EQ(ZX_OK, result.value_NEW().status) << "Tests reported errors, check syslog.";
+  EXPECT_EQ(ZX_OK, result.value().status) << "Tests reported errors, check syslog.";
 
   test_base->ShutdownDevice();
   test_base.reset();

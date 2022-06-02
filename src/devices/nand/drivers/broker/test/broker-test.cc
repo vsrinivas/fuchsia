@@ -141,8 +141,8 @@ NandDevice::NandDevice() {
                     ->Bind(::fidl::StringView(kBroker));
     zx_status_t status = resp.status();
     zx_status_t call_status = ZX_OK;
-    if (resp.Unwrap_NEW()->is_error()) {
-      call_status = resp.Unwrap_NEW()->error_value();
+    if (resp->is_error()) {
+      call_status = resp->error_value();
     }
     if (status == ZX_OK) {
       status = call_status;

@@ -356,18 +356,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMetho
     return &result_.value();
   }
 
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() { return &value(); }
   const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() const { return &value(); }
@@ -422,18 +412,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::So
     return &result_.value();
   }
 
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() { return &value(); }
   const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() const { return &value(); }

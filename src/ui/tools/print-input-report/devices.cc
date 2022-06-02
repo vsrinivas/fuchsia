@@ -21,7 +21,7 @@ zx_status_t PrintFeatureReports(std::string filename, Printer* printer,
         if (!call_result.ok()) {
           return;
         }
-        auto* result = call_result.Unwrap_NEW();
+        auto* result = call_result.Unwrap();
         if (result->is_error()) {
           callback();
           return;
@@ -109,7 +109,7 @@ zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
         if (!call_result.ok()) {
           return;
         }
-        auto* result = call_result.Unwrap_NEW();
+        auto* result = call_result.Unwrap();
         printer->SetIndent(0);
         printer->Print("Descriptor from file: %s\n", filename.c_str());
         if (result->descriptor.has_mouse()) {
@@ -313,7 +313,7 @@ void PrintInputReports(std::string filename, Printer* printer,
         if (!call_result.ok()) {
           return;
         }
-        auto* result = call_result.Unwrap_NEW();
+        auto* result = call_result.Unwrap();
         size_t reads_left = num_reads;
         if (result->is_error()) {
           callback();
@@ -372,7 +372,7 @@ void GetAndPrintInputReport(std::string filename,
             if (!call_result.ok()) {
               return;
             }
-            auto* result = call_result.Unwrap_NEW();
+            auto* result = call_result.Unwrap();
             if (result->is_error()) {
               callback();
               return;

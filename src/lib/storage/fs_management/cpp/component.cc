@@ -31,10 +31,9 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
   if (!open_exposed_res.ok())
     return zx::error(open_exposed_res.status());
 
-  if (open_exposed_res.Unwrap_NEW()->is_ok()) {
+  if (open_exposed_res->is_ok()) {
     client_end = std::move(exposed_endpoints->client);
-  } else if (open_exposed_res.Unwrap_NEW()->error_value() ==
-             fuchsia_component::wire::Error::kInstanceNotFound) {
+  } else if (open_exposed_res->error_value() == fuchsia_component::wire::Error::kInstanceNotFound) {
     if (component_collection_name == nullptr)
       return zx::error(ZX_ERR_NOT_FOUND);
 
@@ -52,7 +51,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
     auto create_res = realm->CreateChild(collection_ref, child_decl, child_args);
     if (!create_res.ok())
       return zx::error(create_res.status());
-    if (create_res.Unwrap_NEW()->is_error())
+    if (create_res->is_error())
       return zx::error(ZX_ERR_INVALID_ARGS);
 
     auto exposed_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -62,7 +61,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
     if (!open_exposed_res.ok()) {
       return zx::error(open_exposed_res.status());
     }
-    if (open_exposed_res.Unwrap_NEW()->is_error())
+    if (open_exposed_res->is_error())
       return zx::error(ZX_ERR_INVALID_ARGS);
 
     client_end = std::move(exposed_endpoints->client);
@@ -89,8 +88,7 @@ zx::status<> DestroyNativeFsComponent(const char* component_child_name,
   if (!res.ok())
     return zx::error(res.status());
   // If the instance was not found, that's fine. We "destroyed" it.
-  if (res.Unwrap_NEW()->is_error() &&
-      res.Unwrap_NEW()->error_value() != fuchsia_component::wire::Error::kInstanceNotFound)
+  if (res->is_error() && res->error_value() != fuchsia_component::wire::Error::kInstanceNotFound)
     return zx::error(ZX_ERR_INVALID_ARGS);
 
   return zx::ok();

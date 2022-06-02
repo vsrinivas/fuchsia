@@ -68,7 +68,7 @@ zx_status_t FetchTable(const zx::channel& channel, const TableInfo& table,
   }
 
   // Copy the data into memory.
-  uint32_t size = result.Unwrap_NEW()->value()->size;
+  uint32_t size = result->value()->size;
   auto table_data = fbl::Array<uint8_t>(new uint8_t[size], size);
   if (zx_status_t status = vmo.read(table_data.data(), 0, size); status != ZX_OK) {
     return status;
@@ -92,13 +92,13 @@ bool AcpiTableHasKeyword(const zx::channel& acpi_channel, std::string_view table
             zx_status_get_string(result.status()));
     return false;
   }
-  if (result.value_NEW().is_error()) {
+  if (result.value().is_error()) {
     fprintf(stderr, "Call to list ACPI table entries failed: %s.\n",
-            zx_status_get_string(result.value_NEW().error_value()));
+            zx_status_get_string(result.value().error_value()));
     return false;
   }
 
-  auto& entries = result.Unwrap_NEW()->value()->entries;
+  auto& entries = result->value()->entries;
   for (auto table : entries) {
     if (std::string_view(reinterpret_cast<const char*>(table.name.begin()), table.name.size()) !=
         table_name) {

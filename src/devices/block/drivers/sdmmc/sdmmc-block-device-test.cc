@@ -1181,7 +1181,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
           FAIL("GetDeviceInfo failed: %s", result.error().FormatDescription().c_str());
           return;
         }
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         EXPECT_TRUE(response->info.is_emmc_info());
         EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);
         EXPECT_EQ(response->info.emmc_info().reliable_write_sector_count, 1);
@@ -1230,7 +1230,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
           FAIL("Request failed: %s", result.error().FormatDescription().c_str());
           return;
         }
-        EXPECT_FALSE(result.Unwrap_NEW()->is_error());
+        EXPECT_FALSE(result->is_error());
         sync_completion_signal(&completion);
       });
 
@@ -1262,7 +1262,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
           FAIL("Request failed: %s", result.error().FormatDescription().c_str());
           return;
         }
-        EXPECT_FALSE(result.Unwrap_NEW()->is_error());
+        EXPECT_FALSE(result->is_error());
         sync_completion_signal(&completion);
       });
 
@@ -1310,7 +1310,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
           FAIL("Request failed: %s", result.error().FormatDescription().c_str());
           return;
         }
-        EXPECT_TRUE(result.Unwrap_NEW()->is_error());
+        EXPECT_TRUE(result->is_error());
         sync_completion_signal(&error_completion);
       });
 
@@ -1395,7 +1395,7 @@ void SdmmcBlockDeviceTest::QueueRpmbRequests() {
                   return;
                 }
 
-                EXPECT_FALSE(result.Unwrap_NEW()->is_error());
+                EXPECT_FALSE(result->is_error());
                 if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
                   sync_completion_signal(&completion);
                 }
@@ -1457,7 +1457,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
                 return;
               }
 
-              EXPECT_FALSE(result.Unwrap_NEW()->is_error());
+              EXPECT_FALSE(result->is_error());
               if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
                 sync_completion_signal(&completion);
               }
@@ -1558,7 +1558,7 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
           FAIL("GetDeviceInfo failed: %s", result.error().FormatDescription().c_str());
           return;
         }
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         EXPECT_TRUE(response->info.is_emmc_info());
         EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);
         EXPECT_EQ(response->info.emmc_info().reliable_write_sector_count, 1);

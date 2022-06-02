@@ -596,7 +596,7 @@ struct SockOptResult {
     if (response.status() != ZX_OK) {
       return SockOptResult::Zx(response.status());
     }
-    const auto& result = response.value_NEW();
+    const auto& result = response.value();
     if (result.is_error()) {
       return SockOptResult::Errno(static_cast<int16_t>(result.error_value()));
     }
@@ -613,7 +613,7 @@ class GetSockOptProcessor {
     if (response.status() != ZX_OK) {
       return SockOptResult::Zx(response.status());
     }
-    const auto& result = response.value_NEW();
+    const auto& result = response.value();
     if (result.is_error()) {
       return SockOptResult::Errno(static_cast<int16_t>(result.error_value()));
     }
@@ -1110,7 +1110,7 @@ struct BaseSocket {
           return SockOptResult::Zx(response.status());
         }
         int32_t error_code = 0;
-        const auto& result = response.value_NEW();
+        const auto& result = response.value();
         if (result.is_error()) {
           error_code = static_cast<int32_t>(result.error_value());
         }
@@ -1258,7 +1258,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.value_NEW();
+    auto const& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -1275,7 +1275,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
       if (status != ZX_OK) {
         return status;
       }
-      const auto& result = response.value_NEW();
+      const auto& result = response.value();
       if (result.is_error()) {
         *out_code = static_cast<int16_t>(result.error_value());
       } else {
@@ -1296,7 +1296,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.value_NEW();
+    auto const& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -1311,7 +1311,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.value_NEW();
+    auto const& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -1721,7 +1721,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.value_NEW();
+    auto const& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -1764,7 +1764,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       if (status != ZX_OK) {
         return Errno(fdio_status_to_errno(status));
       }
-      auto const& result = response.value_NEW();
+      auto const& result = response.value();
       if (result.is_error()) {
         if (result.error_value() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
@@ -1796,7 +1796,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
         }
         return Errno(fdio_status_to_errno(status));
       }
-      auto const& result = response.value_NEW();
+      auto const& result = response.value();
       if (result.is_error()) {
         if (result.error_value() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
@@ -1823,7 +1823,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
         }
         return Errno(fdio_status_to_errno(status));
       }
-      auto const& result = response.value_NEW();
+      auto const& result = response.value();
       if (result.is_error()) {
         if (result.error_value() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
@@ -1850,7 +1850,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       if (status != ZX_OK) {
         return Errno(fdio_status_to_errno(status));
       }
-      const auto& interfaces = response.value_NEW().interfaces;
+      const auto& interfaces = response.value().interfaces;
 
       // If `ifc_req` is NULL, return the necessary buffer size in bytes for
       // receiving all available addresses in `ifc_len`.
@@ -2099,7 +2099,7 @@ struct base_socket_with_event : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.value_NEW();
+    auto const& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -2212,7 +2212,7 @@ struct base_socket_with_event : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.value_NEW();
+    auto const& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -2556,7 +2556,7 @@ struct stream_socket : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    auto const& result = response.value_NEW();
+    auto const& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -2577,7 +2577,7 @@ struct stream_socket : public zxio {
     if (status != ZX_OK) {
       return status;
     }
-    const auto& result = response.value_NEW();
+    const auto& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -2740,7 +2740,7 @@ struct stream_socket : public zxio {
     if (!response.ok()) {
       return zx::error(response.status());
     }
-    const auto& result = response.value_NEW();
+    const auto& result = response.value();
     if (result.is_error()) {
       return zx::ok(static_cast<int32_t>(result.error_value()));
     }
@@ -2873,7 +2873,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
     if (status != ZX_OK) {
       return status;
     }
-    const auto& result = response.value_NEW();
+    const auto& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;
@@ -2897,7 +2897,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
     if (status != ZX_OK) {
       return status;
     }
-    const auto& result = response.value_NEW();
+    const auto& result = response.value();
     if (result.is_error()) {
       *out_code = static_cast<int16_t>(result.error_value());
       return ZX_OK;

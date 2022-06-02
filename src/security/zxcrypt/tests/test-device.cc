@@ -138,7 +138,7 @@ void TestDevice::BindFvmDriver() {
   zx_status_t status = resp.status();
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_TRUE(resp.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(resp->is_ok());
 }
 
 void TestDevice::Rebind() {
@@ -161,8 +161,8 @@ void TestDevice::Rebind() {
                     zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
                     ->Rebind(fidl::StringView::FromExternal(kFvmDriver));
     zx_status_t status = resp.status();
-    if (resp.Unwrap_NEW()->is_error()) {
-      call_status = resp.Unwrap_NEW()->error_value();
+    if (resp->is_error()) {
+      call_status = resp->error_value();
     }
     fdio_unsafe_release(io);
     ASSERT_OK(status);
@@ -354,11 +354,11 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
           ->GetTopologicalPath();
   status = resp.status();
 
-  if (resp.Unwrap_NEW()->is_error()) {
-    call_status = resp.Unwrap_NEW()->error_value();
+  if (resp->is_error()) {
+    call_status = resp->error_value();
   } else {
     call_status = ZX_OK;
-    auto& r = *resp.Unwrap_NEW()->value();
+    auto& r = *resp->value();
     out_len = r.path.size();
     memcpy(fvm_part_path_, r.path.data(), r.path.size());
   }

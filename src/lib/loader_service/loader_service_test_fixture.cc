@@ -113,7 +113,7 @@ void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client,
                                    zx::status<std::string> expected) {
   auto result = client->LoadObject(fidl::StringView::FromExternal(name));
   ASSERT_TRUE(result.ok());
-  auto response = result.Unwrap_NEW();
+  auto response = result.Unwrap();
   ASSERT_EQ(expected.status_value(), response->rv);
 
   zx::vmo vmo = std::move(response->object);
@@ -137,7 +137,7 @@ void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client, std
   auto result = client->Config(fidl::StringView::FromExternal(config));
   ASSERT_EQ(result.status(), expected.status_value());
   if (expected.is_ok()) {
-    ASSERT_EQ(result.Unwrap_NEW()->rv, expected.value());
+    ASSERT_EQ(result->rv, expected.value());
   }
 }
 
@@ -160,7 +160,7 @@ zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
     if (!result.ok()) {
       return zx::error(result.status());
     }
-    vmex_resource = std::move(result.value_NEW().resource);
+    vmex_resource = std::move(result.value().resource);
   }
   return zx::ok(vmex_resource.borrow());
 }

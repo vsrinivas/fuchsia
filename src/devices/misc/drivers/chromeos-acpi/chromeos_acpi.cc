@@ -185,16 +185,16 @@ zx_status_t ChromeosAcpi::EvaluateObjectHelper(const char* name,
     return result.status();
   }
 
-  if (result.Unwrap_NEW()->is_error()) {
-    zxlogf(ERROR, "MLST failed: %d", int(result.Unwrap_NEW()->error_value()));
+  if (result->is_error()) {
+    zxlogf(ERROR, "MLST failed: %d", int(result->error_value()));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (!result.Unwrap_NEW()->value()->result.is_object()) {
+  if (!result->value()->result.is_object()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  callback(result.Unwrap_NEW()->value()->result.object());
+  callback(result->value()->result.object());
   return ZX_OK;
 }
 

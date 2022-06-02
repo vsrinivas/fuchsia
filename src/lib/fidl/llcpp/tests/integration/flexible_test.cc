@@ -351,7 +351,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreBytes) {
   auto result = client->GetUnknownXUnionMoreBytes();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value_NEW().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_EQ(result.value().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
@@ -365,7 +365,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
   auto result = client->GetUnknownXUnionMoreHandles();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value_NEW().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_EQ(result.value().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
 
 static_assert(
@@ -380,8 +380,8 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreBytes) {
   auto result = client->GetUnknownTableMoreBytes();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  EXPECT_FALSE(result.value_NEW().t.has_want_more_than_30_bytes_at_ordinal_3());
-  EXPECT_FALSE(result.value_NEW().t.has_want_more_than_4_handles_at_ordinal_4());
+  EXPECT_FALSE(result.value().t.has_want_more_than_30_bytes_at_ordinal_3());
+  EXPECT_FALSE(result.value().t.has_want_more_than_4_handles_at_ordinal_4());
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
@@ -395,8 +395,8 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreHandles) {
   auto result = client->GetUnknownTableMoreHandles();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  EXPECT_FALSE(result.value_NEW().t.has_want_more_than_30_bytes_at_ordinal_3());
-  EXPECT_FALSE(result.value_NEW().t.has_want_more_than_4_handles_at_ordinal_4());
+  EXPECT_FALSE(result.value().t.has_want_more_than_30_bytes_at_ordinal_3());
+  EXPECT_FALSE(result.value().t.has_want_more_than_4_handles_at_ordinal_4());
 }
 
 // Test receiving an event with a flexible envelope that's larger than the types

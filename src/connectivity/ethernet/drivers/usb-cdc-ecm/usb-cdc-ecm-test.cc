@@ -43,10 +43,10 @@ zx_status_t GetTopologicalPath(int fd, std::string* out) {
   if (status != ZX_OK) {
     return status;
   }
-  if (resp.value_NEW().is_error()) {
-    return resp.value_NEW().error_value();
+  if (resp.value().is_error()) {
+    return resp.value().error_value();
   }
-  const auto& r = *resp.Unwrap_NEW()->value();
+  const auto& r = *resp->value();
   path_len = r.path.size();
   if (path_len > PATH_MAX) {
     return ZX_ERR_INTERNAL;
@@ -152,10 +152,10 @@ class EthernetInterface {
     // Get device information
     auto get_info_result = ethernet_client_->GetInfo();
     ASSERT_OK(get_info_result.status());
-    auto info = get_info_result.Unwrap_NEW()->info;
+    auto info = get_info_result->info;
     auto get_fifos_result = ethernet_client_->GetFifos();
     ASSERT_OK(get_fifos_result.status());
-    auto fifos = get_fifos_result.Unwrap_NEW()->info.get();
+    auto fifos = get_fifos_result->info.get();
     mtu_ = info.mtu;
     // Calculate optimal size of VMO, and set up RX and TX buffers.
     size_t optimal_vmo_size = (fifos->rx_depth * mtu_) + (fifos->tx_depth * mtu_);

@@ -79,7 +79,7 @@ void FshostInspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_
   auto result = fidl::WireCall(dir)->QueryFilesystem();
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
   if (result.status() == ZX_OK) {
-    fidl::WireResponse<fuchsia_io::Directory::QueryFilesystem>* response = result.Unwrap_NEW();
+    fidl::WireResponse<fuchsia_io::Directory::QueryFilesystem>* response = result.Unwrap();
     fuchsia_io::wire::FilesystemInfo* info = response->info.get();
     if (info != nullptr) {
       stats.CreateUint("fvm_free_bytes", info->free_shared_pool_bytes, inspector);
@@ -225,7 +225,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
   if (result.status() != ZX_OK) {
     return std::nullopt;
   }
-  fidl::WireResponse<fio::Node::GetAttr>* response = result.Unwrap_NEW();
+  fidl::WireResponse<fio::Node::GetAttr>* response = result.Unwrap();
 
   bool is_dir = response->attributes.mode & fio::wire::kModeTypeDirectory;
   return std::optional<DirectoryEntry>{{
@@ -242,7 +242,7 @@ void DirectoryEntriesIterator::RefreshPendingEntries() {
   if (result.status() != ZX_OK) {
     return;
   }
-  fidl::WireResponse<fio::Directory::ReadDirents>* response = result.Unwrap_NEW();
+  fidl::WireResponse<fio::Directory::ReadDirents>* response = result.Unwrap();
   if (response->dirents.count() == 0) {
     return;
   }

@@ -61,7 +61,7 @@ TEST(V2Integration, SyncCallResponseDecode) {
 
   auto result = client->MethodWithResponse();
   ASSERT_TRUE(result.ok());
-  ASSERT_EQ(123u, result.value_NEW().u.v());
+  ASSERT_EQ(123u, result.value().u.v());
 
   server_thread.join();
 }
@@ -83,7 +83,7 @@ TEST(V2Integration, AsyncCallResponseDecode) {
   client->MethodWithResponse().ThenExactlyOnce(
       [&done](fidl::WireUnownedResult<TestProtocol::MethodWithResponse>& result) {
         ASSERT_EQ(ZX_OK, result.status());
-        ASSERT_EQ(123u, result.value_NEW().u.v());
+        ASSERT_EQ(123u, result.value().u.v());
         sync_completion_signal(&done);
       });
 

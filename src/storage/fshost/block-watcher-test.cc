@@ -787,10 +787,9 @@ class BlockWatcherTest : public testing::FshostIntegrationTest {
     // Get the actual topological path of the block device.
     auto result = fidl::BindSyncClient(std::move(controller))->GetTopologicalPath();
     ASSERT_EQ(result.status(), ZX_OK);
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+    ASSERT_FALSE(result->is_error());
 
-    auto actual_path = std::string(result.Unwrap_NEW()->value()->path.begin(),
-                                   result.Unwrap_NEW()->value()->path.size());
+    auto actual_path = std::string(result->value()->path.begin(), result->value()->path.size());
     // Make sure expected path matches the actual path.
     ASSERT_EQ(actual_path, expected_path);
   }
@@ -832,7 +831,7 @@ TEST_F(BlockWatcherTest, TestBlockWatcherAdd) {
 TEST_F(BlockWatcherTest, TestBlockWatcherUnmatchedResume) {
   auto result = block_watcher()->Resume();
   ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.value_NEW().status, ZX_ERR_BAD_STATE);
+  ASSERT_EQ(result.value().status, ZX_ERR_BAD_STATE);
 }
 
 TEST_F(BlockWatcherTest, TestMultiplePause) {

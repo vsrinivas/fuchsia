@@ -49,7 +49,7 @@ zx::resource AttemptToGetVmexResource() {
     return zx::resource();
   }
 
-  return std::move(result.value_NEW().resource);
+  return std::move(result.value().resource);
 }
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {

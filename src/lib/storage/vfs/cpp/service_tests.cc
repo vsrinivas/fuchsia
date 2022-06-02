@@ -190,7 +190,7 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   // verify it by calling describe on it, which should return correctly.
   auto describe_result = fidl::WireCall(abc->client)->Describe();
   ASSERT_EQ(ZX_OK, describe_result.status());
-  ASSERT_EQ(fio::wire::NodeInfo::Tag::kService, describe_result.value_NEW().info.Which());
+  ASSERT_EQ(fio::wire::NodeInfo::Tag::kService, describe_result.value().info.Which());
 
   loop.Shutdown();
 }

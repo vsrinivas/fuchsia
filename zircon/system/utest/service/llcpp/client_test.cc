@@ -132,7 +132,7 @@ TEST_F(ClientTest, ConnectsToDefault) {
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
-  auto response = echo_result.Unwrap_NEW();
+  auto response = echo_result.Unwrap();
 
   std::string result_string(response->response.data(), response->response.size());
   ASSERT_EQ(result_string, "default-foo: hello");
@@ -153,7 +153,7 @@ TEST_F(ClientTest, ConnectsToOther) {
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
-  auto response = echo_result.Unwrap_NEW();
+  auto response = echo_result.Unwrap();
 
   std::string result_string(response->response.data(), response->response.size());
   ASSERT_EQ(result_string, "other-bar: hello");
@@ -258,9 +258,8 @@ TEST_F(ClientTest, CloneServiceDirectory) {
   auto echo = fidl::BindSyncClient(std::move(*client_end));
   auto result = echo->EchoString("foo");
   ASSERT_OK(result.status());
-  ASSERT_STREQ(
-      std::string(result.value_NEW().response.data(), result.value_NEW().response.size()).c_str(),
-      "default-foo: foo");
+  ASSERT_STREQ(std::string(result.value().response.data(), result.value().response.size()).c_str(),
+               "default-foo: foo");
 }
 
 TEST(CloneService, Error) {

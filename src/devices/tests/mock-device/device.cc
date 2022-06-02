@@ -262,7 +262,7 @@ zx_status_t MockDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
   ZX_ASSERT(result.ok());
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
   return ctx.hook_status;
 }
@@ -272,7 +272,7 @@ zx_status_t MockDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   ZX_ASSERT(result.ok());
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
   return ctx.hook_status;
 }
@@ -282,7 +282,7 @@ zx_status_t MockDevice::DdkClose(uint32_t flags) {
   ZX_ASSERT(result.ok());
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
   return ctx.hook_status;
 }
@@ -293,7 +293,7 @@ void MockDevice::DdkUnbind(ddk::UnbindTxn txn) {
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, false, this, zxdev());
   ctx.pending_unbind_txn = std::move(txn);
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
 }
 
@@ -303,7 +303,7 @@ zx_status_t MockDevice::DdkRead(void* buf, size_t count, zx_off_t off, size_t* a
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
   ctx.associated_buf = buf, ctx.associated_buf_count = count;
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
   *actual = ctx.associated_buf_actual;
   return ctx.hook_status;
@@ -317,7 +317,7 @@ zx_status_t MockDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, si
   ZX_ASSERT(result.ok());
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
   *actual = count;
   return ctx.hook_status;
@@ -328,7 +328,7 @@ zx_off_t MockDevice::DdkGetSize() {
   ZX_ASSERT(result.ok());
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, false, this, zxdev());
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
 
   ZX_ASSERT_MSG(false, "need to plumb returning values in\n");
@@ -340,7 +340,7 @@ zx_status_t MockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   ZX_ASSERT(result.ok());
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
   return ctx.hook_status;
 }
@@ -352,7 +352,7 @@ void MockDevice::DdkSuspend(ddk::SuspendTxn txn) {
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
   ctx.pending_suspend_txn = std::move(txn);
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
 }
 
@@ -362,7 +362,7 @@ void MockDevice::DdkResume(ddk::ResumeTxn txn) {
   ProcessActionsContext::ChannelVariants channel = controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel, true, this, zxdev());
   ctx.pending_resume_txn = std::move(txn);
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
 }
 
@@ -372,7 +372,7 @@ zx_status_t MockDevice::DdkRxrpc(zx_handle_t channel) {
   ProcessActionsContext::ChannelVariants channel_variants =
       controller_.client_end().borrow().channel();
   ProcessActionsContext ctx(channel_variants, true, this, zxdev());
-  zx_status_t status = ProcessActions(std::move(result.value_NEW().actions), &ctx);
+  zx_status_t status = ProcessActions(std::move(result.value().actions), &ctx);
   ZX_ASSERT(status == ZX_OK);
   return ctx.hook_status;
 }
@@ -585,7 +585,7 @@ zx_status_t MockDeviceBind(void* ctx, zx_device_t* parent) {
 
   ProcessActionsContext::ChannelVariants channel_variants = zx::unowned_channel(c);
   ProcessActionsContext pac_ctx(channel_variants, true, nullptr, parent);
-  status = ProcessActions(result.value_NEW().actions, &pac_ctx);
+  status = ProcessActions(result.value().actions, &pac_ctx);
   ZX_ASSERT(status == ZX_OK);
   return pac_ctx.hook_status;
 }

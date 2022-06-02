@@ -120,7 +120,7 @@ TEST_P(AccelerationInputDeviceTest, ReadInputReports) {
       [](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
              result) {
         ASSERT_TRUE(result.ok());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         ASSERT_TRUE(response->is_ok());
         auto& reports = response->value()->reports;
         ASSERT_EQ(reports.count(), 1u);
@@ -141,7 +141,7 @@ TEST_F(AccelerationInputDeviceTest, Descriptor) {
       [&get_descriptor_called](
           fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetDescriptor>& result) {
         ASSERT_TRUE(result.ok());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         get_descriptor_called = true;
         ASSERT_NE(response, nullptr);
         const auto& descriptor = response->descriptor;
@@ -258,7 +258,7 @@ TEST_P(GyroscopeInputDeviceTest, ReadInputReports) {
       [](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
              result) {
         ASSERT_TRUE(result.ok());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         ASSERT_TRUE(response->is_ok());
         auto& reports = response->value()->reports;
         ASSERT_EQ(reports.count(), 1u);
@@ -279,7 +279,7 @@ TEST_F(GyroscopeInputDeviceTest, Descriptor) {
       [&get_descriptor_called](
           fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetDescriptor>& result) {
         ASSERT_TRUE(result.ok());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
 
         get_descriptor_called = true;
         ASSERT_NE(response, nullptr);
@@ -396,7 +396,7 @@ TEST_P(RgbcLightInputDeviceTest, ReadInputReports) {
       [](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
              result) {
         ASSERT_TRUE(result.ok());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         ASSERT_TRUE(response->is_ok());
         auto& reports = response->value()->reports;
         ASSERT_EQ(reports.count(), 1u);
@@ -418,7 +418,7 @@ TEST_F(RgbcLightInputDeviceTest, Descriptor) {
       [&get_descriptor_called](
           fidl::WireUnownedResult<fuchsia_input_report::InputDevice::GetDescriptor>& result) {
         ASSERT_TRUE(result.ok());
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         get_descriptor_called = true;
         ASSERT_NE(response, nullptr);
         const auto& descriptor = response->descriptor;

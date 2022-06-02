@@ -229,5 +229,5 @@ TEST(Devfs, ExportWatcherCreateFails) {
   auto result =
       client->Export(std::move(endpoints->client), "svc/test", "one/two", ZX_PROTOCOL_BLOCK);
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_error());
+  ASSERT_TRUE(result->is_error());
 }

@@ -544,7 +544,7 @@ TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
   auto props = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(props.status());
 
-  EXPECT_EQ(kTestTurnOnNsecs, props.value_NEW().properties.turn_on_delay());
+  EXPECT_EQ(kTestTurnOnNsecs, props.value().properties.turn_on_delay());
 
   child_dev->UnbindOp();
   EXPECT_TRUE(child_dev->UnbindReplyCalled());
@@ -613,10 +613,10 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     // (we know the controller is single threaded, initialization is completed if received a reply).
     // In this test we want to get the gain state anyways.
     auto gain_state = stream_client->WatchGainState();
-    ASSERT_TRUE(gain_state.value_NEW().gain_state.has_agc_enabled());
-    ASSERT_FALSE(gain_state.value_NEW().gain_state.agc_enabled());
-    ASSERT_TRUE(gain_state.value_NEW().gain_state.muted());
-    ASSERT_EQ(gain_state.value_NEW().gain_state.gain_db(), kTestGain);
+    ASSERT_TRUE(gain_state.value().gain_state.has_agc_enabled());
+    ASSERT_FALSE(gain_state.value().gain_state.agc_enabled());
+    ASSERT_TRUE(gain_state.value().gain_state.muted());
+    ASSERT_EQ(gain_state.value().gain_state.gain_db(), kTestGain);
 
     ASSERT_EQ(codec1->gain(), kTestGain + kTestDeltaGain);
     ASSERT_EQ(codec2->gain(), kTestGain);
@@ -643,10 +643,10 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     // In this test we want to get the gain state anyways.
     auto gain_state = stream_client->WatchGainState();
 
-    ASSERT_TRUE(gain_state.value_NEW().gain_state.has_agc_enabled());
-    ASSERT_TRUE(gain_state.value_NEW().gain_state.agc_enabled());
-    ASSERT_FALSE(gain_state.value_NEW().gain_state.muted());
-    ASSERT_EQ(gain_state.value_NEW().gain_state.gain_db(), kTestGain);
+    ASSERT_TRUE(gain_state.value().gain_state.has_agc_enabled());
+    ASSERT_TRUE(gain_state.value().gain_state.agc_enabled());
+    ASSERT_FALSE(gain_state.value().gain_state.muted());
+    ASSERT_EQ(gain_state.value().gain_state.gain_db(), kTestGain);
 
     ASSERT_EQ(codec1->gain(), kTestGain + kTestDeltaGain);
     ASSERT_EQ(codec2->gain(), kTestGain);
@@ -694,10 +694,10 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     // In this test we want to get the gain state anyways.
     auto gain_state = stream_client->WatchGainState();
 
-    ASSERT_TRUE(gain_state.value_NEW().gain_state.has_agc_enabled());
-    ASSERT_FALSE(gain_state.value_NEW().gain_state.agc_enabled());
-    ASSERT_FALSE(gain_state.value_NEW().gain_state.muted());
-    ASSERT_EQ(gain_state.value_NEW().gain_state.gain_db(), kTestGain);
+    ASSERT_TRUE(gain_state.value().gain_state.has_agc_enabled());
+    ASSERT_FALSE(gain_state.value().gain_state.agc_enabled());
+    ASSERT_FALSE(gain_state.value().gain_state.muted());
+    ASSERT_EQ(gain_state.value().gain_state.gain_db(), kTestGain);
 
     // We check the gain delta support in one codec.
     ASSERT_EQ(codec1->gain(), kTestGain + kTestDeltaGain);
@@ -767,8 +767,8 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
   auto props = stream_client->GetProperties();
   ASSERT_OK(props.status());
 
-  EXPECT_TRUE(props.value_NEW().properties.can_mute());
-  EXPECT_FALSE(props.value_NEW().properties.can_agc());
+  EXPECT_TRUE(props.value().properties.can_mute());
+  EXPECT_FALSE(props.value().properties.can_agc());
 
   child_dev->UnbindOp();
   EXPECT_TRUE(child_dev->UnbindReplyCalled());
@@ -829,8 +829,8 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   auto props = stream_client->GetProperties();
   ASSERT_OK(props.status());
 
-  EXPECT_FALSE(props.value_NEW().properties.can_mute());
-  EXPECT_TRUE(props.value_NEW().properties.can_agc());
+  EXPECT_FALSE(props.value().properties.can_mute());
+  EXPECT_TRUE(props.value().properties.can_agc());
 
   child_dev->UnbindOp();
   EXPECT_TRUE(child_dev->UnbindReplyCalled());
@@ -1823,7 +1823,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
 
     auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(frames_req, 0);
     ASSERT_OK(vmo.status());
-    ASSERT_EQ(vmo.Unwrap_NEW()->value()->num_frames, frames_expected);
+    ASSERT_EQ(vmo->value()->num_frames, frames_expected);
 
     child_dev->UnbindOp();
     EXPECT_TRUE(child_dev->UnbindReplyCalled());
@@ -1860,8 +1860,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     auto supported = stream_client->GetSupportedFormats();
     ASSERT_OK(supported.status());
 
-    auto& pcm_supported_formats0 =
-        supported.value_NEW().supported_formats[0].pcm_supported_formats();
+    auto& pcm_supported_formats0 = supported.value().supported_formats[0].pcm_supported_formats();
     ASSERT_EQ(pcm_supported_formats0.frame_rates()[0], 8'000);
     auto& attributes0 = pcm_supported_formats0.channel_sets()[0].attributes();
     ASSERT_EQ(attributes0.count(), 2);
@@ -1870,8 +1869,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     ASSERT_EQ(attributes0[1].min_frequency(), 200);
     ASSERT_EQ(attributes0[1].max_frequency(), 20'000);
 
-    auto& pcm_supported_formats1 =
-        supported.value_NEW().supported_formats[1].pcm_supported_formats();
+    auto& pcm_supported_formats1 = supported.value().supported_formats[1].pcm_supported_formats();
     ASSERT_EQ(pcm_supported_formats1.frame_rates()[0], 16'000);
     auto& attributes1 = pcm_supported_formats1.channel_sets()[0].attributes();
     ASSERT_EQ(attributes1.count(), 2);

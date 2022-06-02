@@ -50,7 +50,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
       return nullptr;
     }
 
-    if (info_result.value_NEW().info.is_source) {
+    if (info_result.value().info.is_source) {
       std::cout << "Creating MIDI source @ \"" << devname << "\"\n";
       std::unique_ptr<MidiKeyboard> ret(new MidiKeyboard(owner, std::move(client)));
       ret->IssueRead();
@@ -67,12 +67,11 @@ void MidiKeyboard::IssueRead() {
       FX_LOGS(WARNING) << "Failed to read from MIDI device: " << result.error();
       return;
     }
-    if (result.Unwrap_NEW()->is_error()) {
-      FX_LOGS(WARNING) << "Shutting down MIDI keyboard (status "
-                       << result.Unwrap_NEW()->error_value() << " )";
+    if (result->is_error()) {
+      FX_LOGS(WARNING) << "Shutting down MIDI keyboard (status " << result->error_value() << " )";
       return;
     }
-    HandleRead(*result.Unwrap_NEW()->value());
+    HandleRead(*result->value());
   });
 }
 

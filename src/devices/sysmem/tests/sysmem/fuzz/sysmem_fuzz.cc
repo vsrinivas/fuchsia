@@ -73,7 +73,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   // This is the first round-trip to/from sysmem.  A failure here can be
   // due to any step above failing async.
   LOGRTN(result.status(), "Failed on WaitForBuffersAllocated.\n");
-  LOGRTN(result.value_NEW().status, "Bad allocation_status on WaitForBuffersAllocated.\n");
+  LOGRTN(result.value().status, "Bad allocation_status on WaitForBuffersAllocated.\n");
 
   return 0;
 }

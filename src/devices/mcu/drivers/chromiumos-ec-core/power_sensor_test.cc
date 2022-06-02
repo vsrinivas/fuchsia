@@ -91,27 +91,27 @@ class ChromiumosEcPowerSensorTest : public ChromiumosEcTestBase {
 TEST_F(ChromiumosEcPowerSensorTest, PowerInfo) {
   auto result = client_->GetPowerWatts();
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-  EXPECT_EQ(result.Unwrap_NEW()->value()->power, 15.0f);
+  ASSERT_TRUE(result->is_ok());
+  EXPECT_EQ(result->value()->power, 15.0f);
 
   SetPower(20'500'000);
   auto result2 = client_->GetPowerWatts();
   ASSERT_TRUE(result2.ok());
-  ASSERT_TRUE(result2.Unwrap_NEW()->is_ok());
-  EXPECT_EQ(result2.Unwrap_NEW()->value()->power, 20.5f);
+  ASSERT_TRUE(result2->is_ok());
+  EXPECT_EQ(result2->value()->power, 20.5f);
 
   SetPower(-1);
   auto result3 = client_->GetPowerWatts();
   ASSERT_TRUE(result3.ok());
-  ASSERT_TRUE(result3.Unwrap_NEW()->is_error());
-  EXPECT_EQ(result3.Unwrap_NEW()->error_value(), ZX_ERR_INTERNAL);
+  ASSERT_TRUE(result3->is_error());
+  EXPECT_EQ(result3->error_value(), ZX_ERR_INTERNAL);
 }
 
 TEST_F(ChromiumosEcPowerSensorTest, VoltageInfo) {
   auto result = client_->GetVoltageVolts();
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-  EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_TRUE(result->is_error());
+  EXPECT_EQ(result->error_value(), ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace chromiumos_ec_core::power_sensor

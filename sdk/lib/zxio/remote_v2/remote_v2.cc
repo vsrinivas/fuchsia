@@ -90,7 +90,7 @@ zx_status_t zxio_remote_v2_close(zxio_t* io) {
     if (!result.ok()) {
       return result.status();
     }
-    const auto* res = result.Unwrap_NEW();
+    const auto* res = result.Unwrap();
     if (res->is_error()) {
       return res->error_value();
     } else if (res->is_ok()) {
@@ -192,7 +192,7 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
   if (!result.ok()) {
     return result.status();
   }
-  const auto* res = result.Unwrap_NEW();
+  const auto* res = result.Unwrap();
   if (res->is_error()) {
     return res->error_value();
   }
@@ -207,7 +207,7 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
     return result.status();
   }
 
-  const auto* res = result.Unwrap_NEW();
+  const auto* res = result.Unwrap();
   if (res->is_error()) {
     return res->error_value();
   }
@@ -224,7 +224,7 @@ zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* at
   if (!result.ok()) {
     return result.status();
   }
-  const auto* res = result.Unwrap_NEW();
+  const auto* res = result.Unwrap();
   if (res->is_error()) {
     return res->error_value();
   }
@@ -378,7 +378,7 @@ zx_status_t zxio_remote_v2_readv(zxio_t* io, const zx_iovec_t* vector, size_t ve
         if (!result.ok()) {
           return result.status();
         }
-        const auto* res = result.Unwrap_NEW();
+        const auto* res = result.Unwrap();
         if (res->is_error()) {
           return res->error_value();
         }
@@ -415,7 +415,7 @@ zx_status_t zxio_remote_v2_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_
         if (!result.ok()) {
           return result.status();
         }
-        const auto* res = result.Unwrap_NEW();
+        const auto* res = result.Unwrap();
         if (res->is_error()) {
           return res->error_value();
         }
@@ -454,7 +454,7 @@ zx_status_t zxio_remote_v2_writev(zxio_t* io, const zx_iovec_t* vector, size_t v
         if (!result.ok()) {
           return result.status();
         }
-        const auto* res = result.Unwrap_NEW();
+        const auto* res = result.Unwrap();
         if (res->is_error()) {
           return res->error_value();
         }
@@ -490,7 +490,7 @@ zx_status_t zxio_remote_v2_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec
         if (!result.ok()) {
           return result.status();
         }
-        const auto* res = result.Unwrap_NEW();
+        const auto* res = result.Unwrap();
         if (res->is_error()) {
           return res->error_value();
         }
@@ -516,7 +516,7 @@ zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t of
   if (!result.ok()) {
     return result.status();
   }
-  const auto* res = result.Unwrap_NEW();
+  const auto* res = result.Unwrap();
   if (res->is_error()) {
     return res->error_value();
   }

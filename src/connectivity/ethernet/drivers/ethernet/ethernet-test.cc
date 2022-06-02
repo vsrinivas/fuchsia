@@ -62,24 +62,24 @@ class EthernetDeviceTest {
     {
       auto result = FidlClient()->GetFifos();
       ASSERT_OK(result.status());
-      ASSERT_OK(result.Unwrap_NEW()->status);
-      tx_fifo_ = std::move(result.Unwrap_NEW()->info->tx);
+      ASSERT_OK(result->status);
+      tx_fifo_ = std::move(result->info->tx);
       EXPECT_TRUE(tx_fifo_.is_valid());
-      rx_fifo_ = std::move(result.Unwrap_NEW()->info->rx);
-      rx_fifo_depth_ = result.Unwrap_NEW()->info->rx_depth;
-      tx_fifo_depth_ = result.Unwrap_NEW()->info->tx_depth;
+      rx_fifo_ = std::move(result->info->rx);
+      rx_fifo_depth_ = result->info->rx_depth;
+      tx_fifo_depth_ = result->info->tx_depth;
       EXPECT_TRUE(rx_fifo_.is_valid());
     }
     {
       ASSERT_OK(zx::vmo::create(2 * sizeof(ethernet_netbuf_t), 0, &buf_));
       auto result = FidlClient()->SetIoBuffer(std::move(buf_));
       ASSERT_OK(result.status());
-      ASSERT_OK(result.Unwrap_NEW()->status);
+      ASSERT_OK(result->status);
     }
     {
       auto result = FidlClient()->Start();
       ASSERT_OK(result.status());
-      ASSERT_OK(result.Unwrap_NEW()->status);
+      ASSERT_OK(result->status);
     }
   }
 
@@ -122,23 +122,23 @@ TEST(EthernetTest, SetClientNameTest) {
   std::string name("ethtest");
   auto result = test.FidlClient()->SetClientName(fidl::StringView::FromExternal(name));
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_OK(result->status);
 }
 
 TEST(EthernetTest, GetInfoTest) {
   EthernetDeviceTest test;
   auto result = test.FidlClient()->GetInfo();
   ASSERT_OK(result.status());
-  EXPECT_TRUE(test.tester.ethmac().TestInfo(&result.Unwrap_NEW()->info));
+  EXPECT_TRUE(test.tester.ethmac().TestInfo(&result->info));
 }
 
 TEST(EthernetTest, GetFifosTest) {
   EthernetDeviceTest test;
   auto result = test.FidlClient()->GetFifos();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->status);
-  EXPECT_TRUE(result.Unwrap_NEW()->info->rx != ZX_HANDLE_INVALID);
-  EXPECT_TRUE(result.Unwrap_NEW()->info->tx != ZX_HANDLE_INVALID);
+  ASSERT_OK(result->status);
+  EXPECT_TRUE(result->info->rx != ZX_HANDLE_INVALID);
+  EXPECT_TRUE(result->info->tx != ZX_HANDLE_INVALID);
 }
 
 TEST(EthernetTest, AddDeviceAsNotPromiscuous) {
@@ -152,14 +152,14 @@ TEST(EthernetTest, SetPromiscuousModeTest) {
   {
     auto result = test.FidlClient()->SetPromiscuousMode(true);
     ASSERT_OK(result.status());
-    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_OK(result->status);
     EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 1, "");
   }
 
   {
     auto result = test.FidlClient()->SetPromiscuousMode(false);
     ASSERT_OK(result.status());
-    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_OK(result->status);
     EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 0, "");
   }
 }
@@ -173,7 +173,7 @@ TEST(EthernetTest, ConfigMulticastAddMacTest) {
 
     auto result = test.FidlClient()->ConfigMulticastAddMac(wrong_addr);
     ASSERT_OK(result.status());
-    ASSERT_NOT_OK(result.Unwrap_NEW()->status);
+    ASSERT_NOT_OK(result->status);
   }
 
   {
@@ -181,7 +181,7 @@ TEST(EthernetTest, ConfigMulticastAddMacTest) {
         .octets = {0x01, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
     auto result = test.FidlClient()->ConfigMulticastAddMac(right_addr);
     ASSERT_OK(result.status());
-    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_OK(result->status);
   }
 }
 
@@ -191,7 +191,7 @@ TEST(EthernetTest, ConfigMulticastDeleteMacTest) {
       .octets = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
   auto result = test.FidlClient()->ConfigMulticastDeleteMac(addr);
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_OK(result->status);
 }
 
 TEST(EthernetTest, ConfigMulticastSetPromiscuousModeTest) {
@@ -199,13 +199,13 @@ TEST(EthernetTest, ConfigMulticastSetPromiscuousModeTest) {
   {
     auto result = test.FidlClient()->ConfigMulticastSetPromiscuousMode(true);
     ASSERT_OK(result.status());
-    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_OK(result->status);
   }
 
   {
     auto result = test.FidlClient()->ConfigMulticastSetPromiscuousMode(false);
     ASSERT_OK(result.status());
-    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_OK(result->status);
   }
 }
 
@@ -213,14 +213,14 @@ TEST(EthernetTest, ConfigMulticastTestFilterTest) {
   EthernetDeviceTest test;
   auto result = test.FidlClient()->ConfigMulticastTestFilter();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_OK(result->status);
 }
 
 TEST(EthernetTest, DumpRegistersTest) {
   EthernetDeviceTest test;
   auto result = test.FidlClient()->DumpRegisters();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_OK(result->status);
   EXPECT_TRUE(test.tester.ethmac().TestDump());
 }
 
@@ -236,7 +236,7 @@ TEST(EthernetTest, SetIOBufferTest) {
   {
     auto result = test.FidlClient()->SetIoBuffer(std::move(buf));
     ASSERT_OK(result.status());
-    ASSERT_OK(result.Unwrap_NEW()->status);
+    ASSERT_OK(result->status);
   }
 }
 
@@ -245,7 +245,7 @@ TEST(EthernetTest, StartTest) {
   // test bad state
   auto result = test.FidlClient()->Start();
   ASSERT_OK(result.status());
-  ASSERT_NOT_OK(result.Unwrap_NEW()->status);
+  ASSERT_NOT_OK(result->status);
 
   // test valid case
   ASSERT_NO_FATAL_FAILURE(test.Start());
@@ -274,8 +274,7 @@ TEST(EthernetTest, GetStatusTest) {
   // Verify status.
   auto result = test.FidlClient()->GetStatus();
   ASSERT_OK(result.status());
-  EXPECT_EQ(result.Unwrap_NEW()->device_status,
-            fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline);
+  EXPECT_EQ(result->device_status, fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline);
 
   // Status is cleared by reading through FIDL.
   ASSERT_STATUS(rx.wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus,
@@ -344,7 +343,7 @@ TEST(EthernetTest, ListenStartTest) {
   // Set listen start
   auto result = test.FidlClient()->ListenStart();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->status);
+  ASSERT_OK(result->status);
 
   // send packet
   eth_fifo_entry_t entry = {
@@ -416,7 +415,7 @@ TEST_P(EthernetGetFeaturesTest, BanjoToFIDLTest) {
   test.tester.ethmac().SetFeatures(banjo_features);
   auto result = test.FidlClient()->GetInfo();
   ASSERT_OK(result.status());
-  EXPECT_EQ(result.Unwrap_NEW()->info.features, fidl_features);
+  EXPECT_EQ(result->info.features, fidl_features);
 }
 
 INSTANTIATE_TEST_SUITE_P(

@@ -29,7 +29,7 @@ extern "C" __EXPORT int uname(utsname* uts) {
     return ERROR(response.status());
   }
 
-  auto* result = response.Unwrap_NEW();
+  auto* result = response.Unwrap();
   if (result->is_error()) {
     return ERROR(result->error_value());
   }

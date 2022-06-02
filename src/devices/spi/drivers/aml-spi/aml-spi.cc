@@ -304,7 +304,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   // problem. DMA transfers do not seem to be affected.
   if (need_reset_ && reset_ && !use_dma && exchange_size >= sizeof(uint64_t)) {
     auto result = reset_->WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
-    if (!result.ok() || result.value_NEW().is_error()) {
+    if (!result.ok() || result.value().is_error()) {
       zxlogf(WARNING, "Failed to reset SPI controller");
     }
 

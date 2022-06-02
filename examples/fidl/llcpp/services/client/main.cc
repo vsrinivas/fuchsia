@@ -40,7 +40,7 @@ zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
     return zx::error(ZX_ERR_IO);
   }
 
-  auto response = echo_result.Unwrap_NEW();
+  auto response = echo_result.Unwrap();
 
   std::string result_string(response->response.data(), response->response.size());
   if (result_string != "hello") {

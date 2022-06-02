@@ -164,7 +164,7 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
                   ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(resp->is_ok());
   fvm_channel.reset();
 
   snprintf(fvm_driver_path_, PATH_MAX, "%s/fvm", ramdisk_path_);
@@ -178,7 +178,7 @@ void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(disk_caller.borrow_channel()))
           ->Rebind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(resp->is_ok());
 
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/fvm", ramdisk_path_);
@@ -311,8 +311,8 @@ class VmoBuf {
     auto res = fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())
                    ->AttachVmo(std::move(xfer_vmo));
     ASSERT_EQ(res.status(), ZX_OK);
-    ASSERT_EQ(res.value_NEW().status, ZX_OK);
-    vmoid_ = res.value_NEW().vmoid->id;
+    ASSERT_EQ(res.value().status, ZX_OK);
+    vmoid_ = res.value().vmoid->id;
   }
 
   ~VmoBuf() {
@@ -340,15 +340,15 @@ VmoClient::VmoClient(int fd) : fd_(fd) {
   auto fifo_or =
       fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetFifo();
   ASSERT_EQ(fifo_or.status(), ZX_OK);
-  ASSERT_EQ(fifo_or.value_NEW().status, ZX_OK);
+  ASSERT_EQ(fifo_or.value().status, ZX_OK);
 
   auto info_res =
       fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
   ASSERT_EQ(info_res.status(), ZX_OK);
-  ASSERT_EQ(info_res.value_NEW().status, ZX_OK);
-  block_size_ = info_res.value_NEW().info->block_size;
+  ASSERT_EQ(info_res.value().status, ZX_OK);
+  block_size_ = info_res.value().info->block_size;
 
-  client_ = std::make_unique<block_client::Client>(std::move(fifo_or.value_NEW().fifo));
+  client_ = std::make_unique<block_client::Client>(std::move(fifo_or.value().fifo));
 }
 
 VmoClient::~VmoClient() {
@@ -486,7 +486,7 @@ void Upgrade(const fdio_cpp::FdioCaller& caller, const uint8_t* old_guid, const 
                          caller.borrow_channel()))
           ->Activate(old_guid_fidl, new_guid_fidl);
   ASSERT_EQ(ZX_OK, response.status());
-  ASSERT_EQ(result, response.value_NEW().status);
+  ASSERT_EQ(result, response.value().status);
 }
 
 /////////////////////// Actual tests:
@@ -530,7 +530,7 @@ TEST_F(FvmTest, TestLarge) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel->get()))
                   ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
-  ASSERT_TRUE(resp.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(resp->is_ok());
 
   snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path());
   ASSERT_OK(wait_for_device(fvm_path, zx::duration::infinite().get()));
@@ -2253,12 +2253,12 @@ TEST_F(FvmTest, TestMounting) {
           ->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
-  const char* name = reinterpret_cast<const char*>(result.value_NEW().info->name.data());
+  const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
 
   // Verify that MinFS does not try to use more of the VPartition than
   // was originally allocated.
-  ASSERT_LE(result.value_NEW().info->total_bytes, kSliceSize * request.slice_count);
+  ASSERT_LE(result.value().info->total_bytes, kSliceSize * request.slice_count);
 
   // Clean up.
   ASSERT_EQ(close(fd.release()), 0);
@@ -2349,12 +2349,12 @@ TEST_F(FvmTest, TestMkfs) {
           ->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
-  const char* name = reinterpret_cast<const char*>(result.value_NEW().info->name.data());
+  const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
 
   // Verify that MinFS does not try to use more of the VPartition than
   // was originally allocated.
-  ASSERT_LE(result.value_NEW().info->total_bytes, kSliceSize * request.slice_count);
+  ASSERT_LE(result.value().info->total_bytes, kSliceSize * request.slice_count);
 
   // Clean up.
   FVMCheckSliceSize(fvm_device(), kSliceSize);
@@ -2652,8 +2652,8 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
                   ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
-  ASSERT_FALSE(resp.Unwrap_NEW()->is_ok());
-  ASSERT_EQ(resp.Unwrap_NEW()->error_value(), ZX_ERR_INTERNAL);
+  ASSERT_FALSE(resp->is_ok());
+  ASSERT_EQ(resp->error_value(), ZX_ERR_INTERNAL);
 
   // Grow the ramdisk to the appropiate size and bind should succeed.
   ASSERT_OK(ramdisk_grow(ramdisk(), kFvmPartitionSize));
@@ -2665,7 +2665,7 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   auto resp2 = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
                    ->Rebind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp2.status());
-  ASSERT_TRUE(resp2.Unwrap_NEW()->is_ok());
+  ASSERT_TRUE(resp2->is_ok());
   char fvm_path[PATH_MAX];
   snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path());
   ASSERT_OK(wait_for_device(fvm_path, zx::duration::infinite().get()));

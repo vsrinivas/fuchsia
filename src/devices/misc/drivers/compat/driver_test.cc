@@ -48,7 +48,7 @@ zx::vmo GetVmo(std::string_view path) {
   EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
   fidl::WireResult result = fidl::WireCall(endpoints->client)->GetBackingMemory(kVmoFlags);
   EXPECT_TRUE(result.ok()) << result.FormatDescription();
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   EXPECT_TRUE(response.is_ok()) << zx_status_get_string(response.error_value());
   return std::move(response.value()->vmo);
 }

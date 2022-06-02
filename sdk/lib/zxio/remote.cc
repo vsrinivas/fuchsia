@@ -107,7 +107,7 @@ class DirentIteratorImpl {
     if (!result.ok()) {
       return result.status();
     }
-    const auto& response = result.value_NEW();
+    const auto& response = result.value();
     if (zx_status_t status = response.s; status != ZX_OK) {
       return status;
     }
@@ -202,7 +202,7 @@ class Remote {
     if (!result.ok()) {
       return zx::error(result.status());
     }
-    return zx::ok(result.value_NEW().info.is_tty());
+    return zx::ok(result.value().info.is_tty());
   }
 
  private:
@@ -488,7 +488,7 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }
@@ -503,7 +503,7 @@ zx_status_t zxio_common_attr_get(zx::unowned_channel control, ToZxioAbilities to
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
@@ -533,7 +533,7 @@ zx_status_t zxio_common_attr_set(zx::unowned_channel control, ToIo1ModePermissio
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   return response.s;
 }
 
@@ -571,7 +571,7 @@ zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }
@@ -631,7 +631,7 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value_NEW();
+        const auto& response = result.value();
         if (response.is_error()) {
           return response.error_value();
         }
@@ -668,7 +668,7 @@ zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value_NEW();
+        const auto& response = result.value();
         if (response.is_error()) {
           return response.error_value();
         }
@@ -707,7 +707,7 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value_NEW();
+        const auto& response = result.value();
         if (response.is_error()) {
           return response.error_value();
         }
@@ -743,7 +743,7 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
         if (!result.ok()) {
           return result.status();
         }
-        const auto& response = result.value_NEW();
+        const auto& response = result.value();
         if (response.is_error()) {
           return response.error_value();
         }
@@ -769,7 +769,7 @@ zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }
@@ -784,7 +784,7 @@ zx_status_t zxio_remote_truncate(zxio_t* io, uint64_t length) {
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }
@@ -798,7 +798,7 @@ zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
@@ -813,7 +813,7 @@ zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   return response.s;
 }
 
@@ -841,7 +841,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, zxio_vmo_flags_t zxio_flags, zx_hand
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }
@@ -911,7 +911,7 @@ zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, size_t name_len, in
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }
@@ -925,7 +925,7 @@ zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {
   if (!result.ok()) {
     return result.status();
   }
-  auto& response = result.value_NEW();
+  auto& response = result.value();
   if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
@@ -943,7 +943,7 @@ zx_status_t zxio_remote_rename(zxio_t* io, const char* old_path, size_t old_path
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }
@@ -960,7 +960,7 @@ zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, size_t src_path_l
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   return response.s;
 }
 
@@ -1006,7 +1006,7 @@ zx_status_t zxio_remote_get_window_size(zxio_t* io, uint32_t* width, uint32_t* h
   if (!result.ok()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.status != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -1039,7 +1039,7 @@ zx_status_t zxio_remote_set_window_size(zxio_t* io, uint32_t width, uint32_t hei
   if (!result.ok()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.status != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -1149,7 +1149,7 @@ zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, 
   if (zx_status_t status = result.status(); status != ZX_OK) {
     return status;
   }
-  if (zx_status_t status = result.value_NEW().s; status != ZX_OK) {
+  if (zx_status_t status = result.value().s; status != ZX_OK) {
     return status;
   }
 
@@ -1351,7 +1351,7 @@ zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value_NEW();
+  const auto& response = result.value();
   if (response.is_error()) {
     return response.error_value();
   }

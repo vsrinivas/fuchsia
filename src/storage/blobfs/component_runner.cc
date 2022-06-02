@@ -56,7 +56,7 @@ void ComponentRunner::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callb
           callback(result.status());
           return;
         }
-        callback(result.value_NEW().status);
+        callback(result.value().status);
       });
 }
 

@@ -124,12 +124,12 @@ class I2cFidlChannel : public I2cChannelBase {
     if (!reply.ok()) {
       return reply.status();
     }
-    if (reply.Unwrap_NEW()->is_error()) {
-      return reply.Unwrap_NEW()->error_value();
+    if (reply->is_error()) {
+      return reply->error_value();
     }
 
     if (rx_len > 0) {
-      const auto& read_data = reply.Unwrap_NEW()->value()->read_data;
+      const auto& read_data = reply->value()->read_data;
       // Truncate the returned buffer to match the behavior of the Banjo version.
       if (read_data.count() != 1) {
         return ZX_ERR_IO;
@@ -183,13 +183,12 @@ class I2cFidlChannel : public I2cChannelBase {
       callback(cookie, reply.status(), nullptr, 0);
       return;
     }
-    if (reply.value_NEW().is_error()) {
-      callback(cookie, reply.value_NEW().error_value(), nullptr, 0);
+    if (reply.value().is_error()) {
+      callback(cookie, reply.value().error_value(), nullptr, 0);
       return;
     }
 
-    const fidl::VectorView<fidl::VectorView<uint8_t>>& read_data =
-        reply.value_NEW().value()->read_data;
+    const fidl::VectorView<fidl::VectorView<uint8_t>>& read_data = reply.value().value()->read_data;
     if (read_data.count() != read_count) {
       callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
       return;

@@ -457,10 +457,10 @@ TEST_F(FakeDdkSysmem, TeardownLeak) {
   fidl::WireResult result = collection->WaitForBuffersAllocated();
 
   EXPECT_OK(result);
-  EXPECT_OK(result.value_NEW().status);
+  EXPECT_OK(result.value().status);
 
-  for (uint32_t i = 0; i < result.value_NEW().buffer_collection_info.buffer_count; i++) {
-    result.value_NEW().buffer_collection_info.buffers[i].vmo.reset();
+  for (uint32_t i = 0; i < result.value().buffer_collection_info.buffer_count; i++) {
+    result.value().buffer_collection_info.buffers[i].vmo.reset();
   }
   collection = {};
 }
@@ -483,19 +483,19 @@ TEST_F(FakeDdkSysmem, AuxBufferLeak) {
   fidl::WireResult result = collection->WaitForBuffersAllocated();
 
   EXPECT_OK(result);
-  EXPECT_OK(result.value_NEW().status);
+  EXPECT_OK(result.value().status);
 
-  for (uint32_t i = 0; i < result.value_NEW().buffer_collection_info.buffer_count; i++) {
-    result.value_NEW().buffer_collection_info.buffers[i].vmo.reset();
+  for (uint32_t i = 0; i < result.value().buffer_collection_info.buffer_count; i++) {
+    result.value().buffer_collection_info.buffers[i].vmo.reset();
   }
 
   fidl::WireResult aux_result = collection->GetAuxBuffers();
 
   EXPECT_OK(aux_result);
-  EXPECT_OK(aux_result.value_NEW().status);
-  EXPECT_EQ(1u, aux_result.value_NEW().buffer_collection_info_aux_buffers.buffer_count);
+  EXPECT_OK(aux_result.value().status);
+  EXPECT_EQ(1u, aux_result.value().buffer_collection_info_aux_buffers.buffer_count);
   EXPECT_EQ(ZX_HANDLE_INVALID,
-            aux_result.value_NEW().buffer_collection_info_aux_buffers.buffers[0].vmo);
+            aux_result.value().buffer_collection_info_aux_buffers.buffers[0].vmo);
   collection = {};
 
   // Poll until all buffer collections are deleted.

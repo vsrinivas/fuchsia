@@ -291,7 +291,7 @@ zx_status_t RealMain(Flags flags) {
 
       auto result =
           fidl::BindSyncClient(std::move(data_sink_local))->WriteVolumes(std::move(client));
-      zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
+      zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to write volumes: %s\n", zx_status_get_string(status));
         return status;
@@ -327,7 +327,7 @@ zx_status_t RealMain(Flags flags) {
       if (!result.ok()) {
         status = result.status();
       } else {
-        status = !result.Unwrap_NEW()->is_ok() ? ZX_OK : result.Unwrap_NEW()->error_value();
+        status = !result->is_ok() ? ZX_OK : result->error_value();
       }
       if (status != ZX_OK) {
         ERROR("Failed to wipe block device: %s\n", zx_status_get_string(status));
@@ -357,7 +357,7 @@ zx_status_t RealMain(Flags flags) {
       }
 
       auto result = fidl::BindSyncClient(std::move(data_sink_local))->InitializePartitionTables();
-      zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
+      zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to initialize partition tables: %s\n", zx_status_get_string(status));
         return status;
@@ -386,7 +386,7 @@ zx_status_t RealMain(Flags flags) {
       }
 
       auto result = fidl::BindSyncClient(std::move(data_sink_local))->WipePartitionTables();
-      zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
+      zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to wipe partition tables: %s\n", zx_status_get_string(status));
         return status;
@@ -424,7 +424,7 @@ zx_status_t RealMain(Flags flags) {
       }
       auto result =
           data_sink->WriteDataFile(fidl::StringView::FromExternal(flags.path), std::move(payload));
-      status = result.ok() ? result.value_NEW().status : result.status();
+      status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("install-data-file failed: %s\n", zx_status_get_string(status));
         return status;
@@ -434,7 +434,7 @@ zx_status_t RealMain(Flags flags) {
     }
     case Command::kBootloader: {
       auto result = data_sink->WriteBootloader(std::move(payload));
-      status = result.ok() ? result.value_NEW().status : result.status();
+      status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Installing bootloader partition failed: %s\n", zx_status_get_string(status));
         return status;
@@ -444,7 +444,7 @@ zx_status_t RealMain(Flags flags) {
     }
     case Command::kAsset: {
       auto result = data_sink->WriteAsset(flags.configuration, flags.asset, std::move(payload));
-      status = result.ok() ? result.value_NEW().status : result.status();
+      status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Writing asset failed: %s\n", zx_status_get_string(status));
         return status;

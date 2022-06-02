@@ -197,11 +197,11 @@ zx_status_t MeasureBandwith(const Printer* const printer,
   if (!info.ok()) {
     return info.status();
   }
-  if (info.Unwrap_NEW()->is_error()) {
-    return info.Unwrap_NEW()->error_value();
+  if (info->is_error()) {
+    return info->error_value();
   }
 
-  printer->Print(info.Unwrap_NEW()->value()->info);
+  printer->Print(info->value()->info);
   return ZX_OK;
 }
 
@@ -211,11 +211,11 @@ zx_status_t GetDdrWindowingResults(
   if (!info.ok()) {
     return info.status();
   }
-  if (info.Unwrap_NEW()->is_error()) {
-    return info.Unwrap_NEW()->error_value();
+  if (info->is_error()) {
+    return info->error_value();
   }
 
-  printf("register value: 0x%x\n", info.Unwrap_NEW()->value()->value);
+  printf("register value: 0x%x\n", info->value()->value);
   return ZX_OK;
 }
 

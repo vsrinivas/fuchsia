@@ -80,11 +80,11 @@ zx_status_t fd_matches_name(const fbl::unique_fd& fd, const char* dev_name, bool
                   zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
                   ->GetTopologicalPath();
   zx_status_t status = resp.status();
-  if (resp.Unwrap_NEW()->is_error()) {
-    call_status = resp.Unwrap_NEW()->error_value();
+  if (resp->is_error()) {
+    call_status = resp->error_value();
   } else {
-    path_len = resp.Unwrap_NEW()->value()->path.size();
-    auto& r = *resp.Unwrap_NEW()->value();
+    path_len = resp->value()->path.size();
+    auto& r = *resp->value();
     memcpy(path, r.path.data(), r.path.size());
   }
 

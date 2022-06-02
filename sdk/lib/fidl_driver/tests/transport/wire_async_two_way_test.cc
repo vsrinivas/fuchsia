@@ -68,7 +68,7 @@ TEST(DriverTransport, WireTwoWayAsync) {
         ->TwoWay(kRequestPayload)
         .ThenExactlyOnce([&](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
           ASSERT_OK(result.status());
-          ASSERT_EQ(kResponsePayload, result.Unwrap_NEW()->payload);
+          ASSERT_EQ(kResponsePayload, result->payload);
           ASSERT_EQ(server->fdf_response_arena.get(), result.arena().get());
           sync_completion_signal(&called);
         });
@@ -119,7 +119,7 @@ TEST(DriverTransport, WireTwoWayAsyncShared) {
       .ThenExactlyOnce(
           [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
             ASSERT_OK(result.status());
-            ASSERT_EQ(kResponsePayload, result.Unwrap_NEW()->payload);
+            ASSERT_EQ(kResponsePayload, result->payload);
             ASSERT_EQ(server->fdf_response_arena.get(), result.arena().get());
             done.Signal();
           });
@@ -131,7 +131,7 @@ TEST(DriverTransport, WireTwoWayAsyncShared) {
       ->TwoWay(kRequestPayload)
       .Then([&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
         ASSERT_OK(result.status());
-        ASSERT_EQ(kResponsePayload, result.Unwrap_NEW()->payload);
+        ASSERT_EQ(kResponsePayload, result->payload);
         ASSERT_EQ(server->fdf_response_arena.get(), result.arena().get());
         done.Signal();
       });

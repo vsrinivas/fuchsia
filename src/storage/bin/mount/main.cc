@@ -122,9 +122,8 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Error mounting, fidl error: %s\n", result.FormatDescription().c_str());
     return EXIT_FAILURE;
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    fprintf(stderr, "Error mounting: %s\n",
-            zx_status_get_string(result.Unwrap_NEW()->error_value()));
+  if (result->is_error()) {
+    fprintf(stderr, "Error mounting: %s\n", zx_status_get_string(result->error_value()));
     return EXIT_FAILURE;
   }
 

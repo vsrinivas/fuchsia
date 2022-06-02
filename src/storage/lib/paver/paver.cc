@@ -687,15 +687,15 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
   if (!resp.ok()) {
     return zx::error(resp.status());
   }
-  if (resp.Unwrap_NEW()->is_error()) {
-    return zx::error(resp.Unwrap_NEW()->error_value());
+  if (resp->is_error()) {
+    return zx::error(resp->error_value());
   }
 
   fs_management::PartitionMatcher matcher{
       .type_guid = data_guid,
       .labels = c_data_partition_names,
       .num_labels = 2,
-      .parent_device = resp.Unwrap_NEW()->value()->path.get(),
+      .parent_device = resp->value()->path.get(),
   };
   auto part_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root_.get(), &matcher, ZX_SEC(1),
                                                           &partition_path);

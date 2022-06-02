@@ -267,7 +267,7 @@ TEST_F(IntelRtcTest, TestNvramGetSize) {
 
   auto result = client->GetSize();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result.Unwrap_NEW()->size, 114);
+  ASSERT_EQ(result->size, 114);
 }
 
 TEST_F(IntelRtcTest, TestNvramWrite) {
@@ -278,7 +278,7 @@ TEST_F(IntelRtcTest, TestNvramWrite) {
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
   auto result = client->Write(0, fidl::VectorView<uint8_t>::FromExternal(my_data));
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
   ASSERT_BYTES_EQ(&registers_[kNvramStart], my_data.data(), my_data.size());
 }
@@ -292,9 +292,9 @@ TEST_F(IntelRtcTest, TestNvramRead) {
 
   auto result = client->Read(30, 4);
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
-  auto& data = result.Unwrap_NEW()->value()->data;
+  auto& data = result->value()->data;
   ASSERT_EQ(data.count(), my_data.size());
   ASSERT_BYTES_EQ(data.data(), my_data.data(), data.count());
 }
@@ -307,7 +307,7 @@ TEST_F(IntelRtcTest, TestNvramWriteAcrossBanks) {
   std::vector<uint8_t> my_data = {1, 2, 3, 4};
   auto result = client->Write(112, fidl::VectorView<uint8_t>::FromExternal(my_data));
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
   ASSERT_BYTES_EQ(&registers_[kNvramStart + 112], my_data.data(), my_data.size());
 }
@@ -321,9 +321,9 @@ TEST_F(IntelRtcTest, TestNvramReadAcrossBanks) {
 
   auto result = client->Read(112, 4);
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 
-  auto& data = result.Unwrap_NEW()->value()->data;
+  auto& data = result->value()->data;
   ASSERT_EQ(data.count(), my_data.size());
   ASSERT_BYTES_EQ(data.data(), my_data.data(), data.count());
 }
@@ -336,12 +336,12 @@ TEST_F(IntelRtcTest, TestNvramOutOfBounds) {
   {
     auto result = client->Read(400, 4);
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result.Unwrap_NEW()->error_value(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_STATUS(result->error_value(), ZX_ERR_OUT_OF_RANGE);
   }
   {
     std::vector<uint8_t> my_data = {7, 8, 42, 10};
     auto result = client->Write(400, fidl::VectorView<uint8_t>::FromExternal(my_data));
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result.Unwrap_NEW()->error_value(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_STATUS(result->error_value(), ZX_ERR_OUT_OF_RANGE);
   }
 }

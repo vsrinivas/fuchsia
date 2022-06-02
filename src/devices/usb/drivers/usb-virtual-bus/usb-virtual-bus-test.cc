@@ -114,7 +114,7 @@ class VirtualBusTest : public zxtest::Test {
 };
 
 TEST_F(VirtualBusTest, ShortTransfer) {
-  ASSERT_TRUE(test_->RunShortPacketTest().value_NEW().success);
+  ASSERT_TRUE(test_->RunShortPacketTest().value().success);
   ASSERT_NO_FATAL_FAILURE();
 }
 

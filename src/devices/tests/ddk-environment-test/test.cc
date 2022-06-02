@@ -45,10 +45,10 @@ class EnvironmentTest : public zxtest::Test {
 TEST_F(EnvironmentTest, GetServiceList) {
   auto result = fidl::WireCall<TestDevice>(zx::unowned(chan_))->GetServiceList();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result.value_NEW().services.count(), 3);
+  ASSERT_EQ(result.value().services.count(), 3);
 
   std::unordered_set<std::string> actual;
-  for (const auto& service : result.value_NEW().services) {
+  for (const auto& service : result.value().services) {
     actual.emplace(service.data(), service.size());
   }
   std::unordered_set<std::string> kExpectedServices = {

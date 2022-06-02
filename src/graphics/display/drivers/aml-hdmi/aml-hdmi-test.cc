@@ -150,13 +150,13 @@ TEST_F(AmlHdmiTest, ReadTest) {
   (*mock_mmio_)[0x12 * 4 + 0x8000].ExpectRead(0x1234);
   auto pval_aml = hdmi_client_->ReadReg(0x12);
   ASSERT_OK(pval_aml.status());
-  EXPECT_EQ(pval_aml.value_NEW().val, 0x1234);
+  EXPECT_EQ(pval_aml.value().val, 0x1234);
 
   // Designware Register
   (*mock_mmio_)[0x3].ExpectRead(0x21);
   auto pval_dwc = hdmi_client_->ReadReg((0x10UL << 24) + 0x3);
   ASSERT_OK(pval_dwc.status());
-  EXPECT_EQ(pval_dwc.value_NEW().val, 0x21);
+  EXPECT_EQ(pval_dwc.value().val, 0x21);
 }
 
 TEST_F(AmlHdmiTest, WriteTest) {

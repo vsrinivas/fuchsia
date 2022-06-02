@@ -307,7 +307,7 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage
 //       buffer_head *bh_result, int create)
 // {
 //   uint32_t blkbits = inode->i_sb->s_blocksize_bits;
-//   unsigned maxblocks = bh_result.value_NEW().b_size > blkbits;
+//   unsigned maxblocks = bh_result.value().b_size > blkbits;
 //   DnodeOfData dn;
 //   pgoff_t pgofs;
 //   //int err = 0;

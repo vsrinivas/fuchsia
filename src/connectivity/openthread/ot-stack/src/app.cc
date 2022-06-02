@@ -55,7 +55,7 @@ void OtStackApp::RadioAllowanceInit() {
     Shutdown();
     return;
   }
-  const auto& result = fidl_result.value_NEW();
+  const auto& result = fidl_result.value();
   if (result.is_error()) {
     FX_LOGS(DEBUG) << "ot-stack: radio returned err in spinel Open(): "
                    << static_cast<uint32_t>(result.error_value());
@@ -183,7 +183,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
     app_.Shutdown();
     return;
   }
-  completer.Reply(fidl_result.value_NEW().size);
+  completer.Reply(fidl_result.value().size);
 }
 
 void OtStackApp::PushFrameToOtLib() {
@@ -544,7 +544,7 @@ zx_status_t OtStackApp::SetupOtRadioDev() {
     return fidl_result.status();
   }
 
-  const auto& result = fidl_result.value_NEW();
+  const auto& result = fidl_result.value();
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Cannot set the channel to device: "
                    << static_cast<uint32_t>(result.error_value());

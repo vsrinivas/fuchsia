@@ -395,11 +395,10 @@ void Device::SecureMemControl::AddProtectedRange(const protected_ranges::Range& 
           ->AddSecureHeapPhysicalRange(std::move(secure_heap_and_range));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
-  if (result.Unwrap_NEW()->is_error()) {
-    LOG(ERROR, "AddSecureHeapPhysicalRange() failed - status: %d",
-        result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    LOG(ERROR, "AddSecureHeapPhysicalRange() failed - status: %d", result->error_value());
   }
-  ZX_ASSERT(!result.Unwrap_NEW()->is_error());
+  ZX_ASSERT(!result->is_error());
 }
 
 void Device::SecureMemControl::DelProtectedRange(const protected_ranges::Range& range) {
@@ -417,11 +416,10 @@ void Device::SecureMemControl::DelProtectedRange(const protected_ranges::Range& 
           ->DeleteSecureHeapPhysicalRange(std::move(secure_heap_and_range));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
-  if (result.Unwrap_NEW()->is_error()) {
-    LOG(ERROR, "DeleteSecureHeapPhysicalRange() failed - status: %d",
-        result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    LOG(ERROR, "DeleteSecureHeapPhysicalRange() failed - status: %d", result->error_value());
   }
-  ZX_ASSERT(!result.Unwrap_NEW()->is_error());
+  ZX_ASSERT(!result->is_error());
 }
 
 void Device::SecureMemControl::ModProtectedRange(const protected_ranges::Range& old_range,
@@ -452,11 +450,10 @@ void Device::SecureMemControl::ModProtectedRange(const protected_ranges::Range& 
           ->ModifySecureHeapPhysicalRange(std::move(modification));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
-  if (result.Unwrap_NEW()->is_error()) {
-    LOG(ERROR, "ModifySecureHeapPhysicalRange() failed - status: %d",
-        result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    LOG(ERROR, "ModifySecureHeapPhysicalRange() failed - status: %d", result->error_value());
   }
-  ZX_ASSERT(!result.Unwrap_NEW()->is_error());
+  ZX_ASSERT(!result->is_error());
 }
 
 void Device::SecureMemControl::ZeroProtectedSubRange(bool is_covering_range_explicit,
@@ -475,10 +472,10 @@ void Device::SecureMemControl::ZeroProtectedSubRange(bool is_covering_range_expl
           ->ZeroSubRange(is_covering_range_explicit, std::move(secure_heap_and_range));
   // If we lose the ability to control protected memory ranges ... reboot.
   ZX_ASSERT(result.ok());
-  if (result.Unwrap_NEW()->is_error()) {
-    LOG(ERROR, "ZeroSubRange() failed - status: %d", result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    LOG(ERROR, "ZeroSubRange() failed - status: %d", result->error_value());
   }
-  ZX_ASSERT(!result.Unwrap_NEW()->is_error());
+  ZX_ASSERT(!result->is_error());
 }
 
 zx_status_t Device::Bind() {
@@ -819,16 +816,16 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
             ZX_ASSERT(!*close_is_abort);
             return;
           }
-          if (get_properties_result.Unwrap_NEW()->is_error()) {
+          if (get_properties_result->is_error()) {
             LOG(WARNING, "GetPhysicalSecureHeapProperties() failed - status: %d",
-                get_properties_result.Unwrap_NEW()->error_value());
+                get_properties_result->error_value());
             // Don't call set_ready() on secure_allocators_.  Eg. this can happen if securemem TA is
             // not found.
             return;
           }
-          ZX_ASSERT(get_properties_result.Unwrap_NEW()->is_ok());
+          ZX_ASSERT(get_properties_result->is_ok());
           const fuchsia_sysmem::wire::SecureHeapProperties& properties =
-              get_properties_result.Unwrap_NEW()->value()->properties;
+              get_properties_result->value()->properties;
           ZX_ASSERT(properties.has_heap());
           ZX_ASSERT(properties.heap() == static_cast<fuchsia_sysmem::wire::HeapType>(heap_type));
           ZX_ASSERT(properties.has_dynamic_protection_ranges());
@@ -856,16 +853,15 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           ZX_ASSERT(!*close_is_abort);
           return;
         }
-        if (get_result.Unwrap_NEW()->is_error()) {
-          LOG(WARNING, "GetPhysicalSecureHeaps() failed - status: %d",
-              get_result.Unwrap_NEW()->error_value());
+        if (get_result->is_error()) {
+          LOG(WARNING, "GetPhysicalSecureHeaps() failed - status: %d", get_result->error_value());
           // Don't call set_ready() on secure_allocators_.  Eg. this can happen if securemem TA is
           // not found.
           return;
         }
-        ZX_ASSERT(get_result.Unwrap_NEW()->is_ok());
+        ZX_ASSERT(get_result->is_ok());
         const fuchsia_sysmem::wire::SecureHeapsAndRanges& tee_configured_heaps =
-            get_result.Unwrap_NEW()->value()->heaps;
+            get_result->value()->heaps;
         ZX_ASSERT(tee_configured_heaps.has_heaps());
         ZX_ASSERT(tee_configured_heaps.heaps().count() != 0);
         for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps().count();

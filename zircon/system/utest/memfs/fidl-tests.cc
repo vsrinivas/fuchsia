@@ -55,8 +55,8 @@ TEST(FidlTests, TestFidlBasic) {
 
   auto describe_result = fidl::WireCall(endpoints->client)->Describe();
   ASSERT_OK(describe_result.status());
-  ASSERT_TRUE(describe_result.Unwrap_NEW()->info.is_file());
-  ASSERT_EQ(describe_result.Unwrap_NEW()->info.file().event.get(), ZX_HANDLE_INVALID);
+  ASSERT_TRUE(describe_result->info.is_file());
+  ASSERT_EQ(describe_result->info.file().event.get(), ZX_HANDLE_INVALID);
   endpoints->client.TakeChannel().reset();
 
   sync_completion_t unmounted;
@@ -89,8 +89,8 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
 
   auto result = fidl::WireCall(endpoints->client)->GetFlags();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->s);
-  ASSERT_EQ(result.Unwrap_NEW()->flags, fio::wire::OpenFlags::kRightReadable);
+  ASSERT_OK(result->s);
+  ASSERT_EQ(result->flags, fio::wire::OpenFlags::kRightReadable);
   endpoints->client.TakeChannel().reset();
 
   sync_completion_t unmounted;
@@ -106,9 +106,9 @@ void QueryInfo(const char* path, fuchsia_io::wire::FilesystemInfo* info) {
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fidl::WireCall(caller.node())->QueryFilesystem();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.Unwrap_NEW()->s);
-  ASSERT_NOT_NULL(result.Unwrap_NEW()->info);
-  *info = *(result.Unwrap_NEW()->info);
+  ASSERT_OK(result->s);
+  ASSERT_NOT_NULL(result->info);
+  *info = *(result->info);
   const char* kFsName = "memfs";
   const char* name = reinterpret_cast<const char*>(info->name.data());
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");

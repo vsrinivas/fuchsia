@@ -83,7 +83,7 @@ TEST_P(WatcherTest, Add) {
   auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
                           ->Watch(fio::wire::WatchMask::kAdded, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
-  ASSERT_EQ(watch_result.Unwrap_NEW()->s, ZX_OK);
+  ASSERT_EQ(watch_result->s, ZX_OK);
 
   WatchBuffer wb;
   memset(&wb, 0, sizeof(wb));
@@ -147,7 +147,7 @@ TEST_P(WatcherTest, Existing) {
     auto watch_result =
         fidl::WireCall<fio::Directory>(caller.channel())->Watch(mask, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
-    ASSERT_EQ(watch_result.Unwrap_NEW()->s, ZX_OK);
+    ASSERT_EQ(watch_result->s, ZX_OK);
   }
   WatchBuffer wb;
   memset(&wb, 0, sizeof(wb));
@@ -175,7 +175,7 @@ TEST_P(WatcherTest, Existing) {
     auto watch_result =
         fidl::WireCall<fio::Directory>(caller.channel())->Watch(mask, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
-    ASSERT_EQ(watch_result.Unwrap_NEW()->s, ZX_OK);
+    ASSERT_EQ(watch_result->s, ZX_OK);
   }
   WatchBuffer wb2;
   memset(&wb2, 0, sizeof(wb2));
@@ -215,7 +215,7 @@ TEST_P(WatcherTest, Removed) {
   auto watch_result =
       fidl::WireCall<fio::Directory>(caller.channel())->Watch(mask, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
-  ASSERT_EQ(watch_result.Unwrap_NEW()->s, ZX_OK);
+  ASSERT_EQ(watch_result->s, ZX_OK);
 
   WatchBuffer wb;
   memset(&wb, 0, sizeof(wb));
@@ -262,7 +262,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
     auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
                             ->Watch(fio::wire::WatchMask::kDeleted, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
-    ASSERT_EQ(watch_result.Unwrap_NEW()->s, ZX_OK);
+    ASSERT_EQ(watch_result->s, ZX_OK);
     std::string dir2_name = GetPath("dir2");
     ASSERT_EQ(mkdir(dir2_name.c_str(), 0666), 0);
 
@@ -282,7 +282,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
   auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
                           ->Watch(fio::wire::WatchMask::kDeleted, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
-  ASSERT_EQ(watch_result.Unwrap_NEW()->s, ZX_OK);
+  ASSERT_EQ(watch_result->s, ZX_OK);
 
   // Unlinking a directory should generate a deleted directory event.
   ASSERT_EQ(rmdir(dir_name.c_str()), 0);

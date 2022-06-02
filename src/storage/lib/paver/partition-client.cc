@@ -36,12 +36,12 @@ BlockPartitionClient::~BlockPartitionClient() {
 zx::status<> BlockPartitionClient::ReadBlockInfo() {
   if (!block_info_) {
     auto result = partition_->GetInfo();
-    auto status = zx::make_status(result.ok() ? result.value_NEW().status : result.status());
+    auto status = zx::make_status(result.ok() ? result.value().status : result.status());
     if (status.is_error()) {
       ERROR("Failed to get partition info with status: %s\n", status.status_string());
       return status.take_error();
     }
-    block_info_ = *result.value_NEW().info;
+    block_info_ = *result.value().info;
   }
   return zx::ok();
 }
@@ -68,12 +68,12 @@ zx::status<> BlockPartitionClient::RegisterFastBlockIo() {
   }
 
   auto result = partition_->GetFifo();
-  auto status = zx::make_status(result.ok() ? result.value_NEW().status : result.status());
+  auto status = zx::make_status(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }
 
-  client_ = std::make_unique<block_client::Client>(std::move(result.value_NEW().fifo));
+  client_ = std::make_unique<block_client::Client>(std::move(result.value().fifo));
   return zx::ok();
 }
 
@@ -85,12 +85,12 @@ zx::status<vmoid_t> BlockPartitionClient::RegisterVmo(const zx::vmo& vmo) {
   }
 
   auto result = partition_->AttachVmo(std::move(dup));
-  auto status = zx::make_status(result.ok() ? result.value_NEW().status : result.status());
+  auto status = zx::make_status(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }
 
-  return zx::ok(result.value_NEW().vmoid->id);
+  return zx::ok(result.value().vmoid->id);
 }
 
 zx::status<vmoid_t> BlockPartitionClient::Setup(const zx::vmo& vmo) {

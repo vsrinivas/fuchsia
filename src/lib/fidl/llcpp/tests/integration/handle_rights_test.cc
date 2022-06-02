@@ -122,8 +122,8 @@ TEST_F(HandleRightsTest, SyncGetTooManyRights) {
   auto resp = client->SyncGetHandleWithTooManyRights();
   ASSERT_TRUE(resp.ok());
   zx_info_handle_basic_t info;
-  ASSERT_EQ(ZX_OK, resp.value_NEW().h.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
-                                               nullptr));
+  ASSERT_EQ(ZX_OK,
+            resp.value().h.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   EXPECT_EQ(ZX_RIGHT_TRANSFER | ZX_RIGHT_SIGNAL, info.rights);
   EXPECT_EQ(ZX_OBJ_TYPE_EVENT, info.type);
 }

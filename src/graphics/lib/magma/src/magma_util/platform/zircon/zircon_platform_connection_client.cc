@@ -767,7 +767,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     if (!rsp.ok())
       return DRET_MSG(magma::FromZxStatus(rsp.status()).get(), "failed to write to channel");
 
-    *enabled_out = rsp.Unwrap_NEW()->enabled;
+    *enabled_out = rsp->enabled;
     return MAGMA_STATUS_OK;
   }
 
@@ -902,10 +902,10 @@ std::unique_ptr<magma::PlatformHandle> PlatformConnectionClient::RetrieveAccessT
   if (!rsp.ok()) {
     return DRETP(nullptr, "GetPerformanceCountToken failed");
   }
-  if (!rsp.Unwrap_NEW()->access_token) {
+  if (!rsp->access_token) {
     return DRETP(nullptr, "GetPerformanceCountToken retrieved no event.");
   }
-  return magma::PlatformHandle::Create(rsp.Unwrap_NEW()->access_token.release());
+  return magma::PlatformHandle::Create(rsp->access_token.release());
 }
 
 }  // namespace magma

@@ -217,8 +217,8 @@ void CustomStage::CallFidlProcess(MixJobContext& ctx) {
   ctx.AddSubtaskMetrics(subtask.FinalMetrics());
 
   auto status = result.status();
-  if (result.ok() && result.value_NEW().is_error()) {
-    status = result.value_NEW().error_value();
+  if (result.ok() && result.value().is_error()) {
+    status = result.value().error_value();
   }
 
   // Zero fill the output buffer on failure.
@@ -228,7 +228,7 @@ void CustomStage::CallFidlProcess(MixJobContext& ctx) {
   }
 
   // On success, update our metrics.
-  auto& server_metrics = result.value_NEW().value()->per_stage_metrics;
+  auto& server_metrics = result.value().value()->per_stage_metrics;
   for (size_t k = 0; k < server_metrics.count(); k++) {
     MixJobSubtask::Metrics metrics;
     if (server_metrics[k].has_name()) {

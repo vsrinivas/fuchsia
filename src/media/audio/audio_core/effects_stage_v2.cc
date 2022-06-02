@@ -546,8 +546,8 @@ void EffectsStageV2::CallProcess(ReadLockContext& ctx, StreamUsageMask source_us
   auto num_frames = source_buffer_.length();
   auto result = processor_.buffer(process_buffer_.view())->Process(num_frames, options);
   auto status = result.status();
-  if (result.ok() && result.Unwrap_NEW()->is_error()) {
-    status = result.Unwrap_NEW()->error_value();
+  if (result.ok() && result->is_error()) {
+    status = result->error_value();
   }
 
   timer.Stop();
@@ -566,7 +566,7 @@ void EffectsStageV2::CallProcess(ReadLockContext& ctx, StreamUsageMask source_us
   }
 
   // On success, update our metrics.
-  auto& server_metrics = result.Unwrap_NEW()->value()->per_stage_metrics;
+  auto& server_metrics = result->value()->per_stage_metrics;
   for (size_t k = 0; k < server_metrics.count(); k++) {
     StageMetrics metrics;
     if (server_metrics[k].has_name()) {

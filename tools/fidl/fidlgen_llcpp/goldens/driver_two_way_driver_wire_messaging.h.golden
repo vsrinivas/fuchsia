@@ -332,20 +332,8 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* operator->() const { return &value(); }

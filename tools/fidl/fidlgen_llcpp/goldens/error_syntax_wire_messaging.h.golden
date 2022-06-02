@@ -617,18 +617,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSynt
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* operator->() const { return &value(); }
@@ -683,18 +673,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>* operator->() const { return &value(); }
@@ -727,18 +707,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSynt
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* operator->() const { return &value(); }
@@ -793,18 +763,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
     return &result_.value();
   }
 
-  ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* Unwrap_NEW() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* Unwrap_NEW() const {
-    return &result_.value();
-  }
-
   ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value() { return *Unwrap(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* operator->() { return &value(); }
   const ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>* operator->() const { return &value(); }

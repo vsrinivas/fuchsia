@@ -290,9 +290,9 @@ const std::string& GetBoardName() {
     auto sysinfo = fidl::BindSyncClient(std::move(client_end.value()));
     auto result = sysinfo->GetBoardName();
     ZX_ASSERT(result.ok());
-    ZX_ASSERT(result.value_NEW().status == ZX_OK);
+    ZX_ASSERT(result.value().status == ZX_OK);
 
-    s_board_name = result.value_NEW().name.get();
+    s_board_name = result.value().name.get();
     printf("\nFound board %s\n", s_board_name.c_str());
   }
   return s_board_name;
@@ -714,12 +714,12 @@ bool AttachTokenSucceeds(
   // allocated yet.
   auto check_1_result = collection_1->CheckBuffersAllocated();
   EXPECT_OK(check_1_result);
-  EXPECT_EQ(check_1_result.value_NEW().status, ZX_ERR_UNAVAILABLE);
+  EXPECT_EQ(check_1_result.value().status, ZX_ERR_UNAVAILABLE);
   IF_FAILURES_RETURN_FALSE();
 
   auto check_2_result = collection_2->CheckBuffersAllocated();
   EXPECT_OK(check_2_result);
-  EXPECT_EQ(check_2_result.value_NEW().status, ZX_ERR_UNAVAILABLE);
+  EXPECT_EQ(check_2_result.value().status, ZX_ERR_UNAVAILABLE);
   IF_FAILURES_RETURN_FALSE();
 
   fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken> token_client_3;
@@ -1071,9 +1071,9 @@ TEST(Sysmem, TokenOneParticipantNoImageConstraints) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocation_result);
-  ASSERT_OK(allocation_result.value_NEW().status);
+  ASSERT_OK(allocation_result.value().status);
 
-  auto buffer_collection_info = &allocation_result.value_NEW().buffer_collection_info;
+  auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
   ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
@@ -1128,9 +1128,9 @@ TEST(Sysmem, TokenOneParticipantColorspaceRanking) {
 
   auto allocation_result = collection->WaitForBuffersAllocated();
   ASSERT_OK(allocation_result);
-  ASSERT_OK(allocation_result.value_NEW().status);
+  ASSERT_OK(allocation_result.value().status);
 
-  auto buffer_collection_info = &allocation_result.value_NEW().buffer_collection_info;
+  auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
   ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
   ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
   ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
@@ -1375,9 +1375,9 @@ TEST(Sysmem, TokenOneParticipantWithImageConstraints) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocation_result);
-  ASSERT_OK(allocation_result.value_NEW().status);
+  ASSERT_OK(allocation_result.value().status);
 
-  auto buffer_collection_info = &allocation_result.value_NEW().buffer_collection_info;
+  auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
 
   ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
   // The size should be sufficient for the whole NV12 frame, not just min_size_bytes.
@@ -1436,8 +1436,8 @@ TEST(Sysmem, MinBufferCount) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocation_result);
-  ASSERT_OK(allocation_result.value_NEW().status);
-  ASSERT_EQ(allocation_result.value_NEW().buffer_collection_info.buffer_count, 5, "");
+  ASSERT_OK(allocation_result.value().status);
+  ASSERT_EQ(allocation_result.value().buffer_collection_info.buffer_count, 5, "");
 }
 
 TEST(Sysmem, BufferName) {
@@ -1473,10 +1473,10 @@ TEST(Sysmem, BufferName) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocation_result);
-  ASSERT_OK(allocation_result.value_NEW().status);
+  ASSERT_OK(allocation_result.value().status);
 
-  ASSERT_EQ(allocation_result.value_NEW().buffer_collection_info.buffer_count, 1, "");
-  zx_handle_t vmo = allocation_result.value_NEW().buffer_collection_info.buffers[0].vmo.get();
+  ASSERT_EQ(allocation_result.value().buffer_collection_info.buffer_count, 1, "");
+  zx_handle_t vmo = allocation_result.value().buffer_collection_info.buffers[0].vmo.get();
   char vmo_name[ZX_MAX_NAME_LEN];
   ASSERT_EQ(ZX_OK, zx_object_get_property(vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name)));
 
@@ -1521,9 +1521,9 @@ TEST(Sysmem, NoToken) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocation_result);
-  ASSERT_OK(allocation_result.value_NEW().status);
+  ASSERT_OK(allocation_result.value().status);
 
-  auto buffer_collection_info = &allocation_result.value_NEW().buffer_collection_info;
+  auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
   ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
@@ -2095,9 +2095,9 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
       [](const ::fidl::WireResult<::fuchsia_sysmem::BufferCollection::WaitForBuffersAllocated>
              allocation_result) {
         ASSERT_OK(allocation_result);
-        ASSERT_OK(allocation_result.value_NEW().status);
+        ASSERT_OK(allocation_result.value().status);
 
-        auto buffer_collection_info = &allocation_result.value_NEW().buffer_collection_info;
+        auto buffer_collection_info = &allocation_result.value().buffer_collection_info;
         ASSERT_EQ(buffer_collection_info->buffer_count, 2, "");
         ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
         ASSERT_EQ(buffer_collection_info->settings.image_format_constraints.pixel_format.type,
@@ -2240,8 +2240,8 @@ TEST(Sysmem, DuplicateSync) {
   auto duplicate_result =
       token_1->DuplicateSync(fidl::VectorView<zx_rights_t>::FromExternal(rights_attenuation_masks));
   ASSERT_OK(duplicate_result);
-  ASSERT_EQ(duplicate_result.value_NEW().tokens.count(), 1);
-  auto token_client_2 = std::move(duplicate_result.value_NEW().tokens[0]);
+  ASSERT_EQ(duplicate_result.value().tokens.count(), 1);
+  auto token_client_2 = std::move(duplicate_result.value().tokens[0]);
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
@@ -2553,14 +2553,14 @@ TEST(Sysmem, HeapConstraints) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result);
-  ASSERT_OK(allocate_result.value_NEW().status);
-  ASSERT_EQ(allocate_result.value_NEW().buffer_collection_info.buffer_count, 1, "");
+  ASSERT_OK(allocate_result.value().status);
+  ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1, "");
   ASSERT_EQ(
-      allocate_result.value_NEW().buffer_collection_info.settings.buffer_settings.coherency_domain,
+      allocate_result.value().buffer_collection_info.settings.buffer_settings.coherency_domain,
       fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
-  ASSERT_EQ(allocate_result.value_NEW().buffer_collection_info.settings.buffer_settings.heap,
+  ASSERT_EQ(allocate_result.value().buffer_collection_info.settings.buffer_settings.heap,
             fuchsia_sysmem::wire::HeapType::kSystemRam, "");
-  ASSERT_EQ(allocate_result.value_NEW()
+  ASSERT_EQ(allocate_result.value()
                 .buffer_collection_info.settings.buffer_settings.is_physically_contiguous,
             true, "");
 }
@@ -2622,10 +2622,10 @@ TEST(Sysmem, SystemRamHeapSupportsAllDomains) {
     auto allocate_result = collection->WaitForBuffersAllocated();
     ASSERT_OK(allocate_result, "Failed Allocate(): domain supported = %u", domain);
 
-    ASSERT_EQ(domain,
-              allocate_result.value_NEW()
-                  .buffer_collection_info.settings.buffer_settings.coherency_domain,
-              "Coherency domain doesn't match constraints");
+    ASSERT_EQ(
+        domain,
+        allocate_result.value().buffer_collection_info.settings.buffer_settings.coherency_domain,
+        "Coherency domain doesn't match constraints");
   }
 }
 
@@ -2666,11 +2666,11 @@ TEST(Sysmem, RequiredSize) {
 
   auto allocate_result = collection->WaitForBuffersAllocated();
   ASSERT_OK(allocate_result);
-  ASSERT_OK(allocate_result.value_NEW().status);
+  ASSERT_OK(allocate_result.value().status);
 
   size_t vmo_size;
   zx_status_t status = zx_vmo_get_size(
-      allocate_result.value_NEW().buffer_collection_info.buffers[0].vmo.get(), &vmo_size);
+      allocate_result.value().buffer_collection_info.buffers[0].vmo.get(), &vmo_size);
   ASSERT_EQ(status, ZX_OK, "");
 
   // Image must be at least 512x1024 NV12, due to the required max sizes
@@ -2779,14 +2779,14 @@ TEST(Sysmem, ContiguousSystemRamIsCached) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result);
-  ASSERT_OK(allocate_result.value_NEW().status);
-  ASSERT_EQ(allocate_result.value_NEW().buffer_collection_info.buffer_count, 1, "");
+  ASSERT_OK(allocate_result.value().status);
+  ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1, "");
   ASSERT_EQ(
-      allocate_result.value_NEW().buffer_collection_info.settings.buffer_settings.coherency_domain,
+      allocate_result.value().buffer_collection_info.settings.buffer_settings.coherency_domain,
       fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
-  ASSERT_EQ(allocate_result.value_NEW().buffer_collection_info.settings.buffer_settings.heap,
+  ASSERT_EQ(allocate_result.value().buffer_collection_info.settings.buffer_settings.heap,
             fuchsia_sysmem::wire::HeapType::kSystemRam, "");
-  ASSERT_EQ(allocate_result.value_NEW()
+  ASSERT_EQ(allocate_result.value()
                 .buffer_collection_info.settings.buffer_settings.is_physically_contiguous,
             true, "");
 
@@ -2800,7 +2800,7 @@ TEST(Sysmem, ContiguousSystemRamIsCached) {
   // CoherencyDomain::kInaccessible + protected has a separate test (
   // test_sysmem_protected_ram_is_uncached).
   zx_info_vmo_t vmo_info{};
-  zx_status_t status = allocate_result.value_NEW().buffer_collection_info.buffers[0].vmo.get_info(
+  zx_status_t status = allocate_result.value().buffer_collection_info.buffers[0].vmo.get_info(
       ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
   ASSERT_EQ(status, ZX_OK, "");
   ASSERT_EQ(vmo_info.cache_policy, ZX_CACHE_POLICY_CACHED, "");
@@ -2860,15 +2860,15 @@ TEST(Sysmem, ContiguousSystemRamIsRecycled) {
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_OK(allocate_result);
-    ASSERT_OK(allocate_result.value_NEW().status);
+    ASSERT_OK(allocate_result.value().status);
 
-    ASSERT_EQ(allocate_result.value_NEW().buffer_collection_info.buffer_count, 1, "");
-    ASSERT_EQ(allocate_result.value_NEW()
-                  .buffer_collection_info.settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
-    ASSERT_EQ(allocate_result.value_NEW().buffer_collection_info.settings.buffer_settings.heap,
+    ASSERT_EQ(allocate_result.value().buffer_collection_info.buffer_count, 1, "");
+    ASSERT_EQ(
+        allocate_result.value().buffer_collection_info.settings.buffer_settings.coherency_domain,
+        fuchsia_sysmem::wire::CoherencyDomain::kCpu, "");
+    ASSERT_EQ(allocate_result.value().buffer_collection_info.settings.buffer_settings.heap,
               fuchsia_sysmem::wire::HeapType::kSystemRam, "");
-    ASSERT_EQ(allocate_result.value_NEW()
+    ASSERT_EQ(allocate_result.value()
                   .buffer_collection_info.settings.buffer_settings.is_physically_contiguous,
               true, "");
 
@@ -2924,7 +2924,7 @@ TEST(Sysmem, OnlyNoneUsageFails) {
   // before the SetConstraints() so we can verify that the wait succeeds but
   // the allocation_status is ZX_ERR_NOT_SUPPORTED.
   ASSERT_TRUE(allocate_result.status() == ZX_ERR_PEER_CLOSED ||
-              allocate_result.value_NEW().status == ZX_ERR_NOT_SUPPORTED);
+              allocate_result.value().status == ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST(Sysmem, NoneUsageAndOtherUsageFromSingleParticipantFails) {
@@ -2967,7 +2967,7 @@ TEST(Sysmem, NoneUsageAndOtherUsageFromSingleParticipantFails) {
   // before the SetConstraints() so we can verify that the wait succeeds but
   // the allocation_status is ZX_ERR_NOT_SUPPORTED.
   ASSERT_TRUE(allocate_result.status() == ZX_ERR_PEER_CLOSED ||
-              allocate_result.value_NEW().status == ZX_ERR_NOT_SUPPORTED);
+              allocate_result.value().status == ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
@@ -3124,9 +3124,9 @@ TEST(Sysmem, PixelFormatBgr24) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result);
-  ASSERT_OK(allocate_result.value_NEW().status);
+  ASSERT_OK(allocate_result.value().status);
 
-  auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+  auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
   ASSERT_EQ(buffer_collection_info->buffer_count, 3, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kStrideAlign, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
@@ -3231,8 +3231,8 @@ TEST(Sysmem, HeapAmlogicSecure) {
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_OK(allocate_result);
-    ASSERT_OK(allocate_result.value_NEW().status);
-    auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+    ASSERT_OK(allocate_result.value().status);
+    auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
     EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
@@ -3247,12 +3247,11 @@ TEST(Sysmem, HeapAmlogicSecure) {
     if (need_aux || allow_aux) {
       auto aux_result = collection->GetAuxBuffers();
       ASSERT_OK(aux_result);
-      ASSERT_OK(aux_result.value_NEW().status);
+      ASSERT_OK(aux_result.value().status);
 
-      EXPECT_EQ(aux_result.value_NEW().buffer_collection_info_aux_buffers.buffer_count,
+      EXPECT_EQ(aux_result.value().buffer_collection_info_aux_buffers.buffer_count,
                 buffer_collection_info->buffer_count, "");
-      aux_buffer_collection_info =
-          std::move(aux_result.value_NEW().buffer_collection_info_aux_buffers);
+      aux_buffer_collection_info = std::move(aux_result.value().buffer_collection_info_aux_buffers);
     }
 
     for (uint32_t i = 0; i < 64; ++i) {
@@ -3375,8 +3374,8 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
     auto allocate_result = collection->WaitForBuffersAllocated();
 
     ASSERT_OK(allocate_result);
-    ASSERT_OK(allocate_result.value_NEW().status);
-    auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+    ASSERT_OK(allocate_result.value().status);
+    auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
     EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, size, "");
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
@@ -3485,8 +3484,8 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_OK(allocate_result);
-    ASSERT_OK(allocate_result.value_NEW().status);
-    auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+    ASSERT_OK(allocate_result.value().status);
+    auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
     EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
@@ -3501,12 +3500,11 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
     if (need_aux || allow_aux) {
       auto aux_result = collection->GetAuxBuffers();
       ASSERT_OK(aux_result);
-      ASSERT_OK(aux_result.value_NEW().status);
+      ASSERT_OK(aux_result.value().status);
 
-      EXPECT_EQ(aux_result.value_NEW().buffer_collection_info_aux_buffers.buffer_count,
+      EXPECT_EQ(aux_result.value().buffer_collection_info_aux_buffers.buffer_count,
                 buffer_collection_info->buffer_count, "");
-      aux_buffer_collection_info =
-          std::move(aux_result.value_NEW().buffer_collection_info_aux_buffers);
+      aux_buffer_collection_info = std::move(aux_result.value().buffer_collection_info_aux_buffers);
     }
 
     for (uint32_t i = 0; i < 64; ++i) {
@@ -3597,8 +3595,8 @@ TEST(Sysmem, HeapAmlogicSecureOnlySupportsInaccessible) {
       // This is the first round-trip to/from sysmem.  A failure here can be due
       // to any step above failing async.
       ASSERT_OK(allocate_result);
-      ASSERT_OK(allocate_result.value_NEW().status);
-      auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+      ASSERT_OK(allocate_result.value().status);
+      auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
       EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
       EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
@@ -3611,7 +3609,7 @@ TEST(Sysmem, HeapAmlogicSecureOnlySupportsInaccessible) {
                 fuchsia_sysmem::wire::HeapType::kAmlogicSecure, "");
       EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
     } else {
-      ASSERT_TRUE(allocate_result.status() != ZX_OK || allocate_result.value_NEW().status != ZX_OK,
+      ASSERT_TRUE(allocate_result.status() != ZX_OK || allocate_result.value().status != ZX_OK,
                   "Sysmem should not allocate memory from secure heap with coherency domain %u",
                   domain);
     }
@@ -3651,8 +3649,8 @@ TEST(Sysmem, HeapAmlogicSecureVdec) {
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_OK(allocate_result);
-    ASSERT_OK(allocate_result.value_NEW().status);
-    auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+    ASSERT_OK(allocate_result.value().status);
+    auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
     EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
     EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
@@ -3713,8 +3711,8 @@ TEST(Sysmem, CpuUsageAndInaccessibleDomainSupportedSucceeds) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result);
-  ASSERT_OK(allocate_result.value_NEW().status);
-  auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+  ASSERT_OK(allocate_result.value().status);
+  auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
   ASSERT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
   ASSERT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSize, "");
@@ -3774,13 +3772,13 @@ TEST(Sysmem, AllocatedBufferZeroInRam) {
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_OK(allocate_result);
-    ASSERT_OK(allocate_result.value_NEW().status);
+    ASSERT_OK(allocate_result.value().status);
 
     // We intentionally don't check a bunch of stuff here.  We assume that sysmem allocated
     // kBufferCount (1) buffer of kBufferSize (64 KiB).  That way we're comparing ASAP after buffer
     // allocation, in case that helps catch any failure to actually zero in RAM.  Ideally we'd read
     // using a DMA in this test instead of using CPU reads, but that wouldn't be a portable test.
-    auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+    auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
     zx::vmo vmo = std::move(buffer_collection_info->buffers[0].vmo);
     buffer_collection_info->buffers[0].vmo = zx::vmo();
 
@@ -3837,8 +3835,8 @@ TEST(Sysmem, DefaultAttributes) {
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
   ASSERT_OK(allocate_result);
-  ASSERT_OK(allocate_result.value_NEW().status);
-  auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+  ASSERT_OK(allocate_result.value().status);
+  auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
   size_t vmo_size;
   auto status = zx_vmo_get_size(buffer_collection_info->buffers[0].vmo.get(), &vmo_size);
@@ -3988,16 +3986,16 @@ bool BasicAllocationSucceeds(
     return false;
   }
 
-  if (allocate_result.value_NEW().status != ZX_OK) {
+  if (allocate_result.value().status != ZX_OK) {
     printf("WaitForBuffersAllocated failed - allocation_status: %d\n",
-           allocate_result.value_NEW().status);
+           allocate_result.value().status);
     return false;
   }
 
   // Check if the contents in allocated VMOs are already filled with zero.
   // If the allocated VMO is readable, then we would expect it could be cleared by sysmem;
   // otherwise we just skip this check.
-  auto buffer_collection_info = &allocate_result.value_NEW().buffer_collection_info;
+  auto buffer_collection_info = &allocate_result.value().buffer_collection_info;
 
   zx::vmo allocated_vmo = std::move(buffer_collection_info->buffers[0].vmo);
   size_t vmo_size;

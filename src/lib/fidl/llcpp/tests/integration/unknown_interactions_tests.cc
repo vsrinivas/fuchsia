@@ -334,7 +334,7 @@ TEST_F(UnknownInteractions, TwoWayStrictErrAsyncSend) {
 
   client->StrictTwoWayErr().Then([](auto& response) {
     ASSERT_TRUE(response.ok());
-    EXPECT_TRUE(response.value_NEW().is_ok());
+    EXPECT_TRUE(response.value().is_ok());
   });
 
   TwoWayServerResult<16> received(server);

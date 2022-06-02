@@ -89,8 +89,7 @@ TEST(NetStreamTest, RaceClose) {
       if (zx_status_t status = response.status(); status != ZX_OK) {
         EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
       } else {
-        EXPECT_TRUE(response.Unwrap_NEW()->is_ok())
-            << zx_status_get_string(response.value_NEW().error_value());
+        EXPECT_TRUE(response->is_ok()) << zx_status_get_string(response.value().error_value());
       }
     });
   }
@@ -110,7 +109,7 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
 
   auto response = client->Describe();
   ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap_NEW()->info;
+  const fuchsia_io::wire::NodeInfo& node_info = response->info;
   ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
@@ -210,7 +209,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
 
   auto describe_response = client->Describe();
   ASSERT_OK(describe_response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = describe_response.Unwrap_NEW()->info;
+  const fuchsia_io::wire::NodeInfo& node_info = describe_response->info;
   ASSERT_EQ(node_info.Which(), TypeParam::tag());
 
   zx_signals_t observed;
@@ -221,8 +220,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
 
   auto close_response = client->Close();
   EXPECT_OK(close_response.status());
-  EXPECT_TRUE(close_response.Unwrap_NEW()->is_ok())
-      << zx_status_get_string(close_response.Unwrap_NEW()->error_value());
+  EXPECT_TRUE(close_response->is_ok()) << zx_status_get_string(close_response->error_value());
 
   // We still have `clone`, nothing should be closed yet.
   ASSERT_STATUS(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(),
@@ -279,7 +277,7 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
 
   auto response = client->Describe();
   ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap_NEW()->info;
+  const fuchsia_io::wire::NodeInfo& node_info = response->info;
   ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
@@ -366,8 +364,7 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   for (auto& client : clients) {
     auto response = client->Close();
     EXPECT_OK(response.status());
-    EXPECT_TRUE(response.Unwrap_NEW()->is_ok())
-        << zx_status_get_string(response.value_NEW().error_value());
+    EXPECT_TRUE(response->is_ok()) << zx_status_get_string(response.value().error_value());
   }
 
   ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);

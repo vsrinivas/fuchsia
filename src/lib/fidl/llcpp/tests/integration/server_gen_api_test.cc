@@ -84,7 +84,7 @@ TEST(BindServerTestCase, SyncReply) {
   // Sync client call.
   auto result = fidl::WireCall(local)->Echo(kExpectedReply);
   EXPECT_OK(result.status());
-  EXPECT_EQ(result.value_NEW().reply, kExpectedReply);
+  EXPECT_EQ(result.value().reply, kExpectedReply);
 
   local.reset();  // To trigger binding destruction before loop's destruction.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
@@ -131,7 +131,7 @@ TEST(BindServerTestCase, AsyncReply) {
   // Sync client call.
   auto result = fidl::WireCall(local)->Echo(kExpectedReply);
   EXPECT_OK(result.status());
-  EXPECT_EQ(result.value_NEW().reply, kExpectedReply);
+  EXPECT_EQ(result.value().reply, kExpectedReply);
 
   local.reset();  // To trigger binding destruction before main's destruction.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
@@ -189,7 +189,7 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
     auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::PostTask(client->dispatcher(), [local = local.borrow(), &done]() {
       auto result = fidl::WireCall(local)->Echo(kExpectedReply);
-      ASSERT_EQ(result.value_NEW().reply, kExpectedReply);
+      ASSERT_EQ(result.value().reply, kExpectedReply);
       static std::atomic<int> count;
       if (++count == kNumberOfAsyncs) {
         sync_completion_signal(&done);

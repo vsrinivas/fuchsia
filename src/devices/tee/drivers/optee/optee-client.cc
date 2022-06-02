@@ -926,10 +926,10 @@ zx_status_t OpteeClient::RpmbGetDevInfo(std::optional<SharedMemoryView> tx_frame
 
   RpmbDevInfo* info = reinterpret_cast<RpmbDevInfo*>(rx_frames->vaddr());
 
-  if (result.value_NEW().info.is_emmc_info()) {
-    memcpy(info->cid, result.value_NEW().info.emmc_info().cid.data(), RpmbDevInfo::kRpmbCidSize);
-    info->rpmb_size = result.value_NEW().info.emmc_info().rpmb_size;
-    info->rel_write_sector_count = result.value_NEW().info.emmc_info().reliable_write_sector_count;
+  if (result.value().info.is_emmc_info()) {
+    memcpy(info->cid, result.value().info.emmc_info().cid.data(), RpmbDevInfo::kRpmbCidSize);
+    info->rpmb_size = result.value().info.emmc_info().rpmb_size;
+    info->rel_write_sector_count = result.value().info.emmc_info().reliable_write_sector_count;
     info->ret_code = RpmbDevInfo::kRpmbCmdRetOK;
   } else {
     info->ret_code = RpmbDevInfo::kRpmbCmdRetError;
@@ -1082,8 +1082,8 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
 
   auto res = rpmb_client_->Request(std::move(rpmb_request));
   status = res.status();
-  if ((status == ZX_OK) && (res.Unwrap_NEW()->is_error())) {
-    status = res.Unwrap_NEW()->error_value();
+  if ((status == ZX_OK) && (res->is_error())) {
+    status = res->error_value();
   }
 
   if (status != ZX_OK) {
@@ -1411,7 +1411,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
-    const fitx::result response = result.value_NEW();
+    const fitx::result response = result.value();
     if (response.is_error()) {
       LOG(ERROR, "failed to read from file (IO status: %s)",
           zx_status_get_string(response.error_value()));
@@ -1472,7 +1472,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
-    const fitx::result response = result.value_NEW();
+    const fitx::result response = result.value();
     if (response.is_error()) {
       LOG(ERROR, "failed to write to file (IO status: %s)",
           zx_status_get_string(response.error_value()));
@@ -1508,7 +1508,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
     message->set_return_code(TEEC_ERROR_GENERIC);
     return result.status();
   }
-  const fitx::result response = result.value_NEW();
+  const fitx::result response = result.value();
   if (response.is_error()) {
     LOG(ERROR, "failed to truncate file (IO status: %s)",
         zx_status_get_string(response.error_value()));
@@ -1554,10 +1554,10 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
     message->set_return_code(TEEC_ERROR_GENERIC);
     return result.status();
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    LOG(ERROR, "failed to remove file (IO status: %d)", result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    LOG(ERROR, "failed to remove file (IO status: %d)", result->error_value());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return result.Unwrap_NEW()->error_value();
+    return result->error_value();
   }
 
   message->set_return_code(TEEC_SUCCESS);
@@ -1636,26 +1636,26 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
     message->set_return_code(TEEC_ERROR_GENERIC);
     return token_result.status();
   }
-  if (token_result.value_NEW().s != ZX_OK) {
+  if (token_result.value().s != ZX_OK) {
     LOG(ERROR, "could not get destination directory's storage token (IO status: %d)",
-        token_result.value_NEW().s);
+        token_result.value().s);
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return token_result.value_NEW().s;
+    return token_result.value().s;
   }
 
   auto rename_result = fidl::WireCall(old_storage.value().borrow())
                            ->Rename(fidl::StringView::FromExternal(old_name),
-                                    zx::event(std::move(token_result.value_NEW().token)),
+                                    zx::event(std::move(token_result.value().token)),
                                     fidl::StringView::FromExternal(new_name));
   if (!rename_result.ok()) {
     LOG(ERROR, "failed to rename file (FIDL status: %s)", rename_result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return rename_result.status();
   }
-  if (rename_result.Unwrap_NEW()->is_error()) {
-    LOG(ERROR, "failed to rename file (IO status: %d)", rename_result.Unwrap_NEW()->error_value());
+  if (rename_result->is_error()) {
+    LOG(ERROR, "failed to rename file (IO status: %d)", rename_result->error_value());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return rename_result.Unwrap_NEW()->error_value();
+    return rename_result->error_value();
   }
 
   message->set_return_code(TEEC_SUCCESS);

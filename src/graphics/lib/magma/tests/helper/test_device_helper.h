@@ -56,9 +56,9 @@ class TestDeviceBase {
     auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_)->GetTopologicalPath();
 
     EXPECT_EQ(ZX_OK, res.status());
-    EXPECT_TRUE(res.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(res->is_ok());
 
-    auto& response = *res.Unwrap_NEW()->value();
+    auto& response = *res->value();
     EXPECT_LE(response.path.size(), fuchsia_device::wire::kMaxDevicePathLen);
 
     memcpy(path, response.path.data(), response.path.size());
@@ -75,7 +75,7 @@ class TestDeviceBase {
   void ShutdownDevice() {
     auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_)->ScheduleUnbind();
     EXPECT_EQ(ZX_OK, res.status());
-    EXPECT_TRUE(res.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(res->is_ok());
   }
 
   static void AutobindDriver(fidl::UnownedClientEnd<fuchsia_device::Controller> parent_device) {
@@ -100,11 +100,11 @@ class TestDeviceBase {
       auto res = fidl::WireCall<fuchsia_device::Controller>(parent_device)
                      ->Bind(fidl::StringView::FromExternal(path));
       ASSERT_EQ(ZX_OK, res.status());
-      if (res.Unwrap_NEW()->is_error() && res.Unwrap_NEW()->error_value() == ZX_ERR_ALREADY_BOUND) {
+      if (res->is_error() && res->error_value() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));
         continue;
       }
-      EXPECT_TRUE(res.Unwrap_NEW()->is_ok());
+      EXPECT_TRUE(res->is_ok());
       break;
     }
   }

@@ -548,20 +548,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_union::TestProtocol::StrictXUnionH
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* operator->() const { return &value(); }
@@ -605,20 +593,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_union::TestProtocol::Strict
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* operator->() const { return &value(); }
@@ -652,20 +628,8 @@ class [[nodiscard]] ::fidl::WireResult<::test_union::TestProtocol::FlexibleXUnio
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* operator->() const { return &value(); }
@@ -709,20 +673,8 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_union::TestProtocol::Flexib
     return &decoded_.Value()->body;
   }
 
-  ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* Unwrap_NEW() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* Unwrap_NEW() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
   ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value() { return *Unwrap(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value_NEW() { return *Unwrap_NEW(); }
-  const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& value_NEW() const { return *Unwrap_NEW(); }
 
   ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* operator->() { return &value(); }
   const ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* operator->() const { return &value(); }

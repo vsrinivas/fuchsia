@@ -60,7 +60,7 @@ void IntelDspStream::GetProperties(GetPropertiesRequestView request,
     LOG(ERROR, "Error on GetProperties res = %d", result.status());
     completer.Close(result.status());
   } else {
-    completer.Reply(std::move(result.value_NEW().properties));
+    completer.Reply(std::move(result.value().properties));
   }
 }
 
@@ -72,7 +72,7 @@ void IntelDspStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
     LOG(ERROR, "Error on GetVmo res = %d", result.status());
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
   } else {
-    auto& response = *result.Unwrap_NEW()->value();
+    auto& response = *result->value();
     completer.ReplySuccess(response.num_frames, std::move(response.ring_buffer));
   }
 }
@@ -94,7 +94,7 @@ void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& compl
     completer.Close(status.code());
     return;
   }
-  completer.Reply(result.value_NEW().start_time);
+  completer.Reply(result.value().start_time);
 }
 
 // Not just pass-through, we also pause the DSP pipeline.
@@ -125,7 +125,7 @@ void IntelDspStream::WatchClockRecoveryPositionInfo(
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on Watch clock recovery position res = %d", result.status());
   }
-  completer.Reply(result.value_NEW().position_info);
+  completer.Reply(result.value().position_info);
 }
 
 zx_status_t IntelDspStream::OnActivateLocked() {

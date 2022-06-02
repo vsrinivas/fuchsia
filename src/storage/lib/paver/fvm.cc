@@ -70,11 +70,11 @@ zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_le
   if (!resp.ok()) {
     return resp.status();
   }
-  if (resp.Unwrap_NEW()->is_error()) {
-    return resp.Unwrap_NEW()->error_value();
+  if (resp->is_error()) {
+    return resp->error_value();
   }
 
-  auto& response = *resp.Unwrap_NEW()->value();
+  auto& response = *resp->value();
   strncpy(buf, response.path.data(), std::min(buf_len, response.path.size()));
   buf[response.path.size()] = '\0';
   return ZX_OK;
@@ -125,7 +125,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
   if (!result.ok()) {
     return result.status();
   }
-  auto& response = result.value_NEW();
+  auto& response = result.value();
   if (response.status != ZX_OK) {
     return response.status;
   }
@@ -140,7 +140,7 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
   if (result2.status() != ZX_OK) {
     return result2.status();
   }
-  const auto& response2 = result2.value_NEW();
+  const auto& response2 = result2.value();
   if (response2.status != ZX_OK) {
     return response2.status;
   }
@@ -270,8 +270,8 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
                   ->Rebind(fidl::StringView(kFvmDriverLib));
   status = resp.status();
   if (status == ZX_OK) {
-    if (resp.Unwrap_NEW()->is_error()) {
-      status = resp.Unwrap_NEW()->error_value();
+    if (resp->is_error()) {
+      status = resp->error_value();
     }
   }
   if (status != ZX_OK && status != ZX_ERR_ALREADY_BOUND) {
@@ -315,10 +315,10 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
                                              header.slice_size)
                 .GetAllocationTableAllocatedEntryCount();
           };
-          if (result.value_NEW().info->slice_size != header.slice_size) {
+          if (result.value().info->slice_size != header.slice_size) {
             ERROR("Mismatched slice size. Reinitializing FVM.\n");
-          } else if (header.maximum_disk_size > 0 && result.value_NEW().info->maximum_slice_count <
-                                                         get_maximum_slice_count(header)) {
+          } else if (header.maximum_disk_size > 0 &&
+                     result.value().info->maximum_slice_count < get_maximum_slice_count(header)) {
             ERROR("Mismatched maximum slice count. Reinitializing FVM.\n");
           } else {
             if (format_result != nullptr) {
@@ -350,8 +350,8 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       return fbl::unique_fd();
     }
 
-    uint64_t initial_disk_size = block_info_result.value_NEW().info->block_count *
-                                 block_info_result.value_NEW().info->block_size;
+    uint64_t initial_disk_size =
+        block_info_result.value().info->block_count * block_info_result.value().info->block_size;
     uint64_t max_disk_size =
         (header.maximum_disk_size == 0) ? initial_disk_size : header.maximum_disk_size;
 
@@ -555,7 +555,7 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
       fdio_cpp::UnownedFdioCaller partition_connection((*parts)[p].new_part.get());
       auto result =
           fidl::WireCall<volume::Volume>(partition_connection.channel())->Extend(offset, length);
-      auto status = result.ok() ? result.value_NEW().status : result.status();
+      auto status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to extend partition: %s\n", zx_status_get_string(status));
         return status;
@@ -629,7 +629,7 @@ zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uin
 
     fdio_cpp::UnownedFdioCaller partition_connection(old_part.get());
     auto result = fidl::WireCall<volume::Volume>(partition_connection.channel())->Destroy();
-    zx_status_t status = result.ok() ? result.value_NEW().status : result.status();
+    zx_status_t status = result.ok() ? result.value().status : result.status();
     if (status != ZX_OK) {
       ERROR("Couldn't destroy partition: %s\n", zx_status_get_string(status));
       return status;
@@ -757,7 +757,7 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(result.status()));
       return zx::error(result.status());
     }
-    const auto& response = result.value_NEW();
+    const auto& response = result.value();
     if (response.status != ZX_OK) {
       ERROR("Couldn't get partition block info: %s\n", zx_status_get_string(response.status));
       return zx::error(response.status);
@@ -791,15 +791,15 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     // inactive) so the new partition persists.
     auto result =
         fidl::WireCall<partition::Partition>(partition_connection.channel())->GetInstanceGuid();
-    if (!result.ok() || result.value_NEW().status != ZX_OK) {
+    if (!result.ok() || result.value().status != ZX_OK) {
       ERROR("Failed to get unique GUID of new partition\n");
       return zx::error(ZX_ERR_BAD_STATE);
     }
-    auto* guid = result.value_NEW().guid.get();
+    auto* guid = result.value().guid.get();
 
     auto result2 =
         fidl::WireCall<volume::VolumeManager>(volume_manager.channel())->Activate(*guid, *guid);
-    if (result2.status() != ZX_OK || result2.value_NEW().status != ZX_OK) {
+    if (result2.status() != ZX_OK || result2.value().status != ZX_OK) {
       ERROR("Failed to upgrade partition\n");
       return zx::error(ZX_ERR_IO);
     }
@@ -841,10 +841,10 @@ zx_status_t FvmUnbind(const fbl::unique_fd& devfs_root, const char* device) {
           name_buffer.data());
     return resp.status();
   }
-  if (resp.Unwrap_NEW()->is_error()) {
-    ERROR("FVM unbind failed: %s on device %s\n",
-          zx_status_get_string(resp.Unwrap_NEW()->error_value()), name_buffer.data());
-    return resp.Unwrap_NEW()->error_value();
+  if (resp->is_error()) {
+    ERROR("FVM unbind failed: %s on device %s\n", zx_status_get_string(resp->error_value()),
+          name_buffer.data());
+    return resp->error_value();
   }
   return ZX_OK;
 }

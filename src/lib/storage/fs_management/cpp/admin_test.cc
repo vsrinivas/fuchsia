@@ -229,8 +229,8 @@ TEST_P(OutgoingDirectoryTest, DataRootIsValid) {
   std::string_view format_str = DiskFormatString(std::get<0>(GetParam()));
   auto resp = DataRoot()->QueryFilesystem();
   ASSERT_TRUE(resp.ok()) << resp.status_string();
-  ASSERT_EQ(resp.value_NEW().s, ZX_OK) << zx_status_get_string(resp.value_NEW().s);
-  ASSERT_STREQ(format_str.data(), reinterpret_cast<char*>(resp.value_NEW().info->name.data()));
+  ASSERT_EQ(resp.value().s, ZX_OK) << zx_status_get_string(resp.value().s);
+  ASSERT_STREQ(format_str.data(), reinterpret_cast<char*>(resp.value().info->name.data()));
 }
 
 INSTANTIATE_TEST_SUITE_P(OutgoingDirectoryTest, OutgoingDirectoryTest,
@@ -275,14 +275,13 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
     const fidl::WireResult res =
         file_client->Write(fidl::VectorView<uint8_t>::FromExternal(content));
     ASSERT_TRUE(res.ok()) << res.status_string();
-    const fitx::result resp = res.value_NEW();
+    const fitx::result resp = res.value();
     ASSERT_TRUE(resp.is_ok()) << zx_status_get_string(resp.error_value());
     ASSERT_EQ(resp.value()->actual_count, content.size());
 
     auto resp2 = file_client->Close();
     ASSERT_TRUE(resp2.ok()) << resp2.status_string();
-    ASSERT_TRUE(resp2.Unwrap_NEW()->is_ok())
-        << zx_status_get_string(resp2.Unwrap_NEW()->error_value());
+    ASSERT_TRUE(resp2->is_ok()) << zx_status_get_string(resp2->error_value());
   }
 };
 
@@ -319,14 +318,13 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file_ends->client));
   const fidl::WireResult res2 = file_client->Read(4);
   ASSERT_TRUE(res2.ok()) << res2.status_string();
-  const fitx::result resp2 = res2.value_NEW();
+  const fitx::result resp2 = res2.value();
   ASSERT_TRUE(resp2.is_ok()) << zx_status_get_string(resp2.error_value());
   ASSERT_EQ(resp2.value()->data[0], 1);
 
   auto close_resp = file_client->Close();
   ASSERT_TRUE(close_resp.ok()) << close_resp.status_string();
-  ASSERT_TRUE(close_resp.Unwrap_NEW()->is_ok())
-      << zx_status_get_string(close_resp.Unwrap_NEW()->error_value());
+  ASSERT_TRUE(close_resp->is_ok()) << zx_status_get_string(close_resp->error_value());
 }
 
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {

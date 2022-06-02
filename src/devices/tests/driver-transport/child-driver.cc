@@ -65,15 +65,14 @@ void Device::GetParentDataOverDriverTransport(
               completer.ReplyError(result.status());
               return;
             }
-            if (result.Unwrap_NEW()->is_error()) {
-              zxlogf(ERROR, "TransmitData failed with status: %d",
-                     result.Unwrap_NEW()->error_value());
-              completer.ReplyError(result.Unwrap_NEW()->error_value());
+            if (result->is_error()) {
+              zxlogf(ERROR, "TransmitData failed with status: %d", result->error_value());
+              completer.ReplyError(result->error_value());
               return;
             }
 
             // Reply to the test's fidl request with the data.
-            completer.ReplySuccess(result.Unwrap_NEW()->value()->out);
+            completer.ReplySuccess(result->value()->out);
           });
 }
 

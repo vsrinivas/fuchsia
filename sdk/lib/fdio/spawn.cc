@@ -162,15 +162,15 @@ zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executa
     return ZX_ERR_INTERNAL;
   }
 
-  status = response.value_NEW().status;
+  status = response.value().status;
   if (status != ZX_OK) {
     report_error(err_msg, "failed to resolve %.*s: %d (%s)", name_len, name, status,
                  zx_status_get_string(status));
     return status;
   }
 
-  *out_executable = std::move(response.value_NEW().executable);
-  *out_ldsvc = std::move(response.value_NEW().ldsvc.channel());
+  *out_executable = std::move(response.value().executable);
+  *out_ldsvc = std::move(response.value().ldsvc.channel());
 
   return ZX_OK;
 }
@@ -953,7 +953,7 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     return status;
   }
 
-  status = reply.value_NEW().status;
+  status = reply.value().status;
   if (status != ZX_OK) {
     report_error(err_msg, "fuchsia.process.Launcher failed");
     return status;
@@ -961,13 +961,13 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
 
   // The launcher claimed to succeed but didn't actually give us a
   // process handle. Something is wrong with the launcher.
-  if (!reply.value_NEW().process.is_valid()) {
+  if (!reply.value().process.is_valid()) {
     report_error(err_msg, "failed receive process handle");
     return ZX_ERR_BAD_HANDLE;
   }
 
   if (process_out) {
-    *process_out = reply.value_NEW().process.release();
+    *process_out = reply.value().process.release();
   }
 
   return ZX_OK;

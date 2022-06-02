@@ -18,21 +18,21 @@ int run(int argc, const char** argv, zx::channel channel) {
   if (argc == 4) {
     uint32_t value = static_cast<uint32_t>(strtoul(argv[3], nullptr, 16));
     auto result = device->WriteRegister32(address, 0xFFFFFFFF, value);
-    if (result.Unwrap_NEW()->is_error()) {
-      status = result.Unwrap_NEW()->error_value();
+    if (result->is_error()) {
+      status = result->error_value();
     }
     if (status != ZX_OK) {
       fprintf(stderr, "Write failed due to error %s\n", zx_status_get_string(status));
     }
   } else if (argc == 3) {
     auto result = device->ReadRegister32(address, 0xFFFFFFFF);
-    if (result.Unwrap_NEW()->is_error()) {
-      status = result.Unwrap_NEW()->error_value();
+    if (result->is_error()) {
+      status = result->error_value();
     }
     if (status != ZX_OK) {
       fprintf(stderr, "Read failed due to error %s\n", zx_status_get_string(status));
     } else {
-      printf("Register 0x%08zx: 0x%08x", address, result.Unwrap_NEW()->value()->value);
+      printf("Register 0x%08zx: 0x%08x", address, result->value()->value);
     }
   } else {
     fprintf(stderr, "Invalid args\n");

@@ -246,15 +246,15 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   // Test AddressSpaceChildDriver.AllocateBlock()
   auto result_alloc = client->AllocateBlock(4096u);
   EXPECT_TRUE(result_alloc.ok());
-  EXPECT_EQ(result_alloc.value_NEW().res, ZX_OK);
-  EXPECT_NE(result_alloc.value_NEW().paddr, 0u);
-  EXPECT_TRUE(result_alloc.value_NEW().vmo.is_valid());
+  EXPECT_EQ(result_alloc.value().res, ZX_OK);
+  EXPECT_NE(result_alloc.value().paddr, 0u);
+  EXPECT_TRUE(result_alloc.value().vmo.is_valid());
 
   // Test AddressSpaceChildDriver.DeallocateBlock()
-  auto paddr = result_alloc.value_NEW().paddr;
+  auto paddr = result_alloc.value().paddr;
   auto result_dealloc = client->DeallocateBlock(paddr);
   EXPECT_TRUE(result_dealloc.ok());
-  EXPECT_EQ(result_dealloc.value_NEW().res, ZX_OK);
+  EXPECT_EQ(result_dealloc.value().res, ZX_OK);
 }
 
 }  // namespace goldfish

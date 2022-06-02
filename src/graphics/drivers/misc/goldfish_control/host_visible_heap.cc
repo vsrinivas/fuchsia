@@ -202,25 +202,25 @@ void HostVisibleHeap::AllocateVmo(AllocateVmoRequestView request,
     completer.Reply(result.status(), zx::vmo{});
     return;
   }
-  if (result.value_NEW().res != ZX_OK) {
-    zxlogf(ERROR, "[%s] AllocateBlock failed: res %d", kTag, result.value_NEW().res);
-    completer.Reply(result.value_NEW().res, zx::vmo{});
+  if (result.value().res != ZX_OK) {
+    zxlogf(ERROR, "[%s] AllocateBlock failed: res %d", kTag, result.value().res);
+    completer.Reply(result.value().res, zx::vmo{});
     return;
   }
 
   // We need to clean up the allocated block if |zx_vmo_create_child| or
   // |fsl::GetKoid| fails, which could happen before we create and bind the
   // |DeallocateBlock()| wait in |Block|.
-  auto cleanup_block = fit::defer([this, paddr = result.value_NEW().paddr] {
+  auto cleanup_block = fit::defer([this, paddr = result.value().paddr] {
     auto result = control()->address_space_child()->DeallocateBlock(paddr);
     if (!result.ok()) {
       zxlogf(ERROR, "[%s] DeallocateBlock FIDL call failed: status %d", kTag, result.status());
-    } else if (result.value_NEW().res != ZX_OK) {
-      zxlogf(ERROR, "[%s] DeallocateBlock failed: res %d", kTag, result.value_NEW().res);
+    } else if (result.value().res != ZX_OK) {
+      zxlogf(ERROR, "[%s] DeallocateBlock failed: res %d", kTag, result.value().res);
     }
   });
 
-  zx::vmo vmo = std::move(result.value_NEW().vmo);
+  zx::vmo vmo = std::move(result.value().vmo);
   zx::vmo child;
   zx_status_t status = vmo.create_child(ZX_VMO_CHILD_SLICE, /*offset=*/0u, request->size, &child);
   if (status != ZX_OK) {
@@ -238,7 +238,7 @@ void HostVisibleHeap::AllocateVmo(AllocateVmoRequestView request,
   }
 
   blocks_.try_emplace(
-      child_koid, std::move(vmo), result.value_NEW().paddr,
+      child_koid, std::move(vmo), result.value().paddr,
       [this, child_koid] { DeallocateVmo(child_koid); }, loop()->dispatcher());
 
   cleanup_block.cancel();
@@ -257,8 +257,8 @@ void HostVisibleHeap::DeallocateVmo(zx_koid_t koid) {
   auto result = control()->address_space_child()->DeallocateBlock(paddr);
   if (!result.ok()) {
     zxlogf(ERROR, "[%s] DeallocateBlock FIDL call error: status %d", kTag, result.status());
-  } else if (result.value_NEW().res != ZX_OK) {
-    zxlogf(ERROR, "[%s] DeallocateBlock failed: res %d", kTag, result.value_NEW().res);
+  } else if (result.value().res != ZX_OK) {
+    zxlogf(ERROR, "[%s] DeallocateBlock failed: res %d", kTag, result.value().res);
   }
 }
 

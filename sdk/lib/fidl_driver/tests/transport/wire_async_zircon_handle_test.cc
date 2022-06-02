@@ -63,8 +63,8 @@ TEST(DriverTransport, WireSendZirconHandleAsync) {
            handle](fdf::WireUnownedResult<::test_transport::SendZirconHandleTest::SendZirconHandle>&
                        result) {
             ASSERT_OK(result.status());
-            ASSERT_TRUE(result.Unwrap_NEW()->h.is_valid());
-            ASSERT_EQ(handle, result.Unwrap_NEW()->h.get());
+            ASSERT_TRUE(result->h.is_valid());
+            ASSERT_EQ(handle, result->h.get());
             sync_completion_signal(&done);
           });
 

@@ -75,8 +75,8 @@ void RuntimeTest::ParentSetTestData(uint8_t* data_to_send, size_t size) {
   auto response = fidl::WireCall(parent_client)->SetTestData(std::move(data));
   ASSERT_EQ(ZX_OK, response.status());
   zx_status_t call_status = ZX_OK;
-  if (response.Unwrap_NEW()->is_error()) {
-    call_status = response.Unwrap_NEW()->error_value();
+  if (response->is_error()) {
+    call_status = response->error_value();
   }
   ASSERT_EQ(call_status, ZX_OK);
 }
@@ -86,12 +86,12 @@ void RuntimeTest::GetParentDataOverDriverTransport(const void* want_data, size_t
   ASSERT_EQ(ZX_OK, response.status());
 
   zx_status_t call_status = ZX_OK;
-  if (response.Unwrap_NEW()->is_error()) {
-    call_status = response.Unwrap_NEW()->error_value();
+  if (response->is_error()) {
+    call_status = response->error_value();
   }
   ASSERT_EQ(call_status, ZX_OK);
 
-  auto data = response.Unwrap_NEW()->value()->out;
+  auto data = response->value()->out;
   ASSERT_EQ(data.count(), want_size);
   ASSERT_EQ(memcmp(data.data(), want_data, want_size), 0);
 }

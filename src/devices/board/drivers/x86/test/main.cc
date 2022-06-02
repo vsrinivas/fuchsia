@@ -75,8 +75,8 @@ TEST(X86Board, ListTableEntries) {
   fidl::WireResult<Acpi::ListTableEntries> result =
       fidl::WireCall<Acpi>(dev.channel())->ListTableEntries();
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-  const auto& response = *result.Unwrap_NEW()->value();
+  ASSERT_TRUE(result->is_ok());
+  const auto& response = *result->value();
 
   // We expect to find at least a DSDT entry.
   EXPECT_GE(response.entries.count(), 1);
@@ -100,8 +100,8 @@ TEST(X86Board, ReadNamedTable) {
       fidl::WireCall<Acpi>(dev.channel())
           ->ReadNamedTable(StringToSignature("DSDT"), 0, std::move(vmo_copy));
   ASSERT_TRUE(result.ok());
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-  const auto& response = *result.Unwrap_NEW()->value();
+  ASSERT_TRUE(result->is_ok());
+  const auto& response = *result->value();
 
   // Ensure the size looks sensible.
   ASSERT_GE(response.size, 4);
@@ -121,8 +121,8 @@ TEST(X86Board, InvalidTableName) {
       fidl::WireCall<Acpi>(dev.channel())
           ->ReadNamedTable(StringToSignature("???\n"), 0, std::move(vmo_copy));
   ASSERT_TRUE(result.ok());
-  EXPECT_TRUE(result.Unwrap_NEW()->is_error());
-  EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(result->is_error());
+  EXPECT_EQ(result->error_value(), ZX_ERR_NOT_FOUND);
 }
 
 TEST(X86Board, InvalidIndexNumber) {
@@ -135,8 +135,8 @@ TEST(X86Board, InvalidIndexNumber) {
       fidl::WireCall<Acpi>(dev.channel())
           ->ReadNamedTable(StringToSignature("DSDT"), 1234, std::move(vmo_copy));
   ASSERT_TRUE(result.ok());
-  EXPECT_TRUE(result.Unwrap_NEW()->is_error());
-  EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(result->is_error());
+  EXPECT_EQ(result->error_value(), ZX_ERR_NOT_FOUND);
 }
 
 TEST(X86Board, VmoTooSmall) {
@@ -148,8 +148,8 @@ TEST(X86Board, VmoTooSmall) {
       fidl::WireCall<Acpi>(dev.channel())
           ->ReadNamedTable(StringToSignature("DSDT"), 0, std::move(vmo_copy));
   ASSERT_TRUE(result.ok());
-  EXPECT_TRUE(result.Unwrap_NEW()->is_error());
-  EXPECT_EQ(result.Unwrap_NEW()->error_value(), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_TRUE(result->is_error());
+  EXPECT_EQ(result->error_value(), ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(X86Board, ReadOnlyVmoSent) {

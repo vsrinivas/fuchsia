@@ -37,7 +37,7 @@ int main(int argc, const char** argv) {
     // Make the same call using wire types.
     fidl::WireResult result = client.wire()->EchoString("hello");
     ZX_ASSERT(result.ok());
-    std::string reply_string{result.value_NEW().response.get()};
+    std::string reply_string{result.value().response.get()};
     std::cout << "Got response: " << reply_string << std::endl;
   }
 

@@ -331,10 +331,10 @@ zx::status<uint64_t> DriverHostComponent::GetProcessKoid() {
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  if (result.Unwrap_NEW()->is_error()) {
-    return zx::error(result.Unwrap_NEW()->error_value());
+  if (result->is_error()) {
+    return zx::error(result->error_value());
   }
-  return zx::ok(result.Unwrap_NEW()->value()->koid);
+  return zx::ok(result->value()->koid);
 }
 
 BindResultTracker::BindResultTracker(size_t expected_result_count,
@@ -1005,13 +1005,13 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
       return;
     }
 
-    if (result.Unwrap_NEW()->is_error()) {
+    if (result->is_error()) {
       orphaned();
       // Log the failed MatchDriver only if we are not tracking the results with a tracker
       // or if the error is not a ZX_ERR_NOT_FOUND error (meaning it could not find a driver).
       // When we have a tracker, the bind is happening for all the orphan nodes and the
       // not found errors get very noisy.
-      zx_status_t match_error = result.Unwrap_NEW()->error_value();
+      zx_status_t match_error = result->error_value();
       if (!result_tracker || match_error != ZX_ERR_NOT_FOUND) {
         LOGF(WARNING, "Failed to match Node '%s': %s", driver_node->name().data(),
              zx_status_get_string(match_error));
@@ -1020,7 +1020,7 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
       return;
     }
 
-    auto& matched_driver = result.Unwrap_NEW()->value()->driver;
+    auto& matched_driver = result->value()->driver;
     if (!matched_driver.is_driver() && !matched_driver.is_composite_driver()) {
       orphaned();
       LOGF(WARNING,
@@ -1207,9 +1207,9 @@ zx::status<> DriverRunner::CreateComponent(std::string name, Collection collecti
            url.data(), result.FormatDescription().data());
       return;
     }
-    if (result.Unwrap_NEW()->is_error()) {
+    if (result->is_error()) {
       LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %u", name.data(),
-           url.data(), result.Unwrap_NEW()->error_value());
+           url.data(), result->error_value());
     }
   };
   auto create_callback =
@@ -1221,9 +1221,9 @@ zx::status<> DriverRunner::CreateComponent(std::string name, Collection collecti
                result.error().FormatDescription().data());
           return;
         }
-        if (result.Unwrap_NEW()->is_error()) {
+        if (result->is_error()) {
           LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.data(), url.data(),
-               result.Unwrap_NEW()->error_value());
+               result->error_value());
           return;
         }
         if (exposed_dir) {

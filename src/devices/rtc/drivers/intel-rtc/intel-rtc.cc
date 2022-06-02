@@ -248,12 +248,12 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   auto acpi = std::move(client.value());
 
   auto pio = acpi.borrow()->GetPio(0);
-  if (!pio.ok() || pio.Unwrap_NEW()->is_error()) {
+  if (!pio.ok() || pio->is_error()) {
     zxlogf(ERROR, "Failed to get port I/O resource");
-    return pio.ok() ? pio.Unwrap_NEW()->error_value() : pio.status();
+    return pio.ok() ? pio->error_value() : pio.status();
   }
 
-  zx::resource io_port = std::move(pio.Unwrap_NEW()->value()->pio);
+  zx::resource io_port = std::move(pio->value()->pio);
   zx_info_resource_t resource_info;
   zx_status_t status =
       io_port.get_info(ZX_INFO_RESOURCE, &resource_info, sizeof(resource_info), nullptr, nullptr);
@@ -278,7 +278,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   }
 
   std::unique_ptr<RtcDevice> rtc = std::make_unique<RtcDevice>(
-      parent, std::move(pio.Unwrap_NEW()->value()->pio), resource_info.base, resource_info.size);
+      parent, std::move(pio->value()->pio), resource_info.base, resource_info.size);
   auto time = rtc->ReadTime();
   auto new_time = rtc::SanitizeRtc(parent, time);
   rtc->WriteTime(new_time);

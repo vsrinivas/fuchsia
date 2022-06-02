@@ -45,17 +45,16 @@ class BlobfsComponentTest : public testing::Test {
     fuchsia_component::wire::CreateChildArgs child_args;
     auto create_res = realm_->CreateChild(collection_ref, child_decl, child_args);
     ASSERT_EQ(create_res.status(), ZX_OK);
-    ASSERT_FALSE(create_res.Unwrap_NEW()->is_error())
-        << "create error: " << static_cast<uint32_t>(create_res.Unwrap_NEW()->error_value());
+    ASSERT_FALSE(create_res->is_error())
+        << "create error: " << static_cast<uint32_t>(create_res->error_value());
 
     auto exposed_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_EQ(exposed_endpoints.status_value(), ZX_OK);
     auto open_exposed_res =
         realm_->OpenExposedDir(kBlobfsChildRef, std::move(exposed_endpoints->server));
     ASSERT_EQ(open_exposed_res.status(), ZX_OK);
-    ASSERT_FALSE(open_exposed_res.Unwrap_NEW()->is_error())
-        << "open exposed dir error: "
-        << static_cast<uint32_t>(open_exposed_res.Unwrap_NEW()->error_value());
+    ASSERT_FALSE(open_exposed_res->is_error())
+        << "open exposed dir error: " << static_cast<uint32_t>(open_exposed_res->error_value());
     exposed_dir_ = std::move(exposed_endpoints->client);
 
     auto startup_client_end =
@@ -67,8 +66,8 @@ class BlobfsComponentTest : public testing::Test {
   void TearDown() override {
     auto destroy_res = realm_->DestroyChild(kBlobfsChildRef);
     ASSERT_EQ(destroy_res.status(), ZX_OK);
-    ASSERT_FALSE(destroy_res.Unwrap_NEW()->is_error())
-        << "destroy error: " << static_cast<uint32_t>(destroy_res.Unwrap_NEW()->error_value());
+    ASSERT_FALSE(destroy_res->is_error())
+        << "destroy error: " << static_cast<uint32_t>(destroy_res->error_value());
   }
 
   const fidl::WireSyncClient<fuchsia_fs_startup::Startup>& startup_client() const {
@@ -85,7 +84,7 @@ class BlobfsComponentTest : public testing::Test {
     EXPECT_EQ(block_client_end.status_value(), ZX_OK);
     auto res = fidl::WireCall(*block_client_end)->GetInfo();
     EXPECT_EQ(res.status(), ZX_OK);
-    EXPECT_EQ(res.value_NEW().status, ZX_OK);
+    EXPECT_EQ(res.value().status, ZX_OK);
     return std::move(*block_client_end);
   }
 
@@ -100,18 +99,18 @@ TEST_F(BlobfsComponentTest, FormatCheckStart) {
   fuchsia_fs_startup::wire::FormatOptions format_options;
   auto format_res = startup_client()->Format(block_client(), std::move(format_options));
   ASSERT_EQ(format_res.status(), ZX_OK);
-  ASSERT_FALSE(format_res.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(format_res->is_error());
 
   fuchsia_fs_startup::wire::CheckOptions check_options;
   auto check_res = startup_client()->Check(block_client(), std::move(check_options));
   ASSERT_EQ(check_res.status(), ZX_OK);
-  ASSERT_FALSE(check_res.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(check_res->is_error());
 
   fuchsia_fs_startup::wire::StartOptions start_options;
   start_options.write_compression_level = -1;
   auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
   ASSERT_EQ(startup_res.status(), ZX_OK);
-  ASSERT_FALSE(startup_res.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(startup_res->is_error());
 
   auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
@@ -128,18 +127,18 @@ TEST_F(BlobfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   fuchsia_fs_startup::wire::FormatOptions format_options;
   auto format_res = startup_client()->Format(block_client(), std::move(format_options));
   ASSERT_EQ(format_res.status(), ZX_OK);
-  ASSERT_FALSE(format_res.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(format_res->is_error());
 
   fuchsia_fs_startup::wire::CheckOptions check_options;
   auto check_res = startup_client()->Check(block_client(), std::move(check_options));
   ASSERT_EQ(check_res.status(), ZX_OK);
-  ASSERT_FALSE(check_res.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(check_res->is_error());
 
   fuchsia_fs_startup::wire::StartOptions start_options;
   start_options.write_compression_level = -1;
   auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
   ASSERT_EQ(startup_res.status(), ZX_OK);
-  ASSERT_FALSE(startup_res.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(startup_res->is_error());
 
   auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);

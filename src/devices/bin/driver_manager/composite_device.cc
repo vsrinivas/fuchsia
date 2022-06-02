@@ -391,9 +391,9 @@ zx_status_t CompositeDevice::TryAssemble() {
                    result.error().FormatDescription().c_str());
               return;
             }
-            if (result.value_NEW().status != ZX_OK) {
+            if (result.value().status != ZX_OK) {
               LOGF(ERROR, "Failed to create composite device: %s",
-                   zx_status_get_string(result.value_NEW().status));
+                   zx_status_get_string(result.value().status));
             }
           });
 

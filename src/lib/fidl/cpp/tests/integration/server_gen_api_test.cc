@@ -42,7 +42,7 @@ TEST(Server, SyncReply) {
   std::thread call([&] {
     fidl::WireResult result = fidl::WireCall(endpoints->client)->Echo(kExpectedReply);
     EXPECT_OK(result.status());
-    EXPECT_EQ(result.value_NEW().reply, kExpectedReply);
+    EXPECT_EQ(result.value().reply, kExpectedReply);
     loop.Quit();
   });
   EXPECT_STATUS(ZX_ERR_CANCELED, loop.Run());
@@ -78,7 +78,7 @@ TEST(Server, AsyncReply) {
   std::thread call([&] {
     auto result = fidl::WireCall(endpoints->client)->Echo(kExpectedReply);
     EXPECT_OK(result.status());
-    EXPECT_EQ(result.value_NEW().reply, kExpectedReply);
+    EXPECT_EQ(result.value().reply, kExpectedReply);
     main_loop.Quit();
   });
   EXPECT_STATUS(ZX_ERR_CANCELED, main_loop.Run());

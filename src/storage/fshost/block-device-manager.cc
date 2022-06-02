@@ -289,9 +289,8 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
       FX_LOGS(WARNING) << "Failed to send UnbindChildren: " << zx_status_get_string(status);
       return ZX_ERR_BAD_STATE;
     }
-    if (resp.Unwrap_NEW()->is_error()) {
-      FX_LOGS(WARNING) << "UnbindChildren failed: "
-                       << zx_status_get_string(resp.Unwrap_NEW()->error_value());
+    if (resp->is_error()) {
+      FX_LOGS(WARNING) << "UnbindChildren failed: " << zx_status_get_string(resp->error_value());
       return ZX_ERR_BAD_STATE;
     }
 

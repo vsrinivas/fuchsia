@@ -38,12 +38,12 @@ std::optional<fpty::wire::WindowSize> get_window_size(zx::unowned_channel pty) {
     return std::nullopt;
   }
 
-  if (result.value_NEW().status != ZX_OK) {
-    std::cerr << "GetWindowSize returned with status: " << result.value_NEW().status << std::endl;
+  if (result.value().status != ZX_OK) {
+    std::cerr << "GetWindowSize returned with status: " << result.value().status << std::endl;
     return std::nullopt;
   }
 
-  return result.value_NEW().size;
+  return result.value().size;
 }
 
 std::pair<int, int> init_tty() {
@@ -67,7 +67,7 @@ std::pair<int, int> init_tty() {
     auto result = fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
                       ->ClrSetFeature(0, fpty::wire::kFeatureRaw);
 
-    if (result.status() != ZX_OK || result.value_NEW().status != ZX_OK) {
+    if (result.status() != ZX_OK || result.value().status != ZX_OK) {
       std::cerr << "Warning: Failed to set FEATURE_RAW, some features may not work.\n";
     }
 
@@ -83,7 +83,7 @@ void reset_tty() {
     auto result = fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
                       ->ClrSetFeature(fpty::wire::kFeatureRaw, 0);
 
-    if (result.status() != ZX_OK || result.value_NEW().status != ZX_OK) {
+    if (result.status() != ZX_OK || result.value().status != ZX_OK) {
       std::cerr << "Failed to reset FEATURE_RAW.\n";
     }
 
@@ -117,7 +117,7 @@ class ConsoleIn {
         std::cerr << "Unable to get stdin channel description: " << result << std::endl;
         return false;
       }
-      auto& info = result.value_NEW().info;
+      auto& info = result.value().info;
       FX_DCHECK(info.is_tty()) << "stdin expected to be a tty";
 
       events_ = std::move(info.tty().event);
@@ -178,12 +178,12 @@ class ConsoleIn {
       std::cerr << "Call to ReadEvents failed: " << result << std::endl;
       return;
     }
-    if (result.value_NEW().status != ZX_OK) {
-      std::cerr << "ReadEvents returned with status " << result.value_NEW().status << std::endl;
+    if (result.value().status != ZX_OK) {
+      std::cerr << "ReadEvents returned with status " << result.value().status << std::endl;
       return;
     }
 
-    if (result.value_NEW().events & fpty::wire::kEventWindowSize) {
+    if (result.value().events & fpty::wire::kEventWindowSize) {
       auto ws = get_window_size(std::move(pty));
       if (!ws) {
         return;

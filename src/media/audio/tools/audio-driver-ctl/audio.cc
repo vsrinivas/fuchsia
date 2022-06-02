@@ -727,14 +727,13 @@ int main(int argc, const char** argv) {
   }
 
   if (!channels.has_value()) {
-    if (formats.value_NEW().supported_formats.count() < 1 ||
-        formats.value_NEW().supported_formats[0].pcm_supported_formats().channel_sets().count() <
-            1) {
+    if (formats.value().supported_formats.count() < 1 ||
+        formats.value().supported_formats[0].pcm_supported_formats().channel_sets().count() < 1) {
       printf("No valid format reported by driver\n");
       return ZX_ERR_BAD_STATE;
     }
     // Use the first number of channels value reported.
-    auto& pcm = formats.value_NEW().supported_formats[0].pcm_supported_formats();
+    auto& pcm = formats.value().supported_formats[0].pcm_supported_formats();
     channels = static_cast<uint32_t>(pcm.channel_sets()[0].attributes().count());
   }
 

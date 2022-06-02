@@ -568,9 +568,8 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
           FAIL() << result.error();
           return;
         }
-        ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-        std::string path(result.Unwrap_NEW()->value()->path.data(),
-                         result.Unwrap_NEW()->value()->path.size());
+        ASSERT_TRUE(result->is_ok());
+        std::string path(result->value()->path.data(), result->value()->path.size());
         EXPECT_STREQ("/dev/second-device", path.data());
         callback_called = true;
       });
@@ -606,7 +605,7 @@ TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
           FAIL() << result.error();
           return;
         }
-        ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
+        ASSERT_EQ(ZX_OK, result->status);
         client->GetMinDriverLogSeverity().Then(
             [&client, &callback_called](
                 fidl::WireUnownedResult<fuchsia_device::Controller::GetMinDriverLogSeverity>&
@@ -615,8 +614,8 @@ TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
                 FAIL() << result.error();
                 return;
               }
-              ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
-              ASSERT_EQ(FX_LOG_ERROR, (fx_log_severity_t)result.Unwrap_NEW()->severity);
+              ASSERT_EQ(ZX_OK, result->status);
+              ASSERT_EQ(FX_LOG_ERROR, (fx_log_severity_t)result->severity);
 
               // We set and get again because we cannot confirm if the first
               // call to set actually worked. The min driver log severity that
@@ -630,7 +629,7 @@ TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
                       FAIL() << result.error();
                       return;
                     }
-                    ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
+                    ASSERT_EQ(ZX_OK, result->status);
 
                     client->GetMinDriverLogSeverity().Then(
                         [&callback_called](
@@ -640,8 +639,8 @@ TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
                             FAIL() << result.error();
                             return;
                           }
-                          ASSERT_EQ(ZX_OK, result.Unwrap_NEW()->status);
-                          ASSERT_EQ(FX_LOG_INFO, (fx_log_severity_t)result.Unwrap_NEW()->severity);
+                          ASSERT_EQ(ZX_OK, result->status);
+                          ASSERT_EQ(FX_LOG_INFO, (fx_log_severity_t)result->severity);
                           callback_called = true;
                         });
                   });
@@ -740,7 +739,7 @@ TEST_F(DeviceTest, DevfsVnodeTestBind) {
           FAIL() << result.error();
           return;
         }
-        ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+        ASSERT_TRUE(result->is_ok());
         callback_called = true;
       });
 
@@ -776,8 +775,8 @@ TEST_F(DeviceTest, DevfsVnodeTestBindAlreadyBound) {
           FAIL() << "Bind failed: " << result.error();
           return;
         }
-        ASSERT_TRUE(result.Unwrap_NEW()->is_error());
-        ASSERT_EQ(ZX_ERR_ALREADY_BOUND, result.Unwrap_NEW()->error_value());
+        ASSERT_TRUE(result->is_error());
+        ASSERT_EQ(ZX_ERR_ALREADY_BOUND, result->error_value());
         got_reply = true;
       });
 
@@ -830,7 +829,7 @@ TEST_F(DeviceTest, DevfsVnodeTestRebind) {
           FAIL() << "Rebind failed: " << result.error();
           return;
         }
-        ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
+        ASSERT_TRUE(result->is_ok());
         got_reply = true;
       });
 

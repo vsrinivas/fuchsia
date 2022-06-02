@@ -104,13 +104,12 @@ int socket(int domain, int type, int protocol) {
         }
         return ERROR(status);
       }
-      if (socket_result.Unwrap_NEW()->is_error()) {
-        return ERRNO(static_cast<int32_t>(socket_result.Unwrap_NEW()->error_value()));
+      if (socket_result->is_error()) {
+        return ERRNO(static_cast<int32_t>(socket_result->error_value()));
       }
 
       zx::status create_node_result = create_node(
-          type,
-          fidl::ClientEnd<fio::Node>(socket_result.Unwrap_NEW()->value()->socket.TakeChannel()));
+          type, fidl::ClientEnd<fio::Node>(socket_result->value()->socket.TakeChannel()));
       if (create_node_result.is_error()) {
         return ERROR(create_node_result.error_value());
       }
@@ -152,10 +151,10 @@ int socket(int domain, int type, int protocol) {
           if (result.status() != ZX_OK) {
             return ERROR(result.status());
           }
-          if (result.Unwrap_NEW()->is_error()) {
-            return ERRNO(static_cast<int32_t>(result.Unwrap_NEW()->error_value()));
+          if (result->is_error()) {
+            return ERRNO(static_cast<int32_t>(result->error_value()));
           }
-          client_end.channel() = result.Unwrap_NEW()->value()->s.TakeChannel();
+          client_end.channel() = result->value()->s.TakeChannel();
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -193,10 +192,10 @@ int socket(int domain, int type, int protocol) {
       if (result.status() != ZX_OK) {
         return ERROR(result.status());
       }
-      if (result.Unwrap_NEW()->is_error()) {
-        return ERRNO(static_cast<int32_t>(result.Unwrap_NEW()->error_value()));
+      if (result->is_error()) {
+        return ERRNO(static_cast<int32_t>(result->error_value()));
       }
-      client_end.channel() = result.Unwrap_NEW()->value()->s.TakeChannel();
+      client_end.channel() = result->value()->s.TakeChannel();
     } break;
     case SOCK_RAW: {
       if (protocol == 0) {
@@ -234,10 +233,10 @@ int socket(int domain, int type, int protocol) {
         }
         return ERROR(status);
       }
-      if (result.Unwrap_NEW()->is_error()) {
-        return ERRNO(static_cast<int32_t>(result.Unwrap_NEW()->error_value()));
+      if (result->is_error()) {
+        return ERRNO(static_cast<int32_t>(result->error_value()));
       }
-      client_end.channel() = result.Unwrap_NEW()->value()->s.TakeChannel();
+      client_end.channel() = result->value()->s.TakeChannel();
     } break;
     default:
       return ERRNO(EPROTONOSUPPORT);
@@ -450,7 +449,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     errno = fdio_status_to_errno(fidl_result.status());
     return EAI_SYSTEM;
   }
-  const auto* wire_result = fidl_result.Unwrap_NEW();
+  const auto* wire_result = fidl_result.Unwrap();
   if (wire_result->is_error()) {
     switch (wire_result->error_value()) {
       case fnet_name::wire::LookupError::kNotFound:
@@ -662,7 +661,7 @@ int getifaddrs(struct ifaddrs** ifap) {
     return ERROR(status);
   }
 
-  for (const auto& iface : response.Unwrap_NEW()->interfaces) {
+  for (const auto& iface : response->interfaces) {
     if (!iface.has_name() || !iface.has_addresses()) {
       continue;
     }

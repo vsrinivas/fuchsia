@@ -302,7 +302,7 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
     auto result = cs0_client.sync()->RegisterVmo(1, std::move(vmo),
                                                  SharedVmoRight::kRead | SharedVmoRight::kWrite);
     ASSERT_TRUE(result.ok());
-    EXPECT_TRUE(result.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(result->is_ok());
   }
 
   {
@@ -311,7 +311,7 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
     auto result = cs1_client.sync()->RegisterVmo(2, std::move(vmo),
                                                  SharedVmoRight::kRead | SharedVmoRight::kWrite);
     ASSERT_TRUE(result.ok());
-    EXPECT_TRUE(result.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(result->is_ok());
   }
 
   ASSERT_OK(cs0_vmo.write(kTestData, 1024, sizeof(kTestData)));
@@ -328,7 +328,7 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
             .size = sizeof(kTestData),
         });
     ASSERT_TRUE(result.ok());
-    EXPECT_TRUE(result.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(result->is_ok());
 
     uint8_t buf[sizeof(kTestData)];
     ASSERT_OK(cs0_vmo.read(buf, 2048, sizeof(buf)));
@@ -343,7 +343,7 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
         .size = sizeof(kTestData),
     });
     ASSERT_TRUE(result.ok());
-    EXPECT_TRUE(result.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(result->is_ok());
   }
 
   {
@@ -353,7 +353,7 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
         .size = sizeof(kTestData),
     });
     ASSERT_TRUE(result.ok());
-    EXPECT_TRUE(result.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(result->is_ok());
 
     uint8_t buf[sizeof(kTestData)];
     ASSERT_OK(cs0_vmo.read(buf, 1024, sizeof(buf)));
@@ -363,13 +363,13 @@ TEST_F(SpiDeviceTest, SpiFidlVmoTest) {
   {
     auto result = cs0_client.sync()->UnregisterVmo(1);
     ASSERT_TRUE(result.ok());
-    EXPECT_TRUE(result.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(result->is_ok());
   }
 
   {
     auto result = cs1_client.sync()->UnregisterVmo(2);
     ASSERT_TRUE(result.ok());
-    EXPECT_TRUE(result.Unwrap_NEW()->is_ok());
+    EXPECT_TRUE(result->is_ok());
   }
 
   spi_bus->ReleaseOp();
@@ -409,7 +409,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client.sync()->TransmitVector(tx_buffer);
     ASSERT_OK(result.status());
-    EXPECT_OK(result.value_NEW().status);
+    EXPECT_OK(result.value().status);
   }
 
   spi_impl_.current_test_cs_ = 1;
@@ -417,9 +417,9 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
   {
     auto result = cs1_client.sync()->ReceiveVector(sizeof(test_data));
     ASSERT_OK(result.status());
-    EXPECT_OK(result.value_NEW().status);
-    ASSERT_EQ(result.value_NEW().data.count(), std::size(test_data));
-    EXPECT_BYTES_EQ(result.value_NEW().data.data(), test_data, sizeof(test_data));
+    EXPECT_OK(result.value().status);
+    ASSERT_EQ(result.value().data.count(), std::size(test_data));
+    EXPECT_BYTES_EQ(result.value().data.data(), test_data, sizeof(test_data));
   }
 
   spi_impl_.current_test_cs_ = 0;
@@ -428,9 +428,9 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client.sync()->ExchangeVector(tx_buffer);
     ASSERT_OK(result.status());
-    EXPECT_OK(result.value_NEW().status);
-    ASSERT_EQ(result.value_NEW().rxdata.count(), std::size(test_data));
-    EXPECT_BYTES_EQ(result.value_NEW().rxdata.data(), test_data, sizeof(test_data));
+    EXPECT_OK(result.value().status);
+    ASSERT_EQ(result.value().rxdata.count(), std::size(test_data));
+    EXPECT_BYTES_EQ(result.value().rxdata.data(), test_data, sizeof(test_data));
   }
 
   spi_bus->ReleaseOp();
@@ -472,7 +472,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorErrorTest) {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client.sync()->TransmitVector(tx_buffer);
     ASSERT_OK(result.status());
-    EXPECT_OK(result.value_NEW().status);
+    EXPECT_OK(result.value().status);
   }
 
   spi_impl_.current_test_cs_ = 1;
@@ -480,8 +480,8 @@ TEST_F(SpiDeviceTest, SpiFidlVectorErrorTest) {
   {
     auto result = cs1_client.sync()->ReceiveVector(sizeof(test_data));
     ASSERT_OK(result.status());
-    EXPECT_EQ(result.value_NEW().status, ZX_ERR_INTERNAL);
-    EXPECT_EQ(result.value_NEW().data.count(), 0);
+    EXPECT_EQ(result.value().status, ZX_ERR_INTERNAL);
+    EXPECT_EQ(result.value().data.count(), 0);
   }
 
   spi_impl_.current_test_cs_ = 0;
@@ -490,8 +490,8 @@ TEST_F(SpiDeviceTest, SpiFidlVectorErrorTest) {
     auto tx_buffer = fidl::VectorView<uint8_t>::FromExternal(test_data);
     auto result = cs0_client.sync()->ExchangeVector(tx_buffer);
     ASSERT_OK(result.status());
-    EXPECT_EQ(result.value_NEW().status, ZX_ERR_INTERNAL);
-    EXPECT_EQ(result.value_NEW().rxdata.count(), 0);
+    EXPECT_EQ(result.value().status, ZX_ERR_INTERNAL);
+    EXPECT_EQ(result.value().rxdata.count(), 0);
   }
 
   spi_bus->ReleaseOp();
@@ -526,37 +526,37 @@ TEST_F(SpiDeviceTest, AssertCsWithSiblingTest) {
   {
     auto result = cs0_client.sync()->CanAssertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value_NEW().can);
+    ASSERT_FALSE(result.value().can);
   }
 
   {
     auto result = cs1_client.sync()->CanAssertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value_NEW().can);
+    ASSERT_FALSE(result.value().can);
   }
 
   {
     auto result = cs0_client.sync()->AssertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_STATUS(result.value_NEW().status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
   }
 
   {
     auto result = cs1_client.sync()->AssertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_STATUS(result.value_NEW().status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
   }
 
   {
     auto result = cs0_client.sync()->DeassertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_STATUS(result.value_NEW().status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
   }
 
   {
     auto result = cs1_client.sync()->DeassertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_STATUS(result.value_NEW().status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_STATUS(result.value().status, ZX_ERR_NOT_SUPPORTED);
   }
 }
 
@@ -581,19 +581,19 @@ TEST_F(SpiDeviceTest, AssertCsNoSiblingTest) {
   {
     auto result = cs0_client.sync()->CanAssertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value_NEW().can);
+    ASSERT_TRUE(result.value().can);
   }
 
   {
     auto result = cs0_client.sync()->AssertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_OK(result.value_NEW().status);
+    ASSERT_OK(result.value().status);
   }
 
   {
     auto result = cs0_client.sync()->DeassertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_OK(result.value_NEW().status);
+    ASSERT_OK(result.value().status);
   }
 }
 
@@ -620,7 +620,7 @@ TEST_F(SpiDeviceTest, OneClient) {
   {
     auto result = cs0_client->CanAssertCs();
     ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value_NEW().can);
+    ASSERT_TRUE(result.value().can);
   }
 
   // Trying to make a new connection should fail.
@@ -722,7 +722,7 @@ TEST_F(SpiDeviceTest, DdkLifecycle) {
   {
     auto result = cs0_client->AssertCs();
     ASSERT_TRUE(result.ok());
-    EXPECT_OK(result.value_NEW().status);
+    EXPECT_OK(result.value().status);
   }
 
   spi_bus->children().front()->UnbindOp();
@@ -732,7 +732,7 @@ TEST_F(SpiDeviceTest, DdkLifecycle) {
     auto result = cs0_client->DeassertCs();
     ASSERT_TRUE(result.ok());
     // DdkUnbind has been called, the child device should respond with errors.
-    EXPECT_NOT_OK(result.value_NEW().status);
+    EXPECT_NOT_OK(result.value().status);
   }
 
   spi_bus->children().front()->ReleaseOp();
@@ -744,7 +744,7 @@ TEST_F(SpiDeviceTest, DdkLifecycle) {
     auto result = cs0_client->DeassertCs();
     ASSERT_TRUE(result.ok());
     // The child should still exist and reply since the parent holds a reference to it.
-    EXPECT_NOT_OK(result.value_NEW().status);
+    EXPECT_NOT_OK(result.value().status);
   }
 
   spi_bus->UnbindOp();

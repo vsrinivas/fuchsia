@@ -36,8 +36,8 @@ TEST(BlockDeviceTest, ConnectToFvmReturnsAValidConnection) {
 
   auto fvm_info = fidl::WireCall(*fvm_client)->GetInfo();
   ASSERT_OK(fvm_info.status());
-  ASSERT_OK(fvm_info.value_NEW().status);
-  EXPECT_EQ(fvm_info.value_NEW().info->slice_size, kFvmSliceSize);
+  ASSERT_OK(fvm_info.value().status);
+  EXPECT_EQ(fvm_info.value().info->slice_size, kFvmSliceSize);
 }
 
 TEST(BlockDeviceTest, FvmVolumeCreateWorks) {
@@ -56,8 +56,8 @@ TEST(BlockDeviceTest, FvmVolumeCreateWorks) {
   ASSERT_OK(fvm_colume.status_value());
   auto info = fidl::WireCall(*volume_client)->GetVolumeInfo();
   ASSERT_OK(info.status());
-  ASSERT_OK(info.value_NEW().status);
-  EXPECT_EQ(info.value_NEW().volume->partition_slice_count, 2lu);
+  ASSERT_OK(info.value().status);
+  EXPECT_EQ(info.value().volume->partition_slice_count, 2lu);
 }
 
 TEST(BlockDeviceTest, CreateZxcryptVolumeWorks) {

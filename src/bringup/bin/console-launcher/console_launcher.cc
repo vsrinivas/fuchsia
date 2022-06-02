@@ -76,7 +76,7 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
     FX_PLOGS(ERROR, result.status()) << "failed to get root job";
     return zx::error(result.status());
   }
-  if (zx_status_t status = zx::job::create(result.value_NEW().job, 0u, &launcher.shell_job_);
+  if (zx_status_t status = zx::job::create(result.value().job, 0u, &launcher.shell_job_);
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "failed to create shell job";
     return zx::error(status);
@@ -105,12 +105,12 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
       FX_PLOGS(ERROR, bool_resp.status()) << "failed to get boot bools";
       return zx::error(bool_resp.status());
     }
-    ret.run_shell = bool_resp.Unwrap_NEW()->values[0];
+    ret.run_shell = bool_resp->values[0];
     // If the kernel console is running a shell we can't launch our own shell.
-    ret.run_shell = ret.run_shell && !bool_resp.Unwrap_NEW()->values[1];
-    ret.device.is_virtio = bool_resp.Unwrap_NEW()->values[2];
-    const bool netsvc_disable = bool_resp.Unwrap_NEW()->values[3];
-    const bool netsvc_netboot = bool_resp.Unwrap_NEW()->values[4];
+    ret.run_shell = ret.run_shell && !bool_resp->values[1];
+    ret.device.is_virtio = bool_resp->values[2];
+    const bool netsvc_disable = bool_resp->values[3];
+    const bool netsvc_netboot = bool_resp->values[4];
     const bool netboot = !netsvc_disable && netsvc_netboot;
     ret.virtual_console_need_debuglog = netboot;
   }
@@ -128,23 +128,19 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
     return zx::error(resp.status());
   }
 
-  if (resp.Unwrap_NEW()->values[0].is_null()) {
+  if (resp->values[0].is_null()) {
     ret.term += "uart";
   } else {
-    ret.term +=
-        std::string{resp.Unwrap_NEW()->values[0].data(), resp.Unwrap_NEW()->values[0].size()};
+    ret.term += std::string{resp->values[0].data(), resp->values[0].size()};
   }
-  if (!resp.Unwrap_NEW()->values[1].is_null()) {
-    ret.device.path =
-        std::string{resp.Unwrap_NEW()->values[1].data(), resp.Unwrap_NEW()->values[1].size()};
+  if (!resp->values[1].is_null()) {
+    ret.device.path = std::string{resp->values[1].data(), resp->values[1].size()};
   }
-  if (!resp.Unwrap_NEW()->values[2].is_null()) {
-    ret.autorun_boot =
-        std::string{resp.Unwrap_NEW()->values[2].data(), resp.Unwrap_NEW()->values[2].size()};
+  if (!resp->values[2].is_null()) {
+    ret.autorun_boot = std::string{resp->values[2].data(), resp->values[2].size()};
   }
-  if (!resp.Unwrap_NEW()->values[3].is_null()) {
-    ret.autorun_system =
-        std::string{resp.Unwrap_NEW()->values[3].data(), resp.Unwrap_NEW()->values[3].size()};
+  if (!resp->values[3].is_null()) {
+    ret.autorun_system = std::string{resp->values[3].data(), resp->values[3].size()};
   }
 
   return zx::ok(ret);

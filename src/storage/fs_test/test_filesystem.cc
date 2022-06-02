@@ -100,10 +100,10 @@ zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() const {
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  if (result.value_NEW().s != ZX_OK) {
-    return zx::error(result.value_NEW().s);
+  if (result.value().s != ZX_OK) {
+    return zx::error(result.value().s);
   }
-  return zx::ok(*result.value_NEW().info);
+  return zx::ok(*result.value().info);
 }
 
 inspect::Hierarchy TestFilesystem::TakeSnapshot() const {

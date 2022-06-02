@@ -217,7 +217,7 @@ TEST_F(UnifiedClientToWireServer, RoundTrip) {
             FAIL("RoundTrip failed: %s", result.error().FormatDescription().c_str());
             return;
           }
-          auto* response = result.Unwrap_NEW();
+          auto* response = result.Unwrap();
           CheckWireFile(response->node);
           got_response = true;
         });
@@ -280,7 +280,7 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
             FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
             return;
           }
-          auto* response = result.Unwrap_NEW();
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->is_ok());
           CheckWireDir(response->value()->node);
           got_response = true;
@@ -325,7 +325,7 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
             FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
             return;
           }
-          auto* response = result.Unwrap_NEW();
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->is_error());
           EXPECT_STATUS(ZX_ERR_INVALID_ARGS, response->error_value());
           got_response = true;
@@ -511,7 +511,7 @@ TEST_F(WireClientToNaturalServer, RoundTrip) {
           FAIL("RoundTrip failed: %s", result.error().FormatDescription().c_str());
           return;
         }
-        auto* response = result.Unwrap_NEW();
+        auto* response = result.Unwrap();
         CheckWireFile(response->node);
         got_response = true;
       });
@@ -553,7 +553,7 @@ TEST_F(WireClientToNaturalServer, TryRoundTrip) {
             FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
             return;
           }
-          auto* response = result.Unwrap_NEW();
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->is_ok());
           CheckWireDir(response->value()->node);
           got_response = true;
@@ -576,7 +576,7 @@ TEST_F(WireClientToNaturalServer, TryRoundTrip) {
             FAIL("TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
             return;
           }
-          auto* response = result.Unwrap_NEW();
+          auto* response = result.Unwrap();
           ASSERT_TRUE(response->is_error());
           EXPECT_STATUS(ZX_ERR_INVALID_ARGS, response->error_value());
           got_response = true;
@@ -765,7 +765,7 @@ TEST_F(UnifiedSyncClientToWireServer, RoundTrip) {
         client().wire()->RoundTrip(node);
 
     ASSERT_TRUE(result.ok(), "RoundTrip failed: %s", result.error().FormatDescription().c_str());
-    auto* response = result.Unwrap_NEW();
+    auto* response = result.Unwrap();
     CheckWireFile(response->node);
     EXPECT_EQ(3, server.num_calls);
 
@@ -773,7 +773,7 @@ TEST_F(UnifiedSyncClientToWireServer, RoundTrip) {
     // (caller-allocating flavors extensively tested elsewhere).
     fidl::WireUnownedResult<fidl_cpp_wire_interop_test::Interop::RoundTrip>
         caller_allocating_result = client().wire().buffer(arena)->RoundTrip(node);
-    response = caller_allocating_result.Unwrap_NEW();
+    response = caller_allocating_result.Unwrap();
     ASSERT_TRUE(caller_allocating_result.ok());
     CheckWireFile(response->node);
     ASSERT_OK(loop().RunUntilIdle());
@@ -824,7 +824,7 @@ TEST_F(UnifiedSyncClientToWireServer, TryRoundTrip) {
     fidl::WireResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> result =
         client().wire()->TryRoundTrip(node);
     ASSERT_TRUE(result.ok(), "TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
-    auto* response = result.Unwrap_NEW();
+    auto* response = result.Unwrap();
     ASSERT_TRUE(response->is_ok());
     CheckWireDir(response->value()->node);
     EXPECT_EQ(2, server.num_calls);
@@ -854,7 +854,7 @@ TEST_F(UnifiedSyncClientToWireServer, TryRoundTrip) {
     fidl::WireResult<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> result =
         client().wire()->TryRoundTrip(node);
     ASSERT_TRUE(result.ok(), "TryRoundTrip failed: %s", result.error().FormatDescription().c_str());
-    auto* response = result.Unwrap_NEW();
+    auto* response = result.Unwrap();
     ASSERT_TRUE(response->is_error());
     EXPECT_STATUS(ZX_ERR_INVALID_ARGS, response->error_value());
     EXPECT_EQ(4, server.num_calls);

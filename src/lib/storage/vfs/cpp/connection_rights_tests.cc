@@ -114,7 +114,7 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
       const fidl::WireResult result =
           fidl::WireCall(file->client)->GetBackingMemory(row.request_flags);
       EXPECT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
-      const auto& response = result.value_NEW();
+      const auto& response = result.value();
 
       // Verify that the result matches the value in our test table.
       if (row.expected_result == ZX_OK) {

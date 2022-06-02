@@ -165,18 +165,18 @@ TEST(HdaStreamTest, GetStreamPropertiesDefaults) {
   auto result = stream_client->GetProperties();
   ASSERT_OK(result.status());
   const char* kManufacturer = "<unknown>";
-  ASSERT_BYTES_EQ(result.value_NEW().properties.manufacturer().data(), kManufacturer,
+  ASSERT_BYTES_EQ(result.value().properties.manufacturer().data(), kManufacturer,
                   strlen(kManufacturer));
 
-  EXPECT_EQ(result.value_NEW().properties.is_input(), false);
-  EXPECT_EQ(result.value_NEW().properties.min_gain_db(), 0.);
-  EXPECT_EQ(result.value_NEW().properties.max_gain_db(), 0.);
-  EXPECT_EQ(result.value_NEW().properties.gain_step_db(), 0.);
-  EXPECT_EQ(result.value_NEW().properties.can_mute(), false);
-  EXPECT_EQ(result.value_NEW().properties.can_agc(), false);
-  EXPECT_EQ(result.value_NEW().properties.plug_detect_capabilities(),
+  EXPECT_EQ(result.value().properties.is_input(), false);
+  EXPECT_EQ(result.value().properties.min_gain_db(), 0.);
+  EXPECT_EQ(result.value().properties.max_gain_db(), 0.);
+  EXPECT_EQ(result.value().properties.gain_step_db(), 0.);
+  EXPECT_EQ(result.value().properties.can_mute(), false);
+  EXPECT_EQ(result.value().properties.can_agc(), false);
+  EXPECT_EQ(result.value().properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::kHardwired);
-  EXPECT_EQ(result.value_NEW().properties.clock_domain(), 0);
+  EXPECT_EQ(result.value().properties.clock_domain(), 0);
 
   codec->DeviceRelease();
   fake_controller.DdkAsyncRemove();
@@ -211,7 +211,7 @@ TEST(HdaStreamTest, SetAndGetGainDefaults) {
     EXPECT_OK(gain_state.status());
     EXPECT_EQ(
         0,
-        gain_state.value_NEW().gain_state.gain_db());  // Gain was not changed, default range is 0.
+        gain_state.value().gain_state.gain_db());  // Gain was not changed, default range is 0.
   }
 
   codec->DeviceRelease();
@@ -237,7 +237,7 @@ TEST(HdaStreamTest, WatchPlugStateDefaults) {
 
   auto state = stream_client->WatchPlugState();
   ASSERT_OK(state.status());
-  ASSERT_TRUE(state.value_NEW().plug_state.plugged());
+  ASSERT_TRUE(state.value().plug_state.plugged());
 
   codec->DeviceRelease();
   fake_controller.DdkAsyncRemove();
@@ -300,19 +300,19 @@ TEST(HdaStreamTest, GetStreamProperties) {
 
   auto result = stream_client->GetProperties();
   ASSERT_OK(result.status());
-  ASSERT_BYTES_EQ(result.value_NEW().properties.manufacturer().data(), kTestString,
+  ASSERT_BYTES_EQ(result.value().properties.manufacturer().data(), kTestString,
                   strlen(kTestString));
-  ASSERT_BYTES_EQ(result.value_NEW().properties.product().data(), kTestString, strlen(kTestString));
+  ASSERT_BYTES_EQ(result.value().properties.product().data(), kTestString, strlen(kTestString));
 
-  EXPECT_EQ(result.value_NEW().properties.is_input(), false);
-  EXPECT_EQ(result.value_NEW().properties.min_gain_db(), kTestMinGain);
-  EXPECT_EQ(result.value_NEW().properties.max_gain_db(), kTestMaxGain);
-  EXPECT_EQ(result.value_NEW().properties.gain_step_db(), kTestGainStep);
-  EXPECT_EQ(result.value_NEW().properties.can_mute(), true);
-  EXPECT_EQ(result.value_NEW().properties.can_agc(), false);
-  EXPECT_EQ(result.value_NEW().properties.plug_detect_capabilities(),
+  EXPECT_EQ(result.value().properties.is_input(), false);
+  EXPECT_EQ(result.value().properties.min_gain_db(), kTestMinGain);
+  EXPECT_EQ(result.value().properties.max_gain_db(), kTestMaxGain);
+  EXPECT_EQ(result.value().properties.gain_step_db(), kTestGainStep);
+  EXPECT_EQ(result.value().properties.can_mute(), true);
+  EXPECT_EQ(result.value().properties.can_agc(), false);
+  EXPECT_EQ(result.value().properties.plug_detect_capabilities(),
             audio_fidl::wire::PlugDetectCapabilities::kCanAsyncNotify);
-  EXPECT_EQ(result.value_NEW().properties.clock_domain(), 0);
+  EXPECT_EQ(result.value().properties.clock_domain(), 0);
 
   codec->DeviceRelease();
   fake_controller.DdkAsyncRemove();
@@ -345,14 +345,14 @@ TEST(HdaStreamTest, SetAndGetGain) {
     }
     auto gain_state = stream_client->WatchGainState();
     EXPECT_OK(gain_state.status());
-    EXPECT_EQ(kTestGain, gain_state.value_NEW().gain_state.gain_db());
+    EXPECT_EQ(kTestGain, gain_state.value().gain_state.gain_db());
   }
 
   {
     std::thread th([&] {
       auto gain_state = stream_client->WatchGainState();
       EXPECT_OK(gain_state.status());
-      EXPECT_EQ(kTestGain2, gain_state.value_NEW().gain_state.gain_db());
+      EXPECT_EQ(kTestGain2, gain_state.value().gain_state.gain_db());
     });
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
@@ -385,14 +385,14 @@ TEST(HdaStreamTest, WatchPlugState) {
   {
     auto state = stream_client->WatchPlugState();
     ASSERT_OK(state.status());
-    EXPECT_TRUE(state.value_NEW().plug_state.plugged());
+    EXPECT_TRUE(state.value().plug_state.plugged());
   }
   {
     std::thread th([&] {
       auto state = stream_client->WatchPlugState();
       ASSERT_OK(state.status());
-      EXPECT_FALSE(state.value_NEW().plug_state.plugged());
-      EXPECT_EQ(state.value_NEW().plug_state.plug_state_time(), kTestTime);
+      EXPECT_FALSE(state.value().plug_state.plugged());
+      EXPECT_EQ(state.value().plug_state.plug_state_time(), kTestTime);
     });
     stream->NotifyPlugState(false, kTestTime);
     th.join();

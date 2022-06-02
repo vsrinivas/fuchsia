@@ -44,15 +44,13 @@ int main(int argc, char* argv[]) {
 
   if (strcmp(argv[1], "--read") == 0) {
     auto response = client->GetStateNormalized();
-    zx_status_t status =
-        response.ok()
-            ? (response.Unwrap_NEW()->is_error() ? response.Unwrap_NEW()->error_value() : ZX_OK)
-            : response.status();
+    zx_status_t status = response.ok() ? (response->is_error() ? response->error_value() : ZX_OK)
+                                       : response.status();
     if (status != ZX_OK) {
       printf("Get backlight state failed with %d\n", status);
       return -1;
     }
-    auto state = response.Unwrap_NEW()->value()->state;
+    auto state = response->value()->state;
     printf("Backlight:%s Brightness:%f\n", state.backlight_on ? "on" : "off", state.brightness);
     return 0;
   }
@@ -79,9 +77,8 @@ int main(int argc, char* argv[]) {
   FidlBacklight::wire::State state = {.backlight_on = on, .brightness = brightness};
 
   auto response = client->SetStateNormalized(state);
-  status = response.ok()
-               ? (response.Unwrap_NEW()->is_error() ? response.Unwrap_NEW()->error_value() : ZX_OK)
-               : response.status();
+  status =
+      response.ok() ? (response->is_error() ? response->error_value() : ZX_OK) : response.status();
   if (status != ZX_OK) {
     printf("Set brightness failed with %d\n", status);
     return -1;

@@ -77,11 +77,11 @@ std::string FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
       result.status() != ZX_OK) {
     FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
                      << zx_status_get_string(result.status());
-  } else if (result.Unwrap_NEW()->is_error()) {
+  } else if (result->is_error()) {
     FX_LOGS(WARNING) << "Unable to get device topological path: "
-                     << zx_status_get_string(result.Unwrap_NEW()->error_value());
+                     << zx_status_get_string(result->error_value());
   } else {
-    device_path = result.Unwrap_NEW()->value()->path.get();
+    device_path = result->value()->path.get();
   }
   return device_path;
 }

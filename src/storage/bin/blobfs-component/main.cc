@@ -24,7 +24,7 @@ zx::resource AttemptToGetVmexResource() {
     FX_LOGS(WARNING) << "fuchsia.kernel.VmexResource.Get() failed: " << result.status_string();
     return zx::resource();
   }
-  return std::move(result.value_NEW().resource);
+  return std::move(result.value().resource);
 }
 
 int main() {

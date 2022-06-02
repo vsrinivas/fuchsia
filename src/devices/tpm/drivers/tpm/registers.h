@@ -33,11 +33,11 @@ class TpmReg : public hwreg::RegisterBase<SelfType, BaseType, hwreg::EnablePrint
       zxlogf(ERROR, "Failed to send read FIDL request: %s", result.FormatDescription().data());
       return result.status();
     }
-    if (result.Unwrap_NEW()->is_error()) {
-      zxlogf(ERROR, "Failed to read: %d", result.Unwrap_NEW()->error_value());
-      return result.Unwrap_NEW()->error_value();
+    if (result->is_error()) {
+      zxlogf(ERROR, "Failed to read: %d", result->error_value());
+      return result->error_value();
     }
-    auto& data = result.Unwrap_NEW()->value()->data;
+    auto& data = result->value()->data;
     if (data.count() != sizeof(BaseType)) {
       zxlogf(ERROR, "Incorrect response size");
       return ZX_ERR_BAD_STATE;
@@ -58,9 +58,9 @@ class TpmReg : public hwreg::RegisterBase<SelfType, BaseType, hwreg::EnablePrint
       zxlogf(ERROR, "Failed to send write FIDL request: %s", result.FormatDescription().data());
       return result.status();
     }
-    if (result.Unwrap_NEW()->is_error()) {
-      zxlogf(ERROR, "Failed to write: %d", result.Unwrap_NEW()->error_value());
-      return result.Unwrap_NEW()->error_value();
+    if (result->is_error()) {
+      zxlogf(ERROR, "Failed to write: %d", result->error_value());
+      return result->error_value();
     }
     return ZX_OK;
   }

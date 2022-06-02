@@ -74,16 +74,16 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
   switch (func) {
     case Read: {
       auto result = client->Read();
-      if ((result.status() != ZX_OK) || result.Unwrap_NEW()->is_error()) {
+      if ((result.status() != ZX_OK) || result->is_error()) {
         printf("Could not read GPIO\n");
         return -2;
       }
-      printf("GPIO Value: %u\n", result.Unwrap_NEW()->value()->value);
+      printf("GPIO Value: %u\n", result->value()->value);
       break;
     }
     case Write: {
       auto result = client->Write(write_value);
-      if ((result.status() != ZX_OK) || result.Unwrap_NEW()->is_error()) {
+      if ((result.status() != ZX_OK) || result->is_error()) {
         printf("Could not write to GPIO\n");
         return -2;
       }
@@ -91,7 +91,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     }
     case ConfigIn: {
       auto result = client->ConfigIn(in_flag);
-      if ((result.status() != ZX_OK) || result.Unwrap_NEW()->is_error()) {
+      if ((result.status() != ZX_OK) || result->is_error()) {
         printf("Could not configure GPIO as input\n");
         return -2;
       }
@@ -99,7 +99,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     }
     case ConfigOut: {
       auto result = client->ConfigOut(out_value);
-      if ((result.status() != ZX_OK) || result.Unwrap_NEW()->is_error()) {
+      if ((result.status() != ZX_OK) || result->is_error()) {
         printf("Could not configure GPIO as output\n");
         return -2;
       }
@@ -107,20 +107,20 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     }
     case SetDriveStrength: {
       auto result = client->SetDriveStrength(ds_ua);
-      if ((result.status() != ZX_OK) || result.Unwrap_NEW()->is_error()) {
+      if ((result.status() != ZX_OK) || result->is_error()) {
         printf("Could not set GPIO drive strength\n");
         return -2;
       }
-      printf("Set drive strength to %lu\n", result.Unwrap_NEW()->value()->actual_ds_ua);
+      printf("Set drive strength to %lu\n", result->value()->actual_ds_ua);
       break;
     }
     case GetDriveStrength: {
       auto result = client->GetDriveStrength();
-      if ((result.status() != ZX_OK) || result.Unwrap_NEW()->is_error()) {
+      if ((result.status() != ZX_OK) || result->is_error()) {
         printf("Could not get drive strength\n");
         return -2;
       }
-      printf("Drive Strength: %lu ua\n", result.Unwrap_NEW()->value()->result_ua);
+      printf("Drive Strength: %lu ua\n", result->value()->result_ua);
       break;
     }
     default:

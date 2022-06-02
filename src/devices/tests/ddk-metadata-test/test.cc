@@ -35,7 +35,7 @@ TEST(MetadataTest, RunTests) {
   auto result = sys_dev->Bind(fidl::StringView{kDriver});
   ASSERT_OK(result.status());
   // The driver will run its tests in its bind routine, and return ZX_OK on success.
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(result->is_error());
 }
 
 // Test the Metadata struct helper:

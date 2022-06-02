@@ -161,8 +161,8 @@ TEST_F(InputReportReaderTests, ReadInputReportsTest) {
   // Get the report.
   auto result = reader->ReadInputReports();
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
-  auto& reports = result.Unwrap_NEW()->value()->reports;
+  ASSERT_FALSE(result->is_error());
+  auto& reports = result->value()->reports;
 
   ASSERT_EQ(1, reports.count());
 
@@ -201,8 +201,8 @@ TEST_F(InputReportReaderTests, ReaderAddsRequiredFields) {
   // Get the report.
   auto result = reader->ReadInputReports();
   ASSERT_OK(result.status());
-  ASSERT_FALSE(result.Unwrap_NEW()->is_error());
-  auto& reports = result.Unwrap_NEW()->value()->reports;
+  ASSERT_FALSE(result->is_error());
+  auto& reports = result->value()->reports;
 
   ASSERT_EQ(1, reports.count());
 
@@ -245,8 +245,8 @@ TEST_F(InputReportReaderTests, TwoReaders) {
   {
     auto result = reader_one->ReadInputReports();
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
-    auto& reports = result.Unwrap_NEW()->value()->reports;
+    ASSERT_FALSE(result->is_error());
+    auto& reports = result->value()->reports;
 
     ASSERT_EQ(1, reports.count());
 
@@ -267,8 +267,8 @@ TEST_F(InputReportReaderTests, TwoReaders) {
   {
     auto result = reader_two->ReadInputReports();
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result.Unwrap_NEW()->is_error());
-    auto& reports = result.Unwrap_NEW()->value()->reports;
+    ASSERT_FALSE(result->is_error());
+    auto& reports = result->value()->reports;
 
     ASSERT_EQ(1, reports.count());
 
@@ -306,8 +306,8 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
       [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
               result) {
         ASSERT_OK(result.status());
-        ASSERT_FALSE(result.Unwrap_NEW()->is_error());
-        auto& reports = result.Unwrap_NEW()->value()->reports;
+        ASSERT_FALSE(result->is_error());
+        auto& reports = result->value()->reports;
         ASSERT_EQ(1, reports.count());
 
         auto& report = reports[0];

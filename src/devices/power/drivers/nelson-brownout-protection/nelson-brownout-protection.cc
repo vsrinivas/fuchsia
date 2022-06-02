@@ -152,7 +152,7 @@ int NelsonBrownoutProtection::Thread() {
     while (run_thread_) {
       zx::nanosleep(zx::deadline_after(kVoltagePollInterval));
       const auto result = power_sensor_->GetVoltageVolts();
-      if (result.ok() && result.Unwrap_NEW()->value()->voltage >= kVoltageUpwardThreshold) {
+      if (result.ok() && result->value()->voltage >= kVoltageUpwardThreshold) {
         break;
       }
     }

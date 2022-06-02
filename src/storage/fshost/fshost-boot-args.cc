@@ -44,9 +44,9 @@ FshostBootArgs::FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boo
   if (!ret.ok()) {
     FX_LOGS(ERROR) << "failed to get boolean parameters: " << ret.error();
   } else {
-    netsvc_netboot_ = ret.value_NEW().values[0];
-    zircon_system_disable_automount_ = ret.value_NEW().values[1];
-    zircon_system_filesystem_check_ = ret.value_NEW().values[2];
+    netsvc_netboot_ = ret.value().values[0];
+    zircon_system_disable_automount_ = ret.value().values[1];
+    zircon_system_filesystem_check_ = ret.value().values[2];
   }
 
   auto algorithm = GetStringArgument("blobfs.write-compression-algorithm");
@@ -78,7 +78,7 @@ zx::status<std::string> FshostBootArgs::GetStringArgument(std::string key) {
     return zx::error(ret.status());
   }
   // fuchsia.boot.Arguments.GetString returns a "string?" value, so we need to check for null
-  fidl::StringView value = ret.value_NEW().value;
+  fidl::StringView value = ret.value().value;
   if (value.is_null()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }

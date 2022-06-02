@@ -183,11 +183,11 @@ int main(int argc, const char** argv) {
     auto result =
         fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(caller.borrow_channel()))
             ->QueryFilesystem();
-    if (!result.ok() || result.value_NEW().s != ZX_OK) {
+    if (!result.ok() || result.value().s != ZX_OK) {
       print_fs_type(dirs[i], &options, nullptr, "Unknown; cannot query filesystem");
       continue;
     }
-    info = *result.value_NEW().info;
+    info = *result.value().info;
     info.name[fuchsia_io::wire::kMaxFsNameBuffer - 1] = '\0';
 
     std::string device_path;
@@ -198,10 +198,10 @@ int main(int argc, const char** argv) {
                 result.FormatDescription().c_str());
         return EXIT_FAILURE;
       }
-      if (result.Unwrap_NEW()->is_error())
-        device_path = zx_status_get_string(result.Unwrap_NEW()->error_value());
+      if (result->is_error())
+        device_path = zx_status_get_string(result->error_value());
       else
-        device_path = std::string(result.Unwrap_NEW()->value()->path.get());
+        device_path = std::string(result->value()->path.get());
     }
 
     print_fs_type(dirs[i], &options, &info, device_path.c_str());

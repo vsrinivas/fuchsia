@@ -80,8 +80,8 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   auto result = fidl::WireCall(*fshost_or)->GetDevicePath(buf.f_fsid);
   ASSERT_TRUE(result.ok());
 
-  ASSERT_TRUE(result.Unwrap_NEW()->is_ok());
-  EXPECT_EQ(result.Unwrap_NEW()->value()->path.get(), device_path);
+  ASSERT_TRUE(result->is_ok());
+  EXPECT_EQ(result->value()->path.get(), device_path);
 
   zx::process umount_process;
   ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kUmountBinPath,
@@ -177,17 +177,16 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   for (;;) {
     auto result = fidl::WireCall(*fshost_or)->GetDevicePath(buf.f_fsid);
     ASSERT_TRUE(result.ok());
-    if (result.value_NEW().is_error()) {
+    if (result.value().is_error()) {
       if (++attempts == 100)
         GTEST_FAIL() << "Timed out trying to get device path";
       usleep(100);
     } else {
       if (DataFilesystemFormat() == "fxfs") {
         // Fxfs doesn't use zxcrypt.
-        EXPECT_EQ(result.value_NEW().value()->path.get(),
-                  ramdisk_or->path() + "/fvm/data-p-1/block");
+        EXPECT_EQ(result.value().value()->path.get(), ramdisk_or->path() + "/fvm/data-p-1/block");
       } else {
-        EXPECT_EQ(result.value_NEW().value()->path.get(),
+        EXPECT_EQ(result.value().value()->path.get(),
                   ramdisk_or->path() + "/fvm/data-p-1/block/zxcrypt/unsealed/block");
       }
       break;

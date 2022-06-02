@@ -181,8 +181,8 @@ TEST_F(PwmDeviceTest, GetConfigFidlTest) {
   auto resp = client_->GetConfig();
 
   ASSERT_TRUE(resp.ok());
-  ASSERT_TRUE(resp.Unwrap_NEW()->is_ok());
-  auto& config = resp.Unwrap_NEW()->value()->config;
+  ASSERT_TRUE(resp->is_ok());
+  auto& config = resp->value()->config;
 
   EXPECT_EQ(fake_pwm_impl_.EnableCount(), 0);
   EXPECT_EQ(fake_pwm_impl_.DisableCount(), 0);
@@ -236,7 +236,7 @@ TEST_F(PwmDeviceTest, EnableFidlTest) {
 
   ASSERT_OK(enable_resp.status());
 
-  ASSERT_FALSE(enable_resp.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(enable_resp->is_error());
 
   EXPECT_EQ(fake_pwm_impl_.EnableCount(), 1);
   EXPECT_EQ(fake_pwm_impl_.DisableCount(), 0);
@@ -249,7 +249,7 @@ TEST_F(PwmDeviceTest, DisableFidlTest) {
 
   ASSERT_OK(enable_resp.status());
 
-  ASSERT_FALSE(enable_resp.Unwrap_NEW()->is_error());
+  ASSERT_FALSE(enable_resp->is_error());
 
   EXPECT_EQ(fake_pwm_impl_.EnableCount(), 0);
   EXPECT_EQ(fake_pwm_impl_.DisableCount(), 1);
