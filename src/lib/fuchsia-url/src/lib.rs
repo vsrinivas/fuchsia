@@ -270,6 +270,10 @@ mod test_parse_path_to_name_and_variant {
             path = "/name/variant/extra",
             err = ParseError::ExtraPathSegments,
         }
+        err_invalid_segment => {
+            path = "/name/#",
+            err = ParseError::InvalidVariant(_),
+        }
     }
 
     #[test]

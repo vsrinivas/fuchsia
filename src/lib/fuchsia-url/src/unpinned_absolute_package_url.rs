@@ -27,6 +27,13 @@ impl UnpinnedAbsolutePackageUrl {
         Self { repo, name, variant }
     }
 
+    /// Create an UnpinnedAbsolutePackageUrl from a RepositoryUrl and a &str `path` that will
+    /// be validated.
+    pub fn new_with_path(repo: RepositoryUrl, path: &str) -> Result<Self, ParseError> {
+        let (name, variant) = crate::parse_path_to_name_and_variant(path)?;
+        Ok(Self::new(repo, name, variant))
+    }
+
     /// Parse a "fuchsia-pkg://" URL that locates an unpinned (no hash query parameter) package.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
         match AbsolutePackageUrl::parse(url)? {
@@ -129,6 +136,38 @@ mod tests {
         super::*, crate::errors::PackagePathSegmentError, assert_matches::assert_matches,
         std::convert::TryFrom as _,
     };
+
+    #[test]
+    fn new_with_path_err() {
+        for (path, err) in [
+            ("", ParseError::PathMustHaveLeadingSlash),
+            ("/", ParseError::MissingName),
+            ("//", ParseError::InvalidName(PackagePathSegmentError::Empty)),
+            ("/name/variant/other", ParseError::ExtraPathSegments),
+        ] {
+            assert_matches!(
+                UnpinnedAbsolutePackageUrl::new_with_path(
+                    "fuchsia-pkg://example.org".parse().unwrap(),
+                    path.into(),
+                ),
+                Err(e) if e == err,
+                "the path {:?}", path
+            );
+        }
+    }
+
+    #[test]
+    fn new_with_path_ok() {
+        let repo = "fuchsia-pkg://example.org".parse::<RepositoryUrl>().unwrap();
+        let url = UnpinnedAbsolutePackageUrl::new_with_path(repo.clone(), "/name".into()).unwrap();
+        assert_eq!(url.name().as_ref(), "name");
+        assert_eq!(url.variant(), None);
+
+        let url = UnpinnedAbsolutePackageUrl::new_with_path(repo.clone(), "/name/variant".into())
+            .unwrap();
+        assert_eq!(url.name().as_ref(), "name");
+        assert_eq!(url.variant().map(|v| v.as_ref()), Some("variant"));
+    }
 
     #[test]
     fn parse_err() {

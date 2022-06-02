@@ -35,6 +35,12 @@ impl PinnedAbsolutePackageUrl {
         Self { unpinned: UnpinnedAbsolutePackageUrl::new(repo, name, variant), hash }
     }
 
+    /// Create a PinnedAbsolutePackageUrl from its component parts and a &str `path` that will be
+    /// validated.
+    pub fn new_with_path(repo: RepositoryUrl, path: &str, hash: Hash) -> Result<Self, ParseError> {
+        Ok(Self { unpinned: UnpinnedAbsolutePackageUrl::new_with_path(repo, path)?, hash })
+    }
+
     /// Parse a "fuchsia-pkg://" URL that locates a pinned (has a hash query parameter) package.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
         match AbsolutePackageUrl::parse(url)? {

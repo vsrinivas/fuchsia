@@ -42,7 +42,7 @@ impl AbsoluteComponentUrl {
     pub fn parse(url: &str) -> Result<Self, ParseError> {
         let UrlParts { scheme, host, path, hash, resource } = UrlParts::parse(url)?;
         let repo = RepositoryUrl::new(scheme, host.ok_or(ParseError::MissingHost)?)?;
-        let package = AbsolutePackageUrl::new_with_path(repo, path, hash)?;
+        let package = AbsolutePackageUrl::new_with_path(repo, &path, hash)?;
         let resource = resource.ok_or(ParseError::MissingResource)?;
         Ok(Self { package, resource })
     }

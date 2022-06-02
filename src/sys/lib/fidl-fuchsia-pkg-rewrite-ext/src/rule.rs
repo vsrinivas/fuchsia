@@ -126,7 +126,11 @@ impl Rule {
             self.path_prefix_replacement.clone()
         };
 
-        Some(AbsolutePackageUrl::new_with_path(self.host_replacement.clone(), new_path, uri.hash()))
+        Some(AbsolutePackageUrl::new_with_path(
+            self.host_replacement.clone(),
+            &new_path,
+            uri.hash(),
+        ))
     }
 
     /// Determines the replacement source id, if this rule rewrites all of "fuchsia.com".
@@ -582,7 +586,7 @@ mod rule_tests {
         let rule = Rule::new("fuchsia.com", "fuchsia.com", "/", "/a+b/").unwrap();
         assert_matches!(
             rule.apply(&"fuchsia-pkg://fuchsia.com/foo".parse().unwrap()),
-            Some(Err(ParseError::InvalidPathSegment(_)))
+            Some(Err(ParseError::InvalidName(_)))
         );
     }
 

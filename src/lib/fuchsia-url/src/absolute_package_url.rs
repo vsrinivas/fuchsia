@@ -32,19 +32,20 @@ impl AbsolutePackageUrl {
         if resource.is_some() {
             return Err(ParseError::CannotContainResource);
         }
-        Self::new_with_path(repo, path, hash)
+        Self::new_with_path(repo, &path, hash)
     }
 
-    /// Create an AbsolutePackageUrl from its component parts and a String `path` that will be
+    /// Create an AbsolutePackageUrl from its component parts and a &str `path` that will be
     /// validated.
     pub fn new_with_path(
         repo: RepositoryUrl,
-        path: String,
+        path: &str,
         hash: Option<Hash>,
     ) -> Result<Self, ParseError> {
-        let () = crate::validate_path(&path)?;
-        let (name, variant) = crate::parse_path_to_name_and_variant(path.as_ref())?;
-        Ok(Self::new(repo, name, variant, hash))
+        Ok(match hash {
+            None => Self::Unpinned(UnpinnedAbsolutePackageUrl::new_with_path(repo, path)?),
+            Some(hash) => Self::Pinned(PinnedAbsolutePackageUrl::new_with_path(repo, path, hash)?),
+        })
     }
 
     /// Create an AbsolutePackageUrl from its component parts.
@@ -239,38 +240,5 @@ mod tests {
                 url
             );
         }
-    }
-
-    #[test]
-    fn new_with_path_err() {
-        for (path, err) in [
-            ("", ParseError::PathMustHaveLeadingSlash),
-            ("/", ParseError::MissingName),
-            ("//", ParseError::InvalidPathSegment(PackagePathSegmentError::Empty)),
-            ("/name/variant/other", ParseError::ExtraPathSegments),
-        ] {
-            assert_matches!(
-                AbsolutePackageUrl::new_with_path(
-                    "fuchsia-pkg://example.org".parse().unwrap(),
-                    path.into(),
-                    None,
-                ),
-                Err(e) if e == err,
-                "the path {:?}", path
-            );
-        }
-    }
-
-    #[test]
-    fn new_with_path_ok() {
-        let repo = "fuchsia-pkg://example.org".parse::<RepositoryUrl>().unwrap();
-        let url = AbsolutePackageUrl::new_with_path(repo.clone(), "/name".into(), None).unwrap();
-        assert_eq!(url.name().as_ref(), "name");
-        assert_eq!(url.variant(), None);
-
-        let url =
-            AbsolutePackageUrl::new_with_path(repo.clone(), "/name/variant".into(), None).unwrap();
-        assert_eq!(url.name().as_ref(), "name");
-        assert_eq!(url.variant().map(|v| v.as_ref()), Some("variant"));
     }
 }
