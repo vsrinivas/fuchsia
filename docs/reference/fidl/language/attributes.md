@@ -47,7 +47,7 @@ Illustrates both aspects:
 ## `@available` {#available}
 
 **USAGE**: `@available(platform="`_string_`", added=`_version_`,
-deprecated=`_version_`, removed=`_version`, note="`_string_`")`
+deprecated=`_version_`, removed=`_version_`, note="`_string_`")`
 
 **MEANING**:
 All arguments are optional, but at least one must be provided.
@@ -274,3 +274,4 @@ no longer necessary.
 [RFC-0020]: /docs/contribute/governance/rfcs/0020_interface_ordinal_hashing.md
 [RFC-0021]: /docs/contribute/governance/rfcs/0021_soft_transitions_methods_add_remove.md
 [RFC-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md
+[versioning-formalism]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md#formalism
