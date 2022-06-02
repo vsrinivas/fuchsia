@@ -661,6 +661,9 @@ async fn do_install(
         installation_paths.install_source.ok_or(anyhow!("No installation source?"))?;
     let bootloader_type = installation_paths.bootloader_type.unwrap();
 
+    // TODO(fxbug.dev/100712): Remove this once flake is resolved.
+    println!("Installing to {} ({}), source {} ({})", install_target.topo_path, install_target.class_path, install_source.topo_path, install_source.class_path);
+
     let (paver, data_sink) =
         paver_connect(&install_target.class_path).context("Could not contact paver")?;
 
