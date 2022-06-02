@@ -847,6 +847,7 @@
         // hence the `.root` suffix
         {
             protocol: [
+                "fuchsia.sys2.LifecycleController.root",
                 "fuchsia.sys2.RealmExplorer.root",
                 "fuchsia.sys2.RealmQuery.root",
             ],

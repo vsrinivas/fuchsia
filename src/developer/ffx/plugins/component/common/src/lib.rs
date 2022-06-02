@@ -6,7 +6,7 @@ use {
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon_status::Status,
 };
@@ -36,19 +36,11 @@ will all return information about the appmgr component.";
 pub async fn connect_to_lifecycle_controller(
     rcs_proxy: &rc::RemoteControlProxy,
 ) -> Result<fsys::LifecycleControllerProxy> {
-    let (hub, server_end) = create_proxy::<fio::DirectoryMarker>()?;
-    rcs_proxy
-        .open_hub(server_end)
-        .await?
-        .map_err(|i| ffx_error!("Could not open hub: {}", Status::from_raw(i)))?;
     let (lifecycle_controller, server_end) = create_proxy::<fsys::LifecycleControllerMarker>()?;
-    let server_end = server_end.into_channel();
-    hub.open(
-        fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE,
-        fio::MODE_TYPE_SERVICE,
-        "debug/fuchsia.sys2.LifecycleController",
-        server_end.into(),
-    )?;
+    rcs_proxy
+        .root_lifecycle_controller(server_end)
+        .await?
+        .map_err(|i| ffx_error!("Could not open LifecycleController: {}", Status::from_raw(i)))?;
     Ok(lifecycle_controller)
 }
 

@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Context, Error},
-    fidl::prelude::*,
+    anyhow::{bail, Error},
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_developer_remotecontrol::ServiceMatch,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     fidl_fuchsia_io as io, fidl_fuchsia_sys2 as fsys,
+    fuchsia_component::client::connect_to_protocol_at_path,
     selectors::match_selector_against_single_node,
     std::path::{Component, PathBuf},
     tracing::{info, warn},
@@ -59,7 +60,6 @@ pub struct PathEntry {
     pub moniker: PathBuf,
     pub component_subdir: String,
     pub service: String,
-    pub debug_hub_path: Option<PathBuf>,
 }
 
 impl PathEntry {
@@ -69,7 +69,6 @@ impl PathEntry {
             moniker,
             component_subdir: String::default(),
             service: String::default(),
-            debug_hub_path: None,
         };
     }
 
@@ -85,7 +84,6 @@ impl PathEntry {
             moniker,
             component_subdir: subdir.to_string(),
             service: service.to_string(),
-            debug_hub_path: None,
         };
     }
 
@@ -126,10 +124,6 @@ impl PathEntry {
     fn push_service(&mut self, name: &str) {
         self.push_hub_dir(name);
         self.service = name.to_owned();
-    }
-
-    fn set_debug_hub_path(&mut self, path: PathBuf) {
-        self.debug_hub_path.replace(path);
     }
 }
 
@@ -211,10 +205,8 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
                 path.push_hub_dir("children");
             } else if selector.selector_type == EntryType::ComponentSubdir {
                 if match_selector_against_single_node(&"expose".to_string(), selector.selector)? {
-                    let hub_path = path.hub_path.clone();
                     let mut p = path.clone_push("resolved", EntryType::HubPath);
                     p.push_subdir("expose");
-                    p.set_debug_hub_path(hub_path.join("debug"));
                     new_paths.push(p);
                 }
                 if match_selector_against_single_node(&"out".to_string(), selector.selector)? {
@@ -235,39 +227,24 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
             let entries = match connect_and_read_dir(&path.hub_path).await {
                 Ok(e) => e,
                 Err(_) => {
-                    if path
-                        .hub_path
-                        .file_name()
-                        .context("missing file name")?
-                        .to_string_lossy()
-                        .to_string()
-                        == "expose".to_string()
-                    {
-                        let lifecycle_controller_path = path
-                            .debug_hub_path
-                            .as_ref()
-                            .context("missing debug path")?
-                            .join(fsys::LifecycleControllerMarker::PROTOCOL_NAME);
-                        let node_proxy = io_util::open_node_in_namespace(
-                            lifecycle_controller_path.to_str().expect("invalid chars"),
-                            io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
-                        )?;
-                        let lifecycle_controller_proxy = fsys::LifecycleControllerProxy::new(
-                            node_proxy.into_channel().expect("could not get channel from proxy"),
-                        );
-                        match lifecycle_controller_proxy.resolve(".").await {
-                            Ok(_) => {
-                                info!(
-                                    "successfully resolved component {}",
-                                    path.moniker.to_str().unwrap()
-                                )
-                            }
-                            Err(e) => {
-                                warn!(%e, directory=%path.hub_path.to_string_lossy(), "failed to resolve component.");
-                                continue;
-                            }
-                        };
-                    }
+                    let lifecycle_controller =
+                        connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(&format!(
+                            "/svc/{}.root",
+                            fidl_fuchsia_sys2::LifecycleControllerMarker::PROTOCOL_NAME
+                        ))?;
+                    let moniker = path.moniker.display().to_string();
+                    let moniker = format!(".{}", moniker);
+
+                    info!("Attempting to resolve {}", moniker);
+                    match lifecycle_controller.resolve(&moniker).await {
+                        Ok(_) => {
+                            info!("Successfully resolved component {}", moniker)
+                        }
+                        Err(e) => {
+                            warn!("Failed to resolve component {}: {}", moniker, e);
+                            continue;
+                        }
+                    };
 
                     match connect_and_read_dir(&path.hub_path).await {
                         Ok(e) => e,
@@ -446,10 +423,8 @@ mod test {
             &third_match,
         ]);
 
-        let debug_hub_path = base.join("a/children/b/debug");
-        let mut expose_entry =
+        let expose_entry =
             PathEntry::new_with_service(third_match, PathBuf::from("/a/b"), "expose", "myservice");
-        expose_entry.set_debug_hub_path(debug_hub_path);
 
         let matches = exec_selector(temp, "a/b:*:myservice").await;
 

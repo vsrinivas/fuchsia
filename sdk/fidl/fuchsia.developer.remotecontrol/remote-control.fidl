@@ -57,6 +57,11 @@ protocol RemoteControl {
         server server_end:sys2.RealmQuery;
     }) -> (struct {}) error zx.status;
 
+    /// Connects to the root [`fuchsia.sys2/LifecycleController`] protocol.
+    RootLifecycleController(resource struct {
+        server server_end:sys2.LifecycleController;
+    }) -> (struct {}) error zx.status;
+
     IdentifyHost() -> (struct {
         response IdentifyHostResponse;
     }) error IdentifyHostError;

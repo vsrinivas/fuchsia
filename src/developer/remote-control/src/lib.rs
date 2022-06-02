@@ -138,6 +138,20 @@ impl RemoteControlService {
                 )?;
                 Ok(())
             }
+            rcs::RemoteControlRequest::RootLifecycleController { server, responder } => {
+                responder.send(
+                    &mut io_util::connect_in_namespace(
+                        &format!(
+                            "/svc/{}.root",
+                            fidl_fuchsia_sys2::LifecycleControllerMarker::PROTOCOL_NAME
+                        ),
+                        server.into_channel(),
+                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
+                    )
+                    .map_err(|i| i.into_raw()),
+                )?;
+                Ok(())
+            }
             rcs::RemoteControlRequest::ForwardTcp { addr, socket, responder } => {
                 let addr: SocketAddressExt = addr.into();
                 let addr = addr.0;
@@ -774,14 +788,12 @@ mod tests {
                 moniker: PathBuf::from("/a/b/c"),
                 component_subdir: "out".to_string(),
                 service: "myservice".to_string(),
-                debug_hub_path: None,
             },
             PathEntry {
                 hub_path: PathBuf::from("/"),
                 moniker: PathBuf::from("/a/b/c"),
                 component_subdir: "out".to_string(),
                 service: "myservice2".to_string(),
-                debug_hub_path: None,
             },
         ])
     }
@@ -792,7 +804,6 @@ mod tests {
             moniker: PathBuf::from("/tmp"),
             component_subdir: "out".to_string(),
             service: "myservice".to_string(),
-            debug_hub_path: None,
         }])
     }
 

@@ -222,6 +222,12 @@
             as: "fuchsia.sys2.RealmQuery.root",
             to: "#core",
         },
+        {
+            protocol: "fuchsia.sys2.LifecycleController",
+            from: "framework",
+            as: "fuchsia.sys2.LifecycleController.root",
+            to: "#core",
+        },
 
         // Offer events to `bootstrap` for diagnostics usage.
         {
