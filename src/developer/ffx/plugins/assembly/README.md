@@ -1,10 +1,8 @@
 # FFX Plugin for Product and Image Assembly
 
-[RFC-0072 Proposal](/docs/contribute/governance/rfcs/0072_standalone_image_assembly_tool.md).
+TODO: Document Product Assembly
 
-Note: This documentation lists the future surface area of the Image Assembler,
-but the transition to the new format is currently in progress in
-[fxbug.dev/84025](http://fxbug.dev/84025).
+[Image Assembly RFC-0072](/docs/contribute/governance/rfcs/0072_standalone_image_assembly_tool.md).
 
 Image Assembly is responsible for taking prebuilt artifacts and generating
 images that can be used to update or flash a Fuchsia device. The FFX plugin has
@@ -20,9 +18,9 @@ Create a Fuchsia system that minimally includes a ZBI, and optionally a VBMeta
 and FVM images.
 
 ```bash
-ffx assembly create-system                      \
-  --product product_config.json                 \
-  --images images_config.json                   \
+ffx assembly create-system                           \
+  --image-assembly-config image_assembly_config.json \
+  --images images_config.json                        \
   --outdir <output-directory>
 ```
 
@@ -30,7 +28,7 @@ ffx assembly create-system                      \
 
 | input | format | description |
 | --- | --- | --- |
-| `--product` | [Product Config](#product-config) | Contents of the Fuchsia system that are put into the images. |
+| `--image-assembly-config` | [Image Assembly Config](#image-assembly-config) | Contents of the Fuchsia system that are put into the images. |
 | `--images` | [Images Config](#images-config) | Which images to generate and how. |
 | `--outdir` | path | Directory to write outputs. |
 | `--gendir` | path | (optional; default=outdir) Directory to write intermediate files. |
@@ -63,27 +61,27 @@ Create an update package for updating a running Fuchsia system.
 ffx assembly create-update                    \
   --packages packages.json                    \
   --partitions partitions.json                \
-  --systema images.json                       \
-  --systemr recovery_images.json              \
+  --system-a images.json                      \
+  --system-r recovery_images.jso              \
   --board-name "board"                        \
-  --version "0.1.2.4"                         \
+  --version-file version.txt                  \
   --epoch 0                                   \
   --outdir <output-directory>
 ```
 
 ## Arguments
 
-input                   | format                                                    | description
------------------------ | --------------------------------------------------------- | -----------
-`--packages`            | [Package Manifest](/docs/concepts/packages/update_pkg.md) | List of packages in the system.
-`--partitions`          | [Partitions Config](#partitions-config)                   | Where in the partition table the images are put.
-`--system[a,b,r]`       | [Images Manifest](#images-manifest)                       | The system to place in the slot.
-`--board-name`          | string                                                    | The name of the board. Fuchsia will reject an Update Package with a different board name.
-`--version`             | `a.b.c.d`, where each digit is u32                        | The version of the Fuchsia system.
-`--epoch`               | int                                                       | The backstop OTA version. Fuchsia will reject updates with a lower epoch.
-`--outdir`              | path                                                      | Directory to write outputs.
-`--gendir`              | path                                                      | (optional; default=outdir) Directory to write intermediate files.
-`--update-package-name` | string                                                    | (optional; default="update") Name to give the Update Package. This is currently only used by OTA tests to allow publishing multiple update packages to the same amber repository without naming collisions.
+input                   | format                                                     | description
+----------------------- | ---------------------------------------------------------  | -----------
+`--packages`            | [Package Manifest](/docs/concepts/packages/update_pkg.md)  | List of packages in the system.
+`--partitions`          | [Partitions Config](#partitions-config)                    | Where in the partition table the images are put.
+`--system-[a,b,r]`      | [Images Manifest](#images-manifest)                        | The system to place in the slot.
+`--board-name`          | string                                                     | The name of the board. Fuchsia will reject an Update Package with a different board name.
+`--version-file`        | path of file containing `a.b.c.d`, where each digit is u32 | The file containing the version of the Fuchsia system.
+`--epoch`               | int                                                        | The backstop OTA version. Fuchsia will reject updates with a lower epoch.
+`--outdir`              | path                                                       | Directory to write outputs.
+`--gendir`              | path                                                       | (optional; default=outdir) Directory to write intermediate files.
+`--update-package-name` | string                                                     | (optional; default="update") Name to give the Update Package. This is currently only used by OTA tests to allow publishing multiple update packages to the same amber repository without naming collisions.
 
 ## Outputs
 
@@ -98,10 +96,9 @@ Create a manifest file that describes how to flash images onto a Fuchsia device.
 ```bash
 ffx assembly create-flash-manifest \
   --partitions partitions.json     \
-  --systema images.json            \
-  --systemb images.json            \
-  --systemr recovery_images.json   \
-  --arch "arm64"                   \
+  --system-a images.json           \
+  --system-b images.json           \
+  --system-r recovery_images.json  \
   --outdir <output-directory>
 ```
 
@@ -110,8 +107,7 @@ ffx assembly create-flash-manifest \
 | input | format | description |
 | --- | --- | --- |
 | `--partitions` | [Partitions Config](#partitions-config) | Where in the partition table the images are put. |
-| `--system[a,b,r]` | [Images Manifest](#images-manifest) | The system to place in the slot. |
-| `--arch` | string | The architecture to specify in the flash manifest. This is typically "arm64" or "x64". |
+| `--system-[a,b,r]` | [Images Manifest](#images-manifest) | The system to place in the slot. |
 | `--outdir` | path | Directory to write outputs. |
 
 ## Output
@@ -120,9 +116,9 @@ output       | format                                                           
 ------------ | -------------------------------------------------------------------------------------------- | -----------
 `flash.json` | [RFC-0100](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0100_product_metadata) | Flash manifest that specifies which images to flash to which partitions.
 
-# Product Config
+# Image Assembly Config
 
-The product config specifies the **contents** of the Fuchsia system that is put
+The image assembly config specifies the **contents** of the Fuchsia system that is put
 into the images.
 
 ```json5
@@ -163,27 +159,14 @@ into the images.
       destination: "path/to/file/in/bootfs",
     }
   ],
+
+  // Packages to put in BootFS.
+  bootfs_packages: [
+    "path/to/package_manifest.json",
+    "path/to/package_manifest.json",
+  ]
 }
 ```
-
-When multiple product configs are specified, they are merged, with the following
-details:
-
--   These lists are merged and deduplicated as lists of strings.
-
-    -   `base`
-    -   `cache`
-    -   `system`
-    -   `kernel.args`
-    -   `boot_args`
-
--   One product config MUST specify a path to the kernel, and only one may do
-    so.
-
--   One product config MUST specify a `clock_backstop`, and only one may do so.
-
--   Bootfs files are deduplicated by `destination` + `source`. Only one `source`
-    path may be used for each `destination` path in bootfs.
 
 # Images Config
 
@@ -204,7 +187,7 @@ The images config specifies **which images** to generate and how.
 {
   type: "<type>",
   name: "<name>",
-  parameters: <type-specific-parameters>,
+  <type-specific-parameters>,
 }
 ```
 
@@ -218,14 +201,13 @@ The images config specifies **which images** to generate and how.
 
   // The name to give the file: fuchsia.zbi
   name: "fuchsia",
-  parameters: {
 
-    // The compression format for the ZBI.
-    compression: "zstd.max",
+  // The compression format for the ZBI.
+  compression: "zstd.max",
 
-    // An optional script to post-process the ZBI.
-    // This is often used to prepare the ZBI for the
-    postprocessing_script: <post-processing-script>,
+  // An optional script to post-process the ZBI.
+  // This is often used to prepare the ZBI for the
+  postprocessing_script: <post-processing-script>,
 }
 ```
 
@@ -253,20 +235,18 @@ The images config specifies **which images** to generate and how.
 
   // The name to give the file: fuchsia.vbmeta
   name: "fuchsia",
-  parameters: {
 
-    // Path on host to the key for signing VBMeta.
-    key: "path/to/key/on/host",
+  // Path on host to the key for signing VBMeta.
+  key: "path/to/key/on/host",
 
-    // Path on host to the key metadata to add to the VBMeta.
-    key_metadata: "path/to/key/metadata/on/host",
+  // Path on host to the key metadata to add to the VBMeta.
+  key_metadata: "path/to/key/metadata/on/host",
 
-    // Optional descriptors to add to the VBMeta image.
-    additional_descriptors: [
-      <descriptor>,
-      <descriptor>,
-    ],
-  },
+  // Optional descriptors to add to the VBMeta image.
+  additional_descriptors: [
+    <descriptor>,
+    <descriptor>,
+  ],
 }
 ```
 
@@ -280,10 +260,10 @@ The images config specifies **which images** to generate and how.
   name: "mypart",
 
   // Size of the partition in bytes.
-  size: "12345",
+  size: 12345,
 
   // Custom VBMeta flags to add.
-  flags: "1",
+  flags: 1,
 
   // Minimum AVB version to add.
   min_avb_version: "1.1",
@@ -298,23 +278,21 @@ The images config specifies **which images** to generate and how.
 
   // The name to give the file: fvm.blk
   name: "fvm",
-  parameters: {
 
-    // The size of a slice within the FVM.
-    slice_size: 0,
+  // The size of a slice within the FVM.
+  slice_size: 0,
 
-    // The list of filesystems to generate that can be added to the outputs.
-    filesystems: [
-      <filesystem>,
-      <filesystem>,
-    ],
+  // The list of filesystems to generate that can be added to the outputs.
+  filesystems: [
+    <filesystem>,
+    <filesystem>,
+  ],
 
-    // The FVM images to generate.
-    outputs: [
-      <fvm-output>,
-      <fvm-output>,
-    ],
-  },
+  // The FVM images to generate.
+  outputs: [
+    <fvm-output>,
+    <fvm-output>,
+  ],
 }
 ```
 
@@ -397,18 +375,14 @@ The images config specifies **which images** to generate and how.
     "internal",
   ],
 
-  // Optional parameters to use during construction.
-  parameters: {
+  // Whether to compress the FVM.
+  compress: true,
 
-    // Whether to compress the FVM.
-    compress: true,
+  // Shrink the FVM to fit exactly the contents.
+  resize_image_file_to_fit: true,
 
-    // Shrink the FVM to fit exactly the contents.
-    resize_image_file_to_fit: true,
-
-    // After the optional resize, truncate the file to this length.
-    truncate_to_length: 0,
-  }
+  // After the optional resize, truncate the file to this length.
+  truncate_to_length: 0,
 }
 ```
 
@@ -426,17 +400,13 @@ The images config specifies **which images** to generate and how.
     "internal",
   ],
 
-  // Required parameters for Sparse FVMs.
-  parameters: {
+  // Whether to compress the FVM.
+  compress: true,
 
-    // Whether to compress the FVM.
-    compress: true,
-
-    // The maximum size the FVM can expand to at runtime.
-    // This sets the amount of slice metadata to allocate during construction,
-    // which cannot be modified at runtime.
-    max_disk_size: 0,
-  },
+  // The maximum size the FVM can expand to at runtime.
+  // This sets the amount of slice metadata to allocate during construction,
+  // which cannot be modified at runtime.
+  max_disk_size: 0,
 }
 ```
 
@@ -454,21 +424,17 @@ The images config specifies **which images** to generate and how.
     "internal",
   ],
 
-  // Required parameters for Nand FVMs.
-  parameters {
+  // Whether to compress the FVM.
+  compress: true,
 
-    // Whether to compress the FVM.
-    compress: true,
-
-    // The maximum size the FVM can expand to at runtime.
-    // This sets the amount of slice metadata to allocate during construction,
-    // which cannot be modified at runtime.
-    max_disk_size: 0,
-    block_count: 0,
-    oob_size: 0,
-    page_size: 0,
-    pages_per_block: 0,
-  },
+  // The maximum size the FVM can expand to at runtime.
+  // This sets the amount of slice metadata to allocate during construction,
+  // which cannot be modified at runtime.
+  max_disk_size: 0,
+  block_count: 0,
+  oob_size: 0,
+  page_size: 0,
+  pages_per_block: 0,
 }
 ```
 
@@ -484,56 +450,50 @@ The images config specifies **which images** to generate and how.
     {
       type: "vbmeta",
       name: "fuchsia",
-      parameters: {
-        key: "path/to/key",
-        key_metadata: "path/to/key/metadata",
-      },
+      key: "path/to/key",
+      key_metadata: "path/to/key/metadata",
     },
     {
       type: "fvm",
       name: "fvm",
-      parameters: {
-        slice_size: 0,
-        filesystems: [
-          {
-            type: "blobfs",
-            name: "blob",
-            compress: true,
-            maximum_bytes: 65536,
-            minimum_data_bytes: 0,
-            minimum_inodes: 4096,
-          },
-          {
-            type: "minfs",
-            name: "data",
-            maximum_bytes: 65536,
-            minimum_data_bytes: 0,
-            minimum_inodes: 4096,
-          },
-        ],
-        outputs: [
-          {
-            type: Standard,
-            name: "fvm",
-            filesystems: [
-              "blob",
-              "data",
-            ],
-          },
-          {
-            type: Sparse,
-            name: "fvm.sparse",
-            filesystems: [
-              "blob",
-              "data",
-            ],
-            parameters: {
-              compress: true,
-              max_disk_size: 65536,
-            },
-          },
-        ],
-      },
+      slice_size: 0,
+      filesystems: [
+        {
+          type: "blobfs",
+          name: "blob",
+          compress: true,
+          maximum_bytes: 65536,
+          minimum_data_bytes: 0,
+          minimum_inodes: 4096,
+        },
+        {
+          type: "minfs",
+          name: "data",
+          maximum_bytes: 65536,
+          minimum_data_bytes: 0,
+          minimum_inodes: 4096,
+        },
+      ],
+      outputs: [
+        {
+          type: "standard",
+          name: "fvm",
+          filesystems: [
+            "blob",
+            "data",
+          ],
+        },
+        {
+          type: "sparse",
+          name: "fvm.sparse",
+          filesystems: [
+            "blob",
+            "data",
+          ],
+          compress: true,
+          max_disk_size: 65536,
+        },
+      ],
     },
   ],
 }
@@ -631,8 +591,8 @@ storage-sparse, storage-sparse-blob, or fvm.fastboot.
 }
 ```
 
-`<partition-type>` can be one of: zbi, vbmeta, fvm. `<partition-slot>` can be
-one of: systema, systemb, systemr.
+`<partition-type>` can be one of: `ZBI`, `VBMeta`, `FVM`. `<partition-slot>` can be
+one of: `A`, `B`, `R`.
 
 ## Example
 
@@ -648,28 +608,28 @@ one of: systema, systemb, systemr.
   partitions: [
     {
       name: "zircon_a",
-      type: "zbi",
-      slot: "systema",
+      type: "ZBI",
+      slot: "A",
     },
     {
       name: "vbmeta_a",
-      type: "vbmeta",
-      slot: "systema",
+      type: "VBMeta",
+      slot: "A",
     },
     {
       name: "zircon_b",
-      type: "zbi",
-      slot: "systemb",
+      type: "ZBI",
+      slot: "B",
     },
     {
       name: "vbmeta_b",
-      type: "vbmeta",
-      slot: "systemb",
+      type: "VBMeta",
+      slot: "B",
     },
     {
       name: "fvm",
-      type: "fvm",
-      slot: "systema",
+      type: "FVM",
+      slot: "A",
     },
   ],
 }
