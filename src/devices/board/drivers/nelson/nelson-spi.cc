@@ -27,7 +27,7 @@
 #define spicc0_clk_en (1 << 6)
 #define spicc0_clk_div(x) ((x)-1)
 
-#define spicc1_clk_sel_fclk_div2 (4 << 23)
+#define spicc1_clk_sel_fclk_div3 (3 << 23)
 #define spicc1_clk_en (1 << 22)
 #define spicc1_clk_div(x) (((x)-1) << 16)
 
@@ -39,13 +39,8 @@ zx_status_t Nelson::SpiInit() {
       // SPICC0 clock enable (666 MHz)
       spicc0_clk_sel_fclk_div3 | spicc0_clk_en | spicc0_clk_div(1) |
 
-      // SPICC1 clock enable @200MHz (fclk_div2(1GHz) / N(5)).  For final SCLK frequency, see
-      // CONREG[16:18] in the SPI controller.  This clock config produces a SCLK frequency of 50MHz
-      // assuming a default value for CONREG[16:18].
-      //
-      // Some timing instability was observed which may have been an individual board artifact.  To
-      // debug, consider configuring the SCLK=25MHz (i.e. set spicc1_cli_div(10)).
-      spicc1_clk_sel_fclk_div2 | spicc1_clk_en | spicc1_clk_div(10);
+      // SPICC1 clock enable (666 MHz)
+      spicc1_clk_sel_fclk_div3 | spicc1_clk_en | spicc1_clk_div(1);
 
   // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the
   // dividers
@@ -198,15 +193,20 @@ zx_status_t Nelson::Spi1Init() {
       },
   };
 
+  constexpr uint32_t kMoNoDelay = 0 << 0;
+  constexpr uint32_t kMiDelay3Cycles = 3 << 2;
+  constexpr uint32_t kMiCapAhead2Cycles = 0 << 4;
+
   static const amlogic_spi::amlspi_config_t spi_1_config = {
       .capacity = 0,
       .period = 0,
       .bus_id = NELSON_SPICC1,
       .cs_count = 1,
-      .cs = {0},                                     // index into fragments list
-      .clock_divider_register_value = (4 >> 1) - 1,  // SCLK = core clock / 4 = 25 MHz
+      .cs = {0},                                      // index into fragments list
+      .clock_divider_register_value = (22 >> 1) - 1,  // SCLK = core clock / 22 = 30.3 MHz
       .use_enhanced_clock_mode = true,
       .client_reverses_dma_transfers = true,
+      .delay_control = kMoNoDelay | kMiDelay3Cycles | kMiCapAhead2Cycles,
   };
 
   static pbus_dev_t spi_1_dev = []() {
