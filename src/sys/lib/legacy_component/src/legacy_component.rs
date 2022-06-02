@@ -50,14 +50,8 @@ impl LegacyComponent {
         // our own namespace, and for any other connection we forward to the component's incoming
         // svc.
         let namespace = start_info.ns.ok_or(format_err!("ns cannot be NONE"))?;
-        if namespace.len() > 2 {
-            return Err(format_err!(
-                "v1 component namespace contains unexpected directories. \
-            This error happens when wrapped cml file explicitly uses a storage capability. \
-            Remove the use clause and let your cmx file handle the storage capability."
-            ));
-        }
         let mut svc_names = vec![];
+        let mut flat_namespace = fsysv1::FlatNamespace { paths: vec![], directories: vec![] };
         let mut svc_dir_proxy = None;
         for namespace_entry in namespace {
             match namespace_entry.path.as_ref().map(|s| s.as_str()) {
@@ -75,7 +69,13 @@ impl LegacyComponent {
                     svc_dir_proxy = Some(dir_proxy);
                     break;
                 }
-                Some(p) => return Err(format_err!("unexpected item in namespace: {:?}", p)),
+                Some(entry) => {
+                    let client_end = namespace_entry
+                        .directory
+                        .ok_or(format_err!("directory entry {} has no client handle", entry))?;
+                    flat_namespace.directories.push(client_end.into_channel());
+                    flat_namespace.paths.push(entry.to_string());
+                }
                 _ => return Err(format_err!("malformed namespace")),
             }
         }
@@ -219,7 +219,7 @@ impl LegacyComponent {
             out: None,
             err: None,
             directory_request: Some(outgoing_svc_dir_server_end.into_channel()),
-            flat_namespace: None,
+            flat_namespace: Some(Box::new(flat_namespace)),
             additional_services: None,
         };
         sub_env_launcher_proxy.create_component(&mut launch_info, None)?;

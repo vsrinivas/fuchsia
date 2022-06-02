@@ -3,10 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, fidl::endpoints::ProtocolMarker, fidl_fidl_examples_routing_echo as fecho,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys as fsys, fuchsia_component::client::connect_to_protocol, futures::StreamExt,
-    vfs::execution_scope::ExecutionScope,
+    anyhow::Error,
+    fidl::endpoints::ProtocolMarker,
+    fidl::endpoints::ServerEnd,
+    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsys,
+    fuchsia_component::client::connect_to_protocol,
+    futures::StreamExt,
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::read_only_static, pseudo_directory,
+    },
 };
 
 async fn launch_echo_component(
@@ -139,6 +146,42 @@ async fn test_legacy_echo_with_args() {
 
     let _component =
         launch_echo_component(start_info, "test_legacy_echo_args", execution_scope).await.unwrap();
+    let out = call_echo(None, &dir_proxy).await.expect("echo failed");
+    assert_eq!(TEST_VALUE.to_string(), out.unwrap());
+}
+
+#[fuchsia::test]
+async fn test_legacy_echo_with_directory() {
+    const TEST_VALUE: &str = "TEST";
+
+    let config_data_dir = pseudo_directory! {
+        "default_reply.txt" => read_only_static(TEST_VALUE),
+    };
+    let (client_end, server_end) =
+        fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
+    let scope = vfs::execution_scope::ExecutionScope::new();
+    config_data_dir.open(
+        scope,
+        fio::OpenFlags::RIGHT_READABLE,
+        0,
+        vfs::path::Path::dot(),
+        ServerEnd::new(server_end.into_channel()),
+    );
+
+    let mut start_info = fcrunner::ComponentStartInfo::EMPTY;
+    start_info.ns = Some(vec![fcrunner::ComponentNamespaceEntry {
+        path: Some("/config".to_string()),
+        directory: Some(client_end),
+        ..fcrunner::ComponentNamespaceEntry::EMPTY
+    }]);
+
+    let (dir_proxy, dir_end) = fidl::endpoints::create_proxy().unwrap();
+    start_info.outgoing_dir = Some(dir_end);
+
+    let _component =
+        launch_echo_component(start_info, "test_legacy_echo_dir", ExecutionScope::new())
+            .await
+            .unwrap();
     let out = call_echo(None, &dir_proxy).await.expect("echo failed");
     assert_eq!(TEST_VALUE.to_string(), out.unwrap());
 }
