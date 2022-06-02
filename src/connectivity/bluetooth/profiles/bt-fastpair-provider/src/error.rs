@@ -26,6 +26,15 @@ pub enum Error {
     #[error("Invalid device Model ID: {0}")]
     InvalidModelId(u32),
 
+    /// Error encountered when trying to parse packets received from the remote peer.
+    #[error("Invalid packet received from remote")]
+    Packet,
+
+    /// Encountered during key-based pairing. We couldn't decrypt the message with the existing
+    /// set of Account Keys.
+    #[error("No Account Key could decrypt the key-based pairing payload")]
+    NoAvailableKeys,
+
     /// Internal component Error.
     #[error("Internal component Error: {0}")]
     InternalError(#[from] anyhow::Error),

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use aes::cipher::generic_array::GenericArray;
+use aes::{Aes128, BlockDecrypt, BlockEncrypt, NewBlockCipher};
 use std::convert::{TryFrom, TryInto};
 
 use crate::advertisement::bloom_filter;
@@ -34,7 +36,7 @@ impl From<ModelId> for [u8; 3] {
 
 /// A key that allows the Provider to be recognized as belonging to a certain user account.
 // TODO(fxbug.dev/97271): Define a full-fledged Account Key type.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AccountKey([u8; 16]);
 
 impl AccountKey {
@@ -44,6 +46,24 @@ impl AccountKey {
 
     pub fn as_bytes(&self) -> &[u8; 16] {
         &self.0
+    }
+
+    /// Decrypts the provided `message` buffer with the AccountKey using AES-128.
+    /// Returns the decrypted payload.
+    pub fn decrypt(&self, message: &[u8; 16]) -> [u8; 16] {
+        let cipher = Aes128::new(GenericArray::from_slice(self.as_bytes()));
+        let mut block = GenericArray::clone_from_slice(message);
+        cipher.decrypt_block(&mut block);
+        block.into()
+    }
+
+    /// Encrypts the provided `message` buffer with the AccountKey using AES-128.
+    /// Returns the encrypted payload.
+    pub fn encrypt(&self, message: &[u8; 16]) -> [u8; 16] {
+        let cipher = Aes128::new(GenericArray::from_slice(self.as_bytes()));
+        let mut block = GenericArray::clone_from_slice(message);
+        cipher.encrypt_block(&mut block);
+        block.into()
     }
 }
 
@@ -181,5 +201,30 @@ mod tests {
         ];
 
         assert_eq!(service_data, expected);
+    }
+
+    /// Tests AES-128 encryption & decryption using an Account Key as the Secret Key.
+    /// The contents of this test case are pulled from the GFPS specification.
+    /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#aes_encryption
+    #[test]
+    fn aes_128_encryption_roundtrip() {
+        let message = [
+            0xF3, 0x0F, 0x4E, 0x78, 0x6C, 0x59, 0xA7, 0xBB, 0xF3, 0x87, 0x3B, 0x5A, 0x49, 0xBA,
+            0x97, 0xEA,
+        ];
+        let account_key = AccountKey::new([
+            0xA0, 0xBA, 0xF0, 0xBB, 0x95, 0x1F, 0xF7, 0xB6, 0xCF, 0x5E, 0x3F, 0x45, 0x61, 0xC3,
+            0x32, 0x1D,
+        ]);
+
+        let encrypted = account_key.encrypt(&message);
+        let expected = [
+            0xAC, 0x9A, 0x16, 0xF0, 0x95, 0x3A, 0x3F, 0x22, 0x3D, 0xD1, 0x0C, 0xF5, 0x36, 0xE0,
+            0x9E, 0x9C,
+        ];
+        assert_eq!(encrypted, expected);
+
+        let decrypted = account_key.decrypt(&encrypted);
+        assert_eq!(decrypted, message);
     }
 }

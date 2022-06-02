@@ -26,7 +26,7 @@ pub enum Address {
 }
 
 const NUM_ADDRESS_BYTES: usize = 6;
-type AddressBytes = [u8; NUM_ADDRESS_BYTES];
+pub type AddressBytes = [u8; NUM_ADDRESS_BYTES];
 
 fn addr_to_string(bytes: &AddressBytes) -> String {
     format!(
@@ -61,7 +61,7 @@ impl Address {
         addr_to_string(self.bytes())
     }
 
-    fn bytes(&self) -> &AddressBytes {
+    pub fn bytes(&self) -> &AddressBytes {
         match self {
             Address::Public(b) => b,
             Address::Random(b) => b,

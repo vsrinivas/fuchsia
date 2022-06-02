@@ -12,7 +12,7 @@ use fidl_fuchsia_bluetooth_gatt2::{
     self as gatt, AttributePermissions, Characteristic, CharacteristicPropertyBits, Handle,
     LocalServiceMarker, LocalServiceReadValueResponder, LocalServiceRequest,
     LocalServiceRequestStream, LocalServiceWriteValueResponder, SecurityRequirements,
-    Server_Marker, Server_Proxy, ServiceInfo, WriteValueParameters,
+    Server_Marker, Server_Proxy, ServiceInfo, ValueChangedParameters, WriteValueParameters,
 };
 use fuchsia_bluetooth::types::{PeerId, Uuid};
 use fuchsia_component::client::connect_to_protocol;
@@ -35,7 +35,7 @@ const MODEL_ID_CHARACTERISTIC_HANDLE: Handle = Handle { value: 1 };
 /// Custom characteristic - Key-based pairing.
 const KEY_BASED_PAIRING_CHARACTERISTIC_UUID: &str = "FE2C1234-8366-4814-8EB0-01DE32100BEA";
 /// Fixed Handle assigned to the Model ID characteristic.
-const KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE: Handle = Handle { value: 2 };
+pub const KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE: Handle = Handle { value: 2 };
 
 /// Custom characteristic - Passkey.
 const PASSKEY_CHARACTERISTIC_UUID: &str = "FE2C1235-8366-4814-8EB0-01DE32100BEA";
@@ -52,6 +52,7 @@ const FIRMWARE_REVISION_CHARACTERISTIC_UUID: u16 = 0x2A26;
 /// Fixed Handle assigned to the Model ID characteristic.
 const FIRMWARE_REVISION_CHARACTERISTIC_HANDLE: Handle = Handle { value: 5 };
 
+pub type GattServiceResponder = Box<dyn FnOnce(Result<(), gatt::Error>)>;
 pub enum GattRequest {
     /// A request to initiate the key-based pairing procedure.
     KeyBasedPairing {
@@ -60,7 +61,7 @@ pub enum GattRequest {
         /// The encrypted payload containing the details of the request.
         encrypted_request: Vec<u8>,
         /// A responder used to acknowledge the handling of the pairing request.
-        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+        response: GattServiceResponder,
     },
 
     /// A request to write an Account Key to the local device.
@@ -70,7 +71,7 @@ pub enum GattRequest {
         /// The encrypted payload containing the Account Key to be written.
         encrypted_account_key: Vec<u8>,
         /// A responder used to acknowledge the handling of the write request.
-        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+        response: GattServiceResponder,
     },
 
     /// A request to compare the remote peer's passkey with that of the local device.
@@ -80,7 +81,7 @@ pub enum GattRequest {
         /// The encrypted payload containing the peer's (Seeker) Passkey.
         encrypted_passkey: Vec<u8>,
         /// A responder used to acknowledge the handling of the verification request.
-        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+        response: GattServiceResponder,
     },
 }
 
@@ -238,6 +239,17 @@ impl GattService {
         Ok(service_stream)
     }
 
+    pub fn notify_key_based_pairing(&self, id: PeerId, value: Vec<u8>) -> Result<(), Error> {
+        // TODO(fxbug.dev/96726): Only send request if we have enough credits.
+        let params = ValueChangedParameters {
+            peer_ids: Some(vec![id.into()]),
+            handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
+            value: Some(value),
+            ..ValueChangedParameters::EMPTY
+        };
+        self.local_service_server.control_handle().send_on_notify_value(params).map_err(Into::into)
+    }
+
     /// Handle an incoming GATT read request for the local GATT characteristic at `handle`.
     fn handle_read_request(&self, handle: Handle, responder: LocalServiceReadValueResponder) {
         match handle {
@@ -276,7 +288,7 @@ impl GattService {
             return None;
         };
 
-        let response: Box<dyn FnOnce(Result<(), gatt::Error>)> = Box::new(|mut result| {
+        let response: GattServiceResponder = Box::new(|mut result| {
             let _ = responder.send(&mut result);
         });
         match handle {
@@ -361,7 +373,7 @@ pub(crate) mod tests {
 
     use anyhow::format_err;
     use assert_matches::assert_matches;
-    use async_test_helpers::run_while;
+    use async_test_helpers::{expect_stream_item, run_while};
     use async_utils::PollExt;
     use fidl_fuchsia_bluetooth_gatt2::LocalServiceProxy;
     use fuchsia_async as fasync;
@@ -583,8 +595,7 @@ pub(crate) mod tests {
         assert_matches!(write_result, Ok(Err(gatt::Error::InvalidHandle)));
     }
 
-    type Responder = Box<dyn FnOnce(Result<(), gatt::Error>)>;
-    type GattRequestMatcher = fn(GattRequest) -> Result<Responder, anyhow::Error>;
+    type GattRequestMatcher = fn(GattRequest) -> Result<GattServiceResponder, anyhow::Error>;
     fn characteristic_write_results_in_expected_stream_item(
         characteristic_handle: Handle,
         matcher: GattRequestMatcher,
@@ -684,5 +695,29 @@ pub(crate) mod tests {
             .expect("response is ready")
             .expect("FIDL result is Ok");
         assert_eq!(write_result, Err(gatt::Error::InvalidParameters));
+    }
+
+    #[fuchsia::test]
+    fn key_based_pairing_notification() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
+
+        let mut local_service_event_stream = upstream_service_client.take_event_stream();
+        let _ = exec
+            .run_until_stalled(&mut local_service_event_stream.next())
+            .expect_pending("no events");
+
+        // Component makes a request to notify key-based pairing characteristic.
+        let value = [1; 16].to_vec();
+        let _ =
+            gatt_service.notify_key_based_pairing(PeerId(123), value.clone()).expect("can notify");
+
+        let event =
+            expect_stream_item(&mut exec, &mut local_service_event_stream).expect("fidl request");
+        let ValueChangedParameters { peer_ids, handle, value: v, .. } =
+            event.into_on_notify_value().expect("notify event");
+        assert_eq!(peer_ids, Some(vec![PeerId(123).into()]));
+        assert_eq!(handle, Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE));
+        assert_eq!(v, Some(value));
     }
 }

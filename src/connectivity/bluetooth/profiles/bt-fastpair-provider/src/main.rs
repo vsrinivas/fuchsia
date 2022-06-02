@@ -11,6 +11,7 @@ mod error;
 mod gatt_service;
 mod host_watcher;
 mod keys;
+mod packets;
 mod provider;
 mod types;
 

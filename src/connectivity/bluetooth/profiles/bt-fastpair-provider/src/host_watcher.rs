@@ -57,6 +57,11 @@ impl HostWatcher {
         this
     }
 
+    #[cfg(test)]
+    pub fn set_active_host(&mut self, host: HostInfo) {
+        self.active_host = Some(host);
+    }
+
     // Compares the `new` host state to the current and returns a HostEvent if the relevant state
     // has changed.
     fn compare(&self, new: &Option<HostInfo>) -> Option<HostEvent> {
@@ -94,11 +99,14 @@ impl HostWatcher {
         return Ok(event);
     }
 
-    // TODO(fxbug.dev/94166): Remove the allow once this is used by the toplevel FP server.
-    #[allow(unused)]
     /// Returns the address of the active Host, or None if not set.
     pub fn address(&self) -> Option<Address> {
         self.active_host.as_ref().map(|host| host.address)
+    }
+
+    /// Returns true if the active Host is in pairing mode.
+    pub fn pairing_mode(&self) -> bool {
+        self.active_host.as_ref().map_or(false, |h| h.discoverable)
     }
 }
 

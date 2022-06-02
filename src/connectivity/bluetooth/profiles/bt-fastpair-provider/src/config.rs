@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use p256::SecretKey;
 use std::convert::TryFrom;
 
 use crate::error::Error;
+use crate::keys::{private_key_from_bytes, LOCAL_PRIVATE_KEY_BYTES};
 use crate::types::ModelId;
 
 // TODO(fxbug.dev/97159): Load this from the structured configuration library.
@@ -12,18 +14,27 @@ use crate::types::ModelId;
 pub struct Config {
     pub model_id: ModelId,
     pub firmware_revision: String,
+    pub local_private_key: SecretKey,
 }
 
 impl Config {
     // TODO(fxbug.dev/97159): Load component config from the structured configuration library.
     pub fn load() -> Result<Self, Error> {
-        Ok(Self::example_config())
+        Ok(Self {
+            model_id: ModelId::try_from(1).expect("valid ID"),
+            firmware_revision: "1.0.0".to_string(),
+            local_private_key: private_key_from_bytes(LOCAL_PRIVATE_KEY_BYTES.to_vec())
+                .expect("valid private key"),
+        })
     }
 
+    #[cfg(test)]
     pub fn example_config() -> Self {
         Self {
             model_id: ModelId::try_from(1).expect("valid ID"),
             firmware_revision: "1.0.0".to_string(),
+            local_private_key: private_key_from_bytes(LOCAL_PRIVATE_KEY_BYTES.to_vec())
+                .expect("valid private key"),
         }
     }
 }
