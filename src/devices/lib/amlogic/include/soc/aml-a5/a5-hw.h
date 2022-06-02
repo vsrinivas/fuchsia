@@ -19,6 +19,9 @@
 #define A5_GPIO_INTERRUPT_LENGTH 0x8
 
 // i2c
+#define A5_I2C_LENGTH 0x2000
+#define A5_I2C_C_BASE 0xfe06a000
+#define A5_I2C_D_BASE 0xfe06c000
 
 // spicc
 
@@ -50,6 +53,9 @@
 #define A5_GPIO_IRQ_9 51   // 32+19
 #define A5_GPIO_IRQ_10 52  // 32+20
 #define A5_GPIO_IRQ_11 53  // 32+21
+
+#define A5_I2C_C_IRQ 194  // 162+32
+#define A5_I2C_D_IRQ 195  // 163+32
 
 // PWM
 #define A5_PWM_LENGTH 0x2000  // applies to each PWM bank

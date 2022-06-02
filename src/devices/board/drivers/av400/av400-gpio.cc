@@ -77,6 +77,12 @@ zx_status_t Av400::GpioInit() {
     return status;
   }
 
+  gpio_impl_ = ddk::GpioImplProtocolClient(parent());
+  if (!gpio_impl_.is_valid()) {
+    zxlogf(ERROR, "%s: device_get_protocol failed %d", __func__, status);
+    return ZX_ERR_INTERNAL;
+  }
+
   return ZX_OK;
 }
 

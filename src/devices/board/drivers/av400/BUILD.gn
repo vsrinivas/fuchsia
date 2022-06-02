@@ -24,11 +24,14 @@ fuchsia_driver("av400-driver") {
   sources = [
     "av400-clk.cc",
     "av400-gpio.cc",
+    "av400-i2c.cc",
     "av400-pwm.cc",
     "av400.cc",
   ]
   deps = [
     ":av400-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

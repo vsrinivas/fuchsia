@@ -148,6 +148,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:07:1/aml-axg-gpio",
       "sys/platform/05:07:1d",  // pwm
       "sys/platform/05:07:2c/clocks",
+      "sys/platform/05:00:2/aml-i2c",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

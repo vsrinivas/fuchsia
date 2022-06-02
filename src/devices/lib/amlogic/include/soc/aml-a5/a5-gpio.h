@@ -138,6 +138,10 @@
 #define A5_GPIO_IRQ_8_9_PIN_FILTER_SELECT 0x5
 #define A5_GPIO_IRQ_10_11_PIN_FILTER_SELECT 0x6
 
-// GPIOA pin alternate functions
+// GPIOD pin alternate functions
+#define A5_GPIOD_12_I2C3_SDA_FN 2
+#define A5_GPIOD_13_I2C3_SCL_FN 2
+#define A5_GPIOD_14_I2C2_SDA_FN 2
+#define A5_GPIOD_15_I2C2_SCL_FN 2
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A5_A5_GPIO_H_

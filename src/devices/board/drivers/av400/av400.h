@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <threads.h>
 
@@ -62,6 +63,7 @@ class Av400 : public Av400Type {
   zx_status_t GpioInit();
   zx_status_t PwmInit();
   zx_status_t ClkInit();
+  zx_status_t I2cInit();
 
   int Thread();
 
@@ -69,6 +71,7 @@ class Av400 : public Av400Type {
   std::optional<ddk::InitTxn> init_txn_;
   ddk::IommuProtocolClient iommu_;
   thrd_t thread_;
+  ddk::GpioImplProtocolClient gpio_impl_;
 };
 
 }  // namespace av400
