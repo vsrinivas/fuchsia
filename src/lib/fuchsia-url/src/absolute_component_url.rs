@@ -61,7 +61,7 @@ impl AbsoluteComponentUrl {
         &self.resource
     }
 
-    /// The package Url of this URL (this URL without the resource path).
+    /// The package URL of this URL (this URL without the resource path).
     pub fn package_url(&self) -> &AbsolutePackageUrl {
         &self.package
     }

@@ -7,12 +7,14 @@ pub use fuchsia_hash::{Hash, HASH_SIZE};
 mod absolute_component_url;
 mod absolute_package_url;
 pub mod boot_url;
+mod component_url;
 pub mod errors;
 mod host;
 mod package_url;
 mod parse;
 mod pinned_absolute_package_url;
 pub mod pkg_url;
+mod relative_component_url;
 mod relative_package_url;
 mod repository_url;
 pub mod test;
@@ -21,10 +23,12 @@ mod unpinned_absolute_package_url;
 pub use crate::{
     absolute_component_url::AbsoluteComponentUrl,
     absolute_package_url::AbsolutePackageUrl,
+    component_url::ComponentUrl,
     errors::ParseError,
     package_url::PackageUrl,
     parse::{validate_resource_path, PackageName, PackageVariant, MAX_PACKAGE_PATH_SEGMENT_BYTES},
     pinned_absolute_package_url::PinnedAbsolutePackageUrl,
+    relative_component_url::RelativeComponentUrl,
     relative_package_url::RelativePackageUrl,
     repository_url::RepositoryUrl,
     unpinned_absolute_package_url::UnpinnedAbsolutePackageUrl,
