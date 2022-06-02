@@ -5,9 +5,9 @@
 use {
     crate::common_operations::allowed_ops,
     crate::target::{AvailableTargets, TargetOps},
-    clap::{App, Arg},
+    clap::{App, AppSettings, Arg},
     log::error,
-    std::{env, ffi::OsString, ops::RangeInclusive},
+    std::{ffi::OsString, ops::RangeInclusive},
     thiserror::Error,
 };
 
@@ -194,7 +194,7 @@ fn target_operations_validator(
     return Ok(ops);
 }
 
-fn parse_from<I, T>(iter: I) -> Result<ParseArgs, Error>
+pub fn parse_from<I, T>(iter: I) -> Result<ParseArgs, Error>
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
@@ -215,6 +215,7 @@ where
     let cleanup_default_str = &format!("{}", CLEANUP);
 
     let matches = App::new("odu")
+        .setting(AppSettings::NoBinaryName)
         // TODO: We cannot get package version through `CARGO_PKG_VERSION`.
         //       Find out a way.
         .version("0.1.0")
@@ -389,10 +390,6 @@ where
     Ok(args)
 }
 
-pub fn parse() -> Result<ParseArgs, Error> {
-    parse_from(env::args_os())
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -498,15 +495,13 @@ mod tests {
 
     #[test]
     fn test_block_size_with_log_ftrace() {
-        let arg_vec =
-            vec!["odu", "--log_ftrace=true", "--block_size=8193", "--target=/tmp/abc.xyz"];
+        let arg_vec = vec!["--log_ftrace=true", "--block_size=8193", "--target=/tmp/abc.xyz"];
         assert_eq!(parse_from(arg_vec).unwrap_err(), Error::LargeBlockSizeWithLogFtrace);
 
-        let arg_vec =
-            vec!["odu", "--log_ftrace=true", "--block_size=8192", "--target=/tmp/abc.xyz"];
+        let arg_vec = vec!["--log_ftrace=true", "--block_size=8192", "--target=/tmp/abc.xyz"];
         assert!(parse_from(arg_vec).is_ok());
 
-        let arg_vec = vec!["odu", "--log_ftrace=true", "--block_size=200", "--target=/tmp/abc.xyz"];
+        let arg_vec = vec!["--log_ftrace=true", "--block_size=200", "--target=/tmp/abc.xyz"];
         assert!(parse_from(arg_vec).is_ok());
     }
 }

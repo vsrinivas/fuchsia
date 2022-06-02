@@ -8,6 +8,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/odu_bin_test",
+        binary: "bin/odu_lib_test",
     },
 }

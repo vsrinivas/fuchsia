@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/storage/fxfs/meta/test_fxfs.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf_test_runner",
+        binary: "bin/start-storage-benchmark",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+    facets: {
+        "fuchsia.test": { type: "devices" },
+    },
+}

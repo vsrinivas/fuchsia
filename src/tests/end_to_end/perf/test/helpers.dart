@@ -176,6 +176,19 @@ class PerfTestHelper {
       expect(result.exitCode, equals(0));
     }
   }
+
+  // Runs a V2 component without processing any results.  This is useful when
+  // the caller retrieves performance results via tracing.
+  Future<void> runTestComponentV2WithNoResults(
+      {@required String packageName,
+      @required String componentName,
+      @required String commandArgs}) async {
+    final String command = 'run-test-suite'
+        ' fuchsia-pkg://fuchsia.com/$packageName#meta/$componentName'
+        ' -- $commandArgs';
+    final result = await sl4fDriver.ssh.run(command);
+    expect(result.exitCode, equals(0));
+  }
 }
 
 final _log = Logger('TouchInputLatencyMetricsProcessor');

@@ -11,8 +11,7 @@ import 'package:test/test.dart';
 import 'helpers.dart';
 
 const _launcherUrl =
-    'fuchsia-pkg://fuchsia.com/start-storage-benchmark#meta/start-storage-benchmark.cmx';
-const _oduUrl = 'fuchsia-pkg://fuchsia.com/odu#meta/odu.cmx';
+    'fuchsia-pkg://fuchsia.com/start-storage-benchmark#meta/start-storage-benchmark.cm';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
 
@@ -48,26 +47,25 @@ Future<void> runOdu(
   expect(fileSize % ioSize, equals(0));
   final operationCount = fileSize ~/ ioSize;
   const mountPath = '/benchmark';
-  final result = await helper.component.launch(_launcherUrl, [
-    '--filesystem=$filesystem',
-    '--mount-path=$mountPath',
-    '--benchmark-url=$_oduUrl',
-    ...extraLauncherArgs,
-    '--',
-    '--target=$mountPath/file',
-    '--target_length=$fileSize',
-    '--operations=$operation',
-    '--max_io_count=$operationCount',
-    '--block_size=$ioSize',
-    '--max_io_size=$ioSize',
-    '--sequential=$sequential',
-    '--log_ftrace=true',
-    '--align=true',
-    '--thread_count=1',
-  ]);
-  if (result != 'Success') {
-    throw Exception('Failed to launch $_launcherUrl.');
-  }
+  await helper.runTestComponentV2WithNoResults(
+      packageName: 'start-storage-benchmark',
+      componentName: 'start-storage-benchmark.cm',
+      commandArgs: [
+        '--filesystem=$filesystem',
+        '--mount-path=$mountPath',
+        ...extraLauncherArgs,
+        '--',
+        '--target=$mountPath/file',
+        '--target_length=$fileSize',
+        '--operations=$operation',
+        '--max_io_count=$operationCount',
+        '--block_size=$ioSize',
+        '--max_io_size=$ioSize',
+        '--sequential=$sequential',
+        '--log_ftrace=true',
+        '--align=true',
+        '--thread_count=1',
+      ].join(' '));
 }
 
 void _addOduTest(String filesystem, List<String> extraLauncherArgs) {

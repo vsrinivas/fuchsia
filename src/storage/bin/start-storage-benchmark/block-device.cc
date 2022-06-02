@@ -10,6 +10,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
@@ -228,7 +229,7 @@ zx::status<std::string> FindFvmBlockDevicePath() {
       return zx::ok(block_device.path());
     }
   }
-  fprintf(stderr, "Failed to find fvm's block device\n");
+  FX_LOGS(ERROR) << "Failed to find fvm's block device";
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
@@ -257,6 +258,8 @@ zx::status<> FormatBlockDevice(const std::string &block_device_path,
         return *std::move(service_or);
       }
     };
+    mkfs_options.component_url = "#meta/fxfs";
+    mkfs_options.component_child_name = "fxfs";
   }
 
   zx::status<> status = zx::make_status(fs_management::Mkfs(
@@ -283,6 +286,8 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
         return *std::move(service_or);
       }
     };
+    mount_options.component_url = "#meta/fxfs";
+    mount_options.component_child_name = "fxfs";
   }
   auto mounted_filesystem = fs_management::Mount(std::move(volume_fd), nullptr, format,
                                                  mount_options, fs_management::LaunchStdioAsync);

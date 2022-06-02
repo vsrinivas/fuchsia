@@ -5,53 +5,79 @@
 import("//build/components.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_staticlib.gni")
+
+odu_sources = [
+  "src/args.rs",
+  "src/common_operations.rs",
+  "src/file_target.rs",
+  "src/generator.rs",
+  "src/io_header.rs",
+  "src/io_packet.rs",
+  "src/issuer.rs",
+  "src/lib.rs",
+  "src/log.rs",
+  "src/operations.rs",
+  "src/random_io_generator.rs",
+  "src/sequential_io_generator.rs",
+  "src/target.rs",
+  "src/verifier.rs",
+]
+
+odu_deps = [
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:bincode",
+  "//third_party/rust_crates:clap",
+  "//third_party/rust_crates:crc",
+  "//third_party/rust_crates:libc",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:rand",
+  "//third_party/rust_crates:rand_xorshift",
+  "//third_party/rust_crates:serde",
+  "//third_party/rust_crates:serde_json",
+  "//third_party/rust_crates:thiserror",
+]
+
+if (is_fuchsia) {
+  odu_sources += [ "src/fuchsia_utils.rs" ]
+  odu_deps += [
+    "//src/lib/cstr",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
+  ]
+} else {
+  odu_sources += [ "src/not_fuchsia_utils.rs" ]
+}
+
+odu_version = "0.1.0"
+
+rustc_library("lib") {
+  name = "odu"
+  version = odu_version
+  with_unit_tests = true
+
+  sources = odu_sources
+  deps = odu_deps
+}
+
+# The static library can be imported into C++.
+rustc_staticlib("libodu") {
+  name = "odu"
+  version = odu_version
+
+  sources = odu_sources
+  deps = odu_deps
+}
 
 rustc_binary("bin") {
   name = "odu"
   version = "0.1.0"
-  with_unit_tests = true
-  edition = "2018"
 
   deps = [
+    ":lib",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:bincode",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:crc",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rand_xorshift",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
   ]
-
-  sources = [
-    "src/args.rs",
-    "src/common_operations.rs",
-    "src/file_target.rs",
-    "src/generator.rs",
-    "src/io_header.rs",
-    "src/io_packet.rs",
-    "src/issuer.rs",
-    "src/log.rs",
-    "src/main.rs",
-    "src/operations.rs",
-    "src/random_io_generator.rs",
-    "src/sequential_io_generator.rs",
-    "src/target.rs",
-    "src/verifier.rs",
-  ]
-  if (is_fuchsia) {
-    sources += [ "src/fuchsia_utils.rs" ]
-    deps += [
-      "//src/lib/cstr",
-      "//src/lib/trace/rust:trace",
-      "//src/lib/trace/rust:trace-provider",
-    ]
-  } else {
-    sources += [ "src/not_fuchsia_utils.rs" ]
-  }
+  sources = [ "src/main.rs" ]
 }
 
 fuchsia_shell_package("odu") {
@@ -60,8 +86,8 @@ fuchsia_shell_package("odu") {
 }
 
 fuchsia_unittest_package("odu_tests") {
-  manifest = "meta/odu_bin_test.cml"
-  deps = [ ":bin_test" ]
+  manifest = "meta/odu_lib_test.cml"
+  deps = [ ":lib_test" ]
 }
 
 install_host_tools("odu_host") {
@@ -72,7 +98,7 @@ install_host_tools("odu_host") {
 group("tests") {
   testonly = true
   deps = [
-    ":bin_test($host_toolchain)",
+    ":lib_test($host_toolchain)",
     ":odu_tests",
   ]
 }

@@ -4,12 +4,10 @@
 
 #include "src/storage/bin/start-storage-benchmark/command-line-options.h"
 
-#include <lib/cmdline/args_parser.h>
-#include <lib/cmdline/status.h>
 #include <lib/fitx/result.h>
 #include <zircon/assert.h>
 
-#include <istream>
+#include <sstream>
 
 namespace storage_benchmark {
 namespace {
@@ -18,91 +16,75 @@ constexpr const char kUsageInto[] =
     R"(Tool for launching filesystems and benchmarking them.
 
 Typical usage:
-    run fuchsia-pkg://fuchsia.com/start-storage-benchmark#meta/start-storage-benchmark.cmx \
-    --filesystem=memfs --mount-path=/benchmark \
-    --benchmark-url=fuchsia-pkg://fuchsia.com/odu#meta/odu.cmx \
-    -- --target=/benchmark/file
+    run-test-suite \
+        fuchsia-pkg://fuchsia.com/start-storage-benchmark#meta/start-storage-benchmark.cm \
+        -- --filesystem=memfs --mount-path=/benchmark \
+        -- --target=/benchmark/file
 
 Arguments appearing after `--` will be forwarded to the benchmark.
 
 Options:
-
+    --filesystem=minfs|fxfs|f2fs|memfs
+         [required] Filesystem to benchmark against
+    --partition-size=<bytes>
+        Size of the partition in bytes to create for the filesystem in fvm.
+        If not set then the filesystem will be given a single fvm slice.
+        If the filesystem is fvm-aware then it can allocate more slices from fvm on its own.
+    --zxcrypt
+        Places the filesystem on top of zxcrypt. Not compatible with memfs.
+    --mount-path=<path>
+        [required] The path to mount the filesystem at in the benchmark's namespace.
 )";
 
-constexpr const char kFilesystemHelp[] = R"(  --filesystem=minfs|fxfs|f2fs
-      [Required] Filesystem to benchmark against.)";
-
-constexpr const char kPartitionSizeHelp[] = R"(  --partition-size=<bytes>
-      Size of the partition in bytes to create for the filesystem in fvm.
-      If not set then the filesystem will be given a single fvm slice.
-      If the filesystem is fvm-aware then it can allocate more slices from fvm on its own.)";
-
-constexpr const char kZxcryptHelp[] = R"(  --zxcrypt
-      Places the filesystem on top of zxcrypt. Not compatible with memfs.)";
-
-constexpr const char kBenchmarkUrlHelp[] = R"(  --benchmark-url=<fuchsia component url>
-      [Required] Component url of the benchmark to run.)";
-
-constexpr const char kMountPathHelp[] = R"(  --mount-path=<path>
-      [Required] The path to mount the filesystem at in the benchmark's namespace.)";
-
-CommandLineStatus CommandLineError(const cmdline::ArgsParser<CommandLineOptions> &parser,
-                                   std::string_view error_msg) {
+CommandLineStatus CommandLineError(std::string_view error_msg) {
   std::ostringstream stream;
   stream << error_msg;
   stream << std::endl;
   stream << kUsageInto;
-  stream << parser.GetHelp();
   return fitx::error(stream.str());
 }
 
 }  // namespace
 
-std::istream &operator>>(std::istream &is, FilesystemOption &filesystem) {
-  std::string name;
-  if (!(is >> name)) {
-    return is;
-  }
-  if (name == "minfs") {
-    filesystem = FilesystemOption::kMinfs;
-  } else if (name == "fxfs") {
-    filesystem = FilesystemOption::kFxfs;
-  } else if (name == "f2fs") {
-    filesystem = FilesystemOption::kF2fs;
-  } else if (name == "memfs") {
-    filesystem = FilesystemOption::kMemfs;
-  } else {
-    is.setstate(std::ios::failbit);
-  }
-  return is;
-}
-
-CommandLineStatus ParseCommandLine(int argc, const char *const argv[]) {
-  cmdline::ArgsParser<CommandLineOptions> parser;
-  parser.AddSwitch("filesystem", 0, kFilesystemHelp, &CommandLineOptions::filesystem);
-  parser.AddSwitch("partition-size", 0, kPartitionSizeHelp, &CommandLineOptions::partition_size);
-  parser.AddSwitch("zxcrypt", 0, kZxcryptHelp, &CommandLineOptions::zxcrypt);
-  parser.AddSwitch("benchmark-url", 0, kBenchmarkUrlHelp, &CommandLineOptions::benchmark_url);
-  parser.AddSwitch("mount-path", 0, kMountPathHelp, &CommandLineOptions::mount_path);
-
+CommandLineStatus ParseCommandLine(const fxl::CommandLine& command_line) {
   CommandLineOptions options;
-  std::vector<std::string> benchmark_options;
-  if (auto result = parser.Parse(argc, argv, &options, &benchmark_options); result.has_error()) {
-    return CommandLineError(parser, result.error_message());
+  std::string opt;
+  if (command_line.GetOptionValue("filesystem", &opt)) {
+    if (opt == "minfs") {
+      options.filesystem = FilesystemOption::kMinfs;
+    } else if (opt == "fxfs") {
+      options.filesystem = FilesystemOption::kFxfs;
+    } else if (opt == "f2fs") {
+      options.filesystem = FilesystemOption::kF2fs;
+    } else if (opt == "memfs") {
+      options.filesystem = FilesystemOption::kMemfs;
+    }
   }
+
+  if (command_line.GetOptionValue("partition-size", &opt)) {
+    options.partition_size = strtoull(opt.c_str(), nullptr, 0);
+  }
+
+  if (command_line.HasOption("zxcrypt")) {
+    options.zxcrypt = true;
+  }
+
+  if (command_line.GetOptionValue("mount-path", &opt)) {
+    options.mount_path = opt;
+  }
+
+  options.benchmark_options = command_line.positional_args();
+
   if (options.filesystem == FilesystemOption::kUnset) {
-    return CommandLineError(parser, "--filesystem must be set.");
-  }
-  if (options.benchmark_url.empty()) {
-    return CommandLineError(parser, "--benchmark-url must be set.");
+    return CommandLineError("--filesystem must be set.");
   }
   if (options.mount_path.empty()) {
-    return CommandLineError(parser, "--mount-path must be set.");
+    return CommandLineError("--mount-path must be set.");
   }
   if (options.filesystem == FilesystemOption::kMemfs && options.zxcrypt) {
-    return CommandLineError(parser, "memfs cannot be started on zxcrypt.");
+    return CommandLineError("memfs cannot be started on zxcrypt.");
   }
-  options.benchmark_options = benchmark_options;
+
   return fitx::ok(options);
 }
 
