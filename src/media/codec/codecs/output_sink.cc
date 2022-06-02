@@ -4,6 +4,8 @@
 
 #include "output_sink.h"
 
+#include <limits>
+
 OutputSink::OutputSink(Sender sender, thrd_t writer_thread)
     : sender_(std::move(sender)), writer_thread_(writer_thread) {
   ZX_DEBUG_ASSERT(sender_);
@@ -59,7 +61,12 @@ OutputSink::Status OutputSink::NextOutputBlock(size_t write_size,
     return kUserError;
   }
 
-  current_packet_->SetValidLengthBytes(current_packet_->valid_length_bytes() + bytes_written);
+  if (bytes_written > std::numeric_limits<uint32_t>::max()) {
+    return kUserError;
+  }
+
+  current_packet_->SetValidLengthBytes(current_packet_->valid_length_bytes() +
+                                       static_cast<uint32_t>(bytes_written));
   current_packet_->SetKeyFrame(key_frame);
   return kOk;
 }

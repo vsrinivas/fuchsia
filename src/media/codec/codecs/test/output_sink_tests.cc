@@ -74,7 +74,7 @@ TEST(OutputSink, Basic) {
             EXPECT_NE(output_block.buffer, nullptr);
             EXPECT_EQ(output_block.len, write_size);
             for (size_t i = 0; i < write_size; ++i) {
-              output_block.data[i] = (total_written + i) % 256;
+              output_block.data[i] = static_cast<uint8_t>((total_written + i) % 256);
             }
             total_written += write_size;
             return {

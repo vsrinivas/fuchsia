@@ -4,6 +4,8 @@
 
 #include "codec_adapter_ffmpeg_decoder.h"
 
+#include <limits>
+
 extern "C" {
 #include "libavutil/imgutils.h"
 }
@@ -208,13 +210,20 @@ void CodecAdapterFfmpegDecoder::DecodeFrames() {
       return;
     }
     auto output_packet = *maybe_output_packet;
+    auto release_buffer =
+        fit::defer([this, &output_packet]() { free_output_packets_.Push(output_packet); });
 
     auto buffer_alloc = output_buffer_pool_.FindBufferByBase(frame->data[0]);
     ZX_ASSERT(buffer_alloc);
 
+    if (buffer_alloc->bytes_used > std::numeric_limits<uint32_t>::max()) {
+      events_->onCoreCodecFailCodec("Could not represent bytes_used as uint32_t");
+      return;
+    }
+
     output_packet->SetBuffer(buffer_alloc->buffer);
     output_packet->SetStartOffset(0);
-    output_packet->SetValidLengthBytes(buffer_alloc->bytes_used);
+    output_packet->SetValidLengthBytes(static_cast<uint32_t>(buffer_alloc->bytes_used));
     output_packet->SetTimstampIsh(frame->pts);
 
     {
@@ -222,6 +231,8 @@ void CodecAdapterFfmpegDecoder::DecodeFrames() {
       ZX_DEBUG_ASSERT(in_use_by_client_.find(output_packet) == in_use_by_client_.end());
       in_use_by_client_.emplace(output_packet, std::move(frame));
     }
+
+    release_buffer.cancel();
 
     events_->onCoreCodecOutputPacket(output_packet,
                                      /*error_detected_before=*/false,

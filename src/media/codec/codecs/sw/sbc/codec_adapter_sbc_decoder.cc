@@ -8,6 +8,7 @@
 #include <lib/trace/event.h>
 
 #include <iomanip>
+#include <limits>
 
 #include "fuchsia/media/cpp/fidl.h"
 #include "lib/media/codec_impl/codec_port.h"
@@ -251,7 +252,12 @@ CodecAdapterSbcDecoder::InputLoopStatus CodecAdapterSbcDecoder::DecodeInput(
     FX_DCHECK(output_buffer_);
     FX_DCHECK(output_packet_);
 
-    uint32_t output_bytes = output_buffer_->size() - output_offset_;
+    if (output_buffer_->size() - output_offset_ > std::numeric_limits<uint32_t>::max()) {
+      FX_LOGS(WARNING) << "Could not represent output_bytes as uint32_t";
+      break;
+    }
+
+    uint32_t output_bytes = static_cast<uint32_t>(output_buffer_->size() - output_offset_);
 
     OI_STATUS status =
         OI_CODEC_SBC_DecodeFrame(&context_->context, const_cast<const OI_BYTE**>(&input_data),
@@ -303,8 +309,13 @@ void CodecAdapterSbcDecoder::SendQueuedOutput() {
 
   TRACE_INSTANT("codec_runner", "Media:PacketSent", TRACE_SCOPE_THREAD);
 
+  if (output_offset_ > std::numeric_limits<uint32_t>::max()) {
+    events_->onCoreCodecFailCodec("Could not represent output_offset_ as uint32_t");
+    return;
+  }
+
   output_packet_->SetBuffer(output_buffer_);
-  output_packet_->SetValidLengthBytes(output_offset_);
+  output_packet_->SetValidLengthBytes(static_cast<uint32_t>(output_offset_));
   output_packet_->SetStartOffset(0);
 
   {

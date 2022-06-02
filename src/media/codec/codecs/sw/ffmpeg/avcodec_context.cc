@@ -6,6 +6,7 @@
 
 #include <lib/media/codec_impl/codec_buffer.h>
 
+#include <limits>
 #include <map>
 #include <string>
 
@@ -60,9 +61,10 @@ std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
     const std::vector<uint8_t>& oob = format_details.oob_bytes();
     auto* extradata = reinterpret_cast<uint8_t*>(av_malloc(oob.size()));
     ZX_ASSERT(extradata);
+    ZX_ASSERT(oob.size() <= std::numeric_limits<int>::max());
     std::memcpy(extradata, oob.data(), oob.size());
     decoder->avcodec_context_->extradata = extradata;
-    decoder->avcodec_context_->extradata_size = oob.size();
+    decoder->avcodec_context_->extradata_size = static_cast<int>(oob.size());
   }
 
   int open_error = avcodec_open2(decoder->avcodec_context_.get(), codec, nullptr);
@@ -143,8 +145,10 @@ AvCodecContext::FrameBufferRequest AvCodecContext::frame_buffer_request(AVFrame*
   uncompressed_format.primary_line_stride_bytes = linesizes[0];
   uncompressed_format.primary_width_pixels = frame->width;
   uncompressed_format.primary_height_pixels = frame->height;
-  uncompressed_format.primary_display_width_pixels = frame->width - frame->crop_right;
-  uncompressed_format.primary_display_height_pixels = frame->height - frame->crop_bottom;
+  uncompressed_format.primary_display_width_pixels =
+      static_cast<uint32_t>(frame->width - frame->crop_right);
+  uncompressed_format.primary_display_height_pixels =
+      static_cast<uint32_t>(frame->height - frame->crop_bottom);
 
   // TODO(dustingreen): remove this field from the VideoUncompressedFormat or
   // specify separately for primary / secondary.
@@ -165,8 +169,10 @@ AvCodecContext::FrameBufferRequest AvCodecContext::frame_buffer_request(AVFrame*
   uncompressed_format.image_format.coded_width = frame->width;
   uncompressed_format.image_format.coded_height = frame->height;
   uncompressed_format.image_format.bytes_per_row = linesizes[0];
-  uncompressed_format.image_format.display_width = frame->width - frame->crop_right;
-  uncompressed_format.image_format.display_height = frame->height - frame->crop_bottom;
+  uncompressed_format.image_format.display_width =
+      static_cast<uint32_t>(frame->width - frame->crop_right);
+  uncompressed_format.image_format.display_height =
+      static_cast<uint32_t>(frame->height - frame->crop_bottom);
   uncompressed_format.image_format.layers = 1;
   uncompressed_format.image_format.color_space.type = fuchsia::sysmem::ColorSpaceType::REC709;
 

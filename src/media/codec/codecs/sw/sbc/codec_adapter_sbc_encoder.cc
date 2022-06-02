@@ -7,6 +7,8 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/trace/event.h>
 
+#include <limits>
+
 #include "codec_adapter_sw.h"
 #include "lib/media/codec_impl/codec_port.h"
 
@@ -120,9 +122,10 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
     per_packet_buffer_bytes_max = kInputPerPacketBufferBytesMax;
   } else {
     ZX_ASSERT(context_.has_value());
-
+    ZX_ASSERT(context_->sbc_frame_length() <= std::numeric_limits<uint32_t>::max());
     ZX_DEBUG_ASSERT(port == kOutputPort);
-    per_packet_buffer_bytes_min = context_->sbc_frame_length();
+
+    per_packet_buffer_bytes_min = static_cast<uint32_t>(context_->sbc_frame_length());
     // At least for now, don't cap the per-packet buffer size for output.
     per_packet_buffer_bytes_max = 0xFFFFFFFF;
   }
@@ -230,7 +233,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
   // The encoder will suggest a value for the bitpool, but since the client
   // provides that we ignore the suggestion and set it after
   // SBC_Encoder_Init.
-  params.s16BitPool = settings.bit_pool;
+  params.s16BitPool = static_cast<int16_t>(settings.bit_pool);
 
   const uint64_t bytes_per_second =
       input_format.frames_per_second * sizeof(uint16_t) * input_format.channel_map.size();
@@ -275,7 +278,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
           FX_DCHECK(output_packet_ != nullptr);
 
           output_packet_->SetBuffer(output_buffer_);
-          output_packet_->SetValidLengthBytes(output_offset_);
+          output_packet_->SetValidLengthBytes(static_cast<uint32_t>(output_offset_));
           output_packet_->SetStartOffset(0);
 
           SendOutputPacket(output_packet_);

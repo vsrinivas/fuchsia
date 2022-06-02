@@ -7,10 +7,14 @@
 
 #include <optional>
 
+// Ignore warnings about conversions in libav
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconversion"
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavutil/imgutils.h"
 }
+#pragma clang diagnostic pop
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/media/codec_impl/codec_packet.h>

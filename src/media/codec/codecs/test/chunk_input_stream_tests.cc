@@ -34,14 +34,14 @@ TEST(ChunkInputStream, ChunkBoundaries) {
     // Initialize buffer with bytes counting from 0 to (>=99).
     const uint8_t* end = buffer->base() + buffer->size();
     for (uint8_t* pos = buffer->base(); pos < end; ++pos) {
-      *pos = pos - buffer->base();
+      *pos = static_cast<uint8_t>(pos - buffer->base());
     }
 
     // Assign packets random lengths until the buffer is accounted for.
-    std::vector<std::pair<size_t, size_t>> packet_lengths_and_offsets;
+    std::vector<std::pair<uint32_t, uint32_t>> packet_lengths_and_offsets;
     uint8_t* pos = buffer->base();
     while (pos < end) {
-      size_t packet_length = std::min((rand() % 10) + 1, static_cast<int>(end - pos));
+      uint32_t packet_length = std::min((rand() % 10) + 1, static_cast<int>(end - pos));
       packet_lengths_and_offsets.push_back({packet_length, pos - buffer->base()});
       pos += packet_length;
     }
@@ -391,12 +391,12 @@ TEST(ChunkInputStream, ReportsErrorWhenMissingTimebase) {
   // Configure two packets, the first length 4. The second will contain a
   // timestamp. Since the chunk size is 5, the second packet will need its
   // timestamp extrapolated 1 byte.
-  packets.ptr(0)->SetValidLengthBytes(buffers.ptr(0)->size());
+  packets.ptr(0)->SetValidLengthBytes(static_cast<uint32_t>(buffers.ptr(0)->size()));
   packets.ptr(0)->SetStartOffset(0);
   packets.ptr(0)->SetBuffer(buffers.ptr(0));
 
   const uint64_t kInputTimestamp = 30;
-  packets.ptr(1)->SetValidLengthBytes(buffers.ptr(1)->size());
+  packets.ptr(1)->SetValidLengthBytes(static_cast<uint32_t>(buffers.ptr(1)->size()));
   packets.ptr(1)->SetBuffer(buffers.ptr(1));
   packets.ptr(1)->SetStartOffset(0);
   packets.ptr(1)->SetTimstampIsh(kInputTimestamp);

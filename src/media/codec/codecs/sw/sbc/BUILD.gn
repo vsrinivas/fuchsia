@@ -33,7 +33,4 @@ executable("codec_runner_sw_sbc") {
     "//third_party/android/platform/system/bt/embdrv/sbc:sbc_encoder",
     "//zircon/system/ulib/trace",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
