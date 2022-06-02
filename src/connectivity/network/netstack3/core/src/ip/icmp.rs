@@ -4,7 +4,7 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
-use core::{convert::TryInto as _, fmt::Debug};
+use core::{convert::TryInto as _, fmt::Debug, num::NonZeroU8};
 
 use log::{debug, error, trace};
 use net_types::{
@@ -13,10 +13,16 @@ use net_types::{
     },
     LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, Witness,
 };
-use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
+use packet::{
+    BufferMut, EmptyBuf, InnerPacketBuilder as _, ParseBuffer, Serializer, TruncateDirection,
+    TruncatingSerializer,
+};
 use packet_formats::{
     icmp::{
-        ndp::{options::NdpOption, NdpPacket, NonZeroNdpLifetime},
+        ndp::{
+            options::{NdpOption, NdpOptionBuilder},
+            NdpPacket, NeighborAdvertisement, NonZeroNdpLifetime, OptionSequenceBuilder,
+        },
         peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage, IcmpMessageType,
         IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
         IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
@@ -50,8 +56,8 @@ use crate::{
             BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSocket,
             IpSocketHandler,
         },
-        BufferIpTransportContext, IpDeviceIdContext, IpExt, IpTransportContext,
-        TransportReceiveError, IPV6_DEFAULT_SUBNET,
+        BufferIpLayerHandler, BufferIpTransportContext, IpDeviceIdContext, IpExt,
+        IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap},
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
@@ -1158,17 +1164,71 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
     }
 }
 
+fn send_neighbor_advertisement<SC: Ipv6DeviceHandler + BufferIpLayerHandler<Ipv6, EmptyBuf>, C>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    device_id: SC::DeviceId,
+    solicited: bool,
+    device_addr: UnicastAddr<Ipv6Addr>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
+) {
+    debug!("send_neighbor_advertisement from {:?} to {:?}", device_addr, dst_ip);
+    // We currently only allow the destination address to be:
+    // 1) a unicast address.
+    // 2) a multicast destination but the message should be an unsolicited
+    //    neighbor advertisement.
+    // NOTE: this assertion may need change if more messages are to be allowed
+    // in the future.
+    debug_assert!(dst_ip.is_valid_unicast() || (!solicited && dst_ip.is_multicast()));
+
+    // We must call into the higher level send_ip_packet_from_device function
+    // because it is not guaranteed that we actually know the link-layer
+    // address of the destination IP. Typically, the solicitation request will
+    // carry that information, but it is not necessary. So it is perfectly valid
+    // that trying to send this advertisement will end up triggering a neighbor
+    // solicitation to be sent.
+    let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
+    let _ = BufferIpLayerHandler::<Ipv6, _>::send_ip_packet_from_device(
+        sync_ctx,
+        SendIpPacketMeta {
+            device: device_id,
+            src_ip: Some(device_addr.into_specified()),
+            dst_ip,
+            next_hop: dst_ip,
+            ttl: NonZeroU8::new(255),
+            proto: Ipv6Proto::Icmpv6,
+            mtu: None,
+        },
+        OptionSequenceBuilder::new(
+            src_ll.as_ref().map(AsRef::as_ref).map(NdpOptionBuilder::TargetLinkLayerAddress).iter(),
+        )
+        .into_serializer()
+        .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+            device_addr.get(),
+            dst_ip.get(),
+            IcmpUnusedCode,
+            NeighborAdvertisement::new(
+                sync_ctx.is_router_device(device_id),
+                solicited,
+                false,
+                device_addr.get(),
+            ),
+        )),
+    );
+}
+
 fn receive_ndp_packet<
     B: ByteSlice,
     SC: InnerIcmpv6Context
         + Ipv6DeviceHandler
         + NdpPacketHandler<<SC as IpDeviceIdContext<Ipv6>>::DeviceId>
         + RouteDiscoveryHandler
-        + SlaacHandler,
+        + SlaacHandler
+        + BufferIpLayerHandler<Ipv6, EmptyBuf>,
     C,
 >(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     device_id: SC::DeviceId,
     src_ip: Ipv6SourceAddr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -1210,22 +1270,37 @@ fn receive_ndp_packet<
                         target_address,
                     ) {
                         Ok(tentative) => {
-                            if tentative {
-                                // Nothing further to do.
-                                return;
+                            if !tentative {
+                                // Address is assigned to us to we let the
+                                // remote node performing DAD that we own the
+                                // address.
+                                send_neighbor_advertisement(
+                                    sync_ctx,
+                                    ctx,
+                                    device_id,
+                                    false,
+                                    target_address,
+                                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
+                                );
                             }
+
+                            // Nothing further to do in response to DAD
+                            // messages.
                         }
                         Err(NotFoundError) => {
                             // Nothing further to do for unassigned target
                             // addresses.
-                            return;
                         }
                     }
-                }
-                Ipv6SourceAddr::Unicast(_) => {}
-            }
 
-            // TODO(https://fxbug.dev/99830): Move NUD to IP.
+                    return;
+                }
+                Ipv6SourceAddr::Unicast(_) => {
+                    // Neighbor is performing NUD.
+                    //
+                    // TODO(https://fxbug.dev/99830): Move NUD to IP.
+                }
+            }
         }
         NdpPacket::NeighborAdvertisement(ref p) => {
             // TODO(https://fxbug.dev/97311): Invalidate discovered routers when
@@ -1406,6 +1481,10 @@ fn receive_ndp_packet<
         }
     }
 
+    // Remove this call once NUD and parameter discovery is moved to IP.
+    //
+    // TODO(https://fxbug.dev/99830): Move NUD to IP.
+    // TODO(https://fxbug.dev/101601): Move parameter discovery to IP.
     sync_ctx.receive_ndp_packet(device_id, src_ip, dst_ip, packet)
 }
 
@@ -1418,6 +1497,7 @@ impl<
             + MldPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
             + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
             + RouteDiscoveryHandler
+            + BufferIpLayerHandler<Ipv6, EmptyBuf>
             + SlaacHandler,
     > BufferIpTransportContext<Ipv6, B, C> for IcmpIpTransportContext
 {
@@ -2756,6 +2836,7 @@ mod tests {
                 route_discovery::Ipv6DiscoveredRoute,
                 set_routing_enabled,
                 state::{DelIpv6AddrReason, IpDeviceStateIpExt, SlaacConfig},
+                IpDeviceHandler,
             },
             gmp::mld::MldPacketHandler,
             path_mtu::testutil::DummyPmtuState,
@@ -3863,7 +3944,17 @@ mod tests {
         }
     }
 
+    impl IpDeviceHandler<Ipv6> for Dummyv6Ctx {
+        fn is_router_device(&self, _device_id: Self::DeviceId) -> bool {
+            unimplemented!()
+        }
+    }
+
     impl Ipv6DeviceHandler for Dummyv6Ctx {
+        fn get_link_layer_addr_bytes(&self, _device_id: Self::DeviceId) -> Option<&[u8]> {
+            unimplemented!()
+        }
+
         fn set_discovered_retrans_timer(
             &mut self,
             _device_id: Self::DeviceId,
@@ -3877,6 +3968,16 @@ mod tests {
             _device_id: Self::DeviceId,
             _addr: UnicastAddr<Ipv6Addr>,
         ) -> Result<bool, NotFoundError> {
+            unimplemented!()
+        }
+    }
+
+    impl<B: BufferMut> BufferIpLayerHandler<Ipv6, B> for Dummyv6Ctx {
+        fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
+            &mut self,
+            _meta: SendIpPacketMeta<Ipv6, Self::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
+            _body: S,
+        ) -> Result<(), S> {
             unimplemented!()
         }
     }

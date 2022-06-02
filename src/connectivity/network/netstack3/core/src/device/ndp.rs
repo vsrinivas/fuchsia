@@ -1066,6 +1066,8 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C, SC: NdpContext<D, C>, B>(
 
                 // Finally we ought to reply to the Neighbor Solicitation with a
                 // Neighbor Advertisement.
+                //
+                // TODO(https://fxbug.dev/99830): Move NUD to IP.
                 send_neighbor_advertisement(
                     sync_ctx,
                     ctx,
@@ -1075,18 +1077,9 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C, SC: NdpContext<D, C>, B>(
                     src_ip.into_specified(),
                 );
             } else {
-                trace!("receive_ndp_packet: Received NDP NS: sending NA to all nodes multicast");
-
-                // Send out Unsolicited Advertisement in response to neighbor
-                // who's performing DAD, as described in RFC 4861 and 4862.
-                send_neighbor_advertisement(
-                    sync_ctx,
-                    ctx,
-                    device_id,
-                    false,
-                    target_address.into_specified(),
-                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
-                )
+                // TODO(https://fxbub.dev/99830): Move all of NDP handling
+                // to IP.
+                unreachable!("Handled by caller")
             }
         }
         NdpPacket::NeighborAdvertisement(p) => {
@@ -1112,6 +1105,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C, SC: NdpContext<D, C>, B>(
 
             let ndp_state = sync_ctx.get_state_mut_with(device_id);
 
+            // TODO(https://fxbug.dev/99830): Move NUD to IP.
             let neighbor_state = if let Some(state) =
                 ndp_state.neighbors.get_neighbor_state_mut(&src_ip)
             {

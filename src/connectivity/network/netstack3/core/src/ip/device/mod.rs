@@ -308,8 +308,25 @@ pub(crate) trait Ipv6DeviceContext: IpDeviceContext<Ipv6> {
     fn get_eui64_iid(&self, device_id: Self::DeviceId) -> Option<[u8; 8]>;
 }
 
+/// An implementation of an IP device.
+pub(crate) trait IpDeviceHandler<I: Ip>: IpDeviceIdContext<I> {
+    fn is_router_device(&self, device_id: Self::DeviceId) -> bool;
+}
+
+impl<I: IpDeviceIpExt<SC::Instant, SC::DeviceId>, SC: IpDeviceContext<I>> IpDeviceHandler<I>
+    for SC
+{
+    fn is_router_device(&self, device_id: Self::DeviceId) -> bool {
+        AsRef::<IpDeviceState<_, _>>::as_ref(self.get_ip_device_state(device_id)).routing_enabled
+    }
+}
+
 /// An implementation of an IPv6 device.
-pub(crate) trait Ipv6DeviceHandler: IpDeviceIdContext<Ipv6> {
+pub(crate) trait Ipv6DeviceHandler: IpDeviceHandler<Ipv6> {
+    /// Gets the device's link-layer address bytes, if the device supports
+    /// link-layer addressing.
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
+
     /// Sets the discovered retransmit timer for the device.
     fn set_discovered_retrans_timer(
         &mut self,
@@ -330,6 +347,10 @@ pub(crate) trait Ipv6DeviceHandler: IpDeviceIdContext<Ipv6> {
 }
 
 impl<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler + SlaacHandler> Ipv6DeviceHandler for C {
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
+        Ipv6DeviceContext::get_link_layer_addr_bytes(self, device_id)
+    }
+
     fn set_discovered_retrans_timer(
         &mut self,
         device_id: Self::DeviceId,

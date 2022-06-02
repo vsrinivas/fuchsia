@@ -2110,6 +2110,26 @@ impl<I: packet_formats::ip::IpExt, D> From<SendIpPacketMeta<I, D, SpecifiedAddr<
     }
 }
 
+trait BufferIpLayerHandler<I: Ip, B: BufferMut>: IpDeviceIdContext<I> {
+    fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: SendIpPacketMeta<I, Self::DeviceId, Option<SpecifiedAddr<I::Addr>>>,
+        body: S,
+    ) -> Result<(), S>;
+}
+
+impl<B: BufferMut, C: BufferIpDeviceContext<Ipv6, B> + IpStateContext<Ipv6>>
+    BufferIpLayerHandler<Ipv6, B> for C
+{
+    fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: SendIpPacketMeta<Ipv6, Self::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ipv6_packet_from_device(self, &mut (), meta, body)
+    }
+}
+
 /// Sends an IPv4 packet with the specified metadata.
 ///
 /// # Panics
