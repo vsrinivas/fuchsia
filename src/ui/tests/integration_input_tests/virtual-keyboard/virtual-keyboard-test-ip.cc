@@ -5,10 +5,11 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/buildinfo/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
+#include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
@@ -16,29 +17,16 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
-#include <fuchsia/ui/accessibility/view/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/observation/test/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
-#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/ui/scenic/cpp/resources.h>
-#include <lib/ui/scenic/cpp/session.h>
-#include <lib/ui/scenic/cpp/view_ref_pair.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 #include <zircon/utc.h>
@@ -50,15 +38,20 @@
 #include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <test/virtualkeyboard/cpp/fidl.h>
 
+#include "src/ui/input/testing/fake_input_report_device/fake.h"
+#include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+
 // This test exercises the virtual keyboard visibility interactions between Chromium and Root
 // Presenter. It is a multi-component test, and carefully avoids sleeping or polling for component
 // coordination.
-// - It runs real Root Presenter and Scenic components.
+// - It runs real Root Presenter, Input Pipeline and Scenic components.
 // - It uses a fake display controller; the physical device is unused.
 //
 // Components involved
 // - This test program
-// - Root Presenter
+// - Root Presenter (serves virtual keyboard)
+// - Input Pipeline (serves touch input)
 // - Scenic
 // - WebEngine (built from Chromium)
 //
@@ -79,9 +72,8 @@ using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
 using component_testing::Protocol;
-using component_testing::RealmRoot;
+using component_testing::Realm;
 using component_testing::Route;
-using RealmBuilder = component_testing::RealmBuilder;
 
 // Alias for Component child name as provided to Realm Builder.
 using ChildName = std::string;
@@ -89,64 +81,11 @@ using ChildName = std::string;
 // Alias for Component Legacy URL as provided to Realm Builder.
 using LegacyUrl = std::string;
 
-// Max timeout in failure cases.
-// Set this as low as you can that still works across all test platforms.
-constexpr zx::duration kTimeout = zx::min(5);
-
-constexpr auto kRootPresenter = "root_presenter";
-constexpr auto kScenicTestRealm = "scenic-test-realm";
 constexpr auto kResponseListener = "response_listener";
-
-enum class TapLocation { kTopLeft, kTopRight };
 
 // The type used to measure UTC time. The integer value here does not matter so
 // long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
 using time_utc = zx::basic_time<1>;
-
-void AddBaseComponents(RealmBuilder* realm_builder) {
-  realm_builder->AddChild(kRootPresenter, "#meta/root_presenter.cm");
-  realm_builder->AddChild(kScenicTestRealm, "#meta/scenic_only.cm");
-}
-
-void AddBaseRoutes(RealmBuilder* realm_builder) {
-  // Capabilities routed from test_manager to components in realm.
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
-                             Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                             Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                             Protocol{fuchsia::sysmem::Allocator::Name_},
-                             Protocol{fuchsia::tracing::provider::Registry::Name_}},
-            .source = ParentRef(),
-            .targets = {ChildRef{kScenicTestRealm}}});
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_},
-                             Protocol{fuchsia::logger::LogSink::Name_}},
-            .source = ParentRef(),
-            .targets = {ChildRef{kRootPresenter}}});
-
-  // Capabilities routed between siblings in realm.
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                             Protocol{fuchsia::ui::pointerinjector::Registry::Name_},
-                             Protocol{fuchsia::ui::focus::FocusChainListenerRegistry::Name_}},
-            .source = ChildRef{kScenicTestRealm},
-            .targets = {ChildRef{kRootPresenter}}});
-
-  // Capabilities routed up to test driver (this component).
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::input::virtualkeyboard::Manager::Name_},
-                             Protocol{fuchsia::input::virtualkeyboard::ControllerCreator::Name_},
-                             Protocol{fuchsia::ui::input::InputDeviceRegistry::Name_},
-                             Protocol{fuchsia::ui::accessibility::view::Registry::Name_},
-                             Protocol{fuchsia::ui::policy::Presenter::Name_}},
-            .source = ChildRef{kRootPresenter},
-            .targets = {ParentRef()}});
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                             Protocol{fuchsia::ui::observation::test::Registry::Name_}},
-            .source = ChildRef{kScenicTestRealm},
-            .targets = {ParentRef()}});
-}
 
 // Combines all vectors in `vecs` into one.
 template <typename T>
@@ -156,32 +95,6 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
     result.insert(result.end(), v.begin(), v.end());
   }
   return result;
-}
-
-bool CheckViewExistsInSnapshot(const fuchsia::ui::observation::geometry::ViewTreeSnapshot& snapshot,
-                               zx_koid_t view_ref_koid) {
-  if (!snapshot.has_views()) {
-    return false;
-  }
-
-  auto snapshot_count = std::count_if(
-      snapshot.views().begin(), snapshot.views().end(),
-      [view_ref_koid](const auto& view) { return view.view_ref_koid() == view_ref_koid; });
-
-  return snapshot_count > 0;
-}
-
-zx_koid_t ExtractKoid(const zx::object_base& object) {
-  zx_info_handle_basic_t info{};
-  if (object.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
-    return ZX_KOID_INVALID;  // no info
-  }
-
-  return info.koid;
-}
-
-zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
-  return ExtractKoid(view_ref.reference);
 }
 
 // This component implements the interface for a RealmBuilder
@@ -220,24 +133,33 @@ class InputPositionListenerServer : public InputPositionListener, public LocalCo
 
 class VirtualKeyboardBase : public gtest::RealLoopFixture {
  protected:
-  VirtualKeyboardBase()
-      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())), realm_() {}
+  VirtualKeyboardBase() = default;
 
   ~VirtualKeyboardBase() override {
     FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
   }
 
   void SetUp() override {
-    // Post a "just in case" quit task, if the test hangs.
-    async::PostDelayedTask(
-        dispatcher(),
-        [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
-        kTimeout);
+    FX_LOGS(INFO) << "Setting up test case";
+    ui_testing::UITestManager::Config config;
+    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.use_input = true;
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
+                                    fuchsia::accessibility::semantics::SemanticsManager::Name_,
+                                    fuchsia::ui::input3::Keyboard::Name_,
+                                    fuchsia::ui::input::ImeService::Name_,
+                                    fuchsia::input::virtualkeyboard::Manager::Name_,
+                                    fuchsia::input::virtualkeyboard::ControllerCreator::Name_};
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
+    // Build realm.
+    FX_LOGS(INFO) << "Building realm";
+    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
     BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
 
     // Get the display dimensions
-    scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
+    scenic_ = realm_exposed_services()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
       display_width_ = display_info.width_in_px;
       display_height_ = display_info.height_in_px;
@@ -245,6 +167,8 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
                     << " and display_height = " << *display_height_;
     });
     RunLoopUntil([this] { return display_width_.has_value() && display_height_.has_value(); });
+
+    RegisterInjectionDevice();
   }
 
   // Subclass should implement this method to add components to the test realm
@@ -259,95 +183,85 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
   // next to the base ones added.
   virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
 
-  // This method does NOT block; it only logs when the client view has rendered.
-  void WatchClientRenderStatus(zx_koid_t client_view_ref_koid) {
-    geometry_provider_->Watch([this, client_view_ref_koid](auto response) {
-      if (response.has_updates() && !response.updates().empty() &&
-          CheckViewExistsInSnapshot(response.updates().back(), client_view_ref_koid)) {
-        FX_LOGS(INFO) << "Client view has rendered";
-      } else {
-        WatchClientRenderStatus(client_view_ref_koid);
-      }
+  void RegisterInjectionDevice() {
+    registry_ = realm_exposed_services()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
+    registry_.set_error_handler([](zx_status_t status) {
+      FX_LOGS(ERROR) << "Input device registry error: " << zx_status_get_string(status);
     });
+    // Create a FakeInputDevice
+    fake_input_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
+        input_device_ptr_.NewRequest(), dispatcher());
+
+    // Set descriptor
+    auto device_descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+    auto touch = device_descriptor->mutable_touch()->mutable_input();
+    touch->set_touch_type(fuchsia::input::report::TouchType::TOUCHSCREEN);
+    touch->set_max_contacts(10);
+
+    fuchsia::input::report::Axis x_axis;
+    x_axis.unit.type = fuchsia::input::report::UnitType::NONE;
+    x_axis.unit.exponent = 0;
+    x_axis.range.min = 0;
+    x_axis.range.max = display_width();
+
+    fuchsia::input::report::Axis y_axis;
+    y_axis.unit.type = fuchsia::input::report::UnitType::NONE;
+    y_axis.unit.exponent = 0;
+    y_axis.range.min = 0;
+    y_axis.range.max = display_height();
+
+    fuchsia::input::report::ContactInputDescriptor contact;
+    contact.set_position_x(x_axis);
+    contact.set_position_y(y_axis);
+    contact.set_pressure(x_axis);
+
+    touch->mutable_contacts()->push_back(std::move(contact));
+
+    fake_input_device_->SetDescriptor(std::move(device_descriptor));
+
+    // Register the FakeInputDevice
+    registry_->Register(std::move(input_device_ptr_));
+    FX_LOGS(INFO) << "Registered touchscreen with x touch range = (" << x_axis.range.min << ", "
+                  << x_axis.range.max << ") "
+                  << "and y touch range = (" << y_axis.range.min << ", " << y_axis.range.max
+                  << ").";
   }
 
-  // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
-  // This method should only be invoked if this protocol has been exposed from
-  // the root of the test realm.
-  void LaunchChromium() {
-    // Use |fuchsia.ui.observation.test.Registry| to register the view observer endpoint with
-    // scenic.
-    realm()->Connect<fuchsia::ui::observation::test::Registry>(observer_registry_ptr_.NewRequest());
-    observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider_.NewRequest());
-
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-    auto root_presenter = realm()->Connect<fuchsia::ui::policy::Presenter>();
-    root_presenter->PresentOrReplaceView(std::move(view_holder_token),
-                                         /* presentation */ nullptr);
-
-    auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
-    const auto view_ref_koid = ExtractKoid(view_ref);
-
-    WatchClientRenderStatus(view_ref_koid);
-
-    auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
-    view_provider->CreateViewWithViewRef(std::move(view_token.value), std::move(view_ref_control),
-                                         std::move(view_ref));
-  }
-
-  // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
+  // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
   void InjectInput(int32_t x, int32_t y) {
-    using fuchsia::ui::input::InputReport;
-    // Device parameters
-    auto parameters = std::make_unique<fuchsia::ui::input::TouchscreenDescriptor>();
-    *parameters = {.x = {.range = {.min = 0, .max = static_cast<int32_t>(display_width())}},
-                   .y = {.range = {.min = 0, .max = static_cast<int32_t>(display_height())}},
-                   .max_finger_id = 10};
-    FX_LOGS(INFO) << "Registering touchscreen with x touch range = (" << parameters->x.range.min
-                  << ", " << parameters->x.range.max << ") "
-                  << "and y touch range = (" << parameters->y.range.min << ", "
-                  << parameters->y.range.max << ").";
+    fuchsia::input::report::ContactInputReport contact_input_report;
+    contact_input_report.set_contact_id(1);
+    contact_input_report.set_position_x(x);
+    contact_input_report.set_position_y(y);
 
-    // Register it against Root Presenter.
-    fuchsia::ui::input::DeviceDescriptor device{.touchscreen = std::move(parameters)};
-    auto registry = realm()->Connect<fuchsia::ui::input::InputDeviceRegistry>();
-    fuchsia::ui::input::InputDevicePtr connection;
-    registry->RegisterDevice(std::move(device), connection.NewRequest());
+    fuchsia::input::report::TouchInputReport touch_input_report;
+    auto contacts = touch_input_report.mutable_contacts();
+    contacts->push_back(std::move(contact_input_report));
 
-    {
-      // Inject input report.
-      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
-      *touch = {.touches = {{.finger_id = 1, .x = x, .y = y}}};
-      InputReport report{.event_time = static_cast<uint64_t>(zx::clock::get_monotonic().get()),
-                         .touchscreen = std::move(touch)};
-      connection->DispatchReport(std::move(report));
-      FX_LOGS(INFO) << "Dispatching touch report at (" << x << "," << y << ")";
-    }
+    fuchsia::input::report::InputReport input_report;
+    input_report.set_touch(std::move(touch_input_report));
 
-    {
-      // Inject conclusion (empty) report.
-      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
-      InputReport report{.event_time = static_cast<uint64_t>(zx::clock::get_monotonic().get()),
-                         .touchscreen = std::move(touch)};
-      connection->DispatchReport(std::move(report));
-    }
+    std::vector<fuchsia::input::report::InputReport> input_reports;
+    input_reports.push_back(std::move(input_report));
+
+    fuchsia::input::report::TouchInputReport remove_touch_input_report;
+    fuchsia::input::report::InputReport remove_input_report;
+    remove_input_report.set_touch(std::move(remove_touch_input_report));
+    input_reports.push_back(std::move(remove_input_report));
+    fake_input_device_->SetReports(std::move(input_reports));
 
     ++injection_count_;
     FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
   }
-
-  fuchsia::sys::ComponentControllerPtr& client_component() { return client_component_; }
-  sys::ServiceDirectory& child_services() { return *child_services_; }
-
-  RealmBuilder* builder() { return realm_builder_.get(); }
-  RealmRoot* realm() { return realm_.get(); }
 
   InputPositionListenerServer* response_listener() { return response_listener_.get(); }
 
   // Guaranteed to be initialized after SetUp().
   uint32_t display_width() const { return *display_width_; }
   uint32_t display_height() const { return *display_height_; }
+
+  ui_testing::UITestManager* ui_test_manager() { return ui_test_manager_.get(); }
+  sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
 
  private:
   void BuildRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
@@ -356,38 +270,38 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
     // Key part of service setup: have this test component vend the
     // |ResponseListener| service in the constructed realm.
     response_listener_ = std::make_unique<InputPositionListenerServer>(dispatcher());
-    builder()->AddLocalChild(kResponseListener, response_listener_.get());
-
-    // Add all components shared by each test to the realm.
-    AddBaseComponents(builder());
+    realm_->AddLocalChild(kResponseListener, response_listener_.get());
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
-      builder()->AddLegacyChild(name, component);
+      realm_->AddLegacyChild(name, component);
     }
 
     for (const auto& [name, component] : v2_components) {
-      builder()->AddChild(name, component);
+      realm_->AddChild(name, component);
     }
-
-    // Add the necessary routing for each of the base components added above.
-    AddBaseRoutes(builder());
 
     // Add the necessary routing for each of the extra components added above.
     for (const auto& route : routes) {
-      builder()->AddRoute(route);
+      realm_->AddRoute(route);
     }
 
-    // Finally, build the realm using the provided components and routes.
-    realm_ = std::make_unique<RealmRoot>(builder()->Build());
+    ui_test_manager_->BuildRealm();
+    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
   }
 
-  std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<RealmRoot> realm_;
+  // Configures a RealmBuilder realm and manages scene on behalf of the test
+  // fixture.
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+
+  // Exposed services directory for the realm owned by `ui_test_manager_`.
+  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
+
+  // Configured by the test fixture, and attached as a subrealm to ui test
+  // manager's realm.
+  std::unique_ptr<Realm> realm_;
 
   std::unique_ptr<InputPositionListenerServer> response_listener_;
-
-  std::unique_ptr<scenic::Session> session_;
 
   int injection_count_ = 0;
 
@@ -396,15 +310,9 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
   std::optional<uint32_t> display_width_;
   std::optional<uint32_t> display_height_;
 
-  // Test view and child view's ViewHolder.
-  std::unique_ptr<scenic::ViewHolder> view_holder_;
-  std::unique_ptr<scenic::View> view_;
-
-  fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_ptr_;
-  fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
-
-  fuchsia::sys::ComponentControllerPtr client_component_;
-  std::shared_ptr<sys::ServiceDirectory> child_services_;
+  fuchsia::input::injection::InputDeviceRegistryPtr registry_;
+  std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_input_device_;
+  fuchsia::input::report::InputDevicePtr input_device_ptr_;
 };
 
 class WebEngineTest : public VirtualKeyboardBase {
@@ -418,13 +326,12 @@ class WebEngineTest : public VirtualKeyboardBase {
 
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
+        std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
         std::make_pair(kIntl, kIntlUrl),
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kMockCobalt, kMockCobaltUrl),
         std::make_pair(kNetstack, kNetstackUrl),
-        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
-        std::make_pair(kTextManager, kTextManagerUrl),
-        std::make_pair(kWebVirtualKeyboardClient, kWebVirtualKeyboardUrl),
     };
   }
 
@@ -471,36 +378,31 @@ class WebEngineTest : public VirtualKeyboardBase {
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::ui::input3::Keyboard::Name_},
                           Protocol{fuchsia::ui::input::ImeService::Name_}},
-         .source = ChildRef{kTextManager},
+         .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
          .source = ChildRef{kIntl},
-         .targets = {target, ChildRef{kSemanticsManager}}},
+         .targets = {target}},
         {.capabilities = {Protocol{fuchsia::input::virtualkeyboard::Manager::Name_},
                           Protocol{fuchsia::input::virtualkeyboard::ControllerCreator::Name_}},
-         .source = ChildRef{kRootPresenter},
-         .targets = {ChildRef{kWebVirtualKeyboardClient}}},
+         .source = ParentRef(),
+         .targets = {ChildRef{kWebVirtualKeyboardClient}, ChildRef{kWebContextProvider}}},
         {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
          .source = ChildRef{kMemoryPressureProvider},
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                          Protocol{fuchsia::posix::socket::Provider::Name_},
+        {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_},
                           Protocol{fuchsia::netstack::Netstack::Name_},
                           Protocol{fuchsia::net::interfaces::State::Name_}},
          .source = ChildRef{kNetstack},
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
-         .source = ChildRef{kSemanticsManager},
+         .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
          .source = ChildRef{kWebContextProvider},
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                          Protocol{fuchsia::ui::focus::FocusChainListenerRegistry::Name_}},
-         .source = ChildRef{kScenicTestRealm},
-         .targets = {ChildRef{kSemanticsManager}}},
         {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
-         .source = ChildRef{kScenicTestRealm},
+         .source = ChildRef{kMockCobalt},
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
          .source = ParentRef(),
@@ -510,7 +412,7 @@ class WebEngineTest : public VirtualKeyboardBase {
          .source = ParentRef(),
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kScenicTestRealm},
+         .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
          .source = ChildRef{kBuildInfoProvider},
@@ -518,15 +420,15 @@ class WebEngineTest : public VirtualKeyboardBase {
     };
   }
 
+ private:
+  static constexpr auto kMockCobalt = "cobalt";
+  static constexpr auto kMockCobaltUrl = "#meta/mock_cobalt.cm";
+
   static constexpr auto kWebVirtualKeyboardClient = "web_virtual_keyboard_client";
   static constexpr auto kWebVirtualKeyboardUrl = "#meta/web-virtual-keyboard-client.cm";
 
- private:
   static constexpr auto kFontsProvider = "fonts_provider";
   static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
-
-  static constexpr auto kTextManager = "text_manager";
-  static constexpr auto kTextManagerUrl = "#meta/text_manager.cm";
 
   static constexpr auto kIntl = "intl";
   static constexpr auto kIntlUrl = "#meta/intl_property_manager.cm";
@@ -540,9 +442,6 @@ class WebEngineTest : public VirtualKeyboardBase {
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
-
-  static constexpr auto kSemanticsManager = "semantics_manager";
-  static constexpr auto kSemanticsManagerUrl = "#meta/fake-a11y-manager.cm";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
   static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
@@ -561,19 +460,18 @@ class WebEngineTest : public VirtualKeyboardBase {
 };
 
 TEST_F(WebEngineTest, ShowAndHideKeyboard) {
-  LaunchChromium();
-  client_component().events().OnTerminated = [](int64_t return_code,
-                                                fuchsia::sys::TerminationReason reason) {
-    if (return_code != 0) {
-      FX_LOGS(FATAL) << "Web appterminated abnormally with return_code=" << return_code
-                     << ", reason="
-                     << static_cast<std::underlying_type_t<decltype(reason)>>(reason);
-    }
-  };
+  // Launch the chromium view.
+  ui_test_manager()->InitializeScene();
+  FX_LOGS(INFO) << "Waiting for client view to render";
+  RunLoopUntil([this] { return ui_test_manager()->ClientViewIsRendering(); });
+
+  FX_LOGS(INFO) << "Waiting for client view to be focused";
+  RunLoopUntil([this] { return ui_test_manager()->ClientViewIsFocused(); });
 
   FX_LOGS(INFO) << "Getting initial keyboard state";
   std::optional<bool> is_keyboard_visible;
-  auto virtualkeyboard_manager = realm()->Connect<fuchsia::input::virtualkeyboard::Manager>();
+  auto virtualkeyboard_manager =
+      realm_exposed_services()->Connect<fuchsia::input::virtualkeyboard::Manager>();
   virtualkeyboard_manager->WatchTypeAndVisibility(
       [&is_keyboard_visible](auto text_type, auto is_visible) {
         is_keyboard_visible = is_visible;
@@ -587,9 +485,9 @@ TEST_F(WebEngineTest, ShowAndHideKeyboard) {
 
   FX_LOGS(INFO) << "Tapping _inside_ input box";
   auto input_pos = *response_listener()->input_position();
-  int32_t input_center_x = (input_pos.x0 + input_pos.x1) / 2;
-  int32_t input_center_y = (input_pos.y0 + input_pos.y1) / 2;
-  TryInject(input_center_x, input_center_y);
+  int32_t input_center_x_local = (input_pos.x0 + input_pos.x1) / 2;
+  int32_t input_center_y_local = (input_pos.y0 + input_pos.y1) / 2;
+  TryInject(input_center_x_local, input_center_y_local);
 
   FX_LOGS(INFO) << "Waiting for keyboard to be visible";
   virtualkeyboard_manager->WatchTypeAndVisibility(

@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "//src/ui/testing/ui_test_manager/meta/text_manager.shard.cml" ],
     children: [
-        {
-            name: "text-manager",
-            url: "#meta/text_manager.cm",
-        },
         {
             name: "input-synthesis",
             url: "#meta/input-synthesis-component.cm",
@@ -16,10 +13,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [
-                "#input-synthesis",
-                "#text-manager",
-            ],
+            to: [ "#input-synthesis" ],
         },
         {
             protocol: [ "fuchsia.ui.input3.KeyEventInjector" ],
@@ -49,13 +43,6 @@
                 "test.inputsynthesis.Text",
             ],
             from: "#input-synthesis",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-            ],
-            from: "#text-manager",
         },
     ],
 }

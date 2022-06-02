@@ -8,6 +8,7 @@
 #include <fuchsia/accessibility/scene/cpp/fidl.h>
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/input/injection/cpp/fidl.h>
+#include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/session/scene/cpp/fidl.h>
@@ -173,6 +174,8 @@ std::vector<std::string> SceneOwnerServices(const UITestManager::Config& config)
 
   if (config.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     return {fuchsia::ui::accessibility::view::Registry::Name_,
+            fuchsia::input::virtualkeyboard::Manager::Name_,
+            fuchsia::input::virtualkeyboard::ControllerCreator::Name_,
             fuchsia::ui::pointerinjector::configuration::Setup::Name_,
             fuchsia::ui::policy::Presenter::Name_};
   } else if (config.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
@@ -218,8 +221,8 @@ std::map<std::string, std::string> GetServiceToComponentMap(UITestManager::Confi
     service_to_component[service] = InputOwnerName(config);
   }
 
-  // Include text services only for flatland x scene manager tests.
-  if (config.use_flatland) {
+  // Additional input services.
+  if (config.use_input) {
     service_to_component[fuchsia::ui::input::ImeService::Name_] = kTextManagerName;
     service_to_component[fuchsia::ui::input3::Keyboard::Name_] = kTextManagerName;
   }

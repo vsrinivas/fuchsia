@@ -1,0 +1,24 @@
+{
+    children: [
+        {
+            name: "text-manager",
+            url: "#meta/text_manager.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#text-manager" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+            ],
+            from: "#text-manager",
+        },
+    ],
+}

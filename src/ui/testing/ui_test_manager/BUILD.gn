@@ -20,6 +20,7 @@ source_set("ui_test_manager") {
     "//sdk/fidl/fuchsia.accessibility.scene",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.input.injection",
+    "//sdk/fidl/fuchsia.input.virtualkeyboard",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.session.scene",
@@ -104,6 +105,7 @@ fuchsia_component("root_presenter_scene_with_input") {
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/input-pipeline:component-v2",
     "//src/ui/bin/root_presenter:component_v2",
+    "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/scenic:component_v2",
   ]
 }

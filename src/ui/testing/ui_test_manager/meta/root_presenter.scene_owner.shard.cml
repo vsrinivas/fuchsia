@@ -30,6 +30,8 @@
     expose: [
         {
             protocol: [
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.recovery.FactoryResetStateNotifier",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.accessibility.view.Registry",
