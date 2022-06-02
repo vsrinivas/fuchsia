@@ -30,32 +30,47 @@ plugin!(
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::core::collection::{
-            testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
-            Manifests, Package, Packages,
+        crate::{
+            core::collection::{
+                testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
+                Manifests, Package, Packages,
+            },
+            search::controller::{
+                components::{ComponentSearchController, ComponentSearchRequest},
+                manifests::{ManifestSearchController, ManifestSearchRequest},
+                packages::{PackageSearchController, PackageSearchRequest},
+            },
         },
-        crate::search::controller::{
-            components::ComponentSearchRequest, manifests::ManifestSearchRequest,
-            packages::PackageSearchRequest,
-        },
-        scrutiny_testing::fake::*,
+        fuchsia_merkle::{Hash, HASH_SIZE},
+        fuchsia_url::{AbsolutePackageUrl, PackageName},
+        scrutiny::model::{controller::DataController, model::DataModel},
+        scrutiny_testing::{fake::fake_data_model, TEST_REPO_URL},
         serde_json::json,
-        std::collections::HashMap,
+        std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc},
+        url::Url,
     };
 
     fn data_model() -> Arc<DataModel> {
         fake_data_model()
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_component_search() {
         let model = data_model();
         let search = ComponentSearchController::default();
         model
             .set(Components::new(vec![Component {
                 id: 0,
-                url: "foo".to_string(),
+                url: Url::parse(
+                    &AbsolutePackageUrl::new(
+                        TEST_REPO_URL.clone(),
+                        PackageName::from_str("foo").unwrap(),
+                        None,
+                        None,
+                    )
+                    .to_string(),
+                )
+                .unwrap(),
                 version: 0,
                 source: fake_component_src_pkg(),
             }]))
@@ -72,7 +87,7 @@ mod tests {
         assert_eq!(response_two.len(), 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_manifest_search() {
         let model = data_model();
         let search = ManifestSearchController::default();
@@ -95,16 +110,17 @@ mod tests {
         assert_eq!(response_two.len(), 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_package_search() {
         let model = data_model();
         let search = PackageSearchController::default();
         let mut contents = HashMap::new();
-        contents.insert("foo".to_string(), "bar".to_string());
+        contents.insert(PathBuf::from("foo"), Hash::from([0; HASH_SIZE]));
         model
             .set(Packages::new(vec![Package {
-                url: "test_url".to_string(),
-                merkle: "test_merkle".to_string(),
+                name: PackageName::from_str("test_name").unwrap(),
+                variant: None,
+                merkle: Hash::from([0; HASH_SIZE]),
                 contents,
                 meta: HashMap::new(),
             }]))

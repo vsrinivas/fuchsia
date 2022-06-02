@@ -12,7 +12,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     description = "Extracts a Fuchsia package from a Url",
     example = "To extract a Fuchsia package from a url:
 
-        $ffx scrutiny extract package fuchsia-pkg://fuchsia.com/foo /tmp/foo",
+        $ ffx scrutiny extract package fuchsia-pkg://fuchsia.com/foo /tmp/foo",
     note = "Extracts a package to a specific directory."
 )]
 pub struct ScrutinyPackageCommand {

@@ -83,6 +83,7 @@ mod tests {
         serde_json::json,
         std::boxed::Box,
         std::collections::HashSet,
+        url::Url,
         uuid::Uuid,
     };
 
@@ -113,7 +114,7 @@ mod tests {
         Arc::new(Mutex::new(PluginManager::new(scheduler, dispatcher)))
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_plugin_list_controller() {
         let model = data_model();
         let manager = plugin_manager(model.clone());
@@ -124,7 +125,7 @@ mod tests {
         assert_eq!(list.len(), 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_model_stats_controller() {
         let model = data_model();
         let model_stats = ModelStatsController::default();
@@ -132,7 +133,7 @@ mod tests {
         model
             .set(Components::new(vec![Component {
                 id: 1,
-                url: "".to_string(),
+                url: Url::parse("fuchsia-pkg://fuchsia.com/test#meta/test.cmx").unwrap(),
                 version: 1,
                 source: ComponentSource::Inferred,
             }]))
@@ -147,14 +148,14 @@ mod tests {
         assert_eq!(stats.bootfs_files, 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_model_env_controller() {
         let model = data_model();
         let model_stats = ModelConfigController::default();
         assert_eq!(model_stats.query(model.clone(), json!("")).is_ok(), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_controller_list_controller() {
         let model = data_model();
         let dispatcher = dispatcher(model.clone());
@@ -169,7 +170,7 @@ mod tests {
         assert_eq!(controllers, vec!["/foo/bar".to_string()]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_collector_list_controller() {
         let model = data_model();
         let scheduler = scheduler(model.clone());
@@ -185,7 +186,7 @@ mod tests {
         assert_eq!(list.len(), 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_collector_scheduler_controller() {
         let model = data_model();
         let scheduler = scheduler(model.clone());

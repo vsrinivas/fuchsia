@@ -59,7 +59,8 @@ trait QueryComponentResolvers {
 #[derive(Debug)]
 struct ScrutinyQueryComponentResolvers {
     build_path: PathBuf,
-    repository_path: PathBuf,
+    update_package_path: PathBuf,
+    blobfs_paths: Vec<PathBuf>,
 }
 
 impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
@@ -80,7 +81,8 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
             vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"],
         );
         config.runtime.model.build_path = self.build_path.clone();
-        config.runtime.model.repository_path = self.repository_path.clone();
+        config.runtime.model.update_package_path = self.update_package_path.clone();
+        config.runtime.model.blobfs_paths = self.blobfs_paths.clone();
         config.runtime.logging.silent_mode = true;
 
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
@@ -141,7 +143,8 @@ pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     let allowlist_path = cmd.allowlist.clone();
     let scrutiny = ScrutinyQueryComponentResolvers {
         build_path: cmd.build_path,
-        repository_path: cmd.repository_path,
+        update_package_path: cmd.update,
+        blobfs_paths: cmd.blobfs,
     };
 
     let allowlist: AllowList = serde_json5::from_str(

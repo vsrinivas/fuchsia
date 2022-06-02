@@ -35,6 +35,7 @@ rustc_test("tests") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:url",
     "//tools/lib/cm_fidl_analyzer",
   ]
   sources = [

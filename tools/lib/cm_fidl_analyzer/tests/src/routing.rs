@@ -49,6 +49,7 @@ use {
         sync::Arc,
     },
     thiserror::Error,
+    url::Url,
 };
 
 const TEST_URL_PREFIX: &str = "test:///";
@@ -63,7 +64,7 @@ pub struct RoutingTestForAnalyzer {
 
 pub struct RoutingTestBuilderForAnalyzer {
     root_url: cm_types::Url,
-    decls_by_url: HashMap<String, ComponentDecl>,
+    decls_by_url: HashMap<url::Url, ComponentDecl>,
     namespace_capabilities: Vec<CapabilityDecl>,
     builtin_capabilities: Vec<CapabilityDecl>,
     builtin_runner_registrations: Vec<RunnerRegistration>,
@@ -82,7 +83,10 @@ impl RoutingTestBuilderForAnalyzer {
     // than using the default test URL scheme.
     fn new_with_custom_urls(root_url: String, components: Vec<(String, ComponentDecl)>) -> Self {
         let root_url = cm_types::Url::new(root_url).expect("failed to parse root component url");
-        let decls_by_url = HashMap::from_iter(components.into_iter());
+        let decls_by_url =
+            HashMap::from_iter(components.into_iter().map(|(url_string, component_decl)| {
+                (Url::parse(&url_string).unwrap(), component_decl)
+            }));
         Self {
             root_url,
             decls_by_url,
@@ -106,11 +110,9 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
     fn new(root_component: &str, components: Vec<(&'static str, ComponentDecl)>) -> Self {
         let root_url = cm_types::Url::new(make_test_url(root_component))
             .expect("failed to parse root component url");
-        let decls_by_url = HashMap::from_iter(
-            components
-                .into_iter()
-                .map(|(name, decl)| (format!("{}{}", TEST_URL_PREFIX, name), decl)),
-        );
+        let decls_by_url = HashMap::from_iter(components.into_iter().map(|(name, decl)| {
+            (Url::parse(&format!("{}{}", TEST_URL_PREFIX, name)).unwrap(), decl)
+        }));
         Self {
             root_url,
             decls_by_url,
@@ -183,7 +185,8 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
         };
         config.builtin_boot_resolver = self.builtin_boot_resolver;
 
-        let build_model_result = ModelBuilderForAnalyzer::new(self.root_url).build(
+        let root_url = Url::parse(self.root_url.as_str()).unwrap();
+        let build_model_result = ModelBuilderForAnalyzer::new(root_url).build(
             self.decls_by_url,
             Arc::new(config),
             Arc::new(component_id_index),

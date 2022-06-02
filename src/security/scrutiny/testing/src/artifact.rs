@@ -6,37 +6,55 @@ use {
     anyhow::{anyhow, Result},
     scrutiny_utils::artifact::ArtifactReader,
     std::{
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         path::{Path, PathBuf},
-        sync::RwLock,
     },
 };
 
+/// The result of appending data to a mock implementation.
+pub enum AppendResult {
+    /// All data added as new data (no duplicates).
+    Appended,
+    /// Some data merged into existing data (squashing duplicates).
+    Merged,
+}
+
 pub struct MockArtifactReader {
-    bytes: RwLock<Vec<Vec<u8>>>,
+    artifacts: HashMap<PathBuf, Vec<u8>>,
     deps: HashSet<PathBuf>,
 }
 
 impl MockArtifactReader {
     pub fn new() -> Self {
-        Self { bytes: RwLock::new(Vec::new()), deps: HashSet::new() }
+        Self { artifacts: HashMap::new(), deps: HashSet::new() }
     }
 
-    pub fn append_bytes(&self, byte_vec: Vec<u8>) {
-        self.bytes.write().unwrap().push(byte_vec);
+    pub fn append_artifact<P: AsRef<Path>>(&mut self, path: P, contents: Vec<u8>) -> AppendResult {
+        let path_buf = path.as_ref().to_path_buf();
+        if let Some(artifact) = self.artifacts.get_mut(&path_buf) {
+            *artifact = contents;
+            AppendResult::Merged
+        } else {
+            self.artifacts.insert(path_buf, contents);
+            AppendResult::Appended
+        }
+    }
+
+    pub fn append_dep(&mut self, path_buf: PathBuf) -> AppendResult {
+        if self.deps.insert(path_buf) {
+            AppendResult::Appended
+        } else {
+            AppendResult::Merged
+        }
     }
 }
 
 impl ArtifactReader for MockArtifactReader {
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
-        let mut borrow = self.bytes.write().unwrap();
-        {
-            if borrow.len() == 0 {
-                return Err(anyhow!("No more byte vectors left to return. Maybe append more?"));
-            }
-            self.deps.insert(path.to_path_buf());
-            Ok(borrow.remove(0))
-        }
+        let path_buf = path.to_path_buf();
+        self.artifacts.get(&path_buf).map(|artifact| artifact.clone()).ok_or_else(|| {
+            anyhow!("Mock artifact reader contains no artifact definition for {:?}", path)
+        })
     }
 
     fn get_deps(&self) -> HashSet<PathBuf> {

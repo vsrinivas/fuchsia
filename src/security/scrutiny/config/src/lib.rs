@@ -3,9 +3,21 @@
 // found in the LICENSE file.
 
 use {
+    fuchsia_url::AbsolutePackageUrl,
+    scrutiny_utils::url::from_package_name,
     serde::{Deserialize, Serialize},
     std::path::{Path, PathBuf},
 };
+
+static DEFAULT_FUCHSIA_IMAGE_DIR: &str = "obj/build/images/fuchsia";
+
+static DEFAULT_FUCHSIA_IMAGE_NAME: &str = "fuchsia";
+static DEFAULT_UPDATE_TARGET_NAME: &str = "update";
+
+static DEFAULT_UPDATE_GEN_DIR: &str = "gen";
+
+static DEFAULT_UPDATE_BLOB_FILE: &str = "update.blob.blk";
+static DEFAULT_FUCHSIA_BLOB_FILE: &str = "blob.blk";
 
 /// The Scrutiny Configuration determines how the framework runtime will be setup
 /// when it launches. This includes determining what features the runtime will
@@ -217,16 +229,13 @@ pub struct ModelConfig {
     pub uri: String,
     /// Path to the Fuchsia build directory.
     pub build_path: PathBuf,
-    /// Path to the local Fuchsia package repository.
-    pub repository_path: PathBuf,
-    /// Path to the local Fuchsia blob manifest file.
-    pub blob_manifest_path: PathBuf,
-    /// The URL of the Fuchsia update package.
-    pub update_package_url: String,
+    /// Path to the Fuchsia update package.
+    pub update_package_path: PathBuf,
+    /// Paths to blobfs archives that contain Fuchsia packages and their
+    /// contents.
+    pub blobfs_paths: Vec<PathBuf>,
     /// The URL of the Fuchsia config-data package.
-    pub config_data_package_url: String,
-    /// Path to ZBI (zircon boot image) file.
-    pub zbi_path: PathBuf,
+    pub config_data_package_url: AbsolutePackageUrl,
     /// The path to the device manager configuration inside bootfs inside the
     /// ZBI.
     pub devmgr_config_path: PathBuf,
@@ -243,17 +252,27 @@ impl ModelConfig {
     }
     /// Configure the model to be access at the supplied path.
     pub fn at_path(build_path: PathBuf) -> ModelConfig {
-        let repository_path = build_path.join("amber-files/repository");
-        let blob_manifest_path =
-            build_path.join("obj/build/images/fuchsia/fuchsia/gen/blob.manifest");
+        let update_package_path = build_path
+            .join(DEFAULT_FUCHSIA_IMAGE_DIR)
+            .join(DEFAULT_UPDATE_TARGET_NAME)
+            .join(format!("{}.far", DEFAULT_UPDATE_TARGET_NAME));
+        let blobfs_paths = vec![
+            build_path
+                .join(DEFAULT_FUCHSIA_IMAGE_DIR)
+                .join(DEFAULT_FUCHSIA_IMAGE_NAME)
+                .join(DEFAULT_FUCHSIA_BLOB_FILE),
+            build_path
+                .join(DEFAULT_FUCHSIA_IMAGE_DIR)
+                .join(DEFAULT_UPDATE_TARGET_NAME)
+                .join(DEFAULT_UPDATE_GEN_DIR)
+                .join(DEFAULT_UPDATE_BLOB_FILE),
+        ];
         ModelConfig {
             uri: "{memory}".to_string(),
             build_path,
-            repository_path,
-            blob_manifest_path,
-            update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
-            config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
-            zbi_path: "fuchsia.zbi".into(),
+            update_package_path,
+            blobfs_paths,
+            config_data_package_url: from_package_name("config-data").unwrap(),
             devmgr_config_path: "config/devmgr".into(),
             component_tree_config_path: None,
         }
@@ -269,25 +288,18 @@ impl ModelConfig {
     pub fn build_path(&self) -> PathBuf {
         self.build_path.clone()
     }
-    /// The Fuchsia repository path.
-    pub fn repository_path(&self) -> PathBuf {
-        self.repository_path.clone()
+    /// Path to the Fuchsia update package.
+    pub fn update_package_path(&self) -> PathBuf {
+        self.update_package_path.clone()
     }
-    /// Path to the local Fuchsia blob manifest file.
-    pub fn blob_manifest_path(&self) -> PathBuf {
-        self.blob_manifest_path.clone()
-    }
-    /// The Fuchsia package url of the update package.
-    pub fn update_package_url(&self) -> String {
-        self.update_package_url.clone()
+    /// Paths to blobfs archives that contain Fuchsia packages and their
+    /// contents.
+    pub fn blobfs_paths(&self) -> Vec<PathBuf> {
+        self.blobfs_paths.clone()
     }
     /// The Fuchsia package url of the config data package.
-    pub fn config_data_package_url(&self) -> String {
+    pub fn config_data_package_url(&self) -> AbsolutePackageUrl {
         self.config_data_package_url.clone()
-    }
-    /// The path to the ZBI (zircon boot image).
-    pub fn zbi_path(&self) -> PathBuf {
-        self.zbi_path.clone()
     }
     /// The path to the device manager configuration file in bootfs.
     pub fn devmgr_config_path(&self) -> PathBuf {

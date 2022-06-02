@@ -9,34 +9,60 @@ use {
     anyhow::{Context, Result},
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{
-        artifact::{ArtifactReader, FileArtifactReader},
+        artifact::{ArtifactReader, BlobFsArtifactReader},
         bootfs::BootfsReader,
+        package::{open_update_package, read_content_blob},
         zbi::{ZbiReader, ZbiType},
     },
-    std::{collections::HashMap, path::Path, str::from_utf8, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        path::Path,
+        str::from_utf8,
+        sync::Arc,
+    },
 };
 
-fn load_devmgr_config<'a, P1: AsRef<Path>, P2: AsRef<Path>>(
-    artifact_reader: &'a mut dyn ArtifactReader,
-    zbi_path: P1,
+// Load the devmgr configuration file by following update package -> zbi -> bootfs -> devmgr config
+// file. The zbi is assumed to be stored at the file path "zbi.signed" or "zbi" in the update
+// package, and `devmgr_config_path` is a path in bootfs embedded in the ZBI.
+//
+// The purpose of loading the devmgr config is to parse bootstrapping information such as the system
+// image merkle root used to bootstrap the software delivery stack.
+//
+// TODO(fxbug.dev/98030): This function should support the update package -> images package -> ...
+// flow.
+fn load_devmgr_config<P1: AsRef<Path>, P2: AsRef<Path>>(
+    update_package_path: P1,
+    artifact_reader: &mut Box<dyn ArtifactReader>,
     devmgr_config_path: P2,
 ) -> Result<DevmgrConfigContents, DevmgrConfigError> {
-    let zbi_path_ref = zbi_path.as_ref();
     let devmgr_config_path_ref = devmgr_config_path.as_ref();
     let devmgr_config_path_str = devmgr_config_path_ref.to_str().ok_or_else(|| {
         DevmgrConfigError::FailedToParseDevmgrConfigPath {
             devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
         }
     })?;
-    let zbi_buffer = artifact_reader.read_bytes(zbi_path_ref).map_err(|err| {
-        DevmgrConfigError::FailedToReadZbi {
-            zbi_path: zbi_path_ref.to_path_buf(),
-            io_error: format!("{:?}", err),
-        }
-    })?;
+    let update_package_path_ref = update_package_path.as_ref();
+    let mut far_reader =
+        open_update_package(update_package_path_ref, artifact_reader).map_err(|err| {
+            DevmgrConfigError::FailedToOpenUpdatePackage {
+                update_package_path: update_package_path_ref.to_path_buf(),
+                io_error: format!("{:?}", err),
+            }
+        })?;
+    let zbi_buffer = read_content_blob(&mut far_reader, artifact_reader, "zbi.signed").or_else(
+        |signed_err| {
+            read_content_blob(&mut far_reader, artifact_reader, "zbi").map_err(|err| {
+                DevmgrConfigError::FailedToReadZbi {
+                    update_package_path: update_package_path_ref.to_path_buf(),
+                    io_error: format!("{:?}\n{:?}", signed_err, err),
+                }
+            })
+        },
+    )?;
     let mut reader = ZbiReader::new(zbi_buffer);
     let zbi_sections = reader.parse().map_err(|zbi_error| DevmgrConfigError::FailedToParseZbi {
-        zbi_path: zbi_path_ref.to_path_buf(),
+        update_package_path: update_package_path_ref.to_path_buf(),
         zbi_error: zbi_error.to_string(),
     })?;
 
@@ -45,7 +71,7 @@ fn load_devmgr_config<'a, P1: AsRef<Path>, P2: AsRef<Path>>(
             let mut bootfs_reader = BootfsReader::new(section.buffer.clone());
             let bootfs_data = bootfs_reader.parse().map_err(|bootfs_error| {
                 DevmgrConfigError::FailedToParseBootfs {
-                    zbi_path: zbi_path_ref.to_path_buf(),
+                    update_package_path: update_package_path_ref.to_path_buf(),
                     bootfs_error: bootfs_error.to_string(),
                 }
             })?;
@@ -53,14 +79,14 @@ fn load_devmgr_config<'a, P1: AsRef<Path>, P2: AsRef<Path>>(
                 if file == devmgr_config_path_str {
                     return Ok(parse_devmgr_config_contents(from_utf8(&data).map_err(
                         |utf8_error| DevmgrConfigError::FailedToParseUtf8DevmgrConfig {
-                            zbi_path: zbi_path_ref.to_path_buf(),
+                            update_package_path: update_package_path_ref.to_path_buf(),
                             devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
                             utf8_error: utf8_error.to_string(),
                         },
                     )?)
                     .map_err(|parse_error| {
                         DevmgrConfigError::FailedToParseDevmgrConfigFormat {
-                            zbi_path: zbi_path_ref.to_path_buf(),
+                            update_package_path: update_package_path_ref.to_path_buf(),
                             devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
                             parse_error,
                         }
@@ -70,7 +96,7 @@ fn load_devmgr_config<'a, P1: AsRef<Path>, P2: AsRef<Path>>(
         }
     }
     Err(DevmgrConfigError::FailedToLocateDevmgrConfig {
-        zbi_path: zbi_path_ref.to_path_buf(),
+        update_package_path: update_package_path_ref.to_path_buf(),
         devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
     })
 }
@@ -109,29 +135,59 @@ pub struct DevmgrConfigCollector;
 
 impl DataCollector for DevmgrConfigCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
-        let build_path = model.config().build_path();
-        let zbi_path = model.config().zbi_path();
-        let devmgr_config_path = model.config().devmgr_config_path();
-        let mut artifact_loader = FileArtifactReader::new(&build_path, &build_path);
-        let result = load_devmgr_config(&mut artifact_loader, &zbi_path, &devmgr_config_path);
+        let model_config = model.config();
+        let build_path = model_config.build_path();
+        let update_package_path = model_config.update_package_path();
+        let blobfs_paths = model_config.blobfs_paths();
+        let devmgr_config_path = model_config.devmgr_config_path();
 
+        // Initialize artifact reader; early exit on initialization failure.
+        let mut artifact_reader: Box<dyn ArtifactReader> = match BlobFsArtifactReader::try_compound(
+            &build_path,
+            &blobfs_paths,
+        )
+        .map_err(|err| DevmgrConfigError::FailedToOpenBlobfs {
+            build_path: build_path.clone(),
+            blobfs_paths: blobfs_paths.clone(),
+            blobfs_error: format!("{:?}", err),
+        }) {
+            Ok(compound_artifact_reader) => Box::new(compound_artifact_reader),
+            Err(err) => {
+                model.set(DevmgrConfigCollection {
+                        devmgr_config: None,
+                        deps: HashSet::new(),
+                        errors: vec![err],
+                    })
+                    .with_context(|| { format!(
+                        "Failed to initialize artifact reader for devmgr config collector with build path {:?}, blobfs paths {:?}",
+                        build_path, blobfs_paths,
+                    )})?;
+                return Ok(());
+            }
+        };
+
+        // Execute query using deps-tracking artifact reader.
+        let result =
+            load_devmgr_config(&update_package_path, &mut artifact_reader, &devmgr_config_path);
+
+        // Store result in model.
         model
             .set(match result {
                 Ok(devmgr_config) => DevmgrConfigCollection {
                     devmgr_config: Some(devmgr_config),
-                    deps: artifact_loader.get_deps(),
+                    deps: artifact_reader.get_deps(),
                     errors: vec![],
                 },
                 Err(err) => DevmgrConfigCollection {
                     devmgr_config: None,
-                    deps: artifact_loader.get_deps(),
+                    deps: artifact_reader.get_deps(),
                     errors: vec![err],
                 },
             })
-            .context(format!(
-                "Failed to collect data from devmgr config bootfs:{:?} in ZBI at {:?}",
-                devmgr_config_path, zbi_path
-            ))?;
+            .with_context(|| { format!(
+                "Failed to collect data from devmgr config bootfs:{:?} in ZBI from update package at {:?}",
+                devmgr_config_path, update_package_path,
+            )})?;
         Ok(())
     }
 }

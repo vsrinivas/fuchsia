@@ -25,9 +25,13 @@ pub struct Command {
     /// path to fuchsia build directory.
     #[argh(option)]
     pub build_path: PathBuf,
-    /// path to fuchsia packages TUF repository.
+    /// path to fuchsia update package.
     #[argh(option)]
-    pub repository_path: PathBuf,
+    pub update: PathBuf,
+    /// path to one or more blobfs archives that contain fuchsia packages and
+    /// their packages.
+    #[argh(option)]
+    pub blobfs: Vec<PathBuf>,
     /// path to allowlist file that specifies which components may use
     /// particular custom component resolvers.
     #[argh(option)]

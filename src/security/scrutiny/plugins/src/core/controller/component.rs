@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::collection::{Components, ManifestData, Manifests},
-    crate::core::controller::utils::DefaultComponentRequest,
+    crate::core::{
+        collection::{Components, ManifestData, Manifests},
+        controller::utils::DefaultComponentRequest,
+        util::types::INFERRED_URL_SCHEME,
+    },
     anyhow::{Error, Result},
     scrutiny::{
         model::controller::{DataController, HintDataType},
@@ -139,8 +142,8 @@ impl DataController for ComponentsUrlListController {
         components.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
         let component_urls: Vec<String> = components
             .iter()
-            .map(|e| e.url.clone())
-            .filter(|e| !e.starts_with("fuchsia-pkg://inferred"))
+            .filter(|component| component.url.scheme() != INFERRED_URL_SCHEME)
+            .map(|component| component.url.to_string())
             .collect();
         Ok(serde_json::to_value(component_urls)?)
     }
@@ -168,6 +171,7 @@ mod tests {
         },
         scrutiny_testing::fake::*,
         serde_json::json,
+        url::Url,
     };
 
     fn empty_value() -> Value {
@@ -175,7 +179,8 @@ mod tests {
     }
 
     fn make_component(id: i32, url: &str, version: i32, source: ComponentSource) -> Component {
-        Component { id, url: url.to_string(), version, source }
+        let url = Url::parse(url).unwrap();
+        Component { id, url, version, source }
     }
 
     fn make_manifest(id: i32, manifest: &str) -> Manifest {
@@ -186,12 +191,22 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn components_controller_returns_all_components() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
-        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
+        let comp1 = make_component(
+            1,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
+        let comp2 = make_component(
+            2,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake_2.cmx",
+            0,
+            ComponentSource::Inferred,
+        );
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -206,12 +221,22 @@ mod tests {
         assert_eq!(comp2, response[1]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_id_controller_known_id_returns_component() {
         let model = fake_data_model();
 
-        let comp_1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
-        let comp_2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
+        let comp_1 = make_component(
+            1,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
+        let comp_2 = make_component(
+            2,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake_2.cmx",
+            0,
+            ComponentSource::Inferred,
+        );
         let mut components = Components::default();
         components.push(comp_1.clone());
         components.push(comp_2.clone());
@@ -227,19 +252,29 @@ mod tests {
         assert_eq!(comp_1, response);
 
         let json_body = json!({
-            "url": "fake_url_2",
+            "url": "fuchsia-pkg://fuchsia.com/fake#meta/fake_2.cmx",
         });
         let val_2 = controller.query(model, json_body).unwrap();
         let response_2: Component = serde_json::from_value(val_2).unwrap();
         assert_eq!(comp_2, response_2);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_id_controller_unknown_id_returns_err() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
-        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
+        let comp1 = make_component(
+            1,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
+        let comp2 = make_component(
+            2,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake_2.cmx",
+            0,
+            ComponentSource::Inferred,
+        );
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -252,12 +287,22 @@ mod tests {
         assert!(controller.query(model, json_body).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_raw_manifest_controller_known_id_returns_manifest() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
-        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
+        let comp1 = make_component(
+            1,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
+        let comp2 = make_component(
+            2,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake_2.cmx",
+            0,
+            ComponentSource::Inferred,
+        );
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -269,19 +314,31 @@ mod tests {
         model.set(manifests).unwrap();
 
         let controller = ComponentManifestGraphController::default();
-        let request =
-            DefaultComponentRequest { url: Some("fake_url".to_string()), component_id: None };
+        let request = DefaultComponentRequest {
+            url: Some("fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx".to_string()),
+            component_id: None,
+        };
         let json_body = serde_json::to_value(request).unwrap();
         let val = controller.query(model, json_body).unwrap();
         assert_eq!(val.to_string().contains("fake_manifest"), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_raw_manifest_controller_unknown_id_returns_err() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
-        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
+        let comp1 = make_component(
+            1,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
+        let comp2 = make_component(
+            2,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake_2.cmx",
+            0,
+            ComponentSource::Inferred,
+        );
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -299,12 +356,22 @@ mod tests {
         assert!(controller.query(model, json_body).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_raw_manifest_controller_string_id_returns_manifest() {
         let model = fake_data_model();
 
-        let comp1 = make_component(1, "fake_url", 0, fake_component_src_pkg());
-        let comp2 = make_component(2, "fake_url_2", 0, ComponentSource::Inferred);
+        let comp1 = make_component(
+            1,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
+        let comp2 = make_component(
+            2,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake_2.cmx",
+            0,
+            ComponentSource::Inferred,
+        );
         let mut components = Components::default();
         components.push(comp1.clone());
         components.push(comp2.clone());
@@ -325,7 +392,7 @@ mod tests {
         assert_eq!(val.to_string().contains("fake_manifest"), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn component_urls() {
         let model = fake_data_model();
 
@@ -351,24 +418,24 @@ mod tests {
         let response: Vec<String> = serde_json::from_value(val).unwrap();
 
         assert_eq!(2, response.len());
-        assert_eq!(comp1.url, response[0]);
-        assert_eq!(comp2.url, response[1]);
+        assert_eq!(comp1.url.to_string(), response[0]);
+        assert_eq!(comp2.url.to_string(), response[1]);
     }
 
     #[ignore]
-    #[test]
+    #[fuchsia::test]
     fn component_sandbox_controller_valid_id_invalid_sandbox_fields_returns_err() {
         assert!(true);
     }
 
     #[ignore]
-    #[test]
+    #[fuchsia::test]
     fn component_sandbox_controller_invalid_id_valid_sandbox_fields_returns_err() {
         assert!(true);
     }
 
     #[ignore]
-    #[test]
+    #[fuchsia::test]
     fn component_sandbox_controller_valid_id_valid_sandbox_fields_returns_only_requested_fields() {
         assert!(true);
     }

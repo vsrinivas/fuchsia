@@ -16,8 +16,8 @@ use {
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     fuchsia_url::{boot_url::BootUrl, pkg_url::PkgUrl},
-    lazy_static::lazy_static,
     log::{error, info, warn},
+    once_cell::sync::Lazy,
     routing::{
         component_id_index::ComponentIdIndex, config::RuntimeConfig, environment::RunnerRegistry,
     },
@@ -25,14 +25,17 @@ use {
     serde::{Deserialize, Serialize},
     serde_json5::from_reader,
     std::{collections::HashMap, convert::TryFrom, fs::File, path::PathBuf, sync::Arc},
+    url::Url,
 };
 
-lazy_static! {
-    // The default root component URL used to identify the root instance of the component model
-    // unless the RuntimeConfig specifies a different root URL.
-    pub static ref DEFAULT_ROOT_URL: BootUrl =
-        BootUrl::new_resource("/".to_string(), ROOT_RESOURCE.to_string()).unwrap();
-}
+// The default root component URL used to identify the root instance of the component model
+// unless the RuntimeConfig specifies a different root URL.
+pub static DEFAULT_ROOT_URL: Lazy<Url> = Lazy::new(|| {
+    Url::parse(
+        &BootUrl::new_resource("/".to_string(), ROOT_RESOURCE.to_string()).unwrap().to_string(),
+    )
+    .unwrap()
+});
 
 // The path to the runtime config in bootfs.
 pub const DEFAULT_CONFIG_PATH: &str = "config/component_manager";
@@ -60,9 +63,9 @@ impl V2ComponentModelDataCollector {
         Self {}
     }
 
-    fn get_decls(&self, model: &Arc<DataModel>) -> Result<HashMap<String, ComponentDecl>> {
-        let mut decls = HashMap::<String, ComponentDecl>::new();
-        let mut urls = HashMap::<i32, String>::new();
+    fn get_decls(&self, model: &Arc<DataModel>) -> Result<HashMap<Url, ComponentDecl>> {
+        let mut decls = HashMap::new();
+        let mut urls = HashMap::new();
 
         let components =
             model.get::<Components>().context("Unable to retrieve components from the model")?;
@@ -197,7 +200,7 @@ impl V2ComponentModelDataCollector {
 
 impl DataCollector for V2ComponentModelDataCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
-        let builder = ModelBuilderForAnalyzer::new(DEFAULT_ROOT_URL.to_string());
+        let builder = ModelBuilderForAnalyzer::new(DEFAULT_ROOT_URL.clone());
 
         let decls_by_url = self.get_decls(&model)?;
 

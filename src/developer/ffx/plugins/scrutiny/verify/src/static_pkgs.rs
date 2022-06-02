@@ -24,13 +24,10 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 5: For each existing line you modified in 2, remove the line.
 ";
 
-// Package URLs often include "variant #0" path suffix.
-const EXPECTED_PACKAGE_VARIANT_SUFFIX: &str = "/0";
-
 struct Query {
     build_path: PathBuf,
-    zbi_path: PathBuf,
-    blobfs_manifest_path: PathBuf,
+    update_package_path: PathBuf,
+    blobfs_paths: Vec<PathBuf>,
 }
 
 fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSet<PathBuf>> {
@@ -39,8 +36,8 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
         RuntimeConfig {
             model: ModelConfig {
                 build_path: query.build_path.clone(),
-                zbi_path: query.zbi_path.clone(),
-                blob_manifest_path: query.blobfs_manifest_path.clone(),
+                update_package_path: query.update_package_path.clone(),
+                blobfs_paths: query.blobfs_paths.clone(),
                 ..ModelConfig::minimal()
             },
             logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
@@ -66,17 +63,10 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
     }
     let static_pkgs = static_pkgs_result.static_pkgs.unwrap();
 
-    // Drop trailing "/0" from package URLs; skip any that do not follow this convention.
-    let static_package_urls: Vec<String> = static_pkgs
+    // Extract package names from static package descriptions.
+    let static_package_names: Vec<String> = static_pkgs
         .into_iter()
-        .filter_map(|(mut url, _)| {
-            if url.ends_with(EXPECTED_PACKAGE_VARIANT_SUFFIX) {
-                url.truncate(url.len() - EXPECTED_PACKAGE_VARIANT_SUFFIX.chars().count());
-                Some(url)
-            } else {
-                None
-            }
-        })
+        .map(|((name, _variant), _hash)| name.as_ref().to_string())
         .collect();
 
     let mut golden_reader = FileArtifactReader::new(&query.build_path, &query.build_path);
@@ -85,7 +75,8 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
         .context("Failed to read golden file")?;
     let golden_file = GoldenFile::from_contents(golden_file_path.as_path(), golden_contents)
         .context("Failed to parse golden file")?;
-    match golden_file.compare(static_package_urls) {
+
+    match golden_file.compare(static_package_names) {
         CompareResult::Matches => Ok(static_pkgs_result
             .deps
             .union(&golden_reader.get_deps())
@@ -108,8 +99,8 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
 pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     let query = Query {
         build_path: cmd.build_path,
-        zbi_path: cmd.zbi,
-        blobfs_manifest_path: cmd.blobfs_manifest,
+        update_package_path: cmd.update,
+        blobfs_paths: cmd.blobfs,
     };
     let mut deps = HashSet::new();
 

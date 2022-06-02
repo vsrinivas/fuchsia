@@ -33,39 +33,43 @@ pub struct BlobFsArtifactReader {
 }
 
 impl BlobFsArtifactReader {
-    pub fn try_new(build_path: &Path, blobfs_path: &Path) -> Result<Self> {
-        let build_path = match build_path.canonicalize() {
+    pub fn try_new<P1: AsRef<Path>, P2: AsRef<Path>>(
+        build_path: P1,
+        blobfs_path: P2,
+    ) -> Result<Self> {
+        let build_path_ref = build_path.as_ref();
+        let blobfs_path_ref = blobfs_path.as_ref();
+        let build_path = match build_path_ref.canonicalize() {
             Ok(path) => path,
             Err(err) => {
                 warn!(
-                    "Blobfs artifact reader failed to canonicalize build path: {:#?}: {}",
-                    build_path,
+                    "Blobfs artifact reader failed to canonicalize build path: {:?}: {}",
+                    build_path_ref,
                     err.to_string()
                 );
-                build_path.to_path_buf()
+                build_path_ref.to_path_buf()
             }
         };
-        let blobfs_path = match blobfs_path.canonicalize() {
+        let blobfs_path = match blobfs_path_ref.canonicalize() {
             Ok(path) => path,
             Err(err) => {
                 warn!(
-                    "File artifact reader failed to canonicalize blobfs archive path: {:#?}: {}",
-                    blobfs_path,
+                    "File artifact reader failed to canonicalize blobfs archive path: {:?}: {}",
+                    blobfs_path_ref,
                     err.to_string()
                 );
-                blobfs_path.to_path_buf()
+                blobfs_path_ref.to_path_buf()
             }
         };
 
         if !blobfs_path.is_absolute() {
             return Err(anyhow!("Blobfs archive path {:?} is not absolute", blobfs_path));
         }
-        let blobfs_path_string =
-            blobfs_path.clone().into_os_string().into_string().map_err(|_| {
-                anyhow!("Blobfs archive path {:?} could not be converted to string", blobfs_path)
-            })?;
+        let blobfs_path_str = blobfs_path.to_str().ok_or_else(|| {
+            anyhow!("Blobfs archive path {:?} could not be converted to string", blobfs_path)
+        })?;
         let blobfs_dep_path =
-            dep_from_absolute(&build_path, &blobfs_path_string).with_context(|| {
+            dep_from_absolute(&build_path, blobfs_path_str).with_context(|| {
                 format!(
                     "Blobfs archive path {:?} could not be made relative to build path {:?}",
                     blobfs_path, build_path
@@ -87,6 +91,22 @@ impl BlobFsArtifactReader {
                 blobs.into_iter().map(|blob| (blob.merkle.into(), blob.buffer)).collect(),
             ),
         })
+    }
+
+    pub fn try_compound<P1: AsRef<Path>, P2: AsRef<Path>>(
+        build_path: P1,
+        blobfs_paths: &Vec<P2>,
+    ) -> Result<CompoundArtifactReader> {
+        Ok(CompoundArtifactReader::new(
+            blobfs_paths
+                .into_iter()
+                .map(|blobfs_path| {
+                    let reader = Self::try_new(&build_path, blobfs_path)?;
+                    let boxed: Box<dyn ArtifactReader> = Box::new(reader);
+                    Ok(boxed)
+                })
+                .collect::<Result<Vec<Box<dyn ArtifactReader>>>>()?,
+        ))
     }
 }
 

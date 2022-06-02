@@ -8,6 +8,8 @@ pub mod bootfs;
 pub mod fvm;
 pub mod golden;
 pub mod key_value;
+pub mod package;
+pub mod url;
 pub mod usage;
 pub mod zbi;
 pub mod zstd;

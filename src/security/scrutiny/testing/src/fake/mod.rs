@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny::model::model::DataModel, scrutiny_config::ModelConfig, std::sync::Arc,
+    crate::TEST_REPO_URL,
+    fuchsia_url::{AbsolutePackageUrl, PackageName, UnpinnedAbsolutePackageUrl},
+    scrutiny::model::model::DataModel,
+    scrutiny_config::ModelConfig,
+    std::{str::FromStr, sync::Arc},
     tempfile::tempdir,
 };
 
@@ -11,16 +15,18 @@ use {
 /// tempdata() directories for the required build locations.
 pub fn fake_model_config() -> ModelConfig {
     let dir_path = tempdir().unwrap().into_path();
-    let mut blob_manifest_path = dir_path.clone();
-    blob_manifest_path.push("blob.manifest");
+    let update_package_path = dir_path.join("update.far");
+    let blobfs_paths = vec![dir_path.join("blob.blk"), dir_path.join("update.blob.blk")];
     ModelConfig {
         uri: "{memory}".to_string(),
         build_path: dir_path.clone(),
-        repository_path: dir_path.clone(),
-        blob_manifest_path,
-        update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
-        config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
-        zbi_path: "fuchsia.zbi".into(),
+        update_package_path,
+        blobfs_paths,
+        config_data_package_url: AbsolutePackageUrl::Unpinned(UnpinnedAbsolutePackageUrl::new(
+            TEST_REPO_URL.clone(),
+            PackageName::from_str("config-data").unwrap(),
+            None,
+        )),
         devmgr_config_path: "config/devmgr".into(),
         component_tree_config_path: None,
     }

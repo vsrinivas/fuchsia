@@ -90,9 +90,13 @@ pub struct Command {
     /// path to root output directory of build.
     #[argh(option)]
     pub build_path: PathBuf,
-    /// path to TUF repository that serves fuchsia packages as targets.
+    /// path to fuchsia update package.
     #[argh(option)]
-    pub repository_path: PathBuf,
+    pub update: PathBuf,
+    /// path to one or more blobfs archives that contain fuchsia packages and
+    /// their packages.
+    #[argh(option)]
+    pub blobfs: Vec<PathBuf>,
     /// path(s) to allowlist(s) used to verify routes.
     #[argh(option)]
     pub allowlist: Vec<PathBuf>,

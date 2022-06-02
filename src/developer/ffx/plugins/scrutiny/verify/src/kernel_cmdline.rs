@@ -24,7 +24,20 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 5: For each existing line you modified in 2, remove the line.
 ";
 
-fn verify_kernel_cmdline<P: AsRef<Path>>(zbi_path: &str, golden_path: P) -> Result<()> {
+// Query information common to multiple verification passes that may run against different golden
+// files.
+struct Query {
+    // A host filesystem path to the ZBI blob.
+    zbi_path: PathBuf,
+}
+
+fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Result<()> {
+    let zbi_path = query.zbi_path.to_str().ok_or_else(|| {
+        anyhow!(
+            "ZBI path {:?} cannot be converted to string for passing to scrutiny",
+            query.zbi_path
+        )
+    })?;
     let config = Config::run_command_with_runtime(
         CommandBuilder::new("tool.zbi.extract.cmdline").param("input", zbi_path).build(),
         RuntimeConfig {
@@ -35,6 +48,7 @@ fn verify_kernel_cmdline<P: AsRef<Path>>(zbi_path: &str, golden_path: P) -> Resu
     );
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+
     let kernel_cmdline: String = serde_json::from_str(&scrutiny_output)
         .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
     let mut sorted_cmdline =
@@ -65,14 +79,11 @@ pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
         bail!("Must specify at least one --golden");
     }
     let mut deps = HashSet::new();
-    let zbi_path = &cmd.zbi;
-    let zbi = zbi_path.to_str().ok_or_else(|| {
-        anyhow!("ZBI path {:?} cannot be converted to string for passing to scrutiny", cmd.zbi)
-    })?;
-    deps.insert(zbi_path.clone());
+    deps.insert(cmd.zbi.clone());
 
+    let query = Query { zbi_path: cmd.zbi };
     for golden_file_path in cmd.golden.into_iter() {
-        verify_kernel_cmdline(zbi, &golden_file_path)?;
+        verify_kernel_cmdline(&query, &golden_file_path)?;
 
         deps.insert(golden_file_path);
     }

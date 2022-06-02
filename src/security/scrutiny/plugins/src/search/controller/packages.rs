@@ -5,6 +5,7 @@
 use {
     crate::core::collection::{Package, Packages},
     anyhow::Result,
+    log::warn,
     regex::Regex,
     scrutiny::{
         model::controller::{DataController, HintDataType},
@@ -32,9 +33,16 @@ impl DataController for PackageSearchController {
         let packages = &model.get::<Packages>()?.entries;
         for package in packages.iter() {
             for (file_name, _blob) in package.contents.iter() {
-                if file_re.is_match(&file_name) {
-                    response.push(package.clone());
-                    break;
+                match file_name.to_str() {
+                    Some(file_name) => {
+                        if file_re.is_match(&file_name) {
+                            response.push(package.clone());
+                            break;
+                        }
+                    }
+                    None => {
+                        warn!("Failed to convert package-internal path to string: {:?}", file_name);
+                    }
                 }
             }
         }

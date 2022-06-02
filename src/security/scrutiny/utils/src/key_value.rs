@@ -9,7 +9,7 @@ use {
 
 /// Given a String containing potentially multiple lines of foo=bar returns
 /// a HashMap with the keys and values. This assumes that each key is unique.
-pub fn parse_key_value(contents: String) -> Result<HashMap<String, String>> {
+pub fn parse_key_value<'a>(contents: &'a str) -> Result<HashMap<String, String>> {
     let lines = contents.split('\n');
     let mut kv_map: HashMap<String, String> = HashMap::new();
     for line in lines {
@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn test_single_line() {
-        let contents = String::from("foo=bar");
+        let contents = "foo=bar";
         let kv_map = parse_key_value(contents).unwrap();
         assert_eq!(kv_map.len(), 1);
         assert_eq!(kv_map["foo"], String::from("bar"));
@@ -38,14 +38,14 @@ mod tests {
 
     #[test]
     fn test_empty_line() {
-        let contents = String::from("");
+        let contents = "";
         let kv_map = parse_key_value(contents).unwrap();
         assert_eq!(kv_map.len(), 0);
     }
 
     #[test]
     fn test_multiple_lines() {
-        let contents = String::from("foo=bar\nbaz=bazz\nmagic=foobar");
+        let contents = "foo=bar\nbaz=bazz\nmagic=foobar";
         let kv_map = parse_key_value(contents).unwrap();
         assert_eq!(kv_map.len(), 3);
         assert_eq!(kv_map["foo"], String::from("bar"));
@@ -55,7 +55,7 @@ mod tests {
 
     #[test]
     fn test_multiple_lines_with_empty_lines() {
-        let contents = String::from("foo=bar\n\nbaz=bazz\n\nmagic=foobar\n");
+        let contents = "foo=bar\n\nbaz=bazz\n\nmagic=foobar\n";
         let kv_map = parse_key_value(contents).unwrap();
         assert_eq!(kv_map.len(), 3);
         assert_eq!(kv_map["foo"], String::from("bar"));
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_invalid() {
-        let contents = String::from("invalid");
+        let contents = "invalid";
         assert_eq!(parse_key_value(contents).is_ok(), false);
     }
 }

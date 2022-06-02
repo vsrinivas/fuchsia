@@ -14,9 +14,108 @@ use {
         component_instance::ComponentInstanceForAnalyzer,
         component_model::ComponentModelForAnalyzer,
     },
+    fuchsia_merkle::Hash,
+    fuchsia_url::{
+        AbsoluteComponentUrl, AbsolutePackageUrl, PackageName, PackageVariant, RepositoryUrl,
+    },
     routing::component_instance::ComponentInstanceInterface,
     std::{collections::VecDeque, sync::Arc},
 };
+
+/// Output for package URL matching functions.
+#[derive(Debug, Eq, PartialEq)]
+pub enum PkgUrlMatch {
+    /// URLs match in all particulars they specify. For example, if one URL A specifies a package
+    /// hash and is strongly matched against URL B, then URL B must also specify the same package
+    /// hash.
+    StrongMatch,
+    /// URLs match in all aspects that both URLs specify. For example, if URL B specifies a variant
+    /// and URL B does not, these URLs may weakly match if other all other aspects that they both
+    /// specify match.
+    WeakMatch,
+    /// URLs are mismatched in at least one aspect, such as scheme, host, package name, etc..
+    NoMatch,
+}
+
+impl From<(PkgUrlMatch, PkgUrlMatch)> for PkgUrlMatch {
+    fn from(matches: (PkgUrlMatch, PkgUrlMatch)) -> Self {
+        match matches {
+            (PkgUrlMatch::NoMatch, _) | (_, PkgUrlMatch::NoMatch) => PkgUrlMatch::NoMatch,
+            (PkgUrlMatch::WeakMatch, _) | (_, PkgUrlMatch::WeakMatch) => PkgUrlMatch::WeakMatch,
+            (_, _) => PkgUrlMatch::StrongMatch,
+        }
+    }
+}
+
+pub fn match_absolute_component_urls(
+    a: &AbsoluteComponentUrl,
+    b: &AbsoluteComponentUrl,
+) -> PkgUrlMatch {
+    (
+        match_absolute_pkg_urls(a.package_url(), b.package_url()),
+        match_component_url_resource(a.resource(), b.resource()),
+    )
+        .into()
+}
+
+fn match_component_url_resource(a: &str, b: &str) -> PkgUrlMatch {
+    match a == b {
+        true => PkgUrlMatch::StrongMatch,
+        false => PkgUrlMatch::NoMatch,
+    }
+}
+
+pub fn match_absolute_pkg_urls(a: &AbsolutePackageUrl, b: &AbsolutePackageUrl) -> PkgUrlMatch {
+    (
+        (
+            (
+                match_pkg_url_repository(a.repository(), b.repository()),
+                match_pkg_url_name(a.name(), b.name()),
+            )
+                .into(),
+            match_pkg_url_variant(a.variant(), b.variant()),
+        )
+            .into(),
+        match_pkg_url_hash(a.hash(), b.hash()),
+    )
+        .into()
+}
+
+fn match_pkg_url_repository(a: &RepositoryUrl, b: &RepositoryUrl) -> PkgUrlMatch {
+    match a == b {
+        true => PkgUrlMatch::StrongMatch,
+        false => PkgUrlMatch::NoMatch,
+    }
+}
+
+fn match_pkg_url_name(a: &PackageName, b: &PackageName) -> PkgUrlMatch {
+    match a == b {
+        true => PkgUrlMatch::StrongMatch,
+        false => PkgUrlMatch::NoMatch,
+    }
+}
+
+fn match_pkg_url_variant(a: Option<&PackageVariant>, b: Option<&PackageVariant>) -> PkgUrlMatch {
+    match (a, b) {
+        (None, None) => PkgUrlMatch::StrongMatch,
+        (Some(av), Some(bv)) => match av == bv {
+            true => PkgUrlMatch::StrongMatch,
+            false => PkgUrlMatch::NoMatch,
+        },
+        (Some(_), None) | (None, Some(_)) => PkgUrlMatch::WeakMatch,
+    }
+}
+
+fn match_pkg_url_hash(a: Option<Hash>, b: Option<Hash>) -> PkgUrlMatch {
+    match (a, b) {
+        (None, None) => PkgUrlMatch::StrongMatch,
+        (Some(av), Some(bv)) => match av == bv {
+            true => PkgUrlMatch::StrongMatch,
+            false => PkgUrlMatch::NoMatch,
+        },
+        (Some(_), None) | (None, Some(_)) => PkgUrlMatch::WeakMatch,
+    }
+}
 
 /// The `ComponentInstanceVisitor` trait defines a common entry point for analyzers
 /// that operate on a single component instance.
@@ -134,30 +233,145 @@ impl ComponentInstanceVisitor for ModelMappingVisitor {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
+        super::{
+            match_absolute_component_urls, BreadthFirstModelWalker, ComponentModelWalker,
+            ModelMappingVisitor, PkgUrlMatch,
+        },
         crate::component_model::ModelBuilderForAnalyzer,
         cm_rust::ComponentDecl,
         cm_rust_testing::ComponentDeclBuilder,
+        fuchsia_url::AbsoluteComponentUrl,
         routing::{
             component_id_index::ComponentIdIndex, config::RuntimeConfig,
             environment::RunnerRegistry,
         },
-        std::{collections::HashMap, iter::FromIterator},
+        std::{collections::HashMap, iter::FromIterator, sync::Arc},
+        url::Url,
     };
 
     const TEST_URL_PREFIX: &str = "test:///";
 
-    fn make_test_url(component_name: &str) -> String {
-        format!("{}{}", TEST_URL_PREFIX, component_name)
+    fn make_test_url(component_name: &str) -> Url {
+        Url::parse(&format!("{}{}", TEST_URL_PREFIX, component_name)).unwrap()
     }
 
     fn make_decl_map(
         components: Vec<(&'static str, ComponentDecl)>,
-    ) -> HashMap<String, ComponentDecl> {
+    ) -> HashMap<Url, ComponentDecl> {
         HashMap::from_iter(components.into_iter().map(|(name, decl)| (make_test_url(name), decl)))
     }
 
-    #[test]
+    #[fuchsia::test]
+    fn match_absolute_component_urls_strong() {
+        let url_strs = vec![
+            "fuchsia-pkg://test.fuchsia.com/alpha#meta/alpha.cm",
+            "fuchsia-pkg://test.fuchsia.com/alpha/0#meta/alpha.cm",
+            "fuchsia-pkg://test.fuchsia.com/alpha?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm",
+            "fuchsia-pkg://test.fuchsia.com/alpha/0?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm",
+        ];
+
+        for url_str in url_strs.into_iter() {
+            assert_eq!(
+                PkgUrlMatch::StrongMatch,
+                match_absolute_component_urls(
+                    &AbsoluteComponentUrl::parse(url_str).unwrap(),
+                    &AbsoluteComponentUrl::parse(url_str).unwrap(),
+                )
+            );
+        }
+    }
+
+    #[fuchsia::test]
+    fn match_absolute_component_urls_weak() {
+        let url_strs = vec![
+            "fuchsia-pkg://test.fuchsia.com/alpha#meta/alpha.cm",
+            "fuchsia-pkg://test.fuchsia.com/alpha/0#meta/alpha.cm",
+            "fuchsia-pkg://test.fuchsia.com/alpha?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm",
+            "fuchsia-pkg://test.fuchsia.com/alpha/0?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm",
+        ];
+
+        for i in 0..url_strs.len() {
+            for j in 0..url_strs.len() {
+                if i == j {
+                    continue;
+                }
+                assert_eq!(
+                    PkgUrlMatch::WeakMatch,
+                    match_absolute_component_urls(
+                        &AbsoluteComponentUrl::parse(url_strs[i]).unwrap(),
+                        &AbsoluteComponentUrl::parse(url_strs[j]).unwrap(),
+                    )
+                );
+            }
+        }
+    }
+
+    #[fuchsia::test]
+    fn match_absolute_component_urls_no_match() {
+        assert_eq!(
+            PkgUrlMatch::NoMatch,
+            match_absolute_component_urls(
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha#meta/alpha.cm")
+                    .unwrap(),
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.org/alpha#meta/alpha.cm")
+                    .unwrap(),
+            )
+        );
+        assert_eq!(
+            PkgUrlMatch::NoMatch,
+            match_absolute_component_urls(
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha#meta/alpha.cm")
+                    .unwrap(),
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/beta#meta/alpha.cm")
+                    .unwrap(),
+            )
+        );
+        assert_eq!(
+            PkgUrlMatch::NoMatch,
+            match_absolute_component_urls(
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha#meta/alpha.cm")
+                    .unwrap(),
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha#meta/beta.cm")
+                    .unwrap(),
+            )
+        );
+        assert_eq!(
+            PkgUrlMatch::NoMatch,
+            match_absolute_component_urls(
+                &AbsoluteComponentUrl::parse(
+                    "fuchsia-pkg://test.fuchsia.com/alpha/0#meta/alpha.cm"
+                )
+                .unwrap(),
+                &AbsoluteComponentUrl::parse(
+                    "fuchsia-pkg://test.fuchsia.com/alpha/1#meta/alpha.cm"
+                )
+                .unwrap(),
+            )
+        );
+        assert_eq!(
+            PkgUrlMatch::NoMatch,
+            match_absolute_component_urls(
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha/0?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm").unwrap(),
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha/1?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm").unwrap(),
+            )
+        );
+        assert_eq!(
+            PkgUrlMatch::NoMatch,
+            match_absolute_component_urls(
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm").unwrap(),
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha?hash=1111111111111111111111111111111111111111111111111111111111111111#meta/alpha.cm").unwrap(),
+            )
+        );
+        assert_eq!(
+            PkgUrlMatch::NoMatch,
+            match_absolute_component_urls(
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha/0?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/alpha.cm").unwrap(),
+                &AbsoluteComponentUrl::parse("fuchsia-pkg://test.fuchsia.com/alpha/0?hash=1111111111111111111111111111111111111111111111111111111111111111#meta/alpha.cm").unwrap(),
+            )
+        );
+    }
+
+    #[fuchsia::test]
     fn breadth_first_walker() -> Result<(), anyhow::Error> {
         let components = vec![
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
@@ -171,10 +385,7 @@ mod tests {
         let d_url = make_test_url("d");
 
         let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(a_url.clone()).expect("failed to parse root component url"),
-        )
-        .build(
+        let build_model_result = ModelBuilderForAnalyzer::new(a_url.clone()).build(
             make_decl_map(components),
             config,
             Arc::new(ComponentIdIndex::default()),
@@ -192,16 +403,16 @@ mod tests {
         // The visitor should visit both "b" and "c" before "d", but may visit "b" and "c" in either order.
         assert!(
             (map == &vec![
-                ("/".to_string(), a_url.clone()),
-                ("/b".to_string(), b_url.clone()),
-                ("/c".to_string(), c_url.clone()),
-                ("/c/d".to_string(), d_url.clone())
+                ("/".to_string(), a_url.to_string()),
+                ("/b".to_string(), b_url.to_string()),
+                ("/c".to_string(), c_url.to_string()),
+                ("/c/d".to_string(), d_url.to_string())
             ]) || (map
                 == &vec![
-                    ("/".to_string(), a_url.clone()),
-                    ("/c".to_string(), c_url.clone()),
-                    ("/b".to_string(), b_url.clone()),
-                    ("/c/d".to_string(), d_url.clone())
+                    ("/".to_string(), a_url.to_string()),
+                    ("/c".to_string(), c_url.to_string()),
+                    ("/b".to_string(), b_url.to_string()),
+                    ("/c/d".to_string(), d_url.to_string())
                 ])
         );
 

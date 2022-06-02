@@ -25,8 +25,6 @@ import("//build/sdk/physical_device.gni")
 import("//build/sdk/product_metadata.gni")
 import("//build/sdk/virtual_device.gni")
 import("//build/security.gni")
-import("//build/security/verifier/verify_component_resolvers.gni")
-import("//build/security/verifier/verify_routes.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
@@ -164,28 +162,6 @@ group("qemu-kernel") {
 }
 
 default_image_deps += [ ":qemu-kernel" ]
-
-# Verifies that capabilities used by components are correctly routed to
-# those components. Statically validating the expose-offer-use chain and
-# the rights chain.
-verify_routes("verify_capability_routes") {
-  testonly = true
-  allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
-              fuchsia_verify_routes_exceptions_allowlist_product
-  if (bootfs_only) {
-    allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
-  }
-  if (fuchsia_verify_routes_component_tree_config != "") {
-    component_tree_config = fuchsia_verify_routes_component_tree_config
-  }
-}
-
-# Verifies that privileged component resolvers only resolve allowed static
-# components, determined by the provided allowlist.
-verify_component_resolvers("verify_component_resolvers") {
-  testonly = true
-  allowlist = fuchsia_verify_component_resolvers_allowlist
-}
 
 # This action runs a script that checks all vtables in fuchsia binaries are
 # in readonly data.
@@ -1140,16 +1116,6 @@ group("updates") {
     ":package_lists",
     ":publish",
   ]
-
-  if (!is_coverage) {
-    deps += [
-      ":verify_capability_routes",
-      ":verify_component_resolvers",
-    ]
-    if (fuchsia_route_sources_config != "") {
-      deps += [ "//build/images/fuchsia:fuchsia.route_sources_verify_files" ]
-    }
-  }
 }
 
 group("bootserver") {

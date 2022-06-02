@@ -133,6 +133,7 @@ mod tests {
         scrutiny_testing::fake::*,
         serde_json::json,
         std::{collections::HashMap, convert::TryFrom},
+        url::Url,
     };
 
     static CORE_DEP_STR: &str = "core_dep";
@@ -257,6 +258,7 @@ mod tests {
     }
 
     fn make_v2_component(id: i32, url: String) -> Component {
+        let url = Url::parse(&url).unwrap();
         Component { id, url, version: 2, source: fake_component_src_pkg() }
     }
 
@@ -313,7 +315,7 @@ mod tests {
         let bar_url = "fuchsia-boot:///#meta/bar.cm".to_string();
         let baz_url = "fuchsia-boot:///#meta/baz.cm".to_string();
 
-        let root_component = make_v2_component(root_id, root_url.clone());
+        let root_component = make_v2_component(root_id, root_url);
         let foo_component = make_v2_component(foo_id, foo_url.clone());
         let bar_component = make_v2_component(bar_id, bar_url.clone());
         let baz_component = make_v2_component(baz_id, baz_url.clone());
@@ -376,8 +378,8 @@ mod tests {
     fn two_instance_component_model() -> Result<Arc<DataModel>> {
         let model = data_model();
 
-        let root_url = DEFAULT_ROOT_URL.to_string();
-        let child_url = "fuchsia-boot:///#meta/child.cm".to_string();
+        let root_url = &*DEFAULT_ROOT_URL;
+        let child_url = Url::parse("fuchsia-boot:///#meta/child.cm").unwrap();
 
         let child_name = "child".to_string();
         let missing_child_name = "missing_child".to_string();
@@ -419,7 +421,7 @@ mod tests {
                     OfferDecl::Protocol(root_offer_protocol),
                 ],
                 vec![CapabilityDecl::Directory(root_good_dir_decl)],
-                vec![new_child_decl(child_name, child_url.clone())],
+                vec![new_child_decl(child_name, child_url.to_string())],
             ),
         );
         decls.insert(
@@ -436,10 +438,7 @@ mod tests {
             ),
         );
 
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(root_url).expect("failed to parse root component url"),
-        )
-        .build(
+        let build_model_result = ModelBuilderForAnalyzer::new(root_url.clone()).build(
             decls,
             Arc::new(RuntimeConfig::default()),
             Arc::new(ComponentIdIndex::default()),

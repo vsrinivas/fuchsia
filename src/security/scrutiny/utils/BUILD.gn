@@ -75,6 +75,10 @@ if (is_host) {
       "//src/security/scrutiny/*",
     ]
     deps = [
+      "//src/lib/fuchsia-url",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//src/sys/pkg/lib/fuchsia-hash",
+      "//src/sys/pkg/lib/fuchsia-merkle",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:byteorder",
@@ -106,6 +110,8 @@ if (is_host) {
       "src/golden.rs",
       "src/key_value.rs",
       "src/lib.rs",
+      "src/package.rs",
+      "src/url.rs",
       "src/usage.rs",
       "src/zbi.rs",
       "src/zstd.rs",

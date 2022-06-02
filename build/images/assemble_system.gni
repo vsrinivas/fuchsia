@@ -15,10 +15,6 @@ import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
-import("//build/security/verifier/verify_bootfs.gni")
-import("//build/security/verifier/verify_kernel_cmdline.gni")
-import("//build/security/verifier/verify_route_sources.gni")
-import("//build/security/verifier/verify_static_pkgs.gni")
 import("//build/zircon/tools.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
 import("//src/storage/fshost/generated_fshost_config.gni")
@@ -42,38 +38,6 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #
 #   output_name (optional; default: <target_name>.zbi)
 #     [string] The name of the final system ZBI file.
-#
-#   cmdline_goldens (optional)
-#     [list of files] A list of possible kernel cmdline golden file to compare
-#     against. Verified if matches one of the goldens. At most two entries are
-#     supported for soft migration, if the content matches either of the entries,
-#     it is consider a match. Only one entry should be used for normal case.
-#
-#   bootfs_goldens (optional)
-#     [list of files] A list of possible bootFS golden file to compare against.
-#     Verified if matches one of the goldens. At most two entries are
-#     supported for soft migration, if the content matches either of the entries,
-#     it is consider a match. Only one entry should be used for normal case.
-#
-#   static_pkgs_goldens (optional)
-#     [list of files] A list of possible static pkgs golden file to compare
-#     against. Verified if matches one of the goldens. At most two entries are
-#     supported for soft migration, if the content matches either of the entries,
-#     it is consider a match. Only one entry should be used for normal case.
-#
-#   route_sources_config
-#     [string] A path to the config file to be used when invoking the
-#     route_sources verifier on the assembled system. This parameter is,
-#     temporarily, only available for the `fuchsia` image. For details, see
-#     fxbug.dev/85664.
-#
-#   create_legacy_aib_archive (optional, default = false)
-#     [boolean] If true, create an archive of the legacy AIB produced internally
-#     within assemble_system().
-#
-#   create_legacy_aib_package (optional, default = false)
-#     [boolean] If true, create a package of the legacy AIB produced internally
-#     within assemble_system().
 #
 #   testonly (optional)
 #     [bool] Usual GN meanings.
@@ -931,66 +895,17 @@ template("assemble_system") {
   #######
   # Check the golden files.
   #
+  # TODO(fxbug.dev/101283): These checks are no longer a part of
+  # `assemble_system()`. Remove `not_needed(...)` once all build configurations
+  # no longer specify scrutiny verifier configuration.
 
-  if (defined(invoker.cmdline_goldens)) {
-    verify_kernel_cmdline("${image_name}.cmdline_verify_files") {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      zbi = files.zbi_final
-      goldens = invoker.cmdline_goldens
-      zbi_target = ":${labels.image_assembler}"
-    }
-  }
-  if (defined(invoker.bootfs_goldens)) {
-    verify_bootfs_filelist("${image_name}.bootfs_verify_files") {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      zbi = files.zbi_final
-      goldens = invoker.bootfs_goldens
-      zbi_target = ":${labels.image_assembler}"
-    }
-  }
-  if (defined(invoker.static_pkgs_goldens)) {
-    verify_static_pkgs("${image_name}.static_pkgs_verify_files") {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      zbi = files.zbi_final
-      zbi_target = ":${labels.image_assembler}"
-      blobfs_manifest = files.blobfs_manifest
-      blobfs_manifest_target = ":${labels.image_assembler}"
-      goldens = invoker.static_pkgs_goldens
-    }
-  }
-  if (defined(invoker.route_sources_config)) {
-    assert(
-        image_name == "fuchsia",
-        "assemble_system() { route_sources_config } is temporarily only available for the `fuchsia` image")
-    verify_route_sources("${image_name}.route_sources_verify_files") {
-      # TODO(fxbug.dev/85664): The testonly and the dependency on pm publish
-      # are both temporary; they will be fixed after all collectors use
-      # blobfs_manifest as the source of truth for loading blobs.
-      #
-      # Unlike other verifiers that rely on assembly metadata, the route_sources
-      # verifier depends on pm publish and is integrated into the build via the
-      # testonly //build/images:updates target.
-      testonly = true
-      forward_variables_from(invoker, [ "visibility" ])
-      zbi = files.zbi_final
-      zbi_target = ":${labels.image_assembler}"
-      blobfs_manifest = files.blobfs_manifest
-      blobfs_manifest_target = ":${labels.image_assembler}"
-      config_path = invoker.route_sources_config
-    }
-  }
+  not_needed(invoker,
+             [
+               "cmdline_goldens",
+               "bootfs_goldens",
+               "static_pkgs_goldens",
+               "route_sources_config",
+             ])
 
   group(target_name) {
     forward_variables_from(invoker,
@@ -1011,17 +926,6 @@ template("assemble_system") {
       public_deps += [ ":${labels.copy_images}" ]
     }
 
-    deps = []
-    if (defined(invoker.cmdline_goldens)) {
-      deps += [ ":${image_name}.cmdline_verify_files" ]
-    }
-    if (defined(invoker.bootfs_goldens)) {
-      deps += [ ":${image_name}.bootfs_verify_files" ]
-    }
-    if (defined(invoker.static_pkgs_goldens)) {
-      deps += [ ":${image_name}.static_pkgs_verify_files" ]
-    }
-
     metadata = {
       # Assemblies have some defined packages, such as the base package.
       # This barrier prevents a Assembly#1 from including a depending Assembly#2
@@ -1030,9 +934,5 @@ template("assemble_system") {
 
       assembly_inputs_barrier = []
     }
-
-    # Note: "${image_name}.route_sources_verify_files" dependency on pm-publish
-    # would create a dependency cycle if it were included here. Instead, it is
-    # integrated into the build via //build/images:updates.
   }
 }

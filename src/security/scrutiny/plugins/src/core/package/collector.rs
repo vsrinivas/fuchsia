@@ -10,26 +10,33 @@ use {
                 ManifestData, Manifests, Package, Packages, ProtocolCapability, Route, Routes,
                 Sysmgr, Zbi,
             },
-            package::reader::{PackageReader, PackageServerReader},
-            util::{
-                to_package_url,
-                types::{ComponentManifest, PackageDefinition, ServiceMapping, SysManagerConfig},
+            package::{
+                is_cf_v1_manifest, is_cf_v2_manifest,
+                reader::{PackageReader, PackagesFromUpdateReader},
+            },
+            util::types::{
+                ComponentManifest, PackageDefinition, PartialPackageDefinition, ServiceMapping,
+                SysManagerConfig, INFERRED_URL,
             },
         },
         static_pkgs::StaticPkgsCollection,
     },
     anyhow::{anyhow, Context, Result},
+    cm_fidl_analyzer::{match_absolute_pkg_urls, PkgUrlMatch},
     cm_fidl_validator,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl as fdecl,
-    fuchsia_url::boot_url::BootUrl,
-    lazy_static::lazy_static,
+    fuchsia_merkle::Hash,
+    fuchsia_url::{
+        boot_url::BootUrl, AbsoluteComponentUrl, AbsolutePackageUrl, PackageName, PackageVariant,
+    },
     log::{debug, error, info, warn},
+    once_cell::sync::Lazy,
     regex::Regex,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_config::ModelConfig,
     scrutiny_utils::{
-        artifact::{ArtifactReader, FileArtifactReader},
+        artifact::{ArtifactReader, BlobFsArtifactReader, CompoundArtifactReader},
         bootfs::BootfsReader,
         zbi::{ZbiReader, ZbiType},
     },
@@ -41,52 +48,54 @@ use {
         sync::Arc,
     },
     update_package::parse_image_packages_json,
+    url::Url,
 };
 
 // Constants/Statics
-lazy_static! {
-    static ref SERVICE_CONFIG_RE: Regex = Regex::new(r"data/sysmgr/.+\.config").unwrap();
-    static ref PKG_URL_RE: Regex =
-        Regex::new(r"^fuchsia-pkg://fuchsia.com/([a-zA-Z0-9_-]+)$").unwrap();
-    static ref STATIC_PKG_URL_RE: Regex = Regex::new(r"^([a-zA-Z0-9_-]+)/0$").unwrap();
-}
+static SERVICE_CONFIG_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"data/sysmgr/.+\.config").unwrap());
+static ZBI_PATH: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("zbi"));
+static ZBI_SIGNED_PATH: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("zbi.signed"));
+static IMAGES_JSON_PATH: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("images.json"));
+static IMAGES_JSON_ORIG_PATH: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("images.json.orig"));
+
 // The root v2 component manifest.
 pub const ROOT_RESOURCE: &str = "meta/root.cm";
 
 struct StaticPackageDescription<'a> {
-    url: &'a str,
-    merkle: &'a str,
+    pub name: &'a PackageName,
+    pub variant: Option<&'a PackageVariant>,
+    pub merkle: &'a Hash,
 }
 
 impl<'a> StaticPackageDescription<'a> {
-    fn new(url: &'a str, merkle: &'a str) -> Self {
-        Self { url, merkle }
+    fn new(name: &'a PackageName, variant: Option<&'a PackageVariant>, merkle: &'a Hash) -> Self {
+        Self { name, variant, merkle }
     }
 
+    /// Definitions match when:
+    /// 1. Package definition has no hash (warning emitted above), or hashes match;
+    /// 2. Names match;
+    /// 3. A variant is missing (warning emitted above), or variants match.
     fn matches(&self, pkg: &PackageDefinition) -> bool {
-        if !PKG_URL_RE.is_match(&pkg.url) || &pkg.merkle != self.merkle {
-            return false;
+        let url = AbsolutePackageUrl::new(
+            pkg.url.repository().clone(),
+            self.name.clone(),
+            self.variant.map(PackageVariant::clone),
+            Some(self.merkle.clone()),
+        );
+        let url_match = match_absolute_pkg_urls(&url, &pkg.url);
+        if url_match == PkgUrlMatch::WeakMatch {
+            warn!("Lossy match of absolute package URLs: StaticPackageDescription.url={} ; PackageDefinition.url={}", url, pkg.url);
         }
-
-        let pkg_cap = PKG_URL_RE
-            .captures(&pkg.url)
-            .map(|caps| caps.get(1).map(|cap| cap.as_str()))
-            .unwrap_or(None);
-        let static_pkg_cap = STATIC_PKG_URL_RE
-            .captures(self.url)
-            .map(|caps| caps.get(1).map(|cap| cap.as_str()))
-            .unwrap_or(None);
-
-        // Match when both regular expression had a matching group that contains the same `&str`
-        // content.
-        return pkg_cap.is_some() && pkg_cap == static_pkg_cap;
+        url_match != PkgUrlMatch::NoMatch
     }
 }
 
 /// The PackageDataResponse contains all of the core model information extracted
 /// from the Fuchsia Archive (.far) packages from the current build.
 pub struct PackageDataResponse {
-    pub components: HashMap<String, Component>,
+    pub components: HashMap<Url, Component>,
     pub packages: Vec<Package>,
     pub manifests: Vec<Manifest>,
     pub routes: Vec<Route>,
@@ -95,7 +104,7 @@ pub struct PackageDataResponse {
 
 impl PackageDataResponse {
     pub fn new(
-        components: HashMap<String, Component>,
+        components: HashMap<Url, Component>,
         packages: Vec<Package>,
         manifests: Vec<Manifest>,
         routes: Vec<Route>,
@@ -116,23 +125,15 @@ pub struct PackageDataCollector {}
 impl PackageDataCollector {
     /// Retrieves the set of packages from the current target build returning
     /// them sorted by package url.
-    fn get_packages(
-        &self,
-        package_reader: &mut Box<dyn PackageReader>,
-    ) -> Result<Vec<PackageDefinition>> {
-        // Retrieve the JSON packages definition from the package server.
-        let targets = package_reader.read_targets().context("Failed to read targets")?;
-        let mut pkgs: Vec<PackageDefinition> = Vec::new();
-        for (name, target) in targets.signed.targets.iter() {
-            let pkg_def = package_reader
-                .read_package_definition(&name, &target.custom.merkle)
-                .context(format!(
-                    "Failed to read package definition: name={}; merkle={}",
-                    &name, &target.custom.merkle
-                ))?;
-            pkgs.push(pkg_def);
-        }
-        pkgs.sort_by(|lhs, rhs| lhs.url.cmp(&rhs.url));
+    fn get_packages(package_reader: &mut Box<dyn PackageReader>) -> Result<Vec<PackageDefinition>> {
+        let package_urls =
+            package_reader.read_package_urls().context("Failed to read listing of package URLs")?;
+        let mut pkgs = package_urls
+            .into_iter()
+            .map(|pkg_url| package_reader.read_package_definition(&pkg_url))
+            .collect::<Result<Vec<PackageDefinition>>>()
+            .context("Failed to read package definition")?;
+        pkgs.sort_by(|lhs, rhs| lhs.url.name().cmp(&rhs.url.name()));
         Ok(pkgs)
     }
 
@@ -141,7 +142,7 @@ impl PackageDataCollector {
     fn extend_service_mapping(
         service_mapping: &mut ServiceMapping,
         services: HashMap<String, Value>,
-    ) {
+    ) -> Result<()> {
         for (service_name, service_url_or_array) in services {
             if service_mapping.contains_key(&service_name) {
                 debug!(
@@ -150,11 +151,11 @@ impl PackageDataCollector {
                 );
             }
 
-            let service_url: String;
+            let service_url_string: String;
             if service_url_or_array.is_array() {
                 let service_array = service_url_or_array.as_array().unwrap();
                 if service_array[0].is_string() {
-                    service_url = service_array[0].as_str().unwrap().to_string();
+                    service_url_string = service_array[0].as_str().unwrap().to_string();
                 } else {
                     error!(
                         "Expected a string service url, instead got: {}:{}",
@@ -163,7 +164,7 @@ impl PackageDataCollector {
                     continue;
                 }
             } else if service_url_or_array.is_string() {
-                service_url = service_url_or_array.as_str().unwrap().to_string();
+                service_url_string = service_url_or_array.as_str().unwrap().to_string();
             } else {
                 error!(
                     "Unexpected service mapping found: {}:{}",
@@ -171,38 +172,45 @@ impl PackageDataCollector {
                 );
                 continue;
             }
+
+            let service_url = Url::parse(&service_url_string).with_context(|| {
+                format!(
+                    "Failed to parse service URL {} mapped to service name {}",
+                    &service_url_string, &service_name
+                )
+            })?;
             service_mapping.insert(service_name, service_url);
         }
+
+        Ok(())
     }
 
     /// Combine service name->url mappings defined in config-data.
     fn extract_config_data(
-        &self,
-        config_data_package_url: String,
+        config_data_package_url: &AbsolutePackageUrl,
         package_reader: &mut Box<dyn PackageReader>,
         served: &Vec<PackageDefinition>,
     ) -> Result<SysManagerConfig> {
-        let mut sys_config =
-            SysManagerConfig { services: ServiceMapping::new(), apps: HashSet::<String>::new() };
+        let mut sys_config = SysManagerConfig {
+            services: ServiceMapping::new(),
+            apps: HashSet::<AbsoluteComponentUrl>::new(),
+        };
 
         for pkg_def in served {
-            if pkg_def.url == config_data_package_url {
+            if pkg_def.matches_url(config_data_package_url) {
                 info!("Extracting config data");
                 for (name, data) in &pkg_def.meta {
-                    if SERVICE_CONFIG_RE.is_match(&name) {
-                        info!("Reading service definition: {}", name);
-                        let service_pkg =
-                            package_reader.read_service_package_definition(data.to_string())?;
-                        if let Some(apps) = service_pkg.apps {
-                            for app in apps {
-                                sys_config.apps.insert(app);
-                            }
+                    if let Some(name_str) = name.to_str() {
+                        if SERVICE_CONFIG_RE.is_match(name_str) {
+                            Self::extract_service_config(
+                                package_reader,
+                                &mut sys_config,
+                                name,
+                                data,
+                            )?;
                         }
-                        if let Some(services) = service_pkg.services {
-                            Self::extend_service_mapping(&mut sys_config.services, services);
-                        } else {
-                            debug!("Expected service with name {} to exist. Optimistically continuing.", name);
-                        }
+                    } else {
+                        warn!("Skipping internal package path that cannot be converted to string: {:?}", name);
                     }
                 }
                 break;
@@ -211,18 +219,44 @@ impl PackageDataCollector {
         Ok(sys_config)
     }
 
+    fn extract_service_config(
+        package_reader: &mut Box<dyn PackageReader>,
+        sys_config: &mut SysManagerConfig,
+        name: &PathBuf,
+        data: &Vec<u8>,
+    ) -> Result<()> {
+        info!("Reading service definition: {:?}", name);
+
+        let service_pkg = package_reader.read_service_package_definition(data.as_slice())?;
+        if let Some(apps) = service_pkg.apps {
+            for app in apps {
+                let app_url = AbsoluteComponentUrl::parse(&app).with_context(|| {
+                    format!("Failed to parse sys manager config data app package URL: {}", app)
+                })?;
+                sys_config.apps.insert(app_url);
+            }
+        }
+        if let Some(services) = service_pkg.services {
+            Self::extend_service_mapping(&mut sys_config.services, services)?;
+        } else {
+            debug!("Expected service with name {:?} to exist. Optimistically continuing.", name);
+        }
+
+        Ok(())
+    }
+
     /// Extracts the ZBI from the update package and parses it into the ZBI
     /// model.
     fn extract_zbi_from_update_package(
         reader: &mut Box<dyn ArtifactReader>,
-        package: &PackageDefinition,
+        update_package: &PartialPackageDefinition,
         fuchsia_packages: &Vec<PackageDefinition>,
     ) -> Result<Zbi> {
-        info!("Extracting the ZBI from {}", package.url);
+        info!("Extracting the ZBI from update package");
 
-        let result_from_update_package = Self::lookup_zbi_hash_in_update_package(package);
+        let result_from_update_package = Self::lookup_zbi_hash_in_update_package(update_package);
         let result_from_images_json =
-            Self::lookup_zbi_hash_in_images_json(reader, package, fuchsia_packages);
+            Self::lookup_zbi_hash_in_images_json(reader, update_package, fuchsia_packages);
         let zbi_hash = match (result_from_update_package, result_from_images_json) {
             (Ok(zbi_hash_from_update_package), Ok(zbi_hash_from_images_json)) => {
                 if zbi_hash_from_update_package != zbi_hash_from_images_json {
@@ -239,7 +273,7 @@ impl PackageDataCollector {
             (_, Err(err_from_images_json)) => return Err(err_from_images_json),
         };
 
-        let zbi_data = reader.read_bytes(&Path::new(&format!("blobs/{}", zbi_hash)))?;
+        let zbi_data = reader.read_bytes(&Path::new(&zbi_hash.to_string()))?;
         let mut reader = ZbiReader::new(zbi_data);
         let sections = reader.parse()?;
         let mut bootfs = HashMap::new();
@@ -267,27 +301,29 @@ impl PackageDataCollector {
         Ok(Zbi { sections, bootfs, cmdline })
     }
 
-    fn lookup_zbi_hash_in_update_package(package: &PackageDefinition) -> Result<String> {
-        package
+    fn lookup_zbi_hash_in_update_package(
+        update_package: &PartialPackageDefinition,
+    ) -> Result<Hash> {
+        update_package
             .contents
-            .get("zbi.signed")
-            .or(package.contents.get("zbi"))
-            .map(String::clone)
+            .get(&*ZBI_SIGNED_PATH)
+            .or(update_package.contents.get(&*ZBI_PATH))
+            .map(Hash::clone)
             .ok_or(anyhow!("Update package contains no zbi.signed or zbi entry"))
     }
 
     fn lookup_zbi_hash_in_images_json(
         reader: &mut Box<dyn ArtifactReader>,
-        update_package: &PackageDefinition,
+        update_package: &PartialPackageDefinition,
         fuchsia_packages: &Vec<PackageDefinition>,
-    ) -> Result<String> {
+    ) -> Result<Hash> {
         let images_json_hash = update_package
             .contents
-            .get("images.json")
-            .or(update_package.contents.get("images.json.orig"))
+            .get(&*IMAGES_JSON_PATH)
+            .or(update_package.contents.get(&*IMAGES_JSON_ORIG_PATH))
             .ok_or(anyhow!("Update package contains no images manifest entry"))?;
         let images_json_contents = reader
-            .read_bytes(&Path::new(&format!("blobs/{}", images_json_hash)))
+            .read_bytes(&Path::new(&images_json_hash.to_string()))
             .context("Failed to open images manifest blob designated in update package")?;
         let image_packages_manifest = parse_image_packages_json(images_json_contents.as_slice())
             .context("Failed to parse images manifest in update package")?;
@@ -295,33 +331,41 @@ impl PackageDataCollector {
             .fuchsia()
             .ok_or(anyhow!("Update package images manifest contains no fuchsia boot slot images"))?
             .url();
-        let images_package_url_string = to_package_url(images_package_url.name().as_ref())
-            .with_context(|| format!("Failed to integrate update package images package name into package URL; package_name={}", images_package_url.name()))?;
-        let images_package_hash_string = images_package_url.hash().to_string();
-        let images_package = fuchsia_packages.iter().find(|&pkg_def| pkg_def.url == images_package_url_string && pkg_def.merkle == images_package_hash_string)
-            .ok_or_else(|| anyhow!("Failed to locate update package images package with name {} and merkle root {}", images_package_url.name().as_ref(), images_package_hash_string))?;
+        let images_package = fuchsia_packages
+            .iter()
+            .find(|&pkg_def| pkg_def.url == images_package_url.clone().into())
+            .ok_or_else(|| {
+                anyhow!(
+                    "Failed to locate update package images package with URL {} ",
+                    **images_package_url
+                )
+            })?;
         images_package
             .contents
-            .get("zbi")
-            .map(String::clone)
+            .get(&PathBuf::from("zbi"))
+            .map(Hash::clone)
             .ok_or(anyhow!("Update package images package contains no zbi.signed or zbi entry"))
     }
 
     fn get_pkg_source<'a>(
         pkg: &'a PackageDefinition,
         static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
-    ) -> ComponentSource {
+    ) -> Result<ComponentSource> {
+        let pkg_merkle = pkg.url.hash().ok_or_else(||
+            anyhow!("Unable to report precise component source from package URL that is missing package hash: {}", pkg.url)
+        )?;
+
         if static_pkgs.is_none() {
-            return ComponentSource::Package(pkg.merkle.clone());
+            return Ok(ComponentSource::Package(pkg_merkle.clone()));
         }
 
         for static_pkg in static_pkgs.as_ref().unwrap().iter() {
             if static_pkg.matches(pkg) {
-                return ComponentSource::StaticPackage(static_pkg.merkle.to_string());
+                return Ok(ComponentSource::StaticPackage(static_pkg.merkle.clone()));
             }
         }
 
-        ComponentSource::Package(pkg.merkle.clone())
+        Ok(ComponentSource::Package(pkg_merkle.clone()))
     }
 
     fn get_static_pkgs<'a>(
@@ -339,7 +383,9 @@ impl PackageDataCollector {
                             .as_ref()
                             .unwrap()
                             .iter()
-                            .map(|(url, merkle)| StaticPackageDescription::new(url, merkle))
+                            .map(|((name, variant), merkle)| {
+                                StaticPackageDescription::new(name, variant.as_ref(), merkle)
+                            })
                             .collect(),
                     )
                 } else {
@@ -359,18 +405,33 @@ impl PackageDataCollector {
     fn extract_package_data<'a>(
         component_id: &mut i32,
         service_map: &mut ServiceMapping,
-        components: &mut HashMap<String, Component>,
+        components: &mut HashMap<Url, Component>,
         manifests: &mut Vec<Manifest>,
         pkg: &PackageDefinition,
         static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
     ) -> Result<()> {
-        let source = Self::get_pkg_source(pkg, static_pkgs);
+        let source = Self::get_pkg_source(pkg, static_pkgs)?;
         // Extract V1 and V2 components from the packages.
         for (path, cm) in &pkg.cms {
+            let path_str = path.to_str().ok_or_else(|| {
+                anyhow!("Cannot format component manifest path as string: {:?}", path)
+            })?;
             // Component Framework Version 2.
-            if path.starts_with("meta/") && path.ends_with(".cm") {
+            if is_cf_v2_manifest(path) {
                 *component_id += 1;
-                let url = format!("{}#{}", pkg.url, path);
+                let url = AbsoluteComponentUrl::from_package_url_and_resource(
+                    pkg.url.clone(),
+                    path_str.to_string(),
+                )
+                .with_context(|| {
+                    format!(
+                        r#"Failed to apply resource path "{}" to package URL "{}""#,
+                        path_str, pkg.url
+                    )
+                })?;
+                let url = Url::parse(&url.to_string()).with_context(|| {
+                    format!("Failed to convert package URL to standard URL: {}", url)
+                })?;
                 components.insert(
                     url.clone(),
                     Component {
@@ -444,9 +505,21 @@ impl PackageDataCollector {
                 };
                 manifests.push(cf2_manifest);
             // Component Framework Version 1.
-            } else if path.starts_with("meta/") && path.ends_with(".cmx") {
+            } else if is_cf_v1_manifest(path) {
                 *component_id += 1;
-                let url = format!("{}#{}", pkg.url, path);
+                let url = AbsoluteComponentUrl::from_package_url_and_resource(
+                    pkg.url.clone(),
+                    path_str.to_string(),
+                )
+                .with_context(|| {
+                    format!(
+                        r#"Failed to apply resource path "{}" to package URL "{}""#,
+                        path_str, pkg.url
+                    )
+                })?;
+                let url = Url::parse(&url.to_string()).with_context(|| {
+                    format!("Failed to convert package URL to standard URL: {}", url)
+                })?;
                 components.insert(
                     url.clone(),
                     Component {
@@ -492,7 +565,7 @@ impl PackageDataCollector {
     fn extract_zbi_data(
         component_id: &mut i32,
         service_map: &mut ServiceMapping,
-        components: &mut HashMap<String, Component>,
+        components: &mut HashMap<Url, Component>,
         manifests: &mut Vec<Manifest>,
         zbi: &Zbi,
     ) -> Result<()> {
@@ -500,6 +573,9 @@ impl PackageDataCollector {
             if file_name.ends_with(".cm") {
                 info!("Extracting bootfs manifest: {}", file_name);
                 let url = BootUrl::new_resource("/".to_string(), file_name.to_string())?;
+                let url = Url::parse(&url.to_string()).with_context(|| {
+                    format!("Failed to convert boot URL to standard URL: {}", url)
+                })?;
                 let base64_bytes = base64::encode(&file_data);
                 if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&file_data) {
                     if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
@@ -527,7 +603,7 @@ impl PackageDataCollector {
                                         if let Some(source_name) = &protocol.source_name {
                                             if let Some(fdecl::Ref::Self_(_)) = &protocol.source {
                                                 service_map
-                                                    .insert(source_name.clone(), url.to_string());
+                                                    .insert(source_name.clone(), url.clone());
                                             }
                                         }
                                     }
@@ -548,10 +624,8 @@ impl PackageDataCollector {
                                                 if let Some(fdecl::Ref::Parent(_)) =
                                                     &protocol.source
                                                 {
-                                                    service_map.insert(
-                                                        source_name.clone(),
-                                                        url.to_string(),
-                                                    );
+                                                    service_map
+                                                        .insert(source_name.clone(), url.clone());
                                                 }
                                             }
                                         }
@@ -564,10 +638,10 @@ impl PackageDataCollector {
                         // Add the components directly from the ZBI.
                         *component_id += 1;
                         components.insert(
-                            url.to_string(),
+                            url.clone(),
                             Component {
                                 id: *component_id,
-                                url: url.to_string(),
+                                url: url,
                                 version: 2,
                                 source: ComponentSource::ZbiBootfs,
                             },
@@ -590,7 +664,7 @@ impl PackageDataCollector {
     fn infer_components(
         component_id: &mut i32,
         service_map: &mut ServiceMapping,
-        components: &mut HashMap<String, Component>,
+        components: &mut HashMap<Url, Component>,
     ) {
         for (service_name, pkg_url) in service_map.iter() {
             if !components.contains_key(pkg_url) {
@@ -618,7 +692,7 @@ impl PackageDataCollector {
     fn generate_routes(
         component_id: &mut i32,
         service_map: &mut ServiceMapping,
-        components: &mut HashMap<String, Component>,
+        components: &mut HashMap<Url, Component>,
         manifests: &Vec<Manifest>,
         routes: &mut Vec<Route>,
     ) {
@@ -636,7 +710,10 @@ impl PackageDataCollector {
                             // that provides this service.
                             debug!("Expected a service provider for service {} but it does not exist. Creating inferred node.", service_name);
                             *component_id += 1;
-                            let url = format!("fuchsia-pkg://inferred#meta/{}.cmx", service_name);
+                            let url_fragment = format!("#meta/{}.cmx", service_name);
+                            let url = INFERRED_URL
+                                .join(&url_fragment)
+                                .expect("inferred URL can be joined with manifest fragment");
                             components.insert(
                                 url.clone(),
                                 Component {
@@ -667,44 +744,33 @@ impl PackageDataCollector {
     /// Function to build the component graph model out of the packages and services retrieved
     /// by this collector.
     fn extract<'a>(
-        update_package_url: String,
+        update_package: &PartialPackageDefinition,
         mut artifact_reader: &mut Box<dyn ArtifactReader>,
         fuchsia_packages: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
         static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
     ) -> Result<PackageDataResponse> {
-        let mut components: HashMap<String, Component> = HashMap::new();
+        let mut components: HashMap<Url, Component> = HashMap::new();
         let mut packages: Vec<Package> = Vec::new();
         let mut manifests: Vec<Manifest> = Vec::new();
         let mut routes: Vec<Route> = Vec::new();
-        let mut zbi: Option<Zbi> = None;
 
         // Iterate through all served packages, for each cmx they define, create a node.
         let mut component_id = 0;
         info!("Found {} package", fuchsia_packages.len());
         for pkg in fuchsia_packages.iter() {
             info!("Extracting package: {}", pkg.url);
+            let merkle = pkg.url.hash().ok_or_else(||
+                anyhow!("Unable to extract precise package information from URL without package hash: {}", pkg.url)
+            )?.clone();
             let package = Package {
-                url: pkg.url.clone(),
-                merkle: pkg.merkle.clone(),
+                name: pkg.url.name().clone(),
+                variant: pkg.url.variant().map(|variant| variant.clone()),
+                merkle,
                 contents: pkg.contents.clone(),
                 meta: pkg.meta.clone(),
             };
             packages.push(package);
-
-            // If the package is the update package attempt to extract the ZBI.
-            if pkg.url == update_package_url {
-                let zbi_result = PackageDataCollector::extract_zbi_from_update_package(
-                    &mut artifact_reader,
-                    &pkg,
-                    &fuchsia_packages,
-                );
-                if let Err(err) = zbi_result {
-                    warn!("{}", err);
-                } else {
-                    zbi = Some(zbi_result.unwrap());
-                }
-            }
 
             Self::extract_package_data(
                 &mut component_id,
@@ -716,15 +782,26 @@ impl PackageDataCollector {
             )?;
         }
 
-        if let Some(zbi) = &zbi {
-            Self::extract_zbi_data(
-                &mut component_id,
-                &mut service_map,
-                &mut components,
-                &mut manifests,
-                &zbi,
-            )?;
-        }
+        let zbi = match PackageDataCollector::extract_zbi_from_update_package(
+            &mut artifact_reader,
+            update_package,
+            &fuchsia_packages,
+        ) {
+            Ok(zbi) => {
+                Self::extract_zbi_data(
+                    &mut component_id,
+                    &mut service_map,
+                    &mut components,
+                    &mut manifests,
+                    &zbi,
+                )?;
+                Some(zbi)
+            }
+            Err(err) => {
+                warn!("{}", err);
+                None
+            }
+        };
 
         Self::infer_components(&mut component_id, &mut service_map, &mut components);
 
@@ -747,30 +824,34 @@ impl PackageDataCollector {
     }
 
     pub fn collect_with_reader(
-        &self,
         config: ModelConfig,
         mut package_reader: Box<dyn PackageReader>,
-        mut artifact_loader: Box<dyn ArtifactReader>,
+        mut artifact_reader: Box<dyn ArtifactReader>,
         model: Arc<DataModel>,
     ) -> Result<()> {
-        let package_reader = &mut package_reader;
         let served_packages =
-            self.get_packages(package_reader).context("Failed to read served packages")?;
-        let sysmgr_config = self
-            .extract_config_data(config.config_data_package_url(), package_reader, &served_packages)
-            .context("Failed to read sysmgr config")?;
+            Self::get_packages(&mut package_reader).context("Failed to read packages listing")?;
+        let sysmgr_config = Self::extract_config_data(
+            &config.config_data_package_url(),
+            &mut package_reader,
+            &served_packages,
+        )
+        .context("Failed to read sysmgr config")?;
         info!(
-            "Done collecting. Found in the sys realm: {} services, {} apps, {} served packages.",
+            "Done collecting. Found in the sys realm: {} services, {} apps, {} packages listed.",
             sysmgr_config.services.keys().len(),
             sysmgr_config.apps.len(),
             served_packages.len(),
         );
 
+        let update_package = package_reader
+            .read_update_package_definition()
+            .context("Failed to read update package definition for package data collector")?;
         let static_pkgs_result = model.get();
         let static_pkgs = Self::get_static_pkgs(&static_pkgs_result);
         let response = PackageDataCollector::extract(
-            config.update_package_url(),
-            &mut artifact_loader,
+            &update_package,
+            &mut artifact_reader,
             served_packages,
             sysmgr_config.services.clone(),
             &static_pkgs,
@@ -781,6 +862,7 @@ impl PackageDataCollector {
             model_comps.push(val);
         }
 
+        // TODO: Collections need to forward deps to controllers.
         model.set(Components::new(model_comps)).context("Failed to store components in model")?;
         model.set(Packages::new(response.packages)).context("Failed to store packages in model")?;
         model
@@ -788,7 +870,7 @@ impl PackageDataCollector {
             .context("Failed to store manifests in model")?;
         model.set(Routes::new(response.routes)).context("Failed to store routes in model")?;
         model
-            .set(Sysmgr::new(sysmgr_config.services, sysmgr_config.apps.into_iter().collect()))
+            .set(Sysmgr::new(sysmgr_config.services, sysmgr_config.apps))
             .context("Failed to store sysmgr config in model")?;
 
         if let Some(zbi) = response.zbi {
@@ -801,7 +883,7 @@ impl PackageDataCollector {
         for dep in package_reader.get_deps().into_iter() {
             deps.insert(dep);
         }
-        for dep in artifact_loader.get_deps().into_iter() {
+        for dep in artifact_reader.get_deps().into_iter() {
             deps.insert(dep);
         }
         model.set(CoreDataDeps::new(deps)).context("Failed to store core data deps")?;
@@ -814,15 +896,33 @@ impl DataCollector for PackageDataCollector {
     /// Collects and builds a DAG of component nodes (with manifests) and routes that
     /// connect the nodes.
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
-        let build_path = model.config().build_path();
-        let repository_path = model.config().repository_path();
-        let package_reader: Box<dyn PackageReader> = Box::new(PackageServerReader::new(Box::new(
-            FileArtifactReader::new(&build_path, &repository_path),
-        )));
-        let artifact_loader: Box<dyn ArtifactReader> =
-            Box::new(FileArtifactReader::new(&build_path, &repository_path));
+        let model_config = model.config();
+        let build_path = &model_config.build_path();
 
-        self.collect_with_reader(model.config().clone(), package_reader, artifact_loader, model)?;
+        // Construct blobfs readers from model config blobfs paths.
+        let blobfs_readers = model_config
+            .blobfs_paths()
+            .iter()
+            .map(|blobfs_path| BlobFsArtifactReader::try_new(build_path, blobfs_path))
+            // Use `collect(): Iterator<Result<_>> -> Result<Vec<_>>` to collect `Ok` values or else
+            // first `Err` value.
+            .collect::<Result<Vec<BlobFsArtifactReader>>>()
+            .context("Failed to construct blobfs artifact readers for package collector")?;
+
+        let artifact_reader_for_package_reader: CompoundArtifactReader =
+            blobfs_readers.clone().into();
+        let artifact_reader_for_collect: CompoundArtifactReader = blobfs_readers.into();
+        let package_reader: Box<dyn PackageReader> = Box::new(PackagesFromUpdateReader::new(
+            &model_config.update_package_path(),
+            Box::new(artifact_reader_for_package_reader),
+        ));
+
+        Self::collect_with_reader(
+            model.config().clone(),
+            package_reader,
+            Box::new(artifact_reader_for_collect),
+            model,
+        )?;
 
         Ok(())
     }
@@ -841,27 +941,29 @@ pub mod tests {
             package::{
                 reader::PackageReader,
                 test_utils::{
-                    create_model, create_svc_pkg_def, create_svc_pkg_def_with_array,
+                    create_model, create_svc_pkg_bytes, create_svc_pkg_bytes_with_array,
                     create_test_cm_map, create_test_cmx_map, create_test_package_with_cms,
                     create_test_package_with_contents, create_test_package_with_meta,
-                    create_test_sandbox, MockPackageReader,
+                    create_test_partial_package_with_contents, create_test_sandbox,
+                    MockPackageReader,
                 },
             },
-            util::{
-                jsons::{Custom, FarPackageDefinition, Signed, TargetsJson},
-                types::PackageDefinition,
-            },
+            util::types::{PackageDefinition, PartialPackageDefinition, INFERRED_URL},
         },
         fuchsia_hash::{Hash, HASH_SIZE},
         fuchsia_merkle::MerkleTree,
-        fuchsia_url::PinnedAbsolutePackageUrl,
+        fuchsia_url::{
+            AbsoluteComponentUrl, AbsolutePackageUrl, PackageName, PackageVariant,
+            PinnedAbsolutePackageUrl,
+        },
         fuchsia_zbi_abi::zbi_container_header,
         maplit::{hashmap, hashset},
-        scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config},
+        scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config, TEST_REPO_URL},
         scrutiny_utils::artifact::ArtifactReader,
         sha2::{Digest, Sha256},
-        std::{collections::HashMap, convert::TryInto, sync::Arc},
+        std::{collections::HashMap, convert::TryInto, path::PathBuf, str::FromStr, sync::Arc},
         update_package::{ImageMetadata, ImagePackagesManifest},
+        url::Url,
         zerocopy::AsBytes,
     };
 
@@ -878,105 +980,75 @@ pub mod tests {
 
     fn default_pkg() -> PackageDefinition {
         PackageDefinition {
-            url: "".to_string(),
+            url: "fuchsia-pkg://fuchsia.com/default/0?hash=0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
             meta: HashMap::new(),
-            merkle: "".to_string(),
             contents: HashMap::new(),
             cms: HashMap::new(),
         }
     }
 
-    #[test]
+    fn empty_update_pkg() -> PartialPackageDefinition {
+        PartialPackageDefinition {
+            meta: HashMap::new(),
+            contents: HashMap::new(),
+            cms: HashMap::new(),
+        }
+    }
+
+    #[fuchsia::test]
     fn test_static_pkgs_matches() {
+        let pkg_def_with_variant = PackageDefinition {
+            url: "fuchsia-pkg://fuchsia.com/alpha-beta_gamma9/0?hash=0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
+            ..default_pkg()
+        };
+        let pkg_def_without_variant = PackageDefinition {
+            url: "fuchsia-pkg://fuchsia.com/alpha-beta_gamma9?hash=0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
+            ..default_pkg()
+        };
         // Match.
-        assert!(StaticPackageDescription::new("alpha-beta_gamma9/0", "0").matches(
-            &PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha-beta_gamma9".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }
-        ));
-        // No punctuation in package name.
+        assert!(StaticPackageDescription::new(
+            &PackageName::from_str("alpha-beta_gamma9").unwrap(),
+            Some(&PackageVariant::zero()),
+            &Hash::from([0u8; HASH_SIZE])
+        )
+        .matches(&pkg_def_with_variant));
+        // Match with self variant None, input variant Some.
+        assert!(StaticPackageDescription::new(
+            &PackageName::from_str("alpha-beta_gamma9").unwrap(),
+            None,
+            &Hash::from([0u8; HASH_SIZE])
+        )
+        .matches(&pkg_def_with_variant));
+        // Match with self variant Some, input variant None.
+        assert!(StaticPackageDescription::new(
+            &PackageName::from_str("alpha-beta_gamma9").unwrap(),
+            Some(&PackageVariant::zero()),
+            &Hash::from([0u8; HASH_SIZE])
+        )
+        .matches(&pkg_def_without_variant));
+        // Variant mismatch.
         assert!(
-            StaticPackageDescription::new("alpha+/0", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha+".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        // `/0` cannot be just any number.
-        assert!(
-            StaticPackageDescription::new("alpha/0123456", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        // `/0` is not hex.
-        assert!(
-            StaticPackageDescription::new("alpha/0a1b2c3d", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
+            StaticPackageDescription::new(
+                &PackageName::from_str("alpha-beta_gamma9").unwrap(),
+                Some(&PackageVariant::from_str("1").unwrap()),
+                &Hash::from([0u8; HASH_SIZE])
+            )
+            .matches(&pkg_def_with_variant)
+                == false
         );
         // Merkle mismatch.
         assert!(
-            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
-                merkle: "1".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        // `/0` suffix in static pkg description not part of matched path.
-        assert!(
-            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha/0".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        // Matched path not expected to contain `[name1]/[name2]`.
-        assert!(
-            StaticPackageDescription::new("alpha/beta", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        assert!(
-            StaticPackageDescription::new("alpha/beta/0", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        assert!(
-            StaticPackageDescription::new("alpha/beta", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.com/alpha/beta".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        // Expected pkg definition scheme: `fuchsia-pkg`.
-        assert!(
-            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
-                url: "fuchsia-boot://fuchsia.com/alpha".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
-        );
-        // Expected pkg definition domain: `fuchsia.com`.
-        assert!(
-            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
-                url: "fuchsia-pkg://fuchsia.dev/alpha".to_string(),
-                merkle: "0".to_string(),
-                ..default_pkg()
-            }) == false
+            StaticPackageDescription::new(
+                &PackageName::from_str("alpha").unwrap(),
+                Some(&PackageVariant::zero()),
+                &Hash::from([1u8; HASH_SIZE])
+            )
+            .matches(&pkg_def_with_variant)
+                == false
         );
     }
 
-    fn count_sources(components: HashMap<String, Component>) -> (usize, usize, usize, usize) {
+    fn count_sources(components: HashMap<Url, Component>) -> (usize, usize, usize, usize) {
         let mut inferred_count = 0;
         let mut zbi_bootfs_count = 0;
         let mut package_count = 0;
@@ -1000,177 +1072,160 @@ pub mod tests {
         (inferred_count, zbi_bootfs_count, package_count, static_package_count)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_config_data_ignores_services_defined_on_non_config_data_package() {
         // Create a single package that is NOT the config data package
         let mut mock_reader: Box<dyn PackageReader> = Box::new(MockPackageReader::new());
 
         let mut contents = HashMap::new();
-        contents.insert(String::from("data/sysmgr/foo.config"), String::from("test_merkle"));
+        contents.insert(PathBuf::from("data/sysmgr/foo.config"), Hash::from([0u8; HASH_SIZE]));
         let pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/not-config-data"),
+            PackageName::from_str("not-config-data").unwrap(),
+            None,
             contents,
         );
         let served = vec![pkg];
 
-        let collector = PackageDataCollector::default();
         let config = fake_model_config();
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut mock_reader, &served)
-            .unwrap();
+        let result = PackageDataCollector::extract_config_data(
+            &config.config_data_package_url(),
+            &mut mock_reader,
+            &served,
+        )
+        .unwrap();
         assert_eq!(0, result.services.len());
         assert_eq!(0, result.apps.len())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_config_data_ignores_services_defined_by_non_config_meta_contents() {
         // Create a single package that IS the config data package but
         // does not contain valid data/sysmgr/*.config meta content.
         let mut mock_reader: Box<dyn PackageReader> = Box::new(MockPackageReader::new());
 
         let mut contents = HashMap::new();
-        contents.insert(String::from("not/valid/config"), String::from("test_merkle"));
-        let config = fake_model_config();
-        let pkg = create_test_package_with_contents(config.config_data_package_url(), contents);
+        contents.insert(PathBuf::from("not/valid/config"), Hash::from([0u8; HASH_SIZE]));
+        let pkg = create_test_package_with_contents(
+            PackageName::from_str("config-data").unwrap(),
+            None,
+            contents,
+        );
         let served = vec![pkg];
 
-        let collector = PackageDataCollector::default();
         let config = fake_model_config();
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut mock_reader, &served)
-            .unwrap();
+        let result = PackageDataCollector::extract_config_data(
+            &config.config_data_package_url(),
+            &mut mock_reader,
+            &served,
+        )
+        .unwrap();
 
         assert_eq!(0, result.services.len());
         assert_eq!(0, result.apps.len())
     }
 
-    #[test]
-    fn test_extract_config_data_takes_the_last_defined_duplicate_config_data_services() {
-        let mock_reader = Box::new(MockPackageReader::new());
-        // We will need 2 service package definitions that map the same service to different components
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![(
-                String::from("fuchsia.test.foo.bar"),
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
-            )],
-            vec![],
-        ));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![(
-                String::from("fuchsia.test.foo.bar"),
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
-            )],
-            vec![],
-        ));
-        let mut meta = HashMap::new();
-        meta.insert(String::from("data/sysmgr/foo.config"), String::from("test_merkle"));
-        meta.insert(String::from("data/sysmgr/bar.config"), String::from("test_merkle_2"));
-        let config = fake_model_config();
-        let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
-        let served = vec![pkg];
-
-        let collector = PackageDataCollector::default();
-        let mut package_reader: Box<dyn PackageReader> = mock_reader;
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
-            .unwrap();
-        assert_eq!(1, result.services.len());
-        assert!(result.services.contains_key("fuchsia.test.foo.bar"));
-        assert_eq!(
-            "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
-            result.services.get("fuchsia.test.foo.bar").unwrap()
-        );
-        assert_eq!(0, result.apps.len());
-    }
-
-    #[test]
+    #[fuchsia::test]
     fn test_extract_config_data_merges_unique_service_names() {
         let mock_reader = Box::new(MockPackageReader::new());
-        // We will need 2 service package definitions that map different services
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![(
-                String::from("fuchsia.test.foo.service1"),
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
-            )],
-            vec![],
-        ));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![(
-                String::from("fuchsia.test.foo.service2"),
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
-            )],
-            vec![],
-        ));
 
+        // We will need 2 service package definitions that map different services
         let mut meta = HashMap::new();
-        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
-        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        meta.insert(
+            PathBuf::from("data/sysmgr/service1.config"),
+            create_svc_pkg_bytes(
+                vec![(
+                    String::from("fuchsia.test.foo.service1"),
+                    String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+                )],
+                vec![],
+            ),
+        );
+        meta.insert(
+            PathBuf::from("data/sysmgr/service2.config"),
+            create_svc_pkg_bytes(
+                vec![(
+                    String::from("fuchsia.test.foo.service2"),
+                    String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
+                )],
+                vec![],
+            ),
+        );
         let config = fake_model_config();
-        let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
+        let pkg = create_test_package_with_meta(
+            PackageName::from_str("config-data").unwrap(),
+            None,
+            meta,
+        );
         let served = vec![pkg];
 
-        let collector = PackageDataCollector::default();
         let mut package_reader: Box<dyn PackageReader> = mock_reader;
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
-            .unwrap();
+        let result = PackageDataCollector::extract_config_data(
+            &config.config_data_package_url(),
+            &mut package_reader,
+            &served,
+        )
+        .unwrap();
         assert_eq!(2, result.services.len());
         assert_eq!(0, result.apps.len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_config_data_reads_first_value_when_given_an_array_for_service_url_mapping() {
+        let served2_str = "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx";
+        let served2_url = Url::parse(served2_str).unwrap();
         let mock_reader = Box::new(MockPackageReader::new());
-        // Create 2 service map definitions that map different services
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![(
-                String::from("fuchsia.test.foo.service1"),
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
-            )],
-            vec![],
-        ));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def_with_array(
-            vec![(
-                String::from("fuchsia.test.foo.service2"),
-                vec![
-                    String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
-                    String::from("--foo"),
-                    String::from("--bar"),
-                ],
-            )],
-            vec![],
-        ));
         let mut meta = HashMap::new();
-        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
-        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        meta.insert(
+            PathBuf::from("data/sysmgr/service1.config"),
+            create_svc_pkg_bytes(
+                vec![(
+                    String::from("fuchsia.test.foo.service1"),
+                    String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+                )],
+                vec![],
+            ),
+        );
+        meta.insert(
+            PathBuf::from("data/sysmgr/service2.config"),
+            create_svc_pkg_bytes_with_array(
+                vec![(
+                    String::from("fuchsia.test.foo.service2"),
+                    vec![String::from(served2_str), String::from("--foo"), String::from("--bar")],
+                )],
+                vec![],
+            ),
+        );
         let config = fake_model_config();
-        let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
+        let pkg = create_test_package_with_meta(
+            PackageName::from_str("config-data").unwrap(),
+            None,
+            meta,
+        );
         let served = vec![pkg];
 
-        let collector = PackageDataCollector::default();
         let mut package_reader: Box<dyn PackageReader> = mock_reader;
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
-            .unwrap();
+        let result = PackageDataCollector::extract_config_data(
+            &config.config_data_package_url(),
+            &mut package_reader,
+            &served,
+        )
+        .unwrap();
         assert_eq!(2, result.services.len());
-        assert_eq!(
-            "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
-            result.services.get("fuchsia.test.foo.service2").unwrap()
-        );
+        assert_eq!(&served2_url, result.services.get("fuchsia.test.foo.service2").unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_with_no_services_infers_service() {
         // Create a single test package with a single unknown service dependency
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.foo.bar")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/baz.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/baz.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
         let served = vec![pkg];
 
         let services = HashMap::new();
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1198,19 +1253,23 @@ pub mod tests {
         assert_eq!((1, 0, 1, 0), count_sources(response.components));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_with_static_pkg() {
         // Create a single test package with a single unknown service dependency
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.foo.bar")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/baz.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/baz.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
         let served = vec![pkg];
 
         let services = HashMap::new();
         let mut package_getter: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
-        let static_pkgs = Some(vec![StaticPackageDescription::new("foo/0", "0")]);
+        let pkg_name = PackageName::from_str("foo").unwrap();
+        let pkg_variant = PackageVariant::zero();
+        let pkg_hash = Hash::from([0u8; HASH_SIZE]);
+        let static_pkgs =
+            Some(vec![StaticPackageDescription::new(&pkg_name, Some(&pkg_variant), &pkg_hash)]);
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut package_getter,
             served,
             services,
@@ -1227,24 +1286,24 @@ pub mod tests {
         assert_eq!((1, 0, 0, 1), count_sources(response.components));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_with_known_services_but_no_matching_component_infers_component() {
         // Create a single test package with a single known service dependency
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.foo.bar")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/baz.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/baz.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
         let served = vec![pkg];
 
         // We know about the desired service in the service mapping, but the component doesn't exist
         let mut services = HashMap::new();
         services.insert(
             String::from("fuchsia.test.foo.bar"),
-            String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
+            Url::parse("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx").unwrap(),
         );
 
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1261,23 +1320,23 @@ pub mod tests {
         assert_eq!((1, 0, 1, 0), count_sources(response.components));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_with_invalid_cmx_creates_empty_graph() {
         // Create a single test package with an invalid cmx path
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.foo.bar")]);
         let sb2 = create_test_sandbox(vec![String::from("fuchsia.test.foo.baz")]);
         let cms = create_test_cmx_map(vec![
-            (String::from("foo/bar.cmx"), sb),
-            (String::from("meta/baz"), sb2),
+            (PathBuf::from("foo/bar.cmx"), sb),
+            (PathBuf::from("meta/baz"), sb2),
         ]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
         let served = vec![pkg];
 
         let services = HashMap::new();
 
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1294,17 +1353,18 @@ pub mod tests {
         assert_eq!((0, 0, 0, 0), count_sources(response.components));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_with_cm() {
-        let cms = create_test_cm_map(vec![("meta/foo.cm".to_string(), vec![])]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cm_map(vec![(PathBuf::from("meta/foo.cm"), vec![])]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
+        let pkg_url = pkg.url.clone();
         let served = vec![pkg];
 
         let services = HashMap::new();
 
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1312,32 +1372,39 @@ pub mod tests {
         )
         .unwrap();
 
+        let component_url = AbsoluteComponentUrl::from_package_url_and_resource(
+            pkg_url.clone(),
+            "meta/foo.cm".to_string(),
+        )
+        .unwrap();
+        let url = Url::parse(&component_url.to_string()).unwrap();
+
         assert_eq!(1, response.components.len());
-        assert_eq!(response.components["fuchsia-pkg://fuchsia.com/foo#meta/foo.cm"].version, 2);
+        assert_eq!(response.components[&url].version, 2);
         assert_eq!(1, response.manifests.len());
         assert_eq!(0, response.routes.len());
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_with_duplicate_inferred_services_reuses_inferred_service() {
         // Create two test packages that depend on the same inferred service
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.service")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/bar.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
 
         let sb2 = create_test_sandbox(vec![String::from("fuchsia.test.service")]);
-        let cms2 = create_test_cmx_map(vec![(String::from("meta/taurus.cmx"), sb2)]);
+        let cms2 = create_test_cmx_map(vec![(PathBuf::from("meta/taurus.cmx"), sb2)]);
         let pkg2 =
-            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/aries"), cms2);
+            create_test_package_with_cms(PackageName::from_str("aries").unwrap(), None, cms2);
         let served = vec![pkg, pkg2];
 
         let services = HashMap::new();
 
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1354,35 +1421,37 @@ pub mod tests {
         assert_eq!((1, 0, 2, 0), count_sources(response.components));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_with_known_services_does_not_infer_service() {
         // Create two test packages, one that depends on a service provided by the other
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.taurus")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/bar.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
 
         let sb2 = create_test_sandbox(Vec::new());
-        let cms2 = create_test_cmx_map(vec![(String::from("meta/taurus.cmx"), sb2)]);
+        let cms2 = create_test_cmx_map(vec![(PathBuf::from("meta/taurus.cmx"), sb2)]);
         let pkg2 =
-            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/aries"), cms2);
+            create_test_package_with_cms(PackageName::from_str("aries").unwrap(), None, cms2);
         let served = vec![pkg, pkg2];
 
         // Map the service the first package requires to the second package
         let mut services = HashMap::new();
         services.insert(
             String::from("fuchsia.test.taurus"),
-            String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/aries?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/taurus.cmx").unwrap(),
         );
 
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
             &None,
         )
         .unwrap();
+
+        log::info!("{:#?}", response.components);
 
         assert_eq!(2, response.components.len());
         assert_eq!(2, response.manifests.len());
@@ -1393,22 +1462,22 @@ pub mod tests {
         assert_eq!((0, 0, 2, 0), count_sources(response.components));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_collect_clears_data_model_before_adding_new() {
-        let mock_reader = Box::new(MockPackageReader::new());
+        let mut mock_pkg_reader = Box::new(MockPackageReader::new());
         let (_, model) = create_model();
         // Put some "previous" content into the model.
         {
             let mut comps = vec![];
             comps.push(Component {
                 id: 1,
-                url: String::from("test.component"),
+                url: Url::parse("fuchsia-pkg://test.fuchsia.com/test?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/test.component.cmx").unwrap(),
                 version: 0,
                 source: ComponentSource::ZbiBootfs,
             });
             comps.push(Component {
                 id: 1,
-                url: String::from("foo.bar"),
+                url: Url::parse("fuchsia-pkg://test.fuchsia.com/test?hash=0000000000000000000000000000000000000000000000000000000000000000#meta/foo.bar.cmx").unwrap(),
                 version: 0,
                 source: fake_component_src_pkg(),
             });
@@ -1440,23 +1509,21 @@ pub mod tests {
             model.set(Routes { entries: routes }).unwrap();
         }
 
-        let mut targets = HashMap::new();
-        targets.insert(
-            String::from("123"),
-            FarPackageDefinition { custom: Custom { merkle: String::from("123") } },
-        );
-        mock_reader.append_target(TargetsJson { signed: Signed { targets: targets } });
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.service")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
-        mock_reader.append_pkg_def(pkg);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/bar.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
+        let pkg_urls = vec![pkg.url.clone()];
+        mock_pkg_reader.append_update_package(pkg_urls, empty_update_pkg());
+        mock_pkg_reader.append_pkg_def(pkg);
 
-        let reader: Box<dyn PackageReader> = mock_reader;
-        let getter: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
-        let collector = PackageDataCollector::default();
-        collector
-            .collect_with_reader(fake_model_config(), reader, getter, Arc::clone(&model))
-            .unwrap();
+        let mock_artifact_reader = Box::new(MockArtifactReader::new());
+        PackageDataCollector::collect_with_reader(
+            fake_model_config(),
+            mock_pkg_reader,
+            mock_artifact_reader,
+            Arc::clone(&model),
+        )
+        .unwrap();
 
         // Ensure the model reflects only the latest collection.
         let comps = &model.get::<Components>().unwrap().entries;
@@ -1469,12 +1536,13 @@ pub mod tests {
         assert_eq!(routes.len(), 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_malformed_zbi() {
         let mut contents = HashMap::new();
-        contents.insert(String::from("zbi"), String::from("000"));
+        contents.insert(PathBuf::from("zbi"), Hash::from([0u8; HASH_SIZE]));
         let pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update"),
+            PackageName::from_str("update").unwrap(),
+            Some(PackageVariant::zero()),
             contents,
         );
         let served = vec![pkg];
@@ -1482,7 +1550,7 @@ pub mod tests {
 
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1492,246 +1560,268 @@ pub mod tests {
         assert_eq!(None, response.zbi);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_packages_sorted() {
-        let mock_reader = Box::new(MockPackageReader::new());
+        let mut mock_pkg_reader = Box::new(MockPackageReader::new());
         let (_, model) = create_model();
 
-        let mut targets = HashMap::new();
-        targets.insert(
-            String::from("123"),
-            FarPackageDefinition { custom: Custom { merkle: String::from("123") } },
-        );
-        targets.insert(
-            String::from("456"),
-            FarPackageDefinition { custom: Custom { merkle: String::from("456") } },
-        );
-
-        mock_reader.append_target(TargetsJson { signed: Signed { targets: targets } });
-
         let sb_0 = create_test_sandbox(vec![String::from("fuchsia.test.foo")]);
-        let cms_0 = create_test_cmx_map(vec![(String::from("meta/foo.cmx"), sb_0)]);
+        let cms_0 = create_test_cmx_map(vec![(PathBuf::from("meta/foo.cmx"), sb_0)]);
         let pkg_0 =
-            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms_0);
-        mock_reader.append_pkg_def(pkg_0);
+            create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms_0);
+        let pkg_0_url = pkg_0.url.clone();
+        mock_pkg_reader.append_pkg_def(pkg_0);
 
         let sb_1 = create_test_sandbox(vec![String::from("fuchsia.test.bar")]);
-        let cms_1 = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb_1)]);
+        let cms_1 = create_test_cmx_map(vec![(PathBuf::from("meta/bar.cmx"), sb_1)]);
         let pkg_1 =
-            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/bar"), cms_1);
-        mock_reader.append_pkg_def(pkg_1);
+            create_test_package_with_cms(PackageName::from_str("bar").unwrap(), None, cms_1);
+        let pkg_1_url = pkg_1.url.clone();
+        mock_pkg_reader.append_pkg_def(pkg_1);
 
-        let collector = PackageDataCollector::default();
-        let package_reader: Box<dyn PackageReader> = mock_reader;
-        let artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
-        collector
-            .collect_with_reader(
-                fake_model_config(),
-                package_reader,
-                artifact_loader,
-                Arc::clone(&model),
-            )
-            .unwrap();
+        let pkg_urls = vec![pkg_0_url, pkg_1_url];
+        mock_pkg_reader.append_update_package(pkg_urls, empty_update_pkg());
+
+        let mock_artifact_reader = MockArtifactReader::new();
+        let package_reader: Box<dyn PackageReader> = mock_pkg_reader;
+        let artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
+
+        PackageDataCollector::collect_with_reader(
+            fake_model_config(),
+            package_reader,
+            artifact_reader,
+            Arc::clone(&model),
+        )
+        .unwrap();
 
         // Test that the packages are in sorted order.
         let packages = &model.get::<Packages>().unwrap().entries;
         assert_eq!(packages.len(), 2);
-        assert_eq!(packages[0].url, "fuchsia-pkg://fuchsia.com/bar");
-        assert_eq!(packages[1].url, "fuchsia-pkg://fuchsia.com/foo");
+        assert_eq!(packages[0].name.to_string(), "bar");
+        assert_eq!(packages[1].name.to_string(), "foo");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_deps() {
-        let mock_reader = Box::new(MockPackageReader::new());
+        let mut mock_pkg_reader = Box::new(MockPackageReader::new());
         let (_, model) = create_model();
 
-        let merkle_one_two_three = "123";
-        let merkle_four_five_six = "456";
-        let mut targets = HashMap::new();
-        targets.insert(
-            String::from("123"),
-            FarPackageDefinition { custom: Custom { merkle: String::from("123") } },
-        );
-        targets.insert(
-            String::from("456"),
-            FarPackageDefinition { custom: Custom { merkle: String::from("456") } },
-        );
+        let merkle_one = Hash::from([1u8; HASH_SIZE]);
+        let merkle_two = Hash::from([2u8; HASH_SIZE]);
+        let pkg_url_one = AbsolutePackageUrl::parse(&format!(
+            "fuchsia-pkg://test.fuchsia.com/one-two-three?hash={}",
+            merkle_one.to_string()
+        ))
+        .unwrap();
+        let pkg_url_two = AbsolutePackageUrl::parse(&format!(
+            "fuchsia-pkg://test.fuchsia.com/four-five-six?hash={}",
+            merkle_two.to_string()
+        ))
+        .unwrap();
 
-        mock_reader.append_target(TargetsJson {
-            signed: Signed {
-                targets: hashmap! {
-                    merkle_one_two_three.to_string() => FarPackageDefinition { custom: Custom {
-                        merkle: merkle_one_two_three.to_string(),
-                    } },
-                    merkle_four_five_six.to_string() => FarPackageDefinition { custom: Custom {
-                        merkle: merkle_four_five_six.to_string(),
-                    } },
-                },
-            },
-        });
-        mock_reader.append_pkg_def(PackageDefinition {
-            url: "fuchsia-pkg://fuchsia.com/one-two-three".to_string(),
+        let mut mock_artifact_reader = Box::new(MockArtifactReader::new());
+        mock_pkg_reader.append_pkg_def(PackageDefinition {
+            url: pkg_url_one.clone(),
             meta: hashmap! {},
             contents: hashmap! {},
-            merkle: merkle_one_two_three.to_string(),
             cms: hashmap! {},
         });
-        mock_reader.append_pkg_def(PackageDefinition {
-            url: "fuchsia-pkg://fuchsia.com/four-five-six".to_string(),
+        mock_pkg_reader.append_pkg_def(PackageDefinition {
+            url: pkg_url_two.clone(),
             meta: hashmap! {},
             contents: hashmap! {},
-            merkle: merkle_four_five_six.to_string(),
             cms: hashmap! {},
         });
 
-        let collector = PackageDataCollector::default();
-        let package_reader: Box<dyn PackageReader> = mock_reader;
-        let artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
-        collector
-            .collect_with_reader(
-                fake_model_config(),
-                package_reader,
-                artifact_loader,
-                Arc::clone(&model),
-            )
-            .unwrap();
+        let pkg_urls = vec![pkg_url_one, pkg_url_two];
+        mock_pkg_reader.append_update_package(pkg_urls, empty_update_pkg());
+
+        // Append a dep to both package and artifact readers.
+        let pkg_path: PathBuf = "pkg.far".to_string().into();
+        let artifact_path: PathBuf = "artifact".to_string().into();
+        mock_pkg_reader.append_dep(pkg_path.clone());
+        mock_artifact_reader.append_dep(artifact_path.clone());
+
+        PackageDataCollector::collect_with_reader(
+            fake_model_config(),
+            mock_pkg_reader,
+            mock_artifact_reader,
+            Arc::clone(&model),
+        )
+        .unwrap();
         let deps: Arc<CoreDataDeps> = model.get().unwrap();
         assert_eq!(
             deps,
             Arc::new(CoreDataDeps {
                 deps: hashset! {
-                    // These follow conventions defined in `MockPackageReader` dep management.
-                    "targets.json".to_string().into(), merkle_one_two_three.to_string().into(),
-                    merkle_four_five_six.to_string().into(),
+                    pkg_path,
+                    artifact_path,
                 },
             })
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_config_data_with_only_duplicate_apps() {
         let mock_reader = Box::new(MockPackageReader::new());
+
         // We will need 2 service package definitions that map different services
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![],
-            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
-        ));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![],
-            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
-        ));
-
-        let collector = PackageDataCollector::default();
-
         let mut meta = HashMap::new();
-        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
-        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        meta.insert(
+            PathBuf::from("data/sysmgr/service1.config"),
+            create_svc_pkg_bytes(
+                vec![],
+                vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+            ),
+        );
+        meta.insert(
+            PathBuf::from("data/sysmgr/service2.config"),
+            create_svc_pkg_bytes(
+                vec![],
+                vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+            ),
+        );
         let config = fake_model_config();
-        let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
+        let pkg = create_test_package_with_meta(
+            config.config_data_package_url().name().clone(),
+            Some(PackageVariant::zero()),
+            meta,
+        );
         let served = vec![pkg];
 
         let mut package_reader: Box<dyn PackageReader> = mock_reader;
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
-            .unwrap();
+        let result = PackageDataCollector::extract_config_data(
+            &config.config_data_package_url(),
+            &mut package_reader,
+            &served,
+        )
+        .unwrap();
         assert_eq!(1, result.apps.len());
-        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"));
+        assert!(result.apps.contains(
+            &AbsoluteComponentUrl::parse("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx").unwrap()
+        ));
         assert_eq!(0, result.services.len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_config_data_with_only_apps() {
         let mock_reader = Box::new(MockPackageReader::new());
+
         // We will need 2 service package definitions that map different services
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![],
-            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
-        ));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![],
-            vec![String::from("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx")],
-        ));
-
-        let collector = PackageDataCollector::default();
-
         let mut meta = HashMap::new();
-        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
-        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        meta.insert(
+            PathBuf::from("data/sysmgr/service1.config"),
+            create_svc_pkg_bytes(
+                vec![],
+                vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+            ),
+        );
+        meta.insert(
+            PathBuf::from("data/sysmgr/service2.config"),
+            create_svc_pkg_bytes(
+                vec![],
+                vec![String::from("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx")],
+            ),
+        );
         let config = fake_model_config();
-        let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
+        let pkg = create_test_package_with_meta(
+            config.config_data_package_url().name().clone(),
+            Some(PackageVariant::zero()),
+            meta,
+        );
         let served = vec![pkg];
 
         let mut package_reader: Box<dyn PackageReader> = mock_reader;
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
-            .unwrap();
+        let result = PackageDataCollector::extract_config_data(
+            &config.config_data_package_url(),
+            &mut package_reader,
+            &served,
+        )
+        .unwrap();
         assert_eq!(2, result.apps.len());
-        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx"));
-        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"));
+        assert!(result.apps.contains(
+            &AbsoluteComponentUrl::parse("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx").unwrap()
+        ));
+        assert!(result.apps.contains(
+            &AbsoluteComponentUrl::parse("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx").unwrap()
+        ));
         assert_eq!(0, result.services.len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_extract_config_data_with_apps_and_services() {
         let mock_reader = Box::new(MockPackageReader::new());
+
         // We will need 2 service package definitions that map different services
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![(
-                String::from("fuchsia.test.foo.service1"),
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
-            )],
-            vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
-        ));
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(
-            vec![(
-                String::from("fuchsia.test.foo.service2"),
-                String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
-            )],
-            vec![String::from("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx")],
-        ));
-
-        let collector = PackageDataCollector::default();
-
         let mut meta = HashMap::new();
-        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
-        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        meta.insert(
+            PathBuf::from("data/sysmgr/service1.config"),
+            create_svc_pkg_bytes(
+                vec![(
+                    String::from("fuchsia.test.foo.service1"),
+                    String::from("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx"),
+                )],
+                vec![String::from("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx")],
+            ),
+        );
+        meta.insert(
+            PathBuf::from("data/sysmgr/service2.config"),
+            create_svc_pkg_bytes(
+                vec![(
+                    String::from("fuchsia.test.foo.service2"),
+                    String::from("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx"),
+                )],
+                vec![String::from("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx")],
+            ),
+        );
         let config = fake_model_config();
-        let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
+        let pkg = create_test_package_with_meta(
+            config.config_data_package_url().name().clone(),
+            Some(PackageVariant::zero()),
+            meta,
+        );
         let served = vec![pkg];
 
         let mut package_reader: Box<dyn PackageReader> = mock_reader;
-        let result = collector
-            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
-            .unwrap();
+        let result = PackageDataCollector::extract_config_data(
+            &config.config_data_package_url(),
+            &mut package_reader,
+            &served,
+        )
+        .unwrap();
         assert_eq!(2, result.apps.len());
-        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx"));
-        assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"));
+        assert!(result.apps.contains(
+            &AbsoluteComponentUrl::parse("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx").unwrap()
+        ));
+        assert!(result.apps.contains(
+            &AbsoluteComponentUrl::parse("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx").unwrap()
+        ));
 
         assert_eq!(2, result.services.len());
         assert!(result.services.contains_key("fuchsia.test.foo.service2"));
         assert_eq!(
-            "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
+            &Url::parse("fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx").unwrap(),
             result.services.get("fuchsia.test.foo.service2").unwrap()
         );
         assert!(result.services.contains_key("fuchsia.test.foo.service1"));
         assert_eq!(
-            "fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx",
+            &Url::parse("fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx").unwrap(),
             result.services.get("fuchsia.test.foo.service1").unwrap()
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_inferred_service_route_directionality() {
         // Create a single test package with a single unknown service dependency.
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.foo.bar")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/baz.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/baz.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
         let served = vec![pkg];
 
         let services = HashMap::new();
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1743,7 +1833,7 @@ pub mod tests {
         // be sure that the route source is correct.
         let inferred = response
             .components
-            .get("fuchsia-pkg://inferred#meta/fuchsia.test.foo.bar.cmx")
+            .get(&INFERRED_URL.join("#meta/fuchsia.test.foo.bar.cmx").unwrap())
             .expect("to find inferred route for service");
         assert_eq!(inferred.id, 2);
         // Component 2 is inferred, providing the fuchsia.test.foo.bar service to component 1.
@@ -1759,29 +1849,37 @@ pub mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_route_directionality_with_known_services() {
         // Create two test packages, one that depends on a service provided by the other.
         let sb = create_test_sandbox(vec![String::from("fuchsia.test.taurus")]);
-        let cms = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb)]);
-        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let cms = create_test_cmx_map(vec![(PathBuf::from("meta/bar.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(PackageName::from_str("foo").unwrap(), None, cms);
 
         let sb2 = create_test_sandbox(Vec::new());
-        let cms2 = create_test_cmx_map(vec![(String::from("meta/taurus.cmx"), sb2)]);
+        let cms2 = create_test_cmx_map(vec![(PathBuf::from("meta/taurus.cmx"), sb2)]);
         let pkg2 =
-            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/aries"), cms2);
+            create_test_package_with_cms(PackageName::from_str("aries").unwrap(), None, cms2);
+        let aries_url = pkg2.url.clone();
         let served = vec![pkg, pkg2];
+
+        let taurus_url = Url::parse(
+            &AbsoluteComponentUrl::from_package_url_and_resource(
+                aries_url.clone(),
+                "meta/taurus.cmx".to_string(),
+            )
+            .unwrap()
+            .to_string(),
+        )
+        .unwrap();
 
         // Map the service the first package requires to the second package.
         let mut services = HashMap::new();
-        services.insert(
-            String::from("fuchsia.test.taurus"),
-            String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
-        );
+        services.insert(String::from("fuchsia.test.taurus"), taurus_url.clone());
 
         let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
-            fake_model_config().update_package_url(),
+            &empty_update_pkg(),
             &mut artifact_loader,
             served,
             services,
@@ -1790,10 +1888,7 @@ pub mod tests {
         .unwrap();
 
         assert_eq!(2, response.components.len());
-        let server = response
-            .components
-            .get("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx")
-            .expect("to find serving component");
+        let server = response.components.get(&taurus_url).expect("to find serving component");
         assert_eq!(server.id, 2);
         assert_eq!(
             vec![Route {
@@ -1807,7 +1902,7 @@ pub mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_missing_images_json_fuchsia_zbi() {
         let zbi_contents = zero_content_zbi();
         let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
@@ -1819,23 +1914,20 @@ pub mod tests {
         let images_json_hash =
             MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
 
-        let update_pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update"),
-            hashmap! {
-                // ZBI is designated in update package as "zbi".
-                "zbi".to_string() => zbi_hash.to_string(),
-                // Update package contains images.json defined above.
-                "images.json".to_string() => images_json_hash.to_string(),
-            },
-        );
+        let update_pkg = create_test_partial_package_with_contents(hashmap! {
+            // ZBI is designated in update package as "zbi".
+            "zbi".into() => zbi_hash.clone(),
+            // Update package contains images.json defined above.
+            "images.json".into() => images_json_hash.clone(),
+        });
 
-        let mock_artifact_reader = MockArtifactReader::new();
+        let mut mock_artifact_reader = MockArtifactReader::new();
 
         // Code under test will read artifacts in the following order:
         // 1. images.json to determine its ZBI hash;
-        mock_artifact_reader.append_bytes(images_json_contents);
+        mock_artifact_reader.append_artifact(&images_json_hash.to_string(), images_json_contents);
         // 2. the ZBI designated in update package.
-        mock_artifact_reader.append_bytes(zbi_contents);
+        mock_artifact_reader.append_artifact(&zbi_hash.to_string(), zbi_contents);
 
         let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
 
@@ -1851,7 +1943,7 @@ pub mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_missing_update_package_fuchsia_zbi() {
         let zbi_contents = zero_content_zbi();
         let zbi_content_hash = content_hash(zbi_contents.as_slice());
@@ -1862,7 +1954,7 @@ pub mod tests {
         let mut images_json_builder = ImagePackagesManifest::builder();
         images_json_builder.fuchsia_package(
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                TEST_REPO_URL.clone(),
                 "update-images-fuchsia".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 images_pkg_hash.clone(),
@@ -1875,30 +1967,29 @@ pub mod tests {
         let images_json_hash =
             MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
 
-        let update_pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update"),
+        let update_pkg = create_test_partial_package_with_contents(
             // No ZBI designated in update package (either as "zbi" or "zbi.signed").
             hashmap! {
                 // Update package contains images.json defined above.
-                "images.json".to_string() => images_json_hash.to_string(),
+                "images.json".into() => images_json_hash.clone(),
             },
         );
-        let mut images_pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update-images-fuchsia"),
+        let images_pkg = create_test_package_with_contents(
+            PackageName::from_str("update-images-fuchsia").unwrap(),
+            Some(PackageVariant::zero()),
             // Designate a ZBI in images package.
             hashmap! {
-                "zbi".to_string() => zbi_hash.to_string(),
+                "zbi".into() => zbi_hash.clone(),
             },
         );
-        images_pkg.merkle = images_pkg_hash.to_string();
 
-        let mock_artifact_reader = MockArtifactReader::new();
+        let mut mock_artifact_reader = MockArtifactReader::new();
 
         // Code under test will read artifacts in the following order:
         // 1. images.json to determine its ZBI hash;
-        mock_artifact_reader.append_bytes(images_json_contents);
+        mock_artifact_reader.append_artifact(&images_json_hash.to_string(), images_json_contents);
         // 2. the ZBI designated in images.json.
-        mock_artifact_reader.append_bytes(zbi_contents);
+        mock_artifact_reader.append_artifact(&zbi_hash.to_string(), zbi_contents);
 
         let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
 
@@ -1914,7 +2005,7 @@ pub mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_update_package_vs_images_json_zbi_hash_mismatch() {
         let zbi_contents = zero_content_zbi();
         let zbi_content_hash = content_hash(zbi_contents.as_slice());
@@ -1927,7 +2018,7 @@ pub mod tests {
         let mut images_json_builder = ImagePackagesManifest::builder();
         images_json_builder.fuchsia_package(
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                TEST_REPO_URL.clone(),
                 "update-images-fuchsia".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 images_pkg_hash.clone(),
@@ -1940,30 +2031,32 @@ pub mod tests {
         let images_json_hash =
             MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
 
-        let update_pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update"),
+        let update_pkg = create_test_partial_package_with_contents(
             // ZBI is designated in update package as "zbi". Note that fake hash string,
             // "zbi_hash_from_update_package" will not match string for hash
             // "zbi_hash_from_images_package" designated by `images_pkg` below.
             hashmap! {
-                "zbi".to_string() => zbi_hash.to_string(),
+                "zbi".into() => zbi_hash,
                 // Update package contains images.json defined above.
-                "images.json".to_string() => images_json_hash.to_string(),
+                "images.json".into() => images_json_hash.clone(),
             },
         );
-        let mut images_pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update-images-fuchsia"),
+        let images_pkg = create_test_package_with_contents(
+            PackageName::from_str("update-images-fuchsia").unwrap(),
+            Some(PackageVariant::zero()),
             // Designate a ZBI in images package.
             hashmap! {
-                "zbi".to_string() => zbi_mismatch_hash.to_string(),
+                "zbi".into() => zbi_mismatch_hash,
             },
         );
-        images_pkg.merkle = images_pkg_hash.to_string();
 
-        let mock_artifact_reader = MockArtifactReader::new();
+        let mut mock_artifact_reader = MockArtifactReader::new();
 
         // Code under test will read one artifact: images.json.
-        mock_artifact_reader.append_bytes(serde_json::to_vec(&images_json).unwrap());
+        mock_artifact_reader.append_artifact(
+            &images_json_hash.to_string(),
+            serde_json::to_vec(&images_json).unwrap(),
+        );
 
         let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
         assert!(PackageDataCollector::extract_zbi_from_update_package(
@@ -1977,7 +2070,7 @@ pub mod tests {
         .contains("Update package and its images manifest contain different fuchsia ZBI images"));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_update_package_vs_images_json_zbi_hash_match() {
         let zbi_contents = zero_content_zbi();
         let zbi_content_hash = content_hash(zbi_contents.as_slice());
@@ -1988,7 +2081,7 @@ pub mod tests {
         let mut images_json_builder = ImagePackagesManifest::builder();
         images_json_builder.fuchsia_package(
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                TEST_REPO_URL.clone(),
                 "update-images-fuchsia".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 images_pkg_hash.clone(),
@@ -2001,32 +2094,29 @@ pub mod tests {
         let images_json_hash =
             MerkleTree::from_reader(images_json_contents.as_slice()).unwrap().root();
 
-        let update_pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update"),
-            hashmap! {
-                // ZBI is designated in update package as "zbi". Hash string value matches hash in
-                // `images_json` above.
-                "zbi".to_string() => zbi_hash.to_string(),
-                // Update package contains images.json defined above.
-                "images.json".to_string() => images_json_hash.to_string(),
-            },
-        );
-        let mut images_pkg = create_test_package_with_contents(
-            String::from("fuchsia-pkg://fuchsia.com/update-images-fuchsia"),
+        let update_pkg = create_test_partial_package_with_contents(hashmap! {
+            // ZBI is designated in update package as "zbi". Hash string value matches hash in
+            // `images_json` above.
+            "zbi".into() => zbi_hash.clone(),
+            // Update package contains images.json defined above.
+            "images.json".into() => images_json_hash.clone(),
+        });
+        let images_pkg = create_test_package_with_contents(
+            PackageName::from_str("update-images-fuchsia").unwrap(),
+            Some(PackageVariant::zero()),
             // Designate a ZBI in images package.
             hashmap! {
-                "zbi".to_string() => zbi_hash.to_string(),
+                "zbi".into() => zbi_hash.clone(),
             },
         );
-        images_pkg.merkle = images_pkg_hash.to_string();
 
-        let mock_artifact_reader = MockArtifactReader::new();
+        let mut mock_artifact_reader = MockArtifactReader::new();
 
         // Code under test will read artifacts in the following order:
         // 1. images.json to determine its ZBI hash;
-        mock_artifact_reader.append_bytes(images_json_contents);
+        mock_artifact_reader.append_artifact(&images_json_hash.to_string(), images_json_contents);
         // 2. the ZBI designated by both the update package and image.json.
-        mock_artifact_reader.append_bytes(zbi_contents);
+        mock_artifact_reader.append_artifact(&zbi_hash.to_string(), zbi_contents);
 
         let mut artifact_reader: Box<dyn ArtifactReader> = Box::new(mock_artifact_reader);
         let result = PackageDataCollector::extract_zbi_from_update_package(

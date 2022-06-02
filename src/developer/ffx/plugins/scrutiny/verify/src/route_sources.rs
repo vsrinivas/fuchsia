@@ -18,9 +18,8 @@ use {
 
 struct Query {
     build_path: PathBuf,
-    repository_path: PathBuf,
-    zbi: PathBuf,
-    blobfs_manifest: PathBuf,
+    update_package_path: PathBuf,
+    blobfs_paths: Vec<PathBuf>,
     config_path: String,
 }
 
@@ -35,9 +34,8 @@ impl TryFrom<Command> for Query {
         })?;
         Ok(Query {
             build_path: cmd.build_path,
-            repository_path: cmd.repository_path,
-            zbi: cmd.zbi,
-            blobfs_manifest: cmd.blobfs_manifest,
+            update_package_path: cmd.update,
+            blobfs_paths: cmd.blobfs,
             config_path: config_path.to_string(),
         })
     }
@@ -45,10 +43,9 @@ impl TryFrom<Command> for Query {
 
 fn verify_route_sources(query: Query) -> Result<HashSet<PathBuf>> {
     let model = ModelConfig {
-        zbi_path: query.zbi,
-        blob_manifest_path: query.blobfs_manifest,
+        update_package_path: query.update_package_path,
+        blobfs_paths: query.blobfs_paths,
         build_path: query.build_path,
-        repository_path: query.repository_path,
         ..ModelConfig::minimal()
     };
 

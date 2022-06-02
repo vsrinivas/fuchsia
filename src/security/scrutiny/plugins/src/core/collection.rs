@@ -3,14 +3,24 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::{
+        util::{
+            jsons::{deserialize_services, deserialize_url, serialize_services, serialize_url},
+            types::Protocol as ProtocolName,
+        },
+        DataCollection,
+    },
     core::slice::Iter,
-    scrutiny::prelude::*,
+    fuchsia_merkle::Hash,
+    fuchsia_url::{AbsoluteComponentUrl, PackageName, PackageVariant},
     scrutiny_utils::zbi::ZbiSection,
     serde::{Deserialize, Serialize},
     std::{
+        cmp::{Ord, Ordering, PartialOrd},
         collections::{HashMap, HashSet},
         path::PathBuf,
     },
+    url::Url,
     uuid::Uuid,
 };
 
@@ -24,10 +34,10 @@ pub enum ComponentSource {
     /// Component was loaded ZBI bootfs.
     ZbiBootfs,
     /// Component was loaded from a package with the given merkle hash.
-    Package(String),
+    Package(Hash),
     /// Component was loaded from a package with the given merkle hash. The
     /// package is listed in the static packages index.
-    StaticPackage(String),
+    StaticPackage(Hash),
 }
 
 /// Defines a component. Each component has a unique id which is used to link
@@ -38,7 +48,8 @@ pub enum ComponentSource {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Component {
     pub id: i32,
-    pub url: String,
+    #[serde(serialize_with = "serialize_url", deserialize_with = "deserialize_url")]
+    pub url: Url,
     pub version: i32,
     pub source: ComponentSource,
 }
@@ -81,12 +92,53 @@ impl DataCollection for Components {
 /// Defines a fuchsia package. Each package has a unique url. This provides an
 /// expanded meta/contents so you can see all of the files defined in this
 /// package.
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Package {
-    pub url: String,
-    pub merkle: String,
-    pub contents: HashMap<String, String>,
-    pub meta: HashMap<String, String>,
+    /// The name of the package as would be designated as `[name]` in URLs such
+    /// as `fuchsia-pkg://[host]/[name]`,
+    /// `fuchsia-pkg://[host]/[name]/[variant]`, or
+    /// `fuchsia-pkg://[host]/[name]/[variant]?hash=[hash]`.
+    pub name: PackageName,
+    /// The variant of the package as would be desiganted as `[variant]` in URLs
+    /// such as `fuchsia-pkg://[host]/[name]/[variant]`, or
+    /// `fuchsia-pkg://[host]/[name]/[variant]?hash=[hash]`.
+    pub variant: Option<PackageVariant>,
+    /// The merkle root hash of the package meta.far file as would be designated
+    /// as `[hash]` in URLs such as
+    /// `fuchsia-pkg://[host]/[name]/[variant]?hash=[hash]`.
+    pub merkle: Hash,
+    /// A mapping from internal package paths to merkle root hashes of content
+    /// (that is non-meta) files designated in the package meta.far.
+    pub contents: HashMap<PathBuf, Hash>,
+    /// A mapping from internal package meta paths to meta file contents.
+    pub meta: HashMap<PathBuf, Vec<u8>>,
+}
+
+// Define a zero-copy type that encapsulates "URL part" of `Package` and use it
+// for ordering `Package` instances.
+#[derive(Eq, Ord, PartialEq, PartialOrd)]
+struct PackageUrlPart<'a> {
+    name: &'a PackageName,
+    variant: &'a Option<PackageVariant>,
+    merkle: &'a Hash,
+}
+
+impl<'a> From<&'a Package> for PackageUrlPart<'a> {
+    fn from(package: &'a Package) -> Self {
+        PackageUrlPart { name: &package.name, variant: &package.variant, merkle: &package.merkle }
+    }
+}
+
+impl PartialOrd<Package> for Package {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        PackageUrlPart::from(self).partial_cmp(&PackageUrlPart::from(other))
+    }
+}
+
+impl Ord for Package {
+    fn cmp(&self, other: &Self) -> Ordering {
+        PackageUrlPart::from(self).cmp(&PackageUrlPart::from(other))
+    }
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
@@ -445,17 +497,18 @@ impl DataCollection for Zbi {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Sysmgr {
     /// Mapping from service-name -> url.
-    pub services: HashMap<String, String>,
+    #[serde(serialize_with = "serialize_services", deserialize_with = "deserialize_services")]
+    pub services: HashMap<ProtocolName, Url>,
     /// Url of sys realm apps, started when the sys realm starts
-    pub apps: Vec<String>,
+    pub apps: HashSet<AbsoluteComponentUrl>,
 }
 
 impl Sysmgr {
-    pub fn new(services: HashMap<String, String>, apps: Vec<String>) -> Self {
+    pub fn new(services: HashMap<ProtocolName, Url>, apps: HashSet<AbsoluteComponentUrl>) -> Self {
         Self { services, apps }
     }
 
-    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, String> {
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, ProtocolName, Url> {
         self.services.iter()
     }
 }
@@ -500,12 +553,11 @@ impl DataCollection for CoreDataDeps {
 
 #[cfg(test)]
 pub mod testing {
-    use super::ComponentSource;
+    use {super::ComponentSource, fuchsia_merkle::HASH_SIZE};
 
-    const FAKE_PKG_MERKLE: &str =
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    const FAKE_PKG_MERKLE: [u8; HASH_SIZE] = [0x42; HASH_SIZE];
 
     pub fn fake_component_src_pkg() -> ComponentSource {
-        ComponentSource::Package(FAKE_PKG_MERKLE.to_string())
+        ComponentSource::Package(FAKE_PKG_MERKLE.into())
     }
 }

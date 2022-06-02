@@ -19,7 +19,8 @@ struct Query {
     capability_types: Vec<String>,
     response_level: String,
     build_path: PathBuf,
-    repository_path: PathBuf,
+    update_package_path: PathBuf,
+    blobfs_paths: Vec<PathBuf>,
     allowlist_paths: Vec<PathBuf>,
     component_tree_config_path: Option<PathBuf>,
 }
@@ -40,7 +41,8 @@ impl From<Command> for Query {
             capability_types,
             response_level: cmd.response_level.into(),
             build_path: cmd.build_path,
-            repository_path: cmd.repository_path,
+            update_package_path: cmd.update,
+            blobfs_paths: cmd.blobfs,
             allowlist_paths: cmd.allowlist,
             component_tree_config_path: cmd.component_tree_config,
         }
@@ -78,7 +80,8 @@ pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
         vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"],
     );
     config.runtime.model.build_path = query.build_path;
-    config.runtime.model.repository_path = query.repository_path;
+    config.runtime.model.update_package_path = query.update_package_path;
+    config.runtime.model.blobfs_paths = query.blobfs_paths;
     config.runtime.model.component_tree_config_path = query.component_tree_config_path;
     config.runtime.logging.silent_mode = true;
 

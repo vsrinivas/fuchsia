@@ -18,7 +18,7 @@ impl DataController for SysmgrServicesController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
         let mut services = vec![];
         for (name, url) in model.get::<Sysmgr>()?.iter() {
-            services.push((name.clone(), url.clone()));
+            services.push((name.to_string(), url.to_string()));
         }
         services.sort();
         Ok(serde_json::to_value(services)?)

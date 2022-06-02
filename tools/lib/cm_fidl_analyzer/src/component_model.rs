@@ -5,10 +5,12 @@
 use {
     crate::{
         component_instance::{ComponentInstanceForAnalyzer, TopInstanceForAnalyzer},
+        match_absolute_component_urls,
         node_path::NodePath,
         route::{RouteMap, RouteSegment, VerifyRouteResult},
+        PkgUrlMatch,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityPath, CapabilityTypeName, ComponentDecl, ExposeDecl,
@@ -16,7 +18,7 @@ use {
     },
     fidl::prelude::*,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::{pkg_url::PkgUrl, AbsoluteComponentUrl},
     fuchsia_zircon_status as zx_status,
     futures::FutureExt,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
@@ -114,7 +116,7 @@ impl AnalyzerModelError {
 
 /// Builds a `ComponentModelForAnalyzer` from a set of component manifests.
 pub struct ModelBuilderForAnalyzer {
-    default_root_url: String,
+    default_root_url: Url,
 }
 
 /// The type returned by `ModelBuilderForAnalyzer::build()`. May contain some
@@ -131,8 +133,8 @@ impl BuildModelResult {
 }
 
 impl ModelBuilderForAnalyzer {
-    pub fn new(default_root_url: impl Into<String>) -> Self {
-        Self { default_root_url: default_root_url.into() }
+    pub fn new(default_root_url: Url) -> Self {
+        Self { default_root_url }
     }
 
     fn load_dynamic_components(
@@ -186,7 +188,7 @@ impl ModelBuilderForAnalyzer {
 
     pub fn build(
         self,
-        decls_by_url: HashMap<String, ComponentDecl>,
+        decls_by_url: HashMap<Url, ComponentDecl>,
         runtime_config: Arc<RuntimeConfig>,
         component_id_index: Arc<ComponentIdIndex>,
         runner_registry: RunnerRegistry,
@@ -203,7 +205,7 @@ impl ModelBuilderForAnalyzer {
     pub fn build_with_dynamic_components(
         self,
         dynamic_components: HashMap<NodePath, (PkgUrl, Option<String>)>,
-        decls_by_url: HashMap<String, ComponentDecl>,
+        decls_by_url: HashMap<Url, ComponentDecl>,
         runtime_config: Arc<RuntimeConfig>,
         component_id_index: Arc<ComponentIdIndex>,
         runner_registry: RunnerRegistry,
@@ -225,47 +227,63 @@ impl ModelBuilderForAnalyzer {
             component_id_index,
         };
 
-        let root_url: String = match &runtime_config.root_component_url {
-            Some(url) => url.clone().into(),
-            None => self.default_root_url.clone().into(),
+        let root_url = match &runtime_config.root_component_url {
+            None => Some(self.default_root_url.clone()),
+            Some(url) => match Url::parse(url.as_str()) {
+                Ok(url) => Some(url),
+                Err(err) => {
+                    result.errors.push(anyhow!(
+                        r#"Failed to parse root cm URL "{}" as generic URL: {:?}"#,
+                        url.as_str(),
+                        err
+                    ));
+                    None
+                }
+            },
         };
 
         // If `root_url` matches a `ComponentDecl` in `decls_by_url`, construct the root
         // instance and then recursively add child instances to the model.
-        match decls_by_url.get(&root_url) {
-            Some(root_decl) => {
-                let root_instance = ComponentInstanceForAnalyzer::new_root(
-                    root_decl.clone(),
-                    root_url,
-                    Arc::clone(&model.top_instance),
-                    Arc::clone(&runtime_config),
-                    model.policy_checker.clone(),
-                    Arc::clone(&model.component_id_index),
-                    runner_registry,
-                    false,
-                );
+        if let Some(root_url) = root_url {
+            match Self::get_decl_by_url(&decls_by_url, &root_url) {
+                Err(err) => {
+                    result
+                        .errors
+                        .push(err.context("Failed to parse root URL as fuchsia package URL"));
+                }
+                Ok(None) => {
+                    result
+                        .errors
+                        .push(anyhow!("Failed to locate root component with URL: {}", &root_url));
+                }
+                Ok(Some(root_decl)) => {
+                    let root_instance = ComponentInstanceForAnalyzer::new_root(
+                        root_decl.clone(),
+                        root_url.to_string(),
+                        Arc::clone(&model.top_instance),
+                        Arc::clone(&runtime_config),
+                        model.policy_checker.clone(),
+                        Arc::clone(&model.component_id_index),
+                        runner_registry,
+                        false,
+                    );
 
-                Self::add_descendants(
-                    &root_instance,
-                    &decls_by_url,
-                    &dynamic_components,
-                    &mut model,
-                    &mut result,
-                );
+                    Self::add_descendants(
+                        &root_instance,
+                        &decls_by_url,
+                        &dynamic_components,
+                        &mut model,
+                        &mut result,
+                    );
 
-                model
-                    .instances
-                    .insert(NodePath::from(root_instance.abs_moniker().clone()), root_instance);
+                    model
+                        .instances
+                        .insert(NodePath::from(root_instance.abs_moniker().clone()), root_instance);
 
-                result.model = Some(Arc::new(model));
+                    result.model = Some(Arc::new(model));
+                }
             }
-            None => {
-                result.errors.push(anyhow!(BuildAnalyzerModelError::ComponentDeclNotFound(
-                    root_url,
-                    "".to_string()
-                )));
-            }
-        };
+        }
 
         result
     }
@@ -275,7 +293,7 @@ impl ModelBuilderForAnalyzer {
     // `dynamic_components`.
     fn add_descendants(
         instance: &Arc<ComponentInstanceForAnalyzer>,
-        decls_by_url: &HashMap<String, ComponentDecl>,
+        decls_by_url: &HashMap<Url, ComponentDecl>,
         dynamic_components: &HashMap<AbsoluteMoniker, Vec<Child>>,
         model: &mut ComponentModelForAnalyzer,
         result: &mut BuildModelResult,
@@ -301,13 +319,13 @@ impl ModelBuilderForAnalyzer {
                     .into_iter()
                     .map(|dynamic_child| dynamic_child.clone())
                     .collect(),
-            )
+            );
         }
 
         for child in children.iter() {
             match Self::get_absolute_child_url(&child.url.to_string(), instance) {
                 Ok(url) => {
-                    let absolute_url = url.to_string();
+                    let absolute_url = url;
                     if child.child_moniker.name.is_empty() {
                         result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
                             absolute_url.to_string(),
@@ -316,11 +334,16 @@ impl ModelBuilderForAnalyzer {
                         continue;
                     }
 
-                    match decls_by_url.get(&absolute_url) {
-                        Some(child_component_decl) => {
+                    match Self::get_decl_by_url(decls_by_url, &absolute_url)
+                        .context("Failed to parse absolute child URL")
+                    {
+                        Err(err) => {
+                            result.errors.push(err);
+                        }
+                        Ok(Some(child_component_decl)) => {
                             match ComponentInstanceForAnalyzer::new_for_child(
                                 child,
-                                absolute_url,
+                                absolute_url.to_string(),
                                 child_component_decl.clone(),
                                 Arc::clone(instance),
                                 model.policy_checker.clone(),
@@ -350,13 +373,15 @@ impl ModelBuilderForAnalyzer {
                                 }
                             }
                         }
-                        None => result.errors.push(anyhow!(
-                            BuildAnalyzerModelError::ComponentDeclNotFound(
-                                absolute_url.to_string(),
-                                NodePath::from(instance.abs_moniker().clone()).to_string(),
-                            )
-                        )),
-                    };
+                        Ok(None) => {
+                            result.errors.push(anyhow!(
+                                BuildAnalyzerModelError::ComponentDeclNotFound(
+                                    absolute_url.to_string(),
+                                    NodePath::from(instance.abs_moniker().clone()).to_string(),
+                                )
+                            ));
+                        }
+                    }
                 }
                 Err(err) => {
                     result.errors.push(anyhow!(err));
@@ -388,6 +413,78 @@ impl ModelBuilderForAnalyzer {
                     .expect("failed to join child URL to absolute prefix"))
             }
             _ => Err(err),
+        }
+    }
+
+    fn get_decl_by_url<'a>(
+        decls_by_url: &'a HashMap<Url, ComponentDecl>,
+        url: &Url,
+    ) -> Result<Option<&'a ComponentDecl>> {
+        // Non-`fuchsia-pkg` URLs are not matched with nuance: they must precisely match an entry in
+        // `decls_by_url`.
+        if url.scheme() != "fuchsia-pkg" {
+            return Ok(decls_by_url.get(url));
+        }
+
+        let fuchsia_component_url = AbsoluteComponentUrl::parse(url.as_str())
+            .context("Failed to parse component fuchsia-pkg URL as absolute package URL")?;
+
+        // Gather both strong and weak URL matches against `fuchsia_component_url`.
+        let decl_url_matches = decls_by_url
+            .keys()
+            .filter_map(|decl_url| {
+                if decl_url.scheme() != "fuchsia-pkg" {
+                    None
+                } else if let Ok(decl_fuchsia_pkg_url) =
+                    AbsoluteComponentUrl::parse(decl_url.as_str())
+                {
+                    match match_absolute_component_urls(
+                        &decl_fuchsia_pkg_url,
+                        &fuchsia_component_url,
+                    ) {
+                        PkgUrlMatch::NoMatch => None,
+                        pkg_url_match => Some((decl_url, pkg_url_match)),
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<(&Url, PkgUrlMatch)>>();
+
+        // Return best match. Emit warning or error when multiple matches are found.
+        if decl_url_matches.len() == 0 {
+            return Ok(None);
+        } else if decl_url_matches.len() == 1 {
+            if decl_url_matches[0].1 == PkgUrlMatch::WeakMatch {
+                log::warn!("Weak component URL match: {} matches {}", url, decl_url_matches[0].0);
+            }
+            return Ok(decls_by_url.get(decl_url_matches[0].0));
+        } else {
+            let strong_decl_url_matches = decl_url_matches
+                .iter()
+                .filter_map(|(url, url_match)| match url_match {
+                    PkgUrlMatch::StrongMatch => Some(*url),
+                    _ => None,
+                })
+                .collect::<Vec<&Url>>();
+
+            if strong_decl_url_matches.len() == 0 {
+                log::warn!(
+                    "Multiple weak component URL matches for {}; matching to first: {}",
+                    url,
+                    decl_url_matches[0].0
+                );
+                return Ok(decls_by_url.get(decl_url_matches[0].0));
+            } else {
+                if strong_decl_url_matches.len() > 1 {
+                    log::error!(
+                        "Multiple strong package URL matches for {}; matching to first: {}",
+                        url,
+                        strong_decl_url_matches[0]
+                    );
+                }
+                return Ok(decls_by_url.get(strong_decl_url_matches[0]));
+            }
         }
     }
 }
@@ -945,42 +1042,55 @@ pub struct Child {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::environment::BOOT_SCHEME,
+        super::ModelBuilderForAnalyzer,
+        crate::{environment::BOOT_SCHEME, node_path::NodePath, ComponentModelForAnalyzer},
         anyhow::Result,
         cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
-            Availability, CapabilityName, DependencyType, RegistrationSource, RunnerRegistration,
-            UseProtocolDecl, UseSource,
+            Availability, CapabilityName, CapabilityPath, ComponentDecl, DependencyType,
+            RegistrationSource, ResolverRegistration, RunnerRegistration, UseProtocolDecl,
+            UseSource, UseStorageDecl,
         },
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        maplit::hashmap,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
         routing::{
-            component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
+            component_id_index::ComponentIdIndex,
+            component_instance::{
+                ComponentInstanceInterface, ExtendedInstanceInterface,
+                WeakExtendedInstanceInterface,
+            },
+            config::RuntimeConfig,
+            environment::{EnvironmentInterface, RunnerRegistry},
+            error::ComponentInstanceError,
+            RouteRequest,
         },
         std::{
+            collections::HashMap,
             convert::{TryFrom, TryInto},
             iter::FromIterator,
+            sync::Arc,
         },
+        url::Url,
     };
 
     const TEST_URL_PREFIX: &str = "test:///";
 
-    fn make_test_url(component_name: &str) -> String {
-        format!("{}{}", TEST_URL_PREFIX, component_name)
+    fn make_test_url(component_name: &str) -> Url {
+        Url::parse(&format!("{}{}", TEST_URL_PREFIX, component_name)).unwrap()
     }
 
     fn make_decl_map(
         components: Vec<(&'static str, ComponentDecl)>,
-    ) -> HashMap<String, ComponentDecl> {
+    ) -> HashMap<Url, ComponentDecl> {
         HashMap::from_iter(components.into_iter().map(|(name, decl)| (make_test_url(name), decl)))
     }
 
     // Builds a model with structure `root -- child`, retrieves each of the 2 resulting component
     // instances, and tests their public methods.
-    #[test]
+    #[fuchsia::test]
     fn build_model() -> Result<()> {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("child").build()),
@@ -988,10 +1098,8 @@ mod tests {
         ];
 
         let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
-        )
-        .build(
+        let url = make_test_url("root");
+        let build_model_result = ModelBuilderForAnalyzer::new(url).build(
             make_decl_map(components),
             config,
             Arc::new(ComponentIdIndex::default()),
@@ -1083,24 +1191,21 @@ mod tests {
 
     // Builds a model with structure `root -- child` where the child's URL is expressed in
     // the root manifest as a relative URL.
-    #[test]
+    #[fuchsia::test]
     fn build_model_with_relative_url() {
         let root_decl = ComponentDeclBuilder::new()
             .add_child(ChildDeclBuilder::new().name("child").url("#child").build())
             .build();
         let child_decl = ComponentDeclBuilder::new().build();
         let root_url = make_test_url("root");
-        let absolute_child_url = format!("{}#child", root_url);
+        let absolute_child_url = Url::parse(&format!("{}#child", root_url)).unwrap();
 
         let mut decls_by_url = HashMap::new();
         decls_by_url.insert(root_url.clone(), root_decl);
         decls_by_url.insert(absolute_child_url.clone(), child_decl);
 
         let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(root_url).expect("failed to parse root component url"),
-        )
-        .build(
+        let build_model_result = ModelBuilderForAnalyzer::new(root_url).build(
             decls_by_url,
             config,
             Arc::new(ComponentIdIndex::default()),
@@ -1115,22 +1220,20 @@ mod tests {
             .get_instance(&NodePath::absolute_from_vec(vec!["child"]))
             .expect("child instance");
 
-        assert_eq!(child_instance.url(), absolute_child_url);
+        assert_eq!(child_instance.url(), absolute_child_url.as_str());
     }
 
     // Spot-checks that `route_capability` returns immediately when routing a capability from a
     // `ComponentInstanceForAnalyzer`. In addition, updates to that method should
     // be reviewed to make sure that this property holds; otherwise, `ComponentModelForAnalyzer`'s
     // sync methods may panic.
-    #[test]
+    #[fuchsia::test]
     fn route_capability_is_sync() {
         let components = vec![("root", ComponentDeclBuilder::new().build())];
 
         let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
-        )
-        .build(
+        let url = make_test_url("root");
+        let build_model_result = ModelBuilderForAnalyzer::new(url).build(
             make_decl_map(components),
             config,
             Arc::new(ComponentIdIndex::default()),
@@ -1162,15 +1265,15 @@ mod tests {
     // `ComponentInstanceForAnalyzer`. In addition, updates to that method should
     // be reviewed to make sure that this property holds; otherwise, `ComponentModelForAnalyzer`'s
     // sync methods may panic.
-    #[test]
+    #[fuchsia::test]
     fn route_storage_and_backing_directory_is_sync() {
         let components = vec![("root", ComponentDeclBuilder::new().build())];
 
         let config = Arc::new(RuntimeConfig::default());
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
-        )
-        .build(
+        let cm_url = cm_types::Url::new(make_test_url("root").to_string())
+            .expect("failed to parse root component url");
+        let url = Url::parse(cm_url.as_str()).expect("failed to parse root component url");
+        let build_model_result = ModelBuilderForAnalyzer::new(url).build(
             make_decl_map(components),
             config,
             Arc::new(ComponentIdIndex::default()),
@@ -1199,7 +1302,7 @@ mod tests {
     // Builds a model with structure `root -- child` in which the child environment extends the root's.
     // Checks that the child has access to the inherited runner and resolver registrations through its
     // environment.
-    #[test]
+    #[fuchsia::test]
     fn environment_inherits() -> Result<()> {
         let child_env_name = "child_env";
         let child_runner_registration = RunnerRegistration {
@@ -1245,10 +1348,10 @@ mod tests {
             target_name: builtin_runner_name.clone(),
         };
 
-        let build_model_result = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(make_test_url("root")).expect("failed to parse root component url"),
-        )
-        .build(
+        let cm_url = cm_types::Url::new(make_test_url("root").to_string())
+            .expect("failed to parse root component url");
+        let url = Url::parse(cm_url.as_str()).expect("failed to parse root component url");
+        let build_model_result = ModelBuilderForAnalyzer::new(url).build(
             make_decl_map(components),
             Arc::new(config),
             Arc::new(ComponentIdIndex::default()),
@@ -1317,5 +1420,164 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    fn decl(id: &str) -> ComponentDecl {
+        // Identify decls by a single child named `id`.
+        ComponentDeclBuilder::new().add_child(ChildDeclBuilder::new_lazy_child(id)).build()
+    }
+
+    #[fuchsia::test]
+    fn get_decl_by_url_none() {
+        let beta_beta_urls = vec![
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta#beta.cm").unwrap(),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#beta.cm").unwrap(),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap(),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap(),
+        ];
+        let decls_by_url_no_beta_beta = hashmap! {
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
+        };
+
+        for beta_beta_url in beta_beta_urls.iter() {
+            let result =
+                ModelBuilderForAnalyzer::get_decl_by_url(&decls_by_url_no_beta_beta, beta_beta_url);
+            assert!(result.is_ok());
+            assert_eq!(None, result.ok().unwrap());
+        }
+    }
+
+    #[fuchsia::test]
+    fn get_decl_by_url_fuchsia_boot() {
+        let fuchsia_boot_url = Url::parse("fuchsia-boot:///#meta/boot.cm").unwrap();
+        let fuchsia_boot_component = decl("boot");
+        let decls_by_url_with_fuchsia_boot = hashmap! {
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
+            fuchsia_boot_url.clone() => fuchsia_boot_component.clone(),
+        };
+
+        let result = ModelBuilderForAnalyzer::get_decl_by_url(
+            &decls_by_url_with_fuchsia_boot,
+            &fuchsia_boot_url,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(Some(&fuchsia_boot_component), result.ok().unwrap());
+    }
+
+    #[fuchsia::test]
+    fn get_decl_by_url_bad_url() {
+        let bad_url =
+            Url::parse("fuchsia-pkg:///test.fuchsia.com/alpha?hash=notahexvalue#meta/alpha.cm")
+                .unwrap();
+        let empty_decls_by_url = hashmap! {};
+
+        let result = ModelBuilderForAnalyzer::get_decl_by_url(&empty_decls_by_url, &bad_url);
+
+        assert!(result.is_err());
+    }
+
+    #[fuchsia::test]
+    fn get_decl_by_url_strong() {
+        let beta_beta_url = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
+        let beta_beta_decl = decl("beta_beta");
+        let decls_by_url_with_beta_beta = hashmap! {
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
+            beta_beta_url.clone() => beta_beta_decl.clone(),
+        };
+
+        let result =
+            ModelBuilderForAnalyzer::get_decl_by_url(&decls_by_url_with_beta_beta, &beta_beta_url);
+
+        assert!(result.is_ok());
+        assert_eq!(Some(&beta_beta_decl), result.ok().unwrap());
+    }
+
+    #[fuchsia::test]
+    fn get_decl_by_url_strongest() {
+        let beta_beta_strong_url = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
+        let beta_beta_strong_decl = decl("beta_beta_strong");
+        let beta_beta_weak_url_1 =
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#beta.cm").unwrap();
+        let beta_beta_weak_decl_1 = decl("beta_beta_weak_1");
+        let beta_beta_weak_url_2 = Url::parse("fuchsia-pkg://test.fuchsia.com/beta?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
+        let beta_beta_weak_decl_2 = decl("beta_beta_weak_2");
+        let beta_beta_weak_url_3 =
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta#beta.cm").unwrap();
+        let beta_beta_weak_decl_3 = decl("beta_beta_weak_3");
+        let decls_by_url_with_4_beta_betas = hashmap! {
+            beta_beta_weak_url_1 => beta_beta_weak_decl_1,
+            beta_beta_weak_url_2 => beta_beta_weak_decl_2,
+            beta_beta_weak_url_3 => beta_beta_weak_decl_3,
+            beta_beta_strong_url.clone() => beta_beta_strong_decl.clone(),
+        };
+
+        let result = ModelBuilderForAnalyzer::get_decl_by_url(
+            &decls_by_url_with_4_beta_betas,
+            &beta_beta_strong_url,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(Some(&beta_beta_strong_decl), result.ok().unwrap());
+    }
+
+    #[fuchsia::test]
+    fn get_decl_by_url_weak() {
+        let beta_beta_strong_url = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
+        let beta_beta_weak_url = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
+        let beta_beta_decl = decl("beta_beta");
+        let decls_by_url_with_strong_beta_beta = hashmap! {
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
+            beta_beta_strong_url.clone() => beta_beta_decl.clone(),
+        };
+
+        let result = ModelBuilderForAnalyzer::get_decl_by_url(
+            &decls_by_url_with_strong_beta_beta,
+            &beta_beta_weak_url,
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(Some(&beta_beta_decl), result.ok().unwrap());
+    }
+
+    #[fuchsia::test]
+    fn get_decl_by_url_weak_any() {
+        let beta_beta_url_1 = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
+        let beta_beta_decl_1 = decl("beta_beta_strong");
+        let beta_beta_url_2 = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#beta.cm").unwrap();
+        let beta_beta_decl_2 = decl("beta_beta_weak_1");
+        let beta_beta_url_3 = Url::parse("fuchsia-pkg://test.fuchsia.com/beta?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
+        let beta_beta_decl_3 = decl("beta_beta_weak_2");
+        let beta_beta_weakest_url =
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta#beta.cm").unwrap();
+        let decls_by_url_3_weak_matches = hashmap! {
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
+            beta_beta_url_1 => beta_beta_decl_1.clone(),
+            beta_beta_url_2 => beta_beta_decl_2.clone(),
+            beta_beta_url_3 => beta_beta_decl_3.clone(),
+        };
+
+        let result = ModelBuilderForAnalyzer::get_decl_by_url(
+            &decls_by_url_3_weak_matches,
+            &beta_beta_weakest_url,
+        );
+
+        assert!(result.is_ok());
+        let actual_decl = result.ok().unwrap().unwrap();
+        assert!(
+            &beta_beta_decl_1 == actual_decl
+                || &beta_beta_decl_2 == actual_decl
+                || &beta_beta_decl_3 == actual_decl
+        );
     }
 }

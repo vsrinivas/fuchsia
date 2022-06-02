@@ -31,7 +31,7 @@ impl DataController for ComponentSearchController {
         let url_re = Regex::new(&request.url)?;
         let components = &model.get::<Components>()?.entries;
         for component in components.iter() {
-            if url_re.is_match(&component.url) {
+            if url_re.is_match(&component.url.to_string()) {
                 response.push(component.clone());
             }
         }

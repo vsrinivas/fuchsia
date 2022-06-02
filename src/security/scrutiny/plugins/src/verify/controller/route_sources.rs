@@ -31,6 +31,7 @@ use {
         sync::Arc,
     },
     thiserror::Error as ThisError,
+    url::Url,
 };
 
 const BAD_REQUEST_CTX: &str = "Failed to parse RouteSourcesController request";
@@ -292,6 +293,7 @@ pub enum RouteSourceError {
     RouteSegmentComponentFromUntrustedSource(RouteSegment, ComponentSource),
     RouteMismatch(Source),
     MissingSourceCapability(RouteSegment),
+    InvalidUrl(String),
 }
 
 /// Intermediate value for use declarations that match a use+source spec.
@@ -456,13 +458,17 @@ fn check_pkg_source(
         return Some(RouteSourceError::RouteSegmentNodePathNotFoundInTree(route_segment.clone()));
     }
     let instance = get_instance_result.unwrap();
-    let instance_url = instance.url();
+    let instance_url_str = instance.url();
+    let instance_url = match Url::parse(instance_url_str) {
+        Ok(url) => url,
+        Err(_) => return Some(RouteSourceError::InvalidUrl(instance_url_str.to_string())),
+    };
 
     let matches: Vec<&Component> =
         components.iter().filter(|component| &component.url == &instance_url).collect();
     if matches.len() == 0 {
         return Some(RouteSourceError::ComponentInstanceLookupByUrlFailed(
-            instance_url.to_string(),
+            instance_url_str.to_string(),
         ));
     }
     if matches.len() > 1 {
@@ -624,6 +630,7 @@ mod tests {
             UseDirectoryDecl, UseSource, UseStorageDecl,
         },
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
+        fuchsia_merkle::{Hash, HASH_SIZE},
         maplit::{hashmap, hashset},
         routing::{
             component_id_index::ComponentIdIndex, config::RuntimeConfig,
@@ -633,15 +640,17 @@ mod tests {
         scrutiny_testing::fake::fake_data_model,
         serde_json::json,
         std::{path::PathBuf, str::FromStr, sync::Arc},
+        url::Url,
     };
 
-    const TEST_URL_PREFIX: &str = "test:///";
+    const TEST_URL_PREFIX: &str = "fuchsia-pkg://test.fuchsia.com";
 
-    fn make_test_url(component_name: &str) -> String {
-        format!("{}{}", TEST_URL_PREFIX, component_name)
+    fn make_test_url(component_name: &str) -> Url {
+        Url::parse(&format!("{}/{}#meta/{}.cm", TEST_URL_PREFIX, component_name, component_name))
+            .expect("test URL to parse")
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_match_some_only() {
         // Match Some(path), ignoring None name.
         assert!(
@@ -731,8 +740,8 @@ mod tests {
         }};
     }
 
-    fn create_component(url: &str, source: ComponentSource) -> Component {
-        Component { id: 0, url: url.to_string(), version: 0, source }
+    fn create_component(url: &Url, source: ComponentSource) -> Component {
+        Component { id: 0, url: url.clone(), version: 0, source }
     }
 
     // Component tree:
@@ -774,7 +783,7 @@ mod tests {
     fn valid_two_instance_two_dir_tree_model(
         data_model: Option<Arc<DataModel>>,
     ) -> Result<Arc<DataModel>> {
-        let root_url = DEFAULT_ROOT_URL.to_string();
+        let root_url = &*DEFAULT_ROOT_URL;
         let two_dir_user_url = make_test_url("two_dir_user");
         let one_dir_provider_url = make_test_url("one_dir_provider");
 
@@ -814,14 +823,14 @@ mod tests {
                 children: vec![
                     ChildDecl{
                         name: "two_dir_user".to_string(),
-                        url: two_dir_user_url.clone(),
+                        url: two_dir_user_url.to_string(),
                         startup: fdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
                     ChildDecl{
                         name: "one_dir_provider".to_string(),
-                        url: one_dir_provider_url.clone(),
+                        url: one_dir_provider_url.to_string(),
                         startup: fdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
@@ -874,10 +883,7 @@ mod tests {
                 ..ComponentDecl::default()
             },
         };
-        let build_component_model = ModelBuilderForAnalyzer::new(
-            cm_types::Url::new(root_url).expect("failed to parse root url"),
-        )
-        .build(
+        let build_component_model = ModelBuilderForAnalyzer::new(root_url.clone()).build(
             components,
             Arc::new(RuntimeConfig::default()),
             Arc::new(ComponentIdIndex::default()),
@@ -886,7 +892,7 @@ mod tests {
         let deps = hashset! {};
         data_model.set(V2ComponentModel::new(
             deps,
-            build_component_model.model.expect("failed to build component model"),
+            build_component_model.model.expect("component model to build"),
             build_component_model.errors,
         ))?;
         Ok(data_model)
@@ -897,14 +903,14 @@ mod tests {
     ) -> Result<Arc<DataModel>> {
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = vec![
-            create_component(&DEFAULT_ROOT_URL.to_string(), ComponentSource::ZbiBootfs),
+            create_component(&*DEFAULT_ROOT_URL, ComponentSource::ZbiBootfs),
             create_component(
                 &make_test_url("two_dir_user"),
-                ComponentSource::StaticPackage("".to_string()),
+                ComponentSource::StaticPackage(Hash::from([0u8; HASH_SIZE])),
             ),
             create_component(
                 &make_test_url("one_dir_provider"),
-                ComponentSource::StaticPackage("".to_string()),
+                ComponentSource::StaticPackage(Hash::from([1u8; HASH_SIZE])),
             ),
         ];
         data_model.set(Components { entries: components })?;
@@ -916,10 +922,10 @@ mod tests {
     ) -> Result<Arc<DataModel>> {
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = vec![
-            create_component(&DEFAULT_ROOT_URL.to_string(), ComponentSource::ZbiBootfs),
+            create_component(&*DEFAULT_ROOT_URL, ComponentSource::ZbiBootfs),
             create_component(
                 &make_test_url("one_dir_provider"),
-                ComponentSource::StaticPackage("".to_string()),
+                ComponentSource::StaticPackage(Hash::from([0u8; HASH_SIZE])),
             ),
         ];
         data_model.set(Components { entries: components })?;
@@ -929,16 +935,24 @@ mod tests {
     fn two_instance_two_dir_components_model_duplicate_user(
         data_model: Option<Arc<DataModel>>,
     ) -> Result<(Arc<DataModel>, Vec<Component>)> {
-        let root_url = DEFAULT_ROOT_URL.to_string();
         let two_dir_user_url = make_test_url("two_dir_user");
         let one_dir_provider_url = make_test_url("one_dir_provider");
 
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = vec![
-            create_component(&root_url, ComponentSource::ZbiBootfs),
-            create_component(&two_dir_user_url, ComponentSource::StaticPackage("0".to_string())),
-            create_component(&two_dir_user_url, ComponentSource::StaticPackage("1".to_string())),
-            create_component(&one_dir_provider_url, ComponentSource::StaticPackage("".to_string())),
+            create_component(&*DEFAULT_ROOT_URL, ComponentSource::ZbiBootfs),
+            create_component(
+                &two_dir_user_url,
+                ComponentSource::StaticPackage(Hash::from([0u8; HASH_SIZE])),
+            ),
+            create_component(
+                &two_dir_user_url,
+                ComponentSource::StaticPackage(Hash::from([1u8; HASH_SIZE])),
+            ),
+            create_component(
+                &one_dir_provider_url,
+                ComponentSource::StaticPackage(Hash::from([3u8; HASH_SIZE])),
+            ),
         ];
         data_model.set(Components { entries: components })?;
         Ok((
@@ -946,11 +960,11 @@ mod tests {
             vec![
                 create_component(
                     &two_dir_user_url,
-                    ComponentSource::StaticPackage("0".to_string()),
+                    ComponentSource::StaticPackage(Hash::from([0u8; HASH_SIZE])),
                 ),
                 create_component(
                     &two_dir_user_url,
-                    ComponentSource::StaticPackage("1".to_string()),
+                    ComponentSource::StaticPackage(Hash::from([1u8; HASH_SIZE])),
                 ),
             ],
         ))
@@ -960,22 +974,20 @@ mod tests {
         data_model: Option<Arc<DataModel>>,
     ) -> Result<(Arc<DataModel>, ComponentSource)> {
         let data_model = data_model.unwrap_or(fake_data_model());
+        let untrusted_source = ComponentSource::Package(Hash::from([0u8; HASH_SIZE]));
         let components = vec![
-            create_component(&DEFAULT_ROOT_URL.to_string(), ComponentSource::ZbiBootfs),
-            create_component(
-                &make_test_url("two_dir_user"),
-                ComponentSource::Package("".to_string()),
-            ),
+            create_component(&*DEFAULT_ROOT_URL, ComponentSource::ZbiBootfs),
+            create_component(&make_test_url("two_dir_user"), untrusted_source.clone()),
             create_component(
                 &make_test_url("one_dir_provider"),
-                ComponentSource::StaticPackage("".to_string()),
+                ComponentSource::StaticPackage(Hash::from([1u8; HASH_SIZE])),
             ),
         ];
         data_model.set(Components { entries: components })?;
-        Ok((data_model, ComponentSource::Package("".to_string())))
+        Ok((data_model, untrusted_source))
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_component_routes_bad_request() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -990,7 +1002,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_component_routes_target_ok() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1011,7 +1023,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_component_routes_missing_target() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1036,7 +1048,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_route_lists_incomplete() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1059,7 +1071,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_skip_all_routes() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1098,7 +1110,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_skip_extra_route() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1145,7 +1157,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_match_some_routes() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1217,7 +1229,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_match_some_routes_partial_path() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1289,7 +1301,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_match_all_routes() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1386,7 +1398,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_match_multiple_components() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1493,7 +1505,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_misconfigured_skip_match_source_name() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1537,7 +1549,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_misconfigured_skip_match_source_name_and_target_path() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1588,7 +1600,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_skip_route_with_no_match() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1634,7 +1646,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_skip_duplicate() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1674,7 +1686,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_match_duplicate() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1737,7 +1749,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_skip_match_duplicate() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1792,7 +1804,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_skip_match_duplicate_mixed() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             valid_two_instance_two_dir_components_model(None)?,
@@ -1846,7 +1858,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_verify_all_missing_user_component() -> Result<()> {
         let data_model = valid_two_instance_two_dir_tree_model(Some(
             two_instance_two_dir_components_model_missing_user(None)?,
@@ -1916,11 +1928,11 @@ mod tests {
                     "/two_dir_user".to_string() => vec![
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[0].clone(),
-                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed(make_test_url("two_dir_user"))),
+                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed(make_test_url("two_dir_user").to_string())),
                         },
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[1].clone(),
-                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed(make_test_url("two_dir_user"))),
+                            result: Err(RouteSourceError::ComponentInstanceLookupByUrlFailed(make_test_url("two_dir_user").to_string())),
                         }
                     ],
             }
@@ -1929,7 +1941,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_verify_all_duplicate_user_component() -> Result<()> {
         let (data_model, duplicate_components) =
             two_instance_two_dir_components_model_duplicate_user(None)?;
@@ -2013,7 +2025,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_verify_all_untrusted_user_source() -> Result<()> {
         let (data_model, untrusted_source) =
             two_instance_two_dir_components_model_untrusted_user_source(None)?;

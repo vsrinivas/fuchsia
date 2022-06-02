@@ -6,28 +6,78 @@
 
 use {
     crate::core::util::jsons::*,
+    cm_fidl_analyzer::{match_absolute_pkg_urls, PkgUrlMatch},
+    fuchsia_merkle::Hash,
+    fuchsia_url::{AbsoluteComponentUrl, AbsolutePackageUrl},
+    log::warn,
+    once_cell::sync::Lazy,
     serde::Serialize,
-    std::collections::{HashMap, HashSet},
+    std::{
+        collections::{HashMap, HashSet},
+        path::PathBuf,
+    },
+    url::Url,
 };
 
-pub type ServiceMapping = HashMap<String, String>;
+pub static INFERRED_URL_SCHEME: &str = "fuchsia-inferred";
+pub static INFERRED_URL: Lazy<Url> =
+    Lazy::<Url>::new(|| Url::parse(&format!("{}://", INFERRED_URL_SCHEME)).unwrap());
+
+pub type Protocol = String;
+pub type ServiceMapping = HashMap<Protocol, Url>;
 
 pub struct SysManagerConfig {
     pub services: ServiceMapping,
-    pub apps: HashSet<String>,
+    pub apps: HashSet<AbsoluteComponentUrl>,
 }
 
-/// Defines the interior properties of a package that we care about for
-/// constructing the model.
+/// Package- and component-related data extracted from a package identified by a
+/// fully-qualified fuchsia package URL.
+#[cfg_attr(test, derive(Clone))]
 pub struct PackageDefinition {
-    pub url: String,
-    pub merkle: String,
-    pub meta: HashMap<String, String>,
-    pub contents: HashMap<String, String>,
-    pub cms: HashMap<String, ComponentManifest>,
+    /// The URL from which the definition was extracted.
+    pub url: AbsolutePackageUrl,
+    /// A mapping from internal package paths to merkle root hashes of content
+    /// (that is non-meta) files designated in the package meta.far.
+    pub contents: HashMap<PathBuf, Hash>,
+    /// A mapping from internal package meta paths to meta file contents.
+    pub meta: HashMap<PathBuf, Vec<u8>>,
+    /// A mapping from internal package paths to component manifest data.
+    pub cms: HashMap<PathBuf, ComponentManifest>,
+}
+
+impl PackageDefinition {
+    pub fn new(url: AbsolutePackageUrl, partial: PartialPackageDefinition) -> Self {
+        Self { url, contents: partial.contents, meta: partial.meta, cms: partial.cms }
+    }
+
+    pub fn matches_url(&self, url: &AbsolutePackageUrl) -> bool {
+        let url_match = match_absolute_pkg_urls(&self.url, url);
+        if url_match == PkgUrlMatch::WeakMatch {
+            warn!(
+                "Lossy match of absolute package URLs: PkgDefinition.url={} ; other_url={}",
+                self.url, url
+            );
+        }
+        url_match != PkgUrlMatch::NoMatch
+    }
+}
+
+/// Package- and component-related data extracted from an package.
+#[derive(Default)]
+#[cfg_attr(test, derive(Clone))]
+pub struct PartialPackageDefinition {
+    /// A mapping from internal package paths to merkle root hashes of content
+    /// (that is non-meta) files designated in the package meta.far.
+    pub contents: HashMap<PathBuf, Hash>,
+    /// A mapping from internal package meta paths to meta file contents.
+    pub meta: HashMap<PathBuf, Vec<u8>>,
+    /// A mapping from internal package paths to component manifest data.
+    pub cms: HashMap<PathBuf, ComponentManifest>,
 }
 
 #[allow(dead_code)]
+#[cfg_attr(test, derive(Clone))]
 pub enum ComponentManifest {
     Empty,
     Version1(ComponentV1Manifest),

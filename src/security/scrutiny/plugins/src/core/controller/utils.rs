@@ -4,19 +4,20 @@
 
 use {
     crate::core::collection::{Component, Components},
-    anyhow::{Error, Result},
+    anyhow::{Context, Error, Result},
     scrutiny::model::model::DataModel,
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::io::{self, ErrorKind},
     std::sync::Arc,
+    url::Url,
 };
 
 /// Converts a component_url to an internal component_id.
-pub fn component_from_url(model: Arc<DataModel>, url: &str) -> Option<Component> {
+pub fn component_from_url(model: Arc<DataModel>, url: &Url) -> Option<Component> {
     if let Ok(components) = model.get::<Components>() {
         for component in components.iter() {
-            if component.url == url {
+            if &component.url == url {
                 return Some(component.clone());
             }
         }
@@ -39,6 +40,8 @@ impl DefaultComponentRequest {
     /// If duplicates are found the url will always be selected.
     pub fn component_id(&self, model: Arc<DataModel>) -> Result<i64> {
         if let Some(url) = &self.url {
+            let url = Url::parse(url)
+                .with_context(|| format!("Failed to parse component URL: {}", url))?;
             if let Some(component) = component_from_url(model.clone(), &url) {
                 Ok(component.id as i64)
             } else {
@@ -96,21 +99,30 @@ impl DefaultComponentRequest {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::core::collection::{testing::fake_component_src_pkg, ComponentSource},
+        super::DefaultComponentRequest,
+        crate::core::collection::{
+            testing::fake_component_src_pkg, Component, ComponentSource, Components,
+        },
         scrutiny_testing::fake::*,
         serde_json::json,
+        url::Url,
     };
 
     fn make_component(id: i32, url: &str, version: i32, source: ComponentSource) -> Component {
-        Component { id, url: url.to_string(), version, source }
+        let url = Url::parse(url).unwrap();
+        Component { id, url, version, source }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn default_component_request_component_id_int() {
         let model = fake_data_model();
 
-        let comp = make_component(123, "fake_url", 0, fake_component_src_pkg());
+        let comp = make_component(
+            123,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
         let mut components = Components::default();
         components.push(comp.clone());
         model.set(components).unwrap();
@@ -120,11 +132,16 @@ mod tests {
         assert_eq!(component_id, 123);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn default_component_request_component_id_string() {
         let model = fake_data_model();
 
-        let comp = make_component(123, "fake_url", 0, fake_component_src_pkg());
+        let comp = make_component(
+            123,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
         let mut components = Components::default();
         components.push(comp.clone());
         model.set(components).unwrap();
@@ -134,23 +151,35 @@ mod tests {
         assert_eq!(component_id, 123);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn default_component_request_component_url() {
         let model = fake_data_model();
-        let comp = make_component(123, "fake_url", 0, fake_component_src_pkg());
+        let comp = make_component(
+            123,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
         let mut components = Components::default();
         components.push(comp.clone());
         model.set(components).unwrap();
-        let request =
-            DefaultComponentRequest { component_id: None, url: Some("fake_url".to_string()) };
+        let request = DefaultComponentRequest {
+            component_id: None,
+            url: Some("fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx".to_string()),
+        };
         let component_id = request.component_id(model).unwrap();
         assert_eq!(component_id, 123);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn default_component_request_component_nothing_fails() {
         let model = fake_data_model();
-        let comp = make_component(123, "fake_url", 0, fake_component_src_pkg());
+        let comp = make_component(
+            123,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
         let mut components = Components::default();
         components.push(comp.clone());
         model.set(components).unwrap();
@@ -158,10 +187,15 @@ mod tests {
         assert!(request.component_id(model).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn default_component_request_component_id_fails_if_not_available() {
         let model = fake_data_model();
-        let comp = make_component(123, "fake_url", 0, fake_component_src_pkg());
+        let comp = make_component(
+            123,
+            "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx",
+            0,
+            fake_component_src_pkg(),
+        );
         let mut components = Components::default();
         components.push(comp.clone());
         model.set(components).unwrap();

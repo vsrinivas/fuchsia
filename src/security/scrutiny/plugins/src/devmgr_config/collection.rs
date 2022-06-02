@@ -16,32 +16,34 @@ use {
 #[derive(Clone, Debug, Deserialize, Serialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum DevmgrConfigError {
+    #[error("Failed to open blobfs using build path {build_path} and blobfs archive paths {blobfs_paths:?}\n{blobfs_error}")]
+    FailedToOpenBlobfs { build_path: PathBuf, blobfs_paths: Vec<PathBuf>, blobfs_error: String },
     #[error("Failed to parse zbi config path {devmgr_config_path}")]
     FailedToParseDevmgrConfigPath { devmgr_config_path: PathBuf },
-    #[error("Failed to open ZBI file from path {zbi_path}\n{io_error}")]
-    FailedToOpenZbi { zbi_path: PathBuf, io_error: String },
-    #[error("Failed to read ZBI file at {zbi_path}\n{io_error}")]
-    FailedToReadZbi { zbi_path: PathBuf, io_error: String },
-    #[error("Failed to parse ZBI file at {zbi_path}\n{zbi_error}")]
-    FailedToParseZbi { zbi_path: PathBuf, zbi_error: String },
-    #[error("Failed to parse bootfs from ZBI file at {zbi_path}\n{bootfs_error}")]
-    FailedToParseBootfs { zbi_path: PathBuf, bootfs_error: String },
-    #[error("Failed to parse UTF8 string from devmgr config at bootfs:{devmgr_config_path} in ZBI at {zbi_path}\n{utf8_error}")]
+    #[error("Failed to open ZBI from update package at {update_package_path}\n{io_error}")]
+    FailedToOpenUpdatePackage { update_package_path: PathBuf, io_error: String },
+    #[error("Failed to read ZBI from update package at {update_package_path}\n{io_error}")]
+    FailedToReadZbi { update_package_path: PathBuf, io_error: String },
+    #[error("Failed to parse ZBI from update package at {update_package_path}\n{zbi_error}")]
+    FailedToParseZbi { update_package_path: PathBuf, zbi_error: String },
+    #[error("Failed to parse bootfs from ZBI from update package at {update_package_path}\n{bootfs_error}")]
+    FailedToParseBootfs { update_package_path: PathBuf, bootfs_error: String },
+    #[error("Failed to parse UTF8 string from devmgr config at bootfs:{devmgr_config_path} in ZBI from update package at {update_package_path}\n{utf8_error}")]
     FailedToParseUtf8DevmgrConfig {
-        zbi_path: PathBuf,
+        update_package_path: PathBuf,
         devmgr_config_path: PathBuf,
         utf8_error: String,
     },
-    #[error("Failed to parse devmgr config format from devmgr config at bootfs:{devmgr_config_path} in ZBI at {zbi_path}\n{parse_error}")]
+    #[error("Failed to parse devmgr config format from devmgr config at bootfs:{devmgr_config_path} in ZBI from update package at {update_package_path}\n{parse_error}")]
     FailedToParseDevmgrConfigFormat {
-        zbi_path: PathBuf,
+        update_package_path: PathBuf,
         devmgr_config_path: PathBuf,
         parse_error: DevmgrConfigParseError,
     },
     #[error(
-        "Failed to locate devmgr config file at bootfs:{devmgr_config_path} in ZBI at {zbi_path}"
+        "Failed to locate devmgr config file at bootfs:{devmgr_config_path} in ZBI from update package at {update_package_path}"
     )]
-    FailedToLocateDevmgrConfig { zbi_path: PathBuf, devmgr_config_path: PathBuf },
+    FailedToLocateDevmgrConfig { update_package_path: PathBuf, devmgr_config_path: PathBuf },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Error)]

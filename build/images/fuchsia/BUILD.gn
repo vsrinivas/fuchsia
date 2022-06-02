@@ -13,6 +13,13 @@ import("//build/product.gni")
 import("//build/security.gni")
 import("//build/security/policies.gni")
 import("//build/security/policies_swd.gni")
+import("//build/security/verifier/verify_bootfs.gni")
+import("//build/security/verifier/verify_component_resolvers.gni")
+import("//build/security/verifier/verify_kernel_cmdline.gni")
+import("//build/security/verifier/verify_route_sources.gni")
+import("//build/security/verifier/verify_routes.gni")
+import("//build/security/verifier/verify_routes.gni")
+import("//build/security/verifier/verify_static_pkgs.gni")
 import("//build/testing/host_test_data.gni")
 import("//build/testing/verify_files_match.gni")
 import("//src/sys/core/build/core.gni")
@@ -28,8 +35,7 @@ if (is_host) {
 }
 
 # The assembly operation should only be defined in the default (fuchsia)
-# toolchain.  GN should not attempt to process the rest of this file in any
-# other toolchain
+# toolchain.
 if (is_fuchsia) {
   assert(current_toolchain == default_toolchain)
 
@@ -276,6 +282,32 @@ if (is_fuchsia) {
     if (include_fvm_blob_sparse) {
       public_deps += [ ":copy_fvm_blob_sparse" ]
     }
+    deps = []
+    if (!is_coverage) {
+      # TODO: `!bootfs_only` is a poor proxy for "may be bringup", which is a
+      # poor proxy for "may not generate `blob.blk` (which these verifiers
+      # depend on)". This predicate should be replaced with
+      # `use_bringup_assembly` or similar after https://fxrev.dev/680302 lands.
+      if (!bootfs_only) {
+        deps += [
+          ":verify_capability_routes",
+          ":verify_component_resolvers",
+        ]
+        if (fuchsia_static_pkgs_goldens != []) {
+          deps += [ ":verify_static_pkgs" ]
+        }
+      }
+
+      if (fuchsia_zbi_bootfs_filelist_goldens != []) {
+        deps += [ ":verify_bootfs_filelist" ]
+      }
+      if (fuchsia_zbi_kernel_cmdline_goldens != []) {
+        deps += [ ":verify_kernel_cmdline" ]
+      }
+      if (fuchsia_route_sources_config != "") {
+        deps += [ ":verify_route_sources" ]
+      }
+    }
 
     metadata = {
       assembly_inputs = [
@@ -289,19 +321,6 @@ if (is_fuchsia) {
   assemble_system("fuchsia_assembly") {
     forward_variables_from(fuchsia_base, "*")
     image_name = "fuchsia"
-
-    if (fuchsia_zbi_kernel_cmdline_goldens != []) {
-      cmdline_goldens = fuchsia_zbi_kernel_cmdline_goldens
-    }
-    if (fuchsia_zbi_bootfs_filelist_goldens != []) {
-      bootfs_goldens = fuchsia_zbi_bootfs_filelist_goldens
-    }
-    if (fuchsia_static_pkgs_goldens != []) {
-      static_pkgs_goldens = fuchsia_static_pkgs_goldens
-    }
-    if (fuchsia_route_sources_config != "") {
-      route_sources_config = fuchsia_route_sources_config
-    }
 
     create_legacy_aib_package = !is_debug
     create_legacy_aib_archive = !is_debug
@@ -635,6 +654,76 @@ if (is_fuchsia) {
         # longer be in use.
         "IMAGE_NETBOOT_RAM=netboot.zbi",
       ]
+    }
+  }
+
+  ##################################################
+  # Scrutiny verifiers
+  ##################################################
+
+  # See //build/scrutiny/verifier/verify_*.gni and //build/security.gni for
+  # documentation.
+
+  verify_bootfs_filelist("verify_bootfs_filelist") {
+    testonly = fuchsia_base.testonly
+    zbi_is_signed = custom_signing_script != "" || use_vboot
+    image_assembler_target = ":fuchsia.image_assembler"
+    assembly_image_name = "fuchsia"
+    goldens = fuchsia_zbi_bootfs_filelist_goldens
+  }
+
+  verify_kernel_cmdline("verify_kernel_cmdline") {
+    testonly = fuchsia_base.testonly
+    zbi_is_signed = custom_signing_script != "" || use_vboot
+    image_assembler_target = ":fuchsia.image_assembler"
+    assembly_image_name = "fuchsia"
+    goldens = fuchsia_zbi_kernel_cmdline_goldens
+  }
+
+  if (fuchsia_route_sources_config != "") {
+    verify_route_sources("verify_route_sources") {
+      testonly = fuchsia_base.testonly
+      update_package_target = ":update"
+      image_assembler_target = ":fuchsia.image_assembler"
+      assembly_image_name = "fuchsia"
+      config_path = fuchsia_route_sources_config
+    }
+  }
+
+  # TODO: `!bootfs_only` is a poor proxy for "may be bringup", which is a poor
+  # proxy for "may not generate `blob.blk` (which these verifiers depend on)".
+  # This predicate should be replaced with `use_bringup_assembly` or similar
+  # after https://fxrev.dev/680302 lands.
+  if (!bootfs_only) {
+    verify_component_resolvers("verify_component_resolvers") {
+      testonly = fuchsia_base.testonly
+      update_package_target = ":update"
+      image_assembler_target = ":fuchsia.image_assembler"
+      assembly_image_name = "fuchsia"
+      allowlist = fuchsia_verify_component_resolvers_allowlist
+    }
+
+    verify_routes("verify_capability_routes") {
+      testonly = fuchsia_base.testonly
+      update_package_target = ":update"
+      image_assembler_target = ":fuchsia.image_assembler"
+      assembly_image_name = "fuchsia"
+      allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
+                  fuchsia_verify_routes_exceptions_allowlist_product
+      if (bootfs_only) {
+        allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
+      }
+      if (fuchsia_verify_routes_component_tree_config != "") {
+        component_tree_config = fuchsia_verify_routes_component_tree_config
+      }
+    }
+
+    verify_static_pkgs("verify_static_pkgs") {
+      testonly = fuchsia_base.testonly
+      update_package_target = ":update"
+      image_assembler_target = ":fuchsia.image_assembler"
+      assembly_image_name = "fuchsia"
+      goldens = fuchsia_static_pkgs_goldens
     }
   }
 }

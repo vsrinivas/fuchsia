@@ -12,9 +12,12 @@ use {
 
 #[ffx_plugin()]
 pub async fn scrutiny_package(cmd: ScrutinyPackageCommand) -> Result<(), Error> {
+    let url_string = format!("{}", cmd.url);
     let config = Config {
         launch: LaunchConfig {
-            command: Some(CommandBuilder::new("search.package.list").param("url", cmd.url).build()),
+            command: Some(
+                CommandBuilder::new("search.package.list").param("url", url_string).build(),
+            ),
             script_path: None,
         },
         runtime: RuntimeConfig::minimal(),

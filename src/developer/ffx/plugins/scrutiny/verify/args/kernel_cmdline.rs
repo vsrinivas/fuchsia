@@ -15,10 +15,12 @@ use {
     description = "Verifies that kernel commandline arguments match golden files.",
     example = "To verify kernel cmdline arguments on your current build:
 
-        $ffx scrutiny verify kernel-cmdline --zbi path/to/image.zbi --golden path/to/golden"
+        $ ffx scrutiny verify kernel-cmdline \
+            --zbi path/to/image.zbi \
+            --golden path/to/golden"
 )]
 pub struct Command {
-    /// path to ZBI image to be verified.
+    /// path to ZBI image file that contains bootfs.
     #[argh(option)]
     pub zbi: PathBuf,
     /// path(s) to golden files to compare against during verification.

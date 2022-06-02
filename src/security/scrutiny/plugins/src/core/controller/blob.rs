@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{Context, Result},
+    fuchsia_merkle::Hash,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::DataModel,
     },
     scrutiny_utils::{
-        artifact::{ArtifactReader, FileArtifactReader},
+        artifact::{ArtifactReader, BlobFsArtifactReader},
         usage::UsageBuilder,
     },
     serde::{Deserialize, Serialize},
@@ -19,12 +20,12 @@ use {
 
 #[derive(Deserialize, Serialize)]
 struct BlobRequest {
-    merkle: String,
+    merkle: Hash,
 }
 
 #[derive(Deserialize, Serialize)]
 struct BlobResponse {
-    merkle: String,
+    merkle: Hash,
     encoding: String,
     data: String,
 }
@@ -34,12 +35,18 @@ pub struct BlobController {}
 
 impl DataController for BlobController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let build_path = model.config().build_path();
-        let repository_path = model.config().repository_path();
-        let mut blob_loader = FileArtifactReader::new(&build_path, &repository_path);
+        let model_config = model.config();
+        let mut artifact_reader = BlobFsArtifactReader::try_compound(
+            &model_config.build_path(),
+            &model_config.blobfs_paths(),
+        )
+        .context("Failed to construct blobfs artifact reader for blob controller")?;
 
         let req: BlobRequest = serde_json::from_value(query)?;
-        let data = blob_loader.read_bytes(&Path::new(&format!("blobs/{}", req.merkle)))?;
+        let merkle_string = format!("{}", req.merkle);
+        let data = artifact_reader
+            .read_bytes(Path::new(&merkle_string))
+            .context("Failed to read blob for blob controller")?;
         let resp = BlobResponse {
             merkle: req.merkle.clone(),
             encoding: "base64".to_string(),
@@ -67,20 +74,5 @@ impl DataController for BlobController {
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
         vec![("--merkle".to_string(), HintDataType::NoType)]
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {super::*, scrutiny_testing::fake::*};
-
-    #[test]
-    fn test_blob_controller_bad_merkle() {
-        let model = fake_data_model();
-        let blob_controller = BlobController::default();
-        let request = BlobRequest { merkle: "invalid_merkle".to_string() };
-        let query = serde_json::to_value(request).unwrap();
-        let response = blob_controller.query(model, query);
-        assert_eq!(response.is_ok(), false);
     }
 }
