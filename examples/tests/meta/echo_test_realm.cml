@@ -1,3 +1,6 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 // Component test example which injects echo_server and launches echo_test_client
 // which is a test which connects to this injected server, tests it and
 // passes back result using `fuchsia.test.Suite`

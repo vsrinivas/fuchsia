@@ -27,6 +27,7 @@
             ".bat": true,
             ".c": true,
             ".cc": true,
+            ".cml": true,
             ".cpp": true,
             ".d": true,
             ".dart": true,

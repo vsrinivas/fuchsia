@@ -1,3 +1,6 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 {
     // This component bundles all the different test runners starnix uses, and exposes all their
     // runner capabilities. This makes it easier for the test runner component to include all the

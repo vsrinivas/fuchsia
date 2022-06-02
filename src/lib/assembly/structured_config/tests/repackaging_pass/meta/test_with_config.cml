@@ -1,3 +1,6 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 {
     // TODO(https://fxbug.dev/97805) remove this shard once the empty binary doesn't need it
     include: [ "syslog/client.shard.cml" ],

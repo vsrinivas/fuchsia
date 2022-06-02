@@ -1,3 +1,6 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 // This shard is meant to contain stuff that is meant to be shared across all flavors of the
 // archivist.
 {

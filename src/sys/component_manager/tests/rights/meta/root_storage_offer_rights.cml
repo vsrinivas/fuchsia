@@ -1,3 +1,6 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 // Passes a read only storage capability to a child, this is invalid and so should not be mapped
 // into the child process as it is expecting read write.
 {

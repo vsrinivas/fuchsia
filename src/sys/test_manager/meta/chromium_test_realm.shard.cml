@@ -1,3 +1,6 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 // TODO(fxbug.dev/91934): This shard defines a realm for tests in chromium. Once we are able
 // to define these out of tree this definition should be moved to chromium.
 {
