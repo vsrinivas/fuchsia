@@ -24,14 +24,10 @@
         {
             directory: "hub",
             from: "framework",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
         },
         {
-            protocol: "fuchsia.component.Realm",
-            from: "framework",
-        },
-        {
-            protocol: "fuchsia.component.Binder",
+            protocol: "fuchsia.sys2.RealmExplorer",
             from: "framework",
         },
     ],

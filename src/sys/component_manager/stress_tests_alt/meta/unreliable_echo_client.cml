@@ -28,19 +28,4 @@
             to: "#dynamic_children",
         },
     ],
-    expose: [
-        {
-            directory: "hub",
-            from: "framework",
-            rights: [ "r*" ],
-        },
-        {
-            protocol: "fuchsia.component.Realm",
-            from: "framework",
-        },
-        {
-            protocol: "fuchsia.component.Binder",
-            from: "framework",
-        },
-    ],
 }

@@ -11,8 +11,12 @@
         {
             directory: "hub",
             from: "parent",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
             path: "/hub",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "parent",
         },
     ],
 }

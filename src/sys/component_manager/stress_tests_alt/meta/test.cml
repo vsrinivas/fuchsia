@@ -4,7 +4,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        actor_url: "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/actor.cm",
+        actor_url: "#meta/actor.cm",
         num_instances: "20",
         action_timeout: "5 * 60", // Action Timeout: 5 minutes
         test_duration: "60 * 60", // Test Duration: 1 hour
@@ -12,11 +12,11 @@
     children: [
         {
             name: "unreliable_echo_server",
-            url: "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/unreliable_echo_server.cm",
+            url: "#meta/unreliable_echo_server.cm",
         },
         {
             name: "dynamic_children_root",
-            url: "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/no_binary.cm",
+            url: "#meta/no_binary.cm",
             startup: "eager",
         },
     ],
@@ -25,7 +25,12 @@
             directory: "hub",
             from: "#dynamic_children_root",
             to: "#actors",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "#dynamic_children_root",
+            to: "#actors",
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",

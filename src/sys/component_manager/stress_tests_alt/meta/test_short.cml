@@ -25,7 +25,12 @@
             directory: "hub",
             from: "#dynamic_children_root",
             to: "#actors",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "#dynamic_children_root",
+            to: "#actors",
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",
