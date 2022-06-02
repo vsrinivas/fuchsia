@@ -60,8 +60,8 @@ impl Session {
     }
 
     /// Sends a [`Buffer`] to the network device in this session.
-    pub async fn send(&self, buffer: Buffer<Tx>) -> Result<()> {
-        self.inner()?.send(buffer).await
+    pub fn send(&self, buffer: Buffer<Tx>) -> Result<()> {
+        self.inner()?.send(buffer)
     }
 
     /// Receives a [`Buffer`] from the network device in this session.
@@ -203,7 +203,7 @@ impl Inner {
     }
 
     /// Sends the [`Buffer`] to the driver.
-    async fn send(&self, mut buffer: Buffer<Tx>) -> Result<()> {
+    fn send(&self, mut buffer: Buffer<Tx>) -> Result<()> {
         buffer.pad()?;
         buffer.commit();
         self.tx_pending.extend(std::iter::once(buffer.leak()));

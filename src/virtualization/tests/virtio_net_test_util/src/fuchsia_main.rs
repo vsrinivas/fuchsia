@@ -153,7 +153,7 @@ async fn network_device_send(
     let write_scratch = vec![config.send_byte; config.length];
     let written = buffer.write_at(0, &write_scratch).expect("write message");
     assert_eq!(written, config.length);
-    session.send(buffer).await.expect("send");
+    session.send(buffer).expect("send");
     let recv_buf = session.recv().await.expect("receive");
     let mut scratch = vec![0; config.length];
     let read = recv_buf.read_at(0, &mut scratch).expect("read from buffer");

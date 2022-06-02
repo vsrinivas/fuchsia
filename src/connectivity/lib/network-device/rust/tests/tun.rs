@@ -64,7 +64,7 @@ async fn test_tx() {
         );
         buffer.set_port(port);
         buffer.set_frame_type(netdev::FrameType::Ethernet);
-        session.send(buffer).await.expect("failed to send the buffer");
+        session.send(buffer).expect("failed to send the buffer");
         let frame = tun
             .read_frame()
             .await
@@ -89,17 +89,14 @@ async fn echo(session: Session, port: Port, frame_count: u32) {
         assert_eq!(u32::from_le_bytes(bytes), i);
         if i % 2 == 0 {
             let buffer = buffer.into_tx().await;
-            session
-                .send(buffer)
-                .await
-                .expect("failed to send the buffer back on the zero-copy path");
+            session.send(buffer).expect("failed to send the buffer back on the zero-copy path");
         } else {
             let mut buffer =
                 session.alloc_tx_buffer(DATA_LEN).await.expect("no tx buffer available");
             buffer.set_frame_type(netdev::FrameType::Ethernet);
             buffer.set_port(port);
             assert_eq!(buffer.write(&bytes).unwrap(), DATA_LEN);
-            session.send(buffer).await.expect("failed to send the buffer back on the copying path");
+            session.send(buffer).expect("failed to send the buffer back on the copying path");
         }
     }
 }
@@ -183,7 +180,7 @@ async fn test_echo_pair() {
                                 buffer.write(&bytes[..]).expect("failed to write into the buffer"),
                                 DATA_LEN
                             );
-                            session2.send(buffer).await.expect("failed to send the buffer");
+                            session2.send(buffer).expect("failed to send the buffer");
 
                             let mut buffer =
                                 session2.recv().await.expect("failed to recv from the session");

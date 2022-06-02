@@ -20,6 +20,25 @@ pub struct Client {
     device: netdev::DeviceProxy,
 }
 
+/// A sensible default port stream buffer size.
+const DEFAULT_PORT_STREAM_BUFFER_SIZE: u32 = 64;
+
+/// Creates a [`Stream`] of [`PortStatus`] from a [`netdev::PortProxy`].
+///
+/// If `buffer` is `None`, a sensible nonzero default buffer size will be used.
+pub fn new_port_status_stream(
+    port_proxy: &netdev::PortProxy,
+    buffer: Option<u32>,
+) -> Result<impl Stream<Item = Result<PortStatus>> + Unpin> {
+    let (watcher_proxy, watcher_server) =
+        fidl::endpoints::create_proxy::<netdev::StatusWatcherMarker>()?;
+    let () = port_proxy
+        .get_status_watcher(watcher_server, buffer.unwrap_or(DEFAULT_PORT_STREAM_BUFFER_SIZE))?;
+    Ok(HangingGetStream::new(watcher_proxy, netdev::StatusWatcherProxy::watch_status)
+        .err_into()
+        .and_then(|status| futures::future::ready(status.try_into().map_err(Error::PortStatus))))
+}
+
 impl Client {
     /// Creates a new network device client for the [`netdev::DeviceProxy`].
     pub fn new(device: netdev::DeviceProxy) -> Self {
@@ -46,8 +65,7 @@ impl Client {
         &self,
         port: Port,
     ) -> Result<impl Stream<Item = Result<PortStatus>> + Unpin> {
-        const DEFAULT_BUFFER_SIZE: u32 = 64;
-        self.port_status_stream_with_buffer_size(port, DEFAULT_BUFFER_SIZE)
+        self.port_status_stream_with_buffer_size(port, DEFAULT_PORT_STREAM_BUFFER_SIZE)
     }
 
     /// Gets a [`Stream`] of [`PortStatus`] for status changes from the device.
@@ -57,14 +75,7 @@ impl Client {
         buffer: u32,
     ) -> Result<impl Stream<Item = Result<PortStatus>> + Unpin> {
         let port_proxy = self.connect_port(port)?;
-        let (watcher_proxy, watcher_server) =
-            fidl::endpoints::create_proxy::<netdev::StatusWatcherMarker>()?;
-        let () = port_proxy.get_status_watcher(watcher_server, buffer)?;
-        Ok(HangingGetStream::new(watcher_proxy, netdev::StatusWatcherProxy::watch_status)
-            .err_into()
-            .and_then(|status| {
-                futures::future::ready(status.try_into().map_err(Error::PortStatus))
-            }))
+        new_port_status_stream(&port_proxy, Some(buffer))
     }
 
     /// Waits for `port` to become online and report the [`PortStatus`].
