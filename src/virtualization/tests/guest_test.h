@@ -9,7 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <optional>
+#include <memory>
 
 #include <fbl/type_info.h>
 #include <gtest/gtest.h>
@@ -17,30 +17,20 @@
 #include "lib/zx/time.h"
 #include "src/virtualization/tests/enclosed_guest.h"
 
-// GuestTest creates a static EnclosedGuest to be shared across all tests in a
-// test fixture.
 template <class T>
 class GuestTest : public ::testing::Test {
- public:
-  static void SetUpTestSuite() {
-    FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
-    loop_.emplace(&kAsyncLoopConfigAttachToCurrentThread);
-    enclosed_guest_.emplace(*loop_);
-    ZX_ASSERT(GetEnclosedGuest().Start(zx::time::infinite()) == ZX_OK);
-  }
-
-  static void TearDownTestSuite() {
-    ZX_ASSERT(GetEnclosedGuest().Stop(zx::time::infinite()) == ZX_OK);
-    loop_->Quit();
-    enclosed_guest_.reset();
-    loop_.reset();
-  }
-
  protected:
   void SetUp() override {
-    // An assertion failure in SetUpTestSuite doesn't prevent tests from running,
-    // so we need to check that it succeeded here.
-    ASSERT_TRUE(GetEnclosedGuest().Ready()) << "Guest setup failed";
+    FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
+    enclosed_guest_ = std::make_unique<T>(*loop_);
+    ZX_ASSERT(enclosed_guest_->Start(zx::time::infinite()) == ZX_OK);
+  }
+
+  void TearDown() override {
+    FX_LOGS(INFO) << "Teardown Guest: " << fbl::TypeInfo<T>::Name();
+    ZX_ASSERT(enclosed_guest_->Stop(zx::time::infinite()) == ZX_OK);
+    loop_->Quit();
   }
 
   zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr,
@@ -73,11 +63,11 @@ class GuestTest : public ::testing::Test {
     GetEnclosedGuest().ConnectToBalloon(std::move(balloon_controller));
   }
 
-  static T& GetEnclosedGuest() { return enclosed_guest_.value(); }
+  T& GetEnclosedGuest() const { return *enclosed_guest_; }
 
  private:
-  static inline std::optional<T> enclosed_guest_;
-  static inline std::optional<async::Loop> loop_;
+  std::unique_ptr<async::Loop> loop_;
+  std::unique_ptr<T> enclosed_guest_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_

@@ -74,8 +74,6 @@ class EnclosedGuest {
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
   zx_status_t Stop(zx::time deadline);
 
-  bool Ready() const { return ready_; }
-
   // Execute |command| on the guest serial and wait for the |result|.
   virtual zx_status_t Execute(const std::vector<std::string>& argv,
                               const std::unordered_map<std::string, std::string>& env,
@@ -145,7 +143,6 @@ class EnclosedGuest {
   std::optional<SocketLogger> serial_logger_;
   std::optional<GuestConsole> console_;
   uint32_t guest_cid_;
-  bool ready_ = false;
 };
 
 class ZirconEnclosedGuest : public EnclosedGuest {

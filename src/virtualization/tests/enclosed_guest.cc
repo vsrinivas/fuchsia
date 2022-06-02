@@ -276,7 +276,6 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
     return status;
   }
 
-  ready_ = true;
   return ZX_OK;
 }
 
