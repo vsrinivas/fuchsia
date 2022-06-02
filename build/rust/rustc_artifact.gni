@@ -159,10 +159,12 @@ template("rustc_artifact") {
   # Every rust target is actually a group of both target_name.actual and
   # optionally target_name.clippy (if include_clippy is set)
   group(target_name) {
-    forward_variables_from(invoker.pass_through, [ "testonly" ])
+    forward_variables_from(invoker.pass_through,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     public_deps = [ ":$_target_name" ]
-    metadata = {
-    }
     metadata = {
       test_component_manifest_program_barrier = [ ":$_target_name" ]
       link_output_barrier = [ ":$_target_name" ]

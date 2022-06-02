@@ -29,6 +29,8 @@ rustc_library("version-history-shared") {
   inputs = [ "//sdk/version_history.json" ]
   visibility = [
     ":*",
+    "//src/lib/versioning/version-history/rust:*",
+    "//src/lib/versioning/version-history/rust/proc-macro:*",
     "//src/sys/pkg/lib/version-history/rust:*",
     "//src/sys/pkg/lib/version-history/rust/proc-macro:*",
   ]
