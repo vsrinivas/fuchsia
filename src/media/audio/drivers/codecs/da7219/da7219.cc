@@ -148,6 +148,7 @@ zx_status_t Da7219::Reset() {
   if (status != ZX_OK)
     return status;
 
+  PlugDetected(false);  // TODO(101483): Remove this workaround.
   auto status_a = AccdetStatusA::Read(i2c_);
   if (!status_a.is_ok())
     return status_a.error_value();

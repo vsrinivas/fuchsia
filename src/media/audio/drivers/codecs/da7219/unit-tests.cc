@@ -73,18 +73,27 @@ TEST_F(Da7219Test, GetInfo) {
 
 TEST_F(Da7219Test, Reset) {
   // Reset.
-  mock_i2c_.ExpectWriteStop({0xfd, 0x01}, ZX_OK);               // Enable.
-  mock_i2c_.ExpectWriteStop({0x20, 0x8c}, ZX_OK);               // PLL.
-  mock_i2c_.ExpectWriteStop({0x47, 0xa0}, ZX_OK);               // Charge Pump enablement.
-  mock_i2c_.ExpectWriteStop({0x69, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6a, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x4b, 0x01}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x4c, 0x01}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6e, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6f, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6b, 0x00}, ZX_OK);               // HP Routing (Left HP disabled).
-  mock_i2c_.ExpectWriteStop({0x6c, 0x00}, ZX_OK);               // HP Routing (Right HP disabled).
-  mock_i2c_.ExpectWriteStop({0xc6, 0xd7}, ZX_OK);               // Enable AAD.
+  mock_i2c_.ExpectWriteStop({0xfd, 0x01}, ZX_OK);  // Enable.
+  mock_i2c_.ExpectWriteStop({0x20, 0x8c}, ZX_OK);  // PLL.
+  mock_i2c_.ExpectWriteStop({0x47, 0xa0}, ZX_OK);  // Charge Pump enablement.
+  mock_i2c_.ExpectWriteStop({0x69, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6a, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x4b, 0x01}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x4c, 0x01}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6e, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6f, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6b, 0x00}, ZX_OK);  // HP Routing (Left HP disabled).
+  mock_i2c_.ExpectWriteStop({0x6c, 0x00}, ZX_OK);  // HP Routing (Right HP disabled).
+  mock_i2c_.ExpectWriteStop({0xc6, 0xd7}, ZX_OK);  // Enable AAD.
+  {
+    // TODO(101483): Remove this workaround of a force unplugged report initially.
+    mock_i2c_.ExpectWrite({0x6b})
+        .ExpectReadStop({0xff}, ZX_OK)
+        .ExpectWriteStop({0x6b, 0x77}, ZX_OK);  // HP Routing (Left HP disabled).
+    mock_i2c_.ExpectWrite({0x6c})
+        .ExpectReadStop({0xff}, ZX_OK)
+        .ExpectWriteStop({0x6c, 0x77}, ZX_OK);  // HP Routing (Right HP disabled).
+  }
   mock_i2c_.ExpectWrite({0xc0}).ExpectReadStop({0x00}, ZX_OK);  // Check plug state.
   mock_i2c_.ExpectWrite({0x6b})
       .ExpectReadStop({0xff}, ZX_OK)
@@ -135,18 +144,27 @@ TEST_F(Da7219Test, GoodSetDai) {
 
 TEST_F(Da7219Test, PlugDetectInitiallyUnplugged) {
   // Reset.
-  mock_i2c_.ExpectWriteStop({0xfd, 0x01}, ZX_OK);               // Enable.
-  mock_i2c_.ExpectWriteStop({0x20, 0x8c}, ZX_OK);               // PLL.
-  mock_i2c_.ExpectWriteStop({0x47, 0xa0}, ZX_OK);               // Charge Pump enablement.
-  mock_i2c_.ExpectWriteStop({0x69, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6a, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x4b, 0x01}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x4c, 0x01}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6e, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6f, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6b, 0x00}, ZX_OK);               // HP Routing (Left HP disabled).
-  mock_i2c_.ExpectWriteStop({0x6c, 0x00}, ZX_OK);               // HP Routing (Right HP disabled).
-  mock_i2c_.ExpectWriteStop({0xc6, 0xd7}, ZX_OK);               // Enable AAD.
+  mock_i2c_.ExpectWriteStop({0xfd, 0x01}, ZX_OK);  // Enable.
+  mock_i2c_.ExpectWriteStop({0x20, 0x8c}, ZX_OK);  // PLL.
+  mock_i2c_.ExpectWriteStop({0x47, 0xa0}, ZX_OK);  // Charge Pump enablement.
+  mock_i2c_.ExpectWriteStop({0x69, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6a, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x4b, 0x01}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x4c, 0x01}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6e, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6f, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6b, 0x00}, ZX_OK);  // HP Routing (Left HP disabled).
+  mock_i2c_.ExpectWriteStop({0x6c, 0x00}, ZX_OK);  // HP Routing (Right HP disabled).
+  mock_i2c_.ExpectWriteStop({0xc6, 0xd7}, ZX_OK);  // Enable AAD.
+  {
+    // TODO(101483): Remove this workaround of a force unplugged report initially.
+    mock_i2c_.ExpectWrite({0x6b})
+        .ExpectReadStop({0xff}, ZX_OK)
+        .ExpectWriteStop({0x6b, 0x77}, ZX_OK);  // HP Routing (Left HP disabled).
+    mock_i2c_.ExpectWrite({0x6c})
+        .ExpectReadStop({0xff}, ZX_OK)
+        .ExpectWriteStop({0x6c, 0x77}, ZX_OK);  // HP Routing (Right HP disabled).
+  }
   mock_i2c_.ExpectWrite({0xc0}).ExpectReadStop({0x00}, ZX_OK);  // Check plug state (unplugged).
   mock_i2c_.ExpectWrite({0x6b})
       .ExpectReadStop({0xff}, ZX_OK)
@@ -219,18 +237,27 @@ TEST_F(Da7219Test, PlugDetectInitiallyUnplugged) {
 
 TEST_F(Da7219Test, PlugDetectInitiallyPlugged) {
   // Reset.
-  mock_i2c_.ExpectWriteStop({0xfd, 0x01}, ZX_OK);               // Enable.
-  mock_i2c_.ExpectWriteStop({0x20, 0x8c}, ZX_OK);               // PLL.
-  mock_i2c_.ExpectWriteStop({0x47, 0xa0}, ZX_OK);               // Charge Pump enablement.
-  mock_i2c_.ExpectWriteStop({0x69, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6a, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x4b, 0x01}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x4c, 0x01}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6e, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6f, 0x80}, ZX_OK);               // HP Routing.
-  mock_i2c_.ExpectWriteStop({0x6b, 0x00}, ZX_OK);               // HP Routing (Left HP disabled).
-  mock_i2c_.ExpectWriteStop({0x6c, 0x00}, ZX_OK);               // HP Routing (Right HP disabled).
-  mock_i2c_.ExpectWriteStop({0xc6, 0xd7}, ZX_OK);               // Enable AAD.
+  mock_i2c_.ExpectWriteStop({0xfd, 0x01}, ZX_OK);  // Enable.
+  mock_i2c_.ExpectWriteStop({0x20, 0x8c}, ZX_OK);  // PLL.
+  mock_i2c_.ExpectWriteStop({0x47, 0xa0}, ZX_OK);  // Charge Pump enablement.
+  mock_i2c_.ExpectWriteStop({0x69, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6a, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x4b, 0x01}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x4c, 0x01}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6e, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6f, 0x80}, ZX_OK);  // HP Routing.
+  mock_i2c_.ExpectWriteStop({0x6b, 0x00}, ZX_OK);  // HP Routing (Left HP disabled).
+  mock_i2c_.ExpectWriteStop({0x6c, 0x00}, ZX_OK);  // HP Routing (Right HP disabled).
+  mock_i2c_.ExpectWriteStop({0xc6, 0xd7}, ZX_OK);  // Enable AAD.
+  {
+    // TODO(101483): Remove this workaround of a force unplugged report initially.
+    mock_i2c_.ExpectWrite({0x6b})
+        .ExpectReadStop({0xff}, ZX_OK)
+        .ExpectWriteStop({0x6b, 0x77}, ZX_OK);  // HP Routing (Left HP disabled).
+    mock_i2c_.ExpectWrite({0x6c})
+        .ExpectReadStop({0xff}, ZX_OK)
+        .ExpectWriteStop({0x6c, 0x77}, ZX_OK);  // HP Routing (Right HP disabled).
+  }
   mock_i2c_.ExpectWrite({0xc0}).ExpectReadStop({0x01}, ZX_OK);  // Check plug state (plugged).
   mock_i2c_.ExpectWrite({0x6b})
       .ExpectReadStop({0x77}, ZX_OK)
