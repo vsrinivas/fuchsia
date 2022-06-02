@@ -21,7 +21,7 @@ rustc_library("logger") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",

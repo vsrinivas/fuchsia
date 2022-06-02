@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("syslog") {
-  public_deps = [ "rust:syslog" ]
+  deps = [ "rust" ]
 }
 
 group("tests") {

@@ -66,7 +66,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/fuchsia-vfs-watcher",
-    "//src/lib/syslog/rust",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
     "//src/lib/zircon/rust:fuchsia-zircon",
