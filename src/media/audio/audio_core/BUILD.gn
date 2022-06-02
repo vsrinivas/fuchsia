@@ -237,7 +237,6 @@ source_set("audio_core_main") {
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/system/ulib/syslog:syslog-headers",
     "//zircon/system/ulib/trace-provider",
   ]
 

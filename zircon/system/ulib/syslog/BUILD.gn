@@ -108,7 +108,6 @@ syslog_headers_visibility_allowlist = [
   "//src/bringup/bin/console:*",
   "//src/devices/lib/iommu:*",
   "//src/lib/ddk:*",
-  "//src/media/audio/audio_core:*",
 ]
 
 syslog_headers_visibility_allowlist += [
