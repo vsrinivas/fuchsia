@@ -5,7 +5,6 @@
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/go/toolchain.gni")
-import("//build/rust/toolchain.gni")
 
 # Declares a FIDL library.
 #
@@ -144,12 +143,6 @@ template("fidl") {
     fidl_dart(target_name) {
       forward_variables_from(invoker, "*")
     }
-  } else if (current_toolchain == rust_toolchain) {
-    import("//build/rust/fidl_rust.gni")
-
-    fidl_rust(target_name) {
-      forward_variables_from(invoker, "*")
-    }
   } else if (current_toolchain == go_toolchain) {
     import("//build/go/fidl_go.gni")
 
@@ -187,8 +180,8 @@ template("fidl") {
     }
 
     # TODO(cramertj): remove pending fxbug.dev/26853.
-    import("//build/rust/fidl_rust_library.gni")
-    fidl_rust_library(target_name) {
+    import("//build/rust/fidl_rust.gni")
+    fidl_rust(target_name) {
       forward_variables_from(invoker, "*")
     }
 

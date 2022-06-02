@@ -5,7 +5,6 @@
 import("//build/banjo/toolchain.gni")
 import("//build/compiled_action.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/rust/toolchain.gni")
 
 # Declares the rustc_library invocation for the generated FIDL bindings.
 

@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/toolchain.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
 import("//build/rust/fidl_rust.gni")
-import("//build/rust/toolchain.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
@@ -61,7 +61,7 @@ if (is_host) {
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_rust" ] - [ "fidlgen_rust" ] ==
           info.denylist) {
-        deps += [ "${info.target}_rust_generate($rust_toolchain)" ]
+        deps += [ "${info.target}_rust_generate($fidl_toolchain)" ]
         library_underscore = string_replace(info.library, ".", "_")
         entries += [
           {

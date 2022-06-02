@@ -5,7 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/config.gni")
-import("//build/rust/toolchain.gni")
+import("//build/rust/rustc_library.gni")
 
 # Generates some Rust bindings for a FIDL library.
 #
@@ -14,75 +14,119 @@ import("//build/rust/toolchain.gni")
 #   - name.
 
 template("fidl_rust") {
-  assert(current_toolchain == rust_toolchain,
-         "This template can only be used in $rust_toolchain.")
-
   not_needed(invoker, [ "sources" ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_rust_generate"
+  rustc_target_name = "${target_name}-rustc"
 
   library_name = target_name
   if (defined(invoker.name)) {
     library_name = invoker.name
   }
 
-  underscore_name = "fidl_" + string_replace(library_name, ".", "_")
+  crate_name = "fidl_" + string_replace(library_name, ".", "_")
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  filename = "$fidl_target_gen_dir/$main_target_name/$underscore_name.rs"
-  json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+  file_stem = "$fidl_target_gen_dir/$main_target_name/$crate_name"
 
-  compiled_action(generation_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+  if (current_toolchain == fidl_toolchain) {
+    filename = "$file_stem.rs"
+    json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+    compiled_action(generation_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
 
-    visibility = [
-      ":*",
-      "//tools/fidl/fidlgen_rust:*",
-    ]
+      visibility = [
+        ":*",
+        "//tools/fidl/fidlgen_rust:*",
+      ]
 
-    tool = "//tools/fidl/fidlgen_rust"
+      tool = "//tools/fidl/fidlgen_rust"
 
-    inputs = [
-      json_representation,
-      "//rustfmt.toml",
-      "$rustc_prefix/rustfmt",
-      rustc_version_file,
-    ]
+      inputs = [
+        json_representation,
+        "//rustfmt.toml",
+        "$rustc_prefix/rustfmt",
+        rustc_version_file,
+      ]
 
-    outputs = [ filename ]
+      outputs = [ filename ]
 
-    args = [
-      "--json",
-      rebase_path(json_representation, root_build_dir),
-      "--output-filename",
-      rebase_path(filename, root_build_dir),
-      "--rustfmt",
-      "$rebased_rustc_prefix/rustfmt",
-      "--rustfmt-config",
-      rebase_path("//rustfmt.toml", root_build_dir),
-    ]
+      args = [
+        "--json",
+        rebase_path(json_representation, root_build_dir),
+        "--output-filename",
+        rebase_path(filename, root_build_dir),
+        "--rustfmt",
+        "$rebased_rustc_prefix/rustfmt",
+        "--rustfmt-config",
+        rebase_path("//rustfmt.toml", root_build_dir),
+      ]
 
-    deps = [ ":$main_target_name($fidl_toolchain)" ]
+      deps = [ ":$main_target_name($fidl_toolchain)" ]
 
-    metadata = {
-      generated_sources = rebase_path(outputs, root_build_dir)
+      metadata = {
+        generated_sources = rebase_path(outputs, root_build_dir)
+      }
+    }
+  } else {
+    group(generation_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      deps = [ ":$generation_target_name($fidl_toolchain)" ]
     }
   }
 
-  group(main_target_name) {
+  rustc_library(rustc_target_name) {
+    name = crate_name
+    output_dir = target_out_dir + "/" + target_name
+    version = "0.1.0"
+    edition = "2018"
+    disable_clippy = true
     forward_variables_from(invoker,
                            [
-                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
+    deps = [
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/zerocopy",
+      "//src/lib/zircon/rust:fuchsia-zircon-status",
+      "//third_party/rust_crates:bitflags",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:static_assertions",
+    ]
 
-    deps = [ ":$generation_target_name" ]
+    if (is_fuchsia) {
+      deps += [
+        "//src/lib/fuchsia-async",
+        "//src/lib/zircon/rust:fuchsia-zircon",
+      ]
+    }
+
+    if (defined(invoker.public_deps)) {
+      foreach(dep, invoker.public_deps) {
+        label = get_label_info(dep, "label_no_toolchain")
+        deps += [ "${label}-rustc" ]
+      }
+    }
 
     if (defined(invoker.deps)) {
-      deps += invoker.deps
+      foreach(dep, invoker.deps) {
+        label = get_label_info(dep, "label_no_toolchain")
+        deps += [ label ]
+      }
     }
+
+    non_rust_deps = [ ":$generation_target_name($fidl_toolchain)" ]
+    source_root = "$file_stem.rs"
+    sources = [ "$file_stem.rs" ]
+
+    configs -= [ "//build/config/rust:allow_unused_results" ]
   }
 }

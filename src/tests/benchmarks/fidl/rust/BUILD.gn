@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/rust/toolchain.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
@@ -64,8 +63,7 @@ foreach(suite, benchmark_suites) {
   }
 }
 
-rust_target_gen_dir =
-    get_label_info(":bogus($rust_toolchain)", "target_gen_dir")
+rust_target_gen_dir = get_label_info(":bogus", "target_gen_dir")
 benchmark_suite_file =
     "$rust_target_gen_dir/benchmark_suite-${toolchain_variant.name}.rs"
 
