@@ -88,7 +88,6 @@ struct WireCodingTraits<bool, WireCodingConstraintEmpty, IsRecursive> {
 
   static void Encode(WireEncoder* encoder, const bool* value, WirePosition position,
                      RecursionDepth<IsRecursive> recursion_depth) {
-    ZX_DEBUG_ASSERT(*reinterpret_cast<const uint8_t*>(value) <= 1);
     *position.As<bool>() = *value;
   }
   static void Decode(WireDecoder* decoder, WirePosition position,
