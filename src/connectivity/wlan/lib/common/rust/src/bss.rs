@@ -513,6 +513,7 @@ impl BssDescription {
             self.protection(),
             Protection::Wpa1Wpa2PersonalTkipOnly
                 | Protection::Wpa1Wpa2Personal
+                | Protection::Wpa2PersonalTkipOnly
                 | Protection::Wpa2Personal
                 | Protection::Wpa2Wpa3Personal
         )

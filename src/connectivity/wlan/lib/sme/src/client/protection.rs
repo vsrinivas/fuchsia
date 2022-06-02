@@ -636,6 +636,25 @@ mod tests {
     }
 
     #[test]
+    fn protection_from_wpa2_personal_tkip_only_passphrase() {
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
+        let config = Default::default();
+        let bss = fake_bss_description!(Wpa2TkipOnly);
+        let credentials =
+            wpa::Wpa2PersonalCredentials::Passphrase("password".as_bytes().try_into().unwrap());
+        let protection = Protection::try_from(SecurityContext {
+            security: &credentials,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        })
+        .unwrap();
+        assert!(matches!(protection, Protection::Rsna(_)));
+    }
+
+    #[test]
     fn protection_from_wpa3_personal_passphrase() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
         let security_support = fake_security_support();
