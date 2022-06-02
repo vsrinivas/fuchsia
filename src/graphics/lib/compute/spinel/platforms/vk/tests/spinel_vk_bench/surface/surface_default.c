@@ -104,7 +104,7 @@ surface_verify_surface_format(VkSurfaceKHR               surface,
 
   vkGetPhysicalDeviceSurfaceFormatsKHR(vk_pd, surface, &sf_count, NULL);
 
-  VkSurfaceFormatKHR * const sfs = malloc(sizeof(*sfs) * sf_count);
+  VkSurfaceFormatKHR * const sfs = MALLOC_MACRO(sizeof(*sfs) * sf_count);
 
   vkGetPhysicalDeviceSurfaceFormatsKHR(vk_pd, surface, &sf_count, sfs);
 
@@ -387,8 +387,8 @@ surface_default_regen(struct surface * surface, VkExtent2D * extent, uint32_t * 
   uint32_t const wait_count = new_image_count + 1;
 
   // clang-format off
-  device->swapchain.waits        = malloc(sizeof(*device->swapchain.waits) * wait_count);
-  device->swapchain.presentables = malloc(sizeof(*device->swapchain.presentables) * new_image_count);
+  device->swapchain.waits        = MALLOC_MACRO(sizeof(*device->swapchain.waits) * wait_count);
+  device->swapchain.presentables = MALLOC_MACRO(sizeof(*device->swapchain.presentables) * new_image_count);
   device->swapchain.wait_count   = wait_count;
   device->swapchain.wait_next    = 0;
   // clang-format on
@@ -601,7 +601,7 @@ surface_default_attach(struct surface *           surface,
   //
   // otherwise, create the device
   //
-  struct device * const device = malloc(sizeof(*device));
+  struct device * const device = MALLOC_MACRO(sizeof(*device));
 
   surface->device = device;
 

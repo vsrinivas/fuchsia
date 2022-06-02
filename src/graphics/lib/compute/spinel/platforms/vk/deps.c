@@ -141,7 +141,7 @@ spinel_deps_create(struct spinel_deps_create_info const * info, struct spinel_de
 {
   assert(info->semaphores.delayed.size <= SPN_DEPS_DELAYED_SEMAPHORE_MAX);
 
-  struct spinel_deps * deps = malloc(sizeof(*deps));
+  struct spinel_deps * deps = MALLOC_MACRO(sizeof(*deps));
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -152,10 +152,10 @@ spinel_deps_create(struct spinel_deps_create_info const * info, struct spinel_de
   spinel_next_init(&deps->delayed.next, info->semaphores.delayed.size);
 
   // clang-format off
-  deps->delayed.semaphores  = malloc(info->semaphores.delayed.size * sizeof(*deps->delayed.semaphores));
-  deps->delayed.values      = calloc(info->semaphores.delayed.size, sizeof(*deps->delayed.values));
-  deps->delayed.submissions = calloc(info->semaphores.delayed.size, sizeof(*deps->delayed.submissions));
-  deps->delayed.handle_map  = malloc(handle_map_size);
+  deps->delayed.semaphores  = MALLOC_MACRO(info->semaphores.delayed.size * sizeof(*deps->delayed.semaphores));
+  deps->delayed.values      = CALLOC_MACRO(info->semaphores.delayed.size, sizeof(*deps->delayed.values));
+  deps->delayed.submissions = CALLOC_MACRO(info->semaphores.delayed.size, sizeof(*deps->delayed.submissions));
+  deps->delayed.handle_map  = MALLOC_MACRO(handle_map_size);
   // clang-format on
 
   // invalidate handle map
@@ -173,15 +173,15 @@ spinel_deps_create(struct spinel_deps_create_info const * info, struct spinel_de
   // clang-format off
   deps->immediate.pool.size   = info->semaphores.immediate.pool.size;
   deps->immediate.pool.count  = info->semaphores.immediate.pool.count;
-  deps->immediate.pool.extent = malloc(info->semaphores.immediate.pool.count * sizeof(*deps->immediate.pool.extent));
+  deps->immediate.pool.extent = MALLOC_MACRO(info->semaphores.immediate.pool.count * sizeof(*deps->immediate.pool.extent));
 
   spinel_ring_init(&deps->immediate.ring, immediate_size);
 
-  deps->immediate.stages      = malloc(immediate_size * sizeof(*deps->immediate.stages));
-  deps->immediate.semaphores  = malloc(immediate_size * sizeof(*deps->immediate.semaphores));
-  deps->immediate.values      = calloc(immediate_size, sizeof(*deps->immediate.values));      // zeroed
-  deps->immediate.cbs         = malloc(immediate_size * sizeof(*deps->immediate.cbs));
-  deps->immediate.completions = malloc(immediate_size * sizeof(*deps->immediate.completions));
+  deps->immediate.stages      = MALLOC_MACRO(immediate_size * sizeof(*deps->immediate.stages));
+  deps->immediate.semaphores  = MALLOC_MACRO(immediate_size * sizeof(*deps->immediate.semaphores));
+  deps->immediate.values      = CALLOC_MACRO(immediate_size, sizeof(*deps->immediate.values));      // zeroed
+  deps->immediate.cbs         = MALLOC_MACRO(immediate_size * sizeof(*deps->immediate.cbs));
+  deps->immediate.completions = MALLOC_MACRO(immediate_size * sizeof(*deps->immediate.completions));
   // clang-format on
 
   //////////////////////////////////////////////////////////////////////////////
@@ -190,7 +190,7 @@ spinel_deps_create(struct spinel_deps_create_info const * info, struct spinel_de
   //
   spinel_ring_init(&deps->completion.ring, immediate_size);
 
-  deps->completion.extent = malloc(immediate_size * sizeof(*deps->completion.extent));
+  deps->completion.extent = MALLOC_MACRO(immediate_size * sizeof(*deps->completion.extent));
 
   //////////////////////////////////////////////////////////////////////////////
   //

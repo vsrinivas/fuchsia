@@ -131,7 +131,7 @@ spinel_vk_load_target(char const * filename)
 
   struct spinel_vk_target * target = malloc(file_size);
 
-  if (fread(target, 1, file_size, file) != (size_t)file_size)
+  if ((target != NULL) && (fread(target, 1, file_size, file) != (size_t)file_size))
     {
       fprintf(stderr, "Error: Can't read target filename \"%s\"\n", filename);
       fclose(file);

@@ -443,7 +443,7 @@ impl_input(struct widget *                    widget,
 widget_mouse_t
 widget_mouse_create(void)
 {
-  widget_mouse_t widget_mouse = { .impl = malloc(sizeof(*widget_mouse.impl)) };
+  widget_mouse_t widget_mouse = { .impl = MALLOC_MACRO(sizeof(*widget_mouse.impl)) };
 
   // use a designated initializer
   *widget_mouse.impl = (struct widget_mouse){

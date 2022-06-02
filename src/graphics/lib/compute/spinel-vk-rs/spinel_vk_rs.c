@@ -138,10 +138,10 @@ spinel_vk_rs_cmd_create(struct spinel_vk_rs * rs, uint32_t image_count)
 
   rs->cmd.count     = count;
   rs->cmd.next      = 0;
-  rs->cmd.pools     = malloc(count * sizeof(*rs->cmd.pools));
-  rs->cmd.buffers   = malloc(count * sizeof(*rs->cmd.buffers));
-  rs->cmd.timelines = malloc(count * sizeof(*rs->cmd.timelines));
-  rs->cmd.values    = calloc(count, sizeof(*rs->cmd.values));
+  rs->cmd.pools     = MALLOC_MACRO(count * sizeof(*rs->cmd.pools));
+  rs->cmd.buffers   = MALLOC_MACRO(count * sizeof(*rs->cmd.buffers));
+  rs->cmd.timelines = MALLOC_MACRO(count * sizeof(*rs->cmd.timelines));
+  rs->cmd.values    = CALLOC_MACRO(count, sizeof(*rs->cmd.values));
 
   VkCommandPoolCreateInfo const cpci = {
 
@@ -368,7 +368,7 @@ spinel_vk_rs_create(spinel_vk_rs_create_info_t const * create_info)
   //   uint64_t context_block_pool_size = 256UL << 20;  // 256 MB
   //   uint32_t context_handle_count    = 1 << 18;      // 256K handles
   //
-  spinel_vk_rs_t * rs = calloc(1, sizeof(*rs));
+  spinel_vk_rs_t * rs = CALLOC_MACRO(1, sizeof(*rs));
 
   //
   // acquire all physical devices
@@ -386,7 +386,7 @@ spinel_vk_rs_create(spinel_vk_rs_create_info_t const * create_info)
       return NULL;
     }
 
-  VkPhysicalDevice * pds = malloc(pd_count * sizeof(*pds));
+  VkPhysicalDevice * pds = MALLOC_MACRO(pd_count * sizeof(*pds));
 
   vk(EnumeratePhysicalDevices(create_info->instance, &pd_count, pds));
 
@@ -966,7 +966,7 @@ spinel_vk_rs_get_physical_device_props(VkInstance                   instance,
 
   *props_count = MIN_MACRO(uint32_t, pd_count, *props_count);
 
-  VkPhysicalDevice * pds = malloc(sizeof(*pds) * *props_count);
+  VkPhysicalDevice * pds = MALLOC_MACRO(sizeof(*pds) * *props_count);
 
   result = vkEnumeratePhysicalDevices(instance, props_count, pds);
 

@@ -353,7 +353,7 @@ radix_sort_vk_create(VkDevice                       device,
   //
   // Allocate radix_sort_vk
   //
-  radix_sort_vk_t * const rs = malloc(sizeof(*rs));
+  radix_sort_vk_t * const rs = MALLOC_MACRO(sizeof(*rs));
 
   //
   // Save the config for layer

@@ -65,6 +65,11 @@ target_archive_copy(FILE *                        file_out,
 
   char * buf = malloc(TARGET_ARCHIVE_BUFLEN);
 
+  if (buf == NULL)
+    {
+      exit(EXIT_FAILURE);
+    }
+
   while (true)
     {
       // copy until error
@@ -315,8 +320,14 @@ main(int argc, char const * argv[])
   size_t const entries_size = sizeof(struct target_archive_entry) * read_count;
   size_t const header_size  = sizeof(struct target_archive_header) + entries_size;
 
-  struct target_archive_header * const header  = calloc(1, header_size);
-  struct target_archive_entry *        entries = header->entries;
+  struct target_archive_header * const header = calloc(1, header_size);
+
+  if (header == NULL)
+    {
+      exit(EXIT_FAILURE);
+    }
+
+  struct target_archive_entry * entries = header->entries;
 
   header->magic = TARGET_ARCHIVE_MAGIC;
   header->count = read_count;
@@ -336,6 +347,11 @@ main(int argc, char const * argv[])
   // Blindly open all files
   //
   FILE ** files = calloc(file_count, sizeof(*files));
+
+  if (files == NULL)
+    {
+      exit(EXIT_FAILURE);
+    }
 
   files[0] = fopen(file_name, "wb");
 

@@ -10,6 +10,7 @@
 //
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 //
@@ -43,6 +44,19 @@ pow2_rd_u32(uint32_t n);
 // REQUIRES: |n > 0|.
 uint32_t
 msb_idx_u32(uint32_t n);  // 0-based bit position
+
+//
+// 1. Invoke malloc()/calloc().
+// 2. Assert that the return result is not NULL.
+// 3. Return the result.
+//
+// The assert() macro and its semantics are defined in <assert.h>.
+//
+void *
+malloc_assert(size_t size);
+
+void *
+calloc_assert(size_t num, size_t size);
 
 //
 //

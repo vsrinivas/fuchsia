@@ -391,7 +391,7 @@ impl_input(struct widget *                    widget,
 widget_fps_t
 widget_fps_create(float glyph_width)
 {
-  widget_fps_t widget_fps = { .impl = malloc(sizeof(*widget_fps.impl)) };
+  widget_fps_t widget_fps = { .impl = MALLOC_MACRO(sizeof(*widget_fps.impl)) };
 
   uint64_t const timestamp = impl_timestamp();
 

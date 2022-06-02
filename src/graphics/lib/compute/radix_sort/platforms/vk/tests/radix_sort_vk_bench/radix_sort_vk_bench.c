@@ -174,9 +174,9 @@ rs_load_target(char const * filename)
       return NULL;
     }
 
-  struct radix_sort_vk_target * target = malloc(file_size);
+  struct radix_sort_vk_target * target = MALLOC_MACRO(file_size);
 
-  if (fread(target, 1, file_size, file) != (size_t)file_size)
+  if ((target != NULL) && (fread(target, 1, file_size, file) != (size_t)file_size))
     {
       fprintf(stderr, "Error: Can't read target filename \"%s\"\n", filename);
       fclose(file);
@@ -596,7 +596,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       return EXIT_FAILURE;
     }
 
-  VkPhysicalDevice * pds = malloc(pd_count * sizeof(*pds));
+  VkPhysicalDevice * pds = MALLOC_MACRO(pd_count * sizeof(*pds));
 
   vk(EnumeratePhysicalDevices(instance, &pd_count, pds));
 
@@ -1299,8 +1299,8 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
   //
   // Create the rand and sort host buffers
   //
-  void * rand_h = malloc(rs_mr.keyvals_size);
-  void * sort_h = malloc(rs_mr.keyvals_size);
+  void * rand_h = MALLOC_MACRO(rs_mr.keyvals_size);
+  void * sort_h = MALLOC_MACRO(rs_mr.keyvals_size);
 
   rs_fill_rand(rand_h, info->count_hi, keyval_dwords);
 

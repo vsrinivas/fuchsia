@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common/macros.h"
 #include "spinel/ext/color/color.h"
 #include "spinel/ext/geometry/ellipse.h"
 #include "spinel/ext/geometry/svg_arc.h"
@@ -105,7 +106,7 @@ spinel_svg_implicit_close_filled_path(
 spinel_path_t *
 spinel_svg_paths_decode(struct svg const * const svg, spinel_path_builder_t pb)
 {
-  spinel_path_t * const paths = malloc(sizeof(*paths) * svg_path_count(svg));
+  spinel_path_t * const paths = MALLOC_MACRO(sizeof(*paths) * svg_path_count(svg));
 
   union svg_path_cmd const * cmd;
 
@@ -406,7 +407,7 @@ spinel_svg_rasters_decode(struct svg const * const              svg,
 {
   static struct spinel_clip const raster_clips[] = { { 0.0f, 0.0f, FLT_MAX, FLT_MAX } };
 
-  spinel_raster_t * const rasters    = malloc(sizeof(*rasters) * svg_raster_count(svg));
+  spinel_raster_t * const rasters    = MALLOC_MACRO(sizeof(*rasters) * svg_raster_count(svg));
   uint32_t const          ts_restore = spinel_transform_stack_save(ts);
 
   union svg_raster_cmd const * cmd;

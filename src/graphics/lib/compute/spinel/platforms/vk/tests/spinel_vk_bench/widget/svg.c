@@ -718,7 +718,7 @@ impl_input(struct widget *                    widget,
 widget_svg_t
 widget_svg_create(struct svg * const svg, bool is_srgb)
 {
-  widget_svg_t widget_svg = { .impl = malloc(sizeof(*widget_svg.impl)) };
+  widget_svg_t widget_svg = { .impl = MALLOC_MACRO(sizeof(*widget_svg.impl)) };
 
   // use a designated initializer
   *widget_svg.impl = (struct widget_svg){

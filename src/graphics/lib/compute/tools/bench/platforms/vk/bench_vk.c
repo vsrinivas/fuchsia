@@ -756,7 +756,7 @@ bench_execute(VkCommandBuffer                        cb,
   //
   // Capture array of split times
   //
-  struct bench_split * const splits = malloc(sizeof(*splits) * iter->repetitions);
+  struct bench_split * const splits = MALLOC_MACRO(sizeof(*splits) * iter->repetitions);
 
   switch (wait)
     {
@@ -1682,7 +1682,7 @@ bench_vk(uint32_t argc, char const * argv[])
 
   vk(EnumeratePhysicalDevices(config.vk.i, &pd_count, NULL));
 
-  VkPhysicalDevice * pds = malloc(pd_count * sizeof(*pds));
+  VkPhysicalDevice * pds = MALLOC_MACRO(pd_count * sizeof(*pds));
 
   vk(EnumeratePhysicalDevices(config.vk.i, &pd_count, pds));
 
@@ -1808,7 +1808,9 @@ bench_vk(uint32_t argc, char const * argv[])
 
   vkEnumerateDeviceExtensionProperties(config.vk.pd, NULL, &device_ext_count, NULL);
 
-  VkExtensionProperties * device_ext_props = malloc(sizeof(*device_ext_props) * device_ext_count);
+  // clang-format off
+  VkExtensionProperties * device_ext_props = MALLOC_MACRO(sizeof(*device_ext_props) * device_ext_count);
+  // clang-format on
 
   vkEnumerateDeviceExtensionProperties(config.vk.pd, NULL, &device_ext_count, device_ext_props);
 

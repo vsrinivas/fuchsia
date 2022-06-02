@@ -1725,12 +1725,12 @@ spinel_raster_builder_impl_create(struct spinel_device *    device,
   //
   // allocate impl
   //
-  struct spinel_raster_builder_impl * const impl = malloc(sizeof(*impl));
+  struct spinel_raster_builder_impl * const impl = MALLOC_MACRO(sizeof(*impl));
 
   //
   // allocate raster builder
   //
-  struct spinel_raster_builder * const rb = malloc(sizeof(*rb));
+  struct spinel_raster_builder * const rb = MALLOC_MACRO(sizeof(*rb));
 
   // init impl and rb back-pointers
   *raster_builder      = rb;
@@ -1872,7 +1872,7 @@ spinel_raster_builder_impl_create(struct spinel_device *    device,
     //
     // Allocate rasters
     //
-    impl->rasters.extent = malloc(rc_size_ru);  // same size as mapped size
+    impl->rasters.extent = MALLOC_MACRO(rc_size_ru);  // same size as mapped size
 
     //
     // Are host-writable rings used as staging buffers?
@@ -1916,14 +1916,14 @@ spinel_raster_builder_impl_create(struct spinel_device *    device,
   //
   // Implicitly sets state to SPN_RBI_DISPATCH_STATE_INVALID.
   //
-  impl->dispatches.extent = calloc(max_in_flight, sizeof(*impl->dispatches.extent));
+  impl->dispatches.extent = CALLOC_MACRO(max_in_flight, sizeof(*impl->dispatches.extent));
 
   //
   // Allocate paths
   //
   size_t const paths_size = sizeof(*impl->paths.extent) * config->raster_builder.size.ring;
 
-  impl->paths.extent = malloc(paths_size);
+  impl->paths.extent = MALLOC_MACRO(paths_size);
 
   //
   // Get radix sort memory requirements

@@ -314,7 +314,7 @@ spinel_handle_pool_reclaim_create(struct spinel_handle_pool_reclaim * reclaim,
   //
   spinel_ring_init(&reclaim->dispatches.ring, count_dispatches);
 
-  reclaim->dispatches.extent = calloc(count_dispatches, sizeof(*reclaim->dispatches.extent));
+  reclaim->dispatches.extent = CALLOC_MACRO(count_dispatches, sizeof(*reclaim->dispatches.extent));
 }
 
 //
@@ -716,7 +716,7 @@ spinel_device_handle_pool_create(struct spinel_device * device, uint32_t handle_
   //
   //
   //
-  struct spinel_handle_pool * const handle_pool = malloc(sizeof(*handle_pool));
+  struct spinel_handle_pool * const handle_pool = MALLOC_MACRO(sizeof(*handle_pool));
 
   device->handle_pool = handle_pool;
 
@@ -727,7 +727,7 @@ spinel_device_handle_pool_create(struct spinel_device * device, uint32_t handle_
 
   size_t const size_handles = sizeof(*handle_pool->handles.extent) * handle_count;
 
-  handle_pool->handles.extent = malloc(size_handles);
+  handle_pool->handles.extent = MALLOC_MACRO(size_handles);
 
   for (uint32_t ii = 0; ii < handle_count; ii++)
     {
@@ -737,7 +737,7 @@ spinel_device_handle_pool_create(struct spinel_device * device, uint32_t handle_
   //
   // allocate and init refcnts
   //
-  handle_pool->refcnts = calloc(handle_count, sizeof(*handle_pool->refcnts));
+  handle_pool->refcnts = CALLOC_MACRO(handle_count, sizeof(*handle_pool->refcnts));
 
   //
   // some target invariants

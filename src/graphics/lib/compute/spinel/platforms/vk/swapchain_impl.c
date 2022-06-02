@@ -997,12 +997,12 @@ spinel_swapchain_impl_create(struct spinel_device *                 device,
   //
   // allocate impl
   //
-  struct spinel_swapchain_impl * const impl = malloc(sizeof(*impl));
+  struct spinel_swapchain_impl * const impl = MALLOC_MACRO(sizeof(*impl));
 
   //
   // allocate swapchain
   //
-  struct spinel_swapchain * const s = *swapchain = malloc(sizeof(*s));
+  struct spinel_swapchain * const s = *swapchain = MALLOC_MACRO(sizeof(*s));
 
   //
   // init forward/backward pointers
@@ -1023,9 +1023,11 @@ spinel_swapchain_impl_create(struct spinel_device *                 device,
   //
   // Note that VK_PIPELINE_STAGE_NONE_KHR equals 0
   //
-  impl->vk.timeline.stages     = malloc(create_info->count * sizeof(*impl->vk.timeline.stages));
-  impl->vk.timeline.semaphores = malloc(create_info->count * sizeof(*impl->vk.timeline.semaphores));
-  impl->vk.timeline.values     = calloc(create_info->count, sizeof(*impl->vk.timeline.values));
+  // clang-format off
+  impl->vk.timeline.stages     = MALLOC_MACRO(create_info->count * sizeof(*impl->vk.timeline.stages));
+  impl->vk.timeline.semaphores = MALLOC_MACRO(create_info->count * sizeof(*impl->vk.timeline.semaphores));
+  impl->vk.timeline.values     = CALLOC_MACRO(create_info->count, sizeof(*impl->vk.timeline.values));
+  // clang-format on
 
   VkSemaphoreTypeCreateInfo const stci = {
 

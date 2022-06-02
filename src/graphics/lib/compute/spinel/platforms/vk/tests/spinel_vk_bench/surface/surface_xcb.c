@@ -101,7 +101,7 @@ create_keysyms(struct surface_platform * const platform)
   uint8_t const        keysyms_per_keycode = kmr->keysyms_per_keycode;
   xcb_keysym_t const * keysyms             = xcb_get_keyboard_mapping_keysyms(kmr);
 
-  platform->keysyms = calloc(1, sizeof(*platform->keysyms) * (sizeof(xcb_keycode_t) << 8));
+  platform->keysyms = CALLOC_MACRO(1, sizeof(*platform->keysyms) * (sizeof(xcb_keycode_t) << 8));
 
   for (int ii = platform->setup->min_keycode; ii <= platform->setup->max_keycode; ii++)
     {
@@ -621,7 +621,7 @@ surface_xcb_create(VkInstance                    vk_i,  //
   //
   // surface
   //
-  struct surface * const surface = malloc(sizeof(*surface));
+  struct surface * const surface = MALLOC_MACRO(sizeof(*surface));
 
   surface->vk.i       = vk_i;
   surface->vk.ac      = vk_ac;
@@ -640,7 +640,7 @@ surface_xcb_create(VkInstance                    vk_i,  //
   //
   // platform
   //
-  struct surface_platform * const platform = malloc(sizeof(*platform));
+  struct surface_platform * const platform = MALLOC_MACRO(sizeof(*platform));
 
   surface->platform = platform;
 

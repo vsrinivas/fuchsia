@@ -24,7 +24,10 @@ source_set("svg2spinel") {
     "${graphics_compute_dir}/svg",
   ]
 
-  deps = [ "${graphics_compute_dir}/spinel/ext/geometry" ]
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/spinel/ext/geometry",
+  ]
 
   public_configs = [ ":svg2spinel_config" ]
 }

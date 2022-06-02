@@ -5,6 +5,7 @@
 #include "util.h"
 
 #include <assert.h>
+#include <stdlib.h>
 
 //
 //
@@ -83,6 +84,29 @@ msb_idx_u32(uint32_t n)
 #error "No msb_index()"
 
 #endif
+}
+
+//
+// Invokes malloc()/calloc() and asserts if NULL.
+//
+void *
+malloc_assert(size_t size)
+{
+  void * p = malloc(size);
+
+  assert(p != NULL);
+
+  return p;
+}
+
+void *
+calloc_assert(size_t num, size_t size)
+{
+  void * p = calloc(num, size);
+
+  assert(p != NULL);
+
+  return p;
 }
 
 //

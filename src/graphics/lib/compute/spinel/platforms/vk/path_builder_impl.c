@@ -1109,12 +1109,12 @@ spinel_path_builder_impl_create(struct spinel_device *        device,
   //
   // allocate impl
   //
-  struct spinel_path_builder_impl * const impl = malloc(sizeof(*impl));
+  struct spinel_path_builder_impl * const impl = MALLOC_MACRO(sizeof(*impl));
 
   //
   // allocate path builder
   //
-  struct spinel_path_builder * const pb = malloc(sizeof(*pb));
+  struct spinel_path_builder * const pb = MALLOC_MACRO(sizeof(*pb));
 
   // init impl and pb back-pointers
   *path_builder      = pb;
@@ -1224,7 +1224,7 @@ spinel_path_builder_impl_create(struct spinel_device *        device,
   //
   size_t const paths_size = sizeof(*impl->paths.extent) * ring_size;
 
-  impl->paths.extent = malloc(paths_size);
+  impl->paths.extent = MALLOC_MACRO(paths_size);
 
   spinel_next_init(&impl->paths.next, ring_size);
 
@@ -1238,7 +1238,7 @@ spinel_path_builder_impl_create(struct spinel_device *        device,
   //
   size_t const dispatches_size = sizeof(*impl->dispatches.extent) * max_in_flight;
 
-  impl->dispatches.extent = malloc(dispatches_size);
+  impl->dispatches.extent = MALLOC_MACRO(dispatches_size);
 
   spinel_ring_init(&impl->dispatches.ring, max_in_flight);
 

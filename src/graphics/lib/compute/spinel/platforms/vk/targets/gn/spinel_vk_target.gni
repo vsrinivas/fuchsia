@@ -21,6 +21,7 @@ template("spinel_vk_target") {
   #
   struct_sources = [
     "${_compute_dir}/common/macros.h",
+    "${_compute_dir}/common/util.h",
     "${_spinel_dir}/core.h",
     "${_spinel_dir}/core_c.h",
     "${_spinel_vk_dir}/expand_x.h",

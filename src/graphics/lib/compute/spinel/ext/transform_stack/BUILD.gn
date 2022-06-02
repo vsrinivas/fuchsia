@@ -21,5 +21,7 @@ source_set("transform_stack") {
 
   public_deps = [ "${graphics_compute_dir}/spinel" ]
 
+  deps = [ "${graphics_compute_dir}/common" ]
+
   public_configs = [ ":transform_stack_config" ]
 }

@@ -1214,12 +1214,12 @@ spinel_composition_impl_create(struct spinel_device *       device,
   //
   // Allocate impl
   //
-  struct spinel_composition_impl * const impl = malloc(sizeof(*impl));
+  struct spinel_composition_impl * const impl = MALLOC_MACRO(sizeof(*impl));
 
   //
   // Allocate composition
   //
-  struct spinel_composition * const c = *composition = malloc(sizeof(*c));
+  struct spinel_composition * const c = *composition = MALLOC_MACRO(sizeof(*c));
 
   //
   // Init back-pointers
@@ -1375,8 +1375,8 @@ spinel_composition_impl_create(struct spinel_device *       device,
   size_t const d_size = sizeof(*impl->dispatches.extent) * max_in_flight;
   size_t const r_size = sizeof(*impl->rasters.extent) * config->composition.size.rasters;
 
-  impl->dispatches.extent = malloc(d_size);
-  impl->rasters.extent    = malloc(r_size);
+  impl->dispatches.extent = MALLOC_MACRO(d_size);
+  impl->rasters.extent    = MALLOC_MACRO(r_size);
   impl->rasters.size      = config->composition.size.rasters;
   impl->rasters.count     = 0;
 

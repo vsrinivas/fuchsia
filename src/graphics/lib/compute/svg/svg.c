@@ -437,12 +437,12 @@ svg_stack_reset(struct svg_stack * s)
 static struct svg_stack *
 svg_stack_alloc(uint32_t const entry_max, uint32_t const buf_max)
 {
-  struct svg_stack * const s = malloc(sizeof(*s));
+  struct svg_stack * const s = MALLOC_MACRO(sizeof(*s));
 
-  s->entries   = malloc(sizeof(*s->entries) * entry_max);
+  s->entries   = MALLOC_MACRO(sizeof(*s->entries) * entry_max);
   s->entry_max = entry_max;
 
-  s->buf     = malloc(buf_max);
+  s->buf     = MALLOC_MACRO(buf_max);
   s->buf_max = buf_max;
 
   return s;
@@ -771,7 +771,7 @@ struct svg_attribs
 static struct svg_attribs *
 svg_attribs_create(void)
 {
-  struct svg_attribs * const a = malloc(sizeof(*a));
+  struct svg_attribs * const a = MALLOC_MACRO(sizeof(*a));
 
   a->elem_count = 0;
 
@@ -837,7 +837,7 @@ struct svg_parser
 static struct svg_parser *
 svg_parser_create(bool const is_verbose)
 {
-  struct svg_parser * sp = malloc(sizeof(*sp));
+  struct svg_parser * sp = MALLOC_MACRO(sizeof(*sp));
 
   sp->p = svg_stack_create();
   sp->r = svg_stack_create();
@@ -854,7 +854,7 @@ svg_parser_create(bool const is_verbose)
   svg_stack_push(sp->undo, &sp->undo_count, sizeof(sp->undo_count));
 
   sp->attr_max   = 4096 * 4;
-  sp->attr_buf   = malloc(sp->attr_max);
+  sp->attr_buf   = MALLOC_MACRO(sp->attr_max);
   sp->attr_count = 0;
 
   sp->is_verbose = is_verbose;
@@ -942,7 +942,7 @@ struct svg_path_iterator
 struct svg_path_iterator *
 svg_path_iterator_create(struct svg const * sd, uint32_t path_index)
 {
-  struct svg_path_iterator * iterator = malloc(sizeof(*iterator));
+  struct svg_path_iterator * iterator = MALLOC_MACRO(sizeof(*iterator));
   svg_iterator_init(&iterator->base, sd->p, path_lookup_cmds, path_index);
   return iterator;
 }
@@ -971,7 +971,7 @@ struct svg_raster_iterator
 struct svg_raster_iterator *
 svg_raster_iterator_create(struct svg const * sd, uint32_t raster_index)
 {
-  struct svg_raster_iterator * iterator = malloc(sizeof(*iterator));
+  struct svg_raster_iterator * iterator = MALLOC_MACRO(sizeof(*iterator));
   svg_iterator_init(&iterator->base, sd->r, raster_lookup_cmds, raster_index);
   return iterator;
 }
@@ -1000,7 +1000,7 @@ struct svg_layer_iterator
 struct svg_layer_iterator *
 svg_layer_iterator_create(struct svg const * sd, uint32_t layer_index)
 {
-  struct svg_layer_iterator * iterator = malloc(sizeof(*iterator));
+  struct svg_layer_iterator * iterator = MALLOC_MACRO(sizeof(*iterator));
   svg_iterator_init(&iterator->base, sd->l, layer_lookup_cmds, layer_index);
   return iterator;
 }
@@ -1046,7 +1046,7 @@ svg_layer_count(struct svg const * const sd)
 static struct svg *
 svg_create(struct svg_parser * sp)
 {
-  struct svg * const sd = malloc(sizeof(*sd));
+  struct svg * const sd = MALLOC_MACRO(sizeof(*sd));
 
   sd->p = sp->p;
   sd->r = sp->r;
@@ -3273,7 +3273,7 @@ svg_parse(char const * doc, const bool is_verbose)
   //
 #define YXML_BUFFER_SIZE (1024 * 8)
 
-  yxml_t * const ys = malloc(sizeof(*ys) + YXML_BUFFER_SIZE);
+  yxml_t * const ys = MALLOC_MACRO(sizeof(*ys) + YXML_BUFFER_SIZE);
 
   yxml_init(ys, ys + 1, YXML_BUFFER_SIZE);
 
@@ -3379,7 +3379,7 @@ svg_load(const char * const filename)
   rewind(f);
 
   // allocate
-  char * const doc = malloc(bytes + 1);
+  char * const doc = MALLOC_MACRO(bytes + 1);
 
   // read it in
   if (fread(doc, bytes, 1, f) != 1)

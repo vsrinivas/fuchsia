@@ -95,7 +95,7 @@ spinel_device_init(struct spinel_device * const device)
 static struct spinel_device *
 spinel_device_create(struct spinel_vk_context_create_info const * create_info)
 {
-  struct spinel_device * device = malloc(sizeof(*device));
+  struct spinel_device * device = MALLOC_MACRO(sizeof(*device));
 
   //
   // Create the Spinel target instance
@@ -320,7 +320,7 @@ spinel_vk_context_create(struct spinel_vk_context_create_info const * create_inf
       return NULL;
     }
 
-  spinel_context_t context = malloc(sizeof(*context));
+  spinel_context_t context = MALLOC_MACRO(sizeof(*context));
 
   //
   // Init platform pfns

@@ -4,6 +4,8 @@
 
 #include "spinel/ext/transform_stack/transform_stack.h"
 
+#include "common/macros.h"
+
 //
 //
 //
@@ -117,7 +119,7 @@ spinel_transform_stack_ensure(struct spinel_transform_stack * ts)
 struct spinel_transform_stack *
 spinel_transform_stack_create(uint32_t size)
 {
-  struct spinel_transform_stack * ts = malloc(sizeof(*ts));
+  struct spinel_transform_stack * ts = MALLOC_MACRO(sizeof(*ts));
 
   ts->size  = size;
   ts->count = 0;

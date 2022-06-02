@@ -513,7 +513,7 @@ impl_input(struct widget *                    widget,
 widget_coords_t
 widget_coords_create(float glyph_width)
 {
-  widget_coords_t widget_coords = { .impl = malloc(sizeof(*widget_coords.impl)) };
+  widget_coords_t widget_coords = { .impl = MALLOC_MACRO(sizeof(*widget_coords.impl)) };
 
   // use a designated initializer
   *widget_coords.impl = (struct widget_coords){

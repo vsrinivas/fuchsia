@@ -342,10 +342,10 @@ spinel_vk_cmd_create(struct spinel_vk * vk, uint32_t image_count)
 
   vk->cmd.count     = count;
   vk->cmd.next      = 0;
-  vk->cmd.pools     = malloc(count * sizeof(*vk->cmd.pools));
-  vk->cmd.buffers   = malloc(count * sizeof(*vk->cmd.buffers));
-  vk->cmd.timelines = malloc(count * sizeof(*vk->cmd.timelines));
-  vk->cmd.values    = calloc(count, sizeof(*vk->cmd.values));
+  vk->cmd.pools     = MALLOC_MACRO(count * sizeof(*vk->cmd.pools));
+  vk->cmd.buffers   = MALLOC_MACRO(count * sizeof(*vk->cmd.buffers));
+  vk->cmd.timelines = MALLOC_MACRO(count * sizeof(*vk->cmd.timelines));
+  vk->cmd.values    = CALLOC_MACRO(count, sizeof(*vk->cmd.values));
 
   VkCommandPoolCreateInfo const cpci = {
 
@@ -853,7 +853,7 @@ main(int argc, char * const argv[])
       return EXIT_FAILURE;
     }
 
-  VkPhysicalDevice * pds = malloc(pd_count * sizeof(*pds));
+  VkPhysicalDevice * pds = MALLOC_MACRO(pd_count * sizeof(*pds));
 
   vk(EnumeratePhysicalDevices(vk.i, &pd_count, pds));
 

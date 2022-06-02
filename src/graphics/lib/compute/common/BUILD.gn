@@ -5,7 +5,7 @@
 import("//src/graphics/lib/compute/gn/build_rules.gni")
 
 config("config") {
-  # Unlike the sources here, clients use "common/vk/..." to include the headers.
+  # Unlike the sources here, clients use "common/..." to include the headers.
   include_dirs = [ graphics_compute_dir ]
 }
 

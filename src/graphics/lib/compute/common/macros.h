@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 //
 // clang-format off
@@ -103,6 +104,27 @@
 #else
 #include <stdalign.h>
 #define ALIGN_MACRO(bytes_)             alignas(bytes_)
+#endif
+
+//
+// Provide an opportunity to override malloc() and calloc()
+//
+#ifndef MALLOC_MACRO
+#ifndef NDEBUG
+#include "common/util.h"
+#define MALLOC_MACRO(size_)             malloc_assert(size_)
+#else
+#define MALLOC_MACRO(size_)             malloc(size_)
+#endif
+#endif
+
+#ifndef CALLOC_MACRO
+#ifndef NDEBUG
+#include "common/util.h"
+#define CALLOC_MACRO(num_, size_)       calloc_assert(num_, size_)
+#else
+#define CALLOC_MACRO(num_, size_)       calloc(num_, size_)
+#endif
 #endif
 
 //

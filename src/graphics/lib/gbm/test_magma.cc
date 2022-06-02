@@ -28,9 +28,7 @@ class GbmDevice {
     fd_ = -1;
   }
 
-  struct gbm_device *device() {
-    return device_;
-  }
+  struct gbm_device *device() { return device_; }
 
   int fd_ = -1;
   struct gbm_device *device_ = nullptr;
@@ -42,9 +40,7 @@ class MagmaGbmTest : public testing::Test {
 
   void TearDown() override { gbm_.TearDown(); }
 
-  struct gbm_device *device() {
-    return gbm_.device();
-  }
+  struct gbm_device *device() { return gbm_.device(); }
 
   GbmDevice gbm_;
 };
@@ -129,7 +125,10 @@ TEST_P(MagmaGbmTestWithUsage, Write) {
 
   {
     size_t size = kDefaultHeight * gbm_bo_get_stride(bo);
+
     void *transfer = malloc(size);
+
+    ASSERT_TRUE(transfer != nullptr);
 
     // Write first line - zeros
     for (uint32_t i = 0; i < kDefaultWidth; i++) {

@@ -297,12 +297,12 @@ spinel_styling_impl_create(struct spinel_device *               device,
   //
   // Allocate impl
   //
-  struct spinel_styling_impl * const impl = malloc(sizeof(*impl));
+  struct spinel_styling_impl * const impl = MALLOC_MACRO(sizeof(*impl));
 
   //
   // Allocate styling
   //
-  struct spinel_styling * const s = *styling = malloc(sizeof(*s));
+  struct spinel_styling * const s = *styling = MALLOC_MACRO(sizeof(*s));
 
   //
   // Init forward/backward pointers
