@@ -6,6 +6,7 @@ package subprocess
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -128,6 +129,9 @@ func killProcess(ctx context.Context, cmd *exec.Cmd, pgidSet bool) {
 		pgid = -pgid
 	}
 	if err := syscall.Kill(pgid, syscall.SIGKILL); err != nil {
-		logger.Debugf(ctx, "killed cmd %v with error: %s", cmd.Args, err)
+		// ESRCH is "no such process", meaning the process has already exited.
+		if !errors.Is(err, syscall.ESRCH) {
+			logger.Debugf(ctx, "killed cmd %v with error: %s", cmd.Args, err)
+		}
 	}
 }
