@@ -139,11 +139,6 @@ Please rewrite the command without absolute paths.
 EOF
       exit 1
       ;;
-
-    # TODO(https://bugs.chromium.org/p/gn/issues/detail?id=280): remove this
-    # after all object files are located under paths without redundant output
-    # dir.
-    *"$project_root_rel"*) canonicalize_working_dir=false ;;
   esac
 
   case "$opt" in
