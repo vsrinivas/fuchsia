@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Context, Result},
     fuchsia_hash::Hash,
     fuchsia_pkg::{PackageBuilder, PackageManifest, PackagePath},
-    fuchsia_url::pkg_url::PinnedPkgUrl,
+    fuchsia_url::{PinnedAbsolutePackageUrl, RepositoryUrl},
     serde_json::json,
     std::{collections::BTreeMap, fs::File, io::Write, path::Path, str::FromStr},
 };
@@ -225,7 +225,7 @@ impl WritablePackageList for PackageList {
 /// A list of package URLs pinned to a hash, which can be written to a file.
 #[derive(Default, Debug)]
 pub struct PackageUrlList {
-    packages: Vec<PinnedPkgUrl>,
+    packages: Vec<PinnedAbsolutePackageUrl>,
 }
 
 impl WritablePackageList for PackageUrlList {
@@ -240,9 +240,10 @@ impl WritablePackageList for PackageUrlList {
             repository.ok_or(anyhow!("Unable to create package url: empty repository field."))?;
         let path = PackagePath::from_str(name.as_ref())
             .map_err(|e| anyhow!("Failed to parse package path: {}", e))?;
-        let url = PinnedPkgUrl::new_package(
-            repository.as_ref().to_string(),
-            format!("/{}", path),
+        let url = PinnedAbsolutePackageUrl::new_with_path(
+            RepositoryUrl::parse_host(repository.as_ref().to_string())
+                .context("Failed to create repository url")?,
+            &format!("/{}", path),
             merkle,
         )
         .map_err(|e| anyhow!("Failed to create package url: {}", e))?;
@@ -382,7 +383,7 @@ mod tests {
             vec![("base_package/0".to_string(), Hash::from([0u8; 32]))],
             build_results.base_packages
         );
-        let url: PinnedPkgUrl = "fuchsia-pkg://testrepository.com/cache_package/0\
+        let url: PinnedAbsolutePackageUrl = "fuchsia-pkg://testrepository.com/cache_package/0\
              ?hash=0000000000000000000000000000000000000000000000000000000000000000"
             .parse()
             .unwrap();
