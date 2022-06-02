@@ -26,6 +26,7 @@ go_library("lib") {
     "//tools/debug/elflib",
     "//tools/integration/testsharder:testsharder_lib",
     "//tools/lib/clock",
+    "//tools/lib/environment",
     "//tools/lib/ffxutil",
     "//tools/lib/iomisc",
     "//tools/lib/logger",

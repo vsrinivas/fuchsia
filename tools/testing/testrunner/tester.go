@@ -28,6 +28,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
+	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -215,18 +216,10 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 				Writable: true,
 			},
 		)
-		// Override all of the temp variables set in
-		// http://cs/fuchsia/tools/lib/environment/environment.go?l=65.
-		testCmdBuilder.Env = append(
-			testCmdBuilder.Env,
-			"TMP=/tmp",
-			"TMPDIR=/tmp",
-			"TEMP=/tmp",
-			"ANDROID_TMP=/tmp",
-			"XDG_HOME=/tmp",
-			"XDG_CONFIG_HOME=/tmp",
-			"HOME=/tmp",
-		)
+		// Override all of the temp variables set by the environment library.
+		for _, key := range environment.TempDirEnvVars() {
+			testCmdBuilder.Env = append(testCmdBuilder.Env, key+"=/tmp")
+		}
 		// Set the root of the NsJail and the working directory.
 		// The working directory is expected to be a subdirectory of the root,
 		// and must be passed in as a relative path to the root.
@@ -649,11 +642,10 @@ func (t *FFXTester) EnsureSinks(ctx context.Context, sinks []runtests.DataSinkRe
 	// If there were kernel sinks, record the "kernel_sinks" test in the outputs
 	// so that the test result can be updated with the kernel sinks.
 	if _, ok := sinksPerTest[kernelSinksTestName]; ok {
-		kernelSinksTest :=
-			&TestResult{
-				Name:   kernelSinksTestName,
-				Result: runtests.TestSuccess,
-			}
+		kernelSinksTest := &TestResult{
+			Name:   kernelSinksTestName,
+			Result: runtests.TestSuccess,
+		}
 		outputs.Record(ctx, *kernelSinksTest)
 	}
 	if len(sinksPerTest) > 0 {

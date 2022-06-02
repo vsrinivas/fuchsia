@@ -37,6 +37,28 @@ func Ensure() (func(), error) {
 	return ensure(osEnv{})
 }
 
+// TempDirEnvVars returns all the environment variable keys that will be set to
+// point to $TMPDIR by this library. In addition to $TMP and the like, we
+// override $HOME and related variables to discourage tools from writing to the
+// global home directory and persisting data between tasks.
+//
+// Exposed as a function rather than a variable to ensure it's not possible to
+// mutate a global list.
+func TempDirEnvVars() []string {
+	return []string{
+		"ANDROID_TMP",
+		"HOME",
+		"TEMP",
+		"TEMPDIR",
+		"TMP",
+		"XDG_CACHE_HOME",
+		"XDG_CONFIG_HOME",
+		"XDG_DATA_HOME",
+		"XDG_HOME",
+		"XDG_STATE_HOME",
+	}
+}
+
 func ensure(e environment) (func(), error) {
 	needsCleanup := false
 	td, ok := e.lookupEnv("TMPDIR")
@@ -62,8 +84,7 @@ func ensure(e environment) (func(), error) {
 		}
 	}
 
-	tmpEnvVars := []string{"ANDROID_TMP", "HOME", "TEMP", "TEMPDIR", "TMP", "XDG_HOME", "XDG_CONFIG_HOME"}
-	for _, env := range tmpEnvVars {
+	for _, env := range TempDirEnvVars() {
 		if _, ok := e.lookupEnv(env); !ok {
 			if err := e.setenv(env, td); err != nil {
 				cleanupFunc()
