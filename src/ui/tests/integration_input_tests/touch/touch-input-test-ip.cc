@@ -276,8 +276,11 @@ class TouchInputBase
     RegisterInjectionDevice();
 
     // Launch client view, and wait until it's rendering to proceed with the test.
+    FX_LOGS(INFO) << "Initializing scene";
     ui_test_manager_->InitializeScene();
+    FX_LOGS(INFO) << "Waiting for client view to render";
     RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
+    FX_LOGS(INFO) << "Client view has rendered";
   }
 
   // Subclass should implement this method to add components to the test realm
