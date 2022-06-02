@@ -14,6 +14,7 @@ namespace amlogic_spi {
 
 struct amlspi_config_t {
   static constexpr uint32_t kCsClientManaged = UINT32_MAX;
+  static constexpr uint32_t kDefaultDelayControl = 0x15;
 
   // The capacity and period to use when setting the scheduler profile for the driver thread(s). No
   // profile will be set if either capacity or period is zero.
@@ -39,6 +40,9 @@ struct amlspi_config_t {
   bool use_enhanced_clock_mode;
   // If true, the client is responsible for reversing the endianness of transfers when using DMA.
   bool client_reverses_dma_transfers;
+  // The value to use for the dlyctl field in TESTREG. The default value should work for low-speed
+  // peripherals.
+  uint32_t delay_control = kDefaultDelayControl;
 };
 
 }  // namespace amlogic_spi

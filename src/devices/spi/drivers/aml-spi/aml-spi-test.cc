@@ -827,6 +827,7 @@ TEST(AmlSpiTest, EnhancedClockMode) {
           .cs = {5, 3},
           .clock_divider_register_value = 0xa5,
           .use_enhanced_clock_mode = true,
+          .delay_control = 0b00'11'00,
       },
   };
 
@@ -868,7 +869,7 @@ TEST(AmlSpiTest, EnhancedClockMode) {
   EXPECT_EQ(enhanced_cntl.enhance_clk_div(), 0xa5);
   EXPECT_EQ(enhanced_cntl.clk_cs_delay(), 0);
 
-  EXPECT_EQ(testreg.dlyctl(), 0x15);
+  EXPECT_EQ(testreg.dlyctl(), 0b00'11'00);
   EXPECT_EQ(testreg.clk_free_en(), 1);
 }
 

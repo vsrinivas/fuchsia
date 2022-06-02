@@ -248,7 +248,7 @@ void AmlSpi::WaitForDmaTransferComplete() {
 void AmlSpi::InitRegisters() {
   ConReg::Get().FromValue(0).WriteTo(&mmio_);
 
-  TestReg::GetFromDefaultValue().set_clk_free_en(1).WriteTo(&mmio_);
+  TestReg::Get().FromValue(0).set_dlyctl(config_.delay_control).set_clk_free_en(1).WriteTo(&mmio_);
 
   ConReg::Get()
       .ReadFrom(&mmio_)
@@ -312,7 +312,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     need_reset_ = false;
   } else {
     // reset both fifos
-    auto testreg = TestReg::GetFromDefaultValue().set_fiforst(3).WriteTo(&mmio_);
+    auto testreg = TestReg::Get().ReadFrom(&mmio_).set_fiforst(3).WriteTo(&mmio_);
     do {
       testreg.ReadFrom(&mmio_);
     } while ((testreg.rxcnt() != 0) || (testreg.txcnt() != 0));
