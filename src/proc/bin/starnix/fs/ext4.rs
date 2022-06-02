@@ -178,17 +178,14 @@ impl FileOps for ExtDirFileObject {
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();
-        emit_dotdot(file, sink, &mut offset)?;
-
         let dir_entries =
             self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
 
-        let start_index = (*offset - 2) as usize;
-        if start_index >= dir_entries.len() {
+        if *offset as usize >= dir_entries.len() {
             return Ok(());
         }
 
-        for entry in dir_entries[start_index..].iter() {
+        for entry in dir_entries.iter() {
             let next_offset = *offset + 1;
             let inode_num = entry.e2d_ino.into();
             let entry_type = directory_entry_type(
