@@ -9,6 +9,6 @@
         binary: "bin/to_configure",
     },
     config: {
-        not_from_package: { type: "uint8" },
+        enable_foo: { type: "bool" },
     },
 }

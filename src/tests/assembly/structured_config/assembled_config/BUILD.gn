@@ -21,9 +21,6 @@ generated_file("config") {
   output_conversion = "json"
   contents = {
     platform = {
-      example = {
-        not_from_package = 7
-      }
     }
     product = {
     }

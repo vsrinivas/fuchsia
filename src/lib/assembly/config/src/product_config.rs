@@ -4,7 +4,7 @@
 
 use crate as image_assembly_config;
 use crate::FileEntry;
-use anyhow::{bail, ensure};
+use anyhow::ensure;
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -26,17 +26,8 @@ pub struct ProductAssemblyConfig {
 /// platform itself, not anything provided by the product.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PlatformConfig {
-    example: Option<ExampleConfig>,
-
     #[serde(default)]
     pub build_type: BuildType,
-}
-
-/// Used for demonstrating product assembly in conjunction with
-/// `//examples/assembly/structured_config`.
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
-struct ExampleConfig {
-    not_from_package: u8,
 }
 
 /// The platform BuildTypes.
@@ -87,17 +78,11 @@ impl ProductAssemblyConfig {
         let mut patches = PatchesBuilder::default();
 
         // Configure the Product Assembly + Structured Config example, if enabled.
-        match (should_configure_example(), &self.platform.example) {
-            (true, Some(ExampleConfig { not_from_package })) => {
-                patches
-                    .package("configured_by_assembly")
-                    .component("meta/to_configure.cm")
-                    .field("not_from_package", *not_from_package);
-            }
-            (false, Some(..)) => {
-                bail!("Found example config but not ffx config `{}=true`.", EXAMPLE_ENABLED_FLAG);
-            }
-            (_, None) => (), // nop
+        if should_configure_example() {
+            patches
+                .package("configured_by_assembly")
+                .component("meta/to_configure.cm")
+                .field("enable_foo", matches!(self.platform.build_type, BuildType::Eng));
         }
 
         // Configure the session URL.
