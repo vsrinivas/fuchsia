@@ -268,7 +268,7 @@ pub fn sys_connect(
                 let (parent, basename) =
                     current_task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
                 let name = parent
-                    .lookup_child(current_task, &mut LookupContext::default(), basename)
+                    .lookup_child(&mut LookupContext::new(current_task), basename)
                     .map_err(translate_fs_error)?;
                 name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone()
             }

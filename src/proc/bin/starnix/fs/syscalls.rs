@@ -279,8 +279,8 @@ fn lookup_at(
         return error!(ENOENT);
     }
     let (parent, basename) = current_task.lookup_parent_at(dir_fd, path)?;
-    let mut context = LookupContext::new(options.symlink_mode);
-    parent.lookup_child(current_task, &mut context, basename)
+    let mut context = LookupContext::new_with_mode(current_task, options.symlink_mode);
+    parent.lookup_child(&mut context, basename)
 }
 
 pub fn sys_open(
@@ -459,11 +459,11 @@ pub fn sys_readlinkat(
         if stat.st_mode & S_IRUSR == 0 {
             return error!(EACCES);
         }
-        let mut context = LookupContext::new(SymlinkMode::NoFollow);
-        Ok(parent.lookup_child(&current_task, &mut context, basename)?.entry)
+        let mut context = LookupContext::new_with_mode(current_task, SymlinkMode::NoFollow);
+        Ok(parent.lookup_child(&mut context, basename)?.entry)
     })?;
 
-    let target = match entry.node.readlink(&current_task)? {
+    let target = match entry.node.readlink(&Some(&current_task))? {
         SymlinkTarget::Path(path) => path,
         SymlinkTarget::Node(node) => node.path(),
     };

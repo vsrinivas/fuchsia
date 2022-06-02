@@ -28,7 +28,7 @@ impl FsNodeOps for SymlinkNode {
     fn readlink(
         &self,
         _node: &FsNode,
-        _current_task: &CurrentTask,
+        _current_task: &Option<&CurrentTask>,
     ) -> Result<SymlinkTarget, Errno> {
         Ok(SymlinkTarget::Path(self.target.clone()))
     }

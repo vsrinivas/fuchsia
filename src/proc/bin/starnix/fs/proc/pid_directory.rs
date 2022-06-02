@@ -157,7 +157,7 @@ impl FsNodeOps for ExeSymlink {
     fn readlink(
         &self,
         _node: &FsNode,
-        _current_task: &CurrentTask,
+        _current_task: &Option<&CurrentTask>,
     ) -> Result<SymlinkTarget, Errno> {
         if let Some(node) = self.task.mm.executable_node() {
             Ok(SymlinkTarget::Node(node))
@@ -192,7 +192,7 @@ impl FsNodeOps for FdSymlink {
     fn readlink(
         &self,
         _node: &FsNode,
-        _current_task: &CurrentTask,
+        _current_task: &Option<&CurrentTask>,
     ) -> Result<SymlinkTarget, Errno> {
         let file = self.task.files.get(self.fd).map_err(|_| errno!(ENOENT))?;
         Ok(SymlinkTarget::Node(file.name.clone()))

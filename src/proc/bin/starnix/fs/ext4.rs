@@ -147,7 +147,7 @@ impl FsNodeOps for ExtSymlink {
     fn readlink(
         &self,
         _node: &FsNode,
-        _current_task: &CurrentTask,
+        _current_task: &Option<&CurrentTask>,
     ) -> Result<SymlinkTarget, Errno> {
         let data = self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
         Ok(SymlinkTarget::Path(data))

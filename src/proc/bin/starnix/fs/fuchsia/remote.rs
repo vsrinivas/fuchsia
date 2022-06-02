@@ -561,17 +561,14 @@ mod test {
         let fs = RemoteFs::new(client, rights)?;
         let ns = Namespace::new(fs.clone());
         let root = ns.root();
-        let mut context = LookupContext::default();
-        assert_eq!(
-            root.lookup_child(&current_task, &mut context, b"nib").err(),
-            Some(errno!(ENOENT))
-        );
-        let mut context = LookupContext::default();
-        root.lookup_child(&current_task, &mut context, b"lib").unwrap();
+        let mut context = LookupContext::new(&current_task);
+        assert_eq!(root.lookup_child(&mut context, b"nib").err(), Some(errno!(ENOENT)));
+        let mut context = LookupContext::new(&current_task);
+        root.lookup_child(&mut context, b"lib").unwrap();
 
-        let mut context = LookupContext::default();
+        let mut context = LookupContext::new(&current_task);
         let _test_file = root
-            .lookup_child(&current_task, &mut context, b"bin/hello_starnix")?
+            .lookup_child(&mut context, b"bin/hello_starnix")?
             .open(&current_task, OpenFlags::RDONLY)?;
         Ok(())
     }
