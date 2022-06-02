@@ -28,21 +28,25 @@
             "-object", "iothread,id=iothread0",
             "-device", "virtio-blk-pci,drive=vdisk,iothread=iothread0",
         {{/if}}
+        {{! The QMP is an interface for issuing commands to the emulator. The
+            commands are sent in JSON, as are the results. The syntax for this
+            interface is documented at
+            https://github.com/qemu/qemu/blob/master/qga/qapi-schema.json. }}
+        "-qmp-pretty",
+        "unix:{{runtime.instance_directory}}/qmp,server,nowait",
         {{#if (eq runtime.console "monitor")}}
             "-monitor",
             "stdio",
-            "-serial",
-            "none",
         {{else}}
             "-monitor",
-            "none",
-            {{#if (eq runtime.console "none")}}
-                "-serial",
-                "none",
-            {{else}}
-                "-serial",
-                "stdio",
-            {{/if}}
+            "unix:{{runtime.instance_directory}}/monitor,server,nowait",
+        {{/if}}
+        {{#if (eq runtime.console "console")}}
+            "-serial",
+            "stdio",
+        {{else}}
+            "-serial",
+            "unix:{{runtime.instance_directory}}/serial,server,nowait",
         {{/if}}
         "-machine",
         {{#if (eq device.cpu.architecture "arm64")}}
