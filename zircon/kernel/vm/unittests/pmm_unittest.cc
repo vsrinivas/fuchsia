@@ -529,13 +529,19 @@ static bool pmm_node_oom_sync_alloc_failure_test() {
   status = node.node().AllocPage(PMM_ALLOC_FLAG_CAN_WAIT, &page, nullptr);
   EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
 
-  // Free the list and make sure allocations work again.
+  // Waiting for an allocation should block, although to only try with a very small timeout to not
+  // make this test take too long.
+  EXPECT_EQ(ZX_ERR_TIMED_OUT,
+            node.node().WaitTillShouldRetrySingleAlloc(Deadline::after(ZX_MSEC(10))));
+
+  // Free the list.
   node.node().FreeList(&list);
 
-  status = node.node().AllocPage(PMM_ALLOC_FLAG_CAN_WAIT, &page, nullptr);
-  EXPECT_EQ(ZX_OK, status);
-
-  node.node().FreePage(page);
+  // Allocations should work again, but the PMM is still allowed to randomly fail requests, so we
+  // cannot guarantee that any small finite number of allocation attempts will work.
+  // We can check that waiting to retry an allocation completes with no timeout though.
+  EXPECT_EQ(ZX_OK,
+            node.node().WaitTillShouldRetrySingleAlloc(Deadline::no_slack(ZX_TIME_INFINITE_PAST)));
 
   END_TEST;
 }

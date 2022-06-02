@@ -64,10 +64,6 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
 // Require a loaned page, and fail to allocate if a loaned page isn't available.
 #define PMM_ALLOC_FLAG_MUST_BORROW (1 << 3)
 
-// Debugging flag that can be used to induce artificial delayed page allocation by randomly
-// rejecting some fraction of the synchronous allocations which have PMM_ALLOC_FLAG_CAN_WAIT set.
-#define RANDOM_DELAYED_ALLOC 0
-
 // Allocate count pages of physical memory, adding to the tail of the passed list.
 // The list must be initialized.
 // Note that if PMM_ALLOC_FLAG_CAN_WAIT is passed in then this could always return
