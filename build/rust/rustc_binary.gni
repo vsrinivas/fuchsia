@@ -216,8 +216,6 @@ template("rustc_binary") {
                                "exclude_toolchain_tags",
                                "output_dir",
                                "output_extension",
-                               "testonly",
-                               "visibility",
                              ])
       output_name = _output_name
     }
@@ -230,8 +228,10 @@ template("rustc_binary") {
                              "enforce_source_listing",
                              "features",
                              "inputs",
-                             "sources",
                              "rustenv",
+                             "sources",
+                             "testonly",
+                             "visibility",
                            ])
 
     configs = []

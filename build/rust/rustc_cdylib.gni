@@ -136,8 +136,6 @@ template("rustc_cdylib") {
                              [
                                "data_deps",
                                "output_dir",
-                               "testonly",
-                               "visibility",
                                "runtime_deps",
                              ])
       crate_type = "cdylib"
@@ -163,8 +161,10 @@ template("rustc_cdylib") {
                              "edition",
                              "enforce_source_listing",
                              "inputs",
-                             "sources",
                              "rustenv",
+                             "sources",
+                             "testonly",
+                             "visibility",
                            ])
   }
 

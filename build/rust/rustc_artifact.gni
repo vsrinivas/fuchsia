@@ -84,6 +84,11 @@ import("//build/toolchain/rbe.gni")
 #     for targets that generate a corresponding clippy target so that clippy has access to it.
 #     See https://doc.rust-lang.org/reference/linkage.html for possible values
 #
+#   testonly (optional)
+#     Standard GN meaning. Testonly option for the generated targets.
+#
+#   visibility (optional)
+#     Standard GN meaning. The visibility option for the generated targets.
 template("rustc_artifact") {
   # rustc does not support dashes in crate names
   _crate_name = string_replace(invoker.crate_name, "-", "_")
@@ -123,14 +128,17 @@ template("rustc_artifact") {
   _disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
   if (!_disable_clippy) {
     clippy(_clippy_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "rustenv",
+                             ])
+      clippy_crate_type = invoker.clippy_crate_type
       configs = _configs
-      forward_variables_from(invoker.pass_through, [ "testonly" ])
-      forward_variables_from(invoker, [ "rustenv" ])
+      crate_root = _crate_root
+      deps = invoker.deps
       rustflags = _rustflags
       sources = invoker.sources
-      deps = invoker.deps
-      crate_root = _crate_root
-      clippy_crate_type = invoker.clippy_crate_type
     }
   } else {
     if (defined(invoker.clippy_crate_type)) {
@@ -159,7 +167,7 @@ template("rustc_artifact") {
   # Every rust target is actually a group of both target_name.actual and
   # optionally target_name.clippy (if include_clippy is set)
   group(target_name) {
-    forward_variables_from(invoker.pass_through,
+    forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
@@ -254,5 +262,11 @@ template("rustc_artifact") {
 
     # pass through these variables unmodified
     forward_variables_from(invoker.pass_through, "*")
+
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
   }
 }

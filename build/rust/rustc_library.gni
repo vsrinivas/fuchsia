@@ -164,8 +164,6 @@ template("rustc_library") {
                              [
                                "data_deps",
                                "output_dir",
-                               "testonly",
-                               "visibility",
                              ])
 
       # TODO: maybe just use target_name instead?
@@ -187,14 +185,15 @@ template("rustc_library") {
 
     forward_variables_from(invoker,
                            [
-                             "disable_rbe",
                              "disable_clippy",
                              "edition",
                              "enforce_source_listing",
                              "features",
                              "inputs",
-                             "sources",
                              "rustenv",
+                             "sources",
+                             "testonly",
+                             "visibility",
                            ])
 
     # Avoid walking into data_deps when checking component manifest expected includes.

@@ -158,12 +158,7 @@ template("rustc_staticlib") {
     clippy_crate_type = "staticlib"
     crate_name = rustc_target
     pass_through = {
-      forward_variables_from(invoker,
-                             [
-                               "output_dir",
-                               "testonly",
-                               "visibility",
-                             ])
+      forward_variables_from(invoker, [ "output_dir" ])
       output_name = rustc_target
     }
 
@@ -184,8 +179,10 @@ template("rustc_staticlib") {
                              "enforce_source_listing",
                              "features",
                              "inputs",
-                             "sources",
                              "rustenv",
+                             "sources",
+                             "testonly",
+                             "visibility",
                            ])
 
     configs = []

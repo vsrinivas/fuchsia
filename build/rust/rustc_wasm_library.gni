@@ -126,12 +126,7 @@ template("rustc_wasm_library") {
     clippy_crate_type = "cdylib"
     crate_name = crate_name
     pass_through = {
-      forward_variables_from(invoker,
-                             [
-                               "output_dir",
-                               "testonly",
-                               "visibility",
-                             ])
+      forward_variables_from(invoker, [ "output_dir" ])
       output_name = crate_name
       crate_type = "cdylib"
     }
@@ -155,8 +150,10 @@ template("rustc_wasm_library") {
                              "enforce_source_listing",
                              "features",
                              "inputs",
-                             "sources",
                              "rustenv",
+                             "sources",
+                             "testonly",
+                             "visibility",
                            ])
   }
 }

@@ -160,8 +160,6 @@ template("rustc_macro") {
                                [
                                  "data_deps",
                                  "output_dir",
-                                 "testonly",
-                                 "visibility",
                                ])
         output_name = crate_name
       }
@@ -172,8 +170,10 @@ template("rustc_macro") {
                                "edition",
                                "enforce_source_listing",
                                "inputs",
-                               "sources",
                                "rustenv",
+                               "sources",
+                               "testonly",
+                               "visibility",
                              ])
 
       deps = []

@@ -88,20 +88,17 @@ template("rustc_test_internal") {
     crate_root = source_root
     clippy_crate_type = "bin"
     pass_through = {
-      forward_variables_from(invoker,
-                             [
-                               "output_dir",
-                               "visibility",
-                             ])
+      forward_variables_from(invoker, [ "output_dir" ])
       output_name = crate_name
-
-      # anything defined with rustc_test MUST be a test target
-      testonly = true
     }
     crate_name = crate_name
 
     # tell rustc to compile in the test harness
     rustflags += [ "--test" ]
+
+    # anything defined with rustc_test MUST be a test target
+    testonly = true
+
     forward_variables_from(invoker,
                            [
                              "disable_clippy",
@@ -112,6 +109,7 @@ template("rustc_test_internal") {
                              "inputs",
                              "sources",
                              "rustenv",
+                             "visibility",
                            ])
 
     deps = []
