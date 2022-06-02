@@ -461,6 +461,9 @@ pub async fn configure_launcher(
     })
 }
 
+static CONNECT_ERROR_HELP: &'static str = "To learn more, see \
+https://fuchsia.dev/go/components/connect-errors";
+
 /// Sets an epitaph on `ComponentController` `server_end` for a runner failure and the outgoing
 /// directory, and logs it.
 pub fn report_start_error(
@@ -470,7 +473,7 @@ pub fn report_start_error(
     controller_server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
 ) {
     let _ = controller_server_end.into_channel().close_with_epitaph(err);
-    warn!("Failed to start component `{}`: {}", resolved_url, err_str,);
+    warn!("Failed to start component `{}`: {}\n{}", resolved_url, err_str, CONNECT_ERROR_HELP);
 }
 
 #[cfg(test)]

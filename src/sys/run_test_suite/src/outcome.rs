@@ -129,9 +129,8 @@ impl From<ftest_manager::LaunchError> for RunTestSuiteError {
 
 fn convert_launch_error_to_str(e: &ftest_manager::LaunchError) -> &'static str {
     match e {
-        ftest_manager::LaunchError::CaseEnumeration => "Cannot enumerate test. This may mean `fuchsia.test.Suite` was not \
-        configured correctly. Refer to: \
-        https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#troubleshoot-test",
+        ftest_manager::LaunchError::CaseEnumeration => "Cannot enumerate test. This may mean `fuchsia.test.Suite` was not configured correctly. Refer to: \
+        https://fuchsia.dev/go/components/test-errors",
         ftest_manager::LaunchError::ResourceUnavailable => "Resource unavailable",
         ftest_manager::LaunchError::InstanceCannotResolve => "Cannot resolve test.",
         ftest_manager::LaunchError::InvalidArgs => {
@@ -140,7 +139,7 @@ fn convert_launch_error_to_str(e: &ftest_manager::LaunchError) -> &'static str {
         ftest_manager::LaunchError::FailedToConnectToTestSuite => {
             "Cannot communicate with the tests. This may mean `fuchsia.test.Suite` was not \
             configured correctly. Refer to: \
-            https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#troubleshoot-test"
+            https://fuchsia.dev/go/components/test-errors"
         }
         ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
         ftest_manager::LaunchError::NoMatchingCases =>
@@ -154,8 +153,7 @@ fn convert_launch_error_to_str(e: &ftest_manager::LaunchError) -> &'static str {
             'legacy_test' or 'main', the suite likely uses either the legacy_test_runner or \
             elf_test_runner. In these cases, --test-filter will not work. Instead, \
             you can pass test arguments directly to the test instead. Refer to: \
-            https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework?hl=en#legacy-test-runner
-            ",
+            https://fuchsia.dev/go/components/test-runners",
         ftest_manager::LaunchErrorUnknown!() => "Unrecognized launch error",
     }
 }

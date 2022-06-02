@@ -14,6 +14,10 @@ redirects:
   to: /docs/development/components/build.md#troubleshooting
 - from: /docs/go/components/collections
   to: https://fuchsia.dev/reference/cml#collections
+- from: /docs/go/components/connect
+  to: /docs/development/components/connect.md
+- from: /docs/go/components/connect-errors
+  to: /docs/development/components/connect.md#troubleshooting
 - from: /docs/go/components/instance-id
   to: /docs/development/components/component_id_index
 - from: /docs/go/components/run
@@ -22,6 +26,10 @@ redirects:
   to: /docs/development/components/run.md#troubleshooting
 - from: /docs/go/components/restricted-features
   to: /docs/development/components/build.md#restricted-features
+- from: /docs/go/components/test-errors
+  to: /docs/development/testing/components/test_runner_framework.md#troubleshooting
+- from: /docs/go/components/test-runners
+  to: /docs/development/testing/components/test_runner_framework.md#test-runners
 - from: /docs/go/components/url
   to: /docs/reference/components/url
   # Keep this item last as the default fallback path

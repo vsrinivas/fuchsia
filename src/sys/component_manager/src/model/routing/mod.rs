@@ -411,6 +411,9 @@ pub(super) async fn route_and_delete_storage(
     .await
 }
 
+static ROUTE_ERROR_HELP: &'static str = "To learn more, see \
+https://fuchsia.dev/go/components/connect-errors";
+
 /// Sets an epitaph on `server_end` for a capability routing failure, and logs the error. Logs a
 /// failure to route a capability. Formats `err` as a `String`, but elides the type if the error is
 /// a `RoutingError`, the common case.
@@ -431,11 +434,12 @@ pub async fn report_routing_failure(
         .log(
             Level::Warn,
             format!(
-                "Failed to route {} `{}` with target component `{}`: {}",
+                "Failed to route {} `{}` with target component `{}`: {}\n{}",
                 cap.type_name(),
                 cap.source_id(),
                 &target.abs_moniker,
-                &err_str
+                &err_str,
+                ROUTE_ERROR_HELP
             ),
         )
         .await

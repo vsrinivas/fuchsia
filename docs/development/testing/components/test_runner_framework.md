@@ -1,10 +1,5 @@
 # The Fuchsia Test Runner Framework
 
-{# To see the fully rendered includecode file on this page,
-  see the published page at https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework #}
-
-## Integrating testing frameworks with the Component Framework
-
 The Fuchsia [Component Framework][cf] allows developers to create components in
 a variety of languages and runtimes. Fuchsia's own code uses a diverse mix of
 programming languages for components, including C/C++, Rust, Dart, and Go.
@@ -709,7 +704,6 @@ an error like the following from `fx test`:
 Test suite encountered error trying to run tests: getting test cases
 Caused by:
     The test protocol was closed. This may mean `fuchsia.test.Suite` was not configured correctly.
-    Refer to: https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#troubleshoot-test
 ```
 
 To address the issue, explore the following options:
