@@ -263,6 +263,199 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
     }
   }
 
+  // Verifies independent presubmit queueing (pending wait semaphores) for multi engines.
+  void MemoryWriteEngineInterleavedPresubmitQueueing(int submit_count, int semaphore_count) {
+    ASSERT_EQ(submit_count % 2, 0);
+
+    constexpr uint64_t kMapFlags =
+        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+
+    constexpr uint32_t kPattern = 0xabcd1234;
+    constexpr uint32_t kSize = PAGE_SIZE;
+
+    constexpr uint64_t kOneSecondInNs = 1000000000ull;
+
+    struct Submit {
+      magma_buffer_t batch_buffer;
+      magma_buffer_t result_buffer;
+      std::vector<magma_semaphore_t> wait_semaphores;
+      std::vector<magma_semaphore_t> signal_semaphores;
+      uint64_t command_buffer_flags;
+    };
+    std::vector<Submit> submits;
+
+    for (int i = 0; i < submit_count; i++) {
+      Submit submit = {};
+
+      uint64_t size;
+      ASSERT_EQ(MAGMA_STATUS_OK,
+                magma_create_buffer(connection_, kSize, &size, &submit.batch_buffer));
+
+      ASSERT_EQ(MAGMA_STATUS_OK,
+                magma_create_buffer(connection_, kSize, &size, &submit.result_buffer));
+
+      EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, submit.batch_buffer, 0,
+                                                      size / PAGE_SIZE, gpu_addr_, kMapFlags));
+
+      gpu_addr_ += size + extra_page_count_ * PAGE_SIZE;
+
+      EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, submit.result_buffer, 0,
+                                                      size / PAGE_SIZE, gpu_addr_, kMapFlags));
+
+      InitBatchMemoryWrite(submit.batch_buffer, kPattern, gpu_addr_);
+
+      gpu_addr_ += size + extra_page_count_ * PAGE_SIZE;
+
+      ClearBuffer(submit.result_buffer, 0xfefefefe);
+
+      for (int i = 0; i < semaphore_count; i++) {
+        magma_semaphore_t semaphore;
+
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &semaphore));
+        submit.wait_semaphores.push_back(semaphore);
+
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_create_semaphore(connection_, &semaphore));
+        submit.signal_semaphores.push_back(semaphore);
+      }
+
+      // Alternate between engines
+      if (i % 2 == 0) {
+        submit.command_buffer_flags = kMagmaIntelGenCommandBufferForRender;
+      } else {
+        submit.command_buffer_flags = kMagmaIntelGenCommandBufferForVideo;
+      }
+
+      submits.push_back(std::move(submit));
+    }
+
+    magma::InflightList list;
+
+    for (size_t i = 0; i < submits.size(); i++) {
+      magma_command_descriptor descriptor;
+      magma_exec_command_buffer command_buffer;
+      std::vector<magma_exec_resource> exec_resources;
+
+      InitCommand(&descriptor, &command_buffer, &exec_resources, submits[i].batch_buffer,
+                  submits[i].result_buffer);
+
+      std::vector<uint64_t> semaphore_ids;
+      for (auto& semaphore : submits[i].wait_semaphores) {
+        semaphore_ids.push_back(magma_get_semaphore_id(semaphore));
+      }
+      for (auto& semaphore : submits[i].signal_semaphores) {
+        semaphore_ids.push_back(magma_get_semaphore_id(semaphore));
+      }
+      descriptor.wait_semaphore_count = static_cast<uint32_t>(submits[i].wait_semaphores.size());
+      descriptor.signal_semaphore_count =
+          static_cast<uint32_t>(submits[i].signal_semaphores.size());
+      descriptor.semaphore_ids = semaphore_ids.data();
+      descriptor.flags = submits[i].command_buffer_flags;
+
+      {
+        uint32_t context = context_ids_[0];
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command(connection_, context, &descriptor));
+      }
+
+      for (auto resource : exec_resources) {
+        list.add(resource.buffer_id);
+      }
+    }
+
+    // Ensure signal semaphores not signaled
+    for (auto& submit : submits) {
+      for (size_t i = 0; i < submit.signal_semaphores.size(); i++) {
+        magma_poll_item_t item = {
+            .semaphore = submit.signal_semaphores[i],
+            .type = MAGMA_POLL_TYPE_SEMAPHORE,
+            .condition = MAGMA_POLL_CONDITION_SIGNALED,
+        };
+        EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(&item, 1, /* timeout_ns= */ 0))
+            << "signal semaphore index " << i;
+      }
+    }
+
+    // Signal wait semaphores for RCS
+    for (auto& submit : submits) {
+      if (submit.command_buffer_flags == kMagmaIntelGenCommandBufferForRender) {
+        for (size_t i = 0; i < submit.wait_semaphores.size(); i++) {
+          magma_signal_semaphore(submit.wait_semaphores[i]);
+        }
+      }
+    }
+
+    // Check signal semaphores
+    for (auto& submit : submits) {
+      for (size_t i = 0; i < submit.signal_semaphores.size(); i++) {
+        magma_poll_item_t item = {
+            .semaphore = submit.signal_semaphores[i],
+            .type = MAGMA_POLL_TYPE_SEMAPHORE,
+            .condition = MAGMA_POLL_CONDITION_SIGNALED,
+        };
+        if (submit.command_buffer_flags == kMagmaIntelGenCommandBufferForRender) {
+          EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(&item, 1, kOneSecondInNs))
+              << "signal semaphore index " << i;
+        } else {
+          EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(&item, 1, /* timeout_ns= */ 0))
+              << "signal semaphore index " << i;
+        }
+      }
+    }
+
+    // Signal wait semaphores for second engine
+    for (auto& submit : submits) {
+      if (submit.command_buffer_flags == kMagmaIntelGenCommandBufferForVideo) {
+        for (size_t i = 0; i < submit.wait_semaphores.size(); i++) {
+          magma_signal_semaphore(submit.wait_semaphores[i]);
+        }
+      }
+    }
+
+    // Check signal semaphores
+    for (auto& submit : submits) {
+      for (size_t i = 0; i < submit.signal_semaphores.size(); i++) {
+        magma_poll_item_t item = {
+            .semaphore = submit.signal_semaphores[i],
+            .type = MAGMA_POLL_TYPE_SEMAPHORE,
+            .condition = MAGMA_POLL_CONDITION_SIGNALED,
+        };
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(&item, 1, kOneSecondInNs))
+            << "signal semaphore index " << i;
+      }
+    }
+
+    // Check completion notifications
+    while (list.size()) {
+      uint64_t start_size = list.size();
+
+      magma::Status status =
+          list.WaitForCompletion(connection_, std::numeric_limits<int64_t>::max());
+      ASSERT_EQ(MAGMA_STATUS_OK, status.get());
+
+      list.ServiceCompletions(connection_);
+
+      ASSERT_LT(list.size(), start_size);
+    }
+
+    // Check results and cleanup
+    for (size_t i = 0; i < submits.size(); i++) {
+      uint32_t result;
+      ReadBufferAt(submits[i].result_buffer, 0, &result);
+
+      EXPECT_EQ(kPattern, result) << "submit " << i << " expected: 0x" << std::hex << kPattern
+                                  << " got: 0x" << result;
+
+      magma_release_buffer(connection_, submits[i].batch_buffer);
+      magma_release_buffer(connection_, submits[i].result_buffer);
+
+      for (auto& semaphore : submits[i].wait_semaphores) {
+        magma_release_semaphore(connection_, semaphore);
+      }
+      for (auto& semaphore : submits[i].signal_semaphores) {
+        magma_release_semaphore(connection_, semaphore);
+      }
+    }
+  }
+
   void ReadBufferAt(magma_buffer_t buffer, uint32_t dword_offset, uint32_t* result_out) {
     uint64_t size = magma_get_buffer_size(buffer);
 
@@ -404,6 +597,24 @@ class TestExecuteContextCount : public TestExecuteWithCount {};
 TEST_P(TestExecuteContextCount, SemaphoreWaitAndSignal) { SemaphoreWaitAndSignal(GetParam()); }
 
 INSTANTIATE_TEST_SUITE_P(ExecuteSemaphore, TestExecuteContextCount, ::testing::Values(1, 2),
+                         [](testing::TestParamInfo<uint32_t> info) {
+                           return std::to_string(info.param);
+                         });
+
+class TestMemoryWriteEngineInterleavedPresubmitQueueing : public TestExecuteWithCount {};
+
+TEST_P(TestMemoryWriteEngineInterleavedPresubmitQueueing, OneSemaphore) {
+  MemoryWriteEngineInterleavedPresubmitQueueing(GetParam(), /* semaphore_count= */ 1);
+}
+
+TEST_P(TestMemoryWriteEngineInterleavedPresubmitQueueing, ManySemaphore) {
+  MemoryWriteEngineInterleavedPresubmitQueueing(GetParam(), /* semaphore_count= */ 3);
+}
+
+// TODO(fxbug.dev/100943) - enable this for > 2 (1 per engine) when per-engine presubmit queuing is
+// supported
+INSTANTIATE_TEST_SUITE_P(MemoryWriteEngineInterleavedPresubmitQueueing,
+                         TestMemoryWriteEngineInterleavedPresubmitQueueing, ::testing::Values(2),
                          [](testing::TestParamInfo<uint32_t> info) {
                            return std::to_string(info.param);
                          });
