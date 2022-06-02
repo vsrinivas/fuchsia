@@ -6,6 +6,119 @@ import("//build/components.gni")
 import("//build/test.gni")
 import("//build/zircon/zx_library.gni")
 
+#  ________  _________  ________  ________
+# |\   ____\|\___   ___\\   __  \|\   __  \
+# \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+#  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+#   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+#     ____\_\  \   \ \__\ \ \_______\ \__\
+#    |\_________\   \|__|  \|_______|\|__|
+#    \|_________|
+#
+# This is an allowlist of targets that use the deprecated `syslog` C++ library.
+# C++ libraries should now be using `//sdk/lib/syslog/cpp` instead.
+#
+# Developers are encouraged to migrate to use the `diagnostics_log` and `tracing` libraries
+# instead which bring structured logging support.
+#
+# The policy at this time is:
+# 1. Pre-existing use of syslog in fuchsia.git are allowlisted.
+# 2. Use of syslog in new libraries and binaries is strongly discouraged and only allowed
+#    under special circumstances under which the new library isn't covering the needs.
+#
+# To add items to the allowlist, please send a change to one of the OWNERS of
+# this file to add an element to the visibility list below.
+# Please allowlist entire directories rather than individual targets as it
+# requires less allowlist churn over time.
+#
+# To regenerate:
+# fx gn refs $(fx get-build-dir) /zircon/system/ulib/syslog:syslog //zircon/system/ulib/syslog | sed 's|\(.*:\).*|"\1*",|' | sort | uniq
+syslog_visibility_allowlist = [
+  "//examples/components/echo/cpp:*",
+  "//examples/components/routing/cpp/echo_client:*",
+  "//examples/components/routing_failed/cpp:*",
+  "//garnet/lib/profiler:*",
+  "//sdk/lib/syslog/cpp:*",
+  "//sdk/lib/syslog/duplicate_header_test:*",
+  "//sdk/lib/ui/scenic/cpp:*",
+  "//src/camera/drivers/controller:*",
+  "//src/camera/drivers/hw_accel/gdc:*",
+  "//src/camera/drivers/hw_accel/task:*",
+  "//src/camera/drivers/test_utils:*",
+  "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/lib:*",
+  "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/test-code:*",
+  "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/test-components:*",
+  "//src/connectivity/network/drivers/network-device/device:*",
+  "//src/connectivity/network/drivers/network-device/mac:*",
+  "//src/connectivity/network/tun/network-tun:*",
+  "//src/connectivity/openthread/tests/lib:*",
+  "//src/connectivity/openthread/tests/test-code:*",
+  "//src/connectivity/openthread/tests/test-components:*",
+  "//src/connectivity/telephony/tests/component-integration/fake-at-driver-test:*",
+  "//src/connectivity/telephony/tests/component-integration/fake-at-query:*",
+  "//src/connectivity/telephony/tests/component-integration/fake-qmi-query:*",
+  "//src/connectivity/telephony/tests/component-integration/snooper:*",
+  "//src/devices/bin/driver_host2:*",
+  "//src/devices/lib/log:*",
+  "//src/devices/tests/fx-logger:*",
+  "//src/devices/usb/bin/lsusb:*",
+  "//src/diagnostics/archivist:*",
+  "//src/diagnostics/archivist/tests/logs/cpp:*",
+  "//src/lib/chunked-compression:*",
+  "//src/lib/intl/lookup/rust:*",
+  "//src/lib/syslog/rust:*",
+  "//src/lib/vulkan/imagepipe_view:*",
+  "//src/media/codec/examples/use_media_decoder:*",
+  "//src/media/drivers/amlogic_decoder:*",
+  "//src/media/lib/codec_impl:*",
+  "//src/media/lib/internal_buffer:*",
+  "//src/storage/extractor/cpp:*",
+  "//src/storage/fuchsia-fatfs:*",
+  "//src/storage/lib/watchdog:*",
+  "//src/sys/appmgr:*",
+  "//src/sys/tools/log:*",
+  "//src/virtualization/bin/vmm/device:*",
+  "//zircon/system/ulib/devmgr-integration-test:*",
+  "//zircon/system/ulib/profile:*",
+]
+
+# At this time we are not enforcing restrictions on the below.
+syslog_visibility_allowlist += [
+  "//third_party/*",
+  "//vendor/*",
+]
+
+# Syslog code can depend on syslog.
+syslog_visibility_allowlist += [ "//zircon/system/ulib/syslog:*" ]
+
+syslog_static_visibility_allowlist = [
+  "//src/devices/tests/fx-logger:*",
+  "//src/graphics/lib/magma/src/magma_util/platform/zircon:*",
+]
+
+syslog_static_visibility_allowlist += [
+  "//third_party/*",
+  "//vendor/*",
+]
+
+# Syslog code can depend on syslog-static.
+syslog_static_visibility_allowlist += [ "//zircon/system/ulib/syslog:*" ]
+
+syslog_headers_visibility_allowlist = [
+  "//src/bringup/bin/console:*",
+  "//src/devices/lib/iommu:*",
+  "//src/lib/ddk:*",
+  "//src/media/audio/audio_core:*",
+]
+
+syslog_headers_visibility_allowlist += [
+  "//third_party/*",
+  "//vendor/*",
+]
+
+# Syslog code can depend on syslog-headers.
+syslog_headers_visibility_allowlist += [ "//zircon/system/ulib/syslog:*" ]
+
 syslog_headers = [
   "lib/syslog/global.h",
   "lib/syslog/logger.h",
@@ -37,6 +150,8 @@ zx_library("syslog") {
     "//sdk/lib/fdio:fdio_sdk",
     "//zircon/system/ulib/trace-engine:trace-engine_sdk",
   ]
+
+  visibility = syslog_visibility_allowlist
 }
 
 # This static library should have no shared library dependencies,
@@ -59,12 +174,15 @@ zx_library("syslog-static") {
     "//zircon/system/ulib/zx",
   ]
   defines = [ "SYSLOG_STATIC" ]
+
+  visibility = syslog_static_visibility_allowlist
 }
 
 zx_library("syslog-headers") {
   sdk = "static"
   sdk_publishable = true
   sdk_headers = syslog_headers
+  visibility = syslog_headers_visibility_allowlist
 }
 
 source_set("helpers") {
