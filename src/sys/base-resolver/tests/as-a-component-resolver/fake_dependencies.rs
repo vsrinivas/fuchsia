@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::UnpinnedAbsolutePackageUrl,
     futures::prelude::*,
     maplit::hashmap,
     std::collections::HashMap,
@@ -74,7 +74,7 @@ async fn main() {
                 }),
             PackageCacheMarker::PROTOCOL_NAME =>
                 vfs::service::host(move |stream: PackageCacheRequestStream| {
-                    let mock_package_url: PkgUrl =
+                    let mock_package_url: UnpinnedAbsolutePackageUrl =
                         "fuchsia-pkg://fuchsia.com/mock-package".parse().unwrap();
                     let mock_package_blob_id = BlobId::parse(MOCK_PACKAGE_HASH).unwrap();
                     let base_package_index = hashmap! {
@@ -130,12 +130,14 @@ async fn serve_boot_args(mut stream: fboot::ArgumentsRequestStream, hash: fuchsi
 const PACKAGE_INDEX_CHUNK_SIZE: u32 = 30;
 
 struct MockPackageCacheService {
-    base_packages: Arc<HashMap<PkgUrl, BlobId>>,
+    base_packages: Arc<HashMap<UnpinnedAbsolutePackageUrl, BlobId>>,
 }
 
 impl MockPackageCacheService {
-    fn new_with_base_packages(base_packages: Arc<HashMap<PkgUrl, BlobId>>) -> Self {
-        Self { base_packages: base_packages }
+    fn new_with_base_packages(
+        base_packages: Arc<HashMap<UnpinnedAbsolutePackageUrl, BlobId>>,
+    ) -> Self {
+        Self { base_packages }
     }
 
     async fn run_service(self, mut stream: PackageCacheRequestStream) {
@@ -154,10 +156,8 @@ impl MockPackageCacheService {
         let mut packages = self
             .base_packages
             .iter()
-            .map(|(path, &hash)| PackageIndexEntry {
-                package_url: PackageUrl {
-                    url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
-                },
+            .map(|(url, &hash)| PackageIndexEntry {
+                package_url: PackageUrl { url: url.to_string() },
                 meta_far_blob_id: hash.into(),
             })
             .collect::<Vec<PackageIndexEntry>>();
