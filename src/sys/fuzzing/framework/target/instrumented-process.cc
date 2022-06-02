@@ -31,7 +31,9 @@ class InstrumentedProcess final {
                     })
                     .and_then(process_->Run());
     context_->ScheduleTask(std::move(task));
-    context_->Run();
+    if (auto status = context_->Run(); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to start loop: " << zx_status_get_string(status);
+    }
     sync_completion_wait(sync.get(), ZX_TIME_INFINITE);
   }
 

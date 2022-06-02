@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/compiler.h>
 #include <zircon/status.h>
 
 #include "src/lib/fxl/macros.h"
@@ -47,13 +48,14 @@ class ComponentContext final {
 
   // Adds an interface request handler for a protocol capability provided by this component.
   template <typename Interface>
-  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler) const {
+  __WARN_UNUSED_RESULT zx_status_t
+  AddPublicService(fidl::InterfaceRequestHandler<Interface> handler) const {
     return outgoing_->AddPublicService(std::move(handler));
   }
 
   // Connects a |request| to a protocol capability provided by another component.
   template <typename Interface>
-  zx_status_t Connect(fidl::InterfaceRequest<Interface> request) {
+  __WARN_UNUSED_RESULT zx_status_t Connect(fidl::InterfaceRequest<Interface> request) {
     return Connect(svc_, std::move(request));
   }
 
@@ -72,10 +74,10 @@ class ComponentContext final {
   }
 
   // Runs the message loop on the current thread. This method should only be called at most once.
-  zx_status_t Run();
+  __WARN_UNUSED_RESULT zx_status_t Run();
 
   // Runs until there are no tasks that can make progress.
-  zx_status_t RunUntilIdle();
+  __WARN_UNUSED_RESULT zx_status_t RunUntilIdle();
 
  private:
   // Connects a |request| to a protocol capability provided by another component.

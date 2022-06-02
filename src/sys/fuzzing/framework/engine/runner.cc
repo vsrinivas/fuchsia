@@ -78,8 +78,7 @@ ZxPromise<> RunnerImpl::Configure(const OptionsPtr& options) {
         return fpromise::error(ZX_ERR_CANCELED);
       }))
       .and_then([this](const std::vector<std::string>& parameters) {
-        seed_corpus_->Load(target_adapter_.GetSeedCorpusDirectories(parameters));
-        return fpromise::ok();
+        return AsZxResult(seed_corpus_->Load(target_adapter_.GetSeedCorpusDirectories(parameters)));
       })
       .wrap_with(workflow_);
 }
@@ -87,15 +86,12 @@ ZxPromise<> RunnerImpl::Configure(const OptionsPtr& options) {
 zx_status_t RunnerImpl::AddToCorpus(CorpusType corpus_type, Input input) {
   switch (corpus_type) {
     case CorpusType::SEED:
-      seed_corpus_->Add(std::move(input));
-      break;
+      return seed_corpus_->Add(std::move(input));
     case CorpusType::LIVE:
-      live_corpus_->Add(std::move(input));
-      break;
+      return live_corpus_->Add(std::move(input));
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_OK;
 }
 
 Input RunnerImpl::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
@@ -338,10 +334,12 @@ ZxPromise<> RunnerImpl::Merge() {
         return fpromise::error(ZX_ERR_BAD_STATE);
       })
       .or_else([this, collect_errors](const zx_status_t& status) {
-        return CheckPrevious(status).and_then([this, collect_errors] {
+        return CheckPrevious(status).and_then([this, collect_errors]() -> ZxResult<> {
           // As a final step, keep any inputs that triggered errors.
           for (auto& input : *collect_errors) {
-            live_corpus_->Add(std::move(input));
+            if (auto status = live_corpus_->Add(std::move(input)); status != ZX_OK) {
+              return fpromise::error(status);
+            }
           }
           return fpromise::ok();
         });
@@ -504,8 +502,14 @@ Promise<> RunnerImpl::GenerateCleanInputs(const Input& input,
   constexpr size_t kMaxCleanseAttempts = 5;
   auto attempts_left = kMaxCleanseAttempts + 1;
   // Prepare the pipeline with some artifacts that make the attempt succeed and won't be reverted.
-  recycler->Send(Artifact(FuzzResult::CRASH, input.Duplicate()));
-  recycler->Send(Artifact(FuzzResult::CRASH, input.Duplicate()));
+  // This only fails if the |recycler| is closed, in which case the promise below returns an error.
+  for (size_t i = 0; i < 2; ++i) {
+    if (auto status = recycler->Send(Artifact(FuzzResult::CRASH, input.Duplicate()));
+        status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to prepare fuzzing input pipeline: "
+                     << zx_status_get_string(status);
+    }
+  }
   // Ensure that a new attempt will be started.
   auto offset = std::numeric_limits<size_t>::max() - 1;
 
@@ -618,10 +622,12 @@ ZxPromise<Artifact> RunnerImpl::FuzzInputs(size_t backlog) {
 
 ZxPromise<Artifact> RunnerImpl::TestOneAsync(Input input, PostProcessing mode) {
   return fpromise::make_promise([this, input = std::move(input)]() mutable -> ZxResult<> {
-           generated_.Send(std::move(input));
-           generated_.Close();
-           return fpromise::ok();
+           return AsZxResult(generated_.Send(std::move(input)));
          })
+      .and_then([this]() {
+        generated_.Close();
+        return fpromise::ok();
+      })
       .and_then([this, mode] { return TestInputs(mode); });
 }
 
@@ -630,8 +636,7 @@ ZxPromise<Artifact> RunnerImpl::TestCorpusAsync(CorpusPtr corpus, PostProcessing
   return fpromise::make_promise([this]() -> ZxResult<> {
            // Prime the output queue.
            Reset();
-           processed_.Send(Input());
-           return fpromise::ok();
+           return AsZxResult(processed_.Send(Input()));
          })
       .and_then([this, corpus, mode, collect_errors, test_inputs = ZxFuture<Artifact>(),
                  receive = Future<Input>(),
@@ -658,10 +663,13 @@ ZxPromise<Artifact> RunnerImpl::TestCorpusAsync(CorpusPtr corpus, PostProcessing
             return fpromise::error(ZX_ERR_BAD_STATE);
           }
           auto input = receive.take_value();
-          if (corpus->At(offset++, &input)) {
-            generated_.Send(std::move(input));
-          } else {
+          if (!corpus->At(offset++, &input)) {
             generated_.Close();
+            continue;
+          }
+          if (auto status = generated_.Send(std::move(input)); status != ZX_OK) {
+            FX_LOGS(ERROR) << "Input queue closed prematurely: " << zx_status_get_string(status);
+            return fpromise::error(status);
           }
         }
       });
@@ -788,7 +796,11 @@ Promise<bool, FuzzResult> RunnerImpl::RunOne(const Input& input) {
                                        .or_else([] { return fpromise::error(kInvalidTargetId); })
                                        .and_then([this]() -> Result<bool, uint64_t> {
                                          for (auto& [target_id, process_proxy] : process_proxies_) {
-                                           process_proxy->Finish();
+                                           if (auto status = process_proxy->Finish();
+                                               status != ZX_OK) {
+                                             FX_LOGS(WARNING) << "Failed to signal process: "
+                                                              << zx_status_get_string(status);
+                                           }
                                          }
                                          return fpromise::ok(false);
                                        }));
@@ -922,13 +934,17 @@ void RunnerImpl::Analyze(Input& input, PostProcessing mode) {
       auto num_features = pool_->Measure();
       if (num_features) {
         input.set_num_features(num_features);
-        live_corpus_->Add(std::move(input));
+        if (auto status = live_corpus_->Add(std::move(input)); status != ZX_OK) {
+          FX_LOGS(WARNING) << "Failed to save input: " << zx_status_get_string(status);
+        }
       }
       break;
     }
     case kAccumulateCoverageAndKeepInputs: {
       if (pool_->Accumulate()) {
-        live_corpus_->Add(std::move(input));
+        if (auto status = live_corpus_->Add(std::move(input)); status != ZX_OK) {
+          FX_LOGS(WARNING) << "Failed to save input: " << zx_status_get_string(status);
+        }
         UpdateMonitors(UpdateReason::NEW);
         updated = true;
       }
@@ -951,32 +967,27 @@ bool RunnerImpl::Recycle(Input&& input, size_t& attempts_left, bool suspected, b
   //    time with leak detection. Skip the feedback analysis on the second try.
   // 4. Keep track of how many suspected leaks don't result in an error. After
   //    |kMaxLeakDetections|, disable further leak detection.
-  if (attempts_left == 0) {
-    // Out of detection attempts. Send input to be recycled.
-    processed_.Send(std::move(input));
-    return false;
-  }
-  if (detecting) {
-    // Already tried detecting a leak. Decrement the number of attempts and send the input to be
-    // recycled.
-    --attempts_left;
-    if (attempts_left == 0) {
-      FX_LOGS(INFO) << "Disabling leak detection: No memory leaks have been found in any inputs "
-                    << "suspected of leaking. Memory may be accumulating in some global state "
-                    << "without leaking. End-of-process leak checks will still be performed.";
+  if (attempts_left) {
+    if (detecting) {
+      // Already tried detecting a leak. Decrement the number of attempts.
+      --attempts_left;
+      if (attempts_left == 0) {
+        FX_LOGS(INFO) << "Disabling leak detection: No memory leaks have been found in any inputs "
+                      << "suspected of leaking. Memory may be accumulating in some global state "
+                      << "without leaking. End-of-process leak checks will still be performed.";
+      }
+    } else if (suspected) {
+      // Leak detection is still possible, and the last run exhibited a suspected leak. Push the
+      // input to the front of the queue to retry with leak detection.
+      generated_.Resend(std::move(input));
+      return true;
     }
-    processed_.Send(std::move(input));
-    return false;
   }
-  if (!suspected) {
-    // No leak suspected. Send input to be recycled.
-    processed_.Send(std::move(input));
-    return false;
+  //  Send input to be recycled.
+  if (auto status = processed_.Send(std::move(input)); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to recycle input: " << zx_status_get_string(status);
   }
-  // Leak detection is still possible, and the last run exhibited a suspected leak. Push the input
-  // to the front of the queue to retry with leak detection.
-  generated_.Resend(std::move(input));
-  return true;
+  return false;
 }
 
 ///////////////////////////////////////////////////////////////

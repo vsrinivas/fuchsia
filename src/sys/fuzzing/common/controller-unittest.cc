@@ -172,11 +172,11 @@ TEST_F(ControllerTest, ReadCorpus) {
   Input input3({0xfe, 0xed});
   Input input4({0xfa, 0xce});
 
-  runner()->AddToCorpus(CorpusType::SEED, input1.Duplicate());
-  runner()->AddToCorpus(CorpusType::SEED, input2.Duplicate());
+  EXPECT_EQ(runner()->AddToCorpus(CorpusType::SEED, input1.Duplicate()), ZX_OK);
+  EXPECT_EQ(runner()->AddToCorpus(CorpusType::SEED, input2.Duplicate()), ZX_OK);
 
-  runner()->AddToCorpus(CorpusType::LIVE, input3.Duplicate());
-  runner()->AddToCorpus(CorpusType::LIVE, input4.Duplicate());
+  EXPECT_EQ(runner()->AddToCorpus(CorpusType::LIVE, input3.Duplicate()), ZX_OK);
+  EXPECT_EQ(runner()->AddToCorpus(CorpusType::LIVE, input4.Duplicate()), ZX_OK);
 
   FakeCorpusReader seed_reader(executor());
   FakeCorpusReader live_reader(executor());

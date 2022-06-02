@@ -88,6 +88,10 @@ zx_status_t ProcessProxy::Connect(InstrumentedProcess instrumented) {
 }
 
 zx_status_t ProcessProxy::AddLlvmModule(LlvmModule llvm_module) {
+  if (!eventpair_.IsConnected()) {
+    FX_LOGS(WARNING) << "Failed to add module: Disconnected.";
+    return ZX_ERR_PEER_CLOSED;
+  }
   SharedMemory counters;
   auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
   counters.LinkMirrored(std::move(*inline_8bit_counters));

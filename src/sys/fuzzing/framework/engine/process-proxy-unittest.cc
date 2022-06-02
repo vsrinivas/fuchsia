@@ -40,7 +40,7 @@ TEST_F(ProcessProxyTest, Connect) {
   options1->set_run_limit(run_limit);
   process_proxy->Configure(options1);
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreAll());
+  EXPECT_EQ(process_proxy->Connect(IgnoreAll()), ZX_OK);
 }
 
 TEST_F(ProcessProxyTest, AddFeedback) {
@@ -50,11 +50,19 @@ TEST_F(ProcessProxyTest, AddFeedback) {
   fake[0] = 1;
   fake[1] = 4;
   fake[2] = 8;
-  Module module(fake.counters(), fake.pcs(), fake.num_pcs());
 
-  auto llvm_module = module.GetLlvmModule();
-  process_proxy->AddLlvmModule(std::move(llvm_module));
-  auto* module_impl = pool()->Get(module.id(), fake.num_pcs());
+  // Add before connecting.
+  Module module1(fake.counters(), fake.pcs(), fake.num_pcs());
+  auto llvm_module1 = module1.GetLlvmModule();
+  EXPECT_EQ(process_proxy->AddLlvmModule(std::move(llvm_module1)), ZX_ERR_PEER_CLOSED);
+
+  // Add after connecting.
+  Module module2(fake.counters(), fake.pcs(), fake.num_pcs());
+  EXPECT_EQ(process_proxy->Connect(IgnoreAll()), ZX_OK);
+  auto llvm_module2 = module2.GetLlvmModule();
+  EXPECT_EQ(process_proxy->AddLlvmModule(std::move(llvm_module2)), ZX_OK);
+
+  auto* module_impl = pool()->Get(module2.id(), fake.num_pcs());
   EXPECT_EQ(module_impl->Measure(), 3U);
 }
 
@@ -63,7 +71,7 @@ TEST_F(ProcessProxyTest, Signals) {
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
 
   AsyncEventPair eventpair(executor());
-  process_proxy->Connect(IgnoreTarget(eventpair.Create()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreTarget(eventpair.Create())), ZX_OK);
   FUZZING_EXPECT_OK(eventpair.WaitFor(kSync));
   RunUntilIdle();
 
@@ -77,7 +85,7 @@ TEST_F(ProcessProxyTest, Signals) {
 
   EXPECT_EQ(eventpair.SignalSelf(kStart, 0), ZX_OK);
   FUZZING_EXPECT_OK(process_proxy->AwaitFinish(), /* leaks_suspected= */ true);
-  process_proxy->Finish();
+  EXPECT_EQ(process_proxy->Finish(), ZX_OK);
   FUZZING_EXPECT_OK(eventpair.WaitFor(kFinish).and_then([&](const zx_signals_t& signals) {
     EXPECT_EQ(eventpair.SignalPeer(0, kFinishWithLeaks), ZX_OK);
     return fpromise::ok();
@@ -94,7 +102,7 @@ TEST_F(ProcessProxyTest, Signals) {
 
   EXPECT_EQ(eventpair.SignalSelf(kStartLeakCheck, 0), ZX_OK);
   FUZZING_EXPECT_OK(process_proxy->AwaitFinish(), /* leaks_suspected= */ false);
-  process_proxy->Finish();
+  EXPECT_EQ(process_proxy->Finish(), ZX_OK);
   FUZZING_EXPECT_OK(eventpair.WaitFor(kFinish).and_then([&](const zx_signals_t& signals) {
     EXPECT_EQ(eventpair.SignalPeer(0, kFinish), ZX_OK);
     return fpromise::ok();
@@ -107,34 +115,26 @@ TEST_F(ProcessProxyTest, GetStats) {
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
   zx::process spawned = target.Launch();
-  zx_info_handle_basic_t basic_info;
-  zx_info_task_stats_t task_stats;
-  zx_info_task_runtime_t task_runtime;
-  EXPECT_EQ(
-      spawned.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr, nullptr),
-      ZX_OK);
-  EXPECT_EQ(spawned.get_info(ZX_INFO_TASK_STATS, &task_stats, sizeof(task_stats), nullptr, nullptr),
-            ZX_OK);
-  EXPECT_EQ(
-      spawned.get_info(ZX_INFO_TASK_RUNTIME, &task_runtime, sizeof(task_runtime), nullptr, nullptr),
-      ZX_OK);
+  zx_info_handle_basic_t info;
+  EXPECT_EQ(spawned.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr), ZX_OK);
 
-  process_proxy->Connect(IgnoreSentSignals(std::move(spawned)));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(std::move(spawned))), ZX_OK);
   ProcessStats stats;
-  process_proxy->GetStats(&stats);
-  EXPECT_EQ(stats.koid, basic_info.koid);
-  EXPECT_GE(stats.mem_mapped_bytes, task_stats.mem_mapped_bytes);
+  EXPECT_EQ(process_proxy->GetStats(&stats), ZX_OK);
+  EXPECT_EQ(stats.koid, info.koid);
+
+  // The kernel stats are a bit jittery when requested in quick succession. Just check that some
+  // data was received.
+  EXPECT_NE(stats.mem_mapped_bytes, 0U);
   EXPECT_NE(stats.mem_private_bytes, 0U);
-  EXPECT_GE(stats.cpu_time, task_runtime.cpu_time);
-  EXPECT_GE(stats.page_fault_time, task_runtime.page_fault_time);
-  EXPECT_GE(stats.lock_contention_time, task_runtime.lock_contention_time);
+  EXPECT_NE(stats.cpu_time, 0U);
 }
 
 TEST_F(ProcessProxyTest, DefaultBadMalloc) {
   auto process_proxy = MakeProcessProxy();
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(kDefaultMallocExitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::BAD_MALLOC);
   RunUntilIdle();
@@ -147,7 +147,7 @@ TEST_F(ProcessProxyTest, CustomBadMalloc) {
   options->set_malloc_exitcode(exitcode);
   process_proxy->Configure(options);
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(exitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::BAD_MALLOC);
   RunUntilIdle();
@@ -157,7 +157,7 @@ TEST_F(ProcessProxyTest, DefaultDeath) {
   auto process_proxy = MakeProcessProxy();
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(kDefaultDeathExitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::DEATH);
   RunUntilIdle();
@@ -170,7 +170,7 @@ TEST_F(ProcessProxyTest, CustomDeath) {
   options->set_death_exitcode(exitcode);
   process_proxy->Configure(options);
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(exitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::DEATH);
   RunUntilIdle();
@@ -180,7 +180,7 @@ TEST_F(ProcessProxyTest, Exit) {
   auto process_proxy = MakeProcessProxy();
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(1));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::EXIT);
   RunUntilIdle();
@@ -190,7 +190,7 @@ TEST_F(ProcessProxyTest, DefaultLeak) {
   auto process_proxy = MakeProcessProxy();
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(kDefaultLeakExitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::LEAK);
   RunUntilIdle();
@@ -203,7 +203,7 @@ TEST_F(ProcessProxyTest, CustomLeak) {
   options->set_leak_exitcode(exitcode);
   process_proxy->Configure(options);
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(exitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::LEAK);
   RunUntilIdle();
@@ -213,7 +213,7 @@ TEST_F(ProcessProxyTest, DefaultOom) {
   auto process_proxy = MakeProcessProxy();
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(kDefaultOomExitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::OOM);
   RunUntilIdle();
@@ -226,7 +226,7 @@ TEST_F(ProcessProxyTest, CustomOom) {
   options->set_oom_exitcode(exitcode);
   process_proxy->Configure(options);
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   FUZZING_EXPECT_OK(target.Exit(exitcode));
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::OOM);
   RunUntilIdle();
@@ -236,7 +236,7 @@ TEST_F(ProcessProxyTest, Timeout) {
   auto process_proxy = MakeProcessProxy();
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
-  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(target.Launch())), ZX_OK);
   constexpr size_t kBufSize = 1U << 20;
   auto buf = std::make_unique<char[]>(kBufSize);
   // On timeout, the runner invokes |ProcessProxy::Dump|.

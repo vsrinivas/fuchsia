@@ -10,6 +10,9 @@
 namespace fuzzing {
 
 std::unique_ptr<ComponentContext> ComponentContext::Create() {
+  static bool once = true;
+  FX_CHECK(once) << "ComponentContext::Create called more than once.";
+  once = false;
   auto context = sys::ComponentContext::Create();
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   auto executor = MakeExecutor(loop->dispatcher());

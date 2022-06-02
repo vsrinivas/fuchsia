@@ -64,11 +64,11 @@ TEST_F(CoverageProviderTest, WatchCoverageEvent) {
   CoverageEvent event;
   event.target_id = 101ULL;
   event.payload = Payload::WithProcessStarted(InstrumentedProcess());
-  events->Send(std::move(event));
+  EXPECT_EQ(events->Send(std::move(event)), ZX_OK);
 
   event.target_id = 202ULL;
   event.payload = Payload::WithLlvmModuleAdded(LlvmModule());
-  events->Send(std::move(event));
+  EXPECT_EQ(events->Send(std::move(event)), ZX_OK);
 
   events->Close();
 

@@ -55,7 +55,7 @@ TEST_F(CoverageProviderClientTest, WatchCoverageEvent) {
   CoverageEvent event;
   event.target_id = 2222U;
   event.payload = Payload::WithProcessStarted(InstrumentedProcess());
-  events->Send(std::move(event));
+  EXPECT_EQ(events->Send(std::move(event)), ZX_OK);
   RunUntilIdle();
 
   FUZZING_EXPECT_ERROR(client.WatchCoverageEvent());

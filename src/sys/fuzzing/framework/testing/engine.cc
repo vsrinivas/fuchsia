@@ -63,7 +63,7 @@ TEST_F(FuzzerTest, SeedCorpus) {
   auto options = this->options();
   Corpus::AddDefaults(options.get());
   seed_corpus.Configure(options);
-  seed_corpus.Load(seed_corpus_dirs);
+  EXPECT_EQ(seed_corpus.Load(seed_corpus_dirs), ZX_OK);
 
   // Ensure only one call to |TestOneInput| is active at a time.
   auto task = fpromise::make_promise(

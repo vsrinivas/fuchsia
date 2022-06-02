@@ -125,7 +125,9 @@ class LibFuzzerRunnerTest : public RunnerTest {
         })
         .and_then(eventpair_->WaitFor(kStart))
         .and_then([this](const zx_signals_t& observed) -> ZxResult<Input> {
-          eventpair_->SignalSelf(kStart, 0);
+          if (auto status = eventpair_->SignalSelf(kStart, 0); status != ZX_OK) {
+            return fpromise::error(status);
+          }
           auto input = Input(test_input_buffer_);
           return fpromise::ok(std::move(input));
         })
@@ -145,12 +147,11 @@ class LibFuzzerRunnerTest : public RunnerTest {
                ++i;
              }
              feedback_buffer_.Update();
-             eventpair_->SignalPeer(0, kStart);
-             return eventpair_->WaitFor(kFinish);
+             return AsZxResult(eventpair_->SignalPeer(0, kStart));
            })
+        .and_then(eventpair_->WaitFor(kFinish))
         .and_then([this](const zx_signals_t& observed) -> ZxResult<> {
-          eventpair_->SignalSelf(kFinish, 0);
-          return fpromise::ok();
+          return AsZxResult(eventpair_->SignalSelf(kFinish, 0));
         })
         .or_else([](const zx_status_t& status) -> ZxResult<> {
           if (status == ZX_ERR_PEER_CLOSED) {

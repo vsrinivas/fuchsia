@@ -19,7 +19,7 @@ TEST_F(ProcessProxyFatalTest, Crash) {
   process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   TestTarget target(executor());
   auto process = target.Launch();
-  process_proxy->Connect(IgnoreSentSignals(std::move(process)));
+  EXPECT_EQ(process_proxy->Connect(IgnoreSentSignals(std::move(process))), ZX_OK);
   FUZZING_EXPECT_OK(target.Crash());
   FUZZING_EXPECT_OK(process_proxy->GetResult(), FuzzResult::CRASH);
   RunUntilIdle();

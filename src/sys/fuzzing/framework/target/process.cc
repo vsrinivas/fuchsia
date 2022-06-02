@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <zircon/status.h>
 
 #include "src/sys/fuzzing/common/module.h"
 #include "src/sys/fuzzing/common/options.h"
@@ -115,10 +116,14 @@ Process::Process(ExecutorPtr executor)
   FX_CHECK(!gContext.process);
   gContext.process = this;
   for (size_t i = 0; i < gContext.num_counters; ++i) {
-    counters_.Send(std::move(gContext.counters[i]));
+    if (auto status = counters_.Send(std::move(gContext.counters[i])); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to send counter data: " << zx_status_get_string(status);
+    }
   }
   for (size_t i = 0; i < gContext.num_pcs; ++i) {
-    pcs_.Send(std::move(gContext.pcs[i]));
+    if (auto status = pcs_.Send(std::move(gContext.pcs[i])); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to send PC data: " << zx_status_get_string(status);
+    }
   }
   AddDefaults(&options_);
 }
@@ -154,17 +159,24 @@ void Process::AddDefaults(Options* options) {
 
 void Process::AddCounters(CountersInfo counters) {
   // Ensure the AsyncDeque is only accessed from the dispatcher thread.
-  auto task = fpromise::make_promise([this, counters = std::move(counters)]() mutable {
-    counters_.Send(std::move(counters));
-    return fpromise::ok();
-  });
+  auto task =
+      fpromise::make_promise([this, counters = std::move(counters)]() mutable -> ZxResult<> {
+        if (auto status = counters_.Send(std::move(counters)); status != ZX_OK) {
+          FX_LOGS(WARNING) << "Failed to send counter data: " << zx_status_get_string(status);
+          return fpromise::error(status);
+        }
+        return fpromise::ok();
+      });
   executor_->schedule_task(std::move(task));
 }
 
 void Process::AddPCs(PCsInfo pcs) {
   // Ensure the AsyncDeque is only accessed from the dispatcher thread.
-  auto task = fpromise::make_promise([this, pcs = std::move(pcs)]() mutable {
-    pcs_.Send(std::move(pcs));
+  auto task = fpromise::make_promise([this, pcs = std::move(pcs)]() mutable -> ZxResult<> {
+    if (auto status = pcs_.Send(std::move(pcs)); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to send PC data: " << zx_status_get_string(status);
+      return fpromise::error(status);
+    }
     return fpromise::ok();
   });
   executor_->schedule_task(std::move(task));

@@ -79,7 +79,7 @@ TEST(CorpusTest, Load) {
   EXPECT_TRUE(files::WriteFile(files::JoinPath(d_1_2__, "1"), "baz"));
   EXPECT_TRUE(files::WriteFile(files::JoinPath(d_2_1_1, "1"), "qux"));
 
-  corpus.LoadAt(r______, {"1", "2"});
+  EXPECT_EQ(corpus.LoadAt(r______, {"1", "2"}), ZX_OK);
 
   Input inputs[5];
   for (size_t i = 0; i < 4; ++i) {

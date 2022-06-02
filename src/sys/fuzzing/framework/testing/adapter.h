@@ -9,6 +9,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <zircon/compiler.h>
 
 #include <memory>
 #include <string>
@@ -49,7 +50,7 @@ class FakeTargetAdapter final : public TargetAdapter {
   ZxPromise<Input> AwaitStart();
 
   // Sends a signal to the engine that indicates the target adapter is finished with a run.
-  zx_status_t Finish();
+  __WARN_UNUSED_RESULT zx_status_t Finish();
 
   // Returns a promise that waits for the client to disconnect.
   ZxPromise<> AwaitDisconnect();

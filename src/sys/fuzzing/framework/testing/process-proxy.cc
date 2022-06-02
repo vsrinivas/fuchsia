@@ -39,7 +39,8 @@ void FakeProcessProxy::FakeProcessProxy::Initialize(InstrumentedProcess instrume
       instrumented.process().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   process_koid_ = info.koid;
-  SignalPeer(kSync);
+  status = SignalPeer(kSync);
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 }
 
 void FakeProcessProxy::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallback callback) {
@@ -53,7 +54,8 @@ void FakeProcessProxy::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallba
   auto* module = pool_->Get(id, counters.size());
   module->Add(counters.data(), counters.size());
   counters_.push_back(std::move(counters));
-  SignalPeer(kSync);
+  auto status = SignalPeer(kSync);
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 }
 
 zx_status_t FakeProcessProxy::SignalPeer(Signal signal) {

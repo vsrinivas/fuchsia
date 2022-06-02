@@ -86,8 +86,7 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
                     switch (feedback->result) {
                       case FuzzResult::NO_ERRORS:
                         // Notify the unit test that the fuzzer completed the run.
-                        eventpair_->SignalPeer(0, kFinish);
-                        return fpromise::ok();
+                        return AsZxResult(eventpair_->SignalPeer(0, kFinish));
                       case FuzzResult::BAD_MALLOC:
                         printf("DEDUP_TOKEN: BAD_MALLOC\n");
                         Malloc(size_t(-1));
@@ -128,16 +127,20 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
   // current thread. To make |LLVMFuzzerTestOneInput| synchronous, this method needs to periodically
   // kick the loop until the promise above completes.
   context_->ScheduleTask(std::move(task));
-  context_->RunUntilIdle();
-  while (retval == ZX_ERR_SHOULD_WAIT) {
+  while (true) {
+    if (auto status = context_->RunUntilIdle(); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Loop stopped unexpectedly: " << zx_status_get_string(status);
+      return status;
+    }
+    // See the comment on the |FuzzResult::EXIT| case above. It is safe to call exit() here.
+    if (retval == ZX_ERR_STOP) {
+      exit(0);
+    }
+    if (retval != ZX_ERR_SHOULD_WAIT) {
+      return retval;
+    }
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
-    context_->RunUntilIdle();
   }
-  // See the comment on the |FuzzResult::EXIT| case above. It is safe to call exit() here.
-  if (retval == ZX_ERR_STOP) {
-    exit(0);
-  }
-  return retval;
 }
 
 void TestFuzzer::Crash() { __builtin_trap(); }

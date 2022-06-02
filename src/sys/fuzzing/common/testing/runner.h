@@ -6,6 +6,7 @@
 #define SRC_SYS_FUZZING_COMMON_TESTING_RUNNER_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <zircon/compiler.h>
 
 #include <vector>
 
@@ -39,11 +40,11 @@ class FakeRunner final : public Runner {
   void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
 
   void AddDefaults(Options* options) override;
-  zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
+  __WARN_UNUSED_RESULT zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
 
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
 
-  zx_status_t ParseDictionary(const Input& input) override;
+  __WARN_UNUSED_RESULT zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
 
   ZxPromise<> Configure(const OptionsPtr& options) override;

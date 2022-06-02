@@ -4,6 +4,9 @@
 
 #include "src/sys/fuzzing/framework/coverage/instrumentation.h"
 
+#include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
+
 namespace fuzzing {
 
 using fuchsia::fuzzer::Payload;
@@ -18,7 +21,9 @@ void InstrumentationImpl::Initialize(InstrumentedProcess instrumented,
   CoverageEvent event;
   event.target_id = target_id_;
   event.payload = Payload::WithProcessStarted(std::move(instrumented));
-  events_->Send(std::move(event));
+  if (auto status = events_->Send(std::move(event)); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to initialize process: " << zx_status_get_string(status);
+  }
   callback(CopyOptions(*options_));
 }
 
@@ -26,7 +31,9 @@ void InstrumentationImpl::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCal
   CoverageEvent event;
   event.target_id = target_id_;
   event.payload = Payload::WithLlvmModuleAdded(std::move(llvm_module));
-  events_->Send(std::move(event));
+  if (auto status = events_->Send(std::move(event)); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to add module: " << zx_status_get_string(status);
+  }
   callback();
 }
 

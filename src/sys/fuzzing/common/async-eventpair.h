@@ -6,6 +6,7 @@
 #define SRC_SYS_FUZZING_COMMON_ASYNC_EVENTPAIR_H_
 
 #include <lib/zx/eventpair.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include "src/lib/fxl/macros.h"
@@ -62,11 +63,11 @@ class AsyncEventPair final {
 
   // Clears and sets user signals on to this end of the eventpair. Non-user signals are ignored.
   // Returns an error if not connected.
-  zx_status_t SignalSelf(zx_signals_t to_clear, zx_signals_t to_set);
+  __WARN_UNUSED_RESULT zx_status_t SignalSelf(zx_signals_t to_clear, zx_signals_t to_set);
 
   // Clears and sets user signals on to the other end of the eventpair. Non-user signals are
   // ignored. Returns an error if not connected.
-  zx_status_t SignalPeer(zx_signals_t to_clear, zx_signals_t to_set);
+  __WARN_UNUSED_RESULT zx_status_t SignalPeer(zx_signals_t to_clear, zx_signals_t to_set);
 
   // Returns the subset of |signals| currently set on this end of the eventpair.
   zx_signals_t GetSignals(zx_signals_t signals);

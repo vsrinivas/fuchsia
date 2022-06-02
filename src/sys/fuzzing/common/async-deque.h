@@ -6,6 +6,7 @@
 #define SRC_SYS_FUZZING_COMMON_ASYNC_DEQUE_H_
 
 #include <lib/fit/thread_checker.h>
+#include <zircon/compiler.h>
 
 #include <deque>
 
@@ -40,7 +41,7 @@ class AsyncDeque {
   // Takes ownership of |t|. If this object has not been closed, it will resume any pending futures
   // waiting to |Receive| an |T|. Barring any calls to |Resend|, the waiter(s) will |Receive| |T|s
   // in the order they were sent. Returns |ZX_ERR_BAD_STATE| if already closed.
-  zx_status_t Send(T&& t) {
+  __WARN_UNUSED_RESULT zx_status_t Send(T&& t) {
     FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
     if (closed_) {
       return ZX_ERR_BAD_STATE;

@@ -46,8 +46,8 @@ TEST_F(AsyncDequeTest, ReceiveAfterCancel) {
     auto discarded = pipe.Receive();
     FUZZING_EXPECT_OK(pipe.Receive(), bar.Duplicate());
   }
-  pipe.Send(std::move(foo));
-  pipe.Send(std::move(bar));
+  EXPECT_EQ(pipe.Send(std::move(foo)), ZX_OK);
+  EXPECT_EQ(pipe.Send(std::move(bar)), ZX_OK);
   RunUntilIdle();
 }
 

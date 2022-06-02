@@ -6,6 +6,7 @@
 #define SRC_SYS_FUZZING_FRAMEWORK_ENGINE_CORPUS_H_
 
 #include <stddef.h>
+#include <zircon/compiler.h>
 
 #include <memory>
 #include <random>
@@ -46,14 +47,15 @@ class Corpus final {
 
   // Recusively walks the |root|-relative directories given by |dirs| and |Add|s the contents of the
   // files they contain.
-  zx_status_t LoadAt(const std::string& root, const std::vector<std::string>& dirs);
+  __WARN_UNUSED_RESULT zx_status_t LoadAt(const std::string& root,
+                                          const std::vector<std::string>& dirs);
 
   // Like |LoadAt| with |root| defaulting to "/pkg".
-  zx_status_t Load(const std::vector<std::string>& dirs);
+  __WARN_UNUSED_RESULT zx_status_t Load(const std::vector<std::string>& dirs);
 
   // Adds the input to the corpus. Returns ZX_ERR_BUFFER_TOO_SMALL if the input exceeds the max size
   // specified by the options; ZX_OK otherwise.
-  zx_status_t Add(Input input);
+  __WARN_UNUSED_RESULT zx_status_t Add(Input input);
 
   // Adds all inputs from the given |corpus| to this corpus. Returns ZX_ERR_INVALID_ARGS if |corpus|
   // is null, and ZX_ERR_BUFFER_TOO_SMALL if any/ input exceeds the max size specified by the

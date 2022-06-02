@@ -197,7 +197,9 @@ ZxPromise<Artifact> SimpleFixedRunner::Fuzz() {
              }
              next = artifact.take_input();
              if (Measure(next, /* accumulate */ true)) {
-               AddToCorpus(CorpusType::LIVE, std::move(next));
+               if (auto status = AddToCorpus(CorpusType::LIVE, std::move(next)); status != ZX_OK) {
+                 return fpromise::error(status);
+               }
                pulse_at_ = zx::deadline_after(zx::sec(1));
                UpdateMonitors(UpdateReason::NEW);
              } else if (pulse_at_ < zx::clock::get_monotonic()) {

@@ -9,6 +9,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
 #include <lib/zx/process.h>
+#include <zircon/compiler.h>
 
 #include <memory>
 #include <string_view>
@@ -37,9 +38,9 @@ class LibFuzzerRunner : public Runner {
 
   // |Runner| methods.
   void AddDefaults(Options* options) override;
-  zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
+  __WARN_UNUSED_RESULT zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
-  zx_status_t ParseDictionary(const Input& input) override;
+  __WARN_UNUSED_RESULT zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
 
   ZxPromise<> Configure(const OptionsPtr& options) override;

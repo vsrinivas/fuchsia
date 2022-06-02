@@ -13,6 +13,7 @@
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
 #include <stddef.h>
+#include <zircon/compiler.h>
 
 #include <memory>
 #include <unordered_map>
@@ -49,15 +50,15 @@ class ProcessProxy final {
   void Configure(const OptionsPtr& options);
 
   // Coverage methods.
-  zx_status_t Connect(InstrumentedProcess instrumented);
-  zx_status_t AddLlvmModule(LlvmModule llvm_module);
+  __WARN_UNUSED_RESULT zx_status_t Connect(InstrumentedProcess instrumented);
+  __WARN_UNUSED_RESULT zx_status_t AddLlvmModule(LlvmModule llvm_module);
 
   // Signals the associated process that a fuzzing run is starting and if it should |detect_leaks|.
   // Returns a promise that completes when the process acknowledges the signal.
   ZxPromise<> Start(bool detect_leaks);
 
   // Signals the associated process that a fuzzing run is finishing.
-  zx_status_t Finish();
+  __WARN_UNUSED_RESULT zx_status_t Finish();
 
   // Returns a promise that completes either when the process acknowledges a (possibly subsequent)
   // call to |Finish|, or when it encounters an error. The promise returns whether any memory leaks
@@ -65,7 +66,7 @@ class ProcessProxy final {
   Promise<bool, uint64_t> AwaitFinish();
 
   // Adds the associated process' |ProcessStats| to |out|.
-  zx_status_t GetStats(ProcessStats* out);
+  __WARN_UNUSED_RESULT zx_status_t GetStats(ProcessStats* out);
 
   // Promises to return the fuzzing result from a process that encountered a fatal error. Waits for
   // the process to terminate.

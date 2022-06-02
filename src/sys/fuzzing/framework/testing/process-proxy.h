@@ -11,6 +11,7 @@
 #include <lib/zx/process.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <unordered_map>
@@ -49,7 +50,7 @@ class FakeProcessProxy : public Instrumentation {
   void AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallback callback) override;
 
   // Send a signal to the target process. This will complete any pending |AwaitSent| promise.
-  zx_status_t SignalPeer(Signal signal);
+  __WARN_UNUSED_RESULT zx_status_t SignalPeer(Signal signal);
 
   // Returns a promise that completes when the given |signal| is received.
   Promise<> AwaitReceived(Signal signal);
