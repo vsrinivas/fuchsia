@@ -248,14 +248,18 @@ FUNCTION_LABEL(x86_syscall)
     // pre_push and post_pop macros above to maintain alignment.
 
     // Bounds-check system call number and jump to handler.
+    xorq    %r11, %r11
     cmp     $ZX_SYS_COUNT, %rax
     jae     .Lunknown_syscall
+    // Spectre V1: If syscall number >= ZX_SYS_COUNT, replace it with zero. The test/branch above
+    // means this can only occur in wrong-path speculative executions.  It's critical to the
+    // correctness of the mitigation that the following comparison is performed using cmov rather
+    // than a test / conditional branch.
+    cmovge   %r11, %rax
     leaq    .Lcall_wrapper_table(%rip), %r11
     movq    (%r11,%rax,8), %r11
-    // LFENCE stalls dispatch until outcome of bounds check is resolved and system call handler
-    // is known, preventing a Spectre V1 and V2 attack at this site.
-    lfence
-    jmp     *%r11
+    // Spectre V2: Use retpoline to invoke system call handler.
+    jmp     __x86_indirect_thunk_r11
 .Lunknown_syscall:
     mov     %rax, %rdi // move the syscall number into the 0 arg slot
     mov     %rcx, %rsi // pc into arg 1
