@@ -44,6 +44,10 @@ lazy_static! {
 // TODO(https://fxbug.dev/98653): This should be a constant in a FIDL library.
 const FIDL_VECTOR_HEADER_BYTES: usize = 16;
 
+// Number of bytes the header of a fidl message occupies.
+// TODO(https://fxbug.dev/98653): This should be a constant in a FIDL library.
+const FIDL_HEADER_BYTES: usize = 16;
+
 // Serves the fuchsia.sys2.RealmExplorer protocols.
 pub struct RealmExplorer {
     model: Arc<Model>,
@@ -190,7 +194,7 @@ fn serve_instance_info_iterator(
         while let Some(Ok(fsys::InstanceInfoIteratorRequest::Next { responder })) =
             stream.next().await
         {
-            let mut bytes_used: usize = FIDL_VECTOR_HEADER_BYTES;
+            let mut bytes_used: usize = FIDL_HEADER_BYTES + FIDL_VECTOR_HEADER_BYTES;
             let mut instance_count = 0;
 
             // Determine how many info objects can be sent in a single FIDL message.
@@ -206,7 +210,9 @@ fn serve_instance_info_iterator(
             let mut batch: Vec<fsys::InstanceInfo> =
                 instance_infos.drain(0..instance_count).collect();
 
-            if responder.send(&mut batch.iter_mut()).is_err() {
+            let result = responder.send(&mut batch.iter_mut());
+            if let Err(e) = result {
+                warn!("RealmExplorer encountered error sending instance info batch: {:?}", e);
                 break;
             }
         }
