@@ -7,6 +7,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints,
+    fidl_fuchsia_input_report::MouseInputReport,
     fidl_fuchsia_ui_input::{
         self, Axis, AxisScale, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy,
         InputDeviceRegistryMarker, InputReport, KeyboardDescriptor, KeyboardReport,
@@ -169,12 +170,7 @@ impl synthesizer::InputDevice for self::InputDevice {
             .map_err(Into::into)
     }
 
-    fn mouse(
-        &mut self,
-        _movement: Option<(u32, u32)>,
-        _pressed_buttons: Vec<synthesizer::MouseButton>,
-        _time: u64,
-    ) -> Result<(), Error> {
+    fn mouse(&mut self, _report: MouseInputReport, _time: u64) -> Result<(), Error> {
         unimplemented!(
             "Mouse input injection is not supported for tests requiring input via Root Presenter."
         )
@@ -620,7 +616,15 @@ mod tests {
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()
                 .expect("Failed to create InputDeviceProxy.");
         let mut input_device = InputDevice { fidl_proxy };
-        let _ = input_device.mouse(Some((10, 15)), vec![1, 2, 3], 200);
+        let _ = input_device.mouse(
+            MouseInputReport {
+                movement_x: Some(10),
+                movement_y: Some(15),
+                pressed_buttons: Some(vec![1, 2, 3]),
+                ..MouseInputReport::EMPTY
+            },
+            200,
+        );
     }
 
     #[test]

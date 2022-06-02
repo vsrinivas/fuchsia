@@ -17,6 +17,7 @@ declare_args() {
 fidl("test.inputsynthesis") {
   testonly = true
   sources = [ "input_synthesis.test.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.input.report" ]
 }
 
 rustc_library("input-synthesis") {

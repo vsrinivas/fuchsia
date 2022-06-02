@@ -12,6 +12,8 @@
 /// that FIDL supports.
 library test.inputsynthesis;
 
+using fuchsia.input.report;
+
 /// A protocol that allows the test to pretend to be a keyboard and inject
 /// key presses into the input pipeline.
 ///
@@ -50,6 +52,12 @@ protocol Text {
 /// if we ever see mice with more buttons. Copied from fuchsia.input.report.mouse.
 const MOUSE_MAX_NUM_BUTTONS uint32 = 32;
 
+/// Error when calling inputsynthesis protocols.
+type Error = flexible enum : uint32 {
+    /// SendInputReport receive an invalid device id.
+    INVALID_DEVICE_ID = 1;
+};
+
 /// A protocol that allows the test to pretend to be a mouse and inject
 /// mouse cursor movement and button presses into the input pipeline.
 ///
@@ -58,13 +66,18 @@ const MOUSE_MAX_NUM_BUTTONS uint32 = 32;
 /// protocol.
 @discoverable
 protocol Mouse {
-    /// Sends relative mouse movement through the input pipeline.
-    Change(struct {
-        /// The amount of relative X movement.
-        movement_x uint32;
-        /// The amount of relative Y movement.
-        movement_y uint32;
-        /// A list of currently pressed buttons.
-        pressed_buttons vector<uint8>:MOUSE_MAX_NUM_BUTTONS;
-    }) -> ();
+    /// Add a new device for testing.
+    AddDevice() -> (struct {
+        device_id uint32;
+    });
+
+    /// Send input report to specified device. Returning empty tuple will block
+    /// the caller until the input report is dispatched. `event_time` used as
+    /// the timestamp in the `InputReport`, it doesn't change the timing of
+    /// when the report is dispatched to the input pipeline.
+    SendInputReport(struct {
+        device_id uint32;
+        report fuchsia.input.report.MouseInputReport;
+        event_time uint64;
+    }) -> (struct {}) error Error;
 };

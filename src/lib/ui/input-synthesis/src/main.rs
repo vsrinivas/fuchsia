@@ -14,12 +14,17 @@
 //! If you can link to Rust code directly, you can use the `input_synthesis`
 //! library directly too, without this complication.
 
-use anyhow::Result;
-use fidl_test_inputsynthesis::{MouseRequest, MouseRequestStream, TextRequest, TextRequestStream};
-use fuchsia_async::{self as fasync, futures::StreamExt};
-use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
-use std::time::Duration;
+use {
+    anyhow::Result,
+    fidl_test_inputsynthesis::{
+        Error, MouseRequest, MouseRequestStream, TextRequest, TextRequestStream,
+    },
+    fuchsia_async::{self as fasync, futures::StreamExt},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    input_synthesis::synthesizer::InputDevice,
+    std::time::Duration,
+};
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<()> {
@@ -50,25 +55,37 @@ async fn main() -> Result<()> {
     });
     fs.dir("svc").add_fidl_service(|mut stream: MouseRequestStream| {
         fasync::Task::local(async move {
+            let mut devices: Vec<Box<dyn InputDevice>> = Vec::new();
             while let Some(request) = stream.next().await {
                 fx_log_info!("got request: {:?}", &request);
                 match request {
-                    Ok(MouseRequest::Change {
-                        movement_x,
-                        movement_y,
-                        pressed_buttons,
+                    Ok(MouseRequest::AddDevice { responder, .. }) => {
+                        let device = input_synthesis::add_mouse_device_command(127, 127)
+                            .await
+                            .expect("input device created");
+                        devices.push(device);
+                        responder
+                            .send(devices.len() as u32 - 1)
+                            .expect("send a response to MouseRequest");
+                    }
+                    Ok(MouseRequest::SendInputReport {
+                        device_id,
+                        report,
+                        event_time,
                         responder,
                         ..
                     }) => {
-                        input_synthesis::mouse_command(
-                            Some((movement_x, movement_y)),
-                            pressed_buttons,
-                            127,
-                            127,
-                        )
-                        .await
-                        .expect("mouse command is sent");
-                        responder.send().expect("send a response to MouseRequest");
+                        let id = device_id as usize;
+                        if id >= devices.len() {
+                            fx_log_err!("unknown device_id: {}", id);
+                            responder
+                                .send(&mut Err(Error::InvalidDeviceId))
+                                .expect("send a Error to MouseRequest");
+                            // This is intended to ignore the invalid request.
+                            continue;
+                        }
+                        devices[id].mouse(report, event_time).expect("synthesis mouse is sent");
+                        responder.send(&mut Ok({})).expect("send a response to MouseRequest");
                     }
                     Err(e) => {
                         fx_log_err!("could not receive request: {:?}", e);

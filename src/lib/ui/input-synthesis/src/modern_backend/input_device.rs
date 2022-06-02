@@ -139,25 +139,11 @@ impl synthesizer::InputDevice for self::InputDevice {
         )
     }
 
-    fn mouse(
-        &mut self,
-        movement: Option<(u32, u32)>,
-        pressed_buttons: Vec<synthesizer::MouseButton>,
-        time: u64,
-    ) -> Result<(), Error> {
-        let (rel_x, rel_y) = match movement {
-            Some((x, y)) => (Some(x as i64), Some(y as i64)),
-            None => (None, None),
-        };
+    fn mouse(&mut self, report: MouseInputReport, time: u64) -> Result<(), Error> {
         self.report_sender
             .unbounded_send(InputReport {
                 event_time: Some(i64::try_from(time).context("converting time to i64")?),
-                mouse: Some(MouseInputReport {
-                    movement_x: rel_x,
-                    movement_y: rel_y,
-                    pressed_buttons: Some(pressed_buttons.into_iter().map(Into::into).collect()),
-                    ..MouseInputReport::EMPTY
-                }),
+                mouse: Some(report),
                 ..InputReport::EMPTY
             })
             .context("error sending mouse InputReport")
@@ -909,7 +895,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn mouse_generates_empty_mouse_input_report() -> Result<(), Error> {
             let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
-            input_device.mouse(None, vec![], DEFAULT_REPORT_TIMESTAMP)?;
+            input_device.mouse(MouseInputReport::EMPTY, DEFAULT_REPORT_TIMESTAMP)?;
 
             let input_reports = get_input_reports(input_device, input_device_proxy).await;
             assert_eq!(
@@ -918,10 +904,7 @@ mod tests {
                     event_time: Some(
                         DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
                     ),
-                    mouse: Some(MouseInputReport {
-                        pressed_buttons: Some(vec![]),
-                        ..MouseInputReport::EMPTY
-                    }),
+                    mouse: Some(MouseInputReport { ..MouseInputReport::EMPTY }),
                     ..InputReport::EMPTY
                 }]
             );
@@ -931,7 +914,17 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn mouse_generates_full_mouse_input_report() -> Result<(), Error> {
             let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
-            input_device.mouse(Some((10, 15)), vec![1, 2, 3], DEFAULT_REPORT_TIMESTAMP)?;
+            input_device.mouse(
+                MouseInputReport {
+                    movement_x: Some(10),
+                    movement_y: Some(15),
+                    pressed_buttons: Some(vec![1, 2, 3]),
+                    scroll_v: Some(1),
+                    scroll_h: Some(-1),
+                    ..MouseInputReport::EMPTY
+                },
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
 
             let input_reports = get_input_reports(input_device, input_device_proxy).await;
             assert_eq!(
@@ -944,6 +937,8 @@ mod tests {
                         movement_x: Some(10),
                         movement_y: Some(15),
                         pressed_buttons: Some(vec![1, 2, 3]),
+                        scroll_v: Some(1),
+                        scroll_h: Some(-1),
                         ..MouseInputReport::EMPTY
                     }),
                     ..InputReport::EMPTY
@@ -955,7 +950,15 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn mouse_generates_partial_mouse_input_report() -> Result<(), Error> {
             let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
-            input_device.mouse(Some((10, 15)), vec![], DEFAULT_REPORT_TIMESTAMP)?;
+            input_device.mouse(
+                MouseInputReport {
+                    movement_x: Some(10),
+                    movement_y: Some(15),
+                    pressed_buttons: Some(vec![]),
+                    ..MouseInputReport::EMPTY
+                },
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
 
             let input_reports = get_input_reports(input_device, input_device_proxy).await;
             assert_eq!(

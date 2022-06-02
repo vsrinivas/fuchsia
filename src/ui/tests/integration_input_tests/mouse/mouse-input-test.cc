@@ -4,6 +4,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/input/report/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -228,6 +229,21 @@ class MouseInputBase : public gtest::RealLoopFixture {
     RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
   }
 
+  uint32_t AddMouseDevice(fidl::InterfacePtr<test::inputsynthesis::Mouse>& input_synthesis) {
+    uint32_t device_id;
+    bool new_device_completed = false;
+
+    input_synthesis->AddDevice([&device_id, &new_device_completed](uint32_t id) {
+      device_id = id;
+      new_device_completed = true;
+    });
+
+    // wait for new device creation.
+    RunLoopUntil([&new_device_completed] { return new_device_completed; });
+
+    return device_id;
+  }
+
   // Guaranteed to be initialized after SetUp().
   uint32_t display_width() const { return display_width_; }
   uint32_t display_height() const { return display_height_; }
@@ -309,6 +325,8 @@ TEST_F(FlutterInputTest, FlutterMouseMove) {
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
   LaunchClient();
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
+  uint32_t device_id = AddMouseDevice(input_synthesis);
 
   // If the first mouse event is cursor movement, Flutter first sends an ADD event with updated
   // location.
@@ -320,9 +338,15 @@ TEST_F(FlutterInputTest, FlutterMouseMove) {
                             /*component_name=*/"mouse-input-flutter", injection_complete);
 
   bool injection_initiated = false;
-  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
-  input_synthesis->Change(1, 2, std::vector<uint8_t>(),
-                          [&injection_initiated]() { injection_initiated = true; });
+  fuchsia::input::report::MouseInputReport report;
+  report.set_movement_x(1);
+  report.set_movement_y(2);
+  auto ts = static_cast<uint64_t>(zx::clock::get_monotonic().get());
+  input_synthesis->SendInputReport(
+      device_id, std::move(report), ts, [&injection_initiated](auto result) {
+        ASSERT_FALSE(result.is_err()) << "SendInputReport failed " << result.err();
+        injection_initiated = true;
+      });
 
   RunLoopUntil([&injection_initiated] { return injection_initiated; });
 
@@ -334,6 +358,8 @@ TEST_F(FlutterInputTest, FlutterMouseDown) {
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
   LaunchClient();
+  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
+  uint32_t device_id = AddMouseDevice(input_synthesis);
 
   // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
   bool add_event_complete = false;
@@ -360,9 +386,16 @@ TEST_F(FlutterInputTest, FlutterMouseDown) {
                             /*component_name=*/"mouse-input-flutter", move_event_complete);
 
   bool injection_initiated = false;
-  auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
-  input_synthesis->Change(0, 0, std::vector<uint8_t>(fuchsia::ui::input::kMousePrimaryButton),
-                          [&injection_initiated]() { injection_initiated = true; });
+  fuchsia::input::report::MouseInputReport report;
+  report.set_movement_x(0);
+  report.set_movement_y(0);
+  report.set_pressed_buttons({0});
+  auto ts = static_cast<uint64_t>(zx::clock::get_monotonic().get());
+  input_synthesis->SendInputReport(
+      device_id, std::move(report), ts, [&injection_initiated](auto result) {
+        ASSERT_FALSE(result.is_err()) << "SendInputReport failed " << result.err();
+        injection_initiated = true;
+      });
 
   RunLoopUntil([&injection_initiated] { return injection_initiated; });
   RunLoopUntil([&add_event_complete] { return add_event_complete; });
