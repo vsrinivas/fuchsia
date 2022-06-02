@@ -66,7 +66,7 @@ source_set("engine-lib") {
 executable("engine-bin") {
   output_name = "component_fuzzing_engine"
   testonly = true
-  sources = [ "engine.cc" ]
+  sources = [ "engine-main.cc" ]
   deps = [ ":engine-lib" ]
 }
 

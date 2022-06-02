@@ -8,12 +8,21 @@
 namespace fuzzing {
 
 zx_status_t RunLibFuzzerRelay() {
+  // Take start up handles.
   auto context = ComponentContext::Create();
+
+  // Create the test relay.
   RelayImpl relay(context->executor());
-  context->AddPublicService(relay.GetHandler());
+
+  // Serve |test.fuzzer.Relay|.
+  if (auto status = context->AddPublicService(relay.GetHandler()); status != ZX_OK) {
+    FX_LOGS(ERROR) << " Failed to serve test.fuzzer.Relay: " << zx_status_get_string(status);
+    return status;
+  }
+
   return context->Run();
 }
 
 }  // namespace fuzzing
 
-int main(int argc, char** argv) { return fuzzing::RunLibFuzzerRelay(); }
+int main() { return fuzzing::RunLibFuzzerRelay(); }

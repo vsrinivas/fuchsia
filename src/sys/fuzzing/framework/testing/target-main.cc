@@ -10,15 +10,26 @@
 #include <stdlib.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
-int main(int argc, char** argv) {
+namespace fuzzing {
+
+zx_status_t RunTestTarget() {
+  // Take start up handles.
   zx::channel channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+
+  // Wait to read how this process should exit.
   auto status =
       channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
-  FX_CHECK(status == ZX_OK);
-  int exitcode = 0;
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
+
+  zx_status_t exitcode = 0;
   status = channel.read(0, &exitcode, nullptr, sizeof(exitcode), 0, nullptr, nullptr);
-  FX_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
   return exitcode;
 }
+
+}  // namespace fuzzing
+
+int main() { return fuzzing::RunTestTarget(); }

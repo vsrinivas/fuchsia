@@ -21,6 +21,6 @@ source_set("testing") {
 executable("fuzzer") {
   output_name = "component_fuzzing_test_fuzzer"
   testonly = true
-  sources = [ "engine.cc" ]
+  sources = [ "engine-main.cc" ]
   deps = [ ":testing" ]
 }

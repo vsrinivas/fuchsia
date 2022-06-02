@@ -30,10 +30,6 @@ class ControllerProviderImpl final : public ControllerProvider {
   void Connect(fidl::InterfaceRequest<Controller> request, ConnectCallback callback) override;
   void Stop() override;
 
-  // Sets the given |runner|, then takes the startup channel provided by the fuzz_test_runner and
-  // returns a promise to |Serve| the |fuchsia.fuzzer.ControllerProvider| protocol on it.
-  Promise<> Run(RunnerPtr runner);
-
   // Sets the runner. Except for unit tests, callers should prefer |Run|.
   void SetRunner(RunnerPtr runner);
 

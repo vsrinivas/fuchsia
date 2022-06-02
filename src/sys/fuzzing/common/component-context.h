@@ -47,18 +47,21 @@ class ComponentContext final {
 
   // Adds an interface request handler for a protocol capability provided by this component.
   template <typename Interface>
-  void AddPublicService(fidl::InterfaceRequestHandler<Interface> handler) const {
-    auto status = outgoing_->AddPublicService(std::move(handler));
-    FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
+  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler) const {
+    return outgoing_->AddPublicService(std::move(handler));
+  }
+
+  // Connects a |request| to a protocol capability provided by another component.
+  template <typename Interface>
+  zx_status_t Connect(fidl::InterfaceRequest<Interface> request) {
+    return Connect(svc_, std::move(request));
   }
 
   // Returns a handler to connect |request|s to a protocol capability provided by another component.
   template <typename Interface>
   fidl::InterfaceRequestHandler<Interface> MakeRequestHandler() {
     return [svc = svc_](fidl::InterfaceRequest<Interface> request) {
-      auto status = svc->Connect(std::move(request));
-      FX_CHECK(status == ZX_OK) << "failed to connect to " << Interface::Name_ << ": "
-                                << zx_status_get_string(status);
+      Connect(svc, std::move(request));
     };
   }
 
@@ -75,6 +78,17 @@ class ComponentContext final {
   zx_status_t RunUntilIdle();
 
  private:
+  // Connects a |request| to a protocol capability provided by another component.
+  template <typename Interface>
+  static zx_status_t Connect(ServiceDirectoryPtr svc, fidl::InterfaceRequest<Interface> request) {
+    if (auto status = svc->Connect(std::move(request)); status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to connect to " << Interface::Name_ << ": "
+                     << zx_status_get_string(status);
+      return status;
+    }
+    return ZX_OK;
+  }
+
   LoopPtr loop_;
   ExecutorPtr executor_;
   ServiceDirectoryPtr svc_;

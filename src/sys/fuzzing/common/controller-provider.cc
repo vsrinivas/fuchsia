@@ -5,8 +5,6 @@
 #include "src/sys/fuzzing/common/controller-provider.h"
 
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
 
 namespace fuzzing {
 
@@ -33,12 +31,6 @@ void ControllerProviderImpl::Stop() { controller_.Stop(); }
 
 ///////////////////////////////////////////////////////////////
 // Run-related methods
-
-Promise<> ControllerProviderImpl::Run(RunnerPtr runner) {
-  SetRunner(std::move(runner));
-  zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
-  return Serve(std::move(channel));
-}
 
 void ControllerProviderImpl::SetRunner(RunnerPtr runner) {
   FX_CHECK(runner);
