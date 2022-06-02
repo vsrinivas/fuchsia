@@ -40,7 +40,7 @@ if (is_fuchsia) {
   supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 
   files = {
-    images_config = "$target_out_dir/fuchsia.image_assembly_config.json"
+    images_config = "$target_out_dir/fuchsia.images_config.json"
     partitions_config = "$target_out_dir/partitions_config.json"
     assembly_inputs = "$target_out_dir/fuchsia/assembly_inputs.json"
     platform_aib_dir = get_label_info("//build/assembly", "target_out_dir")
