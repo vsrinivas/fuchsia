@@ -10,10 +10,8 @@
     ],
     use: [
         {
-            directory: "hub",
+            protocol: "fuchsia.sys2.LifecycleController",
             from: "framework",
-            rights: [ "rw*" ],
-            path: "/hub",
         },
         { protocol: "fuchsia.sys2.EventSource" },
         {

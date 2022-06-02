@@ -47,7 +47,6 @@ const REALM_COLLECTION_NAME: &str = "netemul";
 const NETEMUL_SERVICES_COMPONENT_NAME: &str = "netemul-services";
 const DEVFS: &str = "dev";
 const DEVFS_PATH: &str = "/dev";
-const HUB: &str = "hub";
 
 #[derive(Error, Debug)]
 enum CreateRealmError {
@@ -452,7 +451,7 @@ async fn create_realm_instance(
     let () = builder
         .add_route(
             Route::new()
-                .capability(Capability::directory(HUB).rights(fio::RW_STAR_DIR))
+                .capability(Capability::protocol::<fsys2::LifecycleControllerMarker>())
                 .from(Ref::framework())
                 .to(Ref::parent()),
         )
@@ -656,15 +655,9 @@ impl ManagedRealm {
                     let realm_ref = &realm;
                     let response = async move {
                         let lifecycle =
-                            fuchsia_component::client::connect_to_named_protocol_at_dir_root::<
+                            fuchsia_component::client::connect_to_protocol_at_dir_root::<
                                 fsys2::LifecycleControllerMarker,
-                            >(
-                                realm_ref.root.get_exposed_dir(),
-                                &format!(
-                                    "hub/debug/{}",
-                                    fsys2::LifecycleControllerMarker::PROTOCOL_NAME
-                                ),
-                            )
+                            >(realm_ref.root.get_exposed_dir())
                             .map_err(|e: anyhow::Error| {
                                 error!("failed to open proxy to lifecycle controller: {}", e);
                                 Err(zx::Status::INTERNAL)

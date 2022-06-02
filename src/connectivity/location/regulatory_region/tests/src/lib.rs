@@ -4,14 +4,12 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::DiscoverableProtocolMarker as _,
-    fidl_fuchsia_io as fio,
     fidl_fuchsia_location_namedplace::{
         RegulatoryRegionConfiguratorMarker, RegulatoryRegionConfiguratorProxy as ConfigProxy,
         RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherProxy as WatcherProxy,
     },
     fidl_fuchsia_sys2 as fsys2,
-    fuchsia_component::client::connect_to_named_protocol_at_dir_root,
+    fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
 };
 
@@ -182,9 +180,8 @@ struct TestContext {
 }
 
 async fn stop_component(realm_ref: &RealmInstance, child_name: &str) {
-    let lifecycle = connect_to_named_protocol_at_dir_root::<fsys2::LifecycleControllerMarker>(
+    let lifecycle = connect_to_protocol_at_dir_root::<fsys2::LifecycleControllerMarker>(
         realm_ref.root.get_exposed_dir(),
-        &format!("hub/debug/{}", fsys2::LifecycleControllerMarker::PROTOCOL_NAME),
     )
     .expect("Failed to connect to LifecycleController");
     lifecycle.stop(&format!("./{}", child_name), true).await.unwrap().unwrap();
@@ -223,7 +220,7 @@ async fn new_test_context() -> Result<TestContext, Error> {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::directory("hub").rights(fio::R_STAR_DIR))
+                .capability(Capability::protocol::<fsys2::LifecycleControllerMarker>())
                 .from(Ref::framework())
                 .to(Ref::parent()),
         )
