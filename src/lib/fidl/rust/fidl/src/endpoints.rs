@@ -34,13 +34,6 @@ pub trait ProtocolMarker: Sized + Send + Sync + 'static {
 
     /// The name of the protocol suitable for debug purposes.
     ///
-    /// This will be removed-- users should switch to either
-    /// `DEBUG_NAME` or `DiscoverableProtocolMarker::PROTOCOL_NAME`.
-    #[deprecated = "Use ProtocolMarker::DEBUG_NAME or DiscoverableProtocolMarker::PROTOCOL_NAME instead"]
-    const NAME: &'static str = Self::DEBUG_NAME;
-
-    /// The name of the protocol suitable for debug purposes.
-    ///
     /// For discoverable protocols, this should be identical to
     /// `<Self as DiscoverableProtocolMarker>::PROTOCOL_NAME`.
     const DEBUG_NAME: &'static str;
