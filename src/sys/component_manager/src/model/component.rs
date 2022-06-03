@@ -2689,13 +2689,8 @@ pub mod tests {
         assert!(is_discovered(&component_c).await);
         assert!(is_discovered(&component_d).await);
 
-        // Error to try to unresolve an already unresolved component.
-        assert_matches!(
-            component_a.unresolve().await,
-            Err(ModelError::ComponentInstanceError {
-                err: ComponentInstanceError::UnresolveFailed { .. }
-            })
-        );
+        // Unresolve again, which is ok because UnresolveAction is idempotent.
+        assert_matches!(component_a.unresolve().await, Ok(()));
         assert!(is_discovered(&component_a).await);
     }
 

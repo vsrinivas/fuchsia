@@ -537,12 +537,10 @@ mod tests {
             Err(fcomponent::Error::InstanceNotFound)
         );
 
-        // TODO(fxbug.dev/101406): For idempotency, make unresolving a Discovered component a
-        // NOP/Ok(()).
-        assert_eq!(
-            lifecycle_proxy.unresolve(".").await.unwrap(),
-            Err(fcomponent::Error::InstanceCannotUnresolve)
-        );
+        // Unresolve again, which is ok because UnresolveAction is idempotent.
+        assert_eq!(lifecycle_proxy.unresolve(".").await.unwrap(), Ok(()));
+        assert!(is_discovered(&component_a).await);
+        assert!(is_discovered(&component_b).await);
     }
 
     #[fuchsia::test]

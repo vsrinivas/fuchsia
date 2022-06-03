@@ -42,7 +42,7 @@ impl Action for UnresolveAction {
 async fn emit_unresolve_failed_event(
     component: &Arc<ComponentInstance>,
     msg: String,
-) -> Result<(), ModelError> {
+) -> Result<bool, ModelError> {
     let e = ModelError::from(ComponentInstanceError::unresolve_failed(
         component.abs_moniker.clone(),
         anyhow!(msg),
@@ -52,29 +52,30 @@ async fn emit_unresolve_failed_event(
     Err(e)
 }
 
-// Check that the component isn't running and its InstanceState is Unresolved, else return an error.
-async fn gate_on_resolved_state(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
+// Check the component state for applicability of the UnresolveAction. Return Ok(true) if the
+// component is Discovered so UnresolveAction can early-return. Return Ok(false) if the component is
+// resolved so UnresolveAction can proceed. Return an error if the component is running or in an
+// incompatible state.
+async fn check_state(component: &Arc<ComponentInstance>) -> Result<bool, ModelError> {
     if component.lock_execution().await.runtime.is_some() {
         return emit_unresolve_failed_event(component, "component was running".to_string()).await;
     }
-    let is_resolved = {
-        let state = component.lock_state().await;
-        matches!(*state, InstanceState::Resolved(_))
-    };
-    if !is_resolved {
-        return emit_unresolve_failed_event(component, "component was not resolved".to_string())
-            .await;
-    };
-    Ok(())
+    match *component.lock_state().await {
+        InstanceState::Discovered => return Ok(true),
+        InstanceState::Resolved(_) => return Ok(false),
+        _ => {}
+    }
+    emit_unresolve_failed_event(component, "component was not discovered or resolved".to_string())
+        .await
 }
 
 async fn unresolve_resolved_children(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
     let mut resolved_children: Vec<Arc<ComponentInstance>> = vec![];
     {
         let state = component.lock_resolved_state().await?;
-        // Collect only the resolved children. It is not required that all children are resolved
-        // for successful recursion. It's also an error to try to resolve components that are
-        // not resolved, so don't include them.
+        // Collect only the resolved children. It is not required that all children are resolved for
+        // successful recursion. It's also unnecessary to unresolve components that are not
+        // resolved, so don't include them.
         for (_, child_instance) in state.live_children() {
             let child_state = child_instance.lock_state().await;
             if matches!(*child_state, InstanceState::Resolved(_)) {
@@ -96,7 +97,9 @@ async fn do_unresolve(component: &Arc<ComponentInstance>) -> Result<(), ModelErr
     // Shut down the component, preventing new starts or resolves during the UnresolveAction.
     ActionSet::register(component.clone(), ShutdownAction::new()).await?;
 
-    gate_on_resolved_state(&component).await?;
+    if check_state(&component).await? {
+        return Ok(());
+    }
 
     unresolve_resolved_children(&component).await?;
 
@@ -117,8 +120,12 @@ async fn do_unresolve(component: &Arc<ComponentInstance>) -> Result<(), ModelErr
     };
 
     if !success {
-        return emit_unresolve_failed_event(component, "component was not resolved".to_string())
-            .await;
+        return emit_unresolve_failed_event(
+            component,
+            "state change failed in UnresolveAction".to_string(),
+        )
+        .await
+        .map(|_| ());
     }
 
     // The component was shut down, so won't start. Re-enable it.
@@ -138,8 +145,8 @@ pub mod tests {
             actions::{ActionSet, DestroyChildAction, ShutdownAction, UnresolveAction},
             component::{ComponentInstance, InstanceState, StartReason},
             error::ModelError,
-            events::{event::Event, registry::EventSubscription, stream::EventStream},
-            hooks::{Event as ComponentEvent, EventError, EventType},
+            events::{registry::EventSubscription, stream::EventStream},
+            hooks::EventType,
             starter::Starter,
             testing::test_helpers::{component_decl_with_test_runner, ActionsTest},
         },
@@ -190,12 +197,10 @@ pub mod tests {
         assert!(is_discovered(&component_b).await);
         assert!(is_discovered(&component_c).await);
 
-        // Try to unresolve again, but it's an error to unresolve a Discovered component.
+        // Unresolve again, which is ok because UnresolveAction is idempotent.
         assert_matches!(
             ActionSet::register(component_a.clone(), UnresolveAction::new()).await,
-            Err(ModelError::ComponentInstanceError {
-                err: ComponentInstanceError::UnresolveFailed { .. }
-            })
+            Ok(())
         );
         // Still Discovered.
         assert!(is_discovered(&component_a).await);
@@ -296,28 +301,14 @@ pub mod tests {
         nf.await.unwrap();
 
         // Now attempt to unresolve again with another UnresolveAction.
-        let _nf = {
+        let nf2 = {
             let mut actions = component_a.lock_actions().await;
             actions.register_no_wait(&component_a, UnresolveAction::new())
         };
-
-        // The component is not resolved anymore, so the unresolve will fail, emitting an
-        // UnresolveFailed event.
-        assert_matches!(
-            event_stream.next().await,
-            Some(Event {
-                event: ComponentEvent {
-                    result: Err(EventError {
-                        source: ModelError::ComponentInstanceError {
-                            err: ComponentInstanceError::UnresolveFailed { .. }
-                        },
-                        ..
-                    }),
-                    ..
-                },
-                ..
-            })
-        );
+        // The component is not resolved anymore, so the unresolve will have no effect. It will not
+        // emit an UnresolveFailed event.
+        nf2.await.unwrap();
+        assert!(is_discovered(&component_a).await);
     }
 
     /// Start a collection with the given durability. The system has a root with a container that
