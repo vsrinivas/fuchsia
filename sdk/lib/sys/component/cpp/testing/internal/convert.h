@@ -16,7 +16,7 @@ namespace internal {
 
 fuchsia::component::test::ChildOptions ConvertToFidl(const ChildOptions& options);
 fuchsia::component::decl::Ref ConvertToFidl(Ref ref);
-fuchsia::component::test::Capability2 ConvertToFidl(Capability capability);
+fuchsia::component::test::Capability ConvertToFidl(Capability capability);
 
 template <class Input, class Output>
 std::vector<Output> ConvertToFidlVec(std::vector<Input> inputs) {

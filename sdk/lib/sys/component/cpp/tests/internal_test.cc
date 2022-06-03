@@ -226,7 +226,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair(ChildRef{.name = "foo"}, component::tests::CreateFidlChildRef("foo"))));
 
 class ConvertCapabilityParameterizedFixture
-    : public ConvertParameterizedFixture<Capability, fctest::Capability2> {};
+    : public ConvertParameterizedFixture<Capability, fctest::Capability> {};
 
 ZX_COMPONENT_TYPED_TEST_P(ConvertCapabilityParameterizedFixture, ConvertsAllField)
 INSTANTIATE_TEST_SUITE_P(

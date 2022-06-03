@@ -839,26 +839,26 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
     // fail to replace a config field in a component that doesn't have a config schema
     assert_matches!(
         builder.replace_config_value_bool(&echo_server, "echo_bool", false).await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::NoConfigSchema))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::NoConfigSchema))
     );
 
     // fail to replace a field that doesn't exist
     assert_matches!(
         builder.replace_config_value_string(&echo_client, "doesnt_exist", "test").await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::NoSuchConfigField))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::NoSuchConfigField))
     );
 
     // fail to replace a field with the wrong type
     assert_matches!(
         builder.replace_config_value_string(&echo_client, "echo_bool", "test").await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigValueInvalid))
     );
 
     // fail to replace a string that violates max_len
     let long_string = String::from_utf8(vec![b'F'; 20]).unwrap();
     assert_matches!(
         builder.replace_config_value_string(&echo_client, "echo_string", long_string.clone()).await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigValueInvalid))
     );
 
     // fail to replace a vector whose string element violates max_len
@@ -870,7 +870,7 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
                 vec![long_string]
             )
             .await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigValueInvalid))
     );
 
     // fail to replace a vector that violates max_count
@@ -882,7 +882,7 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
                 vec!["a", "b", "c", "d"],
             )
             .await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ConfigValueInvalid))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigValueInvalid))
     );
 
     // succeed at replacing all fields with proper constraints
@@ -1241,7 +1241,7 @@ async fn route_required_fields_for_local_component() {
         let assert_add_route_results = |results| match (extra_fields_are_required, results) {
             (
                 true,
-                Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::CapabilityInvalid)),
+                Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::CapabilityInvalid)),
             ) => (),
             (false, Ok(())) => (),
             (true, Ok(())) => {
@@ -1453,14 +1453,14 @@ async fn fail_to_set_invalid_decls() -> Result<(), Error> {
     // We cannot replace the decl for a child added with an absolute URL
     assert_matches!(
         builder.replace_component_decl(&child_a, cm_rust::ComponentDecl::default()).await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ChildDeclNotVisible))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ChildDeclNotVisible))
     );
 
     // We cannot replace the decl for a local component with one missing the realm-builder
     // specifics in the program section
     assert_matches!(
         builder.replace_component_decl(&child_b, cm_rust::ComponentDecl::default()).await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ImmutableProgram))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ImmutableProgram))
     );
 
     // We cannot replace the decl for a component with an invalid decl (references a non-existent
@@ -1480,7 +1480,7 @@ async fn fail_to_set_invalid_decls() -> Result<(), Error> {
                 }
             )
             .await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::InvalidComponentDecl))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::InvalidComponentDecl))
     );
 
     // We cannot replace the realm's decl with an invalid decl (references a non-existent child)
@@ -1496,7 +1496,7 @@ async fn fail_to_set_invalid_decls() -> Result<(), Error> {
                 ..cm_rust::ComponentDecl::default()
             })
             .await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::InvalidComponentDecl))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::InvalidComponentDecl))
     );
 
     // We _can_ replace the realm's decl with a decl that references children added with the
@@ -1638,12 +1638,12 @@ async fn from_relative_url_invalid_manifest() -> Result<(), Error> {
     // The file referenced here is intentionally not a component manifest
     assert_matches!(
         RealmBuilder::from_relative_url("#data/component_manager_realm_builder_config").await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::DeclReadError))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::DeclReadError))
     );
 
     assert_matches!(
         RealmBuilder::from_relative_url("#meta/does-not-exist.cm").await,
-        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::DeclNotFound))
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::DeclNotFound))
     );
 
     Ok(())

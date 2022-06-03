@@ -62,7 +62,7 @@ fuchsia::component::decl::Ref ConvertToFidl(Ref ref) {
   ZX_PANIC("ConvertToFidl(Ref) reached unreachable block!");
 }
 
-fuchsia::component::test::Capability2 ConvertToFidl(Capability capability) {
+fuchsia::component::test::Capability ConvertToFidl(Capability capability) {
   if (auto protocol = cpp17_get_if<Protocol>(&capability)) {
     fuchsia::component::test::Protocol fidl_capability;
 
@@ -71,7 +71,7 @@ fuchsia::component::test::Capability2 ConvertToFidl(Capability capability) {
     ZX_COMPONENT_ADD_STR_IF_PRESENT(protocol, path, fidl_capability);
     ZX_COMPONENT_ADD_IF_PRESENT(protocol, type, fidl_capability);
 
-    return fuchsia::component::test::Capability2::WithProtocol(std::move(fidl_capability));
+    return fuchsia::component::test::Capability::WithProtocol(std::move(fidl_capability));
   }
   if (auto service = cpp17_get_if<Service>(&capability)) {
     fuchsia::component::test::Service fidl_capability;
@@ -80,7 +80,7 @@ fuchsia::component::test::Capability2 ConvertToFidl(Capability capability) {
     ZX_COMPONENT_ADD_STR_IF_PRESENT(service, as, fidl_capability);
     ZX_COMPONENT_ADD_STR_IF_PRESENT(service, path, fidl_capability);
 
-    return fuchsia::component::test::Capability2::WithService(std::move(fidl_capability));
+    return fuchsia::component::test::Capability::WithService(std::move(fidl_capability));
   }
   if (auto directory = cpp17_get_if<Directory>(&capability)) {
     fuchsia::component::test::Directory fidl_capability;
@@ -92,7 +92,7 @@ fuchsia::component::test::Capability2 ConvertToFidl(Capability capability) {
     ZX_COMPONENT_ADD_IF_PRESENT(directory, rights, fidl_capability);
     ZX_COMPONENT_ADD_STR_IF_PRESENT(directory, path, fidl_capability);
 
-    return fuchsia::component::test::Capability2::WithDirectory(std::move(fidl_capability));
+    return fuchsia::component::test::Capability::WithDirectory(std::move(fidl_capability));
   }
   if (auto storage = cpp17_get_if<Storage>(&capability)) {
     fuchsia::component::test::Storage fidl_capability;
@@ -101,7 +101,7 @@ fuchsia::component::test::Capability2 ConvertToFidl(Capability capability) {
     ZX_COMPONENT_ADD_STR_IF_PRESENT(storage, as, fidl_capability);
     ZX_COMPONENT_ADD_STR_IF_PRESENT(storage, path, fidl_capability);
 
-    return fuchsia::component::test::Capability2::WithStorage(std::move(fidl_capability));
+    return fuchsia::component::test::Capability::WithStorage(std::move(fidl_capability));
   }
 
   ZX_PANIC("ConvertToFidl(Capability) reached unreachable block!");

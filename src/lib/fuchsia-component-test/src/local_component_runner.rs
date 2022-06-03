@@ -186,7 +186,7 @@ impl LocalComponentRunnerBuilder {
         &self,
         name: String,
         implementation: I,
-    ) -> Result<(), ftest::RealmBuilderError2>
+    ) -> Result<(), ftest::RealmBuilderError>
     where
         I: Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), Error>>
             + Sync
@@ -197,7 +197,7 @@ impl LocalComponentRunnerBuilder {
             .lock()
             .await
             .as_mut()
-            .ok_or(ftest::RealmBuilderError2::BuildAlreadyCalled)?
+            .ok_or(ftest::RealmBuilderError::BuildAlreadyCalled)?
             .insert(name, Arc::new(implementation));
         Ok(())
     }
@@ -206,14 +206,14 @@ impl LocalComponentRunnerBuilder {
         self,
     ) -> Result<
         (ClientEnd<fcrunner::ComponentRunnerMarker>, fasync::Task<()>),
-        ftest::RealmBuilderError2,
+        ftest::RealmBuilderError,
     > {
         let local_component_implementations = self
             .local_component_implementations
             .lock()
             .await
             .take()
-            .ok_or(ftest::RealmBuilderError2::BuildAlreadyCalled)?;
+            .ok_or(ftest::RealmBuilderError::BuildAlreadyCalled)?;
         let (runner_client_end, runner_request_stream) =
             create_request_stream::<fcrunner::ComponentRunnerMarker>()
                 .expect("failed to create channel pair");

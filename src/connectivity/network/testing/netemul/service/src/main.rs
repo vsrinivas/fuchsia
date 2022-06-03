@@ -91,19 +91,19 @@ impl Into<zx::Status> for CreateRealmError {
                 // The following types of errors from the realm builder library are likely due to
                 // client error (e.g. attempting to create a realm with an invalid configuration).
                 fcomponent::error::Error::ServerError(
-                    ftest::RealmBuilderError2::ChildAlreadyExists
-                    | ftest::RealmBuilderError2::InvalidManifestExtension
-                    | ftest::RealmBuilderError2::InvalidComponentDecl
-                    | ftest::RealmBuilderError2::NoSuchChild
-                    | ftest::RealmBuilderError2::ChildDeclNotVisible
-                    | ftest::RealmBuilderError2::NoSuchSource
-                    | ftest::RealmBuilderError2::NoSuchTarget
-                    | ftest::RealmBuilderError2::CapabilitiesEmpty
-                    | ftest::RealmBuilderError2::TargetsEmpty
-                    | ftest::RealmBuilderError2::SourceAndTargetMatch
-                    | ftest::RealmBuilderError2::DeclNotFound
-                    | ftest::RealmBuilderError2::CapabilityInvalid
-                    | ftest::RealmBuilderError2::ImmutableProgram,
+                    ftest::RealmBuilderError::ChildAlreadyExists
+                    | ftest::RealmBuilderError::InvalidManifestExtension
+                    | ftest::RealmBuilderError::InvalidComponentDecl
+                    | ftest::RealmBuilderError::NoSuchChild
+                    | ftest::RealmBuilderError::ChildDeclNotVisible
+                    | ftest::RealmBuilderError::NoSuchSource
+                    | ftest::RealmBuilderError::NoSuchTarget
+                    | ftest::RealmBuilderError::CapabilitiesEmpty
+                    | ftest::RealmBuilderError::TargetsEmpty
+                    | ftest::RealmBuilderError::SourceAndTargetMatch
+                    | ftest::RealmBuilderError::DeclNotFound
+                    | ftest::RealmBuilderError::CapabilityInvalid
+                    | ftest::RealmBuilderError::ImmutableProgram,
                 ) => zx::Status::INVALID_ARGS,
                 // The following types of realm builder errors are unlikely to be attributable to
                 // the client, and are more likely to indicate e.g. a transport error or an
@@ -120,7 +120,7 @@ impl Into<zx::Status> for CreateRealmError {
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::ServerError(e) => {
-                    let _: ftest::RealmBuilderError2 = e;
+                    let _: ftest::RealmBuilderError = e;
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::RefUsedInWrongRealm(

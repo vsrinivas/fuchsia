@@ -115,7 +115,7 @@ impl RealmBuilderFactory {
                     responder,
                 } => {
                     if !is_relative_url(&relative_url) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::UrlIsNotRelative))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::UrlIsNotRelative))?;
                         continue;
                     }
                     let pkg_dir = match pkg_dir_handle
@@ -125,12 +125,12 @@ impl RealmBuilderFactory {
                         Ok(pkg_dir) => pkg_dir,
                         Err(e) => {
                             responder
-                                .send(&mut Err(ftest::RealmBuilderError2::InvalidPkgDirHandle))?;
+                                .send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;
                             return Err(e);
                         }
                     };
                     if let Err(e) = pkg_dir.describe().await.context("pkg_dir.describe() failed") {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::InvalidPkgDirHandle))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;
                         return Err(e);
                     }
                     let realm_node = match RealmNode2::load_from_pkg(
@@ -164,7 +164,7 @@ impl RealmBuilderFactory {
                         .into_proxy()
                         .context("failed to convert pkg_dir ClientEnd to proxy")?;
                     if let Err(e) = pkg_dir.describe().await.context("pkg_dir.describe() failed") {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::InvalidPkgDirHandle))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;
                         return Err(e);
                     }
                     self.create_realm_and_builder(
@@ -249,7 +249,7 @@ impl Builder {
             match req {
                 ftest::BuilderRequest::Build { runner, responder } => {
                     if self.realm_has_been_built.swap(true, Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     let runner_proxy = runner
@@ -295,7 +295,7 @@ impl Realm {
             match req {
                 ftest::RealmRequest::AddChild { name, url, options, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.add_child(name.clone(), url.clone(), options).await {
@@ -311,7 +311,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::AddLegacyChild { name, legacy_url, options, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.add_legacy_child(name.clone(), legacy_url.clone(), options).await {
@@ -327,7 +327,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::AddChildFromDecl { name, decl, options, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.add_child_from_decl(name.clone(), decl, options).await {
@@ -340,7 +340,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::AddLocalChild { name, options, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.add_local_child(name.clone(), options).await {
@@ -353,7 +353,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::AddChildRealm { name, options, child_realm, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.add_child_realm(name.clone(), options, child_realm).await {
@@ -366,7 +366,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::GetComponentDecl { name, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.get_component_decl(name.clone()).await {
@@ -379,7 +379,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::ReplaceComponentDecl { name, component_decl, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.replace_component_decl(name.clone(), component_decl).await {
@@ -392,14 +392,14 @@ impl Realm {
                 }
                 ftest::RealmRequest::GetRealmDecl { responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     responder.send(&mut Ok(self.get_realm_decl().await))?;
                 }
                 ftest::RealmRequest::ReplaceRealmDecl { component_decl, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.replace_realm_decl(component_decl).await {
@@ -412,7 +412,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::AddRoute { capabilities, from, to, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.realm_node.route_capabilities(capabilities, from, to).await {
@@ -432,7 +432,7 @@ impl Realm {
                     responder,
                 } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.read_only_directory(name, to, directory_contents).await {
@@ -447,7 +447,7 @@ impl Realm {
                 }
                 ftest::RealmRequest::ReplaceConfigValue { name, key, value, responder } => {
                     if self.realm_has_been_built.load(Ordering::Relaxed) {
-                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
                         continue;
                     }
                     match self.replace_config_value(name, key, value).await {
@@ -673,7 +673,7 @@ impl Realm {
         let path = Some(format!("/{}", directory_name));
         self.realm_node
             .route_capabilities(
-                vec![ftest::Capability2::Directory(ftest::Directory {
+                vec![ftest::Capability::Directory(ftest::Directory {
                     name: Some(directory_name),
                     rights: Some(fio::R_STAR_DIR),
                     path,
@@ -953,7 +953,7 @@ impl RealmNode2 {
 
     async fn route_capabilities(
         &self,
-        capabilities: Vec<ftest::Capability2>,
+        capabilities: Vec<ftest::Capability>,
         from: fcdecl::Ref,
         to: Vec<fcdecl::Ref>,
     ) -> Result<(), RealmBuilderError> {
@@ -1070,7 +1070,7 @@ impl RealmNode2 {
 async fn add_use_decl_if_needed(
     realm: &mut RealmNodeState,
     ref_: fcdecl::Ref,
-    capability: ftest::Capability2,
+    capability: ftest::Capability,
 ) -> Result<(), RealmBuilderError> {
     if let fcdecl::Ref::Child(child) = ref_ {
         if let Some(child) = realm.get_updateable_children().get(&child.name) {
@@ -1086,7 +1086,7 @@ async fn add_use_decl_if_needed(
 async fn add_expose_decl_if_needed(
     realm: &mut RealmNodeState,
     ref_: fcdecl::Ref,
-    capability: ftest::Capability2,
+    capability: ftest::Capability,
 ) -> Result<(), RealmBuilderError> {
     if let fcdecl::Ref::Child(child) = ref_ {
         if let Some(child) = realm.get_updateable_children().get(&child.name) {
@@ -1189,15 +1189,15 @@ fn try_into_service_path(
 }
 
 fn create_capability_decl(
-    capability: ftest::Capability2,
+    capability: ftest::Capability,
 ) -> Result<cm_rust::CapabilityDecl, RealmBuilderError> {
     Ok(match capability {
-        ftest::Capability2::Protocol(protocol) => {
+        ftest::Capability::Protocol(protocol) => {
             let name = try_into_source_name(&protocol.name)?;
             let source_path = Some(try_into_service_path(&protocol.name, &protocol.path)?);
             cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl { name, source_path })
         }
-        ftest::Capability2::Directory(directory) => {
+        ftest::Capability::Directory(directory) => {
             let name = try_into_source_name(&directory.name)?;
             let source_path = Some(try_into_capability_path(&directory.path)?);
             let rights = directory.rights.ok_or_else(|| RealmBuilderError::CapabilityInvalid(
@@ -1207,17 +1207,17 @@ fn create_capability_decl(
             ))?;
             cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl { name, source_path, rights })
         }
-        ftest::Capability2::Storage(_) => {
+        ftest::Capability::Storage(_) => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
                 "declaring storage capabilities with add_route is unsupported"
             )))?;
         }
-        ftest::Capability2::Service(service) => {
+        ftest::Capability::Service(service) => {
             let name = try_into_source_name(&service.name)?;
             let source_path = Some(try_into_service_path(&service.name, &service.path)?);
             cm_rust::CapabilityDecl::Service(cm_rust::ServiceDecl { name, source_path })
         }
-        ftest::Capability2::Event(event) => {
+        ftest::Capability::Event(event) => {
             let name = try_into_source_name(&event.name)?;
             cm_rust::CapabilityDecl::Event(cm_rust::EventDecl { name })
         }
@@ -1231,7 +1231,7 @@ fn create_capability_decl(
 }
 
 fn create_offer_decl(
-    capability: ftest::Capability2,
+    capability: ftest::Capability,
     source: fcdecl::Ref,
     target: fcdecl::Ref,
 ) -> Result<cm_rust::OfferDecl, RealmBuilderError> {
@@ -1239,7 +1239,7 @@ fn create_offer_decl(
     let target: cm_rust::OfferTarget = target.fidl_into_native();
 
     Ok(match capability {
-        ftest::Capability2::Protocol(protocol) => {
+        ftest::Capability::Protocol(protocol) => {
             let source_name = try_into_source_name(&protocol.name)?;
             let target_name = try_into_target_name(&protocol.name, &protocol.as_)?;
             let dependency_type = into_dependency_type(&protocol.type_);
@@ -1252,7 +1252,7 @@ fn create_offer_decl(
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Directory(directory) => {
+        ftest::Capability::Directory(directory) => {
             let source_name = try_into_source_name(&directory.name)?;
             let target_name = try_into_target_name(&directory.name, &directory.as_)?;
             let dependency_type = into_dependency_type(&directory.type_);
@@ -1267,7 +1267,7 @@ fn create_offer_decl(
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Storage(storage) => {
+        ftest::Capability::Storage(storage) => {
             let source_name = try_into_source_name(&storage.name)?;
             let target_name = try_into_target_name(&storage.name, &storage.as_)?;
             cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
@@ -1278,7 +1278,7 @@ fn create_offer_decl(
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Service(service) => {
+        ftest::Capability::Service(service) => {
             let source_name = try_into_source_name(&service.name)?;
             let target_name = try_into_target_name(&service.name, &service.as_)?;
             cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
@@ -1291,7 +1291,7 @@ fn create_offer_decl(
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Event(event) => {
+        ftest::Capability::Event(event) => {
             let source_name = try_into_source_name(&event.name)?;
             let target_name = try_into_target_name(&event.name, &event.as_)?;
             let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
@@ -1324,14 +1324,14 @@ enum ExposingIn {
 }
 
 fn create_expose_decl(
-    capability: ftest::Capability2,
+    capability: ftest::Capability,
     source: fcdecl::Ref,
     exposing_in: ExposingIn,
 ) -> Result<cm_rust::ExposeDecl, RealmBuilderError> {
     let source: cm_rust::ExposeSource = source.fidl_into_native();
 
     Ok(match capability {
-        ftest::Capability2::Protocol(protocol) => {
+        ftest::Capability::Protocol(protocol) => {
             let source_name = try_into_source_name(&protocol.name)?;
             let target_name = match exposing_in {
                 ExposingIn::Child => try_into_source_name(&protocol.name)?,
@@ -1344,7 +1344,7 @@ fn create_expose_decl(
                 target_name,
             })
         }
-        ftest::Capability2::Directory(directory) => {
+        ftest::Capability::Directory(directory) => {
             let source_name = try_into_source_name(&directory.name)?;
             let target_name = match exposing_in {
                 ExposingIn::Child => try_into_source_name(&directory.name)?,
@@ -1366,13 +1366,13 @@ fn create_expose_decl(
                 subdir,
             })
         }
-        ftest::Capability2::Storage(_) => {
+        ftest::Capability::Storage(_) => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
                 "storage capabilities cannot be exposed: {:?}",
                 capability.clone()
             )));
         }
-        ftest::Capability2::Service(service) => {
+        ftest::Capability::Service(service) => {
             let source_name = try_into_source_name(&service.name)?;
             let target_name = match exposing_in {
                 ExposingIn::Child => try_into_source_name(&service.name)?,
@@ -1385,7 +1385,7 @@ fn create_expose_decl(
                 target_name,
             })
         }
-        ftest::Capability2::Event(_) => {
+        ftest::Capability::Event(_) => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
                 "event capabilities cannot be exposed: {:?}",
                 capability.clone()
@@ -1400,9 +1400,9 @@ fn create_expose_decl(
     })
 }
 
-fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, RealmBuilderError> {
+fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, RealmBuilderError> {
     Ok(match capability {
-        ftest::Capability2::Protocol(protocol) => {
+        ftest::Capability::Protocol(protocol) => {
             // If the capability was renamed in the parent's offer declaration, we want to use the
             // post-rename version of it here.
             let source_name = try_into_target_name(&protocol.name, &protocol.as_)?;
@@ -1422,7 +1422,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Directory(directory) => {
+        ftest::Capability::Directory(directory) => {
             // If the capability was renamed in the parent's offer declaration, we want to use the
             // post-rename version of it here.
             let source_name = try_into_target_name(&directory.name, &directory.as_)?;
@@ -1449,7 +1449,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Storage(storage) => {
+        ftest::Capability::Storage(storage) => {
             // If the capability was renamed in the parent's offer declaration, we want to use the
             // post-rename version of it here.
             let source_name = try_into_target_name(&storage.name, &storage.as_)?;
@@ -1460,7 +1460,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Service(service) => {
+        ftest::Capability::Service(service) => {
             // If the capability was renamed in the parent's offer declaration, we want to use the
             // post-rename version of it here.
             let source_name = try_into_target_name(&service.name, &service.as_)?;
@@ -1476,7 +1476,7 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 availability: cm_rust::Availability::Required,
             })
         }
-        ftest::Capability2::Event(event) => {
+        ftest::Capability::Event(event) => {
             // If the capability was renamed in the parent's offer declaration, we want to use the
             // post-rename version of it here.
             let source_name = try_into_target_name(&event.name, &event.as_)?;
@@ -1680,7 +1680,7 @@ enum RealmBuilderError {
     ConfigValueInvalid,
 }
 
-impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
+impl From<RealmBuilderError> for ftest::RealmBuilderError {
     fn from(err: RealmBuilderError) -> Self {
         match err {
             RealmBuilderError::ChildAlreadyExists(_) => Self::ChildAlreadyExists,
@@ -1812,7 +1812,7 @@ mod tests {
     // built declarations
     async fn build_tree(
         tree: &mut ComponentTree,
-    ) -> Result<(String, Arc<resolver::Registry>), ftest::RealmBuilderError2> {
+    ) -> Result<(String, Arc<resolver::Registry>), ftest::RealmBuilderError> {
         let res = build_tree_helper(tree.clone()).await;
 
         // We want to be able to check our component tree against the registry later, but the
@@ -1852,7 +1852,7 @@ mod tests {
 
     async fn build_tree_helper(
         tree: ComponentTree,
-    ) -> Result<(String, Arc<resolver::Registry>), ftest::RealmBuilderError2> {
+    ) -> Result<(String, Arc<resolver::Registry>), ftest::RealmBuilderError> {
         let realm_node = tree_to_realm_node(tree).await;
 
         let registry = resolver::Registry::new();
@@ -1938,7 +1938,7 @@ mod tests {
             }
         }
 
-        async fn call_build(&mut self) -> Result<String, ftest::RealmBuilderError2> {
+        async fn call_build(&mut self) -> Result<String, ftest::RealmBuilderError> {
             self.builder_proxy
                 .build(self.runner_client_end.take().expect("call_build called twice"))
                 .await
@@ -1967,7 +1967,7 @@ mod tests {
 
         async fn add_route_or_panic(
             &self,
-            mut capabilities: Vec<ftest::Capability2>,
+            mut capabilities: Vec<ftest::Capability>,
             mut from: fcdecl::Ref,
             mut tos: Vec<fcdecl::Ref>,
         ) {
@@ -2001,7 +2001,7 @@ mod tests {
         drop(runner_server_end);
         let res =
             builder_proxy.build(runner_client_end).await.expect("failed to send build command");
-        assert_eq!(Err(ftest::RealmBuilderError2::BuildAlreadyCalled), res);
+        assert_eq!(Err(ftest::RealmBuilderError::BuildAlreadyCalled), res);
     }
 
     #[fuchsia::test]
@@ -2034,7 +2034,7 @@ mod tests {
             children: vec![],
         };
         let error = build_tree(&mut tree).await.expect_err("builder didn't notice invalid decl");
-        assert_eq!(error, ftest::RealmBuilderError2::InvalidComponentDecl);
+        assert_eq!(error, ftest::RealmBuilderError::InvalidComponentDecl);
     }
 
     #[fuchsia::test]
@@ -2405,7 +2405,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_child was supposed to return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::InvalidManifestExtension);
+        assert_eq!(err, ftest::RealmBuilderError::InvalidManifestExtension);
     }
 
     #[fuchsia::test]
@@ -2423,7 +2423,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_child was supposed to return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2441,7 +2441,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_child was supposed to return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2459,7 +2459,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_child was supposed to return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2477,7 +2477,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_child was supposed to return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2628,7 +2628,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2646,7 +2646,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2658,7 +2658,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::InvalidManifestExtension);
+        assert_eq!(err, ftest::RealmBuilderError::InvalidManifestExtension);
     }
 
     #[fuchsia::test]
@@ -2670,7 +2670,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::InvalidManifestExtension);
+        assert_eq!(err, ftest::RealmBuilderError::InvalidManifestExtension);
     }
 
     #[fuchsia::test]
@@ -2725,7 +2725,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2743,7 +2743,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2773,7 +2773,7 @@ mod tests {
             .expect("add_child_from_decl returned an error");
         realm_and_builder_task
             .add_route_or_panic(
-                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                vec![ftest::Capability::Protocol(ftest::Protocol {
                     name: Some("example.Hippo".to_owned()),
                     type_: Some(fcdecl::DependencyType::Strong),
                     ..ftest::Protocol::EMPTY
@@ -2855,7 +2855,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_local_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2873,7 +2873,7 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_local_child was supposed to error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+        assert_eq!(err, ftest::RealmBuilderError::ChildAlreadyExists);
     }
 
     #[fuchsia::test]
@@ -2890,24 +2890,24 @@ mod tests {
         realm_and_builder_task
             .add_route_or_panic(
                 vec![
-                    ftest::Capability2::Protocol(ftest::Protocol {
+                    ftest::Capability::Protocol(ftest::Protocol {
                         name: Some("fuchsia.examples.Hippo".to_owned()),
                         as_: Some("fuchsia.examples.Elephant".to_owned()),
                         type_: Some(fcdecl::DependencyType::Strong),
                         ..ftest::Protocol::EMPTY
                     }),
-                    ftest::Capability2::Directory(ftest::Directory {
+                    ftest::Capability::Directory(ftest::Directory {
                         name: Some("config-data".to_owned()),
                         rights: Some(fio::RW_STAR_DIR),
                         subdir: Some("component".to_owned()),
                         ..ftest::Directory::EMPTY
                     }),
-                    ftest::Capability2::Storage(ftest::Storage {
+                    ftest::Capability::Storage(ftest::Storage {
                         name: Some("temp".to_string()),
                         as_: Some("data".to_string()),
                         ..ftest::Storage::EMPTY
                     }),
-                    ftest::Capability2::Service(ftest::Service {
+                    ftest::Capability::Service(ftest::Service {
                         name: Some("fuchsia.examples.Whale".to_string()),
                         as_: Some("fuchsia.examples.Orca".to_string()),
                         ..ftest::Service::EMPTY
@@ -2924,7 +2924,7 @@ mod tests {
         // Assert that child -> child capabilities generate proper offer decls.
         realm_and_builder_task
             .add_route_or_panic(
-                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                vec![ftest::Capability::Protocol(ftest::Protocol {
                     name: Some("fuchsia.examples.Echo".to_owned()),
                     ..ftest::Protocol::EMPTY
                 })],
@@ -2939,7 +2939,7 @@ mod tests {
         // Assert that child -> parent capabilities generate proper expose decls.
         realm_and_builder_task
             .add_route_or_panic(
-                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                vec![ftest::Capability::Protocol(ftest::Protocol {
                     name: Some("fuchsia.examples.Echo".to_owned()),
                     type_: Some(fcdecl::DependencyType::Weak),
                     ..ftest::Protocol::EMPTY
@@ -3045,7 +3045,7 @@ mod tests {
         // Routing protocol from `a` should yield one and only one ExposeDecl.
         realm_and_builder_task
             .add_route_or_panic(
-                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                vec![ftest::Capability::Protocol(ftest::Protocol {
                     name: Some("fuchsia.examples.Hippo".to_owned()),
                     ..ftest::Protocol::EMPTY
                 })],
@@ -3058,7 +3058,7 @@ mod tests {
             .await;
         realm_and_builder_task
             .add_route_or_panic(
-                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                vec![ftest::Capability::Protocol(ftest::Protocol {
                     name: Some("fuchsia.examples.Hippo".to_owned()),
                     ..ftest::Protocol::EMPTY
                 })],
@@ -3193,7 +3193,7 @@ mod tests {
             .await;
         realm_and_builder_task
             .add_route_or_panic(
-                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                vec![ftest::Capability::Protocol(ftest::Protocol {
                     name: Some("fuchsia.examples.Echo".to_owned()),
                     ..ftest::Protocol::EMPTY
                 })],
@@ -3206,7 +3206,7 @@ mod tests {
             .await;
         realm_and_builder_task
             .add_route_or_panic(
-                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                vec![ftest::Capability::Protocol(ftest::Protocol {
                     name: Some("fuchsia.examples.RandonNumberGenerator".to_owned()),
                     ..ftest::Protocol::EMPTY
                 })],
@@ -3429,7 +3429,7 @@ mod tests {
             .await
             .expect("failed to call get_component_decl")
             .expect_err("get_component_decl did not return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::NoSuchChild);
+        assert_eq!(err, ftest::RealmBuilderError::NoSuchChild);
     }
 
     #[fuchsia::test]
@@ -3447,7 +3447,7 @@ mod tests {
             .await
             .expect("failed to call get_component_decl")
             .expect_err("get_component_decl did not return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildDeclNotVisible);
+        assert_eq!(err, ftest::RealmBuilderError::ChildDeclNotVisible);
     }
 
     #[fuchsia::test]
@@ -3504,7 +3504,7 @@ mod tests {
         realm_and_builder_task
             .realm_proxy
             .add_route(
-                &mut vec![ftest::Capability2::Event(ftest::Event {
+                &mut vec![ftest::Capability::Event(ftest::Event {
                     name: Some("directory_ready".to_string()),
                     as_: None,
                     filter: Some(fdata::Dictionary {
@@ -3567,7 +3567,7 @@ mod tests {
             collection: None
         }),
         vec![],
-        ftest::RealmBuilderError2::NoSuchSource ; "no_such_source")]
+        ftest::RealmBuilderError::NoSuchSource ; "no_such_source")]
     #[test_case(vec![
         create_valid_capability()],
         fcdecl::Ref::Child(fcdecl::ChildRef {
@@ -3580,7 +3580,7 @@ mod tests {
                 collection: None
             }),
         ],
-        ftest::RealmBuilderError2::NoSuchTarget ; "no_such_target")]
+        ftest::RealmBuilderError::NoSuchTarget ; "no_such_target")]
     #[test_case(vec![
         create_valid_capability()],
         fcdecl::Ref::Child(fcdecl::ChildRef {
@@ -3593,27 +3593,27 @@ mod tests {
                 collection: None
             }),
         ],
-        ftest::RealmBuilderError2::SourceAndTargetMatch ; "source_and_target_match")]
+        ftest::RealmBuilderError::SourceAndTargetMatch ; "source_and_target_match")]
     #[test_case(vec![],
         fcdecl::Ref::Child(fcdecl::ChildRef {
             name: "a".to_owned(),
             collection: None
         }),
         vec![fcdecl::Ref::Parent(fcdecl::ParentRef {})],
-        ftest::RealmBuilderError2::CapabilitiesEmpty ; "capabilities_empty")]
-    #[test_case(vec![ftest::Capability2::unknown(100, vec![])],
+        ftest::RealmBuilderError::CapabilitiesEmpty ; "capabilities_empty")]
+    #[test_case(vec![ftest::Capability::unknown(100, vec![])],
         fcdecl::Ref::Child(fcdecl::ChildRef {
             name: "a".to_owned(),
             collection: None
         }),
         vec![fcdecl::Ref::Parent(fcdecl::ParentRef {})],
-        ftest::RealmBuilderError2::CapabilityInvalid ; "invalid_capability")]
+        ftest::RealmBuilderError::CapabilityInvalid ; "invalid_capability")]
     #[fuchsia::test]
     async fn add_route_error(
-        mut capabilities: Vec<ftest::Capability2>,
+        mut capabilities: Vec<ftest::Capability>,
         mut from: fcdecl::Ref,
         mut to: Vec<fcdecl::Ref>,
-        expected_err: ftest::RealmBuilderError2,
+        expected_err: ftest::RealmBuilderError,
     ) {
         let realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
@@ -3630,8 +3630,8 @@ mod tests {
         assert_eq!(err, expected_err);
     }
 
-    fn create_valid_capability() -> ftest::Capability2 {
-        ftest::Capability2::Protocol(ftest::Protocol {
+    fn create_valid_capability() -> ftest::Capability {
+        ftest::Capability::Protocol(ftest::Protocol {
             name: Some("fuchsia.examples.Hippo".to_owned()),
             as_: None,
             type_: None,
@@ -3709,7 +3709,7 @@ mod tests {
             .await
             .expect("failed to call replace_component_decl")
             .expect_err("replace_component_decl did not return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::ImmutableProgram);
+        assert_eq!(err, ftest::RealmBuilderError::ImmutableProgram);
     }
 
     #[fuchsia::test]
@@ -3781,7 +3781,7 @@ mod tests {
             .await
             .expect("failed to call replace_component_decl")
             .expect_err("replace_component_decl did not return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::NoSuchChild);
+        assert_eq!(err, ftest::RealmBuilderError::NoSuchChild);
     }
 
     #[fuchsia::test]
@@ -3799,7 +3799,7 @@ mod tests {
             .await
             .expect("failed to call replace_component_decl")
             .expect_err("replace_component_decl did not return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::ChildDeclNotVisible);
+        assert_eq!(err, ftest::RealmBuilderError::ChildDeclNotVisible);
     }
 
     #[fuchsia::test]
@@ -3853,7 +3853,7 @@ mod tests {
             .await
             .expect("failed to call replace_realm_decl")
             .expect_err("replace_realm_decl did not return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::InvalidComponentDecl);
+        assert_eq!(err, ftest::RealmBuilderError::InvalidComponentDecl);
     }
 
     #[fuchsia::test]
@@ -3874,12 +3874,10 @@ mod tests {
         let _tree_from_resolver = rabt.call_build_and_get_tree().await;
 
         async fn assert_err<V: std::fmt::Debug>(
-            fut: impl futures::Future<
-                Output = Result<Result<V, ftest::RealmBuilderError2>, fidl::Error>,
-            >,
+            fut: impl futures::Future<Output = Result<Result<V, ftest::RealmBuilderError>, fidl::Error>>,
         ) {
             assert_eq!(
-                ftest::RealmBuilderError2::BuildAlreadyCalled,
+                ftest::RealmBuilderError::BuildAlreadyCalled,
                 fut.await.expect("failed to call function").expect_err("expected an error"),
             );
         }

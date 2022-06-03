@@ -13,11 +13,11 @@
 namespace component_testing {
 namespace internal {
 
-const char* ConvertToString(fuchsia::component::test::RealmBuilderError2& error);
+const char* ConvertToString(fuchsia::component::test::RealmBuilderError& error);
 const char* ConvertToString(fuchsia::component::Error& error);
 void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t status);
 void PanicWithMessage(const char* stacktrace, const char* context,
-                      fuchsia::component::test::RealmBuilderError2& error);
+                      fuchsia::component::test::RealmBuilderError& error);
 void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::Error& error);
 

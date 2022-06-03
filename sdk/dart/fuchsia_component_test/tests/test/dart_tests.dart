@@ -42,10 +42,10 @@ void checkCommonExceptions(Exception err, StackTrace stacktrace) {
       }
     }
     log.warning('fidl.$err: fuchsia.component.Error.$errorName');
-  } else if (err is fidl.MethodException<fctest.RealmBuilderError2>) {
+  } else if (err is fidl.MethodException<fctest.RealmBuilderError>) {
     late final String errorName;
-    for (final name in fctest.RealmBuilderError2.$valuesMap.keys) {
-      if (err.value == fctest.RealmBuilderError2.$valuesMap[name]) {
+    for (final name in fctest.RealmBuilderError.$valuesMap.keys) {
+      if (err.value == fctest.RealmBuilderError.$valuesMap[name]) {
         errorName = name;
         break;
       }
@@ -619,8 +619,8 @@ void main() {
         try {
           await builder.replaceConfigValueBool(
               localEchoServer, 'echo_bool', false);
-        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
-          expect(err.value, fctest.RealmBuilderError2.noConfigSchema);
+        } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
+          expect(err.value, fctest.RealmBuilderError.noConfigSchema);
           caught = true;
         } finally {
           expect(caught, true);
@@ -631,8 +631,8 @@ void main() {
         try {
           await builder.replaceConfigValueString(
               v2EchoClientStructuredConfig, 'doesnt_exist', 'test');
-        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
-          expect(err.value, fctest.RealmBuilderError2.noSuchConfigField);
+        } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
+          expect(err.value, fctest.RealmBuilderError.noSuchConfigField);
           caught = true;
         } finally {
           expect(caught, true);
@@ -643,8 +643,8 @@ void main() {
         try {
           await builder.replaceConfigValueString(
               v2EchoClientStructuredConfig, 'echo_bool', 'test');
-        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
-          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+        } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
+          expect(err.value, fctest.RealmBuilderError.configValueInvalid);
           caught = true;
         } finally {
           expect(caught, true);
@@ -656,8 +656,8 @@ void main() {
         try {
           await builder.replaceConfigValueString(
               v2EchoClientStructuredConfig, 'echo_string', longString);
-        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
-          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+        } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
+          expect(err.value, fctest.RealmBuilderError.configValueInvalid);
           caught = true;
         } finally {
           expect(caught, true);
@@ -668,8 +668,8 @@ void main() {
         try {
           await builder.replaceConfigValueStringVector(
               v2EchoClientStructuredConfig, 'echo_string_vector', [longString]);
-        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
-          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+        } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
+          expect(err.value, fctest.RealmBuilderError.configValueInvalid);
           caught = true;
         } finally {
           expect(caught, true);
@@ -683,8 +683,8 @@ void main() {
             'echo_string_vector',
             ['a', 'b', 'c', 'd'],
           );
-        } on fidl.MethodException<fctest.RealmBuilderError2> catch (err) {
-          expect(err.value, fctest.RealmBuilderError2.configValueInvalid);
+        } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
+          expect(err.value, fctest.RealmBuilderError.configValueInvalid);
           caught = true;
         } finally {
           expect(caught, true);

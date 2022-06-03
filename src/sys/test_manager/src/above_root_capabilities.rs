@@ -6,7 +6,7 @@ use {
     crate::constants::{TEST_ROOT_REALM_NAME, TEST_TYPE_REALM_MAP},
     anyhow::Error,
     fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_test::Capability2 as RBCapability,
+    fidl_fuchsia_component_test::Capability as RBCapability,
     fuchsia_component_test::{
         error::Error as RealmBuilderError, Capability, RealmBuilder, Ref, Route, SubRealmBuilder,
     },

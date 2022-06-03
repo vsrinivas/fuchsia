@@ -41,8 +41,8 @@ static PROFILE_INTERPOSER_PREFIX: &str = "profile-interposer";
 static BT_RFCOMM_PREFIX: &str = "bt-rfcomm";
 
 /// Returns the protocol name from the `capability` or an Error if it cannot be retrieved.
-fn protocol_name_from_capability(capability: &ftest::Capability2) -> Result<String, Error> {
-    if let ftest::Capability2::Protocol(ftest::Protocol { name: Some(name), .. }) = capability {
+fn protocol_name_from_capability(capability: &ftest::Capability) -> Result<String, Error> {
+    if let ftest::Capability::Protocol(ftest::Protocol { name: Some(name), .. }) = capability {
         Ok(name.clone())
     } else {
         Err(format_err!("Not a protocol capability: {:?}", capability))
@@ -101,7 +101,7 @@ impl PiconetMemberSpec {
     pub fn for_profile(
         name: String,
         rfcomm_url: Option<String>,
-        expose_capabilities: Vec<ftest::Capability2>,
+        expose_capabilities: Vec<ftest::Capability>,
     ) -> Result<(Self, bredr::PeerObserverRequestStream), Error> {
         let id = bt_types::PeerId::random();
         let capability_names =
@@ -851,8 +851,8 @@ impl PiconetHarness {
         name: String,
         profile_url: String,
         rfcomm_url: Option<String>,
-        use_capabilities: Vec<ftest::Capability2>,
-        expose_capabilities: Vec<ftest::Capability2>,
+        use_capabilities: Vec<ftest::Capability>,
+        expose_capabilities: Vec<ftest::Capability>,
     ) -> Result<BtProfileComponent, Error> {
         let (mut spec, request_stream) =
             PiconetMemberSpec::for_profile(name, rfcomm_url, expose_capabilities.clone())?;
@@ -889,7 +889,7 @@ impl PiconetHarness {
 /// Builds a set of capability routes from `capabilities` that will be routed from
 /// `source` to the `targets`.
 pub fn route_from_capabilities(
-    capabilities: Vec<ftest::Capability2>,
+    capabilities: Vec<ftest::Capability>,
     source: Ref,
     targets: Vec<Ref>,
 ) -> Route {
@@ -924,7 +924,7 @@ mod tests {
             .expect_err("failed to check realm contents");
         assert_matches!(
             err,
-            RealmBuilderError::ServerError(fctest::RealmBuilderError2::ChildAlreadyExists)
+            RealmBuilderError::ServerError(fctest::RealmBuilderError::ChildAlreadyExists)
         );
     }
 

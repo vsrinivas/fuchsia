@@ -10,37 +10,37 @@
 namespace component_testing {
 namespace internal {
 
-const char* ConvertToString(fuchsia::component::test::RealmBuilderError2& error) {
+const char* ConvertToString(fuchsia::component::test::RealmBuilderError& error) {
   switch (error) {
-    case fuchsia::component::test::RealmBuilderError2::CHILD_ALREADY_EXISTS:
+    case fuchsia::component::test::RealmBuilderError::CHILD_ALREADY_EXISTS:
       return "CHILD_ALREADY_EXISTS";
-    case fuchsia::component::test::RealmBuilderError2::INVALID_MANIFEST_EXTENSION:
+    case fuchsia::component::test::RealmBuilderError::INVALID_MANIFEST_EXTENSION:
       return "INVALID_MANIFEST_EXTENSION";
-    case fuchsia::component::test::RealmBuilderError2::INVALID_COMPONENT_DECL:
+    case fuchsia::component::test::RealmBuilderError::INVALID_COMPONENT_DECL:
       return "INVALID_COMPONENT_DECL";
-    case fuchsia::component::test::RealmBuilderError2::NO_SUCH_CHILD:
+    case fuchsia::component::test::RealmBuilderError::NO_SUCH_CHILD:
       return "NO_SUCH_CHILD";
-    case fuchsia::component::test::RealmBuilderError2::CHILD_DECL_NOT_VISIBLE:
+    case fuchsia::component::test::RealmBuilderError::CHILD_DECL_NOT_VISIBLE:
       return "CHILD_DECL_NOT_VISIBLE";
-    case fuchsia::component::test::RealmBuilderError2::NO_SUCH_SOURCE:
+    case fuchsia::component::test::RealmBuilderError::NO_SUCH_SOURCE:
       return "NO_SUCH_SOURCE";
-    case fuchsia::component::test::RealmBuilderError2::NO_SUCH_TARGET:
+    case fuchsia::component::test::RealmBuilderError::NO_SUCH_TARGET:
       return "NO_SUCH_TARGET";
-    case fuchsia::component::test::RealmBuilderError2::CAPABILITIES_EMPTY:
+    case fuchsia::component::test::RealmBuilderError::CAPABILITIES_EMPTY:
       return "CAPABILITIES_EMPTY";
-    case fuchsia::component::test::RealmBuilderError2::TARGETS_EMPTY:
+    case fuchsia::component::test::RealmBuilderError::TARGETS_EMPTY:
       return "TARGETS_EMPTY";
-    case fuchsia::component::test::RealmBuilderError2::SOURCE_AND_TARGET_MATCH:
+    case fuchsia::component::test::RealmBuilderError::SOURCE_AND_TARGET_MATCH:
       return "SOURCE_AND_TARGET_MATCH";
-    case fuchsia::component::test::RealmBuilderError2::DECL_NOT_FOUND:
+    case fuchsia::component::test::RealmBuilderError::DECL_NOT_FOUND:
       return "DECL_NOT_FOUND";
-    case fuchsia::component::test::RealmBuilderError2::DECL_READ_ERROR:
+    case fuchsia::component::test::RealmBuilderError::DECL_READ_ERROR:
       return "DECL_READ_ERROR";
-    case fuchsia::component::test::RealmBuilderError2::BUILD_ALREADY_CALLED:
+    case fuchsia::component::test::RealmBuilderError::BUILD_ALREADY_CALLED:
       return "BUILD_ALREADY_CALLED";
-    case fuchsia::component::test::RealmBuilderError2::CAPABILITY_INVALID:
+    case fuchsia::component::test::RealmBuilderError::CAPABILITY_INVALID:
       return "CAPABILITY_INVALID";
-    case fuchsia::component::test::RealmBuilderError2::INVALID_CHILD_REALM_HANDLE:
+    case fuchsia::component::test::RealmBuilderError::INVALID_CHILD_REALM_HANDLE:
       return "INVALID_CHILD_REALM_HANDLE";
     default:
       return "UNKNOWN";
@@ -82,7 +82,7 @@ void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t s
 }
 
 void PanicWithMessage(const char* stacktrace, const char* context,
-                      fuchsia::component::test::RealmBuilderError2& error) {
+                      fuchsia::component::test::RealmBuilderError& error) {
   ZX_PANIC("[%s] FIDL method %s failed with error: %s\n", stacktrace, context,
            ConvertToString(error));
 }

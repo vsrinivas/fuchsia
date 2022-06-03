@@ -14,7 +14,7 @@ pub enum Error {
     MissingSource,
 
     #[error("the realm builder server returned an error: {0:?}")]
-    ServerError(ftest::RealmBuilderError2),
+    ServerError(ftest::RealmBuilderError),
 
     #[error("an internal error was encountered while working with the realm builder server")]
     FidlError(#[from] fidl::Error),
@@ -49,8 +49,8 @@ pub enum Error {
     CannotStartRootComponent(anyhow::Error),
 }
 
-impl From<ftest::RealmBuilderError2> for Error {
-    fn from(err: ftest::RealmBuilderError2) -> Self {
+impl From<ftest::RealmBuilderError> for Error {
+    fn from(err: ftest::RealmBuilderError) -> Self {
         Self::ServerError(err)
     }
 }

@@ -100,7 +100,7 @@ Realm Realm::AddChildRealm(const std::string& child_name, ChildOptions options) 
 }
 
 Realm& Realm::AddRoute(Route route) {
-  auto capabilities = internal::ConvertToFidlVec<Capability, fuchsia::component::test::Capability2>(
+  auto capabilities = internal::ConvertToFidlVec<Capability, fuchsia::component::test::Capability>(
       route.capabilities);
   auto source = internal::ConvertToFidl(route.source);
   auto target = internal::ConvertToFidlVec<Ref, fuchsia::component::decl::Ref>(route.targets);

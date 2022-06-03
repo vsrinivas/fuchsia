@@ -18,7 +18,7 @@
         "name": "fuchsia.component.test/Builder_Build_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Builder_Build_Result.err"
     },
@@ -35,31 +35,31 @@
     {
         "declaration": "fuchsia.component.test/Directory",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability2.directory"
+        "name": "fuchsia.component.test/Capability.directory"
     },
     {
         "declaration": "fuchsia.component.test/Event",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability2.event"
+        "name": "fuchsia.component.test/Capability.event"
     },
     {
         "declaration": "fuchsia.component.test/Protocol",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability2.protocol"
+        "name": "fuchsia.component.test/Capability.protocol"
     },
     {
         "declaration": "fuchsia.component.test/Service",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability2.service"
+        "name": "fuchsia.component.test/Capability.service"
     },
     {
         "declaration": "fuchsia.component.test/Storage",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability2.storage"
+        "name": "fuchsia.component.test/Capability.storage"
     },
     {
         "kind": "union",
-        "name": "fuchsia.component.test/Capability2",
+        "name": "fuchsia.component.test/Capability",
         "strictness": "flexible"
     },
     {
@@ -221,7 +221,7 @@
         "name": "fuchsia.component.test/Realm.AddLocalChild"
     },
     {
-        "declaration": "(vector<fuchsia.component.test/Capability2> capabilities,fuchsia.component.decl/Ref from,vector<fuchsia.component.decl/Ref> to) -> (fuchsia.component.test/Realm_AddRoute_Result result)",
+        "declaration": "(vector<fuchsia.component.test/Capability> capabilities,fuchsia.component.decl/Ref from,vector<fuchsia.component.decl/Ref> to) -> (fuchsia.component.test/Realm_AddRoute_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.component.test/Realm.AddRoute"
     },
@@ -261,113 +261,113 @@
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.BUILD_ALREADY_CALLED",
+        "name": "fuchsia.component.test/RealmBuilderError.BUILD_ALREADY_CALLED",
         "value": "12"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.CAPABILITIES_EMPTY",
+        "name": "fuchsia.component.test/RealmBuilderError.CAPABILITIES_EMPTY",
         "value": "7"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.CAPABILITY_INVALID",
+        "name": "fuchsia.component.test/RealmBuilderError.CAPABILITY_INVALID",
         "value": "13"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.CHILD_ALREADY_EXISTS",
+        "name": "fuchsia.component.test/RealmBuilderError.CHILD_ALREADY_EXISTS",
         "value": "0"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.CHILD_DECL_NOT_VISIBLE",
+        "name": "fuchsia.component.test/RealmBuilderError.CHILD_DECL_NOT_VISIBLE",
         "value": "4"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.CONFIG_VALUE_INVALID",
+        "name": "fuchsia.component.test/RealmBuilderError.CONFIG_VALUE_INVALID",
         "value": "20"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.DECL_NOT_FOUND",
+        "name": "fuchsia.component.test/RealmBuilderError.DECL_NOT_FOUND",
         "value": "10"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.DECL_READ_ERROR",
+        "name": "fuchsia.component.test/RealmBuilderError.DECL_READ_ERROR",
         "value": "11"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.IMMUTABLE_PROGRAM",
+        "name": "fuchsia.component.test/RealmBuilderError.IMMUTABLE_PROGRAM",
         "value": "15"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.INVALID_CHILD_REALM_HANDLE",
+        "name": "fuchsia.component.test/RealmBuilderError.INVALID_CHILD_REALM_HANDLE",
         "value": "14"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.INVALID_COMPONENT_DECL",
+        "name": "fuchsia.component.test/RealmBuilderError.INVALID_COMPONENT_DECL",
         "value": "2"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.INVALID_MANIFEST_EXTENSION",
+        "name": "fuchsia.component.test/RealmBuilderError.INVALID_MANIFEST_EXTENSION",
         "value": "1"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.INVALID_PKG_DIR_HANDLE",
+        "name": "fuchsia.component.test/RealmBuilderError.INVALID_PKG_DIR_HANDLE",
         "value": "17"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.NO_CONFIG_SCHEMA",
+        "name": "fuchsia.component.test/RealmBuilderError.NO_CONFIG_SCHEMA",
         "value": "18"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.NO_SUCH_CHILD",
+        "name": "fuchsia.component.test/RealmBuilderError.NO_SUCH_CHILD",
         "value": "3"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.NO_SUCH_CONFIG_FIELD",
+        "name": "fuchsia.component.test/RealmBuilderError.NO_SUCH_CONFIG_FIELD",
         "value": "19"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.NO_SUCH_SOURCE",
+        "name": "fuchsia.component.test/RealmBuilderError.NO_SUCH_SOURCE",
         "value": "5"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.NO_SUCH_TARGET",
+        "name": "fuchsia.component.test/RealmBuilderError.NO_SUCH_TARGET",
         "value": "6"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.SOURCE_AND_TARGET_MATCH",
+        "name": "fuchsia.component.test/RealmBuilderError.SOURCE_AND_TARGET_MATCH",
         "value": "9"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.TARGETS_EMPTY",
+        "name": "fuchsia.component.test/RealmBuilderError.TARGETS_EMPTY",
         "value": "8"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.component.test/RealmBuilderError2.URL_IS_NOT_RELATIVE",
+        "name": "fuchsia.component.test/RealmBuilderError.URL_IS_NOT_RELATIVE",
         "value": "16"
     },
     {
         "declaration": "uint32",
         "kind": "enum",
-        "name": "fuchsia.component.test/RealmBuilderError2",
+        "name": "fuchsia.component.test/RealmBuilderError",
         "strictness": "strict"
     },
     {
@@ -389,7 +389,7 @@
         "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result.err"
     },
@@ -408,7 +408,7 @@
         "name": "fuchsia.component.test/RealmBuilderFactory_Create_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/RealmBuilderFactory_Create_Result.err"
     },
@@ -427,7 +427,7 @@
         "name": "fuchsia.component.test/Realm_AddChildFromDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_AddChildFromDecl_Result.err"
     },
@@ -446,7 +446,7 @@
         "name": "fuchsia.component.test/Realm_AddChildRealm_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_AddChildRealm_Result.err"
     },
@@ -465,7 +465,7 @@
         "name": "fuchsia.component.test/Realm_AddChild_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_AddChild_Result.err"
     },
@@ -484,7 +484,7 @@
         "name": "fuchsia.component.test/Realm_AddLegacyChild_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_AddLegacyChild_Result.err"
     },
@@ -503,7 +503,7 @@
         "name": "fuchsia.component.test/Realm_AddLocalChild_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_AddLocalChild_Result.err"
     },
@@ -522,7 +522,7 @@
         "name": "fuchsia.component.test/Realm_AddRoute_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_AddRoute_Result.err"
     },
@@ -546,7 +546,7 @@
         "name": "fuchsia.component.test/Realm_GetComponentDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_GetComponentDecl_Result.err"
     },
@@ -570,7 +570,7 @@
         "name": "fuchsia.component.test/Realm_GetRealmDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_GetRealmDecl_Result.err"
     },
@@ -589,7 +589,7 @@
         "name": "fuchsia.component.test/Realm_ReadOnlyDirectory_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_ReadOnlyDirectory_Result.err"
     },
@@ -608,7 +608,7 @@
         "name": "fuchsia.component.test/Realm_ReplaceComponentDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_ReplaceComponentDecl_Result.err"
     },
@@ -627,7 +627,7 @@
         "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result.err"
     },
@@ -646,7 +646,7 @@
         "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError2",
+        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
         "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Result.err"
     },

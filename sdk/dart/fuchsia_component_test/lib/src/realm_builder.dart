@@ -402,7 +402,7 @@ abstract class Capability {
 
   Capability(this.name, [this.as]);
 
-  ftest.Capability2 toFidlType();
+  ftest.Capability toFidlType();
 
   String _capabilityToString(String? additionalFields) {
     return '$runtimeType(name = $name, '
@@ -440,8 +440,8 @@ class ProtocolCapability extends Capability {
   }
 
   @override
-  ftest.Capability2 toFidlType() {
-    return ftest.Capability2.withProtocol(ftest.Protocol(
+  ftest.Capability toFidlType() {
+    return ftest.Capability.withProtocol(ftest.Protocol(
       name: name,
       as: as,
       type: type,
@@ -504,8 +504,8 @@ class DirectoryCapability extends Capability {
   }
 
   @override
-  ftest.Capability2 toFidlType() {
-    return ftest.Capability2.withDirectory(ftest.Directory(
+  ftest.Capability toFidlType() {
+    return ftest.Capability.withDirectory(ftest.Directory(
       name: name,
       as: as,
       type: type,
@@ -558,8 +558,8 @@ class StorageCapability extends Capability {
         super(o.name, o.as);
 
   @override
-  ftest.Capability2 toFidlType() {
-    return ftest.Capability2.withStorage(
+  ftest.Capability toFidlType() {
+    return ftest.Capability.withStorage(
         ftest.Storage(name: name, as: as, path: path));
   }
 
@@ -596,8 +596,8 @@ class ServiceCapability extends Capability {
         super(o.name, o.as);
 
   @override
-  ftest.Capability2 toFidlType() {
-    return ftest.Capability2.withService(ftest.Service(
+  ftest.Capability toFidlType() {
+    return ftest.Capability.withService(ftest.Service(
       name: name,
       as: as,
       path: path,

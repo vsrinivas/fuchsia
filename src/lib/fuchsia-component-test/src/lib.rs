@@ -310,9 +310,9 @@ impl ProtocolCapability {
     }
 }
 
-impl Into<ftest::Capability2> for ProtocolCapability {
-    fn into(self) -> ftest::Capability2 {
-        ftest::Capability2::Protocol(ftest::Protocol {
+impl Into<ftest::Capability> for ProtocolCapability {
+    fn into(self) -> ftest::Capability {
+        ftest::Capability::Protocol(ftest::Protocol {
             name: Some(self.name),
             as_: self.as_,
             type_: Some(self.type_),
@@ -368,9 +368,9 @@ impl DirectoryCapability {
     }
 }
 
-impl Into<ftest::Capability2> for DirectoryCapability {
-    fn into(self) -> ftest::Capability2 {
-        ftest::Capability2::Directory(ftest::Directory {
+impl Into<ftest::Capability> for DirectoryCapability {
+    fn into(self) -> ftest::Capability {
+        ftest::Capability::Directory(ftest::Directory {
             name: Some(self.name),
             as_: self.as_,
             type_: Some(self.type_),
@@ -406,9 +406,9 @@ impl StorageCapability {
     }
 }
 
-impl Into<ftest::Capability2> for StorageCapability {
-    fn into(self) -> ftest::Capability2 {
-        ftest::Capability2::Storage(ftest::Storage {
+impl Into<ftest::Capability> for StorageCapability {
+    fn into(self) -> ftest::Capability {
+        ftest::Capability::Storage(ftest::Storage {
             name: Some(self.name),
             as_: self.as_,
             path: self.path,
@@ -442,9 +442,9 @@ impl ServiceCapability {
     }
 }
 
-impl Into<ftest::Capability2> for ServiceCapability {
-    fn into(self) -> ftest::Capability2 {
-        ftest::Capability2::Service(ftest::Service {
+impl Into<ftest::Capability> for ServiceCapability {
+    fn into(self) -> ftest::Capability {
+        ftest::Capability::Service(ftest::Service {
             name: Some(self.name),
             as_: self.as_,
             path: self.path,
@@ -458,9 +458,9 @@ pub struct EventCapability {
     event: Event,
 }
 
-impl Into<ftest::Capability2> for EventCapability {
-    fn into(self) -> ftest::Capability2 {
-        ftest::Capability2::Event(ftest::Event {
+impl Into<ftest::Capability> for EventCapability {
+    fn into(self) -> ftest::Capability {
+        ftest::Capability::Event(ftest::Event {
             name: Some(self.event.name().to_string()),
             as_: None,
             filter: self.event.filter().map(NativeIntoFidl::native_into_fidl),
@@ -472,7 +472,7 @@ impl Into<ftest::Capability2> for EventCapability {
 /// A route of one or more capabilities from one point in the realm to one or more targets.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Route {
-    capabilities: Vec<ftest::Capability2>,
+    capabilities: Vec<ftest::Capability>,
     from: Option<Ref>,
     to: Vec<Ref>,
 }
@@ -483,7 +483,7 @@ impl Route {
     }
 
     /// Adds a capability to this route. Must be called at least once.
-    pub fn capability(mut self, capability: impl Into<ftest::Capability2>) -> Self {
+    pub fn capability(mut self, capability: impl Into<ftest::Capability>) -> Self {
         self.capabilities.push(capability.into());
         self
     }
@@ -2408,7 +2408,7 @@ mod tests {
             component_decl: fdecl::Component,
         },
         AddRoute {
-            capabilities: Vec<ftest::Capability2>,
+            capabilities: Vec<ftest::Capability>,
             from: fdecl::Ref,
             to: Vec<fdecl::Ref>,
         },
