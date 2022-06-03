@@ -345,6 +345,9 @@ pub(crate) mod tests {
         });
     }
 
+    // These benchmarks measure the time taken to remove a token from the token
+    // bucket (using try_take) when tokens are being removed at various rates
+    // (relative to the rate at which they fill into the bucket).
     // These benchmarks use the fastest possible `InstantContext`, and should be
     // considered an upper bound on performance.
 
@@ -361,14 +364,12 @@ pub(crate) mod tests {
 
     #[cfg(benchmark)]
     pub(crate) fn add_benches(b: criterion::Benchmark) -> criterion::Benchmark {
-        let mut b = b.with_function("token_bucket.try_take_slow", bench_try_take_slow);
-        b = b.with_function("token_bucket.try_take_half_rate", bench_try_take_half_rate);
-        b = b.with_function("token_bucket.try_take_equal_rate", bench_try_take_equal_rate);
-        b = b.with_function(
-            "token_bucket.try_take_almost_equal_rate",
-            bench_try_take_almost_equal_rate,
-        );
-        b.with_function("token_bucket.try_take_double_rate", bench_try_take_double_rate)
+        let mut b = b.with_function("TokenBucket/TryTake/Slow", bench_try_take_slow);
+        b = b.with_function("TokenBucket/TryTake/HalfRate", bench_try_take_half_rate);
+        b = b.with_function("TokenBucket/TryTake/EqualRate", bench_try_take_equal_rate);
+        b = b
+            .with_function("TokenBucket/TryTake/AlmostEqualRate", bench_try_take_almost_equal_rate);
+        b.with_function("TokenBucket/TryTake/DoubleRate", bench_try_take_double_rate)
     }
 }
 

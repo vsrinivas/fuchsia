@@ -26,6 +26,7 @@ test_list = [
   "kernel_boot_stats_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
+  "netstack3_benchmarks_test",
   "network_device_microbenchmarks_test",
   "perftest_trace_events_test",
   "storage_benchmarks_test",
@@ -208,6 +209,7 @@ group("package_deps") {
     "//src/testing/sl4f",
 
     # These are used by netstack benchmarks.
+    "//src/connectivity/network/netstack3:netstack3_benchmarks",
     "//src/connectivity/network/tests/benchmarks",
     "//third_party/iperf",
 

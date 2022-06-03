@@ -123,9 +123,10 @@ rustc_binary("netstack3-benchmarks") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_shell_package("netstack3_benchmarks") {
+fuchsia_package_with_single_component("netstack3_benchmarks") {
   deps = [ ":netstack3-benchmarks" ]
   testonly = true
+  manifest = "bench/meta/netstack3-benchmarks.cml"
 }
 
 group("tests") {

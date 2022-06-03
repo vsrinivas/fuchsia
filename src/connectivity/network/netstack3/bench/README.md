@@ -15,11 +15,12 @@ measure Netstack3's performance in a production-like environment.
 
 ## Running the Benchmarks
 
-1. Add the benchmark binary target to your `fx set` line, and configure your
-   build for release (optimized):
+1. Add the benchmark test target to your `fx set` line, and configure your
+   build for release (optimized). Note that the benchmarks rely on `SL4F`
+   which is currently only available on terminal and workstation builds:
 
     ```
-    fx set <product>.<board> ... --with //src/connectivity/network/netstack3:netstack3_benchmarks --release
+    fx set terminal.qemu-x64 --with //src/tests/end_to_end/perf:test --release
     ```
 
 2. Build Fuchsia
@@ -40,14 +41,12 @@ measure Netstack3's performance in a production-like environment.
     fx serve -v
     ```
 
-5. Connect to the emulator shell
+5. Run the tests
 
     ```
-    fx shell
+    fx test --e2e netstack3_benchmarks_test
     ```
 
-6. Run the benchmarks, storing the output in `/tmp/ns3_benchmark_results.json`:
-
-    ```
-    $ netstack3_benchmarks /tmp/ns3_benchmark_results.json
-    ```
+After completing, the tests will print the name of the
+[catapult_json](https://github.com/catapult-project/catapult/blob/main/docs/histogram-set-json-format.md)
+output file containing the benchmark results.
