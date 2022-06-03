@@ -41,7 +41,7 @@ use {
             object_manager::ObjectManager,
             object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
             transaction::{
-                AllocatorMutation, Mutation, ObjectStoreMutation, Options, Transaction,
+                AllocatorMutation, Mutation, MutationV1, ObjectStoreMutation, Options, Transaction,
                 TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
             },
             HandleOptions, Item, ItemRef, LastObjectId, LockState, NewChildStoreOptions,
@@ -112,6 +112,29 @@ pub struct JournalCheckpoint {
     // This can change across reset events so we store it along with the offset and checksum to
     // know which version to deserialize.
     pub version: Version,
+}
+
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum JournalRecordV1 {
+    EndBlock,
+    Mutation { object_id: u64, mutation: MutationV1 },
+    Commit,
+    Discard(u64),
+    DidFlushDevice(u64),
+}
+
+impl From<JournalRecordV1> for JournalRecord {
+    fn from(other: JournalRecordV1) -> Self {
+        match other {
+            JournalRecordV1::EndBlock => JournalRecord::EndBlock,
+            JournalRecordV1::Mutation { object_id, mutation } => {
+                JournalRecord::Mutation { object_id, mutation: mutation.into() }
+            }
+            JournalRecordV1::Commit => JournalRecord::Commit,
+            JournalRecordV1::Discard(bytes) => JournalRecord::Discard(bytes),
+            JournalRecordV1::DidFlushDevice(bytes) => JournalRecord::DidFlushDevice(bytes),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Versioned)]
@@ -334,6 +357,7 @@ impl Journal {
             }
             Mutation::BeginFlush => {}
             Mutation::EndFlush => {}
+            Mutation::DeleteVolume => {}
             Mutation::UpdateBorrowed(_) => {}
         }
         Ok(true)

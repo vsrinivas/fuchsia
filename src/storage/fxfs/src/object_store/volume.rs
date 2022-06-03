@@ -132,6 +132,45 @@ impl RootVolume {
         };
         Ok(result)
     }
+
+    pub async fn delete_volume(&self, volume_name: &str) -> Result<(), Error> {
+        let object_id =
+            match self.volume_directory().lookup(volume_name).await?.ok_or(FxfsError::NotFound)? {
+                (object_id, ObjectDescriptor::Volume) => object_id,
+                _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
+            };
+        let root_store = self.filesystem.root_store();
+        let store = self.filesystem.object_manager().store(object_id)?;
+
+        // Delete all the layers and encrypted mutations stored in root_store for this volume.
+        // This includes the StoreInfo itself.
+        let mut objects_to_delete = store.parent_objects();
+        objects_to_delete.push(store.store_object_id());
+
+        let mut transaction = self
+            .filesystem
+            .clone()
+            .new_transaction(&[], Options { borrow_metadata_space: true, ..Default::default() })
+            .await?;
+        for object_id in &objects_to_delete {
+            root_store.adjust_refs(&mut transaction, *object_id, -1).await?;
+        }
+        // Mark all volume data as deleted.
+        self.filesystem
+            .allocator()
+            .mark_for_deletion(&mut transaction, store.store_object_id())
+            .await;
+        // Remove the volume entry from the VolumeDirectory.
+        self.volume_directory()
+            .delete_child_volume(&mut transaction, volume_name, store.store_object_id())
+            .await?;
+        transaction.commit().await.context("commit")?;
+        // Tombstone the deleted objects.
+        for object_id in &objects_to_delete {
+            root_store.tombstone(*object_id, Options::default()).await?;
+        }
+        Ok(())
+    }
 }
 
 /// Returns the root volume for the filesystem.
@@ -162,7 +201,8 @@ mod tests {
         super::root_volume,
         crate::{
             crypt::insecure::InsecureCrypt,
-            filesystem::{Filesystem, FxFilesystem, SyncOptions},
+            filesystem::{Filesystem, FxFilesystem, JournalingObject, SyncOptions},
+            object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
                 directory::Directory,
                 transaction::{Options, TransactionHandler},
@@ -225,5 +265,89 @@ mod tests {
             root_directory.lookup("foo").await.expect("lookup failed").expect("not found");
             filesystem.close().await.expect("Close failed");
         };
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_delete_volume() {
+        let device = DeviceHolder::new(FakeDevice::new(16384, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let crypt = Arc::new(InsecureCrypt::new());
+        let store_object_id;
+        let parent_objects;
+        // Add volume and a file (some data).
+        {
+            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            let store = root_volume
+                .new_volume("vol", Some(crypt.clone()))
+                .await
+                .expect("new_volume failed");
+            store_object_id = store.store_object_id();
+            let root_directory = Directory::open(&store, store.root_directory_object_id())
+                .await
+                .expect("open failed");
+            let mut transaction = filesystem
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new transaction failed");
+            let handle = root_directory
+                .create_child_file(&mut transaction, "foo")
+                .await
+                .expect("create_child_file failed");
+            transaction.commit().await.expect("commit failed");
+
+            let mut buf = handle.allocate_buffer(8192);
+            buf.as_mut_slice().fill(0xaa);
+            handle.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
+            store.flush().await.expect("flush failed");
+            filesystem.sync(SyncOptions::default()).await.expect("sync failed");
+            parent_objects = store.parent_objects();
+            // Confirm parent objects exist.
+            for object_id in &parent_objects {
+                let _ = filesystem
+                    .root_store()
+                    .get_file_size(*object_id)
+                    .await
+                    .expect("Layer file missing? Bug in test.");
+            }
+        }
+        filesystem.close().await.expect("Close failed");
+        let device = filesystem.take_device().await;
+        device.reopen();
+        let filesystem = FxFilesystem::open(device).await.expect("open failed");
+        {
+            // Expect 8kiB accounted to the new volume.
+            assert_eq!(
+                filesystem.allocator().get_owner_allocated_bytes().get(&store_object_id),
+                Some(&8192)
+            );
+            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            root_volume.delete_volume("vol").await.expect("delete_volume");
+            // Confirm data allocation is gone.
+            assert_eq!(
+                filesystem.allocator().get_owner_allocated_bytes().get(&store_object_id),
+                None
+            );
+            // Confirm volume entry is gone.
+            root_volume
+                .volume("vol", Some(crypt.clone()))
+                .await
+                .err()
+                .expect("volume shouldn't exist anymore.");
+        }
+        filesystem.close().await.expect("Close failed");
+        let device = filesystem.take_device().await;
+        device.reopen();
+        // All artifacts of the original volume should be gone.
+        let filesystem = FxFilesystem::open(device).await.expect("open failed");
+        for object_id in &parent_objects {
+            let _ = filesystem
+                .root_store()
+                .get_file_size(*object_id)
+                .await
+                .err()
+                .expect("File wasn't deleted.");
+        }
+        filesystem.close().await.expect("Close failed");
     }
 }

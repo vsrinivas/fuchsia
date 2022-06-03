@@ -143,6 +143,16 @@ impl VolumesDirectory {
         Ok(volume)
     }
 
+    /// Deletes a volume. The volume must exist but encrypted volume keys are not required.
+    #[allow(unused)]
+    pub async fn delete_volume(&self, name: &str) -> Result<(), Status> {
+        // Cowardly refuse to delete a mounted volume.
+        if self.mounted_volumes.lock().unwrap().contains_key(name) {
+            return Err(Status::ALREADY_BOUND);
+        }
+        self.root_volume.delete_volume(name).await.map_err(map_to_status)
+    }
+
     /// Terminates all opened volumes.
     pub async fn terminate(&self) {
         let volumes = std::mem::take(&mut *self.mounted_volumes.lock().unwrap());
@@ -382,6 +392,33 @@ mod tests {
         let entries = readdir(dir_proxy).await;
         assert_eq!(entries, [".", "encrypted", "unencrypted"]);
 
+        volumes_directory.terminate().await;
+        std::mem::drop(volumes_directory);
+        filesystem.close().await.expect("close filesystem failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_deleted_encrypted_volume_while_mounted() {
+        const VOLUME_NAME: &str = "encrypted";
+
+        let device = DeviceHolder::new(FakeDevice::new(8192, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+        let crypt = Arc::new(InsecureCrypt::new()) as Arc<dyn Crypt>;
+        let volumes_directory =
+            VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
+        volumes_directory
+            .open_or_create_volume(VOLUME_NAME, Some(crypt.clone()), false)
+            .await
+            .expect("create encrypted volume failed");
+        // We have the volume mounted so delete attempts should fail.
+        assert_eq!(
+            volumes_directory
+                .delete_volume(VOLUME_NAME)
+                .await
+                .err()
+                .expect("Deleting volume should fail"),
+            Status::ALREADY_BOUND
+        );
         volumes_directory.terminate().await;
         std::mem::drop(volumes_directory);
         filesystem.close().await.expect("close filesystem failed");

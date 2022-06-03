@@ -119,6 +119,29 @@ pub trait TransactionHandler: Send + Sync {
     async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a>;
 }
 
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum MutationV1 {
+    ObjectStore(ObjectStoreMutation),
+    EncryptedObjectStore(Box<[u8]>),
+    Allocator(AllocatorMutation),
+    BeginFlush,
+    EndFlush,
+    UpdateBorrowed(u64),
+}
+
+impl From<MutationV1> for Mutation {
+    fn from(old: MutationV1) -> Self {
+        match old {
+            MutationV1::ObjectStore(m) => Mutation::ObjectStore(m),
+            MutationV1::EncryptedObjectStore(data) => Mutation::EncryptedObjectStore(data),
+            MutationV1::Allocator(a) => Mutation::Allocator(a),
+            MutationV1::BeginFlush => Mutation::BeginFlush,
+            MutationV1::EndFlush => Mutation::EndFlush,
+            MutationV1::UpdateBorrowed(bytes) => Mutation::UpdateBorrowed(bytes),
+        }
+    }
+}
+
 /// The journal consists of these records which will be replayed at mount time.  Within a
 /// transaction, these are stored as a set which allows some mutations to be deduplicated and found
 /// (and we require custom comparison functions below).  For example, we need to be able to find
@@ -133,6 +156,8 @@ pub enum Mutation {
     // Indicates the end of a flush.  This would typically involve replacing the immutable layers
     // with compacted ones.
     EndFlush,
+    // Volume has been deleted.  Requires we remove it from the set of managed ObjectStore.
+    DeleteVolume,
     UpdateBorrowed(u64),
 }
 

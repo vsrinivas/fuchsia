@@ -193,6 +193,28 @@ impl<S: HandleOwner> Directory<S> {
         self.update_attributes(transaction, None, Some(Timestamp::now()), |_| {}).await
     }
 
+    pub async fn delete_child_volume<'a>(
+        &self,
+        transaction: &mut Transaction<'a>,
+        volume_name: &str,
+        store_object_id: u64,
+    ) -> Result<(), Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
+        transaction.add(
+            self.store().store_object_id(),
+            Mutation::replace_or_insert_object(
+                ObjectKey::child(self.object_id, volume_name),
+                ObjectValue::None,
+            ),
+        );
+        // We note in the journal that we've deleted the volume. ObjectManager applies this
+        // mutation by forgetting the store. We do it this way to ensure that the store is removed
+        // during replay where there may be mutations to the store prior to its deletion. Without
+        // this, we will try (and fail) to open the store after replay.
+        transaction.add(store_object_id, Mutation::DeleteVolume);
+        Ok(())
+    }
+
     /// Inserts a child into the directory.
     ///
     /// Requires transaction locks on |self|.

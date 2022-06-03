@@ -355,6 +355,12 @@ impl ObjectManager {
                         }
                     }
                 }
+                Mutation::DeleteVolume => {
+                    inner.stores.remove(&object_id);
+                    inner.reservations.remove(&object_id);
+                    inner.journal_checkpoints.remove(&object_id);
+                    return;
+                }
                 _ => {
                     if object_id != inner.root_parent_store_object_id {
                         inner

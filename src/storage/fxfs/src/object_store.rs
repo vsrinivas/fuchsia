@@ -68,7 +68,7 @@ use {
 // Exposed for serialized_types.
 pub use allocator::{AllocatorInfo, AllocatorInfoV1, AllocatorKey, AllocatorValue};
 pub use extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID};
-pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord};
+pub use journal::{JournalRecord, JournalRecordV1, SuperBlock, SuperBlockRecord};
 pub use object_record::{
     AttributeKey, EncryptionKeys, ObjectAttributes, ObjectKey, ObjectKeyData, ObjectKind,
     ObjectValue,
@@ -943,6 +943,8 @@ impl ObjectStore {
     }
 
     /// Returns all objects that exist in the parent store that pertain to this object store.
+    /// Note that this doesn't include the object_id of the store itself which is generally
+    /// referenced externally.
     pub fn parent_objects(&self) -> Vec<u64> {
         assert!(self.store_info_handle.get().is_some());
         let mut objects = Vec::new();
