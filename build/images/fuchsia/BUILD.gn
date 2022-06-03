@@ -39,17 +39,11 @@ if (is_host) {
 if (is_fuchsia) {
   assert(current_toolchain == default_toolchain)
 
-  # This catches inadvertent dependencies on the "fucshia" assembly implementation
-  # in bringup-only configurations.
-  assert(
-      !use_bringup_assembly,
-      "The bringup product config cannot rely on the fuchsia assembly.  Bringup has it's own in //build/images/bringup")
-
   ##################################################
   # Shared parameters across assemblies in this file
   ##################################################
 
-  supports_fastboot_fvm = fvm_partition != ""
+  supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 
   files = {
     images_config = "$target_out_dir/fuchsia.images_config.json"
@@ -84,7 +78,7 @@ if (is_fuchsia) {
 
   fuchsia_base = {
     testonly = fuchsia_zbi_testonly
-    generate_fvm = true
+    generate_fvm = !bootfs_only
     board_name = board_name
     output_dir = root_build_dir
     fshost_config = board_fshost_config
@@ -160,40 +154,42 @@ if (is_fuchsia) {
     ]
     bootfs_labels = [ "//build/input:bootfs" ]
 
-    # minfs arguments
-    if (minfs_product_minimum_data_bytes != false) {
-      minfs_minimum_data_bytes = minfs_product_minimum_data_bytes
-    } else if (minfs_board_minimum_data_bytes != false) {
-      minfs_minimum_data_bytes = minfs_board_minimum_data_bytes
-    }
-    if (minfs_product_maximum_bytes != false) {
-      minfs_maximum_bytes = minfs_product_maximum_bytes
-    } else if (minfs_board_maximum_bytes != false) {
-      minfs_maximum_bytes = minfs_board_maximum_bytes
-    }
+    if (!bootfs_only) {
+      # minfs arguments
+      if (minfs_product_minimum_data_bytes != false) {
+        minfs_minimum_data_bytes = minfs_product_minimum_data_bytes
+      } else if (minfs_board_minimum_data_bytes != false) {
+        minfs_minimum_data_bytes = minfs_board_minimum_data_bytes
+      }
+      if (minfs_product_maximum_bytes != false) {
+        minfs_maximum_bytes = minfs_product_maximum_bytes
+      } else if (minfs_board_maximum_bytes != false) {
+        minfs_maximum_bytes = minfs_board_maximum_bytes
+      }
 
-    # blobfs arguments
-    assembly_blob_layout_format = blob_layout_format
-    assembly_compress_blobs = compress_blobs
-    if (blobfs_product_minimum_inodes != false) {
-      blobfs_minimum_inodes = blobfs_product_minimum_inodes
-    } else if (blobfs_board_minimum_inodes != false) {
-      blobfs_minimum_inodes = blobfs_board_minimum_inodes
-    }
-    if (blobfs_product_minimum_data_bytes != false) {
-      blobfs_minimum_data_bytes = blobfs_product_minimum_data_bytes
-    } else if (blobfs_board_minimum_data_bytes != false) {
-      blobfs_minimum_data_bytes = blobfs_board_minimum_data_bytes
-    }
-    if (blobfs_product_maximum_bytes != false) {
-      blobfs_maximum_bytes = blobfs_product_maximum_bytes
-    } else if (blobfs_board_maximum_bytes != false) {
-      blobfs_maximum_bytes = blobfs_board_maximum_bytes
-    }
+      # blobfs arguments
+      assembly_blob_layout_format = blob_layout_format
+      assembly_compress_blobs = compress_blobs
+      if (blobfs_product_minimum_inodes != false) {
+        blobfs_minimum_inodes = blobfs_product_minimum_inodes
+      } else if (blobfs_board_minimum_inodes != false) {
+        blobfs_minimum_inodes = blobfs_board_minimum_inodes
+      }
+      if (blobfs_product_minimum_data_bytes != false) {
+        blobfs_minimum_data_bytes = blobfs_product_minimum_data_bytes
+      } else if (blobfs_board_minimum_data_bytes != false) {
+        blobfs_minimum_data_bytes = blobfs_board_minimum_data_bytes
+      }
+      if (blobfs_product_maximum_bytes != false) {
+        blobfs_maximum_bytes = blobfs_product_maximum_bytes
+      } else if (blobfs_board_maximum_bytes != false) {
+        blobfs_maximum_bytes = blobfs_board_maximum_bytes
+      }
 
-    # fvm arguments
-    assembly_include_account_in_fvm = include_account_in_fvm
-    assembly_fvm_slice_size = fvm_slice_size
+      # fvm arguments
+      assembly_include_account_in_fvm = include_account_in_fvm
+      assembly_fvm_slice_size = fvm_slice_size
+    }
 
     # zbi arguments
     if (custom_signing_script != "") {
@@ -221,24 +217,26 @@ if (is_fuchsia) {
 
   # Copy the blob.blk to the old location for assembled images.
   # TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
-  old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
-  copy("copy_blobfs") {
-    testonly = fuchsia_zbi_testonly
-    sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
-    outputs = [ old_blobfs_path ]
-    deps = [ ":fuchsia_assembly" ]
+  if (!bootfs_only) {
+    old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
+    copy("copy_blobfs") {
+      testonly = fuchsia_zbi_testonly
+      sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
+      outputs = [ old_blobfs_path ]
+      deps = [ ":fuchsia_assembly" ]
 
-    metadata = {
-      # Declare all the generated images.
-      images = [
-        # BlobFS
-        {
-          label = get_label_info(":fuchsia", "label_with_toolchain")
-          name = "blob"
-          path = rebase_path(old_blobfs_path, root_build_dir)
-          type = "blk"
-        },
-      ]
+      metadata = {
+        # Declare all the generated images.
+        images = [
+          # BlobFS
+          {
+            label = get_label_info(":fuchsia", "label_with_toolchain")
+            name = "blob"
+            path = rebase_path(old_blobfs_path, root_build_dir)
+            type = "blk"
+          },
+        ]
+      }
     }
   }
 
@@ -274,23 +272,30 @@ if (is_fuchsia) {
     testonly = fuchsia_zbi_testonly
     public_deps = [
       ":assembly_inputs",
-      ":copy_blobfs",
       ":flash_manifest",
       ":fuchsia_assembly",
       ":update",
     ]
-
+    if (!bootfs_only) {
+      public_deps += [ ":copy_blobfs" ]
+    }
     if (include_fvm_blob_sparse) {
       public_deps += [ ":copy_fvm_blob_sparse" ]
     }
     deps = []
     if (!is_coverage) {
-      deps += [
-        ":verify_capability_routes",
-        ":verify_component_resolvers",
-      ]
-      if (fuchsia_static_pkgs_goldens != []) {
-        deps += [ ":verify_static_pkgs" ]
+      # TODO: `!bootfs_only` is a poor proxy for "may be bringup", which is a
+      # poor proxy for "may not generate `blob.blk` (which these verifiers
+      # depend on)". This predicate should be replaced with
+      # `use_bringup_assembly` or similar after https://fxrev.dev/680302 lands.
+      if (!bootfs_only) {
+        deps += [
+          ":verify_capability_routes",
+          ":verify_component_resolvers",
+        ]
+        if (fuchsia_static_pkgs_goldens != []) {
+          deps += [ ":verify_static_pkgs" ]
+        }
       }
 
       if (fuchsia_zbi_bootfs_filelist_goldens != []) {
@@ -685,34 +690,40 @@ if (is_fuchsia) {
     }
   }
 
-  verify_component_resolvers("verify_component_resolvers") {
-    testonly = fuchsia_base.testonly
-    update_package_target = ":update"
-    image_assembler_target = ":fuchsia.image_assembler"
-    assembly_image_name = "fuchsia"
-    allowlist = fuchsia_verify_component_resolvers_allowlist
-  }
-
-  verify_routes("verify_capability_routes") {
-    testonly = fuchsia_base.testonly
-    update_package_target = ":update"
-    image_assembler_target = ":fuchsia.image_assembler"
-    assembly_image_name = "fuchsia"
-    allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
-                fuchsia_verify_routes_exceptions_allowlist_product
-    if (bootfs_only) {
-      allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
+  # TODO: `!bootfs_only` is a poor proxy for "may be bringup", which is a poor
+  # proxy for "may not generate `blob.blk` (which these verifiers depend on)".
+  # This predicate should be replaced with `use_bringup_assembly` or similar
+  # after https://fxrev.dev/680302 lands.
+  if (!bootfs_only) {
+    verify_component_resolvers("verify_component_resolvers") {
+      testonly = fuchsia_base.testonly
+      update_package_target = ":update"
+      image_assembler_target = ":fuchsia.image_assembler"
+      assembly_image_name = "fuchsia"
+      allowlist = fuchsia_verify_component_resolvers_allowlist
     }
-    if (fuchsia_verify_routes_component_tree_config != "") {
-      component_tree_config = fuchsia_verify_routes_component_tree_config
-    }
-  }
 
-  verify_static_pkgs("verify_static_pkgs") {
-    testonly = fuchsia_base.testonly
-    update_package_target = ":update"
-    image_assembler_target = ":fuchsia.image_assembler"
-    assembly_image_name = "fuchsia"
-    goldens = fuchsia_static_pkgs_goldens
+    verify_routes("verify_capability_routes") {
+      testonly = fuchsia_base.testonly
+      update_package_target = ":update"
+      image_assembler_target = ":fuchsia.image_assembler"
+      assembly_image_name = "fuchsia"
+      allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
+                  fuchsia_verify_routes_exceptions_allowlist_product
+      if (bootfs_only) {
+        allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
+      }
+      if (fuchsia_verify_routes_component_tree_config != "") {
+        component_tree_config = fuchsia_verify_routes_component_tree_config
+      }
+    }
+
+    verify_static_pkgs("verify_static_pkgs") {
+      testonly = fuchsia_base.testonly
+      update_package_target = ":update"
+      image_assembler_target = ":fuchsia.image_assembler"
+      assembly_image_name = "fuchsia"
+      goldens = fuchsia_static_pkgs_goldens
+    }
   }
 }

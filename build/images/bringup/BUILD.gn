@@ -16,7 +16,6 @@ bringup_base = {
 
   include_component_id_index = true
   include_shell_commands = false
-  include_config_data = false
 
   cmdline_deps = [ "//build/input:bootfs" ]
 
@@ -171,6 +170,8 @@ assemble_system("bringup_fastboot") {
 
 group("bringup") {
   testonly = true
-  deps = [ ":bringup_fastboot" ]
-  public_deps = [ ":bringup_non_fastboot" ]
+  deps = [
+    ":bringup_fastboot",
+    ":bringup_non_fastboot",
+  ]
 }
