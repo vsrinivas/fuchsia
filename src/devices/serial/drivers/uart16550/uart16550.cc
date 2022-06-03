@@ -23,8 +23,6 @@ using namespace uart::ns8250;
 
 namespace uart16550 {
 
-static constexpr uint32_t kMaxBaudRate = 115200;
-
 static constexpr int64_t kPioIndex = 0;
 static constexpr int64_t kIrqIndex = 0;
 

@@ -21,6 +21,8 @@ TEST(Ns8250Tests, HelloWorld) {
       .mock()
       .ExpectWrite(uint8_t{0b0000'0000}, 1)  // Init
       .ExpectWrite(uint8_t{0b1000'0000}, 3)
+      .ExpectWrite(uint8_t{0b0000'0001}, 0)
+      .ExpectWrite(uint8_t{0b0000'0000}, 1)
       .ExpectWrite(uint8_t{0b1110'0111}, 2)
       .ExpectWrite(uint8_t{0b0000'0011}, 3)
       .ExpectWrite(uint8_t{0b0000'0011}, 4)
@@ -42,6 +44,8 @@ TEST(Ns8250Tests, Read) {
       .mock()
       .ExpectWrite(uint8_t{0b0000'0000}, 1)  // Init
       .ExpectWrite(uint8_t{0b1000'0000}, 3)
+      .ExpectWrite(uint8_t{0b0000'0001}, 0)
+      .ExpectWrite(uint8_t{0b0000'0000}, 1)
       .ExpectWrite(uint8_t{0b1110'0111}, 2)
       .ExpectWrite(uint8_t{0b0000'0011}, 3)
       .ExpectWrite(uint8_t{0b0000'0011}, 4)
