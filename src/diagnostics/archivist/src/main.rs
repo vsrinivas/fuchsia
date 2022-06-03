@@ -86,7 +86,9 @@ fn main() -> Result<(), Error> {
         load_v1_config(args.v1)
     };
     init_diagnostics(&config).context("initializing diagnostics")?;
-    config.record_inspect(component::inspector().root());
+    component::inspector()
+        .root()
+        .record_child("config", |config_node| config.record_inspect(config_node));
 
     let num_threads = config.num_threads;
     debug!("Running executor with {} threads.", num_threads);

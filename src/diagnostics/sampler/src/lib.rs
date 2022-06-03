@@ -40,7 +40,9 @@ pub async fn main() -> Result<(), Error> {
     inspect::component::health().set_starting_up();
 
     let component_config = ComponentConfig::take_from_startup_handle();
-    component_config.record_inspect(inspector.root());
+    inspector
+        .root()
+        .record_child("config", |config_node| component_config.record_inspect(config_node));
 
     let sampler_config = format!("{}/metrics", component_config.configs_path);
     let fire_config = format!("{}/fire", component_config.configs_path);

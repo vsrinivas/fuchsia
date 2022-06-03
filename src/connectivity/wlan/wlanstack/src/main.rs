@@ -72,7 +72,7 @@ async fn main() -> Result<(), Error> {
     inspect_runtime::serve(&inspector, &mut fs)?;
 
     let cfg = wlanstack_config::Config::take_from_startup_handle();
-    cfg.record_inspect(inspector.root());
+    inspector.root().record_child("config", |config_node| cfg.record_inspect(config_node));
     let cfg: ServiceCfg = cfg.into();
     info!("{:?}", cfg);
 

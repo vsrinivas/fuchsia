@@ -20,7 +20,7 @@ async fn main() {
     inspect_runtime::serve(inspector, &mut fs).unwrap();
 
     let config = Config::take_from_startup_handle();
-    config.record_inspect(inspector.root());
+    inspector.root().record_child("config", |config_node| config.record_inspect(config_node));
     let receiver_config = generated_to_puppet_defined(config);
 
     fs.dir("svc").add_fidl_service(IncomingRequest::Puppet);

@@ -22,7 +22,7 @@ async fn main() {
     // [START inspect]
     // Record configuration to inspect
     let inspector = fuchsia_inspect::component::inspector();
-    config.record_inspect(inspector.root());
+    inspector.root().record_child("config", |config_node| config.record_inspect(config_node));
     // [END inspect]
 
     let mut fs = ServiceFs::new_local();

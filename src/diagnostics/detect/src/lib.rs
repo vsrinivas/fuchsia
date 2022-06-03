@@ -187,7 +187,9 @@ pub async fn main() -> Result<(), Error> {
     .detach();
 
     let component_config = ComponentConfig::take_from_startup_handle();
-    component_config.record_inspect(inspector.root());
+    inspector
+        .root()
+        .record_child("config", |config_node| component_config.record_inspect(config_node));
 
     let stats = Stats::new().with_inspect(inspector.root(), "stats")?;
     let mode = match component_config.test_only {

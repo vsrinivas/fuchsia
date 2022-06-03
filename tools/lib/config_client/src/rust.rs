@@ -94,10 +94,8 @@ pub fn create_rust_wrapper(
                 }
             }
 
-            pub fn record_inspect(&self, root_node: &Node) {
-                root_node.record_child("config", |inspector_node| {
-                    #(#record_inspect_ops)*
-                });
+            pub fn record_inspect(&self, inspector_node: &Node) {
+                #(#record_inspect_ops)*
             }
         }
     };
