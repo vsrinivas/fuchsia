@@ -48,6 +48,12 @@ impl AsRef<str> for RelativePackageUrl {
     }
 }
 
+impl From<&RelativePackageUrl> for String {
+    fn from(url: &RelativePackageUrl) -> Self {
+        url.to_string()
+    }
+}
+
 impl serde::Serialize for RelativePackageUrl {
     fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         self.to_string().serialize(ser)

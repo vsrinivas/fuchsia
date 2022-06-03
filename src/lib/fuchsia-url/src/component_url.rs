@@ -2,27 +2,41 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{errors::ParseError, AbsoluteComponentUrl, RelativeComponentUrl};
+use crate::{errors::ParseError, AbsoluteComponentUrl, PackageUrl, RelativeComponentUrl};
 
 /// A URL locating a Fuchsia component. Can be either absolute or relative.
 /// See `AbsoluteComponentUrl` and `RelativeComponentUrl` for more details.
 /// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ComponentUrl {
-    Absolute(AbsoluteComponentUrl),
-    Relative(RelativeComponentUrl),
+pub struct ComponentUrl {
+    package: PackageUrl,
+    resource: String,
 }
 
 impl ComponentUrl {
     /// Parse a Component URL.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
         match AbsoluteComponentUrl::parse(url) {
-            Ok(absolute) => Ok(Self::Absolute(absolute)),
+            Ok(absolute) => {
+                let (absolute, resource) = absolute.into_parts();
+                Ok(Self { package: absolute.into(), resource })
+            }
             Err(ParseError::UrlParseError(url::ParseError::RelativeUrlWithoutBase)) => {
-                Ok(Self::Relative(RelativeComponentUrl::parse(url)?))
+                let (relative, resource) = RelativeComponentUrl::parse(url)?.into_parts();
+                Ok(Self { package: relative.into(), resource })
             }
             Err(e) => Err(e),
         }
+    }
+
+    /// The package URL of this URL (this URL without the resource path).
+    pub fn package_url(&self) -> &PackageUrl {
+        &self.package
+    }
+
+    /// The resource path of this URL.
+    pub fn resource(&self) -> &str {
+        &self.resource
     }
 }
 
@@ -44,10 +58,12 @@ impl std::convert::TryFrom<&str> for ComponentUrl {
 
 impl std::fmt::Display for ComponentUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Absolute(absolute) => absolute.fmt(f),
-            Self::Relative(relative) => relative.fmt(f),
-        }
+        write!(
+            f,
+            "{}#{}",
+            self.package,
+            percent_encoding::utf8_percent_encode(&self.resource, crate::FRAGMENT)
+        )
     }
 }
 
@@ -100,6 +116,7 @@ mod tests {
     fn parse_ok_absolute() {
         for url in [
             "fuchsia-pkg://example.org/name#resource",
+            "fuchsia-pkg://example.org/name#resource%09",
             "fuchsia-pkg://example.org/name/variant#resource",
             "fuchsia-pkg://example.org/name?hash=0000000000000000000000000000000000000000000000000000000000000000#resource",
             "fuchsia-pkg://example.org/name/variant?hash=0000000000000000000000000000000000000000000000000000000000000000#resource",

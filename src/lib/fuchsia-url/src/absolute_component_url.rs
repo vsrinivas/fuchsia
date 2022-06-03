@@ -65,6 +65,11 @@ impl AbsoluteComponentUrl {
     pub fn package_url(&self) -> &AbsolutePackageUrl {
         &self.package
     }
+
+    pub(crate) fn into_parts(self) -> (AbsolutePackageUrl, String) {
+        let Self { package, resource } = self;
+        (package, resource)
+    }
 }
 
 // AbsoluteComponentUrl does not maintain any invariants on its `package` field in addition to those

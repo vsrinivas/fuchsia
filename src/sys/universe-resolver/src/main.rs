@@ -3,23 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{self, Context},
+    anyhow::{anyhow, Context},
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_pkg::{
-        transitional::{
-            context_bytes_from_subpackages_map, parse_package_url_and_resource,
-            subpackages_map_from_context_bytes,
-        },
+        transitional::{context_bytes_from_subpackages_map, subpackages_map_from_context_bytes},
         PackageDirectory,
     },
-    fuchsia_url::{
-        pkg_url::{PackageName, PkgUrl, RepoUrl},
-        Hash,
-    },
+    fuchsia_url::{ComponentUrl, Hash, PackageUrl, RelativePackageUrl, RepositoryUrl},
     futures::prelude::*,
     log::*,
     std::collections::HashMap,
@@ -43,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
             if let Err(err) = match request {
                 IncomingService::Resolver(stream) => serve(stream).await,
             } {
-                error!("failed to serve resolve request: {:?}", err);
+                error!("failed to serve resolve request: {:#}", err);
             }
         })
         .await;
@@ -60,10 +54,17 @@ async fn serve(mut stream: fresolution::ResolverRequestStream) -> anyhow::Result
         match request {
             fresolution::ResolverRequest::Resolve { component_url, responder } => {
                 let mut result =
-                    resolve_component(&component_url, &package_resolver).await.map_err(|err| {
-                        warn!("failed to resolve component URL {}: {:#?}", component_url, err);
-                        err.into()
-                    });
+                    resolve_component_without_context(&component_url, &package_resolver)
+                        .await
+                        .map_err(|err| {
+                            let fidl_err = (&err).into();
+                            warn!(
+                                "failed to resolve component URL {}: {:#}",
+                                component_url,
+                                anyhow!(err)
+                            );
+                            fidl_err
+                        });
                 responder.send(&mut result).context("failed sending response")?;
             }
             fresolution::ResolverRequest::ResolveWithContext {
@@ -75,11 +76,14 @@ async fn serve(mut stream: fresolution::ResolverRequestStream) -> anyhow::Result
                     resolve_component_with_context(&component_url, &context, &package_resolver)
                         .await
                         .map_err(|err| {
+                            let fidl_err = (&err).into();
                             warn!(
-                                "failed to resolve component URL {} with context {:?}: {:#?}",
-                                component_url, context, err
+                                "failed to resolve component URL {} with context {:?}: {:#}",
+                                component_url,
+                                context,
+                                anyhow!(err)
                             );
-                            err.into()
+                            fidl_err
                         });
                 responder.send(&mut result).context("failed sending response")?;
             }
@@ -88,11 +92,11 @@ async fn serve(mut stream: fresolution::ResolverRequestStream) -> anyhow::Result
     Ok(())
 }
 
-async fn resolve_component(
+async fn resolve_component_without_context(
     component_url: &str,
     package_resolver: &PackageResolverProxy,
 ) -> Result<fresolution::Component, ResolverError> {
-    resolve_component_async(component_url, None, package_resolver).await
+    resolve_component(component_url, None, package_resolver).await
 }
 
 async fn resolve_component_with_context(
@@ -100,20 +104,21 @@ async fn resolve_component_with_context(
     context: &Vec<u8>,
     package_resolver: &PackageResolverProxy,
 ) -> Result<fresolution::Component, ResolverError> {
-    resolve_component_async(component_url, Some(context), package_resolver).await
+    resolve_component(component_url, Some(context), package_resolver).await
 }
 
-async fn resolve_component_async(
-    component_url: &str,
+async fn resolve_component(
+    component_url_str: &str,
     some_incoming_context: Option<&Vec<u8>>,
     package_resolver: &PackageResolverProxy,
 ) -> Result<fresolution::Component, ResolverError> {
-    let (package_url, cm_path) = parse_package_url_and_resource(component_url)?;
+    let component_url = ComponentUrl::parse(component_url_str)?;
     let package =
-        resolve_package_async(&package_url, some_incoming_context, package_resolver).await?;
+        resolve_package_async(component_url.package_url(), some_incoming_context, package_resolver)
+            .await?;
 
     // Read the component manifest (.cm file) from the package directory.
-    let data = mem_util::open_file_data(&package.dir, &cm_path)
+    let data = mem_util::open_file_data(&package.dir, component_url.resource())
         .await
         .map_err(ResolverError::ManifestNotFound)?;
     let raw_bytes = mem_util::bytes_from_data(&data).map_err(ResolverError::ReadingManifest)?;
@@ -141,11 +146,11 @@ async fn resolve_component_async(
         package.dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
     Ok(fresolution::Component {
-        url: Some(component_url.into()),
+        url: Some(component_url_str.to_string()),
         resolution_context: Some(package.context),
         decl: Some(data),
         package: Some(fresolution::Package {
-            url: Some(package_url.to_string()),
+            url: Some(component_url.package_url().to_string()),
             directory: Some(package_dir),
             ..fresolution::Package::EMPTY
         }),
@@ -161,7 +166,7 @@ struct ResolvedPackage {
 }
 
 async fn resolve_package_async(
-    package_url: &PkgUrl,
+    package_url: &PackageUrl,
     some_incoming_context: Option<&Vec<u8>>,
     package_resolver: &PackageResolverProxy,
 ) -> Result<ResolvedPackage, ResolverError> {
@@ -169,29 +174,25 @@ async fn resolve_package_async(
         create_proxy::<fio::DirectoryMarker>().expect("failed to create channel pair");
     let package_dir = PackageDirectory::from_proxy(proxy);
 
-    let package_context = if package_url.is_relative() {
-        let context = some_incoming_context
-            .ok_or_else(|| ResolverError::RelativeUrlMissingContext(package_url.to_string()))?;
-        transitional::resolve_with_context(
-            package_resolver,
-            &package_dir,
-            // TODO(fxbug.dev/100060): Replace above 3 lines with
-            // `package_resolver.resolve_with_context` when available
-            &package_url.to_string(),
-            context,
-            server_end,
-        )
-        .await
-    } else {
-        transitional::resolve(
-            package_resolver,
-            &package_dir,
-            // TODO(fxbug.dev/100060): Replace above 3 lines with
-            // `package_resolver.resolve` when updated to return a context.
-            &package_url.to_string(),
-            server_end,
-        )
-        .await
+    let package_context = match package_url {
+        PackageUrl::Relative(relative) => {
+            let context = some_incoming_context
+                .ok_or_else(|| ResolverError::RelativeUrlMissingContext(package_url.to_string()))?;
+            // TODO(fxbug.dev/100060): Replace with `package_resolver.resolve_with_context` when
+            // available.
+            transitional::resolve_with_context(
+                package_resolver,
+                &package_dir,
+                relative,
+                context,
+                server_end,
+            )
+            .await
+        }
+        PackageUrl::Absolute(absolute) => {
+            // TODO(fxbug.dev/100060): Replace with `package_resolver.resolve` when available.
+            transitional::resolve(package_resolver, &package_dir, absolute, server_end).await
+        }
     }
     .map_err(ResolverError::IoError)?
     .map_err(|err| match err {
@@ -210,39 +211,32 @@ async fn resolve_package_async(
 /// support subpackages, by wrapping the existing API. Once the new version is
 /// implemented, this module will be removed.
 mod transitional {
-    use {super::*, fidl::endpoints::ServerEnd};
+    use {super::*, fidl::endpoints::ServerEnd, fuchsia_url::AbsolutePackageUrl};
 
     pub async fn resolve(
         package_resolver: &PackageResolverProxy,
         package_dir: &PackageDirectory,
-        package_url: &str,
+        package_url: &AbsolutePackageUrl,
         dir_server_end: ServerEnd<fio::DirectoryMarker>,
     ) -> Result<Result<Vec<u8>, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
-        let result = package_resolver.resolve(package_url, dir_server_end).await?;
+        let result = package_resolver.resolve(&package_url.to_string(), dir_server_end).await?;
         if let Err(err) = result {
             // The proxy call returned (outer result Ok), but it returned an Err (inner result)
             return Ok(Err(err));
         }
-        let result = PkgUrl::parse(package_url).map_err(|err| {
-            error!("failed to parse package_url {}: {:?}", package_url, err);
-            fidl_fuchsia_pkg::ResolveError::Internal
-        });
-        let pkgurl = match result {
-            Ok(v) => v,
-            Err(err) => return Ok(Err(err)),
-        };
-        let repo = pkgurl.repo();
-        let result = fabricate_package_context(repo, package_dir).await.map_err(|err| {
-            error!("failed to fabricate package context: {:?}", err);
-            fidl_fuchsia_pkg::ResolveError::Internal
-        });
+        let result = fabricate_package_context(package_url.repository(), package_dir)
+            .await
+            .map_err(|err: anyhow::Error| {
+                error!("failed to fabricate package context: {:#}", err);
+                fidl_fuchsia_pkg::ResolveError::Internal
+            });
         Ok(result)
     }
 
     pub async fn resolve_with_context(
         package_resolver: &PackageResolverProxy,
         package_dir: &PackageDirectory,
-        package_url: &str,
+        package_url: &RelativePackageUrl,
         context: &Vec<u8>,
         dir_server_end: ServerEnd<fio::DirectoryMarker>,
     ) -> Result<Result<Vec<u8>, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
@@ -278,7 +272,7 @@ mod transitional {
             Ok(package_context) => Ok(Ok(package_context)),
             Err(err) => {
                 error!(
-                    "failed to fabricate package context: {:?}, given package_url={}",
+                    "failed to fabricate package context: {:#}, given package_url={}",
                     err, package_url
                 );
                 Ok(Err(fidl_fuchsia_pkg::ResolveError::Internal))
@@ -287,10 +281,9 @@ mod transitional {
     }
 
     fn get_subpackage_repo_and_hash(
-        package_url: &str,
+        subpackage: &RelativePackageUrl,
         context: &Vec<u8>,
-    ) -> anyhow::Result<(RepoUrl, Hash)> {
-        let subpackage = PkgUrl::parse_relative_path(package_url)?.name().clone();
+    ) -> anyhow::Result<(RepositoryUrl, Hash)> {
         let info = PackageResolutionInfo::from_package_context(context)?;
         Ok((
             info.repo,
@@ -302,7 +295,7 @@ mod transitional {
     }
 
     async fn fabricate_package_context(
-        repo: &RepoUrl,
+        repo: &RepositoryUrl,
         package_dir: &PackageDirectory,
     ) -> anyhow::Result<Vec<u8>> {
         let meta = package_dir.meta_subpackages().await?;
@@ -312,39 +305,44 @@ mod transitional {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageResolutionInfo {
-    pub repo: RepoUrl,
-    pub subpackage_hashes: HashMap<PackageName, Hash>,
+    pub repo: RepositoryUrl,
+    pub subpackage_hashes: HashMap<RelativePackageUrl, Hash>,
 }
 
 impl PackageResolutionInfo {
-    pub fn new(repo: RepoUrl, subpackage_hashes: HashMap<PackageName, Hash>) -> Self {
+    pub fn new(repo: RepositoryUrl, subpackage_hashes: HashMap<RelativePackageUrl, Hash>) -> Self {
         Self { repo, subpackage_hashes }
     }
 
     pub fn from_package_context(context: &Vec<u8>) -> Result<Self, anyhow::Error> {
         let mut parts = context.split(|&b| b == b'\0');
-        let repo = RepoUrl::new(
+        let repo = RepositoryUrl::parse_host(
             String::from_utf8(
                 parts
                     .next()
                     .ok_or_else(|| anyhow::format_err!("Empty resolution context bytes"))?
                     .to_vec(),
             )
-            .map_err(|err| {
-                anyhow::format_err!(
-                    "Error extracting package URL host from resolution context bytes: {:?}: {:?}",
-                    context,
-                    err
+            .with_context(|| {
+                format!(
+                    "Error extracting package URL host from resolution context bytes: {:?}",
+                    context
                 )
             })?,
         )?;
 
-        let subpackage_hashes = parts.next().map(|bytes| {
-            subpackages_map_from_context_bytes(&bytes.to_vec())
-            .map_err(|err| {
-                anyhow::format_err!("Error extracting subpackages JSON from resolution context bytes: {:?}: {:?}", err, bytes)
+        let subpackage_hashes = parts
+            .next()
+            .map(|bytes| {
+                subpackages_map_from_context_bytes(&bytes.to_vec()).with_context(|| {
+                    format!(
+                        "Error extracting subpackages JSON from resolution context bytes: {:?}",
+                        bytes
+                    )
+                })
             })
-        }).transpose()?.unwrap_or_else(|| HashMap::default());
+            .transpose()?
+            .unwrap_or_default();
         Ok(Self { repo, subpackage_hashes })
     }
 
@@ -363,51 +361,64 @@ impl PackageResolutionInfo {
 enum ResolverError {
     #[error("an unexpected error occurred")]
     Internal,
-    #[error("invalid component URL: {}", .0)]
+
+    #[error("invalid component URL")]
     InvalidUrl(#[from] fuchsia_url::errors::ParseError),
-    #[error("manifest not found: {_0}")]
+
+    #[error("manifest not found")]
     ManifestNotFound(#[source] mem_util::FileError),
-    #[error("config values not found: {_0}")]
+
+    #[error("config values not found")]
     ConfigValuesNotFound(#[source] mem_util::FileError),
+
     #[error("package not found")]
     PackageNotFound,
-    #[error("IO error: {}", .0)]
+
+    #[error("IO error")]
     IoError(#[source] fidl::Error),
+
     #[error("failed to deal with fuchsia.mem.Data")]
     ReadingManifest(#[source] mem_util::DataError),
-    #[error("failed to parse compiled manifest to check for config: {_0}")]
+
+    #[error("failed to parse compiled manifest to check for config")]
     ParsingManifest(#[source] fidl::Error),
+
     #[error("insufficient space to store package")]
     NoSpace,
+
     #[error("the component's package is temporarily unavailable")]
     Unavailable,
+
     #[error("component has config fields but does not have a config value lookup strategy")]
     MissingConfigSource,
+
     #[error("unsupported config value resolution strategy {_0:?}")]
     UnsupportedConfigStrategy(fdecl::ConfigValueSource),
+
     #[error("failed to create the resolution context")]
     CreatingContext(#[from] anyhow::Error),
+
     #[error("a context is required to resolve relative url: {0}")]
     RelativeUrlMissingContext(String),
 }
 
-impl From<ResolverError> for fresolution::ResolverError {
-    fn from(err: ResolverError) -> fresolution::ResolverError {
-        use ResolverError::*;
+impl From<&ResolverError> for fresolution::ResolverError {
+    fn from(err: &ResolverError) -> fresolution::ResolverError {
+        use {fresolution::ResolverError as ferr, ResolverError::*};
         match err {
-            Internal => fresolution::ResolverError::Internal,
-            InvalidUrl(_) => fresolution::ResolverError::InvalidArgs,
-            ManifestNotFound { .. } => fresolution::ResolverError::ManifestNotFound,
-            ConfigValuesNotFound { .. } => fresolution::ResolverError::ConfigValuesNotFound,
-            PackageNotFound => fresolution::ResolverError::PackageNotFound,
-            ReadingManifest(_) | IoError(_) => fresolution::ResolverError::Io,
-            NoSpace => fresolution::ResolverError::NoSpace,
-            Unavailable => fresolution::ResolverError::ResourceUnavailable,
+            Internal => ferr::Internal,
+            InvalidUrl(_) => ferr::InvalidArgs,
+            ManifestNotFound { .. } => ferr::ManifestNotFound,
+            ConfigValuesNotFound { .. } => ferr::ConfigValuesNotFound,
+            PackageNotFound => ferr::PackageNotFound,
+            ReadingManifest(_) | IoError(_) => ferr::Io,
+            NoSpace => ferr::NoSpace,
+            Unavailable => ferr::ResourceUnavailable,
             ParsingManifest(..) | MissingConfigSource | UnsupportedConfigStrategy(..) => {
-                fresolution::ResolverError::InvalidManifest
+                ferr::InvalidManifest
             }
-            CreatingContext(_) => fresolution::ResolverError::Internal,
-            RelativeUrlMissingContext(_) => fresolution::ResolverError::Internal,
+            CreatingContext(_) => ferr::Internal,
+            RelativeUrlMissingContext(_) => ferr::Internal,
         }
     }
 }
@@ -443,7 +454,7 @@ mod tests {
     };
 
     async fn resolve_package(
-        package_url: &PkgUrl,
+        package_url: &PackageUrl,
         package_resolver: &PackageResolverProxy,
     ) -> Result<ResolvedPackage, ResolverError> {
         resolve_package_async(package_url, None, package_resolver).await
@@ -610,11 +621,8 @@ mod tests {
             }
         };
         let client = async move {
-            let result = resolve_package(
-                &PkgUrl::new_package("fuchsia.com".into(), "/test".into(), None).unwrap(),
-                &proxy,
-            )
-            .await;
+            let result =
+                resolve_package(&"fuchsia-pkg://fuchsia.com/test".parse().unwrap(), &proxy).await;
             let package = result.expect("package resolver failed unexpectedly");
             let file = io_util::directory::open_file(
                 &package.dir,
@@ -670,7 +678,11 @@ mod tests {
         };
         let client = async move {
             assert_matches!(
-                resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
+                resolve_component_without_context(
+                    "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
+                    &proxy
+                )
+                .await,
                 Ok(fresolution::Component {
                     decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
                     ..
@@ -715,7 +727,7 @@ mod tests {
             }
         };
         let client = async move {
-            assert_matches!(resolve_component("fuchsia-pkg://fuchsia.com/test?hash=9e3a3f63c018e2a4db0ef93903a87714f036e3e8ff982a7a2020eca86cc4677c#meta/test.cm", &proxy).await, Ok(_));
+            assert_matches!(resolve_component_without_context("fuchsia-pkg://fuchsia.com/test?hash=9e3a3f63c018e2a4db0ef93903a87714f036e3e8ff982a7a2020eca86cc4677c#meta/test.cm", &proxy).await, Ok(_));
         };
         join!(server, client);
     }
@@ -755,7 +767,11 @@ mod tests {
         };
         let client = async move {
             assert_matches!(
-                resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
+                resolve_component_without_context(
+                    "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
+                    &proxy
+                )
+                .await,
                 Ok(fresolution::Component { decl: Some(fmem::Data::Buffer(_)), .. })
             );
         };
@@ -774,7 +790,7 @@ mod tests {
         let subpackage_hash_query_url =
             format!("fuchsia-pkg://fuchsia.com/?hash={}", subpackage_hash);
         let subpackages = MetaSubpackages::from_iter(vec![(
-            PackageName::from_str(subpackage_name).unwrap(),
+            RelativePackageUrl::parse(subpackage_name).unwrap(),
             Hash::from_str(subpackage_hash).unwrap(),
         )]);
 
@@ -824,7 +840,7 @@ mod tests {
             }
         };
         let client = async move {
-            let parent_component = resolve_component(&parent_component_url, &proxy)
+            let parent_component = resolve_component_without_context(&parent_component_url, &proxy)
                 .await
                 .expect("failed to resolve parent_component");
             let resolution_context_repr =
@@ -862,7 +878,11 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         drop(server);
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
+            resolve_component_without_context(
+                "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
+                &proxy
+            )
+            .await,
             Err(ResolverError::IoError(_))
         );
     }
@@ -883,7 +903,11 @@ mod tests {
         };
         let client = async move {
             assert_matches!(
-                resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
+                resolve_component_without_context(
+                    "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
+                    &proxy
+                )
+                .await,
                 Err(ResolverError::NoSpace)
             );
         };
@@ -914,7 +938,11 @@ mod tests {
         };
         let client = async move {
             assert_matches!(
-                resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
+                resolve_component_without_context(
+                    "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
+                    &proxy
+                )
+                .await,
                 Err(ResolverError::ManifestNotFound(..))
             );
         };
@@ -978,9 +1006,12 @@ mod tests {
         };
         let _pkg_resolver = spawn_pkg_resolver(fs, server);
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
-                .await
-                .unwrap(),
+            resolve_component_without_context(
+                "fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm",
+                &proxy
+            )
+            .await
+            .unwrap(),
             fresolution::Component {
                 decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
                 config_values: Some(fidl_fuchsia_mem::Data::Buffer(
@@ -1015,9 +1046,12 @@ mod tests {
         };
         let _pkg_resolver = spawn_pkg_resolver(fs, server);
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
-                .await
-                .unwrap_err(),
+            resolve_component_without_context(
+                "fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm",
+                &proxy
+            )
+            .await
+            .unwrap_err(),
             ResolverError::ConfigValuesNotFound(_)
         );
     }
@@ -1047,25 +1081,30 @@ mod tests {
         };
         let _pkg_resolver = spawn_pkg_resolver(fs, server);
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
-                .await
-                .unwrap_err(),
+            resolve_component_without_context(
+                "fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm",
+                &proxy
+            )
+            .await
+            .unwrap_err(),
             ResolverError::MissingConfigSource
         );
     }
 
     #[test]
-    fn test_package_resolution_info() -> Result<(), Error> {
+    fn test_package_resolution_info() {
         let mut subpackages_map = HashMap::default();
         subpackages_map.insert(
-            PackageName::from_str("subpackage_name").unwrap(),
-            Hash::from_str("facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface")?,
+            RelativePackageUrl::parse("subpackage_name").unwrap(),
+            Hash::from_str("facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface")
+                .unwrap(),
         );
-        let info =
-            PackageResolutionInfo::new(RepoUrl::new("fuchsia.com".to_string())?, subpackages_map);
-        let package_context = info.clone().into_package_context()?;
-        let info2 = PackageResolutionInfo::from_package_context(&package_context)?;
+        let info = PackageResolutionInfo::new(
+            RepositoryUrl::parse_host("fuchsia.com".to_string()).unwrap(),
+            subpackages_map,
+        );
+        let package_context = info.clone().into_package_context().unwrap();
+        let info2 = PackageResolutionInfo::from_package_context(&package_context).unwrap();
         assert_eq!(info, info2);
-        Ok(())
     }
 }

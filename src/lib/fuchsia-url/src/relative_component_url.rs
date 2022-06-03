@@ -38,6 +38,11 @@ impl RelativeComponentUrl {
     pub fn resource(&self) -> &str {
         &self.resource
     }
+
+    pub(crate) fn into_parts(self) -> (RelativePackageUrl, String) {
+        let Self { package, resource } = self;
+        (package, resource)
+    }
 }
 
 impl std::str::FromStr for RelativeComponentUrl {

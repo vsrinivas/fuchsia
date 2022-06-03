@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::parse::{PackageName, PackageVariant},
+    crate::{
+        parse::{PackageName, PackageVariant},
+        RelativePackageUrl,
+    },
     proptest::prelude::*,
 };
 
@@ -33,6 +36,12 @@ prop_compose! {
 prop_compose! {
     fn always_valid_resource_path_char()(c in ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE) -> String {
         c
+    }
+}
+
+prop_compose! {
+    pub fn random_relative_package_url()(s in random_package_segment()) -> RelativePackageUrl {
+        s.parse().unwrap()
     }
 }
 

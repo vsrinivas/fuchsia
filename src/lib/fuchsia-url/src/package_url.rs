@@ -42,6 +42,18 @@ impl std::convert::TryFrom<&str> for PackageUrl {
     }
 }
 
+impl From<AbsolutePackageUrl> for PackageUrl {
+    fn from(absolute: AbsolutePackageUrl) -> Self {
+        Self::Absolute(absolute)
+    }
+}
+
+impl From<RelativePackageUrl> for PackageUrl {
+    fn from(relative: RelativePackageUrl) -> Self {
+        Self::Relative(relative)
+    }
+}
+
 impl std::fmt::Display for PackageUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

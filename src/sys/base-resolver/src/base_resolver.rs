@@ -14,13 +14,10 @@ use {
     fidl_fuchsia_pkg_ext::BasePackageIndex,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_pkg::{
-        transitional::{
-            context_bytes_from_subpackages_map, parse_package_url_and_resource,
-            subpackages_map_from_context_bytes,
-        },
+        transitional::{context_bytes_from_subpackages_map, subpackages_map_from_context_bytes},
         PackageDirectory,
     },
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::{ComponentUrl, PackageUrl},
     futures::prelude::*,
     log::*,
 };
@@ -123,21 +120,21 @@ async fn resolve_component_with_context(
 }
 
 async fn resolve_component_async(
-    component_url: &str,
+    component_url_str: &str,
     some_incoming_context: Option<&Vec<u8>>,
     packages_dir: &fio::DirectoryProxy,
     some_base_package_index: Option<&BasePackageIndex>,
 ) -> Result<fresolution::Component, crate::ResolverError> {
-    let (package_url, cm_path) = parse_package_url_and_resource(component_url)?;
+    let component_url = ComponentUrl::parse(component_url_str)?;
     let package = resolve_package_async(
-        &package_url,
+        component_url.package_url(),
         some_incoming_context,
         packages_dir,
         some_base_package_index,
     )
     .await?;
 
-    let data = mem_util::open_file_data(&package.dir, &cm_path)
+    let data = mem_util::open_file_data(&package.dir, &component_url.resource())
         .await
         .map_err(crate::ResolverError::ComponentNotFound)?;
     let raw_bytes = mem_util::bytes_from_data(&data).map_err(crate::ResolverError::ReadManifest)?;
@@ -165,11 +162,11 @@ async fn resolve_component_async(
         package.dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
     Ok(fresolution::Component {
-        url: Some(component_url.into()),
+        url: Some(component_url_str.to_string()),
         resolution_context: Some(package.context),
         decl: Some(data),
         package: Some(fresolution::Package {
-            url: Some(package_url.to_string()),
+            url: Some(component_url.package_url().to_string()),
             directory: Some(package_dir),
             ..fresolution::Package::EMPTY
         }),
@@ -185,49 +182,49 @@ struct ResolvedPackage {
 }
 
 async fn resolve_package_async(
-    package_url: &PkgUrl,
+    package_url: &PackageUrl,
     some_incoming_context: Option<&Vec<u8>>,
     packages_dir: &fio::DirectoryProxy,
     some_base_package_index: Option<&BasePackageIndex>,
 ) -> Result<ResolvedPackage, crate::ResolverError> {
-    let (package_name, some_variant) = if package_url.is_relative() {
-        let context = some_incoming_context.ok_or_else(|| {
-            crate::ResolverError::RelativeUrlMissingContext(package_url.to_string())
-        })?;
-        // TODO(fxbug.dev/101492): Update base-resolver to use blobfs directly,
-        // and allow subpackage lookup to resolve subpackages from blobfs via
-        // the blobid (package hash). Then base-resolver will no longer need
-        // access to pkgfs-packages or to the package index (from PackageCache).
-        let base_package_index =
-            some_base_package_index.ok_or_else(|| crate::ResolverError::Internal)?;
-        // Note, `name()` returns the first segment only
-        let subpackage = package_url.name();
-        let subpackage_hashes = subpackages_map_from_context_bytes(context)
-            .map_err(|err| crate::ResolverError::ReadingContext(err))?;
-        let hash = subpackage_hashes.get(subpackage).ok_or_else(|| {
-            crate::ResolverError::SubpackageNotFound(anyhow::format_err!(
-                "Subpackage '{}' not found in context: {:?}",
-                subpackage,
-                subpackage_hashes
-            ))
-        })?;
-        if let Some(package_url) = base_package_index.get_url(&(*hash).into()) {
-            (package_url.name(), package_url.variant())
-        } else {
-            return Err(crate::ResolverError::SubpackageNotInBase(anyhow::format_err!(
-                "Subpackage '{}' with hash '{}' is not in base",
-                subpackage,
-                hash
-            )));
+    let (package_name, some_variant) = match package_url {
+        PackageUrl::Relative(relative) => {
+            let context = some_incoming_context.ok_or_else(|| {
+                crate::ResolverError::RelativeUrlMissingContext(package_url.to_string())
+            })?;
+            // TODO(fxbug.dev/101492): Update base-resolver to use blobfs directly,
+            // and allow subpackage lookup to resolve subpackages from blobfs via
+            // the blobid (package hash). Then base-resolver will no longer need
+            // access to pkgfs-packages or to the package index (from PackageCache).
+            let base_package_index =
+                some_base_package_index.ok_or_else(|| crate::ResolverError::Internal)?;
+            let subpackage_hashes = subpackages_map_from_context_bytes(context)
+                .map_err(|err| crate::ResolverError::ReadingContext(err))?;
+            let hash = subpackage_hashes.get(relative).ok_or_else(|| {
+                crate::ResolverError::SubpackageNotFound(anyhow::format_err!(
+                    "Subpackage '{}' not found in context: {:?}",
+                    relative,
+                    subpackage_hashes
+                ))
+            })?;
+            let absolute = base_package_index.get_url(&(*hash).into()).ok_or_else(|| {
+                crate::ResolverError::SubpackageNotInBase(anyhow::format_err!(
+                    "Subpackage '{}' with hash '{}' is not in base",
+                    relative,
+                    hash
+                ))
+            })?;
+            (absolute.name(), absolute.variant())
         }
-    } else {
-        if package_url.host() != "fuchsia.com" {
-            return Err(crate::ResolverError::UnsupportedRepo);
+        PackageUrl::Absolute(absolute) => {
+            if absolute.host() != "fuchsia.com" {
+                return Err(crate::ResolverError::UnsupportedRepo);
+            }
+            if absolute.hash().is_some() {
+                return Err(crate::ResolverError::PackageHashNotSupported);
+            }
+            (absolute.name(), absolute.variant())
         }
-        if package_url.package_hash().is_some() {
-            return Err(crate::ResolverError::PackageHashNotSupported);
-        }
-        (package_url.name(), package_url.variant())
     };
     // Package contents are available at `packages/$PACKAGE_NAME/0`.
     let dir = io_util::directory::open_directory(
@@ -262,7 +259,7 @@ mod tests {
         fidl_fuchsia_pkg_ext::BlobId,
         fuchsia_hash::Hash,
         fuchsia_pkg::MetaSubpackages,
-        fuchsia_url::{pkg_url::PackageName, UnpinnedAbsolutePackageUrl},
+        fuchsia_url::{RelativePackageUrl, UnpinnedAbsolutePackageUrl},
         fuchsia_zircon::Status,
         maplit::hashmap,
         std::{iter::FromIterator, str::FromStr, sync::Arc},
@@ -273,13 +270,6 @@ mod tests {
         "facefacefacefacefacefacefacefacefacefacefacefacefacefacefaceface";
     const OTHER_PACKAGE_HASH: &'static str =
         "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-
-    async fn resolve_package(
-        package_url: &PkgUrl,
-        packages_dir: &fio::DirectoryProxy,
-    ) -> Result<ResolvedPackage, crate::ResolverError> {
-        resolve_package_async(package_url, None, packages_dir, None).await
-    }
 
     /// A DirectoryEntry implementation that checks whether an expected set of flags
     /// are set in the Open request.
@@ -330,12 +320,10 @@ mod tests {
 
     #[fuchsia::test]
     async fn fails_to_resolve_package_unsupported_repo() {
-        let pkg_url = PkgUrl::new_package("fuchsia.ca".into(), "/test-package".into(), None)
-            .expect("failed to create test PkgUrl");
         let packages_dir = serve_executable_dir(vfs::pseudo_directory! {});
-
         assert_matches!(
-            resolve_package(&pkg_url, &packages_dir).await,
+            resolve_component("fuchsia-pkg://fuchsia.ca/test-package#meta/foo.cm", &packages_dir)
+                .await,
             Err(crate::ResolverError::UnsupportedRepo)
         );
     }
@@ -585,7 +573,7 @@ mod tests {
         .expect("failed to encode ComponentDecl FIDL");
 
         let subpackages = MetaSubpackages::from_iter(vec![(
-            PackageName::from_str(SUBPACKAGE_NAME).unwrap(),
+            RelativePackageUrl::parse(SUBPACKAGE_NAME).unwrap(),
             Hash::from_str(SUBPACKAGE_HASH).unwrap(),
         )]);
 

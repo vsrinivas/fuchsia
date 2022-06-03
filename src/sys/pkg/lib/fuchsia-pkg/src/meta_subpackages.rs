@@ -6,7 +6,7 @@ use {
     crate::errors::MetaSubpackagesError,
     anyhow,
     fuchsia_merkle::Hash,
-    fuchsia_url::pkg_url::PackageName,
+    fuchsia_url::RelativePackageUrl,
     serde::{Deserialize, Serialize},
     std::{collections::HashMap, io, iter::FromIterator},
 };
@@ -26,14 +26,14 @@ impl MetaSubpackages {
     }
 
     /// Get the map from subpackage names to Merkle Tree root hashes.
-    pub fn subpackages(&self) -> &HashMap<PackageName, Hash> {
+    pub fn subpackages(&self) -> &HashMap<RelativePackageUrl, Hash> {
         match &self.0 {
             VersionedMetaSubpackages::Version1(meta) => &meta.subpackages,
         }
     }
 
     /// Take the map from subpackage names to Merkle Tree root hashes.
-    pub fn into_subpackages(self) -> HashMap<PackageName, Hash> {
+    pub fn into_subpackages(self) -> HashMap<RelativePackageUrl, Hash> {
         match self.0 {
             VersionedMetaSubpackages::Version1(meta) => meta.subpackages,
         }
@@ -54,10 +54,10 @@ impl MetaSubpackages {
     }
 }
 
-impl FromIterator<(PackageName, Hash)> for MetaSubpackages {
+impl FromIterator<(RelativePackageUrl, Hash)> for MetaSubpackages {
     fn from_iter<T>(iter: T) -> Self
     where
-        T: IntoIterator<Item = (PackageName, Hash)>,
+        T: IntoIterator<Item = (RelativePackageUrl, Hash)>,
     {
         MetaSubpackages(VersionedMetaSubpackages::Version1(MetaSubpackagesV1 {
             subpackages: HashMap::from_iter(iter),
@@ -80,37 +80,19 @@ impl Default for VersionedMetaSubpackages {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 struct MetaSubpackagesV1 {
-    subpackages: HashMap<PackageName, Hash>,
+    subpackages: HashMap<RelativePackageUrl, Hash>,
 }
 
 /// The following functions may be deprecated. They support the initial
 /// implementation of Subpackages (RFC-0154) but are likely to move to
 /// a different module.
 pub mod transitional {
-    use {
-        super::*,
-        fuchsia_url::{
-            errors::ParseError as PkgUrlParseError, errors::ResourcePathError, pkg_url::PkgUrl,
-        },
-    };
-
-    /// Given a component URL (which may be absolute, or may start with a relative
-    /// package path), extract the component resource (from the URL fragment) and
-    /// create the `PkgUrl`, and return both, as a tuple.
-    pub fn parse_package_url_and_resource(
-        component_url: &str,
-    ) -> Result<(PkgUrl, String), PkgUrlParseError> {
-        let pkg_url = PkgUrl::parse_maybe_relative(component_url)?;
-        let resource = pkg_url
-            .resource()
-            .ok_or_else(|| PkgUrlParseError::InvalidResourcePath(ResourcePathError::PathIsEmpty))?;
-        Ok((pkg_url.root_url(), resource.to_string()))
-    }
+    use super::*;
 
     /// Returns a package-resolver-specific value representing the given
     /// subpackage name-to-merkle map, or `None` if the map is empty.
     pub fn context_bytes_from_subpackages_map(
-        subpackage_hashes: &HashMap<PackageName, Hash>,
+        subpackage_hashes: &HashMap<RelativePackageUrl, Hash>,
     ) -> Result<Option<Vec<u8>>, anyhow::Error> {
         if subpackage_hashes.is_empty() {
             Ok(None)
@@ -128,25 +110,26 @@ pub mod transitional {
     /// The inverse of `context_bytes_from_subpackages_map()`.
     pub fn subpackages_map_from_context_bytes(
         context_bytes: &Vec<u8>,
-    ) -> Result<HashMap<PackageName, Hash>, anyhow::Error> {
+    ) -> Result<HashMap<RelativePackageUrl, Hash>, anyhow::Error> {
         let json_value = serde_json::from_slice(context_bytes)?;
-        Ok(serde_json::from_value::<HashMap<PackageName, Hash>>(json_value)?)
+        Ok(serde_json::from_value::<HashMap<RelativePackageUrl, Hash>>(json_value)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::transitional::*, super::*, crate::test::*, fuchsia_url::test::random_package_name,
-        maplit::hashmap, proptest::prelude::*, serde_json::json, std::str::FromStr,
+        super::transitional::*, super::*, crate::test::*,
+        fuchsia_url::test::random_relative_package_url, maplit::hashmap, proptest::prelude::*,
+        serde_json::json,
     };
 
     fn zeros_hash() -> Hash {
-        Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap()
+        "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap()
     }
 
     fn ones_hash() -> Hash {
-        Hash::from_str("1111111111111111111111111111111111111111111111111111111111111111").unwrap()
+        "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap()
     }
 
     #[test]
@@ -160,8 +143,8 @@ mod tests {
             }"#.as_bytes();
         let meta_subpackages = MetaSubpackages::deserialize(bytes).unwrap();
         let expected_subpackages = hashmap! {
-            PackageName::from_str("a_0_subpackage").unwrap() => zeros_hash(),
-            PackageName::from_str("other-1-subpackage").unwrap() => ones_hash(),
+            RelativePackageUrl::parse("a_0_subpackage").unwrap() => zeros_hash(),
+            RelativePackageUrl::parse("other-1-subpackage").unwrap() => ones_hash(),
         };
         assert_eq!(meta_subpackages.subpackages(), &expected_subpackages);
         assert_eq!(meta_subpackages.into_subpackages(), expected_subpackages);
@@ -170,9 +153,9 @@ mod tests {
     proptest! {
         #[test]
         fn serialize(
-            ref path0 in random_package_name(),
+            ref path0 in random_relative_package_url(),
             ref hex0 in random_hash(),
-            ref path1 in random_package_name(),
+            ref path1 in random_relative_package_url(),
             ref hex1 in random_hash())
         {
             prop_assume!(path0 != path1);
@@ -199,36 +182,22 @@ mod tests {
         #[test]
         fn serialize_deserialize_is_id(
             subpackages in prop::collection::hash_map(
-                random_package_name(), random_hash(), 0..4)
+                random_relative_package_url(), random_hash(), 0..4)
         ) {
             let meta_subpackages = MetaSubpackages::from_iter(subpackages);
-            let deserialized = MetaSubpackages::deserialize(&*serde_json::to_vec(&meta_subpackages).unwrap()).unwrap();
+            let deserialized = MetaSubpackages::deserialize(
+                &*serde_json::to_vec(&meta_subpackages).unwrap()
+            )
+            .unwrap();
             prop_assert_eq!(meta_subpackages, deserialized);
         }
     }
 
     #[test]
-    pub fn test_parse_package_url_and_resource() {
-        let (abs_pkgurl, resource) =
-            parse_package_url_and_resource("fuchsia-pkg://fuchsia.com/package#meta/comp.cm")
-                .unwrap();
-        assert_eq!(abs_pkgurl.is_relative(), false);
-        assert_eq!(abs_pkgurl.host(), "fuchsia.com");
-        assert_eq!(abs_pkgurl.name().as_ref(), "package");
-        assert_eq!(resource, "meta/comp.cm");
-
-        let (rel_pkgurl, resource) =
-            parse_package_url_and_resource("package#meta/comp.cm").unwrap();
-        assert_eq!(rel_pkgurl.is_relative(), true);
-        assert_eq!(rel_pkgurl.name().as_ref(), "package");
-        assert_eq!(resource, "meta/comp.cm");
-    }
-
-    #[test]
-    pub fn test_context_bytes_from_subpackages_map_and_back() {
+    fn test_context_bytes_from_subpackages_map_and_back() {
         let subpackages_map = hashmap! {
-            PackageName::from_str("a_0_subpackage").unwrap() => zeros_hash(),
-            PackageName::from_str("other-1-subpackage").unwrap() => ones_hash(),
+            RelativePackageUrl::parse("a_0_subpackage").unwrap() => zeros_hash(),
+            RelativePackageUrl::parse("other-1-subpackage").unwrap() => ones_hash(),
         };
         let bytes = context_bytes_from_subpackages_map(&subpackages_map).unwrap().unwrap();
         let restored_map = subpackages_map_from_context_bytes(&bytes).unwrap();
