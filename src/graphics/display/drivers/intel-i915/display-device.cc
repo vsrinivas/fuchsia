@@ -110,13 +110,13 @@ void DisplayDevice::InitBacklight() {
 }
 
 bool DisplayDevice::Resume() {
-  if (!DdiModeset(info_, pipe_->pipe(), pipe_->transcoder())) {
-    return false;
-  }
   if (pipe_) {
+    if (!DdiModeset(info_, pipe_->pipe(), pipe_->transcoder())) {
+      return false;
+    }
     controller_->interrupts()->EnablePipeVsync(pipe_->pipe(), true);
   }
-  return true;
+  return pipe_ != nullptr;
 }
 
 void DisplayDevice::LoadActiveMode() {
@@ -190,15 +190,19 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
   if (CheckNeedsModeset(&config->mode)) {
     info_ = config->mode;
 
-    DdiModeset(info_, pipe_->pipe(), pipe_->transcoder());
+    if (pipe_) {
+      DdiModeset(info_, pipe_->pipe(), pipe_->transcoder());
 
-    PipeConfigPreamble(info_, pipe_->pipe(), pipe_->transcoder());
-    pipe_->ApplyModeConfig(info_);
-    PipeConfigEpilogue(info_, pipe_->pipe(), pipe_->transcoder());
+      PipeConfigPreamble(info_, pipe_->pipe(), pipe_->transcoder());
+      pipe_->ApplyModeConfig(info_);
+      PipeConfigEpilogue(info_, pipe_->pipe(), pipe_->transcoder());
+    }
   }
 
-  pipe_->ApplyConfiguration(config, config_stamp,
-                            fit::bind_member<&Controller::SetupGttImage>(controller_));
+  if (pipe_) {
+    pipe_->ApplyConfiguration(config, config_stamp,
+                              fit::bind_member<&Controller::SetupGttImage>(controller_));
+  }
 }
 
 void DisplayDevice::GetStateNormalized(GetStateNormalizedRequestView request,
