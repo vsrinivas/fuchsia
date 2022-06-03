@@ -47,6 +47,11 @@ impl Credentials {
         })
     }
 
+    /// Creates a set of credentials with all possible permissions, suitable for system tasks.
+    pub fn system() -> Credentials {
+        Credentials { uid: 0, gid: 0, euid: 0, egid: 0, saved_uid: 0, saved_gid: 0, groups: vec![] }
+    }
+
     /// Compares the user ID of `self` to that of `other`.
     ///
     /// Used to check whether a task can signal another.

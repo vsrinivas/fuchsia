@@ -13,7 +13,7 @@ use fuchsia_async as fasync;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::HandleBased;
 use futures::TryStreamExt;
-use std::sync::Arc;
+use std::rc::Rc;
 use tracing::error;
 
 use super::*;
@@ -43,7 +43,7 @@ pub async fn serve_starnix_manager(
 
 pub async fn serve_component_runner(
     mut request_stream: fcrunner::ComponentRunnerRequestStream,
-    galaxy: Arc<Galaxy>,
+    galaxy: Rc<Galaxy>,
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {

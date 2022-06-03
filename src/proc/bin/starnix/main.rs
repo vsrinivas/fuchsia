@@ -6,8 +6,8 @@ use crate::execution::create_galaxy;
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use std::sync::Arc;
 use futures::StreamExt;
+use std::rc::Rc;
 
 mod auth;
 mod collections;
@@ -31,7 +31,7 @@ mod testing;
 
 #[fuchsia::main(logging_tags = ["starnix"])]
 async fn main() -> Result<(), Error> {
-    let galaxy = Arc::new(create_galaxy().await?);
+    let galaxy = Rc::new(create_galaxy().await?);
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         let galaxy = galaxy.clone();

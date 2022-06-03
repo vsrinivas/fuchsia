@@ -36,6 +36,9 @@ pub struct Galaxy {
 
     /// The root filesystem context for the galaxy.
     pub root_fs: Arc<FsContext>,
+
+    /// The system task to execute action as the system.
+    pub system_task: CurrentTask,
 }
 
 impl Galaxy {
@@ -102,13 +105,12 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     execute_task(init_task, |result| {
         tracing::info!("Finished running init process: {:?}", result);
     });
+    let system_task = create_task(&kernel, &fs_context, "kthreadd", Credentials::system())?;
     if let Some(startup_file_path) = startup_file_path {
-        let init_wait_task = create_init_task(&kernel, &fs_context)?;
-        wait_for_init_file(&startup_file_path, &init_wait_task).await?;
-        init_wait_task.write().exit_status = Some(ExitStatus::Exit(0));
+        wait_for_init_file(&startup_file_path, &system_task).await?;
     };
 
-    Ok(Galaxy { kernel, root_fs })
+    Ok(Galaxy { kernel, root_fs, system_task })
 }
 
 fn create_fs_context(
@@ -157,13 +159,21 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
     Ok(())
 }
 
+fn create_task(
+    kernel: &Arc<Kernel>,
+    fs: &Arc<FsContext>,
+    name: &str,
+    credentials: Credentials,
+) -> Result<CurrentTask, Error> {
+    let task = Task::create_process_without_parent(kernel, to_cstr(&name.to_string()), fs.clone())?;
+    task.write().creds = credentials;
+    Ok(task)
+}
+
 fn create_init_task(kernel: &Arc<Kernel>, fs: &Arc<FsContext>) -> Result<CurrentTask, Error> {
     let credentials = Credentials::from_passwd(&CONFIG.init_user)?;
-    let name =
-        if CONFIG.init.is_empty() { to_cstr(&String::new()) } else { to_cstr(&CONFIG.init[0]) };
-    let init_task = Task::create_process_without_parent(kernel, name, fs.clone())?;
-    init_task.write().creds = credentials;
-    Ok(init_task)
+    let name = if CONFIG.init.is_empty() { "" } else { &CONFIG.init[0] };
+    create_task(kernel, fs, name, credentials)
 }
 
 fn mount_filesystems(
