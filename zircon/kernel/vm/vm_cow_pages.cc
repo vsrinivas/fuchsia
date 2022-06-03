@@ -2933,6 +2933,10 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // zero, and any committed pages beyond supply_zero_offset_ need to be removed. Exit the loop
     // for this case, so that we can perform this operation later more optimally in the order of
     // committed pages, instead of having to iterate over empty slots too.
+    //
+    // TODO(rashaeqbal): Optimize for the common case too so that we do not need to handle this case
+    // separately out of the common loop. Specialized code increases the likelihood of forgetting
+    // one of the many checks in this common loop, as is evidenced by fxbug.dev/101608.
     if (is_source_preserving_page_content_locked() && offset >= supply_zero_offset_) {
       break;
     }
@@ -3153,18 +3157,29 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   if (offset < end) {
     DEBUG_ASSERT(is_source_preserving_page_content_locked());
     DEBUG_ASSERT(offset >= supply_zero_offset_);
+    DEBUG_ASSERT(can_decommit_zero_pages_locked());
 
-    // Remove any committed pages. Empty slots starting at supply_zero_offset_ are implicitly zero.
+    // Remove any committed pages that are not pinned. Empty slots starting at supply_zero_offset_
+    // are implicitly zero.
     page_list_.RemovePages(
         [this, &freed_list](VmPageOrMarker* p, uint64_t off) {
           // We cannot have clean pages beyond supply_zero_offset_.
           ASSERT(p->IsPage());
-          ASSERT(is_page_dirty_tracked(p->Page()));
-          ASSERT(!is_page_clean(p->Page()));
-          DEBUG_ASSERT(!pmm_is_loaned(p->Page()));
+          vm_page_t* page = p->Page();
+          ASSERT(is_page_dirty_tracked(page));
+          ASSERT(!is_page_clean(page));
+          DEBUG_ASSERT(!pmm_is_loaned(page));
+
+          // We cannot remove a pinned page. Zero it instead.
+          if (page->object.pin_count > 0) {
+            ZeroPage(page);
+            return ZX_ERR_NEXT;
+          }
 
           AssertHeld(this->lock_);
-          vm_page_t* page = p->ReleasePage();
+          vm_page_t* released_page = p->ReleasePage();
+          DEBUG_ASSERT(released_page == page);
+          DEBUG_ASSERT(page->object.pin_count == 0);
           pmm_page_queues()->Remove(page);
           DEBUG_ASSERT(!list_in_list(&page->queue_node));
           list_add_tail(&freed_list, &page->queue_node);

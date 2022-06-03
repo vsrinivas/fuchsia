@@ -3420,6 +3420,89 @@ static bool vmo_supply_zero_offset_test() {
   END_TEST;
 }
 
+static bool is_page_zero(vm_page_t* page) {
+  auto* base = reinterpret_cast<uint64_t*>(paddr_to_physmap(page->paddr()));
+  for (size_t i = 0; i < PAGE_SIZE / sizeof(uint64_t); i++) {
+    if (base[i] != 0)
+      return false;
+  }
+  return true;
+}
+
+// Tests that ZeroRange does not remove pinned pages. Regression test for fxbug.dev/101608.
+static bool vmo_zero_pinned_test() {
+  BEGIN_TEST;
+
+  // Create a non pager-backed VMO.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Pin the page.
+  status = vmo->CommitRangePinned(0, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Write non-zero content to the page.
+  vm_page_t* page = vmo->DebugGetPage(0);
+  *reinterpret_cast<uint8_t*>(paddr_to_physmap(page->paddr())) = 0xff;
+
+  // Zero the page and check that it is not removed.
+  status = vmo->ZeroRange(0, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(page, vmo->DebugGetPage(0));
+
+  // The page should be zero.
+  EXPECT_TRUE(is_page_zero(page));
+
+  vmo->Unpin(0, PAGE_SIZE);
+
+  // Create a pager-backed VMO.
+  fbl::RefPtr<VmObjectPaged> pager_vmo;
+  vm_page_t* old_page;
+  status =
+      make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/true, &old_page, &pager_vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Pin the page.
+  status = pager_vmo->CommitRangePinned(0, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Write non-zero content to the page. Lookup the page again, as pinning might have switched out
+  // the page if it was originally loaned.
+  old_page = pager_vmo->DebugGetPage(0);
+  *reinterpret_cast<uint8_t*>(paddr_to_physmap(old_page->paddr())) = 0xff;
+
+  // Zero the page and check that it is not removed.
+  status = pager_vmo->ZeroRange(0, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_page, pager_vmo->DebugGetPage(0));
+
+  // The page should be zero.
+  EXPECT_TRUE(is_page_zero(old_page));
+
+  // Resize the VMO up, and pin a page in the newly extended range.
+  status = pager_vmo->Resize(2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  status = pager_vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Write non-zero content to the page.
+  vm_page_t* new_page = pager_vmo->DebugGetPage(PAGE_SIZE);
+  *reinterpret_cast<uint8_t*>(paddr_to_physmap(new_page->paddr())) = 0xff;
+
+  // Zero the new page, and ensure that it is not removed.
+  status = pager_vmo->ZeroRange(PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(new_page, pager_vmo->DebugGetPage(PAGE_SIZE));
+
+  // The page should be zero.
+  EXPECT_TRUE(is_page_zero(new_page));
+
+  pager_vmo->Unpin(0, 2 * PAGE_SIZE);
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -3473,6 +3556,7 @@ VM_UNITTEST(vmo_dirty_pages_writeback_test)
 VM_UNITTEST(vmo_dirty_pages_with_hints_test)
 VM_UNITTEST(vmo_pinning_backlink_test)
 VM_UNITTEST(vmo_supply_zero_offset_test)
+VM_UNITTEST(vmo_zero_pinned_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest
