@@ -32,12 +32,6 @@ class SystemInterface {
   // null if the root job was not available.
   virtual std::unique_ptr<JobHandle> GetRootJob() const = 0;
 
-  // The component job is the one that the component manager uses for launched components. Returns
-  // null if there was an error finding it or getting its handle.
-  //
-  // TODO(bug 56725) this function currently always returns null.
-  virtual std::unique_ptr<JobHandle> GetComponentRootJob() const = 0;
-
   // Creates a BinaryLauncher. This is a creator for a launcher instead of
   //   std::unique_ptr<ProcessHandle> LaunchProcess(...);
   // because the launch on Fuchsia requires two steps with possibly some caller-specific logic in

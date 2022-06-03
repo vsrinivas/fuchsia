@@ -168,14 +168,14 @@ struct KillReply {
   debug::Status status;
 };
 
-enum class TaskType : uint32_t { kProcess = 0, kJob, kSystemRoot, kComponentRoot, kLast };
+enum class TaskType : uint32_t { kProcess = 0, kJob, kSystemRoot, kLast };
 const char* TaskTypeToString(TaskType);
 
 // The debug agent will follow a successful AttachReply with notifications for
 // all threads currently existing in the attached process.
 struct AttachRequest {
   TaskType type = TaskType::kProcess;
-  uint64_t koid = 0;  // Unused for ComponentRoot.
+  uint64_t koid = 0;  // Unused for kSystemRoot.
 };
 
 struct AttachReply {

@@ -271,7 +271,7 @@ TEST(Protocol, KillReply) {
 
 TEST(Protocol, AttachRequest) {
   AttachRequest initial;
-  initial.type = TaskType::kComponentRoot;
+  initial.type = TaskType::kSystemRoot;
   initial.koid = 5678;
 
   AttachRequest second;

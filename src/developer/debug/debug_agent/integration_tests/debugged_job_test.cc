@@ -221,11 +221,11 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   agent.Connect(&backend.stream());
   backend.set_remote_api(remote_api);
 
-  FX_VLOGS(1) << "Attaching to root component.";
+  FX_VLOGS(1) << "Attaching to system root.";
 
-  // Attach to the component root.
+  // Attach to the system root.
   AttachRequest attach_request;
-  attach_request.type = TaskType::kComponentRoot;
+  attach_request.type = TaskType::kSystemRoot;
   remote_api->OnAttach(0, attach_request);
 
   // We should've received an attach reply.
@@ -412,33 +412,13 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   agent.Connect(&backend.stream());
   backend.set_remote_api(remote_api);
 
-  // Request attaching to the component root job.
+  // Request attaching to the system root job.
   debug_ipc::AttachRequest attach_request = {};
-  attach_request.type = debug_ipc::TaskType::kComponentRoot;
+  attach_request.type = debug_ipc::TaskType::kSystemRoot;
 
   // OnAttach is special and takes a serialized message.
   const uint32_t kTransactionId = 1;
   debug_ipc::MessageWriter writer;
-  debug_ipc::WriteRequest(attach_request, kTransactionId, &writer);
-  remote_api->OnAttach(writer.MessageComplete());
-
-  ASSERT_TRUE(backend.attach_reply());
-  debug_ipc::AttachReply comp_reply = *backend.attach_reply();
-
-  // TODO(bug 56725) component roots are currently always null
-#if 0
-  // At this point we can't validate that much since the test environment is
-  // special and the component manager's job won't actually be the real one.
-  // But we can at least check that the KOID matches what the component job
-  // KOID getter computes.
-  auto component_root_job = agent.system_interface().GetComponentRootJob();
-  EXPECT_EQ(component_root_job->GetKoid(), comp_reply.koid);
-#endif
-
-  // Now attach to the system root.
-  backend.ClearAttachReply();
-  attach_request.type = debug_ipc::TaskType::kSystemRoot;
-
   debug_ipc::WriteRequest(attach_request, kTransactionId, &writer);
   remote_api->OnAttach(writer.MessageComplete());
 
@@ -450,7 +430,6 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   // too much checking.
   auto root_job = agent.system_interface().GetRootJob();
   EXPECT_EQ(root_job->GetKoid(), root_reply.koid);
-  EXPECT_NE(root_reply.koid, comp_reply.koid);
 }
 
 }  // namespace debug_agent

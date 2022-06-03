@@ -58,11 +58,8 @@ class Job : public ClientObject, public FilterObserver {
   // complete (or fails).
   void Attach(uint64_t koid, Callback callback);
 
-  // Attaches to the given special job. The root job is the system root, and the component job is
-  // the one in which all the components are created. The callback will be executed when the attach
-  // is complete (or fails).
+  // Attaches to the root job. The callback will be executed when the attach is complete (or fails).
   void AttachToSystemRoot(Callback callback);
-  void AttachToComponentRoot(Callback callback);
 
   // Attaches with the given koid and name without making IPC calls.
   void AttachForTesting(uint64_t koid, const std::string& name);

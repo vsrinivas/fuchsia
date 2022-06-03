@@ -20,8 +20,7 @@ namespace zxdb {
 
 namespace {
 
-constexpr int kAttachComponentRootSwitch = 1;
-constexpr int kAttachSystemRootSwitch = 2;
+constexpr int kAttachSystemRootSwitch = 1;
 
 const char kAttachJobShortHelp[] = "attach-job / aj: Watch for process launches in a job.";
 const char kAttachJobHelp[] =
@@ -59,17 +58,9 @@ Watching processes in a job
 
 Arguments
 
-  Two switches are accepted to refer to special jobs. With these switches, no
-  job koid is read.
-
     -r
     --root
-        Attaches to the system's root job.
-
-    -a
-    --app
-        Attaches to the component manager's job which is the root of all
-        components.
+        Attaches to the system's root job. No job koid is read.
 
 More about jobs
 
@@ -130,14 +121,10 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
   size_t first_filter_index = 0;
 
   // Which job to attach to.
-  enum AttachToWhat { kAttachComponentRoot, kAttachSystemRoot, kAttachKoid } attach_to_what;
+  enum AttachToWhat { kAttachSystemRoot, kAttachKoid } attach_to_what;
   uint64_t attach_koid = 0;  // Valid when attach_to_what == kAttachKoid.
 
-  if (cmd.HasSwitch(kAttachComponentRootSwitch) && cmd.HasSwitch(kAttachSystemRootSwitch)) {
-    return Err("Can't specify both --app and --root.");
-  } else if (cmd.HasSwitch(kAttachComponentRootSwitch)) {
-    attach_to_what = kAttachComponentRoot;
-  } else if (cmd.HasSwitch(kAttachSystemRootSwitch)) {
+  if (cmd.HasSwitch(kAttachSystemRootSwitch)) {
     attach_to_what = kAttachSystemRoot;
   } else {
     // Attach by koid.
@@ -171,9 +158,6 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
   };
 
   switch (attach_to_what) {
-    case kAttachComponentRoot:
-      job->AttachToComponentRoot(std::move(cb));
-      break;
     case kAttachSystemRoot:
       job->AttachToSystemRoot(std::move(cb));
       break;
@@ -207,7 +191,6 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
 VerbRecord GetAttachJobVerbRecord() {
   VerbRecord attach_job(&RunVerbAttachJob, {"attach-job", "aj"}, kAttachJobShortHelp,
                         kAttachJobHelp, CommandGroup::kProcess);
-  attach_job.switches.push_back(SwitchRecord(kAttachComponentRootSwitch, false, "app", 'a'));
   attach_job.switches.push_back(SwitchRecord(kAttachSystemRootSwitch, false, "root", 'r'));
   return attach_job;
 }

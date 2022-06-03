@@ -113,10 +113,6 @@ void Job::AttachToSystemRoot(Callback callback) {
   AttachInternal(debug_ipc::TaskType::kSystemRoot, 0, std::move(callback));
 }
 
-void Job::AttachToComponentRoot(Callback callback) {
-  AttachInternal(debug_ipc::TaskType::kComponentRoot, 0, std::move(callback));
-}
-
 void Job::AttachForTesting(uint64_t koid, const std::string& name) {
   state_ = State::kAttached;
   koid_ = koid;

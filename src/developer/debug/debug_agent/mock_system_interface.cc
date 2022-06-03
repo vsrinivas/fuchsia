@@ -10,8 +10,6 @@ std::unique_ptr<JobHandle> MockSystemInterface::GetRootJob() const {
   return std::make_unique<MockJobHandle>(root_job_);
 }
 
-std::unique_ptr<JobHandle> MockSystemInterface::GetComponentRootJob() const { return nullptr; }
-
 ComponentManager& MockSystemInterface::GetComponentManager() { return component_manager_; }
 
 std::unique_ptr<BinaryLauncher> MockSystemInterface::GetLauncher() const {

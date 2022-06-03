@@ -593,8 +593,10 @@ std::vector<debug_ipc::ProcessThreadId> DebugAgent::ClientSuspendAll(zx_koid_t e
 debug::Status DebugAgent::AddDebuggedJob(std::unique_ptr<JobHandle> job_handle) {
   zx_koid_t koid = job_handle->GetKoid();
   auto job = std::make_unique<DebuggedJob>(this, std::move(job_handle));
-  if (auto status = job->Init(); status.has_error())
+  if (auto status = job->Init(); status.has_error()) {
+    FX_LOGS(WARNING) << "Failed to attach to job " << koid << ": " << status.message();
     return status;
+  }
 
   jobs_[koid] = std::move(job);
   return debug::Status();
@@ -664,10 +666,6 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
   std::unique_ptr<JobHandle> job;
   if (request.type == debug_ipc::TaskType::kJob) {
     job = system_interface_->GetJob(request.koid);
-  } else if (request.type == debug_ipc::TaskType::kComponentRoot) {
-    job = system_interface_->GetComponentRootJob();
-    if (job)
-      attached_root_job_koid_ = job->GetKoid();
   } else if (request.type == debug_ipc::TaskType::kSystemRoot) {
     job = system_interface_->GetRootJob();
     if (job)
@@ -688,8 +686,8 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     reply.status = AddDebuggedJob(std::move(job));
     reply.timestamp = GetNowTimestamp();
   } else {
-    DEBUG_LOG(Agent) << "Failed to attach to job.";
-    reply.status = debug::Status("Could not attach to job.");
+    DEBUG_LOG(Agent) << "Failed to get the job.";
+    reply.status = debug::Status("Could not get the job.");
   }
 
   // Send the reply.

@@ -793,7 +793,10 @@ void System::DidConnect(bool is_local) {
     implicit_job = new_job.get();
     AddNewJob(std::move(new_job));
   }
-  implicit_job->AttachToSystemRoot([](fxl::WeakPtr<Job>, const Err&) {});
+  implicit_job->AttachToSystemRoot([](fxl::WeakPtr<Job>, const Err& e) {
+    if (e.has_error())
+      LOGS(Warn) << "Failed to attach to the root job. Maybe another debugger is running?";
+  });
 
   // Force the debug agent to reload its second-chance exception handling policy.
   OnSettingChanged(settings(), ClientSettings::System::kSecondChanceExceptions);

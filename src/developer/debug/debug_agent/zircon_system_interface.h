@@ -25,7 +25,6 @@ class ZirconSystemInterface final : public SystemInterface {
   uint32_t GetNumCpus() const override;
   uint64_t GetPhysicalMemory() const override;
   std::unique_ptr<JobHandle> GetRootJob() const override;
-  std::unique_ptr<JobHandle> GetComponentRootJob() const override;
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
   ComponentManager& GetComponentManager() override;
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
