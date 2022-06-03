@@ -13,6 +13,7 @@
 #include <zircon/hw/gpt.h>
 
 #include <set>
+#include <utility>
 
 #include "lib/fdio/directory.h"
 #include "lib/fidl/llcpp/channel.h"
@@ -41,9 +42,8 @@ std::pair<std::string_view, std::string_view> SplitPath(std::string_view path) {
   size_t separator = path.rfind('/');
   if (separator != std::string::npos) {
     return std::make_pair(path.substr(0, separator), path.substr(separator + 1));
-  } else {
-    return std::make_pair(std::string_view(), path);
   }
+  return std::make_pair(std::string_view(), path);
 }
 
 bool IsRamdisk(const BlockDeviceInterface& device) {
@@ -94,9 +94,8 @@ class ContentMatcher : public BlockDeviceManager::Matcher {
     }
     if (device.content_format() == format_) {
       return format_;
-    } else {
-      return fs_management::kDiskFormatUnknown;
     }
+    return fs_management::kDiskFormatUnknown;
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
@@ -173,7 +172,7 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
                 const fuchsia_hardware_block_partition::wire::Guid& type_guid,
                 fs_management::DiskFormat format, PartitionLimit limit)
       : map_(map),
-        partition_name_(partition_name),
+        partition_name_(std::move(partition_name)),
         type_guid_(type_guid),
         format_(format),
         limit_(limit) {}
@@ -182,9 +181,8 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
     if (map_.IsChild(device) && device.partition_name() == partition_name_ &&
         !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
       return format_;
-    } else {
-      return fs_management::kDiskFormatUnknown;
     }
+    return fs_management::kDiskFormatUnknown;
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
@@ -192,8 +190,9 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
       if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
         // Set the max size for this partition in FVM. Ignore failures since the max size is
         // mostly a guard rail against bad behavior and we can still function.
-        [[maybe_unused]] auto status =
+        auto status =
             device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
       }
     }
     return device.Add();
@@ -207,7 +206,7 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
   const PartitionLimit limit_;
 };
 
-static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
+constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
 
 // Matches Fxfs partitions and manages migrations that may need to happen, e.g. removing zxcrypt
 // from beneath Fxfs or migrating from a zxcrypt+minfs partition.
@@ -253,8 +252,9 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
         // Set the max size for this partition in FVM. This is not persisted so we need to set it
         // every time on mount. Ignore failures since the max size is mostly a guard rail against
         // bad behavior and we can still function.
-        [[maybe_unused]] auto status =
+        auto status =
             device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
       }
     }
     if (device.GetFormat() == fs_management::kDiskFormatZxcrypt) {
@@ -394,8 +394,9 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
         // Set the max size for this partition in FVM. This is not persisted so we need to set it
         // every time on mount. Ignore failures since the max size is mostly a guard rail against
         // bad behavior and we can still function.
-        [[maybe_unused]] auto status =
+        auto status =
             device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
+        ZX_DEBUG_ASSERT(status == ZX_OK);
       }
     }
 
@@ -470,7 +471,7 @@ class FactoryfsMatcher : public BlockDeviceManager::Matcher {
   static constexpr std::string_view kVerityMutableSuffix = "/verity/mutable/block";
   static constexpr std::string_view kVerityVerifiedSuffix = "/verity/verified/block";
 
-  FactoryfsMatcher(const PartitionMapMatcher& map) : map_(map) {}
+  explicit FactoryfsMatcher(const PartitionMapMatcher& map) : map_(map) {}
 
   fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     static constexpr fuchsia_hardware_block_partition::wire::Guid factory_type_guid =
@@ -521,9 +522,8 @@ class BootpartMatcher : public BlockDeviceManager::Matcher {
 DataPartitionMatcher::PartitionNames GetDataPartitionNames(bool include_legacy) {
   if (include_legacy) {
     return {std::string(kDataPartitionLabel), "minfs", "fuchsia-data"};
-  } else {
-    return {std::string(kDataPartitionLabel)};
   }
+  return {std::string(kDataPartitionLabel)};
 }
 
 }  // namespace
