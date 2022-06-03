@@ -1,0 +1,19 @@
+{
+    "files": [
+        "bin/aemu.version",
+        "bin/device_launcher.version",
+        "bin/grpcwebproxy.version",
+        "bin/femu.sh",
+        "bin/femu-exec-wrapper.sh",
+        "bin/fuchsia-common.sh",
+        "bin/devshell/emu",
+        "bin/devshell/lib/image_build_vars.sh",
+        "bin/devshell/lib/fvm.sh",
+        "bin/start-unsecure-internet.sh",
+        "bin/devshell/lib/emu-ifup-macos.sh"
+    ],
+    "name": "femu",
+    "root": "bin",
+    "target_files": {},
+    "type": "host_tool"
+}

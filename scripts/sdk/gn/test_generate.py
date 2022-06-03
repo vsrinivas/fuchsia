@@ -22,6 +22,12 @@ TMP_DIR_NAME = tempfile.mkdtemp(prefix='tmp_unittest_%s_' % 'GNGenerateTest')
 TMP_ARCH_DIR = tempfile.mkdtemp(prefix='tmp_unittest_%s_' % 'GNGenArchiveTest')
 TMP_ARCHIVE_PATH = os.path.join(TMP_ARCH_DIR, 'gn.tar.gz')
 
+EXPECTED_PREBUILTS = {
+    'aemu': 'bid:7927554',
+    'grpcwebproxy': 'git_revision:b123456789abcdef0123456789abcdef01234567',
+    'device_launcher': 'g3-revision:vdl_fuchsia_20200819_RC00',
+}
+
 
 class GNGenerateTest(unittest.TestCase):
 
@@ -45,6 +51,10 @@ class GNGenerateTest(unittest.TestCase):
                 TMP_ARCHIVE_PATH,
                 "--directory",
                 os.path.join(SCRIPT_DIR, 'testdata'),
+                "--jiri-manifest",
+                os.path.join(
+                    SCRIPT_DIR, 'testdata', '.jiri_root', 'update_history',
+                    'latest'),
             ])
         self.verify_contents(TMP_DIR_NAME)
         # verify tarball
@@ -53,6 +63,18 @@ class GNGenerateTest(unittest.TestCase):
         tar.close()
         os.remove(TMP_ARCHIVE_PATH)
         self.verify_manifest(TMP_ARCH_DIR)
+
+    def testPrebuilts(self):
+        INPUT_PREBUILTS = generate.EXTRA_PREBUILTS
+        prebuilt_results = generate.get_prebuilts(
+            INPUT_PREBUILTS,
+            os.path.join(
+                SCRIPT_DIR, 'testdata', '.jiri_root', 'update_history',
+                'latest'))
+        if prebuilt_results != EXPECTED_PREBUILTS:
+            self.fail(
+                "Expected output %s but returned %s instead" %
+                (EXPECTED_PREBUILTS, prebuilt_results))
 
     def verify_contents(self, outdir):
         # update_golden.py doesn't copy bin and build subdirectories because we
@@ -67,6 +89,16 @@ class GNGenerateTest(unittest.TestCase):
             SCRIPT_DIR, 'golden', 'build', 'test_targets.gni')
         if not filecmp.cmp(generated_file, golden_file, False):
             self.fail(_gen_diff(generated_file, golden_file))
+
+        # Special case: Check the prebuilts *.version files generated from the jiri manifest
+        for prebuilt, version in EXPECTED_PREBUILTS.items():
+            in_path = os.path.join(outdir, 'bin', prebuilt + '.version')
+            with open(in_path, 'r') as in_file:
+                in_version = in_file.read().strip()
+                if in_version != version:
+                    self.fail(
+                        "Generated %s in %s does not match expected %s" %
+                        (in_version, in_path))
 
     def verify_contents_recursive(self, dcmp):
         """Recursively checks for differences between two directories.
