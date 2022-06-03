@@ -249,37 +249,50 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
   }
   gpt_partition_t* zircon_a_partition = status->gpt_partition;
 
-  // Find the highest priority kernel partition.
-  uint8_t top_priority = 0;
+  // Get kernel partition priorities.
+  gpt_partition_t* priority_to_partition[16] = {nullptr};
+
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    zx::status<const gpt_partition_t*> partition_or = gpt_->GetGpt()->GetPartition(i);
+    zx::status<gpt_partition_t*> partition_or = gpt_->GetGpt()->GetPartition(i);
     if (partition_or.is_error()) {
       continue;
     }
-    const gpt_partition_t* partition = partition_or.value();
+    gpt_partition_t* partition = partition_or.value();
     const uint8_t priority = gpt_cros_attr_get_priority(partition->flags);
+
+    // Priority 0 means not bootable.
+    if (priority == 0) {
+      continue;
+    }
+
     // Ignore anything not of type CROS KERNEL.
     if (Uuid(partition->type) != Uuid(GUID_CROS_KERNEL_VALUE)) {
       continue;
     }
 
-    // Ignore ourself.
+    // We'll later set the priority of Zircon A to be higher than any other partition.
     if (partition == zircon_a_partition) {
       continue;
     }
 
-    if (priority > top_priority) {
-      top_priority = priority;
+    priority_to_partition[priority] = partition;
+  }
+
+  // Compact kernel partition priorities.
+  uint8_t priority = 1;
+  for (gpt_partition_t* partition : priority_to_partition) {
+    if (partition) {
+      int ret = gpt_cros_attr_set_priority(&partition->flags, priority);
+      if (ret != 0) {
+        ERROR("Cannot set CrOS partition priority\n");
+        return zx::error(ZX_ERR_OUT_OF_RANGE);
+      }
+      ++priority;
     }
   }
 
   // Priority for Zircon A set to higher priority than all other kernels.
-  if (top_priority == UINT8_MAX) {
-    ERROR("Cannot set CrOS partition priority higher than other kernels\n");
-    return zx::error(ZX_ERR_OUT_OF_RANGE);
-  }
-  int ret = gpt_cros_attr_set_priority(&zircon_a_partition->flags,
-                                       static_cast<uint8_t>(top_priority + 1));
+  int ret = gpt_cros_attr_set_priority(&zircon_a_partition->flags, priority);
   if (ret != 0) {
     ERROR("Cannot set CrOS partition priority for ZIRCON-A\n");
     return zx::error(ZX_ERR_OUT_OF_RANGE);

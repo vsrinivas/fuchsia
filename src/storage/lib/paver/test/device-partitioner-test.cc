@@ -982,6 +982,28 @@ uint64_t CrosGptPriorityFlags(uint8_t priority) {
   return flags;
 }
 
+uint8_t CrosGptHighestKernelPriority(const gpt::GptDevice* gpt) {
+  uint8_t top_priority = 0;
+  for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
+    zx::status<const gpt_partition_t*> partition_or = gpt->GetPartition(i);
+    if (partition_or.is_error()) {
+      continue;
+    }
+    const gpt_partition_t* partition = partition_or.value();
+    const uint8_t priority = gpt_cros_attr_get_priority(partition->flags);
+    // Ignore anything not of type CROS KERNEL.
+    if (uuid::Uuid(partition->type) != uuid::Uuid(GUID_CROS_KERNEL_VALUE)) {
+      continue;
+    }
+
+    if (priority > top_priority) {
+      top_priority = priority;
+    }
+  }
+
+  return top_priority;
+}
+
 TEST_F(CrosDevicePartitionerTests, KernelPriority) {
   // Create a 32 GiB disk.
   std::unique_ptr<BlockDevice> disk;
@@ -1015,14 +1037,15 @@ TEST_F(CrosDevicePartitionerTests, KernelPriority) {
     ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
   }
 
-  // Ensure that the "zircon-a" kernel was created with priority 4 (priority of CROS_KERNEL +
-  // 1).
+  // Ensure that the "zircon-a" kernel has the highest priority.
   {
     std::unique_ptr<gpt::GptDevice> gpt;
     ASSERT_NO_FATAL_FAILURE(CreateGptDevice(disk.get(), &gpt));
-    const gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GPT_ZIRCON_A_NAME);
-    ASSERT_TRUE(partition != nullptr);
-    EXPECT_EQ(gpt_cros_attr_get_priority(partition->flags), 4);
+    const gpt_partition_t* zircon_a_partition =
+        FindPartitionWithLabel(gpt.get(), GPT_ZIRCON_A_NAME);
+    ASSERT_TRUE(zircon_a_partition != nullptr);
+    EXPECT_EQ(gpt_cros_attr_get_priority(zircon_a_partition->flags),
+              CrosGptHighestKernelPriority(gpt.get()));
   }
 
   // Partition the disk again.
@@ -1032,13 +1055,15 @@ TEST_F(CrosDevicePartitionerTests, KernelPriority) {
     ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
   }
 
-  // Ensure that the "zircon-a" kernel still has priority 4.
+  // Ensure that the "zircon-a" kernel still has the highest priority.
   {
     std::unique_ptr<gpt::GptDevice> gpt;
     ASSERT_NO_FATAL_FAILURE(CreateGptDevice(disk.get(), &gpt));
-    const gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GPT_ZIRCON_A_NAME);
-    ASSERT_TRUE(partition != nullptr);
-    EXPECT_EQ(gpt_cros_attr_get_priority(partition->flags), 4);
+    const gpt_partition_t* zircon_a_partition =
+        FindPartitionWithLabel(gpt.get(), GPT_ZIRCON_A_NAME);
+    ASSERT_TRUE(zircon_a_partition != nullptr);
+    EXPECT_EQ(gpt_cros_attr_get_priority(zircon_a_partition->flags),
+              CrosGptHighestKernelPriority(gpt.get()));
   }
 }
 
