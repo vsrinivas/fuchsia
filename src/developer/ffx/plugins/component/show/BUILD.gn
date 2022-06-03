@@ -16,6 +16,7 @@ ffx_plugin("ffx_component_show") {
     "//src/lib/component_hub",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:ansi_term",
+    "//third_party/rust_crates:prettytable-rs",
   ]
 
   args_sources = [ "src/args.rs" ]

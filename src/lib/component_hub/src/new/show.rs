@@ -290,7 +290,7 @@ impl Resolved {
                 .iter()
                 .map(|f| {
                     let value = match &f.value {
-                        fconfig::Value::Vector(v) => format!("{:?}", v),
+                        fconfig::Value::Vector(v) => format!("{:#?}", v),
                         fconfig::Value::Single(v) => format!("{:?}", v),
                         _ => "Unknown".to_string(),
                     };

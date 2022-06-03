@@ -5,15 +5,17 @@
 use {
     ansi_term::Color,
     anyhow::{Context, Result},
-    component_hub::new::show::{find_instances, Instance},
+    component_hub::new::show::{find_instances, Instance, Resolved},
     ffx_writer::Writer,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon_status::Status,
+    prettytable::{cell, format::consts::FORMAT_CLEAN, row, Table},
+    std::io::Write,
 };
 
 pub async fn show_impl(
     rcs_proxy: rc::RemoteControlProxy,
-    writer: Writer,
+    mut writer: Writer,
     query: &str,
 ) -> Result<()> {
     let (explorer_proxy, explorer_server) =
@@ -38,109 +40,96 @@ pub async fn show_impl(
         writer.machine(&instances)?;
     } else {
         for instance in instances {
-            let output = pretty_print_instance(instance)?;
-            writer.line(output)?;
+            let table = create_table(instance);
+            table.print(&mut writer)?;
+            writeln!(&mut writer, "")?;
         }
     }
 
     Ok(())
 }
 
-macro_rules! pretty_print {
-    ( $f: expr, $title: expr, $value: expr ) => {
-        writeln!($f, "{:>22}: {}", $title, $value)
-    };
+fn create_table(instance: Instance) -> Table {
+    let mut table = Table::new();
+    table.set_format(*FORMAT_CLEAN);
+
+    add_basic_info_to_table(&mut table, &instance);
+    add_resolved_info_to_table(&mut table, &instance);
+    add_started_info_to_table(&mut table, &instance);
+
+    table
 }
 
-macro_rules! pretty_print_list {
-    ( $f: expr, $title: expr, $list: expr ) => {
-        if !$list.is_empty() {
-            writeln!($f, "{:>22}: {}", $title, &$list[0])?;
-            for item in &$list[1..] {
-                writeln!($f, "{:>22}  {}", " ", item)?;
-            }
-        }
-    };
-}
+fn add_basic_info_to_table(table: &mut Table, instance: &Instance) {
+    table.add_row(row!(r->"Moniker:", instance.moniker));
+    table.add_row(row!(r->"URL:", instance.url));
 
-pub fn pretty_print_instance(instance: Instance) -> Result<String, std::fmt::Error> {
-    let mut f = String::new();
-    use std::fmt::Write;
-
-    pretty_print!(f, "Moniker", instance.moniker)?;
-    pretty_print!(f, "URL", instance.url)?;
     if let Some(component_id) = &instance.component_id {
-        pretty_print!(f, "Component ID", component_id)?;
+        table.add_row(row!(r->"Component ID:", component_id));
     }
 
     if instance.is_cmx {
-        pretty_print!(f, "Type", "CMX Component")?;
+        table.add_row(row!(r->"Type:", "CMX Component"));
     } else {
-        pretty_print!(f, "Type", "CML Component")?;
-    }
+        table.add_row(row!(r->"Type:", "CML Component"));
+    };
+}
 
+fn add_resolved_info_to_table(table: &mut Table, instance: &Instance) {
     if let Some(resolved) = &instance.resolved {
-        pretty_print!(f, "Component State", Color::Green.paint("Resolved"))?;
-        pretty_print_list!(f, "Incoming Capabilities", resolved.incoming_capabilities);
-        pretty_print_list!(f, "Exposed Capabilities", resolved.exposed_capabilities);
+        table.add_row(row!(r->"Component State:", Color::Green.paint("Resolved")));
+        let incoming_capabilities = resolved.incoming_capabilities.join("\n");
+        let exposed_capabilities = resolved.exposed_capabilities.join("\n");
+        table.add_row(row!(r->"Incoming Capabilities:", incoming_capabilities));
+        table.add_row(row!(r->"Exposed Capabilities:", exposed_capabilities));
 
         if let Some(merkle_root) = &resolved.merkle_root {
-            pretty_print!(f, "Merkle root", merkle_root)?;
+            table.add_row(row!(r->"Merkle root:", merkle_root));
         }
 
         if let Some(config) = &resolved.config {
             if !config.is_empty() {
-                let max_len = config.iter().map(|f| f.key.len()).max().unwrap();
+                let mut config_table = Table::new();
+                let mut format = *FORMAT_CLEAN;
+                format.padding(0, 0);
+                config_table.set_format(format);
 
-                let first_field = &config[0];
-                writeln!(
-                    f,
-                    "{:>22}: {:width$} -> {}",
-                    "Configuration",
-                    first_field.key,
-                    first_field.value,
-                    width = max_len
-                )?;
-                for field in &config[1..] {
-                    writeln!(
-                        f,
-                        "{:>22}  {:width$} -> {}",
-                        " ",
-                        field.key,
-                        field.value,
-                        width = max_len
-                    )?;
-                }
-            }
-        }
-
-        if let Some(started) = &resolved.started {
-            pretty_print!(f, "Execution State", Color::Green.paint("Running"))?;
-            pretty_print!(f, "Start reason", started.start_reason)?;
-
-            if let Some(runtime) = &started.elf_runtime {
-                if let Some(utc_estimate) = &runtime.process_start_time_utc_estimate {
-                    pretty_print!(f, "Running since", utc_estimate)?;
-                } else if let Some(ticks) = &runtime.process_start_time {
-                    pretty_print!(f, "Running for", format!("{} ticks", ticks))?;
+                for field in config {
+                    config_table.add_row(row!(field.key, " -> ", field.value));
                 }
 
-                pretty_print!(f, "Job ID", runtime.job_id)?;
-
-                if let Some(process_id) = &runtime.process_id {
-                    pretty_print!(f, "Process ID", process_id)?;
-                }
+                table.add_row(row!(r->"Configuration:", config_table));
             }
-
-            if let Some(outgoing_capabilities) = &started.outgoing_capabilities {
-                pretty_print_list!(f, "Outgoing Capabilities", outgoing_capabilities);
-            }
-        } else {
-            pretty_print!(f, "Execution State", Color::Red.paint("Stopped"))?;
         }
     } else {
-        pretty_print!(f, "Component State", Color::Red.paint("Unresolved"))?;
+        table.add_row(row!(r->"Component State:", Color::Red.paint("Unresolved")));
     }
+}
 
-    Ok(f)
+fn add_started_info_to_table(table: &mut Table, instance: &Instance) {
+    if let Some(Resolved { started: Some(started), .. }) = &instance.resolved {
+        table.add_row(row!(r->"Execution State:", Color::Green.paint("Running")));
+        table.add_row(row!(r->"Start reason:", started.start_reason));
+
+        if let Some(runtime) = &started.elf_runtime {
+            if let Some(utc_estimate) = &runtime.process_start_time_utc_estimate {
+                table.add_row(row!(r->"Running since:", utc_estimate));
+            } else if let Some(ticks) = &runtime.process_start_time {
+                table.add_row(row!(r->"Running for:", format!("{} ticks", ticks)));
+            }
+
+            table.add_row(row!(r->"Job ID:", runtime.job_id));
+
+            if let Some(process_id) = &runtime.process_id {
+                table.add_row(row!(r->"Process ID:", process_id));
+            }
+        }
+
+        if let Some(outgoing_capabilities) = &started.outgoing_capabilities {
+            let outgoing_capabilities = outgoing_capabilities.join("\n");
+            table.add_row(row!(r->"Outgoing Capabilities:", outgoing_capabilities));
+        }
+    } else {
+        table.add_row(row!(r->"Execution State:", Color::Red.paint("Stopped")));
+    }
 }
