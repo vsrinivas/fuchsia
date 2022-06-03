@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/assembly/package_manifest_list.gni")
+import("//build/assembly/package_manifests_list.gni")
 import("//build/dist/distribution_manifest.gni")
 import("//build/dist/resource.gni")
 import("//build/images/args.gni")
@@ -104,7 +104,7 @@ template("generated_image_assembly_config") {
   }
 
   # Construct a list of Base packages to add to the image assembly config.
-  list_package_manifests(labels.base_package_list) {
+  package_manifests_list(labels.base_package_list) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -115,7 +115,7 @@ template("generated_image_assembly_config") {
   }
 
   # Construct a list of Cache packages to add to the image assembly config.
-  list_package_manifests(labels.cache_package_list) {
+  package_manifests_list(labels.cache_package_list) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -126,7 +126,7 @@ template("generated_image_assembly_config") {
   }
 
   # Construct a list of extra packages whose files should be added to the Base Package.
-  list_package_manifests(labels.extra_base_list) {
+  package_manifests_list(labels.extra_base_list) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -222,7 +222,7 @@ template("generated_image_assembly_config") {
 
   # Construct a list of bootfs packages to add to the image assembly config.
   # Ignores any fuchsia_driver_packages and fuchsia_shell_packages
-  list_package_manifests(labels.bootfs_package_list) {
+  package_manifests_list(labels.bootfs_package_list) {
     forward_variables_from(invoker,
                            [
                              "testonly",

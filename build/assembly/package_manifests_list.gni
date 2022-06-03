@@ -23,7 +23,7 @@
 #  GN Usual
 #    testonly, visibility
 #
-template("list_package_manifests") {
+template("package_manifests_list") {
   walk_keys_entries = [
     "package_barrier",
     "assembly_package_barrier",
