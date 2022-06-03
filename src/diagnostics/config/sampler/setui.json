@@ -2237,6 +2237,118 @@
             "metric_id": 2,
             "metric_type": "Occurrence",
             "selector": "core/setui_service:root/response_counts/LightSensor/TimeoutError:count"
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Accessibility:count"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Audio:count"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/AudioPolicy:count"
+        },
+        {
+            "event_codes": [
+                4
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Display:count"
+        },
+        {
+            "event_codes": [
+                5
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/DoNotDisturb:count"
+        },
+        {
+            "event_codes": [
+                6
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/FactoryReset:count"
+        },
+        {
+            "event_codes": [
+                7
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Input:count"
+        },
+        {
+            "event_codes": [
+                8
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Intl:count"
+        },
+        {
+            "event_codes": [
+                9
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Light:count"
+        },
+        {
+            "event_codes": [
+                10
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/NightMode:count"
+        },
+        {
+            "event_codes": [
+                11
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Privacy:count"
+        },
+        {
+            "event_codes": [
+                12
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Setup:count"
+        },
+        {
+            "event_codes": [
+                13
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/Keyboard:count"
+        },
+        {
+            "event_codes": [
+                14
+            ],
+            "metric_id": 3,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/active_listeners/LightSensor:count"
         }
     ],
     "poll_rate_sec": 3600,
