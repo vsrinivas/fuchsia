@@ -250,6 +250,15 @@ fn dhcpv6_enabled_default() -> bool {
     true
 }
 
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields, rename_all = "lowercase")]
+struct ForwardedDeviceClasses {
+    #[serde(default)]
+    pub ipv4: HashSet<DeviceClass>,
+    #[serde(default)]
+    pub ipv6: HashSet<DeviceClass>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
@@ -263,6 +272,8 @@ struct Config {
     // TODO(https://fxbug.dev/92096): default to false.
     #[serde(default = "dhcpv6_enabled_default")]
     pub enable_dhcpv6: bool,
+    #[serde(default)]
+    pub forwarded_device_classes: ForwardedDeviceClasses,
 }
 
 impl Config {
@@ -415,6 +426,7 @@ impl InterfaceState {
             }
             InterfaceConfigState::WlanAp(WlanApInterfaceState {}) => {}
         }
+
         Ok(())
     }
 }
@@ -446,6 +458,8 @@ pub struct NetCfg<'a> {
     interface_metrics: InterfaceMetrics,
 
     dns_servers: DnsServers,
+
+    forwarded_device_classes: ForwardedDeviceClasses,
 }
 
 /// Returns a [`fnet_name::DnsServer_`] with a static source from a [`std::net::IpAddr`].
@@ -545,6 +559,7 @@ impl<'a> NetCfg<'a> {
         filter_enabled_interface_types: HashSet<InterfaceType>,
         interface_metrics: InterfaceMetrics,
         enable_dhcpv6: bool,
+        forwarded_device_classes: ForwardedDeviceClasses,
     ) -> Result<NetCfg<'a>, anyhow::Error> {
         let svc_dir = clone_namespace_svc().context("error cloning svc directory handle")?;
         let stack = svc_connect::<fnet_stack::StackMarker>(&svc_dir)
@@ -600,6 +615,7 @@ impl<'a> NetCfg<'a> {
             interface_states: Default::default(),
             interface_metrics,
             dns_servers: Default::default(),
+            forwarded_device_classes,
         })
     }
 
@@ -1388,6 +1404,30 @@ impl<'a> NetCfg<'a> {
         interface_name: String,
         info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
+        let class: DeviceClass = info.device_class.into();
+        let ForwardedDeviceClasses { ipv4, ipv6 } = &self.forwarded_device_classes;
+        let config: fnet_interfaces_admin::Configuration = control
+            .set_configuration(fnet_interfaces_admin::Configuration {
+                ipv6: Some(fnet_interfaces_admin::Ipv6Configuration {
+                    forwarding: Some(ipv6.contains(&class)),
+                    ..fnet_interfaces_admin::Ipv6Configuration::EMPTY
+                }),
+                ipv4: Some(fnet_interfaces_admin::Ipv4Configuration {
+                    forwarding: Some(ipv4.contains(&class)),
+                    ..fnet_interfaces_admin::Ipv4Configuration::EMPTY
+                }),
+                ..fnet_interfaces_admin::Configuration::EMPTY
+            })
+            .await
+            .context("setting configuration")
+            .and_then(|res| {
+                res.map_err(|e: fnet_interfaces_admin::ControlSetConfigurationError| {
+                    anyhow::anyhow!("{:?}", e)
+                })
+            })
+            .map_err(errors::Error::Fatal)?;
+        info!("installed configuration with result {:?}", config);
+
         if info.is_wlan_ap() {
             if let Some(id) = self.interface_states.iter().find_map(|(id, state)| {
                 if state.is_wlan_ap() {
@@ -1785,6 +1825,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
         interface_metrics,
         allowed_upstream_device_classes: AllowedDeviceClasses(allowed_upstream_device_classes),
         enable_dhcpv6,
+        forwarded_device_classes,
     } = Config::load(config_data)?;
 
     let mut netcfg = NetCfg::new(
@@ -1792,6 +1833,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
         filter_enabled_interface_types,
         interface_metrics,
         enable_dhcpv6,
+        forwarded_device_classes,
     )
     .await
     .context("error creating new netcfg instance")?;
@@ -1953,6 +1995,7 @@ mod tests {
                 interface_states: Default::default(),
                 interface_metrics: Default::default(),
                 dns_servers: Default::default(),
+                forwarded_device_classes: Default::default(),
             },
             ServerEnds {
                 lookup_admin: lookup_admin_server
@@ -2473,7 +2516,8 @@ mod tests {
     "eth_metric": 10
   },
   "allowed_upstream_device_classes": ["ethernet", "wlan"],
-  "enable_dhcpv6": true
+  "enable_dhcpv6": true,
+  "forwarded_device_classes": { "ipv4": [ "ethernet" ], "ipv6": [ "wlan" ] }
 }
 "#;
 
@@ -2484,6 +2528,7 @@ mod tests {
             interface_metrics,
             allowed_upstream_device_classes,
             enable_dhcpv6,
+            forwarded_device_classes,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(vec!["8.8.8.8".parse::<std::net::IpAddr>().unwrap()], servers);
@@ -2504,6 +2549,12 @@ mod tests {
         );
 
         assert_eq!(enable_dhcpv6, true);
+
+        let expected_classes = ForwardedDeviceClasses {
+            ipv4: HashSet::from([DeviceClass::Ethernet]),
+            ipv6: HashSet::from([DeviceClass::Wlan]),
+        };
+        assert_eq!(forwarded_device_classes, expected_classes);
     }
 
     #[test]
@@ -2527,6 +2578,7 @@ mod tests {
             allowed_upstream_device_classes,
             interface_metrics,
             enable_dhcpv6,
+            forwarded_device_classes: _,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(allowed_upstream_device_classes, Default::default());
@@ -2568,6 +2620,7 @@ mod tests {
             allowed_upstream_device_classes: _,
             enable_dhcpv6: _,
             interface_metrics,
+            forwarded_device_classes: _,
         } = Config::load_str(&config_str).unwrap();
 
         let expected_metrics = InterfaceMetrics { wlan_metric, eth_metric };
@@ -2662,6 +2715,19 @@ mod tests {
   },
   "filter_enabled_interface_types": [],
   "allowed_upstream_device_classes": ["speling"]
+}
+"#,
+            r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": [],
+  "allowed_upstream_device_classes": [],
+  "forwarded_device_classes": { "ipv4": [], "ipv6": [], "speling": [] }
 }
 "#,
         ];

@@ -31,7 +31,7 @@ use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
     interfaces, pause_fake_clock,
-    realms::{KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _},
+    realms::{KnownServiceProvider, Manager, ManagerConfig, Netstack2, TestSandboxExt as _},
     wait_for_component_stopped, write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -134,7 +134,7 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
-                    enable_dhcpv6: false,
+                    config: ManagerConfig::Empty,
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::FakeClock,
@@ -281,7 +281,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
-                    enable_dhcpv6: true,
+                    config: ManagerConfig::Dhcpv6,
                 },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::DnsResolver,

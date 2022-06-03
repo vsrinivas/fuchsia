@@ -76,6 +76,7 @@ fuchsia_test_package("netstack-integration-tests") {
     # netcfg integration with netstack is tested.
     ":netcfg-netemul-config",
     ":netcfg-with-dhcpv6-netemul-config",
+    ":netcfg-with-forwarding-netemul-config",
     "//src/connectivity/network/netcfg:component-advanced",
     "//src/connectivity/network/netcfg:component-basic",
   ]
@@ -91,6 +92,12 @@ resource("netcfg-with-dhcpv6-netemul-config") {
   testonly = true
   sources = [ "management/config/dhcpv6.json" ]
   outputs = [ "netcfg/dhcpv6.json" ]
+}
+
+resource("netcfg-with-forwarding-netemul-config") {
+  testonly = true
+  sources = [ "management/config/forwarding.json" ]
+  outputs = [ "netcfg/forwarding.json" ]
 }
 
 resource("sampler-config") {

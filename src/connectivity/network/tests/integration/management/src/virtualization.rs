@@ -19,7 +19,8 @@ use net_declare::fidl_subnet;
 use netstack_testing_common::{
     interfaces, ping,
     realms::{
-        KnownServiceProvider, ManagementAgent, NetCfgVersion, Netstack2, TestSandboxExt as _,
+        KnownServiceProvider, ManagementAgent, ManagerConfig, NetCfgVersion, Netstack2,
+        TestSandboxExt as _,
     },
 };
 use netstack_testing_macros::variants_test;
@@ -290,7 +291,7 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
                 KnownServiceProvider::Manager {
                     agent: ManagementAgent::NetCfg(NetCfgVersion::Advanced),
                     use_dhcp_server: false,
-                    enable_dhcpv6: false,
+                    config: ManagerConfig::Empty,
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::FakeClock,
@@ -519,7 +520,7 @@ async fn dhcpv4_client_started<E: netemul::Endpoint>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: ManagementAgent::NetCfg(NetCfgVersion::Advanced),
                     use_dhcp_server: false,
-                    enable_dhcpv6: false,
+                    config: ManagerConfig::Empty,
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::FakeClock,

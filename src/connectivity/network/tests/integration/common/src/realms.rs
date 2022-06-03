@@ -140,12 +140,31 @@ impl ManagementAgent {
     }
 }
 
+/// Available configurations for a Manager.
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[allow(missing_docs)]
+pub enum ManagerConfig {
+    Empty,
+    Dhcpv6,
+    Forwarding,
+}
+
+impl ManagerConfig {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ManagerConfig::Empty => "/pkg/netcfg/empty.json",
+            ManagerConfig::Dhcpv6 => "/pkg/netcfg/dhcpv6.json",
+            ManagerConfig::Forwarding => "/pkg/netcfg/forwarding.json",
+        }
+    }
+}
+
 /// Components that provide known services used in tests.
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[allow(missing_docs)]
 pub enum KnownServiceProvider {
     Netstack(NetstackVersion),
-    Manager { agent: ManagementAgent, use_dhcp_server: bool, enable_dhcpv6: bool },
+    Manager { agent: ManagementAgent, use_dhcp_server: bool, config: ManagerConfig },
     SecureStash,
     DhcpServer { persistent: bool },
     Dhcpv6Client,
@@ -261,7 +280,12 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 )),
                 ..fnetemul::ChildDef::EMPTY
             },
-            KnownServiceProvider::Manager { agent, use_dhcp_server, enable_dhcpv6 } => {
+            KnownServiceProvider::Manager { agent, use_dhcp_server, config } => {
+                let enable_dhcpv6 = match config {
+                    ManagerConfig::Dhcpv6 => true,
+                    ManagerConfig::Forwarding | ManagerConfig::Empty => false,
+                };
+
                 fnetemul::ChildDef {
                     name: Some(agent.get_component_name().to_string()),
                     source: Some(fnetemul::ChildSource::Component(agent.get_url().to_string())),
@@ -271,11 +295,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                             .iter()
                             .cloned()
                             .chain(std::iter::once("--config-data"))
-                            .chain(std::iter::once(if *enable_dhcpv6 {
-                                "/pkg/netcfg/dhcpv6.json"
-                            } else {
-                                "/pkg/netcfg/empty.json"
-                            }))
+                            .chain(std::iter::once(config.as_str()))
                             .map(Into::into)
                             .collect(),
                     ),
@@ -293,7 +313,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                             })
                             .into_iter()
                             .chain(
-                                (*enable_dhcpv6)
+                                enable_dhcpv6
                                     .then(|| {
                                         fnetemul::Capability::ChildDep(protocol_dep::<
                                             fnet_dhcpv6::ClientProviderMarker,

@@ -12,6 +12,7 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_dhcp as dhcp;
 use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_interfaces as net_interfaces;
+use fidl_fuchsia_net_interfaces_admin as net_interfaces_admin;
 use fidl_fuchsia_netemul_network as netemul_network;
 use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
@@ -26,7 +27,9 @@ use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
 use netstack_testing_common::{
     interfaces,
-    realms::{KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _},
+    realms::{
+        KnownServiceProvider, Manager, ManagerConfig, Netstack2, TestRealmExt as _, TestSandboxExt,
+    },
     try_all, try_any, wait_for_component_stopped, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -43,7 +46,7 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
-                    enable_dhcpv6: false,
+                    config: ManagerConfig::Empty,
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::FakeClock,
@@ -95,7 +98,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
-                    enable_dhcpv6: false,
+                    config: ManagerConfig::Empty,
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::FakeClock,
@@ -476,7 +479,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: true,
-                    enable_dhcpv6: false,
+                    config: ManagerConfig::Empty,
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::DhcpServer { persistent: false },
@@ -520,7 +523,7 @@ async fn observes_stop_events<M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
-                    enable_dhcpv6: false,
+                    config: ManagerConfig::Empty,
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::FakeClock,
@@ -560,4 +563,77 @@ async fn observes_stop_events<M: Manager>(name: &str) {
     // statement.
     let events::StoppedPayload { status } = event.result().expect("error event on stopped");
     assert_matches::assert_matches!(status, events::ExitStatus::Clean);
+}
+
+/// Test that NetCfg enables forwarding on interfaces when the device class is configured to have
+/// that enabled.
+#[variants_test]
+async fn test_forwarding<E: netemul::Endpoint, M: Manager>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name,
+            &[
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: false,
+                    config: ManagerConfig::Forwarding,
+                },
+                KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
+            ],
+        )
+        .expect("create netstack realm");
+
+    // Add a device to the realm.
+    let endpoint = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let () = endpoint.set_link_up(true).await.expect("set link up");
+    let endpoint_mount_path = E::dev_path("ep");
+    let endpoint_mount_path = endpoint_mount_path.as_path();
+    let () = realm.add_virtual_device(&endpoint, endpoint_mount_path).await.unwrap_or_else(|e| {
+        panic!("add virtual device {}: {:?}", endpoint_mount_path.display(), e)
+    });
+
+    // Make sure the Netstack got the new device added.
+    let interface_state = realm
+        .connect_to_protocol::<net_interfaces::StateMarker>()
+        .expect("connect to fuchsia.net.interfaces/State service");
+    let wait_for_netmgr =
+        wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
+    futures::pin_mut!(wait_for_netmgr);
+    let (id, _name) = interfaces::wait_for_non_loopback_interface_up(
+        &interface_state,
+        &mut wait_for_netmgr,
+        None,
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    )
+    .await
+    .expect("wait for non loopback interface");
+
+    let control = realm
+        .interface_control(id)
+        .expect("connect to fuchsia.net.interfaces.admin/Control for new interface");
+    let net_interfaces_admin::Configuration { ipv4: ipv4_config, ipv6: ipv6_config, .. } = control
+        .get_configuration()
+        .await
+        .expect("get_configuration FIDL error")
+        .expect("to get configuration");
+
+    let net_interfaces_admin::Ipv4Configuration { forwarding: v4, .. } =
+        ipv4_config.expect("to have a v4 config");
+    let net_interfaces_admin::Ipv6Configuration { forwarding: v6, .. } =
+        ipv6_config.expect("to have a v6 config");
+
+    // The configuration installs forwarding on v4 on Virtual interfaces and v6 on Ethernet. We
+    // should only observe the configuration to be installed on v4 because the device installed by
+    // this test doesn't match the Ethernet device class.
+    assert_eq!(v4, Some(true));
+    assert_eq!(v6, Some(false));
+
+    // TODO(https://fxbug.dev/92164): make orderly shutdown automatic or unnecessary.
+    //
+    // In the meantime, block on destruction of the test realm before we allow test interfaces to be
+    // cleaned up. This prevents test interfaces from being removed while NetCfg is still in the
+    // process of configuring them after adding them to the Netstack, which causes spurious errors.
+    realm.shutdown().await.expect("failed to shutdown realm");
 }
