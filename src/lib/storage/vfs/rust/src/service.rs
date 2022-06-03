@@ -116,7 +116,7 @@ impl Service {
             }
         };
 
-        debug_assert!(flags == fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        debug_assert!(flags.contains(fio::OpenFlags::RIGHT_READABLE));
 
         match Channel::from_channel(server_end.into_channel()) {
             Ok(channel) => (self.open)(scope, channel),

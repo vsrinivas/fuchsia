@@ -147,6 +147,32 @@ where
             None => Err(Status::NOT_FOUND),
         }
     }
+
+    /// Gets or inserts an entry (as supplied by the callback `f`).
+    pub fn get_or_insert<T: DirectoryEntry>(
+        &self,
+        name: String,
+        f: impl FnOnce() -> Arc<T>,
+    ) -> Arc<dyn DirectoryEntry> {
+        self.inner
+            .lock()
+            .unwrap()
+            .entries
+            .entry(name)
+            .or_insert_with(|| f() as Arc<dyn DirectoryEntry>)
+            .clone()
+    }
+
+    /// Filters and maps all directory entries.  It is similar to std::iter::Iterator::filter_map
+    /// except that it always return a Vec rather than an iterator.
+    pub fn filter_map<B>(&self, f: impl Fn(&str, &Arc<dyn DirectoryEntry>) -> Option<B>) -> Vec<B> {
+        self.inner.lock().unwrap().entries.iter().filter_map(|(k, v)| f(k, v)).collect()
+    }
+
+    /// Returns true if any entry matches the given predicate.
+    pub fn any(&self, f: impl Fn(&str, &Arc<dyn DirectoryEntry>) -> bool) -> bool {
+        self.inner.lock().unwrap().entries.iter().any(|(k, v)| f(k, v))
+    }
 }
 
 impl<Connection> DirectoryEntry for Simple<Connection>
