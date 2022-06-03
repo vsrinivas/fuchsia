@@ -601,6 +601,12 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
               brcmf_fil_get_errstr(fw_err));
   }
 
+  // Buffer the key until EAPOL Key exchange packet #4 is sent out
+  err = brcmf_fil_iovar_data_set(ifp, "buf_key_b4_m4", &kBufKeyB4M4, sizeof(kBufKeyB4M4), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Failed to set buf_key_b4_m4: %s, fw err %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+  }
   /* do bus specific preinit here */
   err = brcmf_bus_preinit(drvr->bus_if);
 done:

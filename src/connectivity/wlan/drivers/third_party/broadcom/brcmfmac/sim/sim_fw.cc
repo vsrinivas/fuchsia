@@ -148,6 +148,8 @@ zx_status_t SimFirmware::SetupIovarTable() {
       {"wsec_key", sizeof(brcmf_wsec_key_le), &SimFirmware::IovarWsecKeySet,
        &SimFirmware::IovarWsecKeyGet},
       {"wstats_counters", sizeof(wl_wstats_cnt_t), nullptr, &SimFirmware::IovarWstatsCountersGet},
+      {"buf_key_b4_m4", sizeof(uint32_t), &SimFirmware::IovarSet, &SimFirmware::IovarGet,
+       std::nullopt, &buf_key_b4_m4_},
   };
 
   for (const auto& it : kIovarInfoTable) {

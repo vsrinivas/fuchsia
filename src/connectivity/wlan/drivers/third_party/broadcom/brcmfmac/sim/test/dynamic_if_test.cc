@@ -256,6 +256,13 @@ static zx_status_t validate_not_invoked_on_del(struct brcmf_if* ifp,
 TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
 
+  uint32_t buf_key_b4_m4;
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
+  // Iovar buf_key_b4_m4 is set to 1 during init. Check if it is set correctly.
+  EXPECT_EQ(ZX_OK, brcmf_fil_iovar_data_get(ifp, "buf_key_b4_m4", &buf_key_b4_m4,
+                                            sizeof(buf_key_b4_m4), nullptr));
+  EXPECT_EQ(buf_key_b4_m4, 1U);
   ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
 
   // Verify whether the provided MAC addr is used when creating the client iface.
