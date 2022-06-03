@@ -16,11 +16,12 @@ Criteria for changes which require RFCs in the Software Delivery area.
 The [Software Delivery][swd] (SWD) system has wide scope over system behaviors,
 including over the air (OTA) system updates, development and testing flows,
 device security, and eventually package updates without a system update. Changes
-to the SWD stack can modify behavior of the system in subtle ways. To best
-adhere to the [Fuchsia-wide RFC process][rfc-process], we seek to disambiguate
-the changes which have 'broad impact' in the SWD area by putting forth a set of
-clear criteria. These criteria are an attempt to achieve a balance between
-execution velocity and proper stakeholder communication and approval processes.
+to the SWD stack can modify behavior of the system in subtle ways and incur cost
+to the Fuchsia program. To best adhere to the
+[Fuchsia-wide RFC process][rfc-process], we seek to disambiguate the changes
+which have 'broad impact' in the SWD area by putting forth a set of clear
+criteria. These criteria are an attempt to achieve a balance between execution
+velocity and proper stakeholder communication and approval processes.
 
 
 ## Design
@@ -29,26 +30,40 @@ execution velocity and proper stakeholder communication and approval processes.
 
 *   **Changes to the system update flow which add restrictions or gates, or new
     error conditions to the OTA process.** For example, adding additional checks
-    before completing an OTA, or making OTA downgrade checking more strict.
+    before completing an OTA, or making OTA downgrade checking more strict. This
+    is important because these changes have the potential to reduce the
+    reliability of the OTA process.
 *   **Changes to how we use package repositories, or the [structure of package
     repositories we expect][tuf-structure].** We expect that both internal and
     external developers may create or host their own TUF servers, and we should
     provide appropriate notice of changes to the expected format.
 *   **Changes to the Fuchsia package format**. Anything that modifies the
     [schema for Fuchsia packages][package-schema] or the [Fuchsia Archive
-    format][far-format].
+    format][far-format]. This is important because many different tools interact
+    with the package format and we should provide appropriate notice of changes.
 *   **Adding or removing requirements for a product or build type to support OTA
     system updates**. For example, requiring vbmeta to OTA successfully, or
-    removing a requirement for vbmeta.
+    removing a requirement for vbmeta. This is important because these changes
+    may incur costs for product developers.
 *   **Modifications to enforcement of security policies**. For example, changing
-    executability restriction strategies.
+    executability restriction strategies. This is important because these
+    changes have the potential to impact the security of Fuchsia.
 *   **Changes which may make old systems fail to update to newer system
-    versions, or require stepping-stone builds.**
+    versions, or require stepping-stone builds.** This is important because
+    stepping-stone releases incur a long-term cost. When a device is set up for
+    the first time, or reconnected after a long time, it must update through
+    every stepping-stone release, costing additional time and network traffic
+    for the end user. A bug in a stepping-stone release has the potential to
+    impact the security or availability of devices moving through it even years
+    after the original release, meaning that stepping-stone releases must be
+    tested and maintained for significantly longer than regular releases.
 *   **Changes which will substantially increase resource usage.** Whether
-    memory, disk, CPU, network, etc.
-*   **Modifications to privacy policies or their enforcement.** We don't have
-    much ability to transact PII in the codebase today, but if we someday want
-    to, that should go through an RFC.
+    memory, disk, CPU, network, etc. This gives broader visibility to changes in
+    the use of shared device resources.
+*   **Modifications to privacy policies or their enforcement.** This is
+    important because these changes have the potential to impact the privacy
+    Fuchsia offers to users. We don't have much ability to transact PII in the
+    codebase today, but if we someday want to, that should go through an RFC.
 
 
 ### Examples: past changes which would now require an RFC
