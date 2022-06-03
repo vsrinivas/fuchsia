@@ -1111,7 +1111,7 @@ build_api_module("cipd_assembly_artifacts") {
   testonly = true
   data_keys = [ "assembly_inputs" ]
   walk_keys = [ "assembly_inputs_barrier" ]
-  deps = [ "//build/images/fuchsia" ]
+  deps = [ "//build/images:main_assembly" ]
 }
 
 # This describes the locations of archives for the out-of-tree assembly inputs

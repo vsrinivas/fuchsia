@@ -30,23 +30,38 @@ import("//build/zircon/tools.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
 
+assert(
+    bootfs_only == use_bringup_assembly,
+    "use_bringup_assembly is replacing bootfs_only, and MUST always be the same value")
+
 labels = {
-  images = "//build/images/fuchsia"
-  images_prime = "//build/images/fuchsia:fuchsia_prime"
-  images_netboot = "//build/images/fuchsia:netboot"
-  base_packages = "//build/images/fuchsia:fuchsia.base_packages"
-  cache_packages = "//build/images/fuchsia:fuchsia.cache_packages"
-  meta_packages = "//build/images/fuchsia:fuchsia.meta_packages"
+  if (use_bringup_assembly) {
+    images = "//build/images/bringup"
+    assembly_name = "bringup"
+  } else {
+    images = "//build/images/fuchsia"
+    assembly_name = "fuchsia"
+    images_prime = "${images}:${assembly_name}_prime"
+    fuchsia_netboot = "${images}:netboot"
+
+    # These only exist in fuchsia, not in bringup.
+    base_packages = "${images}:${assembly_name}.base_packages"
+    cache_packages = "${images}:${assembly_name}.cache_packages"
+    meta_packages = "${images}:${assembly_name}.meta_packages"
+  }
 }
 
-supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
+supports_fastboot_fvm = fvm_partition != "" && !use_bringup_assembly
 files = {
-  outdir = get_label_info(labels.images, "target_out_dir") + "/fuchsia"
-  gendir = "${outdir}/gen"
-  minfs = "${outdir}/data.blk"
-  blobfs = "${root_out_dir}/obj/build/images/blob.blk"
-  flash_manifest =
-      "${root_out_dir}/obj/build/images/fuchsia/flash_manifest/flash.json"
+  images_outdir = get_label_info(labels.images, "target_out_dir")
+  assembly_outdir = images_outdir + "/${labels.assembly_name}"
+
+  if (!use_bringup_assembly) {
+    minfs = "${assembly_outdir}/data.blk"
+    blobfs = "${root_out_dir}/obj/build/images/blob.blk"
+  }
+
+  flash_manifest = "${images_outdir}/flash_manifest/flash.json"
 
   # TODO(https://fxbug.dev/98480) move these to image-relative paths along with tools' usages
   base_package_manifests = "$root_build_dir/base_package_manifests.list"
@@ -57,16 +72,24 @@ files = {
   cache_package_names = "$root_build_dir/cache_packages.list"
   universe_package_names = "$root_build_dir/universe_packages.list"
 
-  if (!bootfs_only) {
-    fvm = "${outdir}/fvm.blk"
+  if (!use_bringup_assembly) {
+    fvm = "${assembly_outdir}/fvm.blk"
   }
 
   if (supports_fastboot_fvm) {
-    fvm_fastboot = "${outdir}/fvm.fastboot.blk"
+    fvm_fastboot = "${assembly_outdir}/fvm.fastboot.blk"
   }
 }
-if (bootfs_only && !supports_fastboot_fvm) {
-  not_needed(files, "*")
+
+# This is a group that contains the one-and-only assembly implementation.  It
+# can be used in contexts that need either bringup or the full-fuchsia assembly
+# implementation's outputs.
+#
+# If a target requires the outputs of the full-fuchsia assembly implementation,
+# it should directly use it (//build/images/fuchsia).
+group("main_assembly") {
+  testonly = use_bringup_assembly || fuchsia_zbi_testonly
+  public_deps = [ labels.images ]
 }
 
 # Dependencies for all image targets referenced by paver_targets, i.e., the
@@ -90,10 +113,10 @@ group("universe_packages") {
 
 group("packages") {
   testonly = true
-  public_deps = [
-    ":universe_packages",
-    labels.meta_packages,
-  ]
+  public_deps = [ ":universe_packages" ]
+  if (defined(labels.meta_packages)) {
+    public_deps += [ labels.meta_packages ]
+  }
 }
 
 #####
@@ -240,7 +263,7 @@ group("signed") {
 # once this targets is no longer hardcoded in infra.
 group("record_filesystem_sizes") {
   testonly = true
-  if (!bootfs_only) {
+  if (!use_bringup_assembly) {
     deps = [ "//build/images/sizes:elf_sizes.json" ]
   }
 }
@@ -825,7 +848,7 @@ generated_file("fastboot_manifest_archive") {
 }
 
 fastboot_targets = []
-if (bootfs_only) {
+if (use_bringup_assembly) {
   fastboot_targets += [
     {
       name = "fastboot-boot-script"
@@ -859,13 +882,13 @@ paver_targets = [
 
     deps = [ ":bootserver" ]
 
-    # XXX(46415): The build graph for "bringup" (bootfs_only) MUST only
+    # XXX(46415): The build graph for "bringup" (use_bringup_assembly) MUST only
     # contain one zircon-a metadata target, which means that anything
     # reaching fuchsia.zbi must be excluded from the build graph.
-    if (bootfs_only) {
+    if (use_bringup_assembly) {
       deps += [ "bringup" ]
     } else {
-      deps += [ labels.images_netboot ]
+      deps += [ labels.fuchsia_netboot ]
     }
     metadata = {
       images = [
@@ -883,7 +906,7 @@ paver_targets = [
     name = "paver-script"
     outputs = [ "$root_build_dir/pave.sh" ]
     deps = [ ":bootserver" ]
-    if (bootfs_only) {
+    if (use_bringup_assembly) {
       deps += [ "bringup" ]
       switch = "--netboot="
     } else {
@@ -911,7 +934,7 @@ if (recovery_is_zedboot) {
       name = "zedboot-script"
       outputs = [ "$root_build_dir/pave-zedboot.sh" ]
       deps = [ ":bootserver" ]
-      if (bootfs_only) {
+      if (use_bringup_assembly) {
         deps += [ "bringup" ]
         switch = "--netboot="
       } else {
@@ -1056,13 +1079,15 @@ generate_package_metadata("package_manifests_from_metadata.list") {
   deps = [
     ":packages",
     labels.images,
-    labels.images_prime,
   ]
+  if (defined(labels.images_prime)) {
+    deps += [ labels.images_prime ]
+  }
 }
 
 package_list_from_assembly("base_package_manifests.list") {
   testonly = true
-  system_label = labels.images
+  system_label = "${labels.images}:${labels.assembly_name}"
   package_set = "base"
   contents = "manifest"
   outputs = [ files.base_package_manifests ]
@@ -1070,7 +1095,7 @@ package_list_from_assembly("base_package_manifests.list") {
 
 package_list_from_assembly("cache_package_manifests.list") {
   testonly = true
-  system_label = labels.images
+  system_label = "${labels.images}:${labels.assembly_name}"
   package_set = "cache"
   contents = "manifest"
   outputs = [ files.cache_package_manifests ]
@@ -1112,10 +1137,12 @@ pm_publish("publish") {
 
 group("updates") {
   testonly = true
-  deps = [
-    ":package_lists",
-    ":publish",
-  ]
+  if (!use_bringup_assembly) {
+    deps = [
+      ":package_lists",
+      ":publish",
+    ]
+  }
 }
 
 group("bootserver") {
@@ -1196,7 +1223,7 @@ mkfs_label = "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)"
 mkfs_out_dir = get_label_info(mkfs_label, "root_out_dir")
 mkfs_bin = "$mkfs_out_dir/mkfs-msdosfs"
 
-if (!bootfs_only) {
+if (!use_bringup_assembly) {
   fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
   fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
 }
@@ -1207,13 +1234,9 @@ compiled_action("uefi-disk") {
   deps = [
     "zedboot",
     "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)",
+    labels.images,
     mkfs_label,
   ]
-  if (bootfs_only) {
-    deps += [ "bringup" ]
-  } else {
-    deps += [ labels.images ]
-  }
   testonly = true
   tool = "//tools/make-fuchsia-vol"
   inputs = [ mkfs_bin ]
@@ -1232,7 +1255,7 @@ compiled_action("uefi-disk") {
     "10000000000",  # 10GB
   ]
 
-  if (bootfs_only) {
+  if (use_bringup_assembly) {
     args += [ "-ramdisk-only" ]
   } else {
     inputs += [
@@ -1263,7 +1286,7 @@ compiled_action("uefi-disk") {
 }
 
 # We shouldn't generate a product metadata if we are building an SDK.
-if (!bootfs_only && !build_sdk_archives) {
+if (!use_bringup_assembly && !build_sdk_archives) {
   compatible_devices = []
 
   # Virtual device manifest should only be generated for emu compatible boards.
@@ -1344,7 +1367,7 @@ group("images") {
     ":default-images",
   ]
 
-  if (!bootfs_only) {
+  if (defined(labels.images_netboot)) {
     deps += [ labels.images_netboot ]
   }
 }
@@ -1365,7 +1388,7 @@ group("default-images") {
 
   if (size_checker_input != {
       }) {
-    # Size checks only make sense when bootfs_only is false, since
+    # Size checks only make sense when use_bringup_assembly is false, since
     # they require system images in addition to the ZBI.
     deps += [ "size_checker:size_report.json" ]
   }
@@ -1386,10 +1409,10 @@ group("default-images") {
     deps += [ ":netboot-script" ]
   }
 
-  # TODO(fxbug.dev/46415): The build graph for "bringup" (bootfs_only) MUST only
+  # TODO(fxbug.dev/46415): The build graph for "bringup" (use_bringup_assembly) MUST only
   # contain one zircon-a metadata target, which means that anything
   # reaching fuchsia.zbi must be excluded from the build graph.
-  if (!bootfs_only) {
+  if (!use_bringup_assembly) {
     deps += [
       ":record_filesystem_sizes",
       ":updates",

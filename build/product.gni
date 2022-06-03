@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # Is the `assemble_system()` instantiation used by the product the standard
+  # one or the bringup one?
+  use_bringup_assembly = false
+
   # A list of binary labels to include in ZBIs built for this product.
   product_bootfs_labels = []
 

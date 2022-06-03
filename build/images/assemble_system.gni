@@ -105,6 +105,9 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     [bool] Whether to include shell commands. Should be set to false for
 #     build without shell access.
 #
+#   include_config_data (default: true)
+#     [bool] Whether to create a config_data package for the assembly or not.
+#
 #   base_package_name (optional; default: "system_image")
 #     [string] The name to give the base package. For prime builds this
 #     should be "system_image_prime", so that the package does not override the
@@ -400,49 +403,56 @@ template("assemble_system") {
     not_needed([ "_universe_packages" ])
   }
 
-  # For details, see //docs/development/components/component_id_index.md#system-assembly
-  component_id_index_config("${image_name}.component_id_index_config") {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-
-    # collect and merge component ID indices from the base set.
-    deps = _base_packages
-
-    metadata = {
-      package_barrier = []
-    }
-  }
-
   component_id_index_dep = []
   component_id_index_config_data_dep = []
   include_component_index = defined(invoker.include_component_id_index) &&
                             invoker.include_component_id_index
   if (include_component_index) {
+    # For details, see //docs/development/components/component_id_index.md#system-assembly
+    component_id_index_config("${image_name}.component_id_index_config") {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      # collect and merge component ID indices from the base set.
+      deps = _base_packages
+
+      metadata = {
+        package_barrier = []
+      }
+    }
+
     component_id_index_dep = [ ":${image_name}.component_id_index_config" ]
     component_id_index_config_data_dep =
         [ ":${image_name}.component_id_index_config-config-data" ]
+    _meta_packages += component_id_index_dep
   }
-  _meta_packages += component_id_index_dep
 
-  config_package(labels.config_data) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    package_name = "config-data"
-    deps = _base_packages + _cache_packages + component_id_index_config_data_dep
-    if (defined(invoker.sysmgr_golden)) {
-      sysmgr_golden = invoker.sysmgr_golden
-    }
-    if (defined(invoker.sysmgr_golden_warn)) {
-      sysmgr_golden_warn = invoker.sysmgr_golden_warn
-    }
+  include_config_data = true
+  if (defined(invoker.include_config_data)) {
+    include_config_data = invoker.include_config_data
   }
-  _meta_packages += [ ":${labels.config_data}" ]
+  if (include_config_data) {
+    config_package(labels.config_data) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      package_name = "config-data"
+      deps =
+          _base_packages + _cache_packages + component_id_index_config_data_dep
+      if (defined(invoker.sysmgr_golden)) {
+        sysmgr_golden = invoker.sysmgr_golden
+      }
+      if (defined(invoker.sysmgr_golden_warn)) {
+        sysmgr_golden_warn = invoker.sysmgr_golden_warn
+      }
+    }
+    _meta_packages += [ ":${labels.config_data}" ]
+  }
 
   generated_fshost_config(labels.fshost_config) {
     options = fshost_config

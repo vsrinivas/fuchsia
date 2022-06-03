@@ -5,6 +5,9 @@
 import("//build/security/policies.gni")
 import("//products/bringup.gni")
 
+# Core, and all products based on it, use the "standard" assemble_system() impl
+# in `//build/images/fuchsia`
+use_bringup_assembly = false
 bootfs_only = false
 
 # Kernel command line arguments.
