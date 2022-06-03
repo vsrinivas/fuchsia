@@ -28,9 +28,9 @@ constexpr size_t kTopPercentChunks = 95;
 constexpr size_t kMaxUniqueContexts = 8;
 
 // Static context; used to store module info until the process singleton is created and to find the
-// singleton from the static hook functions. This structure is NOT thread-safe, and should only be
-// accessed from the main thread. More precisely, do not load multiple shared libraries concurrently
-// from different threads.
+// singleton from the static hook functions. This structure is NOT thread-safe, and MUST NOT be
+// written to once the singleton has been constructed. Except for in unit tests, this singleton is
+// constructed before |main| and before any threads other than the main thread have started.
 struct {
   CountersInfo counters[kMaxModules];
   size_t num_counters = 0;
@@ -115,6 +115,8 @@ Process::Process(ExecutorPtr executor)
     : executor_(executor), eventpair_(executor), next_purge_(zx::time::infinite()) {
   FX_CHECK(!gContext.process);
   gContext.process = this;
+  // Safe: |gProcess.num_counters| and |gContext.num_pcs| are only modified while the process is
+  // single-threaded.
   for (size_t i = 0; i < gContext.num_counters; ++i) {
     if (auto status = counters_.Send(std::move(gContext.counters[i])); status != ZX_OK) {
       FX_LOGS(WARNING) << "Failed to send counter data: " << zx_status_get_string(status);
@@ -128,7 +130,10 @@ Process::Process(ExecutorPtr executor)
   AddDefaults(&options_);
 }
 
-Process::~Process() { memset(&gContext, 0, sizeof(gContext)); }
+Process::~Process() {
+  // This is only reached in unit tests or on exit.
+  memset(&gContext, 0, sizeof(gContext));
+}
 
 void Process::AddDefaults(Options* options) {
   if (!options->has_detect_leaks()) {
@@ -304,7 +309,9 @@ Promise<> Process::AwaitSync() {
 }
 
 Promise<> Process::AddModules() {
-  if (counters_.is_empty() || pcs_.is_empty()) {
+  // Safe: |gProcess.num_counters| and |gContext.num_pcs| are only modified while the process is
+  // single-threaded.
+  if (gContext.num_counters == 0 || gContext.num_pcs == 0) {
     FX_LOGS(FATAL) << "No modules found; is the code instrumented for fuzzing?";
   }
   return fpromise::make_promise(

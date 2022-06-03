@@ -979,8 +979,11 @@ bool RunnerImpl::Recycle(Input&& input, size_t& attempts_left, bool suspected, b
     } else if (suspected) {
       // Leak detection is still possible, and the last run exhibited a suspected leak. Push the
       // input to the front of the queue to retry with leak detection.
-      generated_.Resend(std::move(input));
-      return true;
+      if (auto status = generated_.Resend(std::move(input)); status != ZX_OK) {
+        FX_LOGS(WARNING) << "Failed to resend input: " << zx_status_get_string(status);
+      } else {
+        return true;
+      }
     }
   }
   //  Send input to be recycled.

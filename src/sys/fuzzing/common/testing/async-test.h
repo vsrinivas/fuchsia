@@ -25,13 +25,11 @@ class AsyncTest : public ::testing::Test {
   void SetUp() override { executor_ = MakeExecutor(dispatcher()); }
 
 // Each of these macros creates a promise from a provided handler with additional source location
-// information. The promise expects the indicated kind of result (or no result in the case of
-// |EXPECT_CANCEL|), and for the result to contain the expected value if provided.
+// information. The promise expects the indicated kind of result.
 //
 // Example usage:
 //   auto f = FUZZING_EXPECT_OK([&] { return AwaitSomething(); });
 //   auto g = FUZZING_EXPECT_ERROR([&] { return AwaitFailure(); }, ZX_ERR_BAD_STATE);
-//   auto h = FUZZING_EXPECT_CANCEL([&] { return AwaitDropped(); });
 //
 #define FUZZING_EXPECT_OK(...) Schedule(ExpectOk(__FILE__, __LINE__, __VA_ARGS__))
 #define FUZZING_EXPECT_ERROR(...) Schedule(ExpectError(__FILE__, __LINE__, __VA_ARGS__))

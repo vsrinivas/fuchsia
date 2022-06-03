@@ -17,6 +17,16 @@ class AsyncDequeTest : public AsyncTest {};
 
 // Unit tests.
 
+TEST_F(AsyncDequeTest, TryReceive) {
+  AsyncDeque<Input> pipe;
+  Input hello("hello");
+  auto result = pipe.TryReceive();
+  EXPECT_TRUE(result.is_error());
+  EXPECT_EQ(pipe.Send(hello.Duplicate()), ZX_OK);
+  result = pipe.TryReceive();
+  EXPECT_EQ(result.value(), hello);
+}
+
 TEST_F(AsyncDequeTest, SendBeforeReceive) {
   AsyncDeque<Input> pipe;
   Input hello("hello");
@@ -38,16 +48,16 @@ TEST_F(AsyncDequeTest, ReceiveBeforeSend) {
 
 TEST_F(AsyncDequeTest, ReceiveAfterCancel) {
   AsyncDeque<Input> pipe;
-  Input foo("foo");
-  Input bar("bar");
+  Input hello("hello");
+  Input world("world");
   {
     // Discarding a promise shouldn't drop data.
-    FUZZING_EXPECT_OK(pipe.Receive(), foo.Duplicate());
+    FUZZING_EXPECT_OK(pipe.Receive(), hello.Duplicate());
     auto discarded = pipe.Receive();
-    FUZZING_EXPECT_OK(pipe.Receive(), bar.Duplicate());
+    FUZZING_EXPECT_OK(pipe.Receive(), world.Duplicate());
   }
-  EXPECT_EQ(pipe.Send(std::move(foo)), ZX_OK);
-  EXPECT_EQ(pipe.Send(std::move(bar)), ZX_OK);
+  EXPECT_EQ(pipe.Send(std::move(hello)), ZX_OK);
+  EXPECT_EQ(pipe.Send(std::move(world)), ZX_OK);
   RunUntilIdle();
 }
 
@@ -55,10 +65,10 @@ TEST_F(AsyncDequeTest, Resend) {
   AsyncDeque<Input> pipe;
   Input hello("hello");
   Input world("world");
-  pipe.Resend(hello.Duplicate());
+  EXPECT_EQ(pipe.Resend(hello.Duplicate()), ZX_OK);
   EXPECT_EQ(pipe.Send(world.Duplicate()), ZX_OK);
   FUZZING_EXPECT_OK(pipe.Receive(), hello.Duplicate());
-  pipe.Resend(hello.Duplicate());
+  EXPECT_EQ(pipe.Resend(hello.Duplicate()), ZX_OK);
   FUZZING_EXPECT_OK(pipe.Receive(), std::move(hello));
   FUZZING_EXPECT_OK(pipe.Receive(), std::move(world));
   RunUntilIdle();
@@ -69,29 +79,24 @@ TEST_F(AsyncDequeTest, Close) {
   Input hello("hello");
   Input world("world");
 
-  // Close with items in the queue.
-  pipe1.Resend(hello.Duplicate());
-  EXPECT_FALSE(pipe1.is_closed());
-  EXPECT_FALSE(pipe1.is_empty());
-  pipe1.Close();
-  EXPECT_TRUE(pipe1.is_closed());
-  EXPECT_FALSE(pipe1.is_empty());
-  EXPECT_EQ(pipe1.Send(world.Duplicate()), ZX_ERR_BAD_STATE);
+  // Close with items in the queue. Items sent before closing are still received.
   FUZZING_EXPECT_OK(pipe1.Receive(), hello.Duplicate());
   FUZZING_EXPECT_ERROR(pipe1.Receive());
+  EXPECT_EQ(pipe1.Send(hello.Duplicate()), ZX_OK);
+  EXPECT_EQ(pipe1.state(), AsyncDequeState::kOpen);
+  pipe1.Close();
+  EXPECT_EQ(pipe1.state(), AsyncDequeState::kClosing);
+  EXPECT_EQ(pipe1.Send(world.Duplicate()), ZX_ERR_BAD_STATE);
   RunUntilIdle();
 
-  // Close with promises waiting to receive.
+  // Close with promises waiting to receive. Items resent after closing are still received.
+  FUZZING_EXPECT_OK(pipe2.Receive(), world.Duplicate());
   FUZZING_EXPECT_ERROR(pipe2.Receive());
-  EXPECT_FALSE(pipe2.is_closed());
-  EXPECT_TRUE(pipe2.is_empty());
+  EXPECT_EQ(pipe2.state(), AsyncDequeState::kOpen);
   pipe2.Close();
-  EXPECT_TRUE(pipe2.is_closed());
-  EXPECT_TRUE(pipe2.is_empty());
-  EXPECT_EQ(pipe2.Send(std::move(world)), ZX_ERR_BAD_STATE);
-  pipe2.Resend(hello.Duplicate());
-  FUZZING_EXPECT_OK(pipe2.Receive(), std::move(hello));
-  FUZZING_EXPECT_ERROR(pipe2.Receive());
+  EXPECT_EQ(pipe2.state(), AsyncDequeState::kClosing);
+  EXPECT_EQ(pipe2.Send(std::move(hello)), ZX_ERR_BAD_STATE);
+  EXPECT_EQ(pipe2.Resend(std::move(world)), ZX_OK);
   RunUntilIdle();
 }
 
@@ -101,28 +106,23 @@ TEST_F(AsyncDequeTest, Clear) {
   Input world("world");
 
   // Clear with items in the queue.
-  pipe1.Resend(hello.Duplicate());
-  EXPECT_FALSE(pipe1.is_closed());
-  EXPECT_FALSE(pipe1.is_empty());
-  pipe1.Clear();
-  EXPECT_TRUE(pipe1.is_closed());
-  EXPECT_TRUE(pipe1.is_empty());
-  EXPECT_EQ(pipe1.Send(world.Duplicate()), ZX_ERR_BAD_STATE);
   FUZZING_EXPECT_ERROR(pipe1.Receive());
+  EXPECT_EQ(pipe1.Resend(hello.Duplicate()), ZX_OK);
+  EXPECT_EQ(pipe1.state(), AsyncDequeState::kOpen);
+  pipe1.Clear();
+  EXPECT_EQ(pipe1.state(), AsyncDequeState::kClosed);
+  EXPECT_EQ(pipe1.Send(world.Duplicate()), ZX_ERR_BAD_STATE);
   RunUntilIdle();
 
   // Clear with promises waiting to receive.
   FUZZING_EXPECT_ERROR(pipe2.Receive());
-  EXPECT_FALSE(pipe2.is_closed());
-  EXPECT_TRUE(pipe2.is_empty());
+  EXPECT_EQ(pipe2.state(), AsyncDequeState::kOpen);
   pipe2.Clear();
-  EXPECT_TRUE(pipe2.is_closed());
-  EXPECT_TRUE(pipe2.is_empty());
-  EXPECT_EQ(pipe2.Send(world.Duplicate()), ZX_ERR_BAD_STATE);
-  pipe2.Resend(hello.Duplicate());
-  FUZZING_EXPECT_OK(pipe2.Receive(), std::move(hello));
-  FUZZING_EXPECT_ERROR(pipe2.Receive());
+  EXPECT_EQ(pipe2.state(), AsyncDequeState::kClosed);
   RunUntilIdle();
+
+  EXPECT_EQ(pipe2.Send(std::move(world)), ZX_ERR_BAD_STATE);
+  EXPECT_EQ(pipe2.Resend(std::move(hello)), ZX_ERR_BAD_STATE);
 }
 
 TEST_F(AsyncDequeTest, Reset) {
@@ -131,27 +131,23 @@ TEST_F(AsyncDequeTest, Reset) {
   Input world("world");
 
   // Reset with items in the queue.
-  pipe1.Resend(hello.Duplicate());
-  EXPECT_FALSE(pipe1.is_closed());
-  EXPECT_FALSE(pipe1.is_empty());
+  EXPECT_EQ(pipe1.Resend(hello.Duplicate()), ZX_OK);
+  EXPECT_EQ(pipe1.state(), AsyncDequeState::kOpen);
   pipe1.Reset();
-  EXPECT_FALSE(pipe1.is_closed());
-  EXPECT_TRUE(pipe1.is_empty());
+  EXPECT_EQ(pipe1.state(), AsyncDequeState::kOpen);
+  FUZZING_EXPECT_OK(pipe1.Receive(), world.Duplicate());
   EXPECT_EQ(pipe1.Send(world.Duplicate()), ZX_OK);
-  FUZZING_EXPECT_OK(pipe1.Receive(), std::move(world));
   RunUntilIdle();
 
   // Reset with promises waiting to receive.
   FUZZING_EXPECT_ERROR(pipe2.Receive());
-  EXPECT_FALSE(pipe2.is_closed());
-  EXPECT_TRUE(pipe2.is_empty());
+  EXPECT_EQ(pipe2.state(), AsyncDequeState::kOpen);
   pipe2.Reset();
-  EXPECT_FALSE(pipe2.is_closed());
-  EXPECT_TRUE(pipe2.is_empty());
-  EXPECT_EQ(pipe2.Send(world.Duplicate()), ZX_OK);
-  pipe2.Resend(hello.Duplicate());
-  FUZZING_EXPECT_OK(pipe2.Receive(), std::move(hello));
-  FUZZING_EXPECT_OK(pipe2.Receive(), std::move(world));
+  EXPECT_EQ(pipe2.state(), AsyncDequeState::kOpen);
+  FUZZING_EXPECT_OK(pipe2.Receive(), hello.Duplicate());
+  FUZZING_EXPECT_OK(pipe2.Receive(), world.Duplicate());
+  EXPECT_EQ(pipe2.Send(std::move(world)), ZX_OK);
+  EXPECT_EQ(pipe2.Resend(std::move(hello)), ZX_OK);
   RunUntilIdle();
 }
 
