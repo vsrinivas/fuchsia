@@ -778,8 +778,9 @@ mod tests {
 
         // Alice sends Bob a ping.
 
-        BufferIpSocketHandler::<Ipv4, _>::send_oneshot_ip_packet(
+        BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
             net.context("alice"),
+            &mut (),
             None, // device
             None, // local_ip
             DUMMY_CONFIG_V4.remote_ip,
@@ -945,8 +946,9 @@ mod tests {
         );
 
         // Alice sends Bob a ping.
-        BufferIpSocketHandler::<Ipv4, _>::send_oneshot_ip_packet(
+        BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
             net.context("alice"),
+            &mut (),
             None, // device
             None, // local_ip
             DUMMY_CONFIG_V4.remote_ip,

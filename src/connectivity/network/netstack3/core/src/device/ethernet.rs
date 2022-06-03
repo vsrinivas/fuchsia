@@ -101,12 +101,12 @@ pub(crate) trait EthernetIpLinkDeviceContext<C>:
 impl<D: EventDispatcher, C: BlanketCoreContext> EthernetIpLinkDeviceContext<()> for Ctx<D, C> {
     fn add_ipv6_addr_subnet(
         &mut self,
-        _ctx: &mut (),
+        ctx: &mut (),
         device_id: EthernetDeviceId,
         addr_sub: AddrSubnet<Ipv6Addr>,
         config: AddrConfig<C::Instant>,
     ) -> Result<(), ExistsError> {
-        crate::ip::device::add_ipv6_addr_subnet(self, &mut (), device_id.into(), addr_sub, config)
+        crate::ip::device::add_ipv6_addr_subnet(self, ctx, device_id.into(), addr_sub, config)
     }
 
     fn join_ipv6_multicast(
@@ -1009,10 +1009,10 @@ mod tests {
         }
     }
 
-    impl<C> EthernetIpLinkDeviceContext<C> for DummyCtx {
+    impl EthernetIpLinkDeviceContext<()> for DummyCtx {
         fn add_ipv6_addr_subnet(
             &mut self,
-            _ctx: &mut C,
+            _ctx: &mut (),
             _device_id: DummyDeviceId,
             _addr_sub: AddrSubnet<Ipv6Addr>,
             _config: AddrConfig<DummyInstant>,
@@ -1022,7 +1022,7 @@ mod tests {
 
         fn join_ipv6_multicast(
             &mut self,
-            _ctx: &mut C,
+            _ctx: &mut (),
             _device_id: DummyDeviceId,
             _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
@@ -1031,7 +1031,7 @@ mod tests {
 
         fn leave_ipv6_multicast(
             &mut self,
-            _ctx: &mut C,
+            _ctx: &mut (),
             _device_id: DummyDeviceId,
             _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
@@ -1043,7 +1043,7 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl<C> IpLinkDeviceContext<EthernetLinkDevice, C, EthernetTimerId<DummyDeviceId>> for DummyCtx {}
+    impl IpLinkDeviceContext<EthernetLinkDevice, (), EthernetTimerId<DummyDeviceId>> for DummyCtx {}
 
     fn contains_addr<A: IpAddress>(
         ctx: &crate::testutil::DummyCtx,
@@ -1247,8 +1247,8 @@ mod tests {
 
     fn is_routing_enabled<I: Ip>(ctx: &crate::testutil::DummyCtx, device: DeviceId) -> bool {
         match I::VERSION {
-            IpVersion::V4 => is_ipv4_routing_enabled(ctx, &mut (), device),
-            IpVersion::V6 => is_ipv6_routing_enabled(ctx, &mut (), device),
+            IpVersion::V4 => is_ipv4_routing_enabled(ctx, device),
+            IpVersion::V6 => is_ipv6_routing_enabled(ctx, device),
         }
     }
 

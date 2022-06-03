@@ -48,7 +48,7 @@ pub(crate) struct RsTimerId<DeviceId> {
 }
 
 /// The IP device context provided to RS.
-pub(super) trait Ipv6DeviceRsContext: IpDeviceIdContext<Ipv6> {
+pub(super) trait Ipv6DeviceRsContext<C>: IpDeviceIdContext<Ipv6> {
     /// Gets the maximum number of router solicitations to send when
     /// performing router solicitation.
     fn get_max_router_solicitations(&self, device_id: Self::DeviceId) -> Option<NonZeroU8>;
@@ -66,10 +66,11 @@ pub(super) trait Ipv6DeviceRsContext: IpDeviceIdContext<Ipv6> {
 }
 
 /// The IP layer context provided to RS.
-pub(super) trait Ipv6LayerRsContext: IpDeviceIdContext<Ipv6> {
+pub(super) trait Ipv6LayerRsContext<C>: IpDeviceIdContext<Ipv6> {
     /// Sends an NDP Router Solicitation to the local-link.
     fn send_rs_packet<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         message: RouterSolicitation,
         body: S,
@@ -77,37 +78,41 @@ pub(super) trait Ipv6LayerRsContext: IpDeviceIdContext<Ipv6> {
 }
 
 /// The execution context for RS
-pub(super) trait RsContext:
-    Ipv6DeviceRsContext + Ipv6LayerRsContext + TimerContext<RsTimerId<Self::DeviceId>> + RngContext
+pub(super) trait RsContext<C>:
+    Ipv6DeviceRsContext<C>
+    + Ipv6LayerRsContext<C>
+    + TimerContext<RsTimerId<Self::DeviceId>>
+    + RngContext
 {
 }
 
 impl<
-        C: Ipv6DeviceRsContext
-            + Ipv6LayerRsContext
-            + TimerContext<RsTimerId<C::DeviceId>>
+        C,
+        SC: Ipv6DeviceRsContext<C>
+            + Ipv6LayerRsContext<C>
+            + TimerContext<RsTimerId<SC::DeviceId>>
             + RngContext,
-    > RsContext for C
+    > RsContext<C> for SC
 {
 }
 
 /// An implementation of Router Solicitation.
-pub(crate) trait RsHandler: IpDeviceIdContext<Ipv6> {
+pub(crate) trait RsHandler<C>: IpDeviceIdContext<Ipv6> {
     /// Starts router solicitation.
-    fn start_router_solicitation(&mut self, device_id: Self::DeviceId);
+    fn start_router_solicitation(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 
     /// Stops router solicitation.
     ///
     /// Does nothing if router solicitaiton is not being performed
-    fn stop_router_solicitation(&mut self, device_id: Self::DeviceId);
+    fn stop_router_solicitation(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 
     /// Handles a timer.
     // TODO: Replace this with a `TimerHandler` bound.
-    fn handle_timer(&mut self, _ctx: &mut (), id: RsTimerId<Self::DeviceId>);
+    fn handle_timer(&mut self, ctx: &mut C, id: RsTimerId<Self::DeviceId>);
 }
 
-impl<C: RsContext> RsHandler for C {
-    fn start_router_solicitation(&mut self, device_id: Self::DeviceId) {
+impl<C, SC: RsContext<C>> RsHandler<C> for SC {
+    fn start_router_solicitation(&mut self, _ctx: &mut C, device_id: Self::DeviceId) {
         let max_router_solicitations = self.get_max_router_solicitations(device_id);
         *self.get_router_soliciations_remaining_mut(device_id) = max_router_solicitations;
 
@@ -125,19 +130,19 @@ impl<C: RsContext> RsHandler for C {
         }
     }
 
-    fn stop_router_solicitation(&mut self, device_id: Self::DeviceId) {
-        let _: Option<C::Instant> = self.cancel_timer(RsTimerId { device_id });
+    fn stop_router_solicitation(&mut self, _ctx: &mut C, device_id: Self::DeviceId) {
+        let _: Option<SC::Instant> = self.cancel_timer(RsTimerId { device_id });
     }
 
-    fn handle_timer(&mut self, ctx: &mut (), RsTimerId { device_id }: RsTimerId<C::DeviceId>) {
+    fn handle_timer(&mut self, ctx: &mut C, RsTimerId { device_id }: RsTimerId<SC::DeviceId>) {
         do_router_solicitation(self, ctx, device_id)
     }
 }
 
 /// Solicit routers once and schedule next message.
-fn do_router_solicitation<SC: RsContext, C>(
+fn do_router_solicitation<C, SC: RsContext<C>>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     device_id: SC::DeviceId,
 ) {
     let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
@@ -145,6 +150,7 @@ fn do_router_solicitation<SC: RsContext, C>(
     // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
     // can't happen statically.
     let _: Result<(), _> = sync_ctx.send_rs_packet(
+        ctx,
         device_id,
         RouterSolicitation::default(),
         OptionSequenceBuilder::new(
@@ -200,7 +206,7 @@ mod tests {
     type MockCtx<'a> =
         DummyCtx<MockRsContext<'a>, RsTimerId<DummyDeviceId>, RsMessageMeta, (), DummyDeviceId>;
 
-    impl<'a> Ipv6DeviceRsContext for MockCtx<'a> {
+    impl<'a> Ipv6DeviceRsContext<()> for MockCtx<'a> {
         fn get_max_router_solicitations(&self, DummyDeviceId: DummyDeviceId) -> Option<NonZeroU8> {
             let MockRsContext {
                 max_router_solicitations,
@@ -232,9 +238,10 @@ mod tests {
         }
     }
 
-    impl<'a> Ipv6LayerRsContext for MockCtx<'a> {
+    impl<'a> Ipv6LayerRsContext<()> for MockCtx<'a> {
         fn send_rs_packet<S: Serializer<Buffer = EmptyBuf>>(
             &mut self,
+            _ctx: &mut (),
             DummyDeviceId: DummyDeviceId,
             message: RouterSolicitation,
             body: S,
@@ -252,13 +259,13 @@ mod tests {
             router_soliciations_remaining: None,
             link_layer_bytes: None,
         });
-        RsHandler::start_router_solicitation(&mut ctx, DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
 
         let now = ctx.now();
         ctx.timer_ctx()
             .assert_timers_installed([(RS_TIMER_ID, now..=now + MAX_RTR_SOLICITATION_DELAY)]);
 
-        RsHandler::stop_router_solicitation(&mut ctx, DummyDeviceId);
+        RsHandler::stop_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
         ctx.timer_ctx().assert_no_timers_installed();
 
         assert_eq!(ctx.frames(), &[][..]);
@@ -283,7 +290,7 @@ mod tests {
             router_soliciations_remaining: None,
             link_layer_bytes,
         });
-        RsHandler::start_router_solicitation(&mut ctx, DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
 
         assert_eq!(ctx.frames(), &[][..]);
 

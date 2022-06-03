@@ -272,7 +272,7 @@ where
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv4> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv4, ()> for Ctx<D, C> {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv4DeviceState<Self::Instant> {
         &get_ip_device_state(self, device).ipv4
     }
@@ -295,6 +295,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv4> for Ctx<D,
 
     fn join_link_multicast_group(
         &mut self,
+        _ctx: &mut (),
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv4Addr>,
     ) {
@@ -303,6 +304,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv4> for Ctx<D,
 
     fn leave_link_multicast_group(
         &mut self,
+        _ctx: &mut (),
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv4Addr>,
     ) {
@@ -330,11 +332,12 @@ fn send_ip_frame<
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv4, B>
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv4, (), B>
     for Ctx<D, C>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
+        _ctx: &mut (),
         device: DeviceId,
         local_addr: SpecifiedAddr<Ipv4Addr>,
         body: S,
@@ -343,7 +346,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDevice
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6, ()> for Ctx<D, C> {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv6DeviceState<Self::Instant> {
         &get_ip_device_state(self, device).ipv6
     }
@@ -366,6 +369,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6> for Ctx<D,
 
     fn join_link_multicast_group(
         &mut self,
+        _ctx: &mut (),
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
@@ -374,6 +378,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6> for Ctx<D,
 
     fn leave_link_multicast_group(
         &mut self,
+        _ctx: &mut (),
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
@@ -381,7 +386,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6> for Ctx<D,
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext<()> for Ctx<D, C> {
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => {
@@ -401,11 +406,12 @@ impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext for Ctx<D, C> 
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv6, B>
+impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv6, (), B>
     for Ctx<D, C>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
+        _ctx: &mut (),
         device: DeviceId,
         local_addr: SpecifiedAddr<Ipv6Addr>,
         body: S,
@@ -871,9 +877,10 @@ pub fn update_ipv6_configuration<
 pub struct Tentative<T>(T, bool);
 
 /// This implementation of `NdpPacketHandler` is consumed by ICMPv6.
-impl<D: EventDispatcher, C: BlanketCoreContext> NdpPacketHandler<DeviceId> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> NdpPacketHandler<(), DeviceId> for Ctx<D, C> {
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
+        _ctx: &mut (),
         device: DeviceId,
         src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -916,7 +923,7 @@ pub(crate) mod testutil {
             ctx: &Ctx<D, C>,
             device: DeviceId,
         ) -> &IpDeviceState<C::Instant, Ipv4> {
-            crate::ip::device::get_ipv4_device_state(ctx, &mut (), device)
+            crate::ip::device::get_ipv4_device_state(ctx, device)
         }
     }
 
@@ -925,7 +932,7 @@ pub(crate) mod testutil {
             ctx: &Ctx<D, C>,
             device: DeviceId,
         ) -> &IpDeviceState<C::Instant, Ipv6> {
-            crate::ip::device::get_ipv6_device_state(ctx, &mut (), device)
+            crate::ip::device::get_ipv6_device_state(ctx, device)
         }
     }
 
@@ -967,8 +974,8 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
 
         fn check(ctx: &DummyCtx, expected: &[DeviceId]) {
-            assert_eq!(IpDeviceContext::<Ipv4>::iter_devices(ctx).collect::<Vec<_>>(), expected);
-            assert_eq!(IpDeviceContext::<Ipv6>::iter_devices(ctx).collect::<Vec<_>>(), expected);
+            assert_eq!(IpDeviceContext::<Ipv4, _>::iter_devices(ctx).collect::<Vec<_>>(), expected);
+            assert_eq!(IpDeviceContext::<Ipv6, _>::iter_devices(ctx).collect::<Vec<_>>(), expected);
         }
         check(&ctx, &[][..]);
 

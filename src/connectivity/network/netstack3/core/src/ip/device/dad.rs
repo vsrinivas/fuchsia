@@ -28,30 +28,32 @@ pub(crate) struct DadTimerId<DeviceId> {
 }
 
 /// The IP device context provided to DAD.
-pub(super) trait Ipv6DeviceDadContext: IpDeviceIdContext<Ipv6> {
+pub(super) trait Ipv6DeviceDadContext<C>: IpDeviceIdContext<Ipv6> {
     /// Returns the address's state mutably, if it exists on the interface.
     fn get_address_state_mut(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) -> Option<&mut AddressState>;
 
     /// Returns the NDP retransmission timer configured on the device.
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
+    fn retrans_timer(&self, ctx: &mut C, device_id: Self::DeviceId) -> Duration;
 
     /// Returns the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
-    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
+    fn get_link_layer_addr_bytes(&self, ctx: &mut C, device_id: Self::DeviceId) -> Option<&[u8]>;
 }
 
 /// The IP layer context provided to DAD.
-pub(super) trait Ipv6LayerDadContext: IpDeviceIdContext<Ipv6> {
+pub(super) trait Ipv6LayerDadContext<C>: IpDeviceIdContext<Ipv6> {
     /// Sends an NDP Neighbor Solicitation message for DAD to the local-link.
     ///
     /// The message will be sent with the unspecified (all-zeroes) source
     /// address.
     fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         dst_ip: MulticastAddr<Ipv6Addr>,
         message: NeighborSolicitation,
@@ -72,25 +74,26 @@ pub enum DadEvent<DeviceId> {
 }
 
 /// The execution context for DAD
-pub(super) trait DadContext:
-    Ipv6DeviceDadContext
-    + Ipv6LayerDadContext
+pub(super) trait DadContext<C>:
+    Ipv6DeviceDadContext<C>
+    + Ipv6LayerDadContext<C>
     + TimerContext<DadTimerId<Self::DeviceId>>
     + EventContext<DadEvent<Self::DeviceId>>
 {
 }
 
 impl<
-        C: Ipv6DeviceDadContext
-            + Ipv6LayerDadContext
-            + TimerContext<DadTimerId<C::DeviceId>>
-            + EventContext<DadEvent<C::DeviceId>>,
-    > DadContext for C
+        C,
+        SC: Ipv6DeviceDadContext<C>
+            + Ipv6LayerDadContext<C>
+            + TimerContext<DadTimerId<SC::DeviceId>>
+            + EventContext<DadEvent<SC::DeviceId>>,
+    > DadContext<C> for SC
 {
 }
 
 /// An implementation for Duplicate Address Detection.
-pub(crate) trait DadHandler: IpDeviceIdContext<Ipv6> {
+pub(crate) trait DadHandler<C>: IpDeviceIdContext<Ipv6> {
     /// Do duplicate address detection.
     ///
     /// # Panics
@@ -98,6 +101,7 @@ pub(crate) trait DadHandler: IpDeviceIdContext<Ipv6> {
     /// Panics if tentative state for the address is not found.
     fn do_duplicate_address_detection(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     );
@@ -107,6 +111,7 @@ pub(crate) trait DadHandler: IpDeviceIdContext<Ipv6> {
     /// Does nothing if DAD is not being performed on the address.
     fn stop_duplicate_address_detection(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     );
@@ -115,21 +120,22 @@ pub(crate) trait DadHandler: IpDeviceIdContext<Ipv6> {
     // TODO(https://fxbug.dev/101399): Replace this with a `TimerHandler` bound.
     fn handle_timer(
         &mut self,
-        _ctx: &mut (),
+        ctx: &mut C,
         DadTimerId { device_id, addr }: DadTimerId<Self::DeviceId>,
     ) {
-        self.do_duplicate_address_detection(device_id, addr)
+        self.do_duplicate_address_detection(ctx, device_id, addr)
     }
 }
 
-impl<C: DadContext> DadHandler for C {
+impl<C, SC: DadContext<C>> DadHandler<C> for SC {
     fn do_duplicate_address_detection(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) {
         let state = self
-            .get_address_state_mut(device_id, addr)
+            .get_address_state_mut(ctx, device_id, addr)
             .unwrap_or_else(|| panic!("expected address to exist; addr={}", addr));
 
         let remaining = match state {
@@ -159,14 +165,15 @@ impl<C: DadContext> DadHandler for C {
                 //      time a node waits after sending the last Neighbor
                 //      Solicitation before ending the Duplicate Address Detection
                 //      process.
-                let retrans_timer = self.retrans_timer(device_id);
+                let retrans_timer = self.retrans_timer(ctx, device_id);
 
-                let src_ll = self.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
+                let src_ll = self.get_link_layer_addr_bytes(ctx, device_id).map(|a| a.to_vec());
                 let dst_ip = addr.to_solicited_node_address();
 
                 // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
                 // can't happen statically.
                 let _: Result<(), _> = self.send_dad_packet(
+                    ctx,
                     device_id,
                     dst_ip,
                     NeighborSolicitation::new(addr.get()),
@@ -193,10 +200,11 @@ impl<C: DadContext> DadHandler for C {
 
     fn stop_duplicate_address_detection(
         &mut self,
+        _ctx: &mut C,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) {
-        let _: Option<C::Instant> = self.cancel_timer(DadTimerId { device_id, addr });
+        let _: Option<SC::Instant> = self.cancel_timer(DadTimerId { device_id, addr });
     }
 }
 
@@ -234,9 +242,10 @@ mod tests {
         DummyDeviceId,
     >;
 
-    impl<'a> Ipv6DeviceDadContext for MockCtx<'a> {
+    impl<'a> Ipv6DeviceDadContext<()> for MockCtx<'a> {
         fn get_address_state_mut(
             &mut self,
+            _ctx: &mut (),
             DummyDeviceId: DummyDeviceId,
             request_addr: UnicastAddr<Ipv6Addr>,
         ) -> Option<&mut AddressState> {
@@ -245,22 +254,27 @@ mod tests {
             (*addr == request_addr).then(|| state)
         }
 
-        fn retrans_timer(&self, DummyDeviceId: DummyDeviceId) -> Duration {
+        fn retrans_timer(&self, _ctx: &mut (), DummyDeviceId: DummyDeviceId) -> Duration {
             let MockDadContext { addr: _, state: _, retrans_timer, link_layer_bytes: _ } =
                 self.get_ref();
             *retrans_timer
         }
 
-        fn get_link_layer_addr_bytes(&self, DummyDeviceId: DummyDeviceId) -> Option<&[u8]> {
+        fn get_link_layer_addr_bytes(
+            &self,
+            _ctx: &mut (),
+            DummyDeviceId: DummyDeviceId,
+        ) -> Option<&[u8]> {
             let MockDadContext { addr: _, state: _, retrans_timer: _, link_layer_bytes } =
                 self.get_ref();
             *link_layer_bytes
         }
     }
 
-    impl<'a> Ipv6LayerDadContext for MockCtx<'a> {
+    impl<'a> Ipv6LayerDadContext<()> for MockCtx<'a> {
         fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
             &mut self,
+            _ctx: &mut (),
             DummyDeviceId: DummyDeviceId,
             dst_ip: MulticastAddr<Ipv6Addr>,
             message: NeighborSolicitation,
@@ -284,7 +298,7 @@ mod tests {
             retrans_timer: Duration::default(),
             link_layer_bytes: None,
         });
-        DadHandler::do_duplicate_address_detection(&mut ctx, DummyDeviceId, OTHER_ADDRESS);
+        DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, OTHER_ADDRESS);
     }
 
     #[test]
@@ -296,7 +310,7 @@ mod tests {
             retrans_timer: Duration::default(),
             link_layer_bytes: None,
         });
-        DadHandler::do_duplicate_address_detection(&mut ctx, DummyDeviceId, DAD_ADDRESS);
+        DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
     }
 
     #[test]
@@ -307,7 +321,7 @@ mod tests {
             retrans_timer: Duration::default(),
             link_layer_bytes: None,
         });
-        DadHandler::do_duplicate_address_detection(&mut ctx, DummyDeviceId, DAD_ADDRESS);
+        DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
         let MockDadContext { addr: _, state, retrans_timer: _, link_layer_bytes: _ } =
             ctx.get_ref();
         assert_eq!(*state, AddressState::Assigned);
@@ -364,7 +378,7 @@ mod tests {
             retrans_timer: RETRANS_TIMER,
             link_layer_bytes,
         });
-        DadHandler::do_duplicate_address_detection(&mut ctx, DummyDeviceId, DAD_ADDRESS);
+        DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
 
         for count in 0..=1u8 {
             check_dad(
@@ -398,10 +412,10 @@ mod tests {
             retrans_timer: RETRANS_TIMER,
             link_layer_bytes: None,
         });
-        DadHandler::do_duplicate_address_detection(&mut ctx, DummyDeviceId, DAD_ADDRESS);
+        DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
         check_dad(&ctx, 1, NonZeroU8::new(DAD_TRANSMITS_REQUIRED - 1), RETRANS_TIMER, None);
 
-        DadHandler::stop_duplicate_address_detection(&mut ctx, DummyDeviceId, DAD_ADDRESS);
+        DadHandler::stop_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
         ctx.timer_ctx().assert_no_timers_installed();
     }
 

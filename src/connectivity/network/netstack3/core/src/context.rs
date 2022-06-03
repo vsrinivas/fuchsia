@@ -1357,12 +1357,12 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<C, B: BufferMut, S, Id, Meta, Event: Debug, DeviceId> FrameContext<C, B, Meta>
+    impl<B: BufferMut, S, Id, Meta, Event: Debug, DeviceId> FrameContext<(), B, Meta>
         for DummyCtx<S, Id, Meta, Event, DeviceId>
     {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
-            _ctx: &mut C,
+            _ctx: &mut (),
             metadata: Meta,
             frame: SS,
         ) -> Result<(), SS> {

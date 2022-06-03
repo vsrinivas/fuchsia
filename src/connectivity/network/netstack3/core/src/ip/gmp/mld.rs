@@ -68,11 +68,11 @@ impl<D> MldFrameMetadata<D> {
 }
 
 /// The execution context for the Multicast Listener Discovery (MLD) protocol.
-pub(crate) trait MldContext:
+pub(crate) trait MldContext<C>:
     IpDeviceIdContext<Ipv6>
     + RngContext
     + TimerContext<MldDelayedReportTimerId<Self::DeviceId>>
-    + FrameContext<(), EmptyBuf, MldFrameMetadata<Self::DeviceId>>
+    + FrameContext<C, EmptyBuf, MldFrameMetadata<Self::DeviceId>>
 {
     /// Gets the IPv6 link local address on `device`.
     fn get_ipv6_link_local_addr(
@@ -113,39 +113,42 @@ pub(crate) trait MldContext:
     ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<<Self as InstantContext>::Instant>>;
 }
 
-impl<C: MldContext> GmpHandler<Ipv6> for C {
-    fn gmp_handle_maybe_enabled(&mut self, device: Self::DeviceId) {
-        gmp_handle_maybe_enabled(self, &mut (), device)
+impl<C, SC: MldContext<C>> GmpHandler<Ipv6, C> for SC {
+    fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
+        gmp_handle_maybe_enabled(self, ctx, device)
     }
 
-    fn gmp_handle_disabled(&mut self, device: Self::DeviceId) {
-        gmp_handle_disabled(self, &mut (), device)
+    fn gmp_handle_disabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
+        gmp_handle_disabled(self, ctx, device)
     }
 
     fn gmp_join_group(
         &mut self,
+        ctx: &mut C,
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) -> GroupJoinResult {
-        gmp_join_group(self, &mut (), device, group_addr)
+        gmp_join_group(self, ctx, device, group_addr)
     }
 
     fn gmp_leave_group(
         &mut self,
+        ctx: &mut C,
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) -> GroupLeaveResult {
-        gmp_leave_group(self, &mut (), device, group_addr)
+        gmp_leave_group(self, ctx, device, group_addr)
     }
 }
 
 /// A handler for incoming MLD packets.
 ///
 /// A blanket implementation is provided for all `C: MldContext`.
-pub(crate) trait MldPacketHandler<DeviceId> {
+pub(crate) trait MldPacketHandler<C, DeviceId> {
     /// Receive an MLD packet.
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
+        ctx: &mut C,
         device: DeviceId,
         src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -153,10 +156,11 @@ pub(crate) trait MldPacketHandler<DeviceId> {
     );
 }
 
-impl<C: MldContext> MldPacketHandler<C::DeviceId> for C {
+impl<C, SC: MldContext<C>> MldPacketHandler<C, SC::DeviceId> for SC {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
-        device: C::DeviceId,
+        ctx: &mut C,
+        device: SC::DeviceId,
         _src_ip: Ipv6SourceAddr,
         _dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: MldPacket<B>,
@@ -170,14 +174,20 @@ impl<C: MldContext> MldPacketHandler<C::DeviceId> for C {
                         MulticastAddr::new(addr.get()).map(QueryTarget::Specified)
                     })
                     .map_or(Err(MldError::NotAMember { addr }), |group_addr| {
-                        handle_query_message(self, device, group_addr, body.max_response_delay())
+                        handle_query_message(
+                            self,
+                            ctx,
+                            device,
+                            group_addr,
+                            body.max_response_delay(),
+                        )
                     })
             }
             MldPacket::MulticastListenerReport(msg) => {
                 let addr = msg.body().group_addr();
                 MulticastAddr::new(msg.body().group_addr())
                     .map_or(Err(MldError::NotAMember { addr }), |group_addr| {
-                        handle_report_message(self, &mut (), device, group_addr)
+                        handle_report_message(self, ctx, device, group_addr)
                     })
             }
             MldPacket::MulticastListenerDone(_) => {
@@ -196,7 +206,7 @@ impl<B: ByteSlice> GmpMessage<Ipv6> for Mldv1Body<B> {
     }
 }
 
-impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
+impl<C, SC: MldContext<C>> GmpContext<Ipv6, C, MldProtocolSpecific> for SC {
     type Err = MldError;
     type GroupState = MldGroupState<Self::Instant>;
 
@@ -221,6 +231,7 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
 
     fn send_message(
         &mut self,
+        ctx: &mut C,
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
         msg_type: GmpMessageType<MldProtocolSpecific>,
@@ -228,7 +239,7 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
         let result = match msg_type {
             GmpMessageType::Report(MldProtocolSpecific) => send_mld_packet::<_, _, &[u8], _>(
                 self,
-                &mut (),
+                ctx,
                 device,
                 group_addr,
                 MulticastListenerReport,
@@ -237,7 +248,7 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
             ),
             GmpMessageType::Leave => send_mld_packet::<_, _, &[u8], _>(
                 self,
-                &mut (),
+                ctx,
                 device,
                 Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
                 MulticastListenerDone,
@@ -255,7 +266,7 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
         }
     }
 
-    fn run_actions(&mut self, device: C::DeviceId, actions: Never) {
+    fn run_actions(&mut self, _ctx: &mut C, device: SC::DeviceId, actions: Never) {
         unreachable!("actions ({:?} should not be constructable; device = {}", actions, device)
     }
 
@@ -265,12 +276,12 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
 
     fn get_state_mut_and_rng(
         &mut self,
-        device: C::DeviceId,
+        device: SC::DeviceId,
     ) -> (&mut MulticastGroupSet<Ipv6Addr, Self::GroupState>, &mut Self::Rng) {
         self.get_state_mut_and_rng(device)
     }
 
-    fn get_state(&self, device: C::DeviceId) -> &MulticastGroupSet<Ipv6Addr, Self::GroupState> {
+    fn get_state(&self, device: SC::DeviceId) -> &MulticastGroupSet<Ipv6Addr, Self::GroupState> {
         self.get_state(device)
     }
 }
@@ -384,10 +395,10 @@ impl_timer_context!(
     id
 );
 
-impl<C: MldContext> TimerHandler<(), MldDelayedReportTimerId<C::DeviceId>> for C {
-    fn handle_timer(&mut self, _ctx: &mut (), timer: MldDelayedReportTimerId<C::DeviceId>) {
+impl<C, SC: MldContext<C>> TimerHandler<C, MldDelayedReportTimerId<SC::DeviceId>> for SC {
+    fn handle_timer(&mut self, ctx: &mut C, timer: MldDelayedReportTimerId<SC::DeviceId>) {
         let MldDelayedReportTimerId(id) = timer;
-        gmp_handle_timer(self, &mut (), id);
+        gmp_handle_timer(self, ctx, id);
     }
 }
 
@@ -395,9 +406,9 @@ impl<C: MldContext> TimerHandler<(), MldDelayedReportTimerId<C::DeviceId>> for C
 ///
 /// The MLD packet being sent should have its `hop_limit` to be 1 and a
 /// `RouterAlert` option in its Hop-by-Hop Options extensions header.
-fn send_mld_packet<SC: MldContext, C, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
+fn send_mld_packet<C, SC: MldContext<C>, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     device: SC::DeviceId,
     dst_ip: MulticastAddr<Ipv6Addr>,
     msg: M,
@@ -429,7 +440,7 @@ fn send_mld_packet<SC: MldContext, C, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
             .unwrap(),
         );
     sync_ctx
-        .send_frame(&mut (), MldFrameMetadata::new(device, dst_ip), body)
+        .send_frame(ctx, MldFrameMetadata::new(device, dst_ip), body)
         .map_err(|_| MldError::SendFailure { addr: group_addr.into() })
 }
 
@@ -493,7 +504,7 @@ mod tests {
         DummyDeviceId,
     >;
 
-    impl MldContext for DummyCtx {
+    impl MldContext<()> for DummyCtx {
         fn get_ipv6_link_local_addr(
             &self,
             _device: DummyDeviceId,
@@ -591,6 +602,7 @@ mod tests {
             .unwrap()
         {
             Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(
+                &mut (),
                 DummyDeviceId,
                 router_addr.try_into().unwrap(),
                 MY_IP,
@@ -618,6 +630,7 @@ mod tests {
             .unwrap()
         {
             Icmpv6Packet::Mld(packet) => ctx.receive_mld_packet(
+                &mut (),
                 DummyDeviceId,
                 router_addr.try_into().unwrap(),
                 MY_IP,
@@ -674,7 +687,10 @@ mod tests {
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
 
             receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
             assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
@@ -697,7 +713,10 @@ mod tests {
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             assert_eq!(ctx.frames().len(), 1);
 
             receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
@@ -719,7 +738,10 @@ mod tests {
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             assert_eq!(ctx.frames().len(), 1);
 
             assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
@@ -752,7 +774,10 @@ mod tests {
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             assert_eq!(ctx.frames().len(), 1);
 
             assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
@@ -786,7 +811,10 @@ mod tests {
         // This seed was carefully chosen to produce a substantial duration
         // value below.
         ctx.seed_rng(123456);
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+        assert_eq!(
+            ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+            GroupJoinResult::Joined(())
+        );
         ctx.timer_ctx().assert_timers_installed([(
             TIMER_ID,
             DummyInstant::from(Duration::from_micros(590_354)),
@@ -820,7 +848,10 @@ mod tests {
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             let now = ctx.now();
             ctx.timer_ctx().assert_timers_installed([(
                 TIMER_ID,
@@ -831,7 +862,10 @@ mod tests {
             assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
             // The report after the delay.
             assert_eq!(ctx.frames().len(), 2);
-            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            assert_eq!(
+                ctx.gmp_leave_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupLeaveResult::Left(())
+            );
             // Our leave message.
             assert_eq!(ctx.frames().len(), 3);
             // The first two messages should be reports.
@@ -857,7 +891,10 @@ mod tests {
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             let now = ctx.now();
             ctx.timer_ctx().assert_timers_installed([(
                 TIMER_ID,
@@ -869,7 +906,10 @@ mod tests {
             // The report should be discarded because we have received from someone
             // else.
             assert_eq!(ctx.frames().len(), 1);
-            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            assert_eq!(
+                ctx.gmp_leave_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupLeaveResult::Left(())
+            );
             // A leave message is not sent.
             assert_eq!(ctx.frames().len(), 1);
             // The frames are all reports.
@@ -887,7 +927,10 @@ mod tests {
             ctx.seed_rng(seed);
 
             ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
             for (_, frame) in ctx.frames() {
                 ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
@@ -910,7 +953,10 @@ mod tests {
                     assert_empty(ctx.frames());
                 };
 
-                assert_eq!(ctx.gmp_join_group(DummyDeviceId, group), GroupJoinResult::Joined(()));
+                assert_eq!(
+                    ctx.gmp_join_group(&mut (), DummyDeviceId, group),
+                    GroupJoinResult::Joined(())
+                );
                 // We should join the group but left in the GMP's non-member
                 // state.
                 assert_gmp_state!(ctx, &group, NonMember);
@@ -926,7 +972,10 @@ mod tests {
                 assert_gmp_state!(ctx, &group, NonMember);
                 assert_no_effect(&ctx);
 
-                assert_eq!(ctx.gmp_leave_group(DummyDeviceId, group), GroupLeaveResult::Left(()));
+                assert_eq!(
+                    ctx.gmp_leave_group(&mut (), DummyDeviceId, group),
+                    GroupLeaveResult::Left(())
+                );
                 // We should have left the group but not executed any `Actions`.
                 assert!(ctx.get_ref().groups.get(&group).is_none());
                 assert_no_effect(&ctx);
@@ -967,7 +1016,10 @@ mod tests {
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
             assert_eq!(ctx.frames().len(), 1);
             let now = ctx.now();
@@ -978,7 +1030,7 @@ mod tests {
             ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
 
             assert_eq!(
-                ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR),
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::AlreadyMember
             );
             assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
@@ -986,14 +1038,17 @@ mod tests {
             ctx.timer_ctx().assert_timers_installed([(TIMER_ID, range.clone())]);
 
             assert_eq!(
-                ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR),
+                ctx.gmp_leave_group(&mut (), DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::StillMember
             );
             assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
             assert_eq!(ctx.frames().len(), 1);
             ctx.timer_ctx().assert_timers_installed([(TIMER_ID, range)]);
 
-            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            assert_eq!(
+                ctx.gmp_leave_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupLeaveResult::Left(())
+            );
             assert_eq!(ctx.frames().len(), 2);
             ctx.timer_ctx().assert_no_timers_installed();
             let frame = &ctx.frames().last().unwrap().1;
@@ -1017,11 +1072,18 @@ mod tests {
             //   all-nodes multicast address, nor any multicast address of scope
             //   0 (reserved) or 1 (node-local).
             assert_eq!(
-                ctx.gmp_join_group(DummyDeviceId, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
+                ctx.gmp_join_group(
+                    &mut (),
+                    DummyDeviceId,
+                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
+                ),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(&mut (), DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::Joined(())
+            );
             assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
             assert_matches::assert_matches!(
                 &ctx.take_frames()[..],
@@ -1033,13 +1095,13 @@ mod tests {
             );
 
             // Should do nothing.
-            ctx.gmp_handle_maybe_enabled(DummyDeviceId);
+            ctx.gmp_handle_maybe_enabled(&mut (), DummyDeviceId);
             assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
             assert_eq!(ctx.take_frames(), []);
 
             // Should send done message.
-            ctx.gmp_handle_disabled(DummyDeviceId);
+            ctx.gmp_handle_disabled(&mut (), DummyDeviceId);
             assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
             assert_matches::assert_matches!(
@@ -1052,13 +1114,13 @@ mod tests {
             );
 
             // Should do nothing.
-            ctx.gmp_handle_disabled(DummyDeviceId);
+            ctx.gmp_handle_disabled(&mut (), DummyDeviceId);
             assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
             assert_eq!(ctx.take_frames(), []);
 
             // Should send report message.
-            ctx.gmp_handle_maybe_enabled(DummyDeviceId);
+            ctx.gmp_handle_maybe_enabled(&mut (), DummyDeviceId);
             assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
             assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
             assert_matches::assert_matches!(

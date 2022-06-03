@@ -109,24 +109,25 @@ pub(super) struct SlaacAddressEntryMut<'a, Instant> {
 }
 
 /// The state context provided to SLAAC.
-pub(super) trait SlaacStateContext: IpDeviceIdContext<Ipv6> + InstantContext {
+pub(super) trait SlaacStateContext<C>: IpDeviceIdContext<Ipv6> + InstantContext {
     /// Gets the configuration for SLAAC.
-    fn get_config(&self, device_id: Self::DeviceId) -> SlaacConfiguration;
+    fn get_config(&self, ctx: &mut C, device_id: Self::DeviceId) -> SlaacConfiguration;
 
     /// Returns the number of DAD messages transmitted while performing DAD.
     ///
     /// `None` indicates that DAD is disabled.
-    fn dad_transmits(&self, device_id: Self::DeviceId) -> Option<NonZeroU8>;
+    fn dad_transmits(&self, ctx: &mut C, device_id: Self::DeviceId) -> Option<NonZeroU8>;
 
     /// Returns the configured NDP retransmission interval for the device.
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
+    fn retrans_timer(&self, ctx: &mut C, device_id: Self::DeviceId) -> Duration;
 
     /// Get the interface identifier for a device as defined by RFC 4291 section 2.5.1.
-    fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8];
+    fn get_interface_identifier(&self, ctx: &mut C, device_id: Self::DeviceId) -> [u8; 8];
 
     /// Returns an iterator over the SLAAC addresses on the device.
     fn iter_slaac_addrs(
         &self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
     ) -> Box<dyn Iterator<Item = SlaacAddressEntry<Self::Instant>> + '_>;
 
@@ -134,12 +135,14 @@ pub(super) trait SlaacStateContext: IpDeviceIdContext<Ipv6> + InstantContext {
     /// state.
     fn iter_slaac_addrs_mut(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
     ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, Self::Instant>> + '_>;
 
     /// Adds a new IPv6 Global Address configured via SLAAC.
     fn add_slaac_addr_sub(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         slaac_config: SlaacConfig<Self::Instant>,
@@ -151,7 +154,12 @@ pub(super) trait SlaacStateContext: IpDeviceIdContext<Ipv6> + InstantContext {
     ///
     /// May panic if `addr` is not an address configured via SLAAC on
     /// `device_id`.
-    fn remove_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>);
+    fn remove_slaac_addr(
+        &mut self,
+        ctx: &mut C,
+        device_id: Self::DeviceId,
+        addr: &UnicastAddr<Ipv6Addr>,
+    );
 }
 
 /// Update the instant at which an address configured via SLAAC is no longer
@@ -164,14 +172,15 @@ pub(super) trait SlaacStateContext: IpDeviceIdContext<Ipv6> + InstantContext {
 ///
 /// May panic if `addr` is not an address configured via SLAAC on
 /// `device_id`.
-fn update_slaac_addr_valid_until<C: SlaacStateContext>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn update_slaac_addr_valid_until<C, SC: SlaacStateContext<C>>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     addr: &UnicastAddr<Ipv6Addr>,
-    valid_until: Lifetime<C::Instant>,
+    valid_until: Lifetime<SC::Instant>,
 ) {
     let slaac_config = sync_ctx
-        .iter_slaac_addrs_mut(device_id)
+        .iter_slaac_addrs_mut(ctx, device_id)
         .find_map(|SlaacAddressEntryMut { addr_sub, config, deprecated: _ }| {
             (addr_sub.addr() == *addr).then(|| config)
         })
@@ -193,22 +202,23 @@ fn update_slaac_addr_valid_until<C: SlaacStateContext>(
 }
 
 /// The execution context for SLAAC.
-trait SlaacContext:
-    SlaacStateContext + TimerContext<SlaacTimerId<Self::DeviceId>> + CounterContext + RngContext
+trait SlaacContext<C>:
+    SlaacStateContext<C> + TimerContext<SlaacTimerId<Self::DeviceId>> + CounterContext + RngContext
 {
 }
 
 impl<
-        C: SlaacStateContext
+        C,
+        SC: SlaacStateContext<C>
             + TimerContext<SlaacTimerId<Self::DeviceId>>
             + CounterContext
             + RngContext,
-    > SlaacContext for C
+    > SlaacContext<C> for SC
 {
 }
 
 /// An implementation of SLAAC.
-pub(crate) trait SlaacHandler: IpDeviceIdContext<Ipv6> + InstantContext {
+pub(crate) trait SlaacHandler<C>: IpDeviceIdContext<Ipv6> + InstantContext {
     /// Executes the algorithm in [RFC 4862 Section 5.5.3], with the extensions
     /// from [RFC 8981 Section 3.4] for temporary addresses, for a given prefix
     /// advertised by a router.
@@ -220,6 +230,7 @@ pub(crate) trait SlaacHandler: IpDeviceIdContext<Ipv6> + InstantContext {
     /// [RFC 8981 Section 3.4]: https://tools.ietf.org/html/rfc8981#section-3.4
     fn apply_slaac_update(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         prefix: Subnet<Ipv6Addr>,
         preferred_lifetime: Option<NonZeroNdpLifetime>,
@@ -231,6 +242,7 @@ pub(crate) trait SlaacHandler: IpDeviceIdContext<Ipv6> + InstantContext {
     /// Must only be called after the address is removed from the interface.
     fn on_address_removed(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         state: SlaacConfig<Self::Instant>,
@@ -238,12 +250,13 @@ pub(crate) trait SlaacHandler: IpDeviceIdContext<Ipv6> + InstantContext {
     );
 
     /// Removes all SLAAC addresses assigned to the device.
-    fn remove_all_slaac_addresses(&mut self, device_id: Self::DeviceId);
+    fn remove_all_slaac_addresses(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 }
 
-impl<C: SlaacContext> SlaacHandler for C {
+impl<C, SC: SlaacContext<C>> SlaacHandler<C> for SC {
     fn apply_slaac_update(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         subnet: Subnet<Ipv6Addr>,
         preferred_lifetime: Option<NonZeroNdpLifetime>,
@@ -258,8 +271,10 @@ impl<C: SlaacContext> SlaacHandler for C {
         }
 
         let now = self.now();
-        let existing_subnet_slaac_addrs: Vec<_> =
-            self.iter_slaac_addrs(device_id).filter(|a| a.addr_sub.subnet() == subnet).collect();
+        let existing_subnet_slaac_addrs: Vec<_> = self
+            .iter_slaac_addrs(ctx, device_id)
+            .filter(|a| a.addr_sub.subnet() == subnet)
+            .collect();
 
         // Apply the update to each existing address, static or temporary, for the
         // prefix.
@@ -311,7 +326,7 @@ impl<C: SlaacContext> SlaacHandler for C {
                     let SlaacConfiguration {
                         enable_stable_addresses: _,
                         temporary_address_configuration,
-                    } = self.get_config(device_id);
+                    } = self.get_config(ctx, device_id);
                     let (valid_for, preferred_for, entry_valid_until) =
                         match temporary_address_configuration {
                             // Since it's possible to change NDP configuration for a
@@ -380,11 +395,11 @@ impl<C: SlaacContext> SlaacHandler for C {
                         };
 
                     let preferred_for_and_regen_at = preferred_for.map(|preferred_for| {
-                        let dad_transmits = self.dad_transmits(device_id);
+                        let dad_transmits = self.dad_transmits(ctx, device_id);
                         let SlaacConfiguration {
                             enable_stable_addresses: _,
                             temporary_address_configuration,
-                        } = self.get_config(device_id);
+                        } = self.get_config(ctx, device_id);
 
                         let regen_at = temporary_address_configuration.and_then(
                             |TemporarySlaacAddressConfiguration {
@@ -395,7 +410,7 @@ impl<C: SlaacContext> SlaacHandler for C {
                              }| {
                                 let regen_advance = regen_advance(
                                     temp_idgen_retries,
-                                    self.retrans_timer(device_id),
+                                    self.retrans_timer(ctx, device_id),
                                     dad_transmits.map_or(0, NonZeroU8::get),
                                 )
                                 .get();
@@ -442,17 +457,17 @@ impl<C: SlaacContext> SlaacHandler for C {
             // Must not have reached this point if the address was not already
             // assigned to a device.
             let entry = self
-                .iter_slaac_addrs_mut(device_id)
+                .iter_slaac_addrs_mut(ctx, device_id)
                 .find(|a| a.addr_sub == entry.addr_sub)
                 .unwrap();
             match preferred_for_and_regen_at {
                 None => {
                     if !*entry.deprecated {
                         *entry.deprecated = true;
-                        let _: Option<C::Instant> = self.cancel_timer(
+                        let _: Option<SC::Instant> = self.cancel_timer(
                             SlaacTimerId::new_deprecate_slaac_address(device_id, addr),
                         );
-                        let _: Option<C::Instant> = self.cancel_timer(
+                        let _: Option<SC::Instant> = self.cancel_timer(
                             SlaacTimerId::new_regenerate_temporary_slaac_address(
                                 device_id, addr_sub,
                             ),
@@ -466,7 +481,7 @@ impl<C: SlaacContext> SlaacHandler for C {
 
                     let timer_id =
                         SlaacTimerId::new_deprecate_slaac_address(device_id, addr).into();
-                    let _previously_scheduled_instant: Option<C::Instant> = match preferred_for {
+                    let _previously_scheduled_instant: Option<SC::Instant> = match preferred_for {
                         NonZeroNdpLifetime::Finite(preferred_for) => {
                             // Use `schedule_timer_instant` instead of `schedule_timer` to set
                             // the timeout relative to the previously recorded `now` value. This
@@ -481,7 +496,7 @@ impl<C: SlaacContext> SlaacHandler for C {
                         NonZeroNdpLifetime::Infinite => self.cancel_timer(timer_id),
                     };
 
-                    let _prev_regen_at: Option<C::Instant> = match regen_at {
+                    let _prev_regen_at: Option<SC::Instant> = match regen_at {
                         Some(regen_at) => self.schedule_timer_instant(
                             regen_at,
                             SlaacTimerId::new_regenerate_temporary_slaac_address(
@@ -562,21 +577,28 @@ impl<C: SlaacContext> SlaacHandler for C {
                         // Set the valid lifetime for this address.
                         update_slaac_addr_valid_until(
                             self,
+                            ctx,
                             device_id,
                             &addr,
                             Lifetime::Finite(valid_until),
                         );
 
-                        let _: Option<C::Instant> = self.schedule_timer_instant(
+                        let _: Option<SC::Instant> = self.schedule_timer_instant(
                             valid_until,
                             SlaacTimerId::new_invalidate_slaac_address(device_id, addr).into(),
                         );
                     }
                     NonZeroNdpLifetime::Infinite => {
                         // Set the valid lifetime for this address.
-                        update_slaac_addr_valid_until(self, device_id, &addr, Lifetime::Infinite);
+                        update_slaac_addr_valid_until(
+                            self,
+                            ctx,
+                            device_id,
+                            &addr,
+                            Lifetime::Infinite,
+                        );
 
-                        let _: Option<C::Instant> = self.cancel_timer(
+                        let _: Option<SC::Instant> = self.cancel_timer(
                             SlaacTimerId::new_invalidate_slaac_address(device_id, addr).into(),
                         );
                     }
@@ -637,6 +659,7 @@ impl<C: SlaacContext> SlaacHandler for C {
         for slaac_type in address_types_to_add {
             add_slaac_addr_sub(
                 self,
+                ctx,
                 device_id,
                 now,
                 SlaacInitConfig::new(slaac_type),
@@ -649,20 +672,21 @@ impl<C: SlaacContext> SlaacHandler for C {
 
     fn on_address_removed(
         &mut self,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-        state: SlaacConfig<C::Instant>,
+        state: SlaacConfig<SC::Instant>,
         reason: DelIpv6AddrReason,
     ) {
         let preferred_until = self
             .cancel_timer(SlaacTimerId::new_deprecate_slaac_address(device_id, addr_sub.addr()));
-        let _valid_until: Option<C::Instant> = self
+        let _valid_until: Option<SC::Instant> = self
             .cancel_timer(SlaacTimerId::new_invalidate_slaac_address(device_id, addr_sub.addr()));
 
         let TemporarySlaacConfig { valid_until, creation_time, desync_factor, dad_counter } =
             match state {
                 SlaacConfig::Temporary(temporary_config) => {
-                    let _regen_at: Option<C::Instant> = self.cancel_timer(
+                    let _regen_at: Option<SC::Instant> = self.cancel_timer(
                         SlaacTimerId::new_regenerate_temporary_slaac_address(device_id, addr_sub),
                     );
                     temporary_config
@@ -678,7 +702,7 @@ impl<C: SlaacContext> SlaacHandler for C {
         }
 
         let SlaacConfiguration { enable_stable_addresses: _, temporary_address_configuration } =
-            self.get_config(device_id);
+            self.get_config(ctx, device_id);
         let temporary_address_configuration = match temporary_address_configuration {
             Some(configuration) => configuration,
             None => return,
@@ -715,6 +739,7 @@ impl<C: SlaacContext> SlaacHandler for C {
 
         add_slaac_addr_sub(
             self,
+            ctx,
             device_id,
             now,
             SlaacInitConfig::Temporary { dad_count: dad_counter + 1 },
@@ -724,32 +749,32 @@ impl<C: SlaacContext> SlaacHandler for C {
         );
     }
 
-    fn remove_all_slaac_addresses(&mut self, device_id: Self::DeviceId) {
-        self.iter_slaac_addrs(device_id)
+    fn remove_all_slaac_addresses(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
+        self.iter_slaac_addrs(ctx, device_id)
             .map(|a| a.addr_sub.addr())
             .collect::<Vec<_>>()
             .into_iter()
             .for_each(|addr| {
-                self.remove_slaac_addr(device_id, &addr);
+                self.remove_slaac_addr(ctx, device_id, &addr);
             })
     }
 }
 
-impl<C: SlaacContext> TimerHandler<(), SlaacTimerId<C::DeviceId>> for C {
+impl<C, SC: SlaacContext<C>> TimerHandler<C, SlaacTimerId<SC::DeviceId>> for SC {
     fn handle_timer(
         &mut self,
-        _ctx: &mut (),
-        SlaacTimerId { device_id, inner }: SlaacTimerId<C::DeviceId>,
+        ctx: &mut C,
+        SlaacTimerId { device_id, inner }: SlaacTimerId<SC::DeviceId>,
     ) {
         match inner {
             InnerSlaacTimerId::DeprecateSlaacAddress { addr } => {
-                set_deprecated_slaac_addr(self, device_id, &addr, true)
+                set_deprecated_slaac_addr(self, ctx, device_id, &addr, true)
             }
             InnerSlaacTimerId::InvalidateSlaacAddress { addr } => {
-                self.remove_slaac_addr(device_id, &addr);
+                self.remove_slaac_addr(ctx, device_id, &addr);
             }
             InnerSlaacTimerId::RegenerateTemporaryAddress { addr_subnet } => {
-                regenerate_temporary_slaac_addr(self, device_id, &addr_subnet);
+                regenerate_temporary_slaac_addr(self, ctx, device_id, &addr_subnet);
             }
         }
     }
@@ -831,14 +856,15 @@ impl<'a, Instant> From<&'a SlaacConfig<Instant>> for SlaacType {
     }
 }
 
-fn set_deprecated_slaac_addr<C: SlaacContext>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn set_deprecated_slaac_addr<C, SC: SlaacContext<C>>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     addr: &UnicastAddr<Ipv6Addr>,
     deprecated: bool,
 ) {
     let entry =
-        sync_ctx.iter_slaac_addrs_mut(device_id).find(|a| &a.addr_sub.addr() == addr).unwrap();
+        sync_ctx.iter_slaac_addrs_mut(ctx, device_id).find(|a| &a.addr_sub.addr() == addr).unwrap();
     *entry.deprecated = deprecated;
 }
 
@@ -917,14 +943,15 @@ fn desync_factor<R: RngCore>(
     })
 }
 
-fn regenerate_temporary_slaac_addr<C: SlaacContext>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
+fn regenerate_temporary_slaac_addr<C, SC: SlaacContext<C>>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
     addr_subnet: &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
 ) {
     let entry = {
         let mut subnet_addrs = sync_ctx
-            .iter_slaac_addrs(device_id)
+            .iter_slaac_addrs(ctx, device_id)
             .filter(|entry| entry.addr_sub.subnet() == addr_subnet.subnet() && !entry.deprecated);
 
         // It's possible that there are multiple non-deprecated temporary
@@ -952,7 +979,8 @@ fn regenerate_temporary_slaac_addr<C: SlaacContext>(
                 sync_ctx.now(), addr_subnet, entry.addr_sub.addr(), regen_at);
             return;
         }
-        match sync_ctx.iter_slaac_addrs(device_id).find(|entry| &entry.addr_sub == addr_subnet) {
+        match sync_ctx.iter_slaac_addrs(ctx, device_id).find(|entry| &entry.addr_sub == addr_subnet)
+        {
             Some(entry) => entry,
             None => unreachable!("couldn't find {:?} to regenerate", addr_subnet),
         }
@@ -969,7 +997,7 @@ fn regenerate_temporary_slaac_addr<C: SlaacContext>(
         };
 
     let SlaacConfiguration { enable_stable_addresses: _, temporary_address_configuration } =
-        sync_ctx.get_config(device_id);
+        sync_ctx.get_config(ctx, device_id);
     let TemporarySlaacAddressConfiguration {
         temp_valid_lifetime,
         temp_preferred_lifetime: _,
@@ -998,6 +1026,7 @@ fn regenerate_temporary_slaac_addr<C: SlaacContext>(
 
     add_slaac_addr_sub(
         sync_ctx,
+        ctx,
         device_id,
         now,
         SlaacInitConfig::Temporary { dad_count: 0 },
@@ -1123,10 +1152,11 @@ fn generate_global_temporary_address(
     address
 }
 
-fn add_slaac_addr_sub<C: SlaacContext>(
-    sync_ctx: &mut C,
-    device_id: C::DeviceId,
-    now: C::Instant,
+fn add_slaac_addr_sub<C, SC: SlaacContext<C>>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
+    now: SC::Instant,
     slaac_config: SlaacInitConfig,
     prefix_valid_for: NonZeroNdpLifetime,
     prefix_preferred_for: Option<NonZeroNdpLifetime>,
@@ -1143,7 +1173,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
     struct PreferredForAndRegenAt<Instant>(NonZeroNdpLifetime, Option<Instant>);
 
     let SlaacConfiguration { enable_stable_addresses, temporary_address_configuration } =
-        sync_ctx.get_config(device_id);
+        sync_ctx.get_config(ctx, device_id);
 
     let (valid_until, preferred_and_regen, slaac_config, mut addresses) = match slaac_config {
         SlaacInitConfig::Static => {
@@ -1167,7 +1197,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
                 // TODO(https://fxbug.dev/95946): Support regenerating address.
                 either::Either::Left(core::iter::once(generate_global_static_address(
                     &subnet,
-                    &sync_ctx.get_interface_identifier(device_id)[..],
+                    &sync_ctx.get_interface_identifier(ctx, device_id)[..],
                 ))),
             )
         }
@@ -1184,7 +1214,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
             };
 
             let per_attempt_random_seed = sync_ctx.rng_mut().next_u64();
-            let dad_transmits = sync_ctx.dad_transmits(device_id);
+            let dad_transmits = sync_ctx.dad_transmits(ctx, device_id);
 
             // Per RFC 8981 Section 3.4.4:
             //    When creating a temporary address, DESYNC_FACTOR MUST be computed
@@ -1206,11 +1236,11 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
             let regen_advance = regen_advance(
                 temporary_address_config.temp_idgen_retries,
-                sync_ctx.retrans_timer(device_id),
+                sync_ctx.retrans_timer(ctx, device_id),
                 dad_transmits.map_or(0, NonZeroU8::get),
             );
 
-            let iid = sync_ctx.get_interface_identifier(device_id);
+            let iid = sync_ctx.get_interface_identifier(ctx, device_id);
             let secret_key = temporary_address_config.secret_key;
             let mut seed = per_attempt_random_seed;
             let addresses = either::Either::Right(core::iter::repeat_with(move || {
@@ -1315,7 +1345,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
 
         // TODO(https://fxbug.dev/91301): Should bindings be the one to actually
         // assign the address to maintain a "single source of truth"?
-        match sync_ctx.add_slaac_addr_sub(device_id, address, slaac_config) {
+        match sync_ctx.add_slaac_addr_sub(ctx, device_id, address, slaac_config) {
             Err(ExistsError) => {
                 trace!("IPv6 SLAAC address {:?} already exists on device {:?}", address, device_id);
 
@@ -1385,7 +1415,7 @@ fn add_slaac_addr_sub<C: SlaacContext>(
             }
         }
         None => {
-            set_deprecated_slaac_addr(sync_ctx, device_id, &address.addr(), true);
+            set_deprecated_slaac_addr(sync_ctx, ctx, device_id, &address.addr(), true);
             assert_eq!(sync_ctx.cancel_timer(deprecate_timer_id.into()), None);
         }
     };
@@ -1438,8 +1468,8 @@ mod tests {
 
     type MockCtx = DummyCtx<MockSlaacContext, SlaacTimerId<DummyDeviceId>, (), (), DummyDeviceId>;
 
-    impl SlaacStateContext for MockCtx {
-        fn get_config(&self, DummyDeviceId: Self::DeviceId) -> SlaacConfiguration {
+    impl SlaacStateContext<()> for MockCtx {
+        fn get_config(&self, _ctx: &mut (), DummyDeviceId: Self::DeviceId) -> SlaacConfiguration {
             let MockSlaacContext {
                 config,
                 dad_transmits: _,
@@ -1451,7 +1481,7 @@ mod tests {
             *config
         }
 
-        fn dad_transmits(&self, DummyDeviceId: Self::DeviceId) -> Option<NonZeroU8> {
+        fn dad_transmits(&self, _ctx: &mut (), DummyDeviceId: Self::DeviceId) -> Option<NonZeroU8> {
             let MockSlaacContext {
                 config: _,
                 dad_transmits,
@@ -1463,7 +1493,7 @@ mod tests {
             *dad_transmits
         }
 
-        fn retrans_timer(&self, DummyDeviceId: Self::DeviceId) -> Duration {
+        fn retrans_timer(&self, _ctx: &mut (), DummyDeviceId: Self::DeviceId) -> Duration {
             let MockSlaacContext {
                 config: _,
                 dad_transmits: _,
@@ -1475,7 +1505,11 @@ mod tests {
             *retrans_timer
         }
 
-        fn get_interface_identifier(&self, DummyDeviceId: Self::DeviceId) -> [u8; 8] {
+        fn get_interface_identifier(
+            &self,
+            _ctx: &mut (),
+            DummyDeviceId: Self::DeviceId,
+        ) -> [u8; 8] {
             let MockSlaacContext {
                 config: _,
                 dad_transmits: _,
@@ -1489,6 +1523,7 @@ mod tests {
 
         fn iter_slaac_addrs(
             &self,
+            _ctx: &mut (),
             DummyDeviceId: Self::DeviceId,
         ) -> Box<dyn Iterator<Item = SlaacAddressEntry<Self::Instant>> + '_> {
             let MockSlaacContext {
@@ -1504,6 +1539,7 @@ mod tests {
 
         fn iter_slaac_addrs_mut(
             &mut self,
+            _ctx: &mut (),
             DummyDeviceId: Self::DeviceId,
         ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, Self::Instant>> + '_> {
             let MockSlaacContext {
@@ -1525,6 +1561,7 @@ mod tests {
 
         fn add_slaac_addr_sub(
             &mut self,
+            _ctx: &mut (),
             DummyDeviceId: Self::DeviceId,
             addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
             config: SlaacConfig<Self::Instant>,
@@ -1552,6 +1589,7 @@ mod tests {
 
         fn remove_slaac_addr(
             &mut self,
+            _ctx: &mut (),
             DummyDeviceId: Self::DeviceId,
             addr: &UnicastAddr<Ipv6Addr>,
         ) {
@@ -1604,12 +1642,13 @@ mod tests {
 
         SlaacHandler::apply_slaac_update(
             &mut ctx,
+            &mut (),
             DummyDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
             NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
         );
-        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        assert_empty(ctx.iter_slaac_addrs(&mut (), DummyDeviceId));
         ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -1640,6 +1679,7 @@ mod tests {
         // Generate a new SLAAC address.
         SlaacHandler::apply_slaac_update(
             &mut ctx,
+            &mut (),
             DummyDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
@@ -1653,7 +1693,7 @@ mod tests {
             config: SlaacConfig::Static { valid_until: Lifetime::Finite(valid_until) },
             deprecated: address_created_deprecated,
         };
-        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        assert_eq!(ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(), [entry],);
         let deprecate_timer_id =
             SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
         let invalidate_timer_id =
@@ -1672,13 +1712,13 @@ mod tests {
                 Some(deprecate_timer_id)
             );
             let entry = SlaacAddressEntry { deprecated: true, ..entry };
-            assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+            assert_eq!(ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(), [entry],);
             ctx.timer_ctx().assert_timers_installed([(invalidate_timer_id, valid_until)]);
         }
 
         // Trigger the invalidation timer.
         assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(invalidate_timer_id));
-        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        assert_empty(ctx.iter_slaac_addrs(&mut (), DummyDeviceId));
         ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -1702,12 +1742,13 @@ mod tests {
         // Generate a new SLAAC address.
         SlaacHandler::apply_slaac_update(
             &mut ctx,
+            &mut (),
             DummyDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
             NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
         );
-        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        assert_empty(ctx.iter_slaac_addrs(&mut (), DummyDeviceId));
         ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -1730,6 +1771,7 @@ mod tests {
         // Generate a new SLAAC address.
         SlaacHandler::apply_slaac_update(
             &mut ctx,
+            &mut (),
             DummyDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
@@ -1742,7 +1784,7 @@ mod tests {
             config: SlaacConfig::Static { valid_until: Lifetime::Finite(valid_until) },
             deprecated: false,
         };
-        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        assert_eq!(ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(), [entry],);
         let deprecate_timer_id =
             SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
         let invalidate_timer_id =
@@ -1760,7 +1802,14 @@ mod tests {
             assert!(!deprecated);
             config
         };
-        SlaacHandler::on_address_removed(&mut ctx, DummyDeviceId, addr_sub, config, reason);
+        SlaacHandler::on_address_removed(
+            &mut ctx,
+            &mut (),
+            DummyDeviceId,
+            addr_sub,
+            config,
+            reason,
+        );
         ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -1896,7 +1945,7 @@ mod tests {
         // Generate a new SLAAC address.
         let ndp_pl = NonZeroNdpLifetime::from_u32_with_infinite(orig_pl_secs);
         let ndp_vl = NonZeroNdpLifetime::from_u32_with_infinite(orig_vl_secs);
-        SlaacHandler::apply_slaac_update(&mut ctx, DummyDeviceId, SUBNET, ndp_pl, ndp_vl);
+        SlaacHandler::apply_slaac_update(&mut ctx, &mut (), DummyDeviceId, SUBNET, ndp_pl, ndp_vl);
         let address_created_deprecated = ndp_pl.is_none();
         let now = ctx.now();
         let mut expected_timers = Vec::new();
@@ -1919,13 +1968,14 @@ mod tests {
             config: SlaacConfig::Static { valid_until },
             deprecated: address_created_deprecated,
         };
-        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        assert_eq!(ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(), [entry],);
         ctx.timer_ctx().assert_timers_installed(expected_timers);
 
         // Refresh timers.
         let ndp_pl = NonZeroNdpLifetime::from_u32_with_infinite(new_pl_secs);
         SlaacHandler::apply_slaac_update(
             &mut ctx,
+            &mut (),
             DummyDeviceId,
             SUBNET,
             ndp_pl,
@@ -1953,7 +2003,7 @@ mod tests {
             deprecated: ndp_pl.is_none(),
             ..entry
         };
-        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [entry],);
+        assert_eq!(ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(), [entry],);
         ctx.timer_ctx().assert_timers_installed(expected_timers);
     }
 
@@ -2099,12 +2149,13 @@ mod tests {
 
         SlaacHandler::apply_slaac_update(
             &mut ctx,
+            &mut (),
             DummyDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
             NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
         );
-        assert_empty(ctx.iter_slaac_addrs(DummyDeviceId));
+        assert_empty(ctx.iter_slaac_addrs(&mut (), DummyDeviceId));
         ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -2294,6 +2345,7 @@ mod tests {
         // Generate the first temporary SLAAC address.
         SlaacHandler::apply_slaac_update(
             ctx,
+            &mut (),
             DummyDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(pl_ra),
@@ -2308,7 +2360,7 @@ mod tests {
             invalidate_timer_id: first_invalidate_timer_id,
             regenerate_timer_id: first_regenerate_timer_id,
         } = addr_props(&mut dup_rng, ctx.now(), Duration::ZERO);
-        assert_eq!(ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(), [first_entry]);
+        assert_eq!(ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(), [first_entry]);
         ctx.timer_ctx().assert_timers_installed([
             (first_deprecate_timer_id, first_preferred_until),
             (first_invalidate_timer_id, first_valid_until),
@@ -2331,7 +2383,7 @@ mod tests {
             regenerate_timer_id: second_regenerate_timer_id,
         } = addr_props(&mut dup_rng, ctx.now(), first_desync_factor);
         assert_eq!(
-            ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(),
+            ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(),
             [first_entry, second_entry]
         );
         let second_regen_at = second_preferred_until - regen_advance.get();
@@ -2350,7 +2402,7 @@ mod tests {
         );
         let first_entry = SlaacAddressEntry { deprecated: true, ..first_entry };
         assert_eq!(
-            ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(),
+            ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(),
             [first_entry, second_entry]
         );
         ctx.timer_ctx().assert_timers_installed([
@@ -2395,7 +2447,7 @@ mod tests {
         } = addr_props(&mut dup_rng, third_created_at, first_desync_factor + second_desync_factor);
         let second_entry = SlaacAddressEntry { deprecated: true, ..second_entry };
         assert_eq!(
-            ctx.iter_slaac_addrs(DummyDeviceId).collect::<Vec<_>>(),
+            ctx.iter_slaac_addrs(&mut (), DummyDeviceId).collect::<Vec<_>>(),
             [second_entry, third_entry]
         );
         ctx.timer_ctx().assert_some_timers_installed([
@@ -2500,7 +2552,7 @@ mod tests {
         let stable_addr_sub =
             calculate_addr_sub(SUBNET, local_mac.to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC));
 
-        let addrs = get_assigned_ipv6_addr_subnets(&ctx, &mut (), device_id)
+        let addrs = get_assigned_ipv6_addr_subnets(&ctx, device_id)
             .filter(|a| !a.addr().is_link_local())
             .collect::<Vec<_>>();
         let (stable_addr_sub, temp_addr_sub) = assert_matches!(
@@ -2572,7 +2624,7 @@ mod tests {
 
         // Disabling IP should remove all the SLAAC addresses.
         set_ip_enabled(&mut ctx, false /* enabled */);
-        let addrs = get_assigned_ipv6_addr_subnets(&ctx, &mut (), device_id)
+        let addrs = get_assigned_ipv6_addr_subnets(&ctx, device_id)
             .filter(|a| !a.addr().is_link_local())
             .collect::<Vec<_>>();
         assert_matches!(addrs[..], []);
