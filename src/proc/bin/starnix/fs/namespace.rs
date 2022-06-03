@@ -165,7 +165,7 @@ const MAX_SYMLINK_FOLLOWS: u8 = 40;
 ///
 /// Namespace lookups need to mutate a shared context in order to correctly
 /// count the number of remaining symlink traversals.
-pub struct LookupContext<'a> {
+pub struct LookupContext {
     /// The SymlinkMode for the lookup.
     ///
     /// As the lookup proceeds, the follow count is decremented each time the
@@ -183,58 +183,26 @@ pub struct LookupContext<'a> {
     /// O_DIRECTORY. This flag can be set to true if the lookup encounters a
     /// symlink that ends with a `/`.
     pub must_be_directory: bool,
-
-    /// The current task for the lookup.
-    ///
-    /// This is mainly used by the proc filesystem to resolve symbolic link depending on the
-    /// current task.
-    pub current_task: Option<&'a CurrentTask>,
-
-    /// The root of the file system for the lookup.
-    ///
-    /// This is used to resolve symbolic links to absolute path.
-    pub root: NamespaceNode,
 }
 
-impl<'a> LookupContext<'a> {
-    pub fn new_with_mode(
-        current_task: &'a CurrentTask,
-        symlink_mode: SymlinkMode,
-    ) -> LookupContext<'a> {
+impl LookupContext {
+    pub fn new(symlink_mode: SymlinkMode) -> LookupContext {
         LookupContext {
             symlink_mode,
             remaining_follows: MAX_SYMLINK_FOLLOWS,
             must_be_directory: false,
-            current_task: Some(current_task),
-            root: current_task.fs.root.clone(),
         }
     }
 
-    pub fn new(current_task: &'a CurrentTask) -> LookupContext<'a> {
-        Self::new_with_mode(current_task, SymlinkMode::Follow)
-    }
-
-    pub fn taskless(root: &NamespaceNode, symlink_mode: SymlinkMode) -> LookupContext<'a> {
-        LookupContext {
-            symlink_mode,
-            remaining_follows: MAX_SYMLINK_FOLLOWS,
-            must_be_directory: false,
-            current_task: None,
-            root: root.clone(),
-        }
-    }
-
-    pub fn with(&'a self, symlink_mode: SymlinkMode) -> LookupContext<'a> {
+    pub fn with(&self, symlink_mode: SymlinkMode) -> LookupContext {
         LookupContext {
             symlink_mode,
             remaining_follows: self.remaining_follows,
             must_be_directory: self.must_be_directory,
-            current_task: self.current_task,
-            root: self.root.clone(),
         }
     }
 
-    pub fn update_for_path<'b>(&mut self, path: &'b FsStr) -> &'b FsStr {
+    pub fn update_for_path<'a>(&mut self, path: &'a FsStr) -> &'a FsStr {
         if path.last() == Some(&b'/') {
             self.must_be_directory = true;
             trim_trailing_slashes(path)
@@ -242,49 +210,11 @@ impl<'a> LookupContext<'a> {
             path
         }
     }
+}
 
-    /// Lookup the parent of a namespace node.
-    ///
-    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
-    /// calling this function directly.
-    ///
-    /// This function resolves all but the last component of the given path.
-    /// The function returns the parent directory of the last component as well
-    /// as the last component.
-    ///
-    /// If path is empty, this function returns dir and an empty path.
-    /// Similarly, if path ends with "." or "..", these components will be
-    /// returned along with the parent.
-    ///
-    /// The returned parent might not be a directory.
-    pub fn lookup_parent<'b>(
-        &mut self,
-        dir: NamespaceNode,
-        path: &'b FsStr,
-    ) -> Result<(NamespaceNode, &'b FsStr), Errno> {
-        let mut current_node = dir;
-        let mut it = path.split(|c| *c == b'/');
-        let mut current_path_component = it.next().unwrap_or(b"");
-        while let Some(next_path_component) = it.next() {
-            current_node = current_node.lookup_child(self, current_path_component)?;
-            current_path_component = next_path_component;
-        }
-        Ok((current_node, current_path_component))
-    }
-
-    /// Lookup a namespace node.
-    ///
-    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
-    /// calling this function directly.
-    ///
-    /// This function resolves the component of the given path.
-    pub fn lookup_path(
-        &mut self,
-        dir: NamespaceNode,
-        path: &FsStr,
-    ) -> Result<NamespaceNode, Errno> {
-        let (parent, basename) = self.lookup_parent(dir, path)?;
-        parent.lookup_child(self, basename)
+impl Default for LookupContext {
+    fn default() -> Self {
+        LookupContext::new(SymlinkMode::Follow)
     }
 }
 
@@ -364,7 +294,8 @@ impl NamespaceNode {
     /// Traverse down a parent-to-child link in the namespace.
     pub fn lookup_child(
         &self,
-        context: &mut LookupContext<'_>,
+        current_task: &CurrentTask,
+        context: &mut LookupContext,
         basename: &FsStr,
     ) -> Result<NamespaceNode, Errno> {
         if !self.entry.node.is_dir() {
@@ -386,14 +317,14 @@ impl NamespaceNode {
                             return error!(ELOOP);
                         }
                         context.remaining_follows -= 1;
-                        child = match child.entry.node.readlink(&context.current_task)? {
+                        child = match child.entry.node.readlink(current_task)? {
                             SymlinkTarget::Path(link_target) => {
                                 let link_directory = if link_target[0] == b'/' {
-                                    context.root.clone()
+                                    current_task.fs.root.clone()
                                 } else {
                                     self.clone()
                                 };
-                                context.lookup_path(link_directory, &link_target)?
+                                current_task.lookup_path(context, link_directory, &link_target)?
                             }
                             SymlinkTarget::Node(node) => node,
                         }
@@ -549,15 +480,22 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let mut context = LookupContext::new(&current_task);
-        let dev = ns.root().lookup_child(&mut context, b"dev").expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let dev = ns
+            .root()
+            .lookup_child(&current_task, &mut context, b"dev")
+            .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs), MountFlags::empty())
             .expect("failed to mount dev root node");
 
-        let mut context = LookupContext::new(&current_task);
-        let dev = ns.root().lookup_child(&mut context, b"dev").expect("failed to lookup dev");
-        let mut context = LookupContext::new(&current_task);
-        let pts = dev.lookup_child(&mut context, b"pts").expect("failed to lookup pts");
+        let mut context = LookupContext::default();
+        let dev = ns
+            .root()
+            .lookup_child(&current_task, &mut context, b"dev")
+            .expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let pts =
+            dev.lookup_child(&current_task, &mut context, b"pts").expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
@@ -577,20 +515,27 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let mut context = LookupContext::new(&current_task);
-        let dev = ns.root().lookup_child(&mut context, b"dev").expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let dev = ns
+            .root()
+            .lookup_child(&current_task, &mut context, b"dev")
+            .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs), MountFlags::empty())
             .expect("failed to mount dev root node");
-        let mut context = LookupContext::new(&current_task);
-        let new_dev =
-            ns.root().lookup_child(&mut context, b"dev").expect("failed to lookup dev again");
+        let mut context = LookupContext::default();
+        let new_dev = ns
+            .root()
+            .lookup_child(&current_task, &mut context, b"dev")
+            .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.entry, &new_dev.entry));
         assert_ne!(&dev, &new_dev);
 
-        let mut context = LookupContext::new(&current_task);
-        let _new_pts = new_dev.lookup_child(&mut context, b"pts").expect("failed to lookup pts");
-        let mut context = LookupContext::new(&current_task);
-        assert!(dev.lookup_child(&mut context, b"pts").is_err());
+        let mut context = LookupContext::default();
+        let _new_pts = new_dev
+            .lookup_child(&current_task, &mut context, b"pts")
+            .expect("failed to lookup pts");
+        let mut context = LookupContext::default();
+        assert!(dev.lookup_child(&current_task, &mut context, b"pts").is_err());
 
         Ok(())
     }
@@ -606,15 +551,22 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let mut context = LookupContext::new(&current_task);
-        let dev = ns.root().lookup_child(&mut context, b"dev").expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let dev = ns
+            .root()
+            .lookup_child(&current_task, &mut context, b"dev")
+            .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs), MountFlags::empty())
             .expect("failed to mount dev root node");
 
-        let mut context = LookupContext::new(&current_task);
-        let dev = ns.root().lookup_child(&mut context, b"dev").expect("failed to lookup dev");
-        let mut context = LookupContext::new(&current_task);
-        let pts = dev.lookup_child(&mut context, b"pts").expect("failed to lookup pts");
+        let mut context = LookupContext::default();
+        let dev = ns
+            .root()
+            .lookup_child(&current_task, &mut context, b"dev")
+            .expect("failed to lookup dev");
+        let mut context = LookupContext::default();
+        let pts =
+            dev.lookup_child(&current_task, &mut context, b"pts").expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());
@@ -628,18 +580,24 @@ mod test {
         let root_fs = TmpFs::new(&kernel);
         let ns = Namespace::new(root_fs.clone());
         let _foo_node = root_fs.root().create_dir(b"foo")?;
-        let mut context = LookupContext::new(&current_task);
-        let foo_dir = ns.root().lookup_child(&mut context, b"foo")?;
+        let mut context = LookupContext::default();
+        let foo_dir = ns.root().lookup_child(&current_task, &mut context, b"foo")?;
 
         let foofs1 = TmpFs::new(&kernel);
         foo_dir.mount(WhatToMount::Fs(foofs1.clone()), MountFlags::empty())?;
-        let mut context = LookupContext::new(&current_task);
-        assert!(Arc::ptr_eq(&ns.root().lookup_child(&mut context, b"foo")?.entry, foofs1.root()));
+        let mut context = LookupContext::default();
+        assert!(Arc::ptr_eq(
+            &ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry,
+            foofs1.root()
+        ));
 
         let foofs2 = TmpFs::new(&kernel);
         foo_dir.mount(WhatToMount::Fs(foofs2.clone()), MountFlags::empty())?;
-        let mut context = LookupContext::new(&current_task);
-        assert!(Arc::ptr_eq(&ns.root().lookup_child(&mut context, b"foo")?.entry, foofs2.root()));
+        let mut context = LookupContext::default();
+        assert!(Arc::ptr_eq(
+            &ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry,
+            foofs2.root()
+        ));
 
         Ok(())
     }
@@ -651,8 +609,8 @@ mod test {
         let ns1 = Namespace::new(root_fs.clone());
         let ns2 = Namespace::new(root_fs.clone());
         let _foo_node = root_fs.root().create_dir(b"foo")?;
-        let mut context = LookupContext::new(&current_task);
-        let foo_dir = ns1.root().lookup_child(&mut context, b"foo")?;
+        let mut context = LookupContext::default();
+        let foo_dir = ns1.root().lookup_child(&current_task, &mut context, b"foo")?;
 
         let foofs = TmpFs::new(&kernel);
         foo_dir.mount(WhatToMount::Fs(foofs.clone()), MountFlags::empty())?;

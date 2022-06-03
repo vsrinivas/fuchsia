@@ -139,12 +139,7 @@ impl SelfSymlink {
 impl FsNodeOps for SelfSymlink {
     fs_node_impl_symlink!();
 
-    fn readlink(
-        &self,
-        _node: &FsNode,
-        current_task: &Option<&CurrentTask>,
-    ) -> Result<SymlinkTarget, Errno> {
-        let current_task = current_task.ok_or(EINVAL)?;
+    fn readlink(&self, _node: &FsNode, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
         Ok(SymlinkTarget::Path(current_task.get_pid().to_string().into_bytes()))
     }
 }
@@ -162,12 +157,7 @@ impl ThreadSelfSymlink {
 impl FsNodeOps for ThreadSelfSymlink {
     fs_node_impl_symlink!();
 
-    fn readlink(
-        &self,
-        _node: &FsNode,
-        current_task: &Option<&CurrentTask>,
-    ) -> Result<SymlinkTarget, Errno> {
-        let current_task = current_task.ok_or(EINVAL)?;
+    fn readlink(&self, _node: &FsNode, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
         Ok(SymlinkTarget::Path(
             format!("{}/task/{}", current_task.get_pid(), current_task.get_tid()).into_bytes(),
         ))

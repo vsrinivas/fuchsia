@@ -103,8 +103,10 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
         tracing::info!("Finished running init process: {:?}", result);
     });
     if let Some(startup_file_path) = startup_file_path {
-        wait_for_init_file(root_fs.namespace_root(), &startup_file_path).await?;
-    }
+        let init_wait_task = create_init_task(&kernel, &fs_context)?;
+        wait_for_init_file(&startup_file_path, &init_wait_task).await?;
+        init_wait_task.write().exit_status = Some(ExitStatus::Exit(0));
+    };
 
     Ok(Galaxy { kernel, root_fs })
 }
@@ -184,12 +186,16 @@ fn mount_filesystems(
     Ok(())
 }
 
-async fn wait_for_init_file(root: NamespaceNode, startup_file_path: &str) -> Result<(), Error> {
+async fn wait_for_init_file(
+    startup_file_path: &str,
+    current_task: &CurrentTask,
+) -> Result<(), Error> {
     // TODO(fxb/96299): Use inotify machinery to wait for the file.
     loop {
         fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
-        let mut context = LookupContext::taskless(&root, SymlinkMode::Follow);
-        match context.lookup_path(root.clone(), startup_file_path.as_bytes()) {
+        let root = current_task.fs.namespace_root();
+        let mut context = LookupContext::default();
+        match current_task.lookup_path(&mut context, root, startup_file_path.as_bytes()) {
             Ok(_) => break,
             Err(error) if error == ENOENT => continue,
             Err(error) => return Err(anyhow::Error::from(error)),
@@ -223,9 +229,7 @@ mod test {
             .expect("Failed to create file");
 
         fasync::Task::local(async move {
-            wait_for_init_file(current_task.fs.namespace_root(), &path)
-                .await
-                .expect("failed to wait for file");
+            wait_for_init_file(&path, &current_task).await.expect("failed to wait for file");
             sender.send(()).await.expect("failed to send message");
         })
         .detach();
@@ -244,9 +248,7 @@ mod test {
 
         fasync::Task::local(async move {
             sender.send(()).await.expect("failed to send message");
-            wait_for_init_file(init_task.fs.namespace_root(), &path)
-                .await
-                .expect("failed to wait for file");
+            wait_for_init_file(&path, &init_task).await.expect("failed to wait for file");
             sender.send(()).await.expect("failed to send message");
         })
         .detach();

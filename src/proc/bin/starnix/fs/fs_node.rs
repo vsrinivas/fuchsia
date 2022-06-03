@@ -164,7 +164,7 @@ pub trait FsNodeOps: Send + Sync + AsAny {
     fn readlink(
         &self,
         _node: &FsNode,
-        _current_task: &Option<&CurrentTask>,
+        _current_task: &CurrentTask,
     ) -> Result<SymlinkTarget, Errno> {
         error!(EINVAL)
     }
@@ -394,7 +394,7 @@ impl FsNode {
         self.ops().create_symlink(self, name, target)
     }
 
-    pub fn readlink(&self, current_task: &Option<&CurrentTask>) -> Result<SymlinkTarget, Errno> {
+    pub fn readlink(&self, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
         let now = fuchsia_runtime::utc_time();
         self.info_write().time_access = now;
         self.ops().readlink(self, current_task)

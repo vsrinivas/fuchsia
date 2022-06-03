@@ -568,7 +568,7 @@ impl CurrentTask {
     /// final path component.
     fn resolve_open_path(
         &self,
-        context: &mut LookupContext<'_>,
+        context: &mut LookupContext,
         dir: NamespaceNode,
         path: &FsStr,
         mode: FileMode,
@@ -576,13 +576,13 @@ impl CurrentTask {
     ) -> Result<NamespaceNode, Errno> {
         let path = context.update_for_path(&path);
         let mut parent_content = context.with(SymlinkMode::Follow);
-        let (parent, basename) = parent_content.lookup_parent(dir.clone(), path)?;
+        let (parent, basename) = self.lookup_parent(&mut parent_content, dir.clone(), path)?;
         context.remaining_follows = parent_content.remaining_follows;
 
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
 
         let mut child_context = context.with(SymlinkMode::NoFollow);
-        match parent.lookup_child(&mut child_context, basename) {
+        match parent.lookup_child(self, &mut child_context, basename) {
             Ok(name) => {
                 if name.entry.node.is_lnk() {
                     if context.symlink_mode == SymlinkMode::NoFollow
@@ -599,7 +599,7 @@ impl CurrentTask {
                     }
 
                     context.remaining_follows -= 1;
-                    match name.entry.node.readlink(&Some(self))? {
+                    match name.entry.node.readlink(self)? {
                         SymlinkTarget::Path(path) => {
                             let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
                             self.resolve_open_path(context, dir, &path, mode, flags)
@@ -664,7 +664,7 @@ impl CurrentTask {
         }
 
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        let mut context = LookupContext::new_with_mode(self, symlink_mode);
+        let mut context = LookupContext::new(symlink_mode);
         context.must_be_directory = flags.contains(OpenFlags::DIRECTORY);
         let name = self.resolve_open_path(&mut context, dir, path, mode, flags)?;
 
@@ -720,16 +720,62 @@ impl CurrentTask {
         path: &'a FsStr,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        let mut context = LookupContext::new(self);
-        context.lookup_parent(dir, path)
+        let mut context = LookupContext::default();
+        self.lookup_parent(&mut context, dir, path)
+    }
+
+    /// Lookup the parent of a namespace node.
+    ///
+    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
+    /// calling this function directly.
+    ///
+    /// This function resolves all but the last component of the given path.
+    /// The function returns the parent directory of the last component as well
+    /// as the last component.
+    ///
+    /// If path is empty, this function returns dir and an empty path.
+    /// Similarly, if path ends with "." or "..", these components will be
+    /// returned along with the parent.
+    ///
+    /// The returned parent might not be a directory.
+    fn lookup_parent<'a>(
+        &self,
+        context: &mut LookupContext,
+        dir: NamespaceNode,
+        path: &'a FsStr,
+    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
+        let mut current_node = dir;
+        let mut it = path.split(|c| *c == b'/');
+        let mut current_path_component = it.next().unwrap_or(b"");
+        while let Some(next_path_component) = it.next() {
+            current_node = current_node.lookup_child(self, context, current_path_component)?;
+            current_path_component = next_path_component;
+        }
+        Ok((current_node, current_path_component))
+    }
+
+    /// Lookup a namespace node.
+    ///
+    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
+    /// calling this function directly.
+    ///
+    /// This function resolves the component of the given path.
+    pub fn lookup_path(
+        &self,
+        context: &mut LookupContext,
+        dir: NamespaceNode,
+        path: &FsStr,
+    ) -> Result<NamespaceNode, Errno> {
+        let (parent, basename) = self.lookup_parent(context, dir, path)?;
+        parent.lookup_child(self, context, basename)
     }
 
     /// Lookup a namespace node starting at the root directory.
     ///
     /// Resolves symlinks.
     pub fn lookup_path_from_root(&self, path: &FsStr) -> Result<NamespaceNode, Errno> {
-        let mut context = LookupContext::new(self);
-        context.lookup_path(self.fs.root.clone(), path)
+        let mut context = LookupContext::default();
+        self.lookup_path(&mut context, self.fs.root.clone(), path)
     }
 
     pub fn exec(
