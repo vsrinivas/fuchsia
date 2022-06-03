@@ -389,7 +389,7 @@ where
         conn: UdpConnId<I>,
         src_ip: I::Addr,
         src_port: NonZeroU16,
-        body: B,
+        body: &B,
     ) {
         I::get_collection_mut(self).receive_udp_from_conn(conn, src_ip, src_port, body)
     }
@@ -400,7 +400,7 @@ where
         src_ip: I::Addr,
         dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,
-        body: B,
+        body: &B,
     ) {
         I::get_collection_mut(self)
             .receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body)

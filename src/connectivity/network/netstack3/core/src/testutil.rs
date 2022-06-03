@@ -16,7 +16,7 @@ use core::{convert::Infallible as Never, fmt::Debug, time::Duration};
 use net_types::{
     ethernet::Mac,
     ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither},
-    SpecifiedAddr, UnicastAddr, Witness,
+    MulticastAddr, SpecifiedAddr, UnicastAddr, Witness,
 };
 use packet::{BufferMut, Serializer};
 use packet_formats::ip::IpProto;
@@ -273,6 +273,11 @@ pub(crate) trait TestIpExt: Ip {
     ///
     /// `last` is the value to be put in the last octet of the IP address.
     fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr>;
+
+    /// Get a multicast IP address.
+    ///
+    /// `last` is the value to be put in the last octet of the IP address.
+    fn get_multicast_addr(last: u8) -> MulticastAddr<Self::Addr>;
 }
 
 impl TestIpExt for Ipv4 {
@@ -290,6 +295,13 @@ impl TestIpExt for Ipv4 {
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv4Addr::new(bytes)).unwrap()
     }
+
+    fn get_multicast_addr(last: u8) -> MulticastAddr<Self::Addr> {
+        assert!(u32::from(Self::Addr::BYTES * 8 - Self::MULTICAST_SUBNET.prefix()) > u8::BITS);
+        let mut bytes = Self::MULTICAST_SUBNET.network().ipv4_bytes();
+        bytes[bytes.len() - 1] = last;
+        MulticastAddr::new(Ipv4Addr::new(bytes)).unwrap()
+    }
 }
 
 impl TestIpExt for Ipv6 {
@@ -306,6 +318,13 @@ impl TestIpExt for Ipv6 {
         bytes[bytes.len() - 3] += 1;
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv6Addr::from(bytes)).unwrap()
+    }
+
+    fn get_multicast_addr(last: u8) -> MulticastAddr<Self::Addr> {
+        assert!((Self::Addr::BYTES * 8 - Self::MULTICAST_SUBNET.prefix()) as u32 > u8::BITS);
+        let mut bytes = Self::MULTICAST_SUBNET.network().ipv6_bytes();
+        bytes[bytes.len() - 1] = last;
+        MulticastAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap()
     }
 }
 

@@ -4,7 +4,10 @@
 
 //! The User Datagram Protocol (UDP).
 
-use alloc::collections::{hash_map::DefaultHasher, HashSet};
+use alloc::{
+    collections::{hash_map::DefaultHasher, HashSet},
+    vec::Vec,
+};
 use core::{
     convert::Infallible as Never,
     fmt::Debug,
@@ -16,10 +19,11 @@ use core::{
 };
 
 use derivative::Derivative;
+use either::Either;
 use log::trace;
 use net_types::{
     ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    SpecifiedAddr, Witness,
+    MulticastAddress as _, SpecifiedAddr, Witness,
 };
 use nonzero_ext::nonzero;
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
@@ -391,12 +395,12 @@ impl<I: Ip, D: IpDeviceId, S> PosixSocketMapSpec for Udp<I, D, S> {
     }
 }
 
-enum LookupResult<'a, I: Ip, D: IpDeviceId, S> {
-    Conn(&'a PosixAddrState<UdpConnId<I>>, ConnAddr<Udp<I, D, S>>),
-    Listener(&'a PosixAddrState<UdpListenerId<I>>, ListenerAddr<Udp<I, D, S>>),
+enum LookupResult<I: Ip, D: IpDeviceId, S> {
+    Conn(UdpConnId<I>, ConnAddr<Udp<I, D, S>>),
+    Listener(UdpListenerId<I>, ListenerAddr<Udp<I, D, S>>),
 }
 
-#[derive(Hash)]
+#[derive(Hash, Copy, Clone)]
 struct SocketSelectorParams<I: Ip, A: AsRef<I::Addr>> {
     src_ip: A,
     dst_ip: A,
@@ -405,19 +409,7 @@ struct SocketSelectorParams<I: Ip, A: AsRef<I::Addr>> {
     _ip: IpVersionMarker<I>,
 }
 
-impl<'a, I: Ip, D: IpDeviceId, S> LookupResult<'a, I, D, S> {
-    fn select_receiver<A: AsRef<I::Addr> + Hash>(
-        &self,
-        selector: SocketSelectorParams<I, A>,
-    ) -> UdpBoundId<I> {
-        match self {
-            LookupResult::Listener(state, _) => state.select_receiver(selector).clone().into(),
-            LookupResult::Conn(state, _) => state.select_receiver(selector).clone().into(),
-        }
-    }
-}
-
-impl<T: Debug> PosixAddrState<T> {
+impl<T> PosixAddrState<T> {
     fn select_receiver<I: Ip, A: AsRef<I::Addr> + Hash>(
         &self,
         selector: SocketSelectorParams<I, A>,
@@ -432,30 +424,88 @@ impl<T: Debug> PosixAddrState<T> {
             }
         }
     }
+
+    fn collect_all_ids(&self) -> impl Iterator<Item = &'_ T> {
+        match self {
+            PosixAddrState::Exclusive(id) => Either::Left(core::iter::once(id)),
+            PosixAddrState::ReusePort(ids) => Either::Right(ids.iter()),
+        }
+    }
+}
+
+enum AddrEntry<'a, I: Ip, P: PosixSocketMapSpec> {
+    Listen(&'a PosixAddrState<UdpListenerId<I>>, ListenerAddr<P>),
+    Conn(&'a PosixAddrState<UdpConnId<I>>, ConnAddr<P>),
+}
+
+impl<'a, I: Ip, D: IpDeviceId + 'a, S: 'a> AddrEntry<'a, I, Udp<I, D, S>> {
+    /// Returns an iterator that yields a `LookupResult` for each contained ID.
+    fn collect_all_ids(self) -> impl Iterator<Item = LookupResult<I, D, S>> + 'a {
+        match self {
+            Self::Listen(state, l) => Either::Left(
+                state.collect_all_ids().map(move |id| LookupResult::Listener(*id, l.clone())),
+            ),
+            Self::Conn(state, c) => Either::Right(
+                state.collect_all_ids().map(move |id| LookupResult::Conn(*id, c.clone())),
+            ),
+        }
+    }
+
+    /// Returns a `LookupResult` for the contained ID that matches the selector.
+    fn select_receiver<A: AsRef<I::Addr> + Hash>(
+        self,
+        selector: SocketSelectorParams<I, A>,
+    ) -> LookupResult<I, D, S> {
+        match self {
+            Self::Listen(state, l) => LookupResult::Listener(*state.select_receiver(selector), l),
+            Self::Conn(state, c) => LookupResult::Conn(*state.select_receiver(selector), c),
+        }
+    }
 }
 
 impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
+    /// Finds the socket(s) that should receive an incoming packet.
+    ///
+    /// Uses the provided addresses and receiving device to look up sockets that
+    /// should receive a matching incoming packet. The returned iterator may
+    /// yield 0, 1, or multiple sockets.
     fn lookup(
         &self,
-        local_ip: SpecifiedAddr<I::Addr>,
-        remote_ip: SpecifiedAddr<I::Addr>,
-        local_port: NonZeroU16,
-        remote_port: NonZeroU16,
+        dst_ip: SpecifiedAddr<I::Addr>,
+        src_ip: SpecifiedAddr<I::Addr>,
+        dst_port: NonZeroU16,
+        src_port: NonZeroU16,
         device: D,
-    ) -> Option<LookupResult<'_, I, D, S>> {
+    ) -> impl Iterator<Item = LookupResult<I, D, S>> + '_ {
         let Self { bound } = self;
-        iter_receiving_addrs(
-            ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) },
+
+        let mut matching_entries = iter_receiving_addrs(
+            ConnIpAddr { local_ip: dst_ip, local_identifier: dst_port, remote: (src_ip, src_port) },
             device,
         )
-        .find_map(|addr| match addr {
+        .filter_map(move |addr| match addr {
             AddrVec::Listen(l) => {
-                bound.get_listener_by_addr(&l).map(|state| LookupResult::Listener(state, l))
+                bound.get_listener_by_addr(&l).map(|state| AddrEntry::Listen(state, l))
             }
-            AddrVec::Conn(c) => {
-                bound.get_conn_by_addr(&c).map(|state| LookupResult::Conn(state, c))
-            }
-        })
+            AddrVec::Conn(c) => bound.get_conn_by_addr(&c).map(|state| AddrEntry::Conn(state, c)),
+        });
+
+        if dst_ip.is_multicast() {
+            let all_ids = matching_entries.flat_map(AddrEntry::collect_all_ids);
+            Either::Left(all_ids)
+        } else {
+            let selector = SocketSelectorParams::<I, _> {
+                src_ip,
+                dst_ip,
+                src_port: src_port.get(),
+                dst_port: dst_port.get(),
+                _ip: IpVersionMarker::default(),
+            };
+
+            let single_id: Option<_> =
+                matching_entries.next().map(move |entry| entry.select_receiver(selector));
+            Either::Right(single_id.into_iter())
+        }
     }
 
     /// Collects the currently used local ports into a [`HashSet`].
@@ -828,7 +878,7 @@ pub trait BufferUdpContext<I: IpExt, B: BufferMut>: UdpContext<I> {
         _conn: UdpConnId<I>,
         _src_ip: I::Addr,
         _src_port: NonZeroU16,
-        _body: B,
+        _body: &B,
     ) {
         log_unimplemented!((), "BufferUdpContext::receive_udp_from_conn: not implemented");
     }
@@ -840,7 +890,7 @@ pub trait BufferUdpContext<I: IpExt, B: BufferMut>: UdpContext<I> {
         _src_ip: I::Addr,
         _dst_ip: I::Addr,
         _src_port: Option<NonZeroU16>,
-        _body: B,
+        _body: &B,
     ) {
         log_unimplemented!((), "BufferUdpContext::receive_udp_from_listen: not implemented");
     }
@@ -854,7 +904,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         conn: UdpConnId<Ipv4>,
         src_ip: Ipv4Addr,
         src_port: NonZeroU16,
-        body: B,
+        body: &B,
     ) {
         BufferUdpContext::receive_udp_from_conn(&mut self.dispatcher, conn, src_ip, src_port, body)
     }
@@ -865,7 +915,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         src_ip: Ipv4Addr,
         dst_ip: Ipv4Addr,
         src_port: Option<NonZeroU16>,
-        body: B,
+        body: &B,
     ) {
         BufferUdpContext::receive_udp_from_listen(
             &mut self.dispatcher,
@@ -886,7 +936,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         conn: UdpConnId<Ipv6>,
         src_ip: Ipv6Addr,
         src_port: NonZeroU16,
-        body: B,
+        body: &B,
     ) {
         BufferUdpContext::receive_udp_from_conn(&mut self.dispatcher, conn, src_ip, src_port, body)
     }
@@ -897,7 +947,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
         src_port: Option<NonZeroU16>,
-        body: B,
+        body: &B,
     ) {
         BufferUdpContext::receive_udp_from_listen(
             &mut self.dispatcher,
@@ -999,18 +1049,17 @@ impl<I: IpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTranspor
         if let (Some(src_ip), Some(src_port), Some(dst_port)) =
             (src_ip, udp_packet.src_port(), udp_packet.dst_port())
         {
-            if let Some(lookup_result) = sync_ctx
+            let receiver = sync_ctx
                 .get_first_state()
                 .conn_state
                 .lookup(src_ip, dst_ip, src_port, dst_port, device)
-            {
-                let id = lookup_result.select_receiver(SocketSelectorParams {
-                    src_ip,
-                    dst_ip,
-                    src_port: src_port.get(),
-                    dst_port: dst_port.get(),
-                    _ip: IpVersionMarker::default(),
-                });
+                .next();
+
+            if let Some(id) = receiver {
+                let id = match id {
+                    LookupResult::Listener(id, _) => id.into(),
+                    LookupResult::Conn(id, _) => id.into(),
+                };
                 sync_ctx.receive_icmp_error(id, err);
             } else {
                 trace!("UdpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent UDP socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
@@ -1044,45 +1093,40 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
 
         let state = sync_ctx.get_first_state();
 
-        if let Some((lookup_result, selector)) = SpecifiedAddr::new(src_ip)
-            .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
-            .and_then(|(src_ip, src_port)| {
-                let dst_port = packet.dst_port();
-                let selector = SocketSelectorParams::<I, _> {
-                    src_ip,
-                    dst_ip,
-                    src_port: src_port.get(),
-                    dst_port: dst_port.get(),
-                    _ip: IpVersionMarker::default(),
-                };
-                state
-                    .conn_state
-                    .lookup(dst_ip, src_ip, dst_port, src_port, device)
-                    .map(|result| (result, selector))
+        let recipients: Vec<LookupResult<_, _, _>> = SpecifiedAddr::new(src_ip)
+            .and_then(|src_ip| {
+                packet.src_port().map(|src_port| {
+                    state.conn_state.lookup(dst_ip, src_ip, packet.dst_port(), src_port, device)
+                })
             })
-        {
-            match lookup_result {
-                LookupResult::Conn(
-                    lookup_result,
-                    ConnAddr {
-                        ip:
-                            ConnIpAddr {
-                                local_ip: _,
-                                local_identifier: _,
-                                remote: (remote_ip, remote_port),
-                            },
-                        device: _,
-                    },
-                ) => {
-                    let id = *lookup_result.select_receiver(selector);
-                    mem::drop(packet);
-                    sync_ctx.receive_udp_from_conn(id, remote_ip.get(), remote_port, buffer)
-                }
-                LookupResult::Listener(lookup_result, _) => {
-                    let id = *lookup_result.select_receiver(selector);
-                    let src_port = packet.src_port();
-                    mem::drop(packet);
-                    sync_ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, buffer)
+            .into_iter()
+            .flatten()
+            .collect();
+
+        if !recipients.is_empty() {
+            let src_port = packet.src_port();
+            mem::drop(packet);
+            for lookup_result in recipients {
+                match lookup_result {
+                    LookupResult::Conn(
+                        id,
+                        ConnAddr {
+                            ip:
+                                ConnIpAddr {
+                                    local_ip: _,
+                                    local_identifier: _,
+                                    remote: (remote_ip, remote_port),
+                                },
+                            device: _,
+                        },
+                    ) => sync_ctx.receive_udp_from_conn(id, remote_ip.get(), remote_port, &buffer),
+                    LookupResult::Listener(id, _) => sync_ctx.receive_udp_from_listen(
+                        id,
+                        src_ip,
+                        dst_ip.get(),
+                        src_port,
+                        &buffer,
+                    ),
                 }
             }
             Ok(())
@@ -1516,7 +1560,7 @@ pub fn listen_udp<I: IpExt, SC: UdpStateContext<I>, C>(
     port: Option<NonZeroU16>,
 ) -> Result<UdpListenerId<I>, LocalAddressError> {
     if let Some(addr) = addr {
-        if !sync_ctx.is_assigned_local_addr(addr.get()) {
+        if !addr.is_multicast() && !sync_ctx.is_assigned_local_addr(addr.get()) {
             return Err(LocalAddressError::CannotBindToAddress);
         }
     }
@@ -1604,11 +1648,14 @@ pub enum UdpSockCreationError {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{borrow::ToOwned, vec, vec::Vec};
+    use alloc::{borrow::ToOwned, collections::HashMap, vec, vec::Vec};
     use core::convert::TryInto as _;
 
     use assert_matches::assert_matches;
-    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
+    use net_types::{
+        ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr},
+        MulticastAddr,
+    };
     use packet::{Buf, InnerPacketBuilder, ParsablePacket, Serializer};
     use packet_formats::{
         icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode},
@@ -1687,6 +1734,24 @@ mod tests {
                 icmp_errors: Default::default(),
                 extra_local_addrs: Vec::new(),
             }
+        }
+
+        fn listen_data(&self) -> HashMap<UdpListenerId<I>, Vec<&'_ [u8]>> {
+            let Self {
+                listen_data,
+                state: _,
+                ip_socket_ctx: _,
+                conn_data: _,
+                icmp_errors: _,
+                extra_local_addrs: _,
+            } = self;
+            listen_data.iter().fold(
+                HashMap::new(),
+                |mut map, ListenData { listener, body, src_ip: _, dst_ip: _, src_port: _ }| {
+                    map.entry(*listener).or_default().push(&body);
+                    map
+                },
+            )
         }
     }
 
@@ -1796,7 +1861,7 @@ mod tests {
             conn: UdpConnId<I>,
             _src_ip: <I as Ip>::Addr,
             _src_port: NonZeroU16,
-            body: B,
+            body: &B,
         ) {
             self.get_mut().conn_data.push(ConnData { conn, body: body.as_ref().to_owned() })
         }
@@ -1807,7 +1872,7 @@ mod tests {
             src_ip: <I as Ip>::Addr,
             dst_ip: <I as Ip>::Addr,
             src_port: Option<NonZeroU16>,
-            body: B,
+            body: &B,
         ) {
             self.get_mut().listen_data.push(ListenData {
                 listener,
@@ -2709,12 +2774,97 @@ mod tests {
         assert_eq!(pkt.body, &body[..]);
     }
 
+    #[ip_test]
+    fn test_receive_multicast_packet<I: Ip + TestIpExt>()
+    where
+        DummyCtx<I>: DummyCtxBound<I>,
+        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
+    {
+        set_logger_for_test();
+        let local_ip = local_ip::<I>();
+        let remote_ip = I::get_other_ip_address(70);
+        let local_port = NonZeroU16::new(100).unwrap();
+        let remote_port = NonZeroU16::new(200).unwrap();
+        let multicast_addr = I::get_multicast_addr(0);
+        let multicast_addr_other = I::get_multicast_addr(1);
+
+        let mut ctx = DummyCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
+            vec![local_ip],
+            vec![remote_ip],
+        ));
+
+        // Create 3 sockets: one listener for all IPs, two listeners on the same
+        // local address.
+        let any_listener = {
+            let unbound = create_udp_unbound(&mut ctx);
+            set_udp_posix_reuse_port(&mut ctx, unbound, true);
+            listen_udp::<I, _, _>(&mut ctx, &mut (), unbound, None, Some(local_port))
+                .expect("listen_udp failed")
+        };
+
+        let specific_listeners = [(); 2].map(|()| {
+            let unbound = create_udp_unbound(&mut ctx);
+            set_udp_posix_reuse_port(&mut ctx, unbound, true);
+            listen_udp::<I, _, _>(
+                &mut ctx,
+                &mut (),
+                unbound,
+                Some(SpecifiedAddr::from_witness(multicast_addr).unwrap()),
+                Some(local_port),
+            )
+            .expect("listen_udp failed")
+        });
+
+        let mut receive_packet = |body, local_ip: MulticastAddr<I::Addr>| {
+            let body = [body];
+            receive_udp_packet(
+                &mut ctx,
+                DummyDeviceId,
+                remote_ip.get(),
+                local_ip.get(),
+                remote_port,
+                local_port,
+                &body,
+            )
+        };
+
+        // These packets should be received by all listeners.
+        receive_packet(1, multicast_addr);
+        receive_packet(2, multicast_addr);
+
+        // This packet should be received only by the all-IPs listener.
+        receive_packet(3, multicast_addr_other);
+
+        assert_eq!(
+            ctx.get_ref().listen_data(),
+            HashMap::from([
+                (specific_listeners[0], vec![[1].as_slice(), &[2]]),
+                (specific_listeners[1], vec![&[1], &[2]]),
+                (any_listener, vec![&[1], &[2], &[3]]),
+            ]),
+        );
+    }
+
     /// A device ID type that supports identifying more than one distinct
     /// device.
     #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
     enum MultipleDevicesId {
         A,
         B,
+    }
+    impl MultipleDevicesId {
+        fn all() -> [Self; 2] {
+            [Self::A, Self::B]
+        }
+    }
+
+    impl From<MultipleDevicesId> for u8 {
+        fn from(id: MultipleDevicesId) -> Self {
+            match id {
+                MultipleDevicesId::A => 0,
+                MultipleDevicesId::B => 1,
+            }
+        }
     }
 
     impl core::fmt::Display for MultipleDevicesId {
@@ -2735,13 +2885,13 @@ mod tests {
         fn default() -> Self {
             let remote_ips = vec![Ipv4::get_other_remote_ip_address(1)];
             DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_ipv4(
-                IntoIterator::into_iter([MultipleDevicesId::A, MultipleDevicesId::B])
-                    .enumerate()
-                    .map(|(i, device)| DummyDeviceConfig {
+                IntoIterator::into_iter(MultipleDevicesId::all()).enumerate().map(|(i, device)| {
+                    DummyDeviceConfig {
                         device,
                         local_ips: vec![Ipv4::get_other_ip_address((i + 1).try_into().unwrap())],
                         remote_ips: remote_ips.clone(),
-                    }),
+                    }
+                }),
             ))
         }
     }
@@ -2750,13 +2900,13 @@ mod tests {
         fn default() -> Self {
             let remote_ips = vec![Ipv6::get_other_remote_ip_address(1)];
             DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_ipv6(
-                IntoIterator::into_iter([MultipleDevicesId::A, MultipleDevicesId::B])
-                    .enumerate()
-                    .map(|(i, device)| DummyDeviceConfig {
+                IntoIterator::into_iter(MultipleDevicesId::all()).enumerate().map(|(i, device)| {
+                    DummyDeviceConfig {
                         device,
                         local_ips: vec![Ipv6::get_other_ip_address((i + 1).try_into().unwrap())],
                         remote_ips: remote_ips.clone(),
-                    }),
+                    }
+                }),
             ))
         }
     }
@@ -2838,7 +2988,7 @@ mod tests {
         set_logger_for_test();
         let mut ctx = MultiDeviceDummyCtx::<I>::default();
         let ctx = &mut ctx;
-        let bound_on_devices = [MultipleDevicesId::A, MultipleDevicesId::B].map(|device| {
+        let bound_on_devices = MultipleDevicesId::all().map(|device| {
             let unbound = create_udp_unbound(ctx);
             set_unbound_udp_device(ctx, &mut (), unbound, Some(device));
             listen_udp(ctx, &mut (), unbound, None, Some(LOCAL_PORT))
@@ -2945,7 +3095,7 @@ mod tests {
         let mut ctx = MultiDeviceDummyCtx::<I>::default();
         let ctx = &mut ctx;
 
-        let bound_on_devices = [MultipleDevicesId::A, MultipleDevicesId::B].map(|device| {
+        let bound_on_devices = MultipleDevicesId::all().map(|device| {
             let unbound = create_udp_unbound(ctx);
             set_unbound_udp_device(ctx, &mut (), unbound, Some(device));
             listen_udp(ctx, &mut (), unbound, None, Some(LOCAL_PORT))
@@ -2960,6 +3110,71 @@ mod tests {
                 Err(LocalAddressError::AddressInUse)
             );
         }
+    }
+
+    #[ip_test]
+    fn test_bound_device_receive_multicast_packet<I: Ip + TestIpExt>()
+    where
+        MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
+    {
+        set_logger_for_test();
+        let remote_ip = I::get_other_ip_address(1);
+        let local_port = NonZeroU16::new(100).unwrap();
+        let remote_port = NonZeroU16::new(200).unwrap();
+        let multicast_addr = I::get_multicast_addr(0);
+
+        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+
+        // Create 3 sockets: one listener bound on each device and one not bound
+        // to a device.
+
+        let ctx = &mut ctx;
+        let bound_on_devices = MultipleDevicesId::all().map(|device| {
+            let unbound = create_udp_unbound(ctx);
+            set_unbound_udp_device(ctx, &mut (), unbound, Some(device));
+            set_udp_posix_reuse_port(ctx, unbound, true);
+            let listener = listen_udp(ctx, &mut (), unbound, None, Some(LOCAL_PORT))
+                .expect("listen should succeed");
+
+            (device, listener)
+        });
+
+        let listener = {
+            let unbound = create_udp_unbound(ctx);
+            set_udp_posix_reuse_port(ctx, unbound, true);
+            listen_udp(ctx, &mut (), unbound, None, Some(LOCAL_PORT))
+                .expect("listen should succeed")
+        };
+
+        let mut receive_packet = |remote_ip: SpecifiedAddr<I::Addr>, device: MultipleDevicesId| {
+            let body = vec![device.into()];
+            receive_udp_packet(
+                ctx,
+                device,
+                remote_ip.get(),
+                multicast_addr.get(),
+                remote_port,
+                local_port,
+                &body,
+            )
+        };
+
+        // Receive packets from the remote IP on each device (2 packets total).
+        // Listeners bound on devices should receive one, and the other listener
+        // should receive both.
+        for device in MultipleDevicesId::all() {
+            receive_packet(remote_ip, device);
+        }
+
+        let listen_data = ctx.get_ref().listen_data();
+
+        for (device, listener) in bound_on_devices {
+            let device: u8 = device.into();
+            assert_eq!(listen_data[&listener], vec![&[device]]);
+        }
+        let expected_listener_data: &[&[u8]] =
+            &[&[MultipleDevicesId::A.into()], &[MultipleDevicesId::B.into()]];
+        assert_eq!(&listen_data[&listener], expected_listener_data);
     }
 
     /// Tests establishing a UDP connection without providing a local IP

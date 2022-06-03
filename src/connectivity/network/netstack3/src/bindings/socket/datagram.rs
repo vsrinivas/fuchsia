@@ -464,7 +464,7 @@ impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for SocketCollection<I, Udp>
         conn: UdpConnId<I>,
         src_ip: I::Addr,
         src_port: NonZeroU16,
-        body: B,
+        body: &B,
     ) {
         let Self { binding_data, conns, listeners: _ } = self;
         let binding_data =
@@ -481,7 +481,7 @@ impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for SocketCollection<I, Udp>
         src_ip: I::Addr,
         _dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,
-        body: B,
+        body: &B,
     ) {
         let Self { binding_data, conns: _, listeners } = self;
         let binding_data =

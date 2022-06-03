@@ -146,7 +146,7 @@ impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
         conn: netstack3_core::UdpConnId<I>,
         src_ip: I::Addr,
         src_port: NonZeroU16,
-        body: B,
+        body: &B,
     ) {
         self.disp.receive_udp_from_conn(conn, src_ip, src_port, body)
     }
@@ -158,7 +158,7 @@ impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
         src_ip: I::Addr,
         dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,
-        body: B,
+        body: &B,
     ) {
         self.disp.receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body)
     }
