@@ -1,6 +1,6 @@
 # Assembling structured configuration
 
-[Self-link](go/fuchsia-assembling-structured-config)
+[Self-link](https://goto.google.com/fuchsia-assembling-structured-config)
 
 [Structured configuration][sc-docs] allows developers to package components with
 different values in different contexts. Product assembly allows developers to
@@ -74,10 +74,10 @@ build configuration rules.
 See [this diff][session-manager-diff] for an example of changing
 session_manager's size limit configuration to match the new location.
 
-[sc-docs]: /docs/development/components/structured_config.md
-[pa-chat]: go/fuchsia-product-assembly-chat
-[pa-hours]: go/fuchsia-product-assembly-office-hours
+[sc-docs]: https://fuchsia.dev/fuchsia-src/development/components/structured_config?hl=en
+[pa-chat]: https://goto.google.com/fuchsia-product-assembly-chat
+[pa-hours]: https://goto.google.com/fuchsia-product-assembly-office-hours
 [example-cml]: /examples/assembly/structured_config/configured_by_assembly/meta/to_configure.cml
 [product-config]: /src/lib/assembly/config/src/product_config.rs
 [mismatch-exceptions]: /build/assembly/scripts/compare_image_assembly_config_contents.py
-[session-manager-diff]: go/fuchsia-session-manager-size-limits-path-update
+[session-manager-diff]: https://goto.google.com/fuchsia-session-manager-size-limits-path-update
