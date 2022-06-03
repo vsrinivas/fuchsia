@@ -6,7 +6,7 @@ use {
     crate::core::collection::{Package, Packages},
     anyhow::{anyhow, Context, Result},
     fuchsia_archive::Reader as FarReader,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::DataModel,
@@ -28,7 +28,7 @@ use {
 #[derive(Deserialize, Serialize)]
 pub struct PackageExtractRequest {
     // The input path for the ZBI.
-    pub url: PkgUrl,
+    pub url: AbsolutePackageUrl,
     // The output directory for the extracted ZBI.
     pub output: PathBuf,
 }
@@ -63,7 +63,7 @@ impl PackageExtractRequest {
     }
 
     fn url_has_package_hash(&self) -> bool {
-        self.url.package_hash().is_some()
+        self.url.hash().is_some()
     }
 
     fn url_matches_pkg_name(&self, pkg: &Package) -> bool {
@@ -75,7 +75,7 @@ impl PackageExtractRequest {
     }
 
     fn url_matches_package_hash(&self, pkg: &Package) -> bool {
-        self.url.package_hash() == Some(&pkg.merkle)
+        self.url.hash() == Some(pkg.merkle)
     }
 }
 

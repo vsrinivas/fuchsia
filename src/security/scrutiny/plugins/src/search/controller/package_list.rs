@@ -5,7 +5,7 @@
 use {
     crate::core::collection::{Package, Packages},
     anyhow::Result,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_url::AbsolutePackageUrl,
     log::warn,
     scrutiny::{
         model::controller::{DataController, HintDataType},
@@ -21,7 +21,7 @@ static DEFAULT_HOST: &str = "fuchsia.com";
 
 #[derive(Deserialize, Serialize)]
 pub struct PackageListRequest {
-    pub url: PkgUrl,
+    pub url: AbsolutePackageUrl,
 }
 
 impl PackageListRequest {
@@ -32,8 +32,8 @@ impl PackageListRequest {
             (self.url.variant().is_none()
                 || self.url.variant() == pkg.variant.as_ref()) &&
             // Match hash iff request specifies hash.
-            (self.url.package_hash().is_none()
-                || self.url.package_hash() == Some(&pkg.merkle))
+            (self.url.hash().is_none()
+                || self.url.hash() == Some(pkg.merkle))
     }
 }
 
@@ -49,9 +49,6 @@ impl DataController for PackageListController {
                 request.url.host(),
                 DEFAULT_HOST,
             );
-        }
-        if request.url.resource().is_some() {
-            warn!("Package list controller URL contains resource, which is not checked in URL matching");
         }
         let packages = &model.get::<Packages>()?.entries;
         for package in packages.iter() {

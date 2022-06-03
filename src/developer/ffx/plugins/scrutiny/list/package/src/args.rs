@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, fuchsia_url::pkg_url::PkgUrl};
+use {argh::FromArgs, ffx_core::ffx_command, fuchsia_url::AbsolutePackageUrl};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -17,5 +17,5 @@ use {argh::FromArgs, ffx_core::ffx_command, fuchsia_url::pkg_url::PkgUrl};
 )]
 pub struct ScrutinyPackageCommand {
     #[argh(positional)]
-    pub url: PkgUrl,
+    pub url: AbsolutePackageUrl,
 }
