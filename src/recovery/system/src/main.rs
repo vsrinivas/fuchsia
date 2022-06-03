@@ -57,7 +57,8 @@ use rive_rs::{self as rive};
 use std::borrow::{Borrow, Cow};
 use std::path::Path;
 
-const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
+// 11 seconds so it can count from 10 down to 0 while displaying each tick for 1 second
+const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 11;
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.riv";
 const BG_COLOR: Color = Color::white();
 const HEADING_COLOR: Color = Color::new();
@@ -275,6 +276,8 @@ impl RenderResources {
                         }),
                     );
 
+                    // Display countdown as 1 less than ticks remaining, don't allow negative numbers
+                    let countdown_ticks = std::cmp::max(countdown_ticks as i32 - 1, 0);
                     // Place countdown text
                     builder.text(
                         face.clone(),
