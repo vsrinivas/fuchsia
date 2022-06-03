@@ -123,7 +123,42 @@ impl Resolver for QueuedResolver {
                 fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
                 Ok(dir)
             }
-            Err(e) => self.handle_cache_fallbacks(e, &pkg_url, &rewritten_url).await,
+            Err(tuf_err) => {
+                match self.handle_cache_fallbacks(&*tuf_err, &pkg_url, &rewritten_url).await {
+                    Ok(Some((hash, pkg))) => {
+                        fx_log_info!(
+                            "resolved {} as {} to {} with cache_packages due to {:#}",
+                            pkg_url,
+                            rewritten_url,
+                            hash,
+                            anyhow!(tuf_err)
+                        );
+                        Ok(pkg)
+                    }
+                    Ok(None) => {
+                        let fidl_err = tuf_err.to_resolve_error();
+                        fx_log_err!(
+                            "failed to resolve {} as {} with TUF: {:#}",
+                            pkg_url,
+                            rewritten_url,
+                            anyhow!(tuf_err)
+                        );
+                        Err(fidl_err)
+                    }
+                    Err(fallback_err) => {
+                        let fidl_err = fallback_err.to_resolve_error();
+                        fx_log_err!(
+                            "failed to resolve {} as {} with cache packages fallback: {:#}. \
+                            fallback was attempted because TUF failed with {:#}",
+                            pkg_url,
+                            rewritten_url,
+                            anyhow!(fallback_err),
+                            anyhow!(tuf_err)
+                        );
+                        Err(fidl_err)
+                    }
+                }
+            }
         };
 
         let err_str = match pkg_or_status {
@@ -167,19 +202,16 @@ impl QueuedResolver {
         (package_fetch_queue.into_future(), fetcher)
     }
 
+    // On success returns the package directory and the package's hash for easier logging (the
+    // package's hash could be obtained from the package directory but that would require reading
+    // the package's meta file).
     async fn handle_cache_fallbacks(
         &self,
-        error: Arc<GetPackageError>,
+        tuf_error: &GetPackageError,
         pkg_url: &AbsolutePackageUrl,
         rewritten_url: &AbsolutePackageUrl,
-    ) -> Result<PackageDirectory, pkg::ResolveError> {
-        // NB: Combination of {:#} formatting applied to an `anyhow::Error` allows to print the
-        // display impls of all the source errors.
-
-        let error_clone = error.clone();
-        // Declare an error to extend lifetime of errors generated inside match.
-        let outer_error;
-        let maybe_package: Result<PackageDirectory, &GetPackageError> = match &*error {
+    ) -> Result<Option<(BlobId, PackageDirectory)>, fidl_fuchsia_pkg_ext::cache::OpenError> {
+        match tuf_error {
             Cache(MerkleFor(NotFound)) => {
                 // If we can get metadata but the repo doesn't know about the package,
                 // it shouldn't be in the cache, BUT some SDK customers currently rely on this
@@ -191,23 +223,8 @@ impl QueuedResolver {
                     &self.system_cache_list,
                     &self.inspect,
                 ) {
-                    Some(blob) => match self.cache.open(blob).await {
-                        Ok(pkg) => {
-                            fx_log_info!(
-                                "resolved {} as {} to {} with cache_packages due to {:#}",
-                                pkg_url,
-                                rewritten_url,
-                                blob,
-                                anyhow!(error)
-                            );
-                            Ok(pkg)
-                        }
-                        Err(open_error) => {
-                            outer_error = Into::into(open_error);
-                            Err(&outer_error)
-                        }
-                    },
-                    None => Err(&error),
+                    Some(hash) => self.cache.open(hash).await.map(|pkg| Some((hash, pkg))),
+                    None => Ok(None),
                 }
             }
             RepoNotFound(..)
@@ -218,28 +235,12 @@ impl QueuedResolver {
             | Cache(MerkleFor(InvalidTargetPath(..)))
             | Cache(MerkleFor(NoCustomMetadata))
             | Cache(MerkleFor(SerdeError(..))) => {
-                // If we couldn't get TUF metadata, we might not have networking. Check in
-                // system/data/cache_packages (not to be confused with pkg-cache). The
-                // cache_packages manifest pkg URLs are for fuchsia.com, so do not use the
-                // rewritten URL.
+                // If we couldn't get TUF metadata, we might not have networking. Check the
+                // cache packages manifest obtained from pkg-cache.
+                // The manifest pkg URLs are for fuchsia.com, so do not use the rewritten URL.
                 match hash_from_cache_packages_manifest(&pkg_url, &self.system_cache_list) {
-                    Some(blob) => match self.cache.open(blob).await {
-                        Ok(pkg) => {
-                            fx_log_info!(
-                                "resolved {} as {} to {} with cache_packages due to {:#}",
-                                pkg_url,
-                                rewritten_url,
-                                blob,
-                                anyhow!(error)
-                            );
-                            Ok(pkg)
-                        }
-                        Err(open_error) => {
-                            outer_error = Into::into(open_error);
-                            Err(&outer_error)
-                        }
-                    },
-                    None => Err(&error),
+                    Some(hash) => self.cache.open(hash).await.map(|pkg| Some((hash, pkg))),
+                    None => Ok(None),
                 }
             }
             OpenPackage(..)
@@ -255,18 +256,9 @@ impl QueuedResolver {
                 // on a bench they expect the newest version, or a failure. cache_packages are great
                 // for running packages before networking is up, but for these error conditions,
                 // we know we have networking because we could talk to TUF.
-                Err(&error)
+                Ok(None)
             }
-        };
-        maybe_package.map_err(|e| {
-            fx_log_warn!(
-                "error resolving {} as {}: {:#}",
-                pkg_url,
-                rewritten_url,
-                anyhow!(error_clone)
-            );
-            e.to_resolve_error()
-        })
+        }
     }
 }
 
