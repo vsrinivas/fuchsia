@@ -418,7 +418,6 @@ group("cmx_allowlist") {
     "//src/media/stream_processors/test:*",
     "//src/modular:*",
     "//src/modular/bin/basemgr:*",
-    "//src/modular/bin/basemgr_launcher:*",
     "//src/modular/bin/modular_test_harness:*",
     "//src/modular/bin/sessionctl:*",
     "//src/modular/bin/sessionmgr:*",

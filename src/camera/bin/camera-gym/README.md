@@ -17,7 +17,7 @@ Arguments can be specified as shown below.
 
 ### How To Shutdown Session
 
-fx shell basemgr_launcher shutdown
+ffx component destroy /core/session-manager/session:session
 
 ### How to Run (using present_view)
 

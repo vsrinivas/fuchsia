@@ -156,7 +156,6 @@ group("core_base_packages") {
     "//src/media/playback/mediaplayer:mediaplayer",
     "//src/media/sessions:mediasession",
     "//src/modular/bin/basemgr",
-    "//src/modular/bin/basemgr_launcher:basemgr_launcher",
     "//src/modular/bin/modular_test_harness",
     "//src/modular/bin/sessionmgr",
     "//src/modular/bin/sessionmgr:dev_session_shell",

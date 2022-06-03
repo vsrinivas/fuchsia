@@ -34,45 +34,6 @@ of a running `sessionmgr`:
 ffx inspect show sessionmgr.cmx:root:config
 ```
 
-## Launching Modular with custom configuration
-
-Modular normally uses the configuration embedded in the product image
-with the `modular_config` build rule. When developing agents and shells,
-it may be useful to launch Modular with a custom configuration file.
-
-`basemgr_launcher` is a shell utility that overrides the configuration with
-one provided through stdin and starts `basemgr`. To launch a session,
-run (from host machine):
-
-```posix-terminal
-cat myconfig.json | fx shell basemgr_launcher
-```
-
-### Persistent configuration
-
-By default, configuration provided to `basemgr_launcher` is only used for a
-single instance of the session. For example, rebooting the device launches
-Modular with the default configuration from `modular_config`.
-
-The `basemgr_launcher` configuration can be persisted across session restarts
-and reboots by adding the `allow_persistent_config_override` build rule
-to a non-production build:
-
-```posix-terminal
-fx set ... --with //src/modular/build:allow_persistent_config_override
-```
-
-When enabled, `basemgr_launcher` stores configuration provided to it in
-its component cache, and `basemgr` uses it instead of the default
-configuration. Subsequent invocations of `basemgr_launcher` overwrite existing
-persistent configuration.
-
-You can delete the persistent configuration by running (from host machine):
-
-```posix-terminal
-fx shell basemgr_launcher delete_config
-```
-
 ## Example
 
 ```json5

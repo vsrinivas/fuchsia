@@ -14,7 +14,6 @@ group("tools") {
   testonly = true
   public_deps = [
     ":testing",
-    "//src/modular/bin/basemgr_launcher",
     "//src/modular/bin/sessionctl",
   ]
 }

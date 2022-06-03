@@ -21,7 +21,6 @@ fidl("fuchsia.devicesettings") {
     "//src/connectivity/network/testing/netemul/*",
     "//src/experiences/session_shells/ermine/settings/*",
     "//src/modular/bin/basemgr/*",
-    "//src/modular/bin/basemgr_launcher/*",
     "//src/modular/lib/modular_test_harness/*",
     "//src/modular/tests/*",
     "//src/settings/service/*",

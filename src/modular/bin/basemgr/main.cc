@@ -172,9 +172,6 @@ std::string GetUsage() {
 
     Specifies the base used for calculating exponential backoff delay. Value
     should be a positive integer, in minutes. Default value is 2.
-
-
-basemgr cannot be launched from the shell. Please use `basemgr_launcher` or `run`.
 )";
 }
 

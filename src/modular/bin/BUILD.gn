@@ -6,7 +6,6 @@ group("bin") {
   testonly = true
   deps = [
     "basemgr",
-    "basemgr_launcher",
     "sessionctl",
     "sessionmgr",
   ]

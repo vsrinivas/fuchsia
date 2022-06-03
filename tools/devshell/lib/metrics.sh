@@ -32,7 +32,6 @@ _METRICS_TRACK_REGEX=(
 # their args.
 _METRICS_TRACK_COMMAND_OPS=(
     "shell activity"
-    "shell basemgr_launcher"
     "shell basename"
     "shell bssl"
     "shell bt-avdtp-tool"
