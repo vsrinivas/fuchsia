@@ -32,8 +32,7 @@ use {
     fuchsia_url::{AbsolutePackageUrl, ParseError},
     fuchsia_zircon::Status,
     futures::{future::Future, stream::TryStreamExt as _},
-    std::sync::Arc,
-    std::time::Instant,
+    std::{sync::Arc, time::Instant},
     system_image::CachePackages,
 };
 
@@ -48,7 +47,7 @@ pub struct QueuedResolver {
     queue: work_queue::WorkSender<
         AbsolutePackageUrl,
         (),
-        Result<PackageDirectory, Arc<GetPackageError>>,
+        Result<(BlobId, PackageDirectory), Arc<GetPackageError>>,
     >,
     cache: pkg::cache::Client,
     base_package_index: Arc<BasePackageIndex>,
@@ -120,7 +119,10 @@ impl Resolver for QueuedResolver {
         // Fetch from TUF.
         let queued_fetch = self.queue.push(rewritten_url.clone(), ());
         let pkg_or_status = match queued_fetch.await.expect("expected queue to be open") {
-            Ok(v) => Ok(v),
+            Ok((hash, dir)) => {
+                fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
+                Ok(dir)
+            }
             Err(e) => self.handle_cache_fallbacks(e, &pkg_url, &rewritten_url).await,
         };
 
@@ -245,13 +247,13 @@ impl QueuedResolver {
             | Cache(FetchMetaFar(..))
             | Cache(Get(_)) => {
                 // We could talk to TUF and we know there's a new version of this package,
-                // but we coldn't retrieve its blobs for some reason. Refuse to fall back to
+                // but we couldn't retrieve its blobs for some reason. Refuse to fall back to
                 // cache_packages and instead return an error for the resolve, which is consistent
                 // with the path for packages which are not in cache_packages.
                 //
                 // We don't use cache_packages in production, and when developers resolve a package
                 // on a bench they expect the newest version, or a failure. cache_packages are great
-                // for running packages before networking is up, but for these two error conditions,
+                // for running packages before networking is up, but for these error conditions,
                 // we know we have networking because we could talk to TUF.
                 Err(&error)
             }
@@ -543,34 +545,20 @@ async fn hash_from_repo_or_cache(
     }
 }
 
+// On success returns the resolved package directory and the package's hash for convenient
+// logging (the package hash could be obtained from the package directory but that would
+// require reading the package's meta file).
 async fn package_from_repo(
     repo_manager: &AsyncRwLock<RepositoryManager>,
     rewritten_url: &AbsolutePackageUrl,
     cache: pkg::cache::Client,
     blob_fetcher: BlobFetcher,
-) -> Result<PackageDirectory, GetPackageError> {
-    // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
-    // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
-    // statement, so the following two lines should not be combined.
+) -> Result<(BlobId, PackageDirectory), GetPackageError> {
+    // Rust temporaries are kept alive for the duration of the innermost enclosing statement, and
+    // we don't want to hold the repo_manager lock while we fetch the package, so the following two
+    // lines should not be combined.
     let fut = repo_manager.read().await.get_package(&rewritten_url, &cache, &blob_fetcher);
-    match fut.await {
-        Ok((blob, dir)) => {
-            fx_log_info!("resolved {} to {} with TUF", rewritten_url, blob);
-            Ok(dir)
-        }
-        Err(e) => {
-            // We could talk to TUF and we know there's a new version of this package,
-            // but we coldn't retrieve its blobs for some reason. Refuse to fall back to
-            // cache_packages and instead return an error for the resolve, which is consistent with
-            // the path for packages which are not in cache_packages.
-            //
-            // We don't use cache_packages in production, and when developers resolve a package on
-            // a bench they expect the newest version, or a failure. cache_packages are great for
-            // running packages before networking is up, but for these two error conditions,
-            // we know we have networking because we could talk to TUF.
-            Err(e)
-        }
-    }
+    fut.await
 }
 
 // Attempts to lookup the hash of a package from `system_cache_list`, which is populated from the
