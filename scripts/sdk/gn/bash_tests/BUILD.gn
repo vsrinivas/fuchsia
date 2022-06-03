@@ -15,11 +15,8 @@ group("tests") {
 # This is the list of test scripts that should be run to
 # test the bash f* scripts.
 test_scripts = [
-  "femu-exec-wrapper-test.sh",
-  "femu-test.sh",
   "fpave-test.sh",
   "fuchsia-common-tests.sh",
-  "femu-osx-test.sh",
 ]
 
 # Copies the files needed for the tests to the out dir
@@ -44,11 +41,8 @@ host_script_test_data("gn_sdk_bash_tests") {
       source_base_dir = "//scripts/sdk/gn/base/bin"
       target_base_dir = "scripts/sdk/gn/base/bin"
       files = [
-        "//scripts/sdk/gn/base/bin/femu-exec-wrapper.sh",
-        "//scripts/sdk/gn/base/bin/femu.sh",
         "//scripts/sdk/gn/base/bin/fpave.sh",
         "//scripts/sdk/gn/base/bin/fuchsia-common.sh",
-        "//scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh",
       ]
     },
     {
@@ -69,20 +63,6 @@ host_script_test_data("gn_sdk_bash_tests") {
         "//tools/devshell/tests/lib/bash_test_framework.sh",
         "//tools/devshell/tests/lib/fuchsia-mock.sh",
         "//tools/devshell/tests/lib/mock.sh",
-      ]
-    },
-    {
-      source_base_dir = "//scripts"
-      target_base_dir = "scripts"
-      files = [ "//scripts/start-unsecure-internet.sh" ]
-    },
-    {
-      source_base_dir = "//tools/devshell"
-      target_base_dir = "tools/devshell"
-      files = [
-        "//tools/devshell/emu",
-        "//tools/devshell/lib/fvm.sh",
-        "//tools/devshell/lib/emu-ifup-macos.sh",
       ]
     },
     {

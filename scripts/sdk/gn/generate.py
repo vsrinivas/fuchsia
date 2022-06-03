@@ -32,39 +32,6 @@ from frontend import Frontend
 import template_model as model
 
 from collections import namedtuple
-# Arguments for self.copy_file. Using the 'src' path, a relative path will be
-# calculated from 'base', then the file is copied to that path under 'dest'.
-# E.g. to copy {in}/foo/bar/baz to {out}/blam/baz, use
-#   CopyArgs(src = 'foo/bar/baz', base = 'foo/bar', dest = 'blam')
-CopyArgs = namedtuple('CopyArgs', ['src', 'base', 'dest'])
-
-# Any extra files which need to be added manually to the SDK can be specified
-# here. Entries are structured as args for self.copy_file.
-EXTRA_COPY = [
-    # Copy various files to support femu.sh from implementation of fx emu.
-    # See base/bin/femu-meta.json for more detail about the files needed.
-    # {fuchsia}/tools/devshell/emu -> {out}/bin/devshell/emu
-    CopyArgs(
-        src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
-        base=os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest='bin'),
-    # {fuchsia}/tools/devshell/lib/fvm.sh -> {out}/bin/devshell/lib/fvm.sh
-    CopyArgs(
-        src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
-        base=os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest='bin'),
-    # {fuchsia}/scripts/start-unsecure-internet.sh -> {out}/bin/start-unsecure-internet.sh
-    CopyArgs(
-        src=os.path.join(FUCHSIA_ROOT, 'scripts', 'start-unsecure-internet.sh'),
-        base=os.path.join(FUCHSIA_ROOT, 'scripts'),
-        dest='bin'),
-    # {fuchsia}/tools/devshell/lib/emu-ifup-macos.sh -> {out}/bin/devshell/lib/emu-ifup-macos.sh
-    CopyArgs(
-        src=os.path.join(
-            FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'emu-ifup-macos.sh'),
-        base=os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest='bin'),
-]
 
 # Capture the version of required prebuilts from the jiri manifest. Note
 # that ${platform} is actually part of the XML package name, so should
@@ -161,10 +128,6 @@ class GNBuilder(Frontend):
         # Copy the common files. The destination of these files is relative to
         # the root of the fuchsia_sdk.
         copy_tree(self.local('base'), self.output, allow_overwrite=False)
-        # Copy any additional files that would normally not be included
-        for each in EXTRA_COPY:
-            self.copy_file(
-                each.src, each.base, each.dest, allow_overwrite=False)
 
         self.write_additional_files()
         # Find CIPD prebuilt gn.
