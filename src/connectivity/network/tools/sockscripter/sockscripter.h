@@ -78,10 +78,9 @@ class SockScripter {
   bool Shutdown(char* arg);
   bool Connect(char* arg);
   bool Disconnect(char* arg);
-  bool JoinOrDrop4(const char* func, char* arg, int optname, const char* optname_str);
   bool Join4(char* arg);
   bool Drop4(char* arg);
-  bool JoinOrDrop6(const char* func, char* arg, int optname, const char* optname_str);
+  bool Block4(char* arg);
   bool Join6(char* arg);
   bool Drop6(char* arg);
   bool Listen(char* arg);
@@ -99,6 +98,9 @@ class SockScripter {
   bool Sleep(char* arg);
 
  private:
+  bool JoinOrDrop4(const char* func, char* arg, int optname, const char* optname_str);
+  bool JoinOrDrop6(const char* func, char* arg, int optname, const char* optname_str);
+
   int sockfd_ = -1;
   int tcp_listen_socket_fd_ = -1;
   int snd_flags_ = 0;

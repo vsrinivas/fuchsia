@@ -155,6 +155,9 @@ const struct Command {
      "join IPv4 mcast group (IP_ADD_MEMBERSHIP) on local interface", &SockScripter::Join4},
     {"drop4", "<mcast-ip>-<local-intf-Addr>",
      "drop IPv4 mcast group (IP_DROP_MEMBERSHIP) on local interface", &SockScripter::Drop4},
+    {"block4", "<mcast-ip>-<source-ip>-<local-intf-ip>",
+     "block IPv4 packets from source sent to mcast group on local interface (IP_BLOCK_SOURCE)",
+     &SockScripter::Block4},
     {"join6", "<mcast-ip>-<local-intf-id>",
      "join IPv6 mcast group (IPV6_ADD_MEMBERSHIP/IPV6_JOIN_GROUP) on local interface",
      &SockScripter::Join6},
@@ -846,6 +849,52 @@ bool SockScripter::Join4(char* arg) {
 
 bool SockScripter::Drop4(char* arg) {
   return JoinOrDrop4(__FUNCTION__, arg, IP_DROP_MEMBERSHIP, "IP_DROP_MEMBERSHIP");
+}
+
+bool SockScripter::Block4(char* arg) {
+  std::string saved_arg(arg);
+  char* mcast_ip_str = strtok(arg, "-");
+  char* source_ip_str = strtok(nullptr, "-");
+  char* if_ip_str = strtok(nullptr, "-");
+
+  if (mcast_ip_str == nullptr || source_ip_str == nullptr || if_ip_str == nullptr) {
+    LOG(ERROR) << "Error-Block4 got arg='" << saved_arg << "', "
+               << "needs to be <mcast-ip>-<source-ip>-<local-intf-id>";
+    return false;
+  }
+
+  std::optional mcast_addr = Parse(mcast_ip_str, std::nullopt);
+  if (!mcast_addr.has_value() || mcast_addr.value().ss_family != AF_INET) {
+    LOG(ERROR) << "Error-Block4 got invalid mcast address='" << mcast_ip_str << "'!";
+    return false;
+  }
+
+  std::optional source_addr = Parse(source_ip_str, std::nullopt);
+  if (!source_addr.has_value() || source_addr.value().ss_family != AF_INET) {
+    LOG(ERROR) << "Error-Block4 got invalid source address='" << source_ip_str << "'!";
+    return false;
+  }
+
+  std::optional if_addr = Parse(if_ip_str, std::nullopt);
+  if (!if_addr.has_value() || if_addr.value().ss_family != AF_INET) {
+    LOG(ERROR) << "Error-Block4 got invalid interface address='" << if_ip_str << "'!";
+    return false;
+  }
+
+  struct ip_mreq_source mreq;
+  mreq.imr_multiaddr = reinterpret_cast<sockaddr_in*>(&mcast_addr.value())->sin_addr;
+  mreq.imr_interface = reinterpret_cast<sockaddr_in*>(&if_addr.value())->sin_addr;
+  mreq.imr_sourceaddr = reinterpret_cast<sockaddr_in*>(&source_addr.value())->sin_addr;
+
+  if (api_->setsockopt(sockfd_, IPPROTO_IP, IP_BLOCK_SOURCE, &mreq, sizeof(mreq)) < 0) {
+    LOG(ERROR) << "Error-Setting IP_BLOCK_SOURCE failed-[" << errno << "]" << strerror(errno);
+    return false;
+  }
+
+  LOG(INFO) << "Set IP_BLOCK_SOURCE for " << Format(mcast_addr.value()) << " source "
+            << Format(source_addr.value()) << " iface " << Format(if_addr.value()) << ".";
+
+  return true;
 }
 
 bool SockScripter::JoinOrDrop6(const char* func, char* arg, int optname, const char* optname_str) {

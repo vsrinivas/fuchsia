@@ -357,15 +357,17 @@ TEST(CommandLine, TcpShutdown) {
   EXPECT_EQ(test.RunCommandLine("tcp shutdown wrd"), 0);
 }
 
-TEST(CommandLine, JoinDropMcast) {
+TEST(CommandLine, JoinBlockDropMcast) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
   EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)).WillOnce(testing::Return(kSockFd));
   struct ip_mreqn expected = {
       .imr_ifindex = 1,
   };
+  in_addr_t expected_source_addr;
   ASSERT_EQ(1, inet_pton(AF_INET, "224.0.0.1", &expected.imr_multiaddr)) << strerror(errno);
   ASSERT_EQ(1, inet_pton(AF_INET, "192.168.0.1", &expected.imr_address)) << strerror(errno);
+  ASSERT_EQ(1, inet_pton(AF_INET, "8.8.8.8", &expected_source_addr));
   EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_ADD_MEMBERSHIP, testing::_, testing::_))
       .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
                             socklen_t optlen) {
@@ -374,6 +376,17 @@ TEST(CommandLine, JoinDropMcast) {
         EXPECT_EQ(mreq.imr_multiaddr.s_addr, expected.imr_multiaddr.s_addr);
         EXPECT_EQ(mreq.imr_address.s_addr, expected.imr_address.s_addr);
         EXPECT_EQ(mreq.imr_ifindex, expected.imr_ifindex);
+        return 0;
+      });
+  EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_BLOCK_SOURCE, testing::_, testing::_))
+      .WillOnce([&expected, &expected_source_addr](testing::Unused, testing::Unused,
+                                                   testing::Unused, const void* optval,
+                                                   socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(expected));
+        const auto& mreq = *reinterpret_cast<const struct ip_mreq_source*>(optval);
+        EXPECT_EQ(mreq.imr_multiaddr.s_addr, expected.imr_multiaddr.s_addr);
+        EXPECT_EQ(mreq.imr_sourceaddr.s_addr, expected_source_addr);
+        EXPECT_EQ(mreq.imr_interface.s_addr, expected.imr_address.s_addr);
         return 0;
       });
   EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_DROP_MEMBERSHIP, testing::_, testing::_))
@@ -386,7 +399,8 @@ TEST(CommandLine, JoinDropMcast) {
         EXPECT_EQ(mreq.imr_ifindex, expected.imr_ifindex);
         return 0;
       });
-  EXPECT_EQ(test.RunCommandLine("udp join4 224.0.0.1-192.168.0.1%1 drop4 224.0.0.1-192.168.0.1%1"),
+  EXPECT_EQ(test.RunCommandLine("udp join4 224.0.0.1-192.168.0.1%1 block4 "
+                                "224.0.0.1-8.8.8.8-192.168.0.1 drop4 224.0.0.1-192.168.0.1%1"),
             0);
 }
 
