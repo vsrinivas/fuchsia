@@ -770,7 +770,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       }
 
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
-      zx_status_t status = MountData(&options, std::move(block_device));
+      zx_status_t status = MountData(options, std::move(block_device));
 
       if (copy_thread.joinable())
         copy_thread.join();
@@ -796,15 +796,16 @@ zx_status_t BlockDevice::MountFilesystem() {
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
-zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::channel block_device) {
+zx_status_t BlockDevice::MountData(const fs_management::MountOptions& options,
+                                   zx::channel block_device) {
   const uint8_t* guid = GetTypeGuid().value.data();
 
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    return mounter_->MountData(std::move(block_device), *options, format_);
+    return mounter_->MountData(std::move(block_device), options, format_);
   } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
-    return mounter_->MountDurable(std::move(block_device), *options);
+    return mounter_->MountDurable(std::move(block_device), options);
   }
   FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
   return ZX_ERR_WRONG_TYPE;
