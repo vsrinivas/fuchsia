@@ -49,10 +49,6 @@ python_binary("hermetic_inputs_for_update_and_flash") {
   main_source = "hermetic_inputs_for_update_and_flash.py"
 }
 
-python_binary("package_list") {
-  main_source = "package_list.py"
-}
-
 group("tests") {
   testonly = true
   deps = [

@@ -30,9 +30,6 @@ import("//build/zircon/tools.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
 
-assert(current_toolchain == default_toolchain,
-       "//build/images is only valid in the Fuchsia toolchain")
-
 assert(
     bootfs_only == use_bringup_assembly,
     "use_bringup_assembly is replacing bootfs_only, and MUST always be the same value")
