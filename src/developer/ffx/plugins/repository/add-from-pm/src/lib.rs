@@ -9,14 +9,14 @@ use {
     ffx_repository_add_from_pm_args::AddFromPmCommand,
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::RepositoryUrl,
     std::convert::TryInto,
 };
 
 #[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     // Validate that we can construct a valid repository url from the name.
-    let repo_url = RepoUrl::new(cmd.repository.to_string())
+    let repo_url = RepositoryUrl::parse_host(cmd.repository.to_string())
         .map_err(|err| ffx_error!("invalid repository name for {:?}: {}", cmd.repository, err))?;
     let repo_name = repo_url.host();
 

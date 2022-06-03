@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_pkg as pkg,
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::RepositoryUrl,
     futures::{
         future::Shared,
         io::Cursor,
@@ -220,8 +220,9 @@ impl Repository {
         backend: Box<dyn RepositoryBackend + Send + Sync>,
     ) -> Result<Self, Error> {
         // Validate that the name can be used as a repo url.
-        let repo_url = RepoUrl::new(name.to_string()).context("creating repository")?;
-        let name = repo_url.host().to_string();
+        let repo_url =
+            RepositoryUrl::parse_host(name.to_string()).context("creating repository")?;
+        let name = repo_url.into_host();
 
         let tuf_repo = backend.get_tuf_repo()?;
         let tuf_client = get_tuf_client(tuf_repo).await?;
