@@ -4,7 +4,6 @@
 
 group("lowpan") {
   deps = [
-    "config",
     "drivers",
     "lib",
     "service",
@@ -16,7 +15,6 @@ group("lowpan") {
 # loadable modules which include drivers). See https://fxbug.dev/91860
 group("lowpan_for_components") {
   deps = [
-    "config",
     "drivers",
     "service",
   ]
