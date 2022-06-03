@@ -16,6 +16,9 @@ all_font_file_paths = []
 # Default prefix for the manifest file name in /config/data.
 _default_manifest_prefix = "all"
 
+# Default name of the Fuchsia package containing the font service component.
+_default_font_service_pkg = "fonts"
+
 foreach(font_pkgs_path, font_pkgs_paths) {
   parsed = {
   }
@@ -80,6 +83,13 @@ foreach(font_pkgs_path, font_pkgs_paths) {
 #     pkg_resolver, which doesn't support loading arbitrary font package
 #     registry files.
 #     Type: boolean
+#
+#   font_service_pkg
+#     Optional: Name of the Fuchsia package containing the font service
+#     component, used in `config_data` rules to provide data files to that
+#     package.
+#     Default: "fonts"
+#     Type: string
 template("font_collection") {
   forward_variables_from(invoker,
                          [
@@ -88,6 +98,7 @@ template("font_collection") {
                            "local_asset_names",
                            "product_config_path",
                            "manifest_prefix",
+                           "font_service_pkg",
                          ])
 
   if (!defined(font_packages)) {
@@ -100,6 +111,10 @@ template("font_collection") {
 
   if (!defined(manifest_prefix)) {
     manifest_prefix = _default_manifest_prefix
+  }
+
+  if (!defined(font_service_pkg)) {
+    font_service_pkg = _default_font_service_pkg
   }
 
   if (!defined(invoker.empty)) {
@@ -222,7 +237,7 @@ template("font_collection") {
   font_manifest_config_data_label = "${target_name}_font_manifest_config_data"
   config_data(font_manifest_config_data_label) {
     forward_variables_from(invoker, [ "testonly" ])
-    for_pkg = "fonts"
+    for_pkg = font_service_pkg
     deps = [ ":${manifest_file_label}" ]
     sources = get_target_outputs(":${manifest_file_label}")
     outputs = [ "${manifest_prefix}.font_manifest.json" ]
@@ -295,9 +310,24 @@ template("font_package_group") {
 #   asset_names
 #     Required: List of font file names, e.g. [ "Roboto-Regular.ttf" ]
 #     Type: list(file)
+#
+#   font_service_pkg
+#     Optional: Name of the Fuchsia package containing the font service
+#     component, used in `config_data` rules to provide data files to that
+#     package.
+#     Default: "fonts"
+#     Type: string
 template("local_font_bundle") {
-  forward_variables_from(invoker, [ "asset_names" ])
+  forward_variables_from(invoker,
+                         [
+                           "asset_names",
+                           "font_service_pkg",
+                         ])
   assert(defined(asset_names))
+
+  if (!defined(font_service_pkg)) {
+    font_service_pkg = _default_font_service_pkg
+  }
 
   local_asset_paths = []
   not_found_asset_names = []
@@ -326,7 +356,7 @@ template("local_font_bundle") {
   config_data_label = "_${target_name}_config_data"
   config_data(config_data_label) {
     forward_variables_from(invoker, [ "testonly" ])
-    for_pkg = "fonts"
+    for_pkg = font_service_pkg
     sources = local_asset_paths
     outputs = [ "assets/{{source_file_part}}" ]
   }
