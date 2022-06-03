@@ -15,7 +15,7 @@ use {
     fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_url::RepositoryUrl,
     fuchsia_zircon::Status,
     futures::{channel::oneshot, prelude::*},
     parking_lot::Mutex,
@@ -166,7 +166,7 @@ fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> fio::DirectoryProxy {
     client_end.into_proxy().unwrap()
 }
 
-fn repo_url() -> RepoUrl {
+fn repo_url() -> RepositoryUrl {
     "fuchsia-pkg://fuchsia.com".parse().unwrap()
 }
 
