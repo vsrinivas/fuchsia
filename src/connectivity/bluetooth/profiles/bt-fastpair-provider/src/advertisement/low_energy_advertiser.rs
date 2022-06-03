@@ -21,9 +21,8 @@ use futures::{ready, Future, FutureExt};
 use std::convert::TryFrom;
 use tracing::{debug, info, trace, warn};
 
-use crate::error::Error;
 use crate::gatt_service::FAST_PAIR_SERVICE_UUID;
-use crate::types::{AccountKeyList, ModelId};
+use crate::types::{AccountKeyList, Error, ModelId};
 
 /// Item type returned by `<LowEnergyAdvertiser as Stream>::poll_next`.
 #[derive(Debug)]

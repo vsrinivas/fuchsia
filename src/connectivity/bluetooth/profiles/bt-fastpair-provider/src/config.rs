@@ -5,9 +5,8 @@
 use p256::SecretKey;
 use std::convert::TryFrom;
 
-use crate::error::Error;
-use crate::keys::{private_key_from_bytes, LOCAL_PRIVATE_KEY_BYTES};
-use crate::types::ModelId;
+use crate::types::keys::{private_key_from_bytes, LOCAL_PRIVATE_KEY_BYTES};
+use crate::types::{Error, ModelId};
 
 // TODO(fxbug.dev/97159): Load this from the structured configuration library.
 #[derive(Clone, Debug, PartialEq)]

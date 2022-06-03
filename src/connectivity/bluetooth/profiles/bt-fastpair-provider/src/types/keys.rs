@@ -6,8 +6,7 @@ use elliptic_curve::sec1::FromEncodedPoint;
 use p256::{EncodedPoint, FieldBytes, PublicKey, SecretKey};
 use sha2::{Digest, Sha256};
 
-use crate::error::Error;
-use crate::types::AccountKey;
+use crate::types::{AccountKey, Error};
 
 // TODO(fxbug.dev/97159): The local Private Key is registered on a per-product basis. Load this
 // from the structured configuration library. To simplify local development, this value is

@@ -7,7 +7,12 @@ use aes::{Aes128, BlockDecrypt, BlockEncrypt, NewBlockCipher};
 use std::convert::{TryFrom, TryInto};
 
 use crate::advertisement::bloom_filter;
-use crate::error::Error;
+
+mod error;
+pub mod keys;
+pub mod packets;
+
+pub use error::Error;
 
 /// Represents the 24-bit Model ID assigned to a Fast Pair device upon registration.
 #[derive(Debug, Copy, Clone, PartialEq)]

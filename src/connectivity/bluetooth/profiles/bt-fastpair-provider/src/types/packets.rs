@@ -8,9 +8,8 @@ use packet_encoding::pub_decodable_enum;
 use std::convert::{TryFrom, TryInto};
 use tracing::debug;
 
-use crate::error::Error;
-use crate::keys::public_key_from_bytes;
-use crate::types::AccountKey;
+use crate::types::keys::public_key_from_bytes;
+use crate::types::{AccountKey, Error};
 
 /// Attempts to parse the provided key-based pairing `request`.
 /// Returns the encrypted portion of the request and an optional Public Key on success.
@@ -119,7 +118,7 @@ pub fn decrypt_key_based_pairing_request(
 pub(crate) mod tests {
     use super::*;
 
-    use crate::keys::tests::example_aes_key;
+    use crate::types::keys::tests::{bob_public_key_bytes, example_aes_key};
     use assert_matches::assert_matches;
 
     #[test]
@@ -161,7 +160,7 @@ pub(crate) mod tests {
     #[test]
     fn parse_request_with_valid_public_key() {
         let mut buf = vec![1u8; 80];
-        buf[16..].copy_from_slice(&crate::keys::tests::bob_public_key_bytes()[..]);
+        buf[16..].copy_from_slice(&bob_public_key_bytes()[..]);
         let (parsed, key) = parse_key_based_pairing_request(buf.clone()).expect("can parse");
         assert_eq!(parsed, &buf[..16]);
         assert_matches!(key, Some(_));

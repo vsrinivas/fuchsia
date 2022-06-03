@@ -6,8 +6,7 @@ use sha2::{Digest, Sha256};
 use std::convert::TryInto;
 use tracing::debug;
 
-use crate::error::Error;
-use crate::types::AccountKey;
+use crate::types::{AccountKey, Error};
 
 /// Returns a byte array created by applying a variable-length Bloom Filter to the provided list of
 /// Account Keys.

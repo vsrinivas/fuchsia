@@ -10,15 +10,14 @@ use tracing::{debug, info, warn};
 
 use crate::advertisement::LowEnergyAdvertiser;
 use crate::config::Config;
-use crate::error::Error;
 use crate::gatt_service::{GattRequest, GattService, GattServiceResponder};
 use crate::host_watcher::{HostEvent, HostWatcher};
-use crate::keys::aes_from_anti_spoofing_and_public;
-use crate::packets::{
+use crate::types::keys::aes_from_anti_spoofing_and_public;
+use crate::types::packets::{
     decrypt_key_based_pairing_request, parse_key_based_pairing_request, KeyBasedPairingAction,
     KeyBasedPairingRequest,
 };
-use crate::types::{AccountKey, AccountKeyList};
+use crate::types::{AccountKey, AccountKeyList, Error};
 
 /// The toplevel server that manages the current state of the Fast Pair Provider service.
 /// Owns the interfaces for interacting with various BT system services.
@@ -245,8 +244,8 @@ mod tests {
 
     use crate::gatt_service::{tests::setup_gatt_service, KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE};
     use crate::host_watcher::tests::example_host;
-    use crate::packets::tests::KEY_BASED_PAIRING_REQUEST;
-    use crate::types::ModelId;
+    use crate::types::keys;
+    use crate::types::{packets::tests::KEY_BASED_PAIRING_REQUEST, ModelId};
 
     async fn setup_provider(
     ) -> (Provider, PeripheralRequestStream, LocalServiceProxy, HostWatcherRequestStream) {
@@ -417,8 +416,8 @@ mod tests {
 
         // Initiating a Key-based pairing request should succeed. The buffer is encrypted by the key
         // defined in the GFPS.
-        let mut encrypted_buf = crate::keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut crate::keys::tests::bob_public_key_bytes());
+        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         pairing_gatt_write_results_in_expected_notification(
             &gatt,
             encrypted_buf,
@@ -435,8 +434,8 @@ mod tests {
 
         // Initiating a valid key-based pairing request should be rejected.
         // Because there's no active host, we don't expect any subsequent GATT notification.
-        let mut encrypted_buf = crate::keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut crate::keys::tests::bob_public_key_bytes());
+        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         pairing_gatt_write_results_in_expected_notification(
             &gatt,
             encrypted_buf,
@@ -459,8 +458,8 @@ mod tests {
         // Initiating a key-based pairing request with public key should be handled gracefully.
         // Because the local host is not discoverable, the write request should be rejected and no
         // subsequent GATT notification.
-        let mut encrypted_buf = crate::keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
-        encrypted_buf.append(&mut crate::keys::tests::bob_public_key_bytes());
+        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
         pairing_gatt_write_results_in_expected_notification(
             &gatt,
             encrypted_buf,
@@ -482,7 +481,7 @@ mod tests {
 
         // Initiating a key-based pairing request should be handled gracefully. Because there are no
         // saved Account Keys, pairing should not continue.
-        let encrypted_buf = crate::keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
+        let encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
         pairing_gatt_write_results_in_expected_notification(
             &gatt,
             encrypted_buf,
@@ -503,12 +502,12 @@ mod tests {
         );
         // Two keys - one key should work, other is random.
         provider.account_keys.keys.push(AccountKey::new([2; 16]));
-        provider.account_keys.keys.push(crate::keys::tests::example_aes_key());
+        provider.account_keys.keys.push(keys::tests::example_aes_key());
         let _provider_server = server_task(provider);
 
         // Initiating a key-based pairing request should succeed because there is a saved Account
         // Key that can successfully decrypt the message.
-        let encrypted_buf = crate::keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
+        let encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
         pairing_gatt_write_results_in_expected_notification(
             &gatt,
             encrypted_buf,

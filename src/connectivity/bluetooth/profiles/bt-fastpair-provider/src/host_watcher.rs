@@ -16,7 +16,7 @@ use futures::{
 use std::convert::TryFrom;
 use tracing::{info, trace};
 
-use crate::error::Error;
+use crate::types::Error;
 
 /// Item type returned by `<HostWatcher as Stream>::poll_next`.
 #[derive(Clone, Copy, Debug, PartialEq)]

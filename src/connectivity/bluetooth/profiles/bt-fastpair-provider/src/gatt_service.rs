@@ -22,7 +22,7 @@ use std::str::FromStr;
 use tracing::{trace, warn};
 
 use crate::config::Config;
-use crate::error::Error;
+use crate::types::Error;
 
 /// The UUID of the Fast Pair Service.
 pub const FAST_PAIR_SERVICE_UUID: u16 = 0xFE2C;

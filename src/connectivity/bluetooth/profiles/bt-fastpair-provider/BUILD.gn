@@ -44,14 +44,14 @@ rustc_binary("bin") {
     "src/advertisement/low_energy_advertiser.rs",
     "src/advertisement/mod.rs",
     "src/config.rs",
-    "src/error.rs",
     "src/gatt_service.rs",
     "src/host_watcher.rs",
-    "src/keys.rs",
     "src/main.rs",
-    "src/packets.rs",
     "src/provider.rs",
-    "src/types.rs",
+    "src/types/error.rs",
+    "src/types/keys.rs",
+    "src/types/mod.rs",
+    "src/types/packets.rs",
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
