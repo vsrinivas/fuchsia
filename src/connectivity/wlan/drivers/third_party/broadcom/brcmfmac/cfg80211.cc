@@ -2164,10 +2164,10 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
       zxlogf(
           INFO,
           "FW Err Counts: Tx: Err Rate: %.2f retrans: %u err %u serr %u nobuf %u runt %u uflo %u "
-          "phyerr %u fail %u",
+          "phyerr %u fail %u noassoc %u noack %u",
           tx_err_rate * 100.0, counters->txretrans, counters->txerror, counters->txserr,
           counters->txnobuf, counters->txrunt, counters->txuflo, counters->txphyerr,
-          counters->txfail);
+          counters->txfail, counters->txnoassoc, counters->txnoack);
       zxlogf(
           INFO,
           "FW Err Counts: Rx: Err Rate: %.2f err %u oflo %u nobuf %u runt %u fragerr %u badplcp %u "
