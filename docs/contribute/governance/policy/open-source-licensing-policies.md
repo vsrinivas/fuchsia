@@ -6,7 +6,7 @@ This document describes open source licenses and related policies in the Fuchsia
 
 All Fuchsia project code is hosted on
 [https://fuchsia.googlesource.com/](https://fuchsia.googlesource.com/). Fuchsia
-project file headers will list `Copyright <year> The Fuchsia Authors`.
+project file headers will list `Copyright <year_of_file_creation> The Fuchsia Authors`.
 
 ## Licenses
 
