@@ -180,21 +180,32 @@ mod tests {
             &format!("fuchsia-pkg://foo.bar/qwe/0?hash={hash}"),
         )
         .unwrap()]);
+        let mut bytes = vec![];
+
+        let () = packages.serialize(&mut bytes).unwrap();
+
         assert_eq!(
-            serde_json::to_value(Packages {
-                version: "1".to_string(),
-                content: packages.contents.clone()
-            })
-            .unwrap(),
+            serde_json::from_slice::<serde_json::Value>(bytes.as_slice()).unwrap(),
             serde_json::json!({
                 "version": "1",
                 "content": vec![
-                    "fuchsia-pkg://foo.bar/qwe/0?hash=0000000000000000000000000000000000000000000000000000000000000000"],
+                    "fuchsia-pkg://foo.bar/qwe/0?hash=0000000000000000000000000000000000000000000000000000000000000000"
+                    ],
             })
         );
+    }
 
+    #[test]
+    fn test_serialize_deserialize_round_trip() {
+        let hash = fuchsia_hash::Hash::from([0; 32]);
+        let packages = CachePackages::from_entries(vec![PinnedAbsolutePackageUrl::parse(
+            &format!("fuchsia-pkg://foo.bar/qwe/0?hash={hash}"),
+        )
+        .unwrap()]);
         let mut bytes = vec![];
+
         packages.serialize(&mut bytes).unwrap();
+
         assert_eq!(CachePackages::from_json(&bytes).unwrap(), packages);
     }
 }
