@@ -107,7 +107,7 @@ StaticSingleFidlMethodAnnotationProvider<Interface, method, Convert>::
                                              std::unique_ptr<backoff::Backoff> backoff)
     : dispatcher_(dispatcher), services_(std::move(services)), backoff_(std::move(backoff)) {
   ptr_.set_error_handler([this](const zx_status_t status) {
-    FX_LOGS(WARNING) << "Lost connection to " << Interface::Name_;
+    FX_PLOGS(WARNING, status) << "Lost connection to " << Interface::Name_;
     async::PostDelayedTask(
         dispatcher_,
         [self = ptr_factory_.GetWeakPtr()] {
