@@ -86,7 +86,6 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zbi::{ZbiParser, ZbiType},
     fuchsia_zircon::{self as zx, Clock, HandleBased, Resource},
-    futures::lock::Mutex,
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
@@ -923,10 +922,7 @@ impl BuiltinEnvironment {
 
     /// Setup a ServiceFs that contains debug capabilities like the root Hub, LifecycleController,
     /// and EventSource.
-    async fn create_service_fs<'a>(
-        &self,
-        debug_event_source_tasks: Arc<Mutex<Vec<fasync::Task<()>>>>,
-    ) -> Result<ServiceFs<ServiceObj<'a, ()>>, Error> {
+    async fn create_service_fs<'a>(&self) -> Result<ServiceFs<ServiceObj<'a, ()>>, Error> {
         if let None = self.hub {
             bail!("Hub must be enabled if OutDirContents is not `None`");
         }
@@ -969,14 +965,18 @@ impl BuiltinEnvironment {
         // root and offer it via ServiceFs to the outside world.
         if self.execution_mode.is_debug() {
             let event_source = self.event_source_factory.create_for_debug().await?;
+            let scope = self.model.top_instance().task_scope().clone();
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
-                let debug_event_source_tasks = debug_event_source_tasks.clone();
-
+                let scope = scope.clone();
+                // Spawn a short-lived task that adds the EventSource serve to
+                // component manager's task scope.
                 fasync::Task::spawn(async move {
-                    let task = event_source.serve(stream);
-                    let mut tasks = debug_event_source_tasks.lock().await;
-                    tasks.push(task);
+                    scope
+                        .add_task(async move {
+                            event_source.serve(stream).await;
+                        })
+                        .await;
                 })
                 .detach();
             });
@@ -992,12 +992,8 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to a provided channel
-    async fn bind_service_fs(
-        &mut self,
-        channel: zx::Channel,
-        debug_event_source_tasks: Arc<Mutex<Vec<fasync::Task<()>>>>,
-    ) -> Result<(), Error> {
-        let mut service_fs = self.create_service_fs(debug_event_source_tasks).await?;
+    async fn bind_service_fs(&mut self, channel: zx::Channel) -> Result<(), Error> {
+        let mut service_fs = self.create_service_fs().await?;
 
         // Bind to the channel
         service_fs
@@ -1016,23 +1012,16 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to the outgoing directory of this component, if it exists.
-    pub async fn bind_service_fs_to_out(
-        &mut self,
-        debug_event_source_tasks: Arc<Mutex<Vec<fasync::Task<()>>>>,
-    ) -> Result<(), Error> {
+    pub async fn bind_service_fs_to_out(&mut self) -> Result<(), Error> {
         if let Some(handle) = fuchsia_runtime::take_startup_handle(
             fuchsia_runtime::HandleType::DirectoryRequest.into(),
         ) {
-            self.bind_service_fs(zx::Channel::from(handle), debug_event_source_tasks).await?;
+            self.bind_service_fs(zx::Channel::from(handle)).await?;
         } else {
             // The component manager running on startup does not get a directory handle. If it was
             // to run as a component itself, it'd get one. When we don't have a handle to the out
             // directory, create one.
-            self.bind_service_fs(
-                zx::Channel::create().expect("make channel").1,
-                debug_event_source_tasks,
-            )
-            .await?;
+            self.bind_service_fs(zx::Channel::create().unwrap().1).await?;
         }
         Ok(())
     }
@@ -1043,9 +1032,8 @@ impl BuiltinEnvironment {
         // Create a channel that ServiceFs will operate on
         let (service_fs_proxy, service_fs_server_end) =
             create_proxy::<fio::DirectoryMarker>().unwrap();
-        let tasks = Arc::new(Mutex::new(vec![]));
 
-        self.bind_service_fs(service_fs_server_end.into_channel(), tasks).await?;
+        self.bind_service_fs(service_fs_server_end.into_channel()).await?;
 
         // Open the Hub from within ServiceFs
         let (hub_client_end, hub_server_end) = create_endpoints::<fio::DirectoryMarker>().unwrap();
@@ -1107,21 +1095,14 @@ impl BuiltinEnvironment {
             }
             OutDirContents::Hub => {
                 info!("Field `out_dir_contents` is set to Hub.");
-                let debug_event_source_tasks = Arc::new(Mutex::new(vec![]));
-                self.bind_service_fs_to_out(debug_event_source_tasks.clone()).await?;
+                self.bind_service_fs_to_out().await?;
                 self.model.start().await;
                 component::health().set_ok();
                 self.wait_for_root_stop().await;
 
-                // Stop serving the out directory, so that more connections to the EventSource
-                // protocol cannot be made.
+                // Stop serving the out directory, so that more connections to debug capabilities
+                // cannot be made.
                 drop(self._service_fs_task.take());
-
-                // Wait for all debug event source streams to close.
-                // This is important for tests because some events may not arrive in a timely manner
-                // because component manager exits immediately after the root component stops.
-                let mut tasks = debug_event_source_tasks.lock().await;
-                futures::future::join_all(tasks.drain(..)).await;
                 Ok(())
             }
             OutDirContents::Svc => {

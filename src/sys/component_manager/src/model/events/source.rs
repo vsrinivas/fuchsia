@@ -25,8 +25,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     std::{path::PathBuf, sync::Weak},
 };
 
@@ -106,10 +105,8 @@ impl EventSource {
     }
 
     /// Serves a `EventSource` FIDL protocol.
-    pub fn serve(self, stream: fsys::EventSourceRequestStream) -> fasync::Task<()> {
-        fasync::Task::spawn(async move {
-            serve_event_source_sync(self, stream).await;
-        })
+    pub async fn serve(self, stream: fsys::EventSourceRequestStream) {
+        serve_event_source_sync(self, stream).await;
     }
 }
 
