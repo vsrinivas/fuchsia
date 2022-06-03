@@ -304,9 +304,9 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
             &PeerChannelState::Connecting => {}
             &PeerChannelState::Disconnected => {
                 // Have we discovered service profile data on the peer?
-                if peer_guard.discovered() && peer_guard.attempt_connection {
+                if peer_guard.discovered() && peer_guard.attempt_control_connection {
                     trace!("Starting make_connection task for peer {}", id);
-                    peer_guard.attempt_connection = false;
+                    peer_guard.attempt_control_connection = false;
                     peer_guard.control_channel.connecting();
                     make_control_channel_task = fasync::Task::spawn(make_connection(
                         peer.clone(),
@@ -333,8 +333,12 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
             &PeerChannelState::Connecting => {}
             &PeerChannelState::Disconnected => {
                 browse_channel_task = None;
-                if peer_guard.control_connected() && peer_guard.supports_browsing() {
+                if peer_guard.control_connected()
+                    && peer_guard.supports_browsing()
+                    && peer_guard.attempt_browse_connection
+                {
                     trace!("Starting make_connection task for browse channel on peer {}", id);
+                    peer_guard.attempt_browse_connection = false;
                     peer_guard.browse_channel.connecting();
                     make_browse_channel_task = fasync::Task::spawn(make_connection(
                         peer.clone(),

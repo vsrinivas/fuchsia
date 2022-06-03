@@ -201,10 +201,17 @@ struct RemotePeer {
     /// processing this peer.
     state_change_listener: StateChangeListener,
 
-    /// Set true to let the state watcher know that it should attempt to make outgoing l2cap
-    /// connection to the peer. Set to false after a failed connection attempt so that we don't
-    /// attempt to connect again immediately.
-    attempt_connection: bool,
+    /// Set true to let the state watcher know that it should attempt to make
+    /// outgoing l2cap connection to the peer for control channel. Set to false
+    /// after a failed connection attempt so that we don't attempt to connect
+    /// again immediately.
+    attempt_control_connection: bool,
+
+    /// Set true to let the state watcher know that it should attempt to make
+    /// outgoing l2cap browse connection to the peer for browse channel. Set
+    /// to false after a failed connection attempt so that we don't attempt to
+    /// connect again immediately.
+    attempt_browse_connection: bool,
 
     /// Set true to let the state watcher know that any outstanding `control_channel` processing
     /// tasks should be canceled and state cleaned up. Set to false after successfully canceling
@@ -263,7 +270,8 @@ impl RemotePeer {
             control_command_handler: ControlChannelHandler::new(&peer_id, target_delegate.clone()),
             browse_command_handler: BrowseChannelHandler::new(target_delegate),
             state_change_listener: StateChangeListener::new(),
-            attempt_connection: true,
+            attempt_control_connection: true,
+            attempt_browse_connection: true,
             cancel_control_task: false,
             cancel_browse_task: false,
             last_control_connected_time: None,
@@ -321,10 +329,15 @@ impl RemotePeer {
     }
 
     /// Reset browse channel.
-    fn reset_browse_connection(&mut self) {
-        info!("Disconnecting browse connection to peer {}", self.peer_id);
+    fn reset_browse_connection(&mut self, attempt_reconnection: bool) {
+        info!(
+            "Disconnecting browse connection peer {}, will {}attempt to reconnect",
+            self.peer_id,
+            if attempt_reconnection { "" } else { "not " }
+        );
         self.browse_command_handler.reset();
         self.browse_channel.disconnect();
+        self.attempt_browse_connection = attempt_reconnection;
         self.cancel_browse_task = true;
         self.last_browse_connected_time = None;
         self.wake_state_watcher();
@@ -335,14 +348,15 @@ impl RemotePeer {
     /// woken.
     fn reset_connections(&mut self, attempt_reconnection: bool) {
         info!(
-            "Disconnecting peer {}, will {}attempt to reconnect",
+            "Disconnecting control connection to peer {}, will {}attempt to reconnect",
             self.peer_id,
             if attempt_reconnection { "" } else { "not " }
         );
         self.reset_peer_state();
         self.browse_channel.disconnect();
         self.control_channel.disconnect();
-        self.attempt_connection = attempt_reconnection;
+        self.attempt_control_connection = attempt_reconnection;
+        self.attempt_browse_connection = attempt_reconnection;
         self.cancel_browse_task = true;
         self.cancel_control_task = true;
         self.last_control_connected_time = None;
@@ -404,7 +418,7 @@ impl RemotePeer {
                     let peer = AvctpPeer::new(channel);
                     return self.set_browse_connection(peer);
                 }
-                self.reset_browse_connection()
+                self.reset_browse_connection(true)
             }
         }
     }
@@ -423,7 +437,7 @@ impl RemotePeer {
             }
             AVCTPConnectionType::Browse => {
                 if always_reset || self.browse_channel.is_connecting() {
-                    self.reset_browse_connection()
+                    self.reset_browse_connection(false)
                 }
             }
         }
@@ -432,7 +446,7 @@ impl RemotePeer {
     fn control_connection(&mut self) -> Result<Arc<AvcPeer>, Error> {
         // if we are not connected, try to reconnect the next time we want to send a command.
         if !self.control_connected() {
-            self.attempt_connection = true;
+            self.attempt_control_connection = true;
             self.wake_state_watcher();
         }
 
@@ -477,6 +491,9 @@ impl RemotePeer {
         info!("{} connected control channel", self.peer_id);
         self.last_control_connected_time = Some(current_time);
         self.control_channel.connected(Arc::new(peer));
+        // Since control connection was newly established, allow browse
+        // connection to be attempted.
+        self.attempt_browse_connection = true;
         self.inspect.record_connected(current_time);
         self.wake_state_watcher();
     }
@@ -497,7 +514,7 @@ impl RemotePeer {
                     diff
                 );
                 self.inspect.metrics().browse_collision();
-                self.reset_browse_connection();
+                self.reset_browse_connection(true);
                 return;
             }
         }
@@ -519,7 +536,7 @@ impl RemotePeer {
     fn set_target_descriptor(&mut self, service: AvrcpService) {
         trace!("Set target descriptor for {}", self.peer_id);
         self.target_descriptor = Some(service);
-        self.attempt_connection = true;
+        self.attempt_control_connection = true;
         // Record inspect target features.
         self.inspect.record_target_features(service);
         self.wake_state_watcher();
@@ -528,7 +545,7 @@ impl RemotePeer {
     fn set_controller_descriptor(&mut self, service: AvrcpService) {
         trace!("Set controller descriptor for {}", self.peer_id);
         self.controller_descriptor = Some(service);
-        self.attempt_connection = true;
+        self.attempt_control_connection = true;
         // Record inspect controller features.
         self.inspect.record_controller_features(service);
         self.wake_state_watcher();
@@ -837,6 +854,7 @@ mod tests {
 
         // Since peer does not support browsing, verify that outgoing
         // browsing connection was not initiated.
+        let mut next_request_fut = profile_requests.next();
         assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
         assert!(!peer_handle.is_browse_connected());
 
@@ -894,6 +912,8 @@ mod tests {
 
         // We should have requested a connection for browse.
         let (_remote2, channel2) = Channel::create();
+
+        let mut next_request_fut = profile_requests.next();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, connection, .. }))) => {
                 let channel = channel2.try_into().unwrap();
@@ -1089,6 +1109,8 @@ mod tests {
         let _ = exec.wake_expired_timers();
 
         let (remote3, channel3) = Channel::create();
+
+        let mut next_request_fut = profile_requests.next();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
                 let channel = channel3.try_into().unwrap();
@@ -1106,6 +1128,117 @@ mod tests {
             Ok(1) => {}
             x => panic!("Expected successful write but got {:?}", x),
         }
+
+        Ok(())
+    }
+
+    /// Tests that when connection fails, we don't infinitely retry.
+    #[test]
+    fn test_connection_no_retries() -> Result<(), Error> {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
+
+        let id = PeerId(123);
+        let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
+
+        // Set the descriptor to simulate service found for peer.
+        peer_handle.set_target_descriptor(AvrcpService::Target {
+            features: AvrcpTargetFeatures::CATEGORY1 | AvrcpTargetFeatures::SUPPORTSBROWSING,
+            psm: Psm::AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        });
+
+        assert!(!peer_handle.is_control_connected());
+
+        let next_request_fut = profile_requests.next();
+        pin_mut!(next_request_fut);
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We should have requested a connection for control.
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+                // Trigger connection failure.
+                responder
+                    .send(&mut Err(fidl_fuchsia_bluetooth::ErrorCode::Failed))
+                    .expect("FIDL response should work");
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should have failed.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(!peer_handle.is_control_connected());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We shouldn't have requested retry.
+        let next_request_fut = profile_requests.next();
+        pin_mut!(next_request_fut);
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
+
+        // Set control channel manually to test browse channel connection retry
+        let (_remote, channel) = Channel::create();
+        let peer = AvcPeer::new(channel);
+        peer_handle.set_control_connection(peer);
+
+        // Run to update watcher state. Control channel should be connected,
+        // but browse is still not connected,
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(peer_handle.is_control_connected());
+        assert!(!peer_handle.is_browse_connected());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We should have requested a connection for browse.
+        match exec.run_until_stalled(&mut next_request_fut) {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { connection, responder, .. }))) => {
+                // Trigger failure.
+                responder
+                    .send(&mut Err(fidl_fuchsia_bluetooth::ErrorCode::Failed))
+                    .expect("FIDL response should work");
+
+                // Verify that request is for browse.
+                match connection {
+                    ConnectParameters::L2cap(L2capParameters {
+                        psm: Some(v),
+                        parameters: Some(params),
+                        ..
+                    }) => {
+                        assert_eq!(v, u16::from(Psm::new(27))); // AVCTP_BROWSE
+                        assert_eq!(
+                            params.channel_mode.expect("channel mode should not be None"),
+                            bredr::ChannelMode::EnhancedRetransmission
+                        );
+                    }
+                    x => panic!("Expected L2CAP parameters but got: {:?}", x),
+                }
+            }
+            x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
+        };
+
+        // run until stalled, the connection should have failed.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(!peer_handle.is_browse_connected());
+
+        // Advance time by the maximum amount of time it would take to establish
+        // a connection.
+        exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
+        let _ = exec.wake_expired_timers();
+
+        // We shouldn't have requested retry.
+        let mut next_request_fut = profile_requests.next();
+        assert!(exec.run_until_stalled(&mut next_request_fut).is_pending());
 
         Ok(())
     }
@@ -1160,6 +1293,8 @@ mod tests {
 
         // We should have requested a connection for browse.
         let (remote2, channel2) = Channel::create();
+
+        let mut next_request_fut = profile_requests.next();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
                 let channel = channel2.try_into().unwrap();
@@ -1212,6 +1347,8 @@ mod tests {
         let _ = exec.wake_expired_timers();
 
         let (remote4, channel4) = Channel::create();
+
+        let mut next_request_fut = profile_requests.next();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
                 let channel = channel4.try_into().unwrap();
@@ -1283,6 +1420,8 @@ mod tests {
 
         // We should have requested a connection for browse.
         let (remote2, channel2) = Channel::create();
+
+        let mut next_request_fut = profile_requests.next();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
                 let channel = channel2.try_into().unwrap();
