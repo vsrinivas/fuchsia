@@ -180,7 +180,7 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
     if (result.value().is_error()) {
       if (++attempts == 100)
         GTEST_FAIL() << "Timed out trying to get device path";
-      usleep(100);
+      usleep(100'000);
     } else {
       if (DataFilesystemFormat() == "fxfs") {
         // Fxfs doesn't use zxcrypt.
