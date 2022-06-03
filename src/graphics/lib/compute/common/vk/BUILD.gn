@@ -14,21 +14,21 @@ source_set("vk") {
   public = [
     "assert.h",
     "barrier.h",
-    "cache.h",
     "debug_utils.h",
     "find_mem_type_idx.h",
+    "pipeline_cache.h",
   ]
   sources = [
     "assert.c",
     "assert.h",
     "barrier.c",
     "barrier.h",
-    "cache.c",
-    "cache.h",
     "debug_utils.c",
     "debug_utils.h",
     "find_mem_type_idx.c",
     "find_mem_type_idx.h",
+    "pipeline_cache.c",
+    "pipeline_cache.h",
   ]
   public_deps = [ graphics_compute_vulkan_loader_target ]
   deps = [ "${graphics_compute_dir}/common" ]

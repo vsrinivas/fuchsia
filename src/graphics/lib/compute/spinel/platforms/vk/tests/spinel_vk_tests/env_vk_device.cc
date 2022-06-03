@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 #include "common/macros.h"
-#include "common/vk/cache.h"
+#include "common/vk/pipeline_cache.h"
 
 //
 // Define a platform-specific prefix

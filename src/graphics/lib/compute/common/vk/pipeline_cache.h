@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_COMPUTE_COMMON_VK_CACHE_H_
-#define SRC_GRAPHICS_LIB_COMPUTE_COMMON_VK_CACHE_H_
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_COMMON_VK_PIPELINE_CACHE_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_COMMON_VK_PIPELINE_CACHE_H_
 
 //
 //
@@ -47,4 +47,4 @@ vk_pipeline_cache_destroy(VkDevice                      device,
 //
 //
 
-#endif  // SRC_GRAPHICS_LIB_COMPUTE_COMMON_VK_CACHE_H_
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_COMMON_VK_PIPELINE_CACHE_H_

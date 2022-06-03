@@ -24,8 +24,8 @@
 
 #include "common/macros.h"
 #include "common/vk/assert.h"
-#include "common/vk/cache.h"
 #include "common/vk/debug_utils.h"
+#include "common/vk/pipeline_cache.h"
 #include "spinel/platforms/vk/ext/find_target/find_target.h"
 #include "spinel/platforms/vk/spinel_vk.h"
 #include "spinel/spinel_assert.h"

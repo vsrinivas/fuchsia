@@ -17,9 +17,9 @@
 #include "common/macros.h"
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
-#include "common/vk/cache.h"
 #include "common/vk/debug_utils.h"
 #include "common/vk/find_mem_type_idx.h"
+#include "common/vk/pipeline_cache.h"
 
 //
 //
