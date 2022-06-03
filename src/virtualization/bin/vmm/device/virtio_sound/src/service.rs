@@ -526,7 +526,6 @@ impl<'s> VirtSoundService<'s> {
         }
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95075)
     /// Handle VIRTIO_SND_R_*_INFO.
     fn handle_info<'a, 'b, T: Info>(
         req_wrapper: RequestWrapper<'a, 'b>,

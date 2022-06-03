@@ -172,12 +172,19 @@ impl PayloadBuffer {
 
 /// State common to AudioRenderer and AudioCapturer connections.
 /// Borrowed references to this object should not be held across an await.
+//
+// In the data path between virtio-sound driver, virtio-sound device and AudioRenderer/Capturer,
+// we use the term "buffers" when referring to the data transport between the virtio-sound driver
+// and virtio-sound device. We use the term "packets" when referring to the data transport between
+// virtio-sound device and AudioRenderer/Capturer.
+// The AudioRenderer/Capturer APIs also have to an overall payload buffer, but we always include
+// "payload" when referring to that entity.
 struct AudioStreamConn<T> {
     fidl_proxy: T,
     params: AudioStreamParams,
     payload_buffer: PayloadBuffer,
     lead_time: tokio::sync::watch::Receiver<zx::Duration>,
-    packets_received: u32,
+    buffers_received: u32,
     packets_pending: HashMap<u32, Notification>, // signalled when we're done with the packet
     closing: Notification,                       // signalled when we've started disconnecting
 }
@@ -211,7 +218,7 @@ impl<T> AudioStreamConn<T> {
         }
     }
 
-    fn validate_packet<'b, 'c>(&self, data_buffer_size: usize) -> Result<(), Error> {
+    fn validate_buffer<'b, 'c>(&self, data_buffer_size: usize) -> Result<(), Error> {
         // See comments at PayloadBuffer: we assume the total size of each data buffer
         // is no bigger than period_bytes, allowing each buffer to fit in one packet.
         if data_buffer_size > self.params.period_bytes {
@@ -291,6 +298,11 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             match lead_time_recv.recv().on_timeout(deadline, || None).await {
                 Some(t) => {
                     if t > zx::Duration::from_nanos(0) {
+                        // TODO(fxbug.dev/101220): temporary for debugging
+                        throttled_log::info!(
+                            "AudioOutput received non-zero lead_time {} ns",
+                            t.into_nanos()
+                        );
                         break;
                     }
                 }
@@ -307,7 +319,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             params,
             payload_buffer,
             lead_time: lead_time_recv,
-            packets_received: 0,
+            buffers_received: 0,
             packets_pending: HashMap::new(),
             closing: Notification::new(),
         });
@@ -326,6 +338,8 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
         let futs = match &mut *self.conn.borrow_mut() {
             Some(conn) => {
                 conn.closing.set();
+                // TODO(fxbug.dev/101220): temporary for debugging
+                throttled_log::info!("AudioOutput is disconnecting");
                 futures::future::join_all(
                     conn.packets_pending.iter().map(|(_, n)| n.clone().when_set()),
                 )
@@ -333,6 +347,8 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             None => panic!("called disconnect() without a connection"),
         };
         futs.await;
+        // TODO(fxbug.dev/101220): temporary for debugging
+        throttled_log::info!("AudioOutput disconnect has completed");
         // Writing None here will deallocate all per-connection state, including the
         // FIDL channel and the payload buffer mapping.
         *self.conn.borrow_mut() = None;
@@ -341,21 +357,42 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
 
     async fn start(&self) -> Result<(), Error> {
         let fut = match &*self.conn.borrow() {
-            Some(conn) => conn
-                .fidl_proxy
-                .play(fidl_fuchsia_media::NO_TIMESTAMP, fidl_fuchsia_media::NO_TIMESTAMP),
-            None => panic!("called start() without a connection"),
+            Some(conn) => {
+                // TODO(fxbug.dev/101220): temporary for debugging
+                throttled_log::info!("AudioOutput start calling renderer.play");
+
+                conn.fidl_proxy
+                    .play(fidl_fuchsia_media::NO_TIMESTAMP, fidl_fuchsia_media::NO_TIMESTAMP)
+            }
+            None => panic!("AudioOutput called start without a connection"),
         };
+        // Relinquish our borrow of conn while waiting for the renderer.play() response.
         fut.await?;
+
+        // TODO(fxbug.dev/101220): temporary for debugging
+        throttled_log::info!("AudioOutput start (renderer.play) has completed");
+
         Ok(())
     }
 
     async fn stop(&self) -> Result<(), Error> {
+        // Deterministically return all packets after we pause.
         let fut = match &*self.conn.borrow() {
-            Some(conn) => conn.fidl_proxy.pause(),
-            None => panic!("called stop() without a connection"),
+            Some(conn) => {
+                // TODO(fxbug.dev/101220): temporary for debugging
+                throttled_log::info!("AudioOutput stop calling pause_no_reply+discard_all_packets");
+
+                conn.fidl_proxy.pause_no_reply()?;
+                conn.fidl_proxy.discard_all_packets()
+            }
+            None => panic!("AudioOutput called stop without a connection"),
         };
+        // Relinquish our borrow of conn while waiting for the discard_all_packets() response.
         fut.await?;
+
+        // TODO(fxbug.dev/101220): temporary for debugging
+        throttled_log::info!("AudioOutput stop (renderer.discard_all_packets) has completed");
+
         Ok(())
     }
 
@@ -367,7 +404,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
         let mut conn_option = self.conn.borrow_mut();
         let conn = match &mut *conn_option {
             Some(conn) => conn,
-            None => panic!("called on_receive_data() without a connection"),
+            None => panic!("AudioOutput called on_receive_data() without a connection"),
         };
 
         if conn.closing.get() {
@@ -375,18 +412,18 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             return reply_txq::err(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
         }
 
-        if let Err(err) = conn.validate_packet(chain.remaining()?) {
-            tracing::warn!("{}", err);
+        if let Err(err) = conn.validate_buffer(chain.remaining()?) {
+            tracing::warn!("AudioOutput validate_buffer failed: {}", err);
             return reply_txq::err(chain, wire::VIRTIO_SND_S_BAD_MSG, conn.latency_bytes());
         }
 
-        let packet_size = chain.remaining()?;
+        let buffer_size = chain.remaining()?;
         let packet_range = match conn.payload_buffer.packets_avail.pop_front() {
-            Some(range) => range,
+            Some(packet) => packet,
             None => {
                 tracing::warn!(
-                    "AudioOutput ran out of packets (latest buffer has size {} bytes, period is {} bytes)",
-                    packet_size,
+                    "AudioOutput ran out of available packet space (buffer from driver has size {} bytes, period is {} bytes)",
+                    buffer_size,
                     conn.params.period_bytes
                 );
                 return reply_txq::err(chain, wire::VIRTIO_SND_S_IO_ERR, conn.latency_bytes());
@@ -401,13 +438,19 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                     conn.payload_buffer.packets_avail.push_back(packet_range.clone());
                     ()
                 }
-                None => (), // ignore: disconnected while before our await completed
+                None => {
+                    // TODO(fxbug.dev/101220): temporary for debugging
+                    throttled_log::info!(
+                    "conn.borrow on packet completion (to add to packets_avail) failed - disconnected with outstanding packets");
+                    // ignore: disconnected before our await completed
+                    ()
+                }
             }
         );
 
         // Copy the data into the packet.
-        let mut offset = 0;
         let packet = conn.payload_buffer.mapping.slice_mut(packet_range.clone());
+        let mut buffer_offset = 0;
 
         while let Some(range) = chain.next().transpose()? {
             // This fails only if the buffer is empty, in which case we can ignore the buffer.
@@ -424,7 +467,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             // could do is write to this buffer concurrently, causing us to read garbage bytes,
             // which would produce garbage audio at the speaker.
             let buf = unsafe { std::slice::from_raw_parts(ptr, range.len()) };
-            offset += packet.write_at(offset, buf);
+            buffer_offset += packet.write_at(buffer_offset, buf);
         }
 
         // A notification that is signalled when the packet is done.
@@ -432,8 +475,8 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
         scopeguard::defer!(when_done.set());
 
         // Add to the pending set.
-        let packet_id = conn.packets_received;
-        conn.packets_received += 1;
+        let packet_id = conn.buffers_received;
+        conn.buffers_received += 1;
         conn.packets_pending.insert(packet_id, when_done.clone());
         scopeguard::defer!(
             // Need to reacquire this borrow since we don't hold it across the await.
@@ -442,7 +485,13 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                     conn.packets_pending.remove(&packet_id);
                     ()
                 }
-                None => (), // ignore: disconnected while before our await completed
+                None => {
+                    // TODO(fxbug.dev/101220): temporary for debugging
+                    throttled_log::info!(
+                  "conn.borrow on completion (removing from packets_pending) failed - disconnected with outstanding packets?");
+                    // ignore: disconnected before our await completed
+                    ()
+                }
             }
         );
 
@@ -451,7 +500,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             pts: fidl_fuchsia_media::NO_TIMESTAMP,
             payload_buffer_id: 0,
             payload_offset: packet_range.start as u64,
-            payload_size: offset as u64, // total bytes copied into the packet
+            payload_size: buffer_offset as u64, // total bytes copied from buffer to packet
             flags: 0,
             buffer_config: 0,
             stream_segment_id: 0,
@@ -479,15 +528,15 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             resp = resp_fut.fuse() =>
                 match &*self.conn.borrow() {
                     Some(conn) => match resp {
-                        Ok(_) => {
-                            reply_txq::success(chain, conn.latency_bytes())?
-                        },
+                        Ok(_) => reply_txq::success(chain, conn.latency_bytes())?,
                         Err(err) =>{
-                            tracing::warn!("AudioOutput failed to send packet: {}", err);
+                            tracing::warn!("AudioRenderer SendPacket[{}] failed: {}", conn.buffers_received, err);
                             reply_txq::err(chain, wire::VIRTIO_SND_S_IO_ERR, conn.latency_bytes())?
                         },
                     },
                     None => {
+                        // TODO(fxbug.dev/101220): temporary for debugging
+                        throttled_log::info!("AudioRenderer disconnected before the packet completed (1)");
                         // Disconnected before the packet completed. We may hit this case instead
                         // of the closing_fut case below because both futures can be ready at the
                         // same time and select! is not deterministic.
@@ -495,6 +544,8 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                     },
                 },
             _ = closing_fut.fuse() => {
+                // TODO(fxbug.dev/101220): temporary for debugging
+                throttled_log::info!("AudioRenderer disconnected before the packet completed (2)");
                 // Disconnected before the packet completed.
                 reply_txq::err(chain, wire::VIRTIO_SND_S_IO_ERR, 0)?
             }
@@ -517,9 +568,13 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                                         // This is an upper-bound: see discussion in fxbug.dev/90564.
                                         let lead_time = zx::Duration::from_nanos(min_lead_time_nsec)
                                             + super::DEADLINE_PROFILE.period;
+                                        // TODO(fxbug.dev/101220): temporary for debugging
+                                        throttled_log::info!("AudioRenderer lead_time {} ns", lead_time.into_nanos());
                                         job.lead_time.broadcast(lead_time)?;
                                     },
                                     None => {
+                                        // TODO(fxbug.dev/101220): temporary for debugging
+                                        throttled_log::info!("AudioRenderer lead_time FIDL connection closed by peer");
                                         // FIDL connection closed by peer.
                                         break;
                                     }
@@ -530,11 +585,15 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                                     fidl::Error::ClientChannelClosed{..} => (),
                                     _ => tracing::warn!("AudioRenderer event stream: unexpected error: {}", err),
                                 }
+                                // TODO(fxbug.dev/101220): temporary for debugging
+                                throttled_log::info!("AudioRenderer lead_time FIDL connection broken");
                                 // FIDL connection broken.
                                 break;
                             }
                     },
                     _ = job.lead_time.closed().fuse() => {
+                        // TODO(fxbug.dev/101220): temporary for debugging
+                        throttled_log::info!("AudioRenderer has been disconnected");
                         // The AudioOutput has been disconnected.
                         break;
                     },
@@ -565,8 +624,8 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
     async fn connect(&self, mut params: AudioStreamParams) -> Result<(), Error> {
         // Allocate a payload buffer.
         let (payload_buffer, payload_vmo) =
-            PayloadBuffer::new(params.buffer_bytes, params.period_bytes, "AudioRendererBuffer")
-                .context("failed to create payload buffer for AudioRenderer")?;
+            PayloadBuffer::new(params.buffer_bytes, params.period_bytes, "AudioCapturerBuffer")
+                .context("failed to create payload buffer for AudioCapturer")?;
 
         // Configure the capturer.
         // Must call SetPcmStreamType before AddPayloadBuffer.
@@ -587,7 +646,7 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
                 params,
                 payload_buffer,
                 lead_time: lead_time_recv,
-                packets_received: 0,
+                buffers_received: 0,
                 packets_pending: HashMap::new(),
                 closing: Notification::new(),
             },
@@ -612,7 +671,7 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
                     conn.packets_pending.iter().map(|(_, n)| n.clone().when_set()),
                 )
             }
-            None => panic!("called disconnect() without a connection"),
+            None => panic!("AudioInput called disconnect() without a connection"),
         };
         futs.await;
         // Writing None here will deallocate all per-connection state, including the
@@ -641,12 +700,12 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
         let mut inner_option = self.inner.borrow_mut();
         let conn = match &mut *inner_option {
             Some(AudioInputInner { conn, .. }) => conn,
-            None => panic!("called on_receive_data() without a connection"),
+            None => panic!("AudioInput called on_receive_data() without a connection"),
         };
 
         let mut chain = WritableChain::from_readable(chain)?;
         let buffer_size = reply_rxq::buffer_size(&chain)?;
-        if let Err(err) = conn.validate_packet(buffer_size) {
+        if let Err(err) = conn.validate_buffer(buffer_size) {
             tracing::warn!("{}", err);
             return reply_rxq::err_from_writable(
                 chain,
@@ -729,8 +788,8 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
         scopeguard::defer!(when_done.set());
 
         // Add to the pending set.
-        let packet_id = conn.packets_received;
-        conn.packets_received += 1;
+        let packet_id = conn.buffers_received;
+        conn.buffers_received += 1;
         conn.packets_pending.insert(packet_id, when_done.clone());
         scopeguard::defer!(
             // Need to reacquire this borrow since we don't hold it across the await.
@@ -822,10 +881,10 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
         let inner = inner_option.as_ref().unwrap();
 
         // Copy the captured packet into the audio buffer.
-        let mut offset = 0;
+        let mut buffer_offset = 0;
         let packet = inner.conn.payload_buffer.mapping.slice(packet_range.clone());
 
-        while let Some(range) = chain.next_with_limit(buffer_size - offset).transpose()? {
+        while let Some(range) = chain.next_with_limit(buffer_size - buffer_offset).transpose()? {
             // This fails only if the buffer is empty, in which case we can ignore the buffer.
             let ptr = match range.try_mut_ptr::<u8>() {
                 Some(ptr) => ptr,
@@ -839,13 +898,13 @@ impl<'a> AudioStream<'a> for AudioInput<'a> {
             // `try_ptr_mut` verifies the pointer is correctly aligned. The worst a buggy driver
             // could do is write to this buffer concurrently, which may garble the captured audio.
             let buf = unsafe { std::slice::from_raw_parts_mut(ptr, range.len()) };
-            let written = packet.read_at(offset, buf);
+            let written = packet.read_at(buffer_offset, buf);
             chain.add_written(written as u32);
-            offset += written;
-            if offset > buffer_size {
-                panic!("wrote past the end of the buffer: {} > {}", offset, buffer_size);
+            buffer_offset += written;
+            if buffer_offset > buffer_size {
+                panic!("wrote past the end of the buffer: {} > {}", buffer_offset, buffer_size);
             }
-            if offset == buffer_size {
+            if buffer_offset == buffer_size {
                 break;
             }
         }

@@ -157,6 +157,11 @@ void BaseRenderer::RecomputeMinLeadTime() {
     cur_lead_time = std::max(cur_lead_time, packet_queue->GetPresentationDelay());
   }
 
+  if constexpr (kLogPresentationDelay) {
+    FX_LOGS(INFO) << "    (" << this << ") " << __FUNCTION__ << " calculated "
+                  << cur_lead_time.to_nsecs() << "ns";
+  }
+
   if (min_lead_time_ != cur_lead_time) {
     reporter_->SetMinLeadTime(cur_lead_time);
     min_lead_time_ = cur_lead_time;
@@ -818,6 +823,11 @@ void BaseRenderer::ReportNewMinLeadTime() {
   if (min_lead_time_events_enabled_) {
     auto& lead_time_event = audio_renderer_binding_.events();
     lead_time_event.OnMinLeadTimeChanged(min_lead_time_.to_nsecs());
+    if constexpr (kLogPresentationDelay) {
+      // This need not be logged every time since we also log this in RecomputeMinLeadTime.
+      FX_LOGS(DEBUG) << "    (" << this << ") " << __FUNCTION__ << " reported "
+                     << min_lead_time_.to_nsecs() << "ns";
+    }
   }
 }
 

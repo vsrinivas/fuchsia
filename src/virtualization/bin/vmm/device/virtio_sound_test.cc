@@ -46,7 +46,8 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
     SetPcmStreamType,
     EnableMinLeadTimeEvents,
     Play,
-    Pause,
+    PauseNoReply,
+    DiscardAllPackets,
     Disconnect,
   };
 
@@ -102,9 +103,10 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
     calls_.push_back({.method = Method::Play});
     callback(0, 0);  // arbitrary: these values are unused by the virtio-sound device
   }
-  void Pause(PauseCallback callback) override {
-    calls_.push_back({.method = Method::Pause});
-    callback(0, 0);  // arbitrary: these values are unused by the virtio-sound device
+  void PauseNoReply() override { calls_.push_back({.method = Method::PauseNoReply}); }
+  void DiscardAllPackets(DiscardAllPacketsCallback callback) override {
+    calls_.push_back({.method = Method::DiscardAllPackets});
+    callback();
   }
   void EnableMinLeadTimeEvents(bool enabled) override {
     EXPECT_TRUE(enabled);
@@ -126,7 +128,6 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
   void RemovePayloadBuffer(uint32_t id) override { UNEXPECTED_METHOD_CALL; }
   void SendPacketNoReply(fuchsia::media::StreamPacket packet) override { UNEXPECTED_METHOD_CALL; }
   void EndOfStream() override { UNEXPECTED_METHOD_CALL; }
-  void DiscardAllPackets(DiscardAllPacketsCallback callback) override { UNEXPECTED_METHOD_CALL; }
   void DiscardAllPacketsNoReply() override { UNEXPECTED_METHOD_CALL; }
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) override {
@@ -136,7 +137,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
   void GetReferenceClock(GetReferenceClockCallback callback) override { UNEXPECTED_METHOD_CALL; }
   void SetReferenceClock(::zx::clock reference_clock) override { UNEXPECTED_METHOD_CALL; }
   void PlayNoReply(int64_t reference_time, int64_t media_time) override { UNEXPECTED_METHOD_CALL; }
-  void PauseNoReply() override { UNEXPECTED_METHOD_CALL; }
+  void Pause(PauseCallback callback) override { UNEXPECTED_METHOD_CALL; }
   void GetMinLeadTime(GetMinLeadTimeCallback callback) override { UNEXPECTED_METHOD_CALL; }
   void BindGainControl(::fidl::InterfaceRequest<::fuchsia::media::audio::GainControl>
                            gain_control_request) override {
@@ -1195,7 +1196,8 @@ void VirtioSoundTestBase<EnableInput>::TestPcmOutputStateTraversal(size_t render
                                              .hdr = {.code = VIRTIO_SND_R_PCM_STOP},
                                              .stream_id = kOutputStreamId,
                                          }));
-    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Pause});
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::PauseNoReply,
+                                     FakeAudioRenderer::Method::DiscardAllPackets});
     ASSERT_FALSE(calls.empty());
   }
 
@@ -1218,7 +1220,8 @@ void VirtioSoundTestBase<EnableInput>::TestPcmOutputStateTraversal(size_t render
                                              .hdr = {.code = VIRTIO_SND_R_PCM_STOP},
                                              .stream_id = kOutputStreamId,
                                          }));
-    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Pause});
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::PauseNoReply,
+                                     FakeAudioRenderer::Method::DiscardAllPackets});
     ASSERT_FALSE(calls.empty());
   }
 
