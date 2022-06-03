@@ -454,39 +454,20 @@ func (ci *adminControlImpl) GetId(fidl.Context) (uint64, error) {
 	return uint64(ci.nicid), nil
 }
 
-// handleIPForwardingConfigurationResult handles the result of getting or
-// setting IP forwarding or IP multicast forwarding configuration.
-//
-// Returns the result if the invoked function was successful. Otherwise, panics
-// if an unexpected error occurred.
-func handleIPForwardingConfigurationResult(result bool, err tcpip.Error, invokedFunction string) bool {
-	switch err.(type) {
-	case nil:
-		return result
-	case *tcpip.ErrUnknownNICID:
-		// Impossible as this Control would be invalid if the interface is not
-		// recognized.
-		panic(fmt.Sprintf("got UnknownNICID error when Control is still valid from %s = %s", invokedFunction, err))
-	default:
-		panic(fmt.Sprintf("%s: %s", invokedFunction, err))
-	}
-}
-
 // setIPForwardingLocked sets the IP forwarding configuration for the interface.
 //
-// The caller must hold the interface's write lock.
+// The caller must bold the interface's write lock.
 func (ci *adminControlImpl) setIPForwardingLocked(netProto tcpip.NetworkProtocolNumber, enabled bool) bool {
-	prevEnabled, err := ci.ns.stack.SetNICForwarding(tcpip.NICID(ci.nicid), netProto, enabled)
-	return handleIPForwardingConfigurationResult(prevEnabled, err, fmt.Sprintf("ci.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t)", ci.nicid, netProto, enabled))
-}
-
-// setMulticastIPForwardingLocked sets the IP multicast forwarding configuration
-// for the interface.
-//
-// The caller must hold the interface's write lock.
-func (ci *adminControlImpl) setMulticastIPForwardingLocked(netProto tcpip.NetworkProtocolNumber, enabled bool) bool {
-	prevEnabled, err := ci.ns.stack.SetNICMulticastForwarding(tcpip.NICID(ci.nicid), netProto, enabled)
-	return handleIPForwardingConfigurationResult(prevEnabled, err, fmt.Sprintf("ci.ns.stack.SetNICMulticastForwarding(tcpip.NICID(%d), %d, %t)", ci.nicid, netProto, enabled))
+	switch prevEnabled, err := ci.ns.stack.SetNICForwarding(tcpip.NICID(ci.nicid), netProto, enabled); err.(type) {
+	case nil:
+		return prevEnabled
+	case *tcpip.ErrUnknownNICID:
+		// Impossible as this Control should be invalid if the interface is not
+		// recognized.
+		panic(fmt.Sprintf("got UnknownNICID error when Control is still valid from ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t) = %s", ci.nicid, netProto, enabled, err))
+	default:
+		panic(fmt.Sprintf("ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t): %s", ci.nicid, netProto, enabled, err))
+	}
 }
 
 func (ci *adminControlImpl) SetConfiguration(_ fidl.Context, config admin.Configuration) (admin.ControlSetConfigurationResult, error) {
@@ -504,10 +485,6 @@ func (ci *adminControlImpl) SetConfiguration(_ fidl.Context, config admin.Config
 			previousIpv4Config.SetForwarding(ci.setIPForwardingLocked(ipv4.ProtocolNumber, ipv4Config.Forwarding))
 		}
 
-		if ipv4Config.HasMulticastForwarding() {
-			previousIpv4Config.SetMulticastForwarding(ci.setMulticastIPForwardingLocked(ipv4.ProtocolNumber, ipv4Config.MulticastForwarding))
-		}
-
 		previousConfig.SetIpv4(previousIpv4Config)
 	}
 
@@ -519,10 +496,6 @@ func (ci *adminControlImpl) SetConfiguration(_ fidl.Context, config admin.Config
 			previousIpv6Config.SetForwarding(ci.setIPForwardingLocked(ipv6.ProtocolNumber, ipv6Config.Forwarding))
 		}
 
-		if ipv6Config.HasMulticastForwarding() {
-			previousIpv6Config.SetMulticastForwarding(ci.setMulticastIPForwardingLocked(ipv6.ProtocolNumber, ipv6Config.MulticastForwarding))
-		}
-
 		previousConfig.SetIpv6(previousIpv6Config)
 	}
 
@@ -531,21 +504,20 @@ func (ci *adminControlImpl) SetConfiguration(_ fidl.Context, config admin.Config
 	}), nil
 }
 
-// ipForwardingRLocked gets the IP forwarding configuration for the interface.
+// getIPForwardingLocked gets the IP forwarding configuration for the interface.
 //
-// The caller must hold the interface's read lock.
-func (ci adminControlImpl) ipForwardingRLocked(netProto tcpip.NetworkProtocolNumber) bool {
-	enabled, err := ci.ns.stack.NICForwarding(tcpip.NICID(ci.nicid), netProto)
-	return handleIPForwardingConfigurationResult(enabled, err, fmt.Sprintf("ci.ns.stack.NICForwarding(tcpip.NICID(%d), %d)", ci.nicid, netProto))
-}
-
-// multicastIPForwardingRLocked gets the IP multicast forwarding configuration
-// for the interface.
-//
-// The caller must hold the interface's read lock.
-func (ci adminControlImpl) multicastIPForwardingRLocked(netProto tcpip.NetworkProtocolNumber) bool {
-	enabled, err := ci.ns.stack.NICMulticastForwarding(tcpip.NICID(ci.nicid), netProto)
-	return handleIPForwardingConfigurationResult(enabled, err, fmt.Sprintf("ci.ns.stack.NICMulticastForwarding(tcpip.NICID(%d), %d)", ci.nicid, netProto))
+// The caller must bold the interface's read lock.
+func (ci adminControlImpl) getIPForwardingRLocked(netProto tcpip.NetworkProtocolNumber) bool {
+	switch enabled, err := ci.ns.stack.NICForwarding(tcpip.NICID(ci.nicid), netProto); err.(type) {
+	case nil:
+		return enabled
+	case *tcpip.ErrUnknownNICID:
+		// Impossible as this Control should be invalid if the interface is not
+		// recognized.
+		panic(fmt.Sprintf("got UnknownNICID error when Control is still valid from ni.ns.stack.NICForwarding(tcpip.NICID(%d), %d) = %s", ci.nicid, netProto, err))
+	default:
+		panic(fmt.Sprintf("ni.ns.stack.NICForwarding(tcpip.NICID(%d), %d): %s", ci.nicid, netProto, err))
+	}
 }
 
 func (ci *adminControlImpl) GetConfiguration(fidl.Context) (admin.ControlGetConfigurationResult, error) {
@@ -557,15 +529,13 @@ func (ci *adminControlImpl) GetConfiguration(fidl.Context) (admin.ControlGetConf
 
 	{
 		var ipv4Config admin.Ipv4Configuration
-		ipv4Config.SetForwarding(ci.ipForwardingRLocked(ipv4.ProtocolNumber))
-		ipv4Config.SetMulticastForwarding(ci.multicastIPForwardingRLocked(ipv4.ProtocolNumber))
+		ipv4Config.SetForwarding(ci.getIPForwardingRLocked(ipv4.ProtocolNumber))
 		config.SetIpv4(ipv4Config)
 	}
 
 	{
 		var ipv6Config admin.Ipv6Configuration
-		ipv6Config.SetForwarding(ci.ipForwardingRLocked(ipv6.ProtocolNumber))
-		ipv6Config.SetMulticastForwarding(ci.multicastIPForwardingRLocked(ipv6.ProtocolNumber))
+		ipv6Config.SetForwarding(ci.getIPForwardingRLocked(ipv6.ProtocolNumber))
 		config.SetIpv6(ipv6Config)
 	}
 

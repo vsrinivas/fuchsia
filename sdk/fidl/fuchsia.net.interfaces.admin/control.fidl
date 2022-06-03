@@ -12,26 +12,16 @@ using fuchsia.net.interfaces;
 type Configuration = table {
     /// The IPv4 configuration for an interface.
     1: ipv4 @generated_name("Ipv4Configuration") table {
-        /// Controls whether or not IPv4 unicast packets may be forwarded if not
+        /// Controls whether or not IPv4 packets may be forwarded if not
         /// destined to the host.
-        /// TODO(https://fxbug.dev/101709): Rename this field to
-        /// unicast_forwarding.
         1: forwarding bool;
-
-        /// Controls whether or not IPv4 multicast packets may be forwarded.
-        2: multicast_forwarding bool;
     };
 
     /// The IPv6 configuration for an interface.
     2: ipv6 @generated_name("Ipv6Configuration") table {
-        /// Controls whether or not IPv6 unicast packets may be forwarded if not
-        /// destined to the host.
-        /// TODO(https://fxbug.dev/101709): Rename this field to
-        /// unicast_forwarding.
+        /// Controls whether or not incoming IPv6 packets may be forwarded if
+        /// not destined to the host.
         1: forwarding bool;
-
-        /// Controls whether or not IPv6 multicast packets may be forwarded.
-        2: multicast_forwarding bool;
     };
 };
 
