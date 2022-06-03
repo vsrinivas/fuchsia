@@ -131,7 +131,11 @@
             to: "#virtio_magma_devices",
         },
         {
-            protocol: [ "fuchsia.vulkan.loader.Loader" ],
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.vulkan.loader.Loader",
+            ],
             from: "parent",
             to: "#virtio_magma_devices",
         },

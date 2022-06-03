@@ -22,10 +22,7 @@
             path: "/dev/class/gpu",
         },
         {
-            protocol: [
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.composition.Allocator",
-            ],
+            protocol: [ "fuchsia.ui.composition.Allocator" ],
         },
     ],
     expose: [
