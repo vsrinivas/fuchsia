@@ -38,12 +38,6 @@ template("package_list_from_assembly") {
   _assembly_target_name = get_label_info(invoker.system_label, "name")
   _images_manifest = "$_assembly_target_dir/$_assembly_target_name/images.json"
 
-  _binary_target = "${target_name}_bin"
-  python_binary(_binary_target) {
-    testonly = true
-    main_source = "//build/images/assembly/package_list.py"
-  }
-
   python_action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -51,7 +45,7 @@ template("package_list_from_assembly") {
                              "testonly",
                              "visibility",
                            ])
-    binary_label = ":$_binary_target"
+    binary_label = "//build/images/assembly:package_list"
     args = [
       "--package-set",
       invoker.package_set,
