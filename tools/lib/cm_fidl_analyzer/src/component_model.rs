@@ -18,7 +18,7 @@ use {
     },
     fidl::prelude::*,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_url::{pkg_url::PkgUrl, AbsoluteComponentUrl},
+    fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon_status as zx_status,
     futures::FutureExt,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
@@ -138,7 +138,7 @@ impl ModelBuilderForAnalyzer {
     }
 
     fn load_dynamic_components(
-        input: HashMap<NodePath, (PkgUrl, Option<String>)>,
+        input: HashMap<NodePath, (AbsoluteComponentUrl, Option<String>)>,
     ) -> (HashMap<AbsoluteMoniker, Vec<Child>>, Vec<anyhow::Error>) {
         let mut errors: Vec<anyhow::Error> = vec![];
         let mut dynamic_components: HashMap<AbsoluteMoniker, Vec<Child>> = HashMap::new();
@@ -204,7 +204,7 @@ impl ModelBuilderForAnalyzer {
 
     pub fn build_with_dynamic_components(
         self,
-        dynamic_components: HashMap<NodePath, (PkgUrl, Option<String>)>,
+        dynamic_components: HashMap<NodePath, (AbsoluteComponentUrl, Option<String>)>,
         decls_by_url: HashMap<Url, ComponentDecl>,
         runtime_config: Arc<RuntimeConfig>,
         component_id_index: Arc<ComponentIdIndex>,

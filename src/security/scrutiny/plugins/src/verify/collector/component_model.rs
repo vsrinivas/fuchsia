@@ -15,7 +15,7 @@ use {
     cm_rust::{ComponentDecl, FidlIntoNative, RegistrationSource, RunnerRegistration},
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
-    fuchsia_url::{boot_url::BootUrl, pkg_url::PkgUrl},
+    fuchsia_url::{boot_url::BootUrl, AbsoluteComponentUrl},
     log::{error, info, warn},
     once_cell::sync::Lazy,
     routing::{
@@ -47,7 +47,7 @@ pub const REALM_BUILDER_RUNNER_NAME: &str = "realm_builder";
 
 #[derive(Deserialize, Serialize)]
 pub struct DynamicComponent {
-    pub url: PkgUrl,
+    pub url: AbsoluteComponentUrl,
     pub environment: Option<String>,
 }
 
@@ -177,7 +177,7 @@ impl V2ComponentModelDataCollector {
 
     fn load_dynamic_components(
         component_tree_config_path: &Option<PathBuf>,
-    ) -> Result<HashMap<NodePath, (PkgUrl, Option<String>)>> {
+    ) -> Result<HashMap<NodePath, (AbsoluteComponentUrl, Option<String>)>> {
         if component_tree_config_path.is_none() {
             return Ok(HashMap::new());
         }
