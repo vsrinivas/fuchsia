@@ -46,6 +46,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <gpt/gpt.h>
+#include <gpt/guid.h>
 
 #include "block-watcher.h"
 #include "constants.h"
@@ -799,6 +800,8 @@ zx_status_t BlockDevice::MountFilesystem() {
 zx_status_t BlockDevice::MountData(const fs_management::MountOptions& options,
                                    zx::channel block_device) {
   const uint8_t* guid = GetTypeGuid().value.data();
+  FX_LOGS(INFO) << "Detected type GUID " << gpt::KnownGuid::TypeDescription(guid)
+                << " for data partition";
 
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -807,7 +810,7 @@ zx_status_t BlockDevice::MountData(const fs_management::MountOptions& options,
   } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
     return mounter_->MountDurable(std::move(block_device), options);
   }
-  FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
+  FX_LOGS(ERROR) << "Unrecognized type GUID for data partition; not mounting";
   return ZX_ERR_WRONG_TYPE;
 }
 

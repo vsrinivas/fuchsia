@@ -102,6 +102,7 @@ zx_status_t Launch(const zx::job& job, const char* name, const char* const* argv
 
   zx::process proc;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  FX_LOGS(INFO) << "launching " << argv[0] << " (" << name << ")...";
   status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv, env.data(), actions.size(),
                           actions.data(), proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
