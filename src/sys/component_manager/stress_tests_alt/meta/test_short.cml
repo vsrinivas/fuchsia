@@ -25,10 +25,9 @@
     ],
     offer: [
         {
-            directory: "hub",
+            protocol: "fuchsia.sys2.LifecycleController",
             from: "#dynamic_children_root",
             to: "#actors",
-            rights: [ "rw*" ],
         },
         {
             protocol: "fuchsia.sys2.RealmExplorer",

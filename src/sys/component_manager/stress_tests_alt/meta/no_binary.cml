@@ -22,9 +22,8 @@
     ],
     expose: [
         {
-            directory: "hub",
+            protocol: "fuchsia.sys2.LifecycleController",
             from: "framework",
-            rights: [ "rw*" ],
         },
         {
             protocol: "fuchsia.sys2.RealmExplorer",

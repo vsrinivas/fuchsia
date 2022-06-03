@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Result},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path},
+    fuchsia_component::client::connect_to_protocol,
 };
 
 pub struct Stressor {
@@ -17,10 +17,8 @@ pub struct Stressor {
 impl Stressor {
     pub fn from_namespace() -> Self {
         let realm_explorer = connect_to_protocol::<fsys::RealmExplorerMarker>().unwrap();
-        let lifecycle_controller = connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(
-            "/hub/debug/fuchsia.sys2.LifecycleController",
-        )
-        .unwrap();
+        let lifecycle_controller =
+            connect_to_protocol::<fsys::LifecycleControllerMarker>().unwrap();
         Self { realm_explorer, lifecycle_controller }
     }
 
