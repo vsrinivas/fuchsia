@@ -470,8 +470,8 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever
   // comes first.
   size_t iterations = 0;
-  while (iterations < limits.min_runs_per_config ||
-         (stats.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
+  while (iterations <= limits.min_runs_per_config ||
+         (stats.total < limits.duration_per_config && iterations <= limits.runs_per_config)) {
     bk.gain.SetSourceGain(source_mute ? fuchsia::media::audio::MUTED_GAIN_DB : gain_db);
 
     if (cfg.gain_type == GainType::Ramped) {
@@ -500,10 +500,11 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
       }
     }
 
-    auto t1 = zx::clock::get_monotonic();
-    stats.Add(t1 - t0);
-
-    iterations++;
+    // Do *not* include the first run to avoid artificially slow initial cases.
+    [[maybe_unused]] auto t1 = zx::clock::get_monotonic();
+    if (iterations++ > 0) {
+      stats.Add(t1 - t0);
+    }
   }
 
   printf("%s:\t%s\n", cfg.ToStringForMixer().c_str(), stats.Summary().c_str());
@@ -577,14 +578,16 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
     // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever
     // comes first.
     size_t iterations = 0;
-    while (iterations < limits.min_runs_per_config ||
-           (stats.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
+    while (iterations <= limits.min_runs_per_config ||
+           (stats.total < limits.duration_per_config && iterations <= limits.runs_per_config)) {
       auto t0 = zx::clock::get_monotonic();
       output_producer->FillWithSilence(dest.get(), frame_count);
-      auto t1 = zx::clock::get_monotonic();
-      stats.Add(t1 - t0);
 
-      iterations++;
+      // Do *not* include the first run to avoid artificially slow initial cases.
+      [[maybe_unused]] auto t1 = zx::clock::get_monotonic();
+      if (iterations++ > 0) {
+        stats.Add(t1 - t0);
+      }
     }
   } else {
     auto accum_format = Format::Create<ASF::FLOAT>(cfg.num_chans, 48000 /* unused */).take_value();
@@ -612,14 +615,16 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
     // Limit to |duration_per_config| or between 5 and |runs_per_config| iterations, whichever
     // comes first.
     size_t iterations = 0;
-    while (iterations < limits.min_runs_per_config ||
-           (stats.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
+    while (iterations <= limits.min_runs_per_config ||
+           (stats.total < limits.duration_per_config && iterations <= limits.runs_per_config)) {
       auto t0 = zx::clock::get_monotonic();
       output_producer->ProduceOutput(&accum.samples()[0], dest.get(), frame_count);
-      auto t1 = zx::clock::get_monotonic();
-      stats.Add(t1 - t0);
 
-      iterations++;
+      // Do *not* include the first run to avoid artificially slow initial cases.
+      [[maybe_unused]] auto t1 = zx::clock::get_monotonic();
+      if (iterations++ > 0) {
+        stats.Add(t1 - t0);
+      }
     }
   }
 
