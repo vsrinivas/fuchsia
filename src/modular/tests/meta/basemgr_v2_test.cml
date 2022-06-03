@@ -11,6 +11,9 @@
     program: {
         binary: "bin/basemgr_v2_test",
     },
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+    ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",

@@ -9,6 +9,7 @@
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
@@ -36,7 +37,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
       fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider>
           intl_property_provider_connector,
       fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
-      fit::function<bool()> is_terminating_cb);
+      inspect::Node agent_restart_tracker, fit::function<bool()> is_terminating_cb);
 
   ~StartupAgentLauncher() override = default;
 
@@ -99,6 +100,10 @@ class StartupAgentLauncher : public AgentServicesFactory {
   fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
       intl_property_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::element::Manager>)> element_manager_connector_;
+
+  inspect::Node session_restart_tracker_;
+  // String is component URL and value is restart attempts.
+  std::map<std::string, inspect::UintProperty> agent_restarts_ = {};
 
   // Return |true| to avoid automatically restarting session_agents_.
   fit::function<bool()> is_terminating_cb_ = nullptr;

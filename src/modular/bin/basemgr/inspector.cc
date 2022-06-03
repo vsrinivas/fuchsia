@@ -10,6 +10,10 @@
 
 namespace modular {
 
+namespace {
+constexpr char kChildRestartTrackerName[] = "eager_children_restarts";
+}
+
 BasemgrInspector::BasemgrInspector(inspect::Inspector* inspector)
     : inspector_(inspector),
       session_started_at_list_(/*capacity=*/kInspectSessionStartedAtCapacity) {
@@ -26,6 +30,10 @@ void BasemgrInspector::AddConfig(const fuchsia::modular::session::ModularConfig&
 void BasemgrInspector::AddSessionStartedAt(zx_time_t timestamp) {
   auto& item = session_started_at_list_.CreateItem();
   item.node.RecordInt(kInspectTimePropertyName, timestamp);
+}
+
+inspect::Node BasemgrInspector::CreateChildRestartTrackerNode() {
+  return inspector_->GetRoot().CreateChild(kChildRestartTrackerName);
 }
 
 }  // namespace modular

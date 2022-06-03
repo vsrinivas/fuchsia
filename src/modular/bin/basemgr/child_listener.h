@@ -7,6 +7,7 @@
 
 #include <fuchsia/component/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
@@ -50,7 +51,8 @@ struct Child {
 class ChildListener final {
  public:
   ChildListener(sys::ServiceDirectory* svc, async_dispatcher_t* dispatcher,
-                const std::vector<Child>& children, size_t backoff_base);
+                const std::vector<Child>& children, size_t backoff_base,
+                inspect::Node child_restart_tracker);
 
   // Start all child components as passed in the constructor. This method
   // will try to establish a connection with each child up to
@@ -71,10 +73,15 @@ class ChildListener final {
     // in the ServiceDirectory associated with the enclosing |ChildListener|
     // object.
     // An empty |path| value will yield undefined behavior.
-    ChildListenerImpl(Child child, std::string path);
+    // |num_restarts| is an Inspect value used to track restart attempts on this
+    // child component. It should be set to 0 when passed to the constructor.
+    // On each restart attempt, it will be incremented by 1.
+    ChildListenerImpl(Child child, std::string path, inspect::UintProperty num_restarts);
 
     fit::closure Connect(sys::ServiceDirectory* svc, async_dispatcher_t* dispatcher,
                          fit::function<void(zx_status_t)> on_error);
+
+    void IncrementRestartCount();
 
     const std::string& GetPath() const;
 
@@ -85,6 +92,7 @@ class ChildListener final {
    private:
     Child child_;
     std::string path_;
+    inspect::UintProperty num_restarts_;
 
     fuchsia::component::BinderPtr binder_;
     fxl::WeakPtrFactory<ChildListenerImpl> weak_factory_;
@@ -98,6 +106,7 @@ class ChildListener final {
   sys::ServiceDirectory* const svc_ = nullptr;      // Not owned.
   async_dispatcher_t* const dispatcher_ = nullptr;  // Not owned.
   size_t backoff_base_;
+  inspect::Node child_restart_tracker_;
   // |ChildListenerImpl needs to be wrapped in a std::unique_ptr because
   // the type is neither moveable nor copyable.
   std::vector<std::unique_ptr<ChildListenerImpl>> impls_ = {};

@@ -44,6 +44,9 @@ constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 // services.
 constexpr char kSessionCtlDir[] = "sessionctl";
 
+// The name used for the Inspect node that tracks agent restarts.
+constexpr char kAgentRestartNodeName[] = "agent_restarts";
+
 // Creates a function that can be used as termination action passed to OnTerminate(),
 // which when called invokes the reset() method on the object pointed to by the
 // argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
@@ -276,7 +279,7 @@ void SessionmgrImpl::InitializeStartupAgentLauncher() {
         }
         element_manager_impl_->Connect(std::move(request));
       },
-      [this]() { return terminating_; });
+      inspect_root_node_.CreateChild(kAgentRestartNodeName), [this]() { return terminating_; });
   OnTerminate(Reset(&startup_agent_launcher_));
 }
 

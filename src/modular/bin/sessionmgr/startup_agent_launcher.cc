@@ -46,12 +46,13 @@ StartupAgentLauncher::StartupAgentLauncher(
         session_restart_controller_connector,
     fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
     fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
-    fit::function<bool()> is_terminating_cb)
+    inspect::Node session_restart_tracker, fit::function<bool()> is_terminating_cb)
     : config_accessor_(config_accessor),
       puppet_master_connector_(std::move(puppet_master_connector)),
       session_restart_controller_connector_(std::move(session_restart_controller_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       element_manager_connector_(std::move(element_manager_connector)),
+      session_restart_tracker_(std::move(session_restart_tracker)),
       is_terminating_cb_(std::move(is_terminating_cb)) {}
 
 void StartupAgentLauncher::StartAgents(AgentRunner* agent_runner,
@@ -60,6 +61,9 @@ void StartupAgentLauncher::StartAgents(AgentRunner* agent_runner,
   FX_LOGS(INFO) << "Starting session_agents:";
   for (const auto& agent : session_agents) {
     FX_LOGS(INFO) << " " << agent;
+    // Initialize the restart tracker for this session agent.
+    agent_restarts_[agent] = session_restart_tracker_.CreateUint(agent, 0);
+
     StartSessionAgent(agent_runner, agent);
   }
 
@@ -138,6 +142,9 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
 
     if (agent_data.restart.ShouldRetry()) {
       FX_LOGS(INFO) << "Restarting " << url << "...";
+      // Increment the restart tracker for this agent.
+      agent_restarts_[url].Add(1);
+
       StartSessionAgent(agent_runner, url);
       return;
     }

@@ -106,7 +106,8 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
       config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
   auto child_listener = std::make_unique<modular::ChildListener>(
-      component_context->svc().get(), loop->dispatcher(), std::move(children), backoff_base);
+      component_context->svc().get(), loop->dispatcher(), std::move(children), backoff_base,
+      inspector->CreateChildRestartTrackerNode());
 
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config_accessor), component_context->outgoing(), inspector,

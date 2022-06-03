@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
+    diagnostics_reader::{ArchiveReader, Inspect},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
     fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_session as fsession,
@@ -366,6 +367,74 @@ async fn test_restart_session_after_critical_child_crashes() -> Result<(), Error
 
     let restart_requested = restart_receiver.take(1).next().await.unwrap();
     assert!(restart_requested);
+
+    // We have to destroy the instance after the test assertion because
+    // basemgr teardown will be spammy with error logs due to closing sessionmgr's
+    // ComponentController channel
+    instance.destroy().await?;
+
+    Ok(())
+}
+
+// Tests that restart attempts for eager children are tracked in Inspect.
+// The expectation is that basemgr emits the data in the Inspect tree like this:
+// root:
+//   ...
+//   eager_children_restarts:
+//      some_child_name: 2
+//      some_other_name: 0
+//
+#[fuchsia::test]
+async fn test_eager_children_restart_are_tracked_in_inspect() -> Result<(), Error> {
+    const MAX_RESTART_ATTEMPTS: u64 = 3;
+    const RESTART_TRACKER_PROP_KEY: &str = "eager_children_restarts";
+    const BASEMGR_WITH_EAGER_CHILDREN_URL: &str = "#meta/basemgr-with-eager-children.cm";
+    const EAGER_CHILDREN: [&str; 2] = ["foo", "bar"];
+
+    let fixture = TestFixture::new(BASEMGR_WITH_EAGER_CHILDREN_URL)
+        .await?
+        .route_placeholder_restarter()
+        .await?
+        .route_noop_sys_launcher()
+        .await?;
+
+    let instance = fixture.builder.build().await?;
+    let moniker = format!("realm_builder\\:{}/basemgr", instance.root.child_name());
+
+    let mut child_restart_futs = vec![];
+    for child_name in EAGER_CHILDREN.iter() {
+        let moniker = moniker.clone();
+        let fut = async move {
+            // We don't know when the restart attempts will added to Inspect.
+            // So in order to prevent a race condition where we assert that the
+            // the final count is MAX_RESTART_ATTEMPTS before basemgr has
+            // actually written that, we'll loop until that is the case.
+            // We can consider that exit condition the "assertion" of this test
+            // case.
+            loop {
+                let results = ArchiveReader::new()
+                    .add_selector(format!("{}:root/eager_children_restarts", moniker))
+                    .snapshot::<Inspect>()
+                    .await
+                    .unwrap();
+                assert_eq!(results.len(), 1);
+                // First, fetch the root node's payload.
+                let payload = results.first().unwrap().payload.as_ref().unwrap();
+                // Then, fetch child node namd `eager_children_restarts`.
+                let payload = payload.get_child(RESTART_TRACKER_PROP_KEY).unwrap();
+                let prop = payload.get_property(child_name).unwrap().uint().unwrap();
+
+                assert!(!prop > MAX_RESTART_ATTEMPTS);
+                // Sadly, Rust doesn't implement Eq trait for &u64 and u64.
+                if prop == &MAX_RESTART_ATTEMPTS {
+                    break;
+                }
+            }
+        };
+        child_restart_futs.push(fut);
+    }
+
+    let _ = join_all(child_restart_futs).await;
 
     // We have to destroy the instance after the test assertion because
     // basemgr teardown will be spammy with error logs due to closing sessionmgr's

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MODULAR_BIN_BASEMGR_INSPECTOR_IMPL_H_
-#define SRC_MODULAR_BIN_BASEMGR_INSPECTOR_IMPL_H_
+#ifndef SRC_MODULAR_BIN_BASEMGR_INSPECTOR_H_
+#define SRC_MODULAR_BIN_BASEMGR_INSPECTOR_H_
 
 #include <lib/inspect/cpp/inspector.h>
 #include <zircon/time.h>
@@ -32,6 +32,10 @@ class BasemgrInspector {
   // Only the last |kSessionStartedAtCapacity| entries are stored.
   void AddSessionStartedAt(zx_time_t timestamp);
 
+  // Create a child node that will be used to track eager children restarts.
+  // Should only be called once.
+  inspect::Node CreateChildRestartTrackerNode();
+
  private:
   inspect::Inspector* inspector_;
   inspect::ValueList static_values_;
@@ -40,4 +44,4 @@ class BasemgrInspector {
 
 }  // namespace modular
 
-#endif
+#endif  // SRC_MODULAR_BIN_BASEMGR_INSPECTOR_H_

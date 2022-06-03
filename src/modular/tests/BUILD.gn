@@ -435,11 +435,14 @@ rustc_test("basemgr_v2_test_bin") {
   source_root = "basemgr_v2_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
@@ -40,12 +41,18 @@ std::string SessionRestartErrorToString(fuchsia::session::RestartError err) {
 }  // namespace
 
 ChildListener::ChildListener(sys::ServiceDirectory* svc, async_dispatcher_t* dispatcher,
-                             const std::vector<Child>& children, size_t backoff_base)
-    : svc_(svc), dispatcher_(dispatcher), backoff_base_(backoff_base), weak_factory_(this) {
+                             const std::vector<Child>& children, size_t backoff_base,
+                             inspect::Node child_restart_tracker)
+    : svc_(svc),
+      dispatcher_(dispatcher),
+      backoff_base_(backoff_base),
+      child_restart_tracker_(std::move(child_restart_tracker)),
+      weak_factory_(this) {
   FX_LOGS(INFO) << "Backoff Base: " << backoff_base << " minutes.";
   for (const auto& child : children) {
     std::string path = "fuchsia.component.Binder." + std::string(child.name);
-    impls_.emplace_back(std::make_unique<ChildListenerImpl>(child, path));
+    auto num_restarts = child_restart_tracker_.CreateUint(child.name, 0);
+    impls_.emplace_back(std::make_unique<ChildListenerImpl>(child, path, std::move(num_restarts)));
   }
 }
 
@@ -83,6 +90,7 @@ void ChildListener::ConnectToCriticalChild(ChildListenerImpl* impl,
 
 void ChildListener::ConnectToEagerChild(ChildListenerImpl* impl, size_t attempt) {
   if (attempt == kMaxCrashRecoveryLimit) {
+    impl->IncrementRestartCount();
     FX_LOGS(INFO) << "Failed to connect to " << impl->GetPath() << " after "
                   << kMaxCrashRecoveryLimit << " attempts. No further attempts will be made.";
     return;
@@ -101,6 +109,7 @@ void ChildListener::ConnectToEagerChild(ChildListenerImpl* impl, size_t attempt)
                     });
 
   if (attempt) {
+    impl->IncrementRestartCount();
     const int64_t delay = static_cast<int64_t>(
         std::pow(static_cast<double>(backoff_base_), static_cast<double>(attempt)));
     async::PostDelayedTask(dispatcher_, std::move(connection_task), zx::min(delay));
@@ -109,8 +118,12 @@ void ChildListener::ConnectToEagerChild(ChildListenerImpl* impl, size_t attempt)
   }
 }
 
-ChildListener::ChildListenerImpl::ChildListenerImpl(Child child, std::string path)
-    : child_(child), path_(std::move(path)), weak_factory_(this) {}
+ChildListener::ChildListenerImpl::ChildListenerImpl(Child child, std::string path,
+                                                    inspect::UintProperty num_restarts)
+    : child_(child),
+      path_(std::move(path)),
+      num_restarts_(std::move(num_restarts)),
+      weak_factory_(this) {}
 
 fit::closure ChildListener::ChildListenerImpl::Connect(sys::ServiceDirectory* svc,
                                                        async_dispatcher_t* dispatcher,
@@ -125,6 +138,8 @@ fit::closure ChildListener::ChildListenerImpl::Connect(sys::ServiceDirectory* sv
     }
   };
 }
+
+void ChildListener::ChildListenerImpl::IncrementRestartCount() { num_restarts_.Add(1); }
 
 cpp17::string_view ChildListener::ChildListenerImpl::GetName() const { return child_.name; }
 
