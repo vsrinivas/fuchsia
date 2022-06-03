@@ -27,6 +27,7 @@ use {
         stream::{StreamExt, TryStreamExt},
         Future,
     },
+    log::*,
     std::{
         borrow::Borrow,
         fmt,

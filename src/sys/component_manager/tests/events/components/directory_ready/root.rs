@@ -26,7 +26,7 @@ async fn call_trigger(directory: &fio::DirectoryProxy, paths: &Vec<String>) {
         let (trigger, server_end) = create_proxy::<ftest::TriggerMarker>().unwrap();
         directory
             .open(
-                fio::OpenFlags::RIGHT_READABLE,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                 fio::MODE_TYPE_SERVICE,
                 path,
                 ServerEnd::new(server_end.into_channel()),

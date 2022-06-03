@@ -225,13 +225,7 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(
-            &local,
-            "dev",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            remote,
-        )
-        .expect("Open OK");
+        fdio::open_at(&local, "dev", fio::OpenFlags::RIGHT_READABLE, remote).expect("Open OK");
         let result = FatDevice::get_guid_at(&dev_dir, "000").await.expect("get guid succeeds");
         assert_eq!(result.unwrap().value, MICROSOFT_BASIC_DATA_GUID);
     }
@@ -249,13 +243,7 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(
-            &local,
-            "dev",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            remote,
-        )
-        .expect("Open OK");
+        fdio::open_at(&local, "dev", fio::OpenFlags::RIGHT_READABLE, remote).expect("Open OK");
         let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), Some("002".to_owned()));
@@ -274,13 +262,7 @@ pub mod test {
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
-        fdio::open_at(
-            &local,
-            "dev",
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            remote,
-        )
-        .expect("Open OK");
+        fdio::open_at(&local, "dev", fio::OpenFlags::RIGHT_READABLE, remote).expect("Open OK");
         let dev_dir = fio::DirectoryProxy::new(fidl::AsyncChannel::from_channel(dev_dir).unwrap());
         let result = FatDevice::find_fat_partition(&dev_dir).await;
         assert_eq!(result.expect("Find partition succeeds"), None);

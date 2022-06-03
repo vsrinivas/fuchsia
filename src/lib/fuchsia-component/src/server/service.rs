@@ -22,6 +22,15 @@ pub trait Service {
     /// The value returned by this function will be yielded from the stream
     /// output of the `ServiceFs` type.
     fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output>;
+
+    /// Create a new instance of the service on the provided `zx::Channel`.
+    /// The service is hosted at the given `path`.
+    ///
+    /// The value returned by this function will be yielded from the stream
+    /// output of the `ServiceFs` type.
+    fn connect_at(&mut self, _path: &str, channel: zx::Channel) -> Option<Self::Output> {
+        self.connect(channel)
+    }
 }
 
 impl<F, O> Service for F
@@ -119,18 +128,16 @@ where
     SR: ServiceRequest,
 {
     f: F,
-    member: &'static str,
     marker: PhantomData<(SR, Output)>,
 }
 
-impl<F, SR, Output> FidlServiceMember<F, SR, Output>
+impl<F, SR, Output> From<F> for FidlServiceMember<F, SR, Output>
 where
     F: FnMut(SR) -> Output,
     SR: ServiceRequest,
 {
-    /// Creates an object that handles connections to a service member.
-    pub fn new(f: F, member: &'static str) -> Self {
-        Self { f, member, marker: PhantomData }
+    fn from(f: F) -> Self {
+        Self { f, marker: PhantomData }
     }
 }
 
@@ -141,9 +148,14 @@ where
 {
     type Output = Output;
 
-    fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output> {
+    fn connect(&mut self, _channel: zx::Channel) -> Option<Self::Output> {
+        // FidlServiceMember needs to know which member to dispatch to.
+        unimplemented!();
+    }
+
+    fn connect_at(&mut self, path: &str, channel: zx::Channel) -> Option<Self::Output> {
         match fasync::Channel::from_channel(channel) {
-            Ok(chan) => Some((self.f)(SR::dispatch(self.member, chan))),
+            Ok(chan) => Some((self.f)(SR::dispatch(path, chan))),
             Err(e) => {
                 eprintln!("ServiceFs failed to convert channel to fasync channel: {:?}", e);
                 None

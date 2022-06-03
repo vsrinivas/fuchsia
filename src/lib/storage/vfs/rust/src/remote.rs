@@ -8,7 +8,6 @@
 mod tests;
 
 use crate::{
-    common::send_on_open_with_error,
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
     path::Path,
@@ -16,7 +15,7 @@ use crate::{
 
 use {
     fidl::{self, endpoints::ServerEnd},
-    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio,
     std::sync::Arc,
 };
 
@@ -64,17 +63,6 @@ pub fn remote_dir(dir: fio::DirectoryProxy) -> Arc<Remote> {
         }),
         fio::DirentType::Directory,
     )
-}
-
-/// Create a new [`Remote`] node that clones the given node when connected.
-pub fn remote_node(node: fio::NodeProxy) -> Arc<Remote> {
-    remote_boxed(Box::new(move |_scope, flags, _mode, path, server_end| {
-        if !path.is_empty() {
-            send_on_open_with_error(flags, server_end, zx::Status::NOT_DIR);
-            return;
-        }
-        let _ = node.clone(flags, server_end);
-    }))
 }
 
 /// A Remote node is a node which forwards most open requests to another entity. The forwarding is
