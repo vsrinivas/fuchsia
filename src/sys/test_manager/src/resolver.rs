@@ -244,7 +244,7 @@ mod tests {
         builder.build().await
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_successful_resolve() {
         let pkg_name = "package-one".to_string();
 
@@ -272,7 +272,8 @@ mod tests {
         universe_resolver_task.await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    // Logging disabled as this outputs ERROR log, which will fail the test.
+    #[fuchsia::test(logging = false)]
     async fn test_package_not_allowed() {
         let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
             .expect("failed to create mock universe resolver proxy");
@@ -293,7 +294,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_failed_resolve() {
         let (resolver_proxy, mut resolver_request_stream) =
             create_proxy_and_stream::<fresolution::ResolverMarker>()
@@ -321,7 +322,7 @@ mod tests {
         universe_resolver_task.await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_invalid_url() {
         let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
             .expect("failed to create mock universe resolver proxy");
@@ -343,7 +344,7 @@ mod tests {
     mod loader {
         use super::*;
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia::test]
         async fn test_successful_loader() {
             let pkg_name = "package-one".to_string();
 
@@ -366,7 +367,8 @@ mod tests {
             );
         }
 
-        #[fasync::run_singlethreaded(test)]
+        // Logging disabled as this outputs ERROR log, which will fail the test.
+        #[fuchsia::test(logging = false)]
         async fn test_package_not_allowed() {
             let (loader_proxy, _) = create_proxy_and_stream::<fv1sys::LoaderMarker>()
                 .expect("failed to create mock loader proxy");
@@ -385,7 +387,7 @@ mod tests {
             );
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia::test]
         async fn test_failed_loader() {
             let (loader_proxy, mut loader_request_stream) =
                 create_proxy_and_stream::<fv1sys::LoaderMarker>()
@@ -408,7 +410,7 @@ mod tests {
             );
         }
 
-        #[fasync::run_singlethreaded(test)]
+        #[fuchsia::test]
         async fn test_invalid_url_loader() {
             let (loader_proxy, _) = create_proxy_and_stream::<fv1sys::LoaderMarker>()
                 .expect("failed to create mock loader proxy");

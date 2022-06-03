@@ -382,7 +382,7 @@ mod tests {
         RootInspectNode::new(&fuchsia_inspect::types::Node::default()).new_run("test-run")
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn run_controller_stop_test() {
         let (sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
@@ -412,7 +412,7 @@ mod tests {
         run_controller.await.unwrap_err();
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn run_controller_abort_when_channel_closed() {
         let (_sender, recv) = mpsc::channel(1024);
         let (stop_sender, _stop_recv) = oneshot::channel::<()>();
@@ -438,7 +438,7 @@ mod tests {
         run_controller.await.unwrap_err();
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn suite_controller_stop_test() {
         let (sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
@@ -461,7 +461,7 @@ mod tests {
         run_controller.await.unwrap();
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn suite_controller_abort_remote_when_controller_closed() {
         let (_sender, recv) = mpsc::channel(1024);
         let (stop_sender, _stop_recv) = oneshot::channel::<()>();
@@ -480,7 +480,7 @@ mod tests {
         run_controller.await.unwrap();
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn suite_controller_get_events() {
         let (mut sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();

@@ -259,7 +259,7 @@ mod tests {
         futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn verify_archive_accessor_server_scopes_monikers() {
         let (sender, receiver) = mpsc::channel(1);
         let embedded_accessor = spawn_fake_archive_accessor(sender);

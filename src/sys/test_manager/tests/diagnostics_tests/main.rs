@@ -12,7 +12,7 @@ use {
 const URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/diagnostics-publisher.cm";
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_isolated_diagnostics_can_be_read_by_the_test() {
     let mut instance =
         ScopedInstance::new("coll".into(), URL.into()).await.expect("Created instance");

@@ -34,6 +34,7 @@ rustc_test("diagnostics_test_bin") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:futures",

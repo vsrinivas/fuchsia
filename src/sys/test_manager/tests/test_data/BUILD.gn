@@ -112,6 +112,7 @@ rustc_test("debug_data_test_bin") {
   deps = [
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

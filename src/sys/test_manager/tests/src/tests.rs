@@ -125,7 +125,7 @@ async fn collect_suite_events(
     Ok((events, collected_logs))
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn calling_kill_should_kill_test() {
     let proxy = connect_test_manager().await.unwrap();
     let builder = TestBuilder::new(proxy);
@@ -165,7 +165,7 @@ async fn calling_kill_should_kill_test() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn closing_suite_controller_should_kill_test() {
     let proxy = connect_test_manager().await.unwrap();
     let builder = TestBuilder::new(proxy);
@@ -188,7 +188,7 @@ async fn closing_suite_controller_should_kill_test() {
     builder_run_task.await.expect("Run controller failed to collect events");
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn calling_builder_kill_should_kill_test() {
     let proxy = connect_test_manager().await.unwrap();
     let builder = TestBuilder::new(proxy);
@@ -229,7 +229,7 @@ async fn calling_builder_kill_should_kill_test() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn calling_stop_should_stop_test() {
     let proxy = connect_test_manager().await.unwrap();
     let builder = TestBuilder::new(proxy);
@@ -279,7 +279,7 @@ fn default_run_option() -> ftest_manager::RunOptions {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
     let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
@@ -297,7 +297,7 @@ async fn launch_and_test_echo_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_and_test_tests_with_legacy_components() {
     let test_url = "fuchsia-pkg://fuchsia.com/cmx_runner_tests#meta/echo_proxy_test.cm";
     let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
@@ -322,7 +322,7 @@ async fn launch_and_test_tests_with_legacy_components() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_and_test_no_on_finished() {
     let test_url =
         "fuchsia-pkg://fuchsia.com/example-tests#meta/no-onfinished-after-test-example.cm";
@@ -349,7 +349,7 @@ async fn launch_and_test_no_on_finished() {
     assert_eq!(logs, Vec::<String>::new());
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_and_test_gtest_runner_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
 
@@ -365,7 +365,7 @@ async fn launch_and_test_gtest_runner_sample_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn positive_filter_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
     let mut options = default_run_option();
@@ -397,7 +397,7 @@ async fn positive_filter_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn negative_filter_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
     let mut options = default_run_option();
@@ -433,7 +433,7 @@ async fn negative_filter_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn positive_and_negative_filter_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
     let mut options = default_run_option();
@@ -461,7 +461,7 @@ async fn positive_and_negative_filter_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn parallel_tests() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
     let mut options = default_run_option();
@@ -478,7 +478,7 @@ async fn parallel_tests() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn multiple_test() {
     let gtest_test_url =
         "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
@@ -518,7 +518,7 @@ async fn multiple_test() {
     assert_eq!(&expected_events, &gtest_events2);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn no_suite_service_test() {
     let proxy = connect_test_manager().await.unwrap();
     let builder = TestBuilder::new(proxy);
@@ -540,7 +540,7 @@ async fn no_suite_service_test() {
     assert_eq!(err, test_manager_test_lib::SuiteLaunchError::CaseEnumeration);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_not_resolved() {
     let proxy = connect_test_manager().await.unwrap();
     let builder = TestBuilder::new(proxy);
@@ -561,7 +561,7 @@ async fn test_not_resolved() {
     assert_eq!(err, test_manager_test_lib::SuiteLaunchError::InstanceCannotResolve);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn collect_isolated_logs_using_default_log_iterator() {
     let test_url = "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/test-root.cm";
     let (_events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
@@ -572,7 +572,7 @@ async fn collect_isolated_logs_using_default_log_iterator() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn collect_isolated_logs_using_batch() {
     let test_url = "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/test-root.cm";
     let mut options = default_run_option();
@@ -585,7 +585,7 @@ async fn collect_isolated_logs_using_batch() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn collect_isolated_logs_using_archive_iterator() {
     let test_url = "fuchsia-pkg://fuchsia.com/test-manager-diagnostics-tests#meta/test-root.cm";
     let mut options = default_run_option();
@@ -598,7 +598,7 @@ async fn collect_isolated_logs_using_archive_iterator() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_v1_v2_bridge_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/v2_test_runs_v1_component.cm";
 
@@ -642,7 +642,7 @@ async fn launch_v1_v2_bridge_test() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn custom_artifact_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/custom_artifact_user.cm";
 
@@ -664,7 +664,7 @@ async fn custom_artifact_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn debug_data_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_write_test.cm";
 
@@ -708,7 +708,7 @@ async fn debug_data_test() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn custom_artifact_realm_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/custom_artifact_realm_test.cm";
 
@@ -730,7 +730,7 @@ async fn custom_artifact_realm_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn enumerate_invalid_test() {
     let proxy = connect_query_server().await.unwrap();
     let (_iterator, server_end) = endpoints::create_proxy().unwrap();
@@ -742,7 +742,7 @@ async fn enumerate_invalid_test() {
     assert_eq!(err, ftest_manager::LaunchError::InstanceCannotResolve);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn enumerate_echo_test() {
     let proxy = connect_query_server().await.unwrap();
     let (iterator, server_end) = endpoints::create_proxy().unwrap();
@@ -766,7 +766,7 @@ async fn enumerate_echo_test() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn enumerate_huge_test() {
     let proxy = connect_query_server().await.unwrap();
     let (iterator, server_end) = endpoints::create_proxy().unwrap();
@@ -798,7 +798,7 @@ async fn enumerate_huge_test() {
 // TODO(fxbug.dev/96471): Write tests for hermetic collection once we remove system capabilities
 // from its namespace. This test is able to test that "system-tests" collection has the
 // Resolver service, which is not available to the hermetic collection.
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_non_hermetic_test() {
     // This test is launched in system realm. Once we remove system capabilities from hermetic
     // realm, we would be able to test this better.
@@ -818,7 +818,7 @@ async fn launch_non_hermetic_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_chromium_test() {
     // TODO(91934): This test is launched in the chromium realm. Once we support out of tree realm
     // definitions we should move the definition and test to chromium.

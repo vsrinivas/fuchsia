@@ -7,7 +7,7 @@ use {
     fuchsia_zircon as zx,
 };
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn can_connect_to_publisher_service() {
     // Here we want to test that we can find and connect to publisher service. As the service does
     // not return anything the only way to do that is to call Publish again and again to make sure
