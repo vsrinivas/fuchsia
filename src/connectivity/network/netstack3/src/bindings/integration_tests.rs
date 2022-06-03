@@ -26,7 +26,7 @@ use netstack3_core::{
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BlanketCoreContext,
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt,
-    IpSockCreationError, UdpBoundId, UdpContext,
+    UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -177,10 +177,6 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestDispatcher {
 impl<I: SocketCollectionIpExt<IcmpEcho> + IcmpIpExt> IcmpContext<I> for TestDispatcher {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
         IcmpContext::<I>::receive_icmp_error(&mut self.disp, conn, seq_num, err)
-    }
-
-    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: IpSockCreationError) {
-        self.disp.close_icmp_connection(conn, err)
     }
 }
 

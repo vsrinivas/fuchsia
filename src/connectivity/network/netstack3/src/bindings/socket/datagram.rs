@@ -38,9 +38,9 @@ use netstack3_core::{
     send_udp_listener, set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device,
     BlanketCoreContext, BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx,
     EventDispatcher, IdMap, IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt,
-    IpSockCreationError, IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId,
-    UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
-    UdpSendListenerError, UdpSockCreationError, UdpStateContext, UdpUnboundId,
+    IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo,
+    UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
+    UdpSockCreationError, UdpStateContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -856,13 +856,6 @@ impl<I: icmp::IcmpIpExt> icmp::IcmpContext<I> for SocketCollection<I, IcmpEcho> 
             conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
         // NB: Logging at error as a means of failing tests that provoke this condition.
         error!("unimplemented receive_icmp_error {:?} seq={} on {:?}", err, seq_num, binding_data)
-    }
-
-    fn close_icmp_connection(&mut self, conn: icmp::IcmpConnId<I>, err: IpSockCreationError) {
-        let Self { binding_data, conns, listeners: _ } = self;
-        let binding_data =
-            conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
-        todo!("https://fxbug.dev/47321: err={}; ICMP should 'stay open' on {:?}", err, binding_data)
     }
 }
 

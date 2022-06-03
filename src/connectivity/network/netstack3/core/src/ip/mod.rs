@@ -59,9 +59,9 @@ use crate::{
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
-            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpState,
-            Icmpv4Error, Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State, Icmpv4StateBuilder,
-            Icmpv6ErrorCode, Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder, InnerIcmpContext,
+            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, Icmpv4Error,
+            Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State, Icmpv4StateBuilder, Icmpv6ErrorCode,
+            Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder, InnerIcmpContext,
         },
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
@@ -2304,16 +2304,6 @@ impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv4> for Ctx<D
             Ipv4Proto::Proto(IpProto::Udp) => Proto17
         );
     }
-
-    fn get_state_and_update_meta(
-        &mut self,
-    ) -> (
-        &mut IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, DeviceId>>,
-        &ForwardingTable<Ipv4, DeviceId>,
-    ) {
-        let state = &mut self.state.ipv4;
-        (state.icmp.as_mut(), &state.inner.table)
-    }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv6> for Ctx<D, C> {
@@ -2348,16 +2338,6 @@ impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv6> for Ctx<D
             Ipv6Proto::Proto(IpProto::Tcp) => Proto6,
             Ipv6Proto::Proto(IpProto::Udp) => Proto17
         );
-    }
-
-    fn get_state_and_update_meta(
-        &mut self,
-    ) -> (
-        &mut IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, DeviceId>>,
-        &ForwardingTable<Ipv6, DeviceId>,
-    ) {
-        let state = &mut self.state.ipv6;
-        (state.icmp.as_mut(), &state.inner.table)
     }
 }
 

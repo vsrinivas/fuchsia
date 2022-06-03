@@ -60,7 +60,7 @@ use netstack3_core::{
     context::{EventContext, InstantContext, RngContext, TimerContext},
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
     BlanketCoreContext, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher,
-    EventDispatcher, IpDeviceConfiguration, IpExt, IpSockCreationError, Ipv4DeviceConfiguration,
+    EventDispatcher, IpDeviceConfiguration, IpExt, Ipv4DeviceConfiguration,
     Ipv6DeviceConfiguration, SlaacConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext,
     UdpListenerId,
 };
@@ -350,10 +350,6 @@ where
 {
     fn receive_icmp_error(&mut self, conn: icmp::IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
         I::get_collection_mut(self).receive_icmp_error(conn, seq_num, err)
-    }
-
-    fn close_icmp_connection(&mut self, conn: icmp::IcmpConnId<I>, err: IpSockCreationError) {
-        I::get_collection_mut(self).close_icmp_connection(conn, err)
     }
 }
 

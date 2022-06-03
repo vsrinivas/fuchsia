@@ -35,10 +35,7 @@ use rand_xorshift::XorShiftRng;
 use crate::{
     context::{testutil::DummyInstant, EventContext, InstantContext, RngContext, TimerContext},
     device::{receive_frame, DeviceId, DeviceLayerEventDispatcher},
-    ip::{
-        icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-        socket::IpSockCreationError,
-    },
+    ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     testutil::{
         benchmarks::{black_box, Bencher},
         DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4,
@@ -84,10 +81,6 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
 
 impl<I: IcmpIpExt> IcmpContext<I> for BenchmarkEventDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
-        unimplemented!()
-    }
-
-    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: IpSockCreationError) {
         unimplemented!()
     }
 }

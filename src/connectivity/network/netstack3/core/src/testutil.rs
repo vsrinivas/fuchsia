@@ -34,7 +34,6 @@ use crate::{
     ip::{
         device::{dad::DadEvent, route_discovery::Ipv6RouteDiscoveryEvent, IpDeviceEvent},
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-        socket::IpSockCreationError,
         AddableEntryEither, DummyDeviceId, IpLayerEvent, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
@@ -658,10 +657,6 @@ impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for DummyEventDis
 
 impl<I: IcmpIpExt> IcmpContext<I> for DummyEventDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
-        unimplemented!()
-    }
-
-    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: IpSockCreationError) {
         unimplemented!()
     }
 }

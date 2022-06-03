@@ -49,7 +49,6 @@ use crate::{
             slaac::SlaacHandler,
             Ipv6DeviceHandler,
         },
-        forwarding::ForwardingTable,
         gmp::mld::MldPacketHandler,
         path_mtu::PmtuHandler,
         socket::{
@@ -574,15 +573,6 @@ pub trait IcmpContext<I: IcmpIpExt> {
     /// triggered the error, and `err` is the specific error identified by the
     /// incoming ICMP error message.
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode);
-
-    /// Closes an ICMP connection because it is no longer routable.
-    ///
-    /// `close_icmp_connection` is called when a change to routing state has
-    /// made an ICMP socket no longer routable. After the call has returned, the
-    /// core will completely remove the socket, and any future calls referencing
-    /// it will either panic (because of an unrecognized [`IcmpConnId`]) or
-    /// incorrectly refer to a different, newly-opened ICMP connection.
-    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: IpSockCreationError);
 }
 
 /// The context required by the ICMP layer in order to deliver packets on ICMP
@@ -605,10 +595,6 @@ impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>, C: BlanketCoreContext> I
 {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
         IcmpContext::receive_icmp_error(&mut self.dispatcher, conn, seq_num, err);
-    }
-
-    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: IpSockCreationError) {
-        self.dispatcher.close_icmp_connection(conn, err);
     }
 }
 
@@ -688,15 +674,6 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
         original_proto: I::Proto,
         original_body: &[u8],
         err: I::ErrorCode,
-    );
-
-    /// Gets the [`IcmpState`] and the metadata needed to apply an IP socket
-    /// update at the same time.
-    fn get_state_and_update_meta(
-        &mut self,
-    ) -> (
-        &mut IcmpState<I::Addr, Self::Instant, IpSock<I, Self::DeviceId>>,
-        &ForwardingTable<I, Self::DeviceId>,
     );
 }
 
@@ -3648,13 +3625,6 @@ mod tests {
         data: Vec<u8>,
     }
 
-    // The arguments to `IcmpContext::close_icmp_connection`.
-    #[allow(unused)] // TODO(joshlf): Remove once we access these fields.
-    struct CloseIcmpConnectionArgs<I: Ip> {
-        conn: IcmpConnId<I>,
-        err: IpSockCreationError,
-    }
-
     // The arguments to `IcmpContext::receive_icmp_error`.
     #[derive(Debug, PartialEq)]
     struct ReceiveIcmpSocketErrorArgs<I: IcmpIpExt> {
@@ -3672,7 +3642,6 @@ mod tests {
         receive_icmp_echo_reply: Vec<ReceiveIcmpEchoReply<I>>,
         receive_icmp_error: Vec<I::ErrorCode>,
         receive_icmp_socket_error: Vec<ReceiveIcmpSocketErrorArgs<I>>,
-        close_icmp_connection: Vec<CloseIcmpConnectionArgs<I>>,
         pmtu_state: DummyPmtuState<I::Addr>,
         socket_ctx: DummyIpSocketCtx<I, D>,
     }
@@ -3701,7 +3670,6 @@ mod tests {
                 receive_icmp_echo_reply: Vec::new(),
                 receive_icmp_error: Vec::new(),
                 receive_icmp_socket_error: Vec::new(),
-                close_icmp_connection: Vec::new(),
                 pmtu_state: DummyPmtuState::default(),
                 socket_ctx,
             }
@@ -3805,17 +3773,6 @@ mod tests {
                         .receive_icmp_socket_error
                         .push(ReceiveIcmpSocketErrorArgs { conn, seq_num, err });
                 }
-
-                fn close_icmp_connection(
-                    &mut self,
-                    conn: IcmpConnId<$ip>,
-                    err: IpSockCreationError,
-                ) {
-                    self.get_mut()
-                        .inner
-                        .close_icmp_connection
-                        .push(CloseIcmpConnectionArgs { conn, err });
-                }
             }
 
             impl<B: BufferMut> BufferIcmpContext<$ip, B> for $outer {
@@ -3861,16 +3818,6 @@ mod tests {
                             err,
                         );
                     }
-                }
-
-                fn get_state_and_update_meta(
-                    &mut self,
-                ) -> (
-                    &mut IcmpState<<$ip as Ip>::Addr, DummyInstant, IpSock<$ip, DummyDeviceId>>,
-                    &ForwardingTable<$ip, DummyDeviceId>,
-                ) {
-                    let state = self.get_mut();
-                    (&mut state.icmp_state.inner, &state.inner.socket_ctx.table)
                 }
             }
         };
