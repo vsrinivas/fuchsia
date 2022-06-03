@@ -59,6 +59,69 @@ impl Namespace {
     pub fn root(&self) -> NamespaceNode {
         self.root_mount.get().unwrap().root()
     }
+
+    pub fn clone_namespace(&self) -> Arc<Namespace> {
+        let namespace = Arc::new(Self {
+            root_mount: OnceCell::new(),
+            mount_points: RwLock::new(HashMap::new()),
+        });
+        let mut mount_mapping = HashMap::new();
+
+        fn _get_new_mount(
+            namespace: &Arc<Namespace>,
+            mount_mapping: &mut HashMap<*const Mount, Arc<Mount>>,
+            old_mount: &Arc<Mount>,
+        ) -> Arc<Mount> {
+            let key = Arc::as_ptr(old_mount);
+
+            // We can't use HashMap::entry() because the entry will mutably borrow the map which
+            // makes it impossible to have a mutable reference to pass to the recursive call
+            if let Some(mount) = mount_mapping.get(&key) {
+                return Arc::clone(mount);
+            }
+
+            // A guard against trying to clone the same Mount twice, which would result in either
+            // two Mounts that should be the same or infinite recursion.
+            // mount_
+
+            let new_mount = Mount::new(
+                Arc::downgrade(&namespace),
+                old_mount.mountpoint.as_ref().map(|(mount, dir)| {
+                    (
+                        Arc::downgrade(&_get_new_mount(
+                            namespace,
+                            mount_mapping,
+                            &mount.upgrade().unwrap(),
+                        )),
+                        Arc::clone(&dir),
+                    )
+                }),
+                Arc::clone(&old_mount.root),
+                old_mount._flags,
+                Arc::clone(&old_mount._fs),
+            );
+            let new_mount = Arc::new(new_mount);
+            mount_mapping.insert(key, Arc::clone(&new_mount));
+            new_mount
+        }
+        let mut get_new_mount =
+            |old_mount| _get_new_mount(&namespace, &mut mount_mapping, old_mount);
+
+        {
+            namespace.root_mount.set(get_new_mount(self.root_mount.get().unwrap())).unwrap();
+            let mut new_mount_points = namespace.mount_points.write();
+            for (node, mount_stack) in self.mount_points.read().iter() {
+                let node = NamespaceNode {
+                    mount: node.mount.as_ref().map(|a| get_new_mount(&a)),
+                    entry: Arc::clone(&node.entry),
+                };
+                let mount_stack = mount_stack.iter().map(|a| get_new_mount(&a)).collect();
+                new_mount_points.insert(node, mount_stack);
+            }
+        }
+
+        namespace
+    }
 }
 
 impl fmt::Debug for Namespace {
@@ -591,12 +654,22 @@ mod test {
             foofs1.root()
         ));
 
+        let ns_clone = ns.clone_namespace();
+
         let foofs2 = TmpFs::new(&kernel);
         foo_dir.mount(WhatToMount::Fs(foofs2.clone()), MountFlags::empty())?;
         let mut context = LookupContext::default();
         assert!(Arc::ptr_eq(
             &ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry,
             foofs2.root()
+        ));
+
+        assert!(Arc::ptr_eq(
+            &ns_clone
+                .root()
+                .lookup_child(&current_task, &mut LookupContext::default(), b"foo")?
+                .entry,
+            foofs1.root()
         ));
 
         Ok(())

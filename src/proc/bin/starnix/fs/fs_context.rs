@@ -13,6 +13,11 @@ use crate::types::*;
 /// This state is cloned in FsContext::fork.
 #[derive(Clone)]
 struct FsContextState {
+    /// The namespace tree for this FsContext.
+    ///
+    /// This field owns the mount table for this FsContext.
+    namespace: Arc<Namespace>,
+
     /// The current working directory.
     cwd: NamespaceNode,
 
@@ -25,11 +30,6 @@ struct FsContextState {
 /// File system operations, such as opening a file or mounting a directory, are
 /// performed using this context.
 pub struct FsContext {
-    /// The namespace tree for this FsContext.
-    ///
-    /// This field owns the mount table for this FsContext.
-    namespace: Arc<Namespace>,
-
     /// The root of the namespace tree for this FsContext.
     ///
     /// Operations on the file system are typically either relative to this
@@ -49,9 +49,12 @@ impl FsContext {
         let namespace = Namespace::new(root);
         let root = namespace.root();
         Arc::new(FsContext {
-            namespace,
             root: root.clone(),
-            state: RwLock::new(FsContextState { cwd: root, umask: FileMode::DEFAULT_UMASK }),
+            state: RwLock::new(FsContextState {
+                namespace,
+                cwd: root,
+                umask: FileMode::DEFAULT_UMASK,
+            }),
         })
     }
 
@@ -62,7 +65,6 @@ impl FsContext {
         // See <https://man7.org/linux/man-pages/man2/umask.2.html>
 
         Arc::new(FsContext {
-            namespace: self.namespace.clone(),
             root: self.root.clone(),
             state: RwLock::new(self.state.read().clone()),
         })
@@ -100,7 +102,12 @@ impl FsContext {
     }
 
     pub fn namespace_root(&self) -> NamespaceNode {
-        self.namespace.root()
+        self.state.read().namespace.root()
+    }
+
+    pub fn unshare_namespace(&self) {
+        let mut state = self.state.write();
+        state.namespace = state.namespace.clone_namespace();
     }
 }
 

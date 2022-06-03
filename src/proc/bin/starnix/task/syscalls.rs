@@ -629,6 +629,23 @@ pub fn sys_setpriority(
     Ok(())
 }
 
+pub fn sys_unshare(current_task: &CurrentTask, flags: u32) -> Result<(), Errno> {
+    const IMPLEMENTED_FLAGS: u32 = CLONE_NEWNS;
+    if flags & !IMPLEMENTED_FLAGS != 0 {
+        not_implemented!("unshare does not implement flags: 0x{:x}", flags & !IMPLEMENTED_FLAGS);
+        return error!(EINVAL);
+    }
+
+    if (flags & CLONE_NEWNS) != 0 {
+        if !current_task.read().creds.has_capability(CAP_SYS_ADMIN) {
+            return error!(EPERM);
+        }
+        current_task.fs.unshare_namespace();
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
