@@ -48,10 +48,6 @@ def main():
         required=True,
         help='The path to the image assembly config file')
     parser.add_argument(
-        '--board-config',
-        type=argparse.FileType('r'),
-        help='The path to the image assembly board config file')
-    parser.add_argument(
         '--images-config',
         type=argparse.FileType('r'),
         help='The path to the image assembly images config file')
@@ -87,20 +83,6 @@ def main():
     inputs.extend(files_from_package_set(config.system))
     inputs.extend([entry.source for entry in config.bootfs_files])
     inputs.append(config.kernel.path)
-
-    if args.board_config:
-        board_config = json.load(args.board_config)
-        if 'vbmeta' in board_config:
-            vbmeta = board_config['vbmeta']
-            if 'key' in vbmeta:
-                inputs.append(vbmeta['key'])
-            if 'key_metadata' in vbmeta:
-                inputs.append(vbmeta['key_metadata'])
-            inputs.extend(vbmeta.get('additional_descriptor_files', []))
-        if 'zbi' in board_config:
-            zbi = board_config['zbi']
-            if 'signing_script' in zbi:
-                inputs.append(zbi['signing_script']['tool'])
 
     if args.images_config:
         images_config = json.load(args.images_config)['images']

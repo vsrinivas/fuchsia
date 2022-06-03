@@ -10,12 +10,12 @@ import("//build/python/python_action.gni")
 #
 # Example:
 #   image_assembly_config = "image_assembly_config.json"
-#   board_config = "board_config.json"
+#   images_config = "images_config.json"
 #   inputs_file = "${target_out_dir}/hermetic_inputs"
 #
 #   hermetic_inputs_for_image_assembly("assembly_inputs") {
 #     image_assembly_config = image_assembly_config
-#     board_config = board_config
+#     images_config = images_config
 #     output = inputs_file
 #   }
 #
@@ -28,9 +28,6 @@ import("//build/python/python_action.gni")
 # Arguments
 #   image_assembly_config (required)
 #     [path] The path to the image assembly config.
-#
-#   board_config (optional)
-#     [path] The path to the board config.
 #
 #   images_config (optional)
 #     [path] The path to the images config.
@@ -66,14 +63,6 @@ template("hermetic_inputs_for_image_assembly") {
       "--depfile",
       rebase_path(depfile_path, root_build_dir),
     ]
-
-    if (defined(invoker.board_config)) {
-      args += [
-        "--board-config",
-        rebase_path(invoker.board_config, root_build_dir),
-      ]
-      inputs += [ invoker.board_config ]
-    }
 
     if (defined(invoker.images_config)) {
       args += [
