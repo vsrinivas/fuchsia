@@ -869,8 +869,8 @@ func (c *Client) send(
 	ciaddr bool,
 ) error {
 	dhcpLength := headerBaseSize + opts.len() + 1
-	b := buffer.NewPrependable(header.IPv4MinimumSize + header.UDPMinimumSize + dhcpLength)
-	dhcpPayload := hdr(b.Prepend(dhcpLength))
+	bytes := buffer.NewView(header.IPv4MinimumSize + header.UDPMinimumSize + dhcpLength)
+	dhcpPayload := hdr(bytes[header.IPv4MinimumSize+header.UDPMinimumSize:][:dhcpLength])
 	dhcpPayload.init()
 	dhcpPayload.setOp(opRequest)
 	if n, l := copy(dhcpPayload.xidbytes(), c.xid[:]), len(c.xid); n != l {
@@ -918,8 +918,8 @@ func (c *Client) send(
 	// functions when available.
 
 	// Initialize the UDP header.
-	udp := header.UDP(b.Prepend(header.UDPMinimumSize))
-	length := uint16(b.UsedLength())
+	udp := header.UDP(bytes[header.IPv4MinimumSize:][:header.UDPMinimumSize])
+	length := uint16(header.UDPMinimumSize + dhcpLength)
 	udp.Encode(&header.UDPFields{
 		SrcPort: ClientPort,
 		DstPort: writeTo.Port,
@@ -930,9 +930,9 @@ func (c *Client) send(
 	udp.SetChecksum(^udp.CalculateChecksum(xsum))
 
 	// Initialize the IP header.
-	ip := header.IPv4(b.Prepend(header.IPv4MinimumSize))
+	ip := header.IPv4(bytes[:header.IPv4MinimumSize])
 	ip.Encode(&header.IPv4Fields{
-		TotalLength: uint16(b.UsedLength()),
+		TotalLength: uint16(len(bytes)),
 		Flags:       header.IPv4FlagDontFragment,
 		ID:          0,
 		TTL:         c.networkEndpoint.DefaultTTL(),
@@ -972,7 +972,7 @@ func (c *Client) send(
 		writeTo.NIC,
 		linkAddress,
 		header.IPv4ProtocolNumber,
-		b.View().ToVectorisedView(),
+		bytes.ToVectorisedView(),
 	); err != nil {
 		return fmt.Errorf("failed to write packet: %s", err)
 	}

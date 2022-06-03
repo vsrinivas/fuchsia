@@ -19,7 +19,6 @@ import (
 	"io"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/seqnum"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -86,18 +85,17 @@ type segment struct {
 }
 
 func newIncomingSegment(id stack.TransportEndpointID, clock tcpip.Clock, pkt *stack.PacketBuffer) (*segment, error) {
-	// We check that the offset to the data respects the following constraints:
-	// 1. That it's at least the minimum header size; if we don't do this
-	//    then part of the header would be delivered to user.
-	// 2. That the header fits within the buffer; if we don't do this, we
-	//    would panic when we tried to access data beyond the buffer.
-	if pkt.TransportHeader().View().Size() < header.TCPMinimumSize {
-		return nil, fmt.Errorf("packet header smaller than minimum TCP header size: minimum size = %d, got size=%d", header.TCPMinimumSize, pkt.TransportHeader().View().Size())
-	}
 	hdr := header.TCP(pkt.TransportHeader().View())
-	offset := int(hdr.DataOffset())
-	if offset < header.TCPMinimumSize || offset > len(hdr) {
-		return nil, fmt.Errorf("header data offset does not respect size constraints: %d < offset < %d, got offset=%d", header.TCPMinimumSize, len(hdr), offset)
+	netHdr := pkt.Network()
+	csum, csumValid, ok := header.TCPValid(
+		hdr,
+		func() uint16 { return pkt.Data().AsRange().Checksum() },
+		uint16(pkt.Data().Size()),
+		netHdr.SourceAddress(),
+		netHdr.DestinationAddress(),
+		pkt.RXTransportChecksumValidated)
+	if !ok {
+		return nil, fmt.Errorf("header data offset does not respect size constraints: %d < offset < %d, got offset=%d", header.TCPMinimumSize, len(hdr), hdr.DataOffset())
 	}
 
 	s := &segment{
@@ -111,23 +109,18 @@ func newIncomingSegment(id stack.TransportEndpointID, clock tcpip.Clock, pkt *st
 		rcvdTime:       clock.NowMonotonic(),
 		dataMemSize:    pkt.MemSize(),
 		pkt:            pkt,
+		csumValid:      csumValid,
 	}
 	pkt.IncRef()
 	s.InitRefs()
 
-	if s.pkt.RXTransportChecksumValidated {
-		s.csumValid = true
-	} else {
-		s.csum = hdr.Checksum()
-		payloadChecksum := s.pkt.Data().AsRange().Checksum()
-		payloadLength := uint16(s.payloadSize())
-		net := s.pkt.Network()
-		s.csumValid = hdr.IsChecksumValid(net.SourceAddress(), net.DestinationAddress(), payloadChecksum, payloadLength)
+	if !s.pkt.RXTransportChecksumValidated {
+		s.csum = csum
 	}
 	return s, nil
 }
 
-func newOutgoingSegment(id stack.TransportEndpointID, clock tcpip.Clock, v buffer.View) *segment {
+func newOutgoingSegment(id stack.TransportEndpointID, clock tcpip.Clock, v []byte) *segment {
 	s := &segment{
 		id: id,
 	}
@@ -185,6 +178,7 @@ func (s *segment) setOwner(ep *endpoint, qFlags queueFlags) {
 func (s *segment) DecRef() {
 	s.segmentRefs.DecRef(func() {
 		defer s.pkt.DecRef()
+		s.pkt = nil
 		if s.ep != nil {
 			switch s.qFlags {
 			case recvQ:
