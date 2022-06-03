@@ -183,6 +183,9 @@ void VaapiFuzzerTestFixture::RunFuzzer(std::string mime_type, const uint8_t *dat
 
 void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
     bool output_re_config_required) {
+  // Ensure decoder won't reuse an old buffer that will be destroyed in this method.
+  decoder_->CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
+
   // Test a representative value.
   auto output_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
       CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
