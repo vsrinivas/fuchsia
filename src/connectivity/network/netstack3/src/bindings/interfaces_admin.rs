@@ -137,10 +137,11 @@ async fn create_interface(
     log::debug!("creating interface from {:?} with {:?}", port, options);
     let fnet_interfaces_admin::Options { name, metric: _, .. } = options;
     match handler.add_port(&ns, netdevice_worker::InterfaceOptions { name }, port).await {
-        Ok(binding_id) => Ok(Some(fasync::Task::spawn(run_interface_control(
+        Ok((binding_id, status_stream)) => Ok(Some(fasync::Task::spawn(run_interface_control(
             ns.ctx.clone(),
             binding_id,
             stop_fut.clone(),
+            status_stream,
             control,
         )))),
         Err(e) => {
@@ -174,7 +175,8 @@ async fn create_interface(
                 netdevice_worker::Error::AlreadyInstalled(_) => {
                     Some(fnet_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound)
                 }
-                netdevice_worker::Error::CantConnectToPort(_) => {
+                netdevice_worker::Error::CantConnectToPort(_)
+                | netdevice_worker::Error::PortClosed => {
                     Some(fnet_interfaces_admin::InterfaceRemovedReason::PortClosed)
                 }
                 netdevice_worker::Error::ConfigurationNotSupported
@@ -182,8 +184,7 @@ async fn create_interface(
                     Some(fnet_interfaces_admin::InterfaceRemovedReason::BadPort)
                 }
                 netdevice_worker::Error::SystemResource(_)
-                | netdevice_worker::Error::InvalidPortInfo(_)
-                | netdevice_worker::Error::InvalidPortStatus(_) => None,
+                | netdevice_worker::Error::InvalidPortInfo(_) => None,
             };
             if let Some(removed_reason) = removed_reason {
                 let (_stream, control) =
@@ -199,10 +200,12 @@ async fn create_interface(
 
 async fn run_interface_control<
     F: Send + 'static + futures::Future<Output = ()> + futures::future::FusedFuture,
+    S: futures::Stream<Item = netdevice_client::Result<netdevice_client::client::PortStatus>>,
 >(
     ctx: NetstackContext,
     id: BindingId,
     cancel: F,
+    status_stream: S,
     server_end: fidl::endpoints::ServerEnd<fnet_interfaces_admin::ControlMarker>,
 ) {
     let (mut stream, control_handle) =
@@ -248,38 +251,99 @@ async fn run_interface_control<
     }
     .fuse();
 
+    let link_state_fut = status_stream
+        .try_for_each(|netdevice_client::client::PortStatus { flags, mtu: _ }| {
+            let ctx = &ctx;
+            async move {
+                let online = flags.contains(fhardware_network::StatusFlags::ONLINE);
+                log::debug!("observed interface {} online = {}", id, online);
+                let mut ctx = ctx.lock().await;
+                match ctx
+                    .dispatcher
+                    .devices
+                    .get_device_mut(id)
+                    .expect("device not present")
+                    .info_mut()
+                {
+                    devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {
+                        common_info: _,
+                        handler: _,
+                        mac: _,
+                        phy_up,
+                    }) => *phy_up = online,
+                    i @ devices::DeviceSpecificInfo::Ethernet(_)
+                    | i @ devices::DeviceSpecificInfo::Loopback(_) => {
+                        unreachable!("unexpected device info {:?} for interface {}", i, id)
+                    }
+                };
+                // Enable or disable interface with context depending on new online
+                // status. The helper functions take care of checking if admin
+                // enable is the expected value.
+                if online {
+                    ctx.enable_interface(id).expect("failed to enable interface");
+                } else {
+                    ctx.disable_interface(id).expect("failed to enable interface");
+                }
+                Ok(())
+            }
+        })
+        .fuse();
+
     enum Outcome {
         Cancelled,
         StreamEnded(Result<(), fidl::Error>),
+        StateStreamEnded(Result<(), netdevice_client::Error>),
     }
     futures::pin_mut!(stream_fut);
     futures::pin_mut!(cancel);
+    futures::pin_mut!(link_state_fut);
     let outcome = futures::select! {
         o = stream_fut => Outcome::StreamEnded(o),
         () = cancel => Outcome::Cancelled,
+        o = link_state_fut => Outcome::StateStreamEnded(o),
     };
-    match outcome {
+    let remove_reason = match outcome {
         Outcome::Cancelled => {
             // Device has been removed from under us, inform the user that's the
             // case.
-            control_handle
-                .send_on_interface_removed(
-                    fnet_interfaces_admin::InterfaceRemovedReason::PortClosed,
-                )
-                .unwrap_or_else(|e| {
-                    if !e.is_closed() {
-                        log::error!("failed to send terminal event: {:?}", e)
-                    }
-                });
+            Some(fnet_interfaces_admin::InterfaceRemovedReason::PortClosed)
         }
         Outcome::StreamEnded(Err(e)) => {
             log::error!(
-                "error operating {} stream: {:?}",
+                "error operating {} stream: {:?} for interface {}",
                 fnet_interfaces_admin::ControlMarker::DEBUG_NAME,
-                e
+                e,
+                id
             );
+            None
         }
-        Outcome::StreamEnded(Ok(())) => (),
+        Outcome::StateStreamEnded(r) => {
+            match r {
+                Ok(()) => log::debug!("state stream closed for interface {}", id),
+                Err(e) => {
+                    let level = match &e {
+                        netdevice_client::Error::Fidl(e) if e.is_closed() => log::Level::Debug,
+                        _ => log::Level::Error,
+                    };
+                    log::log!(
+                        level,
+                        "error operating port state stream {:?} for interface {}",
+                        e,
+                        id
+                    );
+                }
+            }
+            Some(fnet_interfaces_admin::InterfaceRemovedReason::PortClosed)
+        }
+        Outcome::StreamEnded(Ok(())) => None,
+    };
+
+    if let Some(remove_reason) = remove_reason {
+        control_handle.send_on_interface_removed(remove_reason).unwrap_or_else(|e| {
+            if !e.is_closed() {
+                log::error!("failed to send terminal event: {:?} for interface {}", e, id)
+            }
+        });
     }
 
     // Cleanup and remove the interface.

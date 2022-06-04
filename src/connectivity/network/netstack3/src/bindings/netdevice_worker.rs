@@ -12,7 +12,7 @@ use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 
-use futures::{lock::Mutex, FutureExt as _};
+use futures::{lock::Mutex, FutureExt as _, TryStreamExt as _};
 
 use crate::bindings::{
     devices, BindingId, DeviceId, InterfaceEventProducerFactory as _, Netstack, NetstackContext,
@@ -45,10 +45,10 @@ pub(crate) enum Error {
     AlreadyInstalled(netdevice_client::Port),
     #[error("failed to connect to port: {0}")]
     CantConnectToPort(fidl::Error),
+    #[error("port closed")]
+    PortClosed,
     #[error("invalid port info: {0}")]
     InvalidPortInfo(netdevice_client::client::PortInfoValidationError),
-    #[error("invalid port status: {0}")]
-    InvalidPortStatus(netdevice_client::client::PortStatusValidationError),
     #[error("unsupported configuration")]
     ConfigurationNotSupported,
     #[error("mac {mac} on port {port:?} is not a valid unicast address")]
@@ -82,6 +82,7 @@ impl NetdeviceWorker {
         // Allow buffer shuttling to happen in other threads.
         let mut task = fuchsia_async::Task::spawn(task).fuse();
 
+        let mut buff = [0u8; DEFAULT_BUFFER_LENGTH];
         loop {
             // Extract result into an enum to avoid too much code in  macro.
             let rx: netdevice_client::Buffer<_> = futures::select! {
@@ -98,13 +99,23 @@ impl NetdeviceWorker {
                 log::debug!("dropping frame for port {:?}, no device mapping available", port);
                 continue;
             };
+            let mut ctx = ctx.lock().await;
 
-            // We don't need the context right now, we'll use it to feed frames.
-            let _ = ctx;
-            todo!(
-                "https://fxbug.dev/48853 failed to receive data on interface {}, data path not implemented",
-                id
-            )
+            // TODO(https://fxbug.dev/100873): pass strongly owned buffers down
+            // to the stack instead of copying it out.
+            let len = rx.read_at(0, &mut buff[..]).map_err(|e| {
+                log::error!("failed to read from buffer {:?}", e);
+                Error::Client(e)
+            })?;
+            netstack3_core::receive_frame(&mut ctx, id, packet::Buf::new(&mut buff[..], ..len))
+                .unwrap_or_else(|e| {
+                    log::error!(
+                        "failed to receive frame {:?} on port {:?} {:?}",
+                        &buff[..len],
+                        port,
+                        e
+                    )
+                });
         }
     }
 }
@@ -123,7 +134,13 @@ impl DeviceHandler {
         ns: &Netstack,
         InterfaceOptions { name }: InterfaceOptions,
         port: fhardware_network::PortId,
-    ) -> Result<BindingId, Error> {
+    ) -> Result<
+        (
+            BindingId,
+            impl futures::Stream<Item = netdevice_client::Result<netdevice_client::PortStatus>>,
+        ),
+        Error,
+    > {
         let port = netdevice_client::Port::from(port);
 
         let DeviceHandler { inner: Inner { state, device, session: _ } } = self;
@@ -135,6 +152,9 @@ impl DeviceHandler {
                 .map_err(Error::CantConnectToPort)?
                 .try_into()
                 .map_err(Error::InvalidPortInfo)?;
+
+        let mut status_stream =
+            netdevice_client::client::new_port_status_stream(&port_proxy, None)?;
 
         // TODO(https://fxbug.dev/100871): support non-ethernet devices.
         let supports_ethernet_on_rx =
@@ -148,12 +168,9 @@ impl DeviceHandler {
             return Err(Error::ConfigurationNotSupported);
         }
 
-        let netdevice_client::client::PortStatus { flags: _, mtu } = port_proxy
-            .get_status()
-            .await
-            .map_err(Error::CantConnectToPort)?
-            .try_into()
-            .map_err(Error::InvalidPortStatus)?;
+        let netdevice_client::client::PortStatus { flags, mtu } =
+            status_stream.try_next().await?.ok_or_else(|| Error::PortClosed)?;
+        let phy_up = flags.contains(fhardware_network::StatusFlags::ONLINE);
 
         let (mac_proxy, mac_server) =
             fidl::endpoints::create_proxy::<fhardware_network::MacAddressingMarker>()
@@ -203,14 +220,17 @@ impl DeviceHandler {
                 },
                 handler: PortHandler { id, port_id: port, inner: self.inner.clone() },
                 mac: mac_addr,
-                // TODO(https://fxbug.dev/48853): observe link changes. For now,
-                // we assume the link is always offline. Observing link changes
-                // is also how we'll be able to observe port removal.
-                phy_up: false,
+                phy_up,
             })
         };
 
-        Ok(ctx.dispatcher.devices.add_device(core_id, make_info).expect("duplicate core id in set"))
+        Ok((
+            ctx.dispatcher
+                .devices
+                .add_device(core_id, make_info)
+                .expect("duplicate core id in set"),
+            status_stream,
+        ))
     }
 }
 
@@ -218,6 +238,14 @@ pub struct PortHandler {
     id: BindingId,
     port_id: netdevice_client::Port,
     inner: Inner,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum SendError {
+    #[error("no buffers available")]
+    NoTxBuffers,
+    #[error("device error: {0}")]
+    Device(#[from] netdevice_client::Error),
 }
 
 impl PortHandler {
@@ -231,8 +259,20 @@ impl PortHandler {
         session.detach(*port_id).await
     }
 
-    pub(crate) fn send(&self, _frame: &[u8]) -> Result<(), netdevice_client::Error> {
-        todo!("https://fxbug.dev/48853 failed to send data on interface {}, data path not implemented", self.id)
+    pub(crate) fn send(&self, frame: &[u8]) -> Result<(), SendError> {
+        let Self { id: _, port_id, inner: Inner { device: _, session, state: _ } } = self;
+        // NB: We currently send on a dispatcher, so we can't wait for new
+        // buffers to become available. If that ends up being the long term way
+        // of enqueuing outgoing buffers we might want to fix this impedance
+        // mismatch here.
+        let mut tx =
+            session.alloc_tx_buffer(frame.len()).now_or_never().ok_or(SendError::NoTxBuffers)??;
+        tx.set_port(*port_id);
+        tx.set_frame_type(fhardware_network::FrameType::Ethernet);
+        let written = tx.write_at(0, frame)?;
+        assert_eq!(written, frame.len());
+        session.send(tx)?;
+        Ok(())
     }
 }
 

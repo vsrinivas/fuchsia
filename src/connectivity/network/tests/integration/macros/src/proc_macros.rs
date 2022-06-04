@@ -416,6 +416,19 @@ pub fn variants_test(attrs: TokenStream, input: TokenStream) -> TokenStream {
                     },
                 ],
             },
+            Variant {
+                trait_bound: str_to_syn_path("net_types::ip::Ip"),
+                implementations: &[
+                    Implementation {
+                        type_name: str_to_syn_path("net_types::ip::Ipv6"),
+                        suffix: "v6",
+                    },
+                    Implementation {
+                        type_name: str_to_syn_path("net_types::ip::Ipv4"),
+                        suffix: "v4",
+                    },
+                ],
+            },
         ],
     )
 }

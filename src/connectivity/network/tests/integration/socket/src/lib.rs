@@ -1056,8 +1056,8 @@ async fn with_multinic_and_peers<
     call_with_sockets(config).await
 }
 
-// TODO(https://fxbug.dev/48853): parameterize this test over endpoint types
-// once Netstack3 supports netdevice.
+// TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
+// once Netstack3 fully supports admin API surface.
 #[variants_test]
 async fn receive_on_bound_to_devices<N: Netstack + TestNetstackExt>(name: &str) {
     const NUM_PEERS: u8 = 3;
@@ -1111,8 +1111,8 @@ async fn receive_on_bound_to_devices<N: Netstack + TestNetstackExt>(name: &str) 
     .await
 }
 
-// TODO(https://fxbug.dev/48853): parameterize this test over endpoint types
-// once Netstack3 supports netdevice.
+// TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
+// once Netstack3 fully supports admin API surface.
 #[variants_test]
 async fn send_from_bound_to_device<N: Netstack + TestNetstackExt>(name: &str) {
     const NUM_PEERS: u8 = 3;
