@@ -49,7 +49,7 @@ const PMTU_PLATEAUS: [u32; 12] =
     [65535, 32000, 17914, 8166, 4352, 2002, 1492, 1280, 1006, 508, 296, 68];
 
 /// The timer ID for the path MTU cache.
-#[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct PmtuTimerId<I: Ip>(IpVersionMarker<I>);
 
 /// The execution context for the path MTU cache.

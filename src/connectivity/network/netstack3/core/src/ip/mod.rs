@@ -45,10 +45,10 @@ use packet_formats::{
     ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder},
     ipv6::{Ipv6Packet, Ipv6PacketBuilder},
 };
-use specialize_ip_macro::{specialize_ip, specialize_ip_address};
+use specialize_ip_macro::specialize_ip;
 
 use crate::{
-    context::{CounterContext, EventContext, InstantContext, TimerContext},
+    context::{CounterContext, EventContext, InstantContext},
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
@@ -71,8 +71,7 @@ use crate::{
             IpSocketContext, IpSocketHandler,
         },
     },
-    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant, StackState, TimerId,
-    TimerIdInner,
+    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
 };
 
 /// Default IPv4 TTL.
@@ -915,23 +914,10 @@ pub(crate) enum IpLayerTimerId {
     ReassemblyTimeoutv4(FragmentCacheKey<Ipv4Addr>),
     /// A timer event for IPv6 packet reassembly timers.
     ReassemblyTimeoutv6(FragmentCacheKey<Ipv6Addr>),
-    PmtuTimeout(IpVersion),
-}
-
-impl IpLayerTimerId {
-    #[specialize_ip_address]
-    fn new_reassembly_timer_id<A: IpAddress>(key: FragmentCacheKey<A>) -> TimerId {
-        #[ipv4addr]
-        let id = IpLayerTimerId::ReassemblyTimeoutv4(key);
-        #[ipv6addr]
-        let id = IpLayerTimerId::ReassemblyTimeoutv6(key);
-
-        TimerId(TimerIdInner::IpLayer(id))
-    }
-
-    fn new_pmtu_timer_id<I: Ip>() -> TimerId {
-        TimerId(TimerIdInner::IpLayer(IpLayerTimerId::PmtuTimeout(I::VERSION)))
-    }
+    /// A timer event for IPv4 path MTU discovery.
+    PmtuTimeoutv4(PmtuTimerId<Ipv4>),
+    /// A timer event for IPv6 path MTU discovery.
+    PmtuTimeoutv6(PmtuTimerId<Ipv6>),
 }
 
 impl From<FragmentCacheKey<Ipv4Addr>> for IpLayerTimerId {
@@ -946,6 +932,33 @@ impl From<FragmentCacheKey<Ipv6Addr>> for IpLayerTimerId {
     }
 }
 
+impl From<PmtuTimerId<Ipv4>> for IpLayerTimerId {
+    fn from(timer: PmtuTimerId<Ipv4>) -> IpLayerTimerId {
+        IpLayerTimerId::PmtuTimeoutv4(timer)
+    }
+}
+
+impl From<PmtuTimerId<Ipv6>> for IpLayerTimerId {
+    fn from(timer: PmtuTimerId<Ipv6>) -> IpLayerTimerId {
+        IpLayerTimerId::PmtuTimeoutv6(timer)
+    }
+}
+
+impl_timer_context!(
+    IpLayerTimerId,
+    FragmentCacheKey<Ipv4Addr>,
+    IpLayerTimerId::ReassemblyTimeoutv4(id),
+    id
+);
+impl_timer_context!(
+    IpLayerTimerId,
+    FragmentCacheKey<Ipv6Addr>,
+    IpLayerTimerId::ReassemblyTimeoutv6(id),
+    id
+);
+impl_timer_context!(IpLayerTimerId, PmtuTimerId<Ipv4>, IpLayerTimerId::PmtuTimeoutv4(id), id);
+impl_timer_context!(IpLayerTimerId, PmtuTimerId<Ipv6>, IpLayerTimerId::PmtuTimeoutv6(id), id);
+
 /// Handle a timer event firing in the IP layer.
 pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
     sync_ctx: &mut Ctx<D, C>,
@@ -958,85 +971,12 @@ pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
         IpLayerTimerId::ReassemblyTimeoutv6(key) => {
             sync_ctx.state.ipv6.inner.fragment_cache.handle_timer(key);
         }
-        IpLayerTimerId::PmtuTimeout(IpVersion::V4) => {
-            sync_ctx.state.ipv4.inner.pmtu_cache.handle_timer(
-                &mut sync_ctx.ctx,
-                &mut (),
-                PmtuTimerId::default(),
-            );
+        IpLayerTimerId::PmtuTimeoutv4(id) => {
+            sync_ctx.state.ipv4.inner.pmtu_cache.handle_timer(&mut sync_ctx.ctx, &mut (), id);
         }
-        IpLayerTimerId::PmtuTimeout(IpVersion::V6) => {
-            sync_ctx.state.ipv6.inner.pmtu_cache.handle_timer(
-                &mut sync_ctx.ctx,
-                &mut (),
-                PmtuTimerId::default(),
-            );
+        IpLayerTimerId::PmtuTimeoutv6(id) => {
+            sync_ctx.state.ipv6.inner.pmtu_cache.handle_timer(&mut sync_ctx.ctx, &mut (), id);
         }
-    }
-}
-
-impl<A: IpAddress, C: BlanketCoreContext> TimerContext<FragmentCacheKey<A>> for C {
-    fn schedule_timer_instant(
-        &mut self,
-        time: Self::Instant,
-        key: FragmentCacheKey<A>,
-    ) -> Option<Self::Instant> {
-        self.schedule_timer_instant(time, IpLayerTimerId::new_reassembly_timer_id(key))
-    }
-
-    fn cancel_timer(&mut self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.cancel_timer(IpLayerTimerId::new_reassembly_timer_id(key))
-    }
-
-    // TODO(rheacock): the compiler thinks that `f` doesn't have to be mutable,
-    // but it does. Thus we `allow(unused)` here.
-    #[allow(unused)]
-    fn cancel_timers_with<F: FnMut(&FragmentCacheKey<A>) -> bool>(&mut self, f: F) {
-        #[specialize_ip_address]
-        fn cancel_timers_with_inner<
-            A: IpAddress,
-            C: BlanketCoreContext,
-            F: FnMut(&FragmentCacheKey<A>) -> bool,
-        >(
-            sync_ctx: &mut C,
-            mut f: F,
-        ) {
-            sync_ctx.cancel_timers_with(|id| match id {
-                #[ipv4addr]
-                TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeoutv4(key))) => f(key),
-                #[ipv6addr]
-                TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeoutv6(key))) => f(key),
-                _ => false,
-            });
-        }
-
-        cancel_timers_with_inner(self, f);
-    }
-
-    fn scheduled_instant(&self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.scheduled_instant(IpLayerTimerId::new_reassembly_timer_id(key))
-    }
-}
-
-impl<I: Ip, C: BlanketCoreContext> TimerContext<PmtuTimerId<I>> for C {
-    fn schedule_timer_instant(
-        &mut self,
-        time: Self::Instant,
-        _id: PmtuTimerId<I>,
-    ) -> Option<Self::Instant> {
-        self.schedule_timer_instant(time, IpLayerTimerId::new_pmtu_timer_id::<I>())
-    }
-
-    fn cancel_timer(&mut self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.cancel_timer(IpLayerTimerId::new_pmtu_timer_id::<I>())
-    }
-
-    fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, _f: F) {
-        self.cancel_timers_with(|id| id == &IpLayerTimerId::new_pmtu_timer_id::<I>());
-    }
-
-    fn scheduled_instant(&self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.scheduled_instant(IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 }
 
@@ -2418,7 +2358,7 @@ mod tests {
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
     use rand::Rng;
-    use specialize_ip_macro::ip_test;
+    use specialize_ip_macro::{ip_test, specialize_ip_address};
 
     use super::*;
     use crate::{
@@ -2929,7 +2869,7 @@ mod tests {
         );
         assert_eq!(
             ctx.trigger_next_timer(crate::handle_timer).unwrap(),
-            IpLayerTimerId::new_reassembly_timer_id(key)
+            IpLayerTimerId::from(key.into()).into(),
         );
 
         // Make sure no other timers exist.

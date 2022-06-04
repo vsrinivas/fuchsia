@@ -321,6 +321,7 @@ impl From<IpLayerTimerId> for TimerId {
 }
 
 impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
+impl_timer_context!(TimerId, IpLayerTimerId, TimerId(TimerIdInner::IpLayer(id)), id);
 impl_timer_context!(
     TimerId,
     Ipv4DeviceTimerId<DeviceId>,
