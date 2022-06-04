@@ -30,6 +30,7 @@
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
@@ -311,6 +312,8 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
     BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
 
+    scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
+
     observer_registry_ptr_ = realm()->Connect<fuchsia::ui::observation::test::Registry>();
 
     observer_registry_ptr_.set_error_handler([](zx_status_t status) {
@@ -417,11 +420,25 @@ class TouchInputBase : public gtest::RealLoopFixture {
   // Calls test.touch.TestAppLauncher::Launch.
   // Only works if we've already launched a client that serves test.touch.TestAppLauncher.
   void LaunchEmbeddedClient(std::string debug_name) {
+    // Set up an empty session, only used for synchronization in this method.
+    auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get());
+    session_ = std::make_unique<scenic::Session>(std::move(session_pair.first),
+                                                 std::move(session_pair.second));
+
     // Launch the embedded app.
     auto test_app_launcher = realm()->Connect<test::touch::TestAppLauncher>();
     bool child_launched = false;
     test_app_launcher->Launch(debug_name, [&child_launched] { child_launched = true; });
     RunLoopUntil([&child_launched] { return child_launched; });
+
+    // TODO(fxb/101748) : Use fuchsia.ui.observation.geometry.Provider for synchronization.
+    // Waits an extra frame to avoid any flakes from the child launching signal firing slightly
+    // early.
+    bool frame_presented = false;
+    session_->set_on_frame_presented_handler([&frame_presented](auto) { frame_presented = true; });
+    session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
+    RunLoopUntil([&frame_presented] { return frame_presented; });
+    session_->set_on_frame_presented_handler([](auto) {});
   }
 
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
@@ -572,6 +589,8 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
   std::unique_ptr<RealmBuilder> realm_builder_;
   std::unique_ptr<RealmRoot> realm_;
+  std::unique_ptr<scenic::Session> session_;
+  fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::unique_ptr<ResponseListenerServer> response_listener_;
 
