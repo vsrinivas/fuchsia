@@ -23,9 +23,6 @@ fuchsia_unittest_package("realm_integration_test") {
   manifest = "meta/realm_integration_test.cml"
   deps = [
     ":realm_integration_test_bin",
-
-    # fxbug.dev/101490: Dep included for affected tests presubmit
-    "//src/sys/component_manager:component-manager-realm-builder-cmp",
     "//src/sys/component_manager/testing/echo_server",
   ]
 }

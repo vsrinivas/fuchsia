@@ -41,9 +41,6 @@ fuchsia_unittest_package("routing_integration_test") {
   deps = [
     ":routing_integration_test_bin",
     ":trigger",
-
-    # fxbug.dev/101490: Dep included for affected tests presubmit
-    "//src/sys/component_manager:component-manager-realm-builder-cmp",
     "//src/sys/component_manager/testing/echo_server",
   ]
 }

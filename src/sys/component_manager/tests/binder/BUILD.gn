@@ -64,10 +64,5 @@ fuchsia_component("binder_integration_test_component") {
 
 fuchsia_test_package("binder_integration_test") {
   test_components = [ ":binder_integration_test_component" ]
-  deps = [
-    ":looper_component",
-
-    # fxbug.dev/101490: Dep included for affected tests presubmit
-    "//src/sys/component_manager:component-manager-realm-builder-cmp",
-  ]
+  deps = [ ":looper_component" ]
 }
