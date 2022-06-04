@@ -149,6 +149,13 @@ fn main() -> Result<(), Error> {
                     .short("t")
                     .long("host_timestamps")
                     .takes_value(false)
+            ).arg(
+                Arg::with_name("power")
+                    .help("If specified, only output the power result for each sample")
+                    .short("p")
+                    .long("power")
+                    .takes_value(false)
+
             )
         )
         .subcommand(
@@ -267,6 +274,7 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
     let options = lib::ReportingOptions {
         interval: reporting_interval,
         use_host_timestamps: arg_matches.is_present("host_timestamps"),
+        output_power_only: arg_matches.is_present("power"),
     };
     match duration {
         Some(duration) => zedmon.read_reports(output, lib::DurationStopper::new(duration), options),

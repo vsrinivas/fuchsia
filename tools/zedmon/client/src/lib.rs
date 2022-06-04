@@ -216,6 +216,9 @@ pub struct ReportingOptions {
     /// Whether to report timestamps using host time (based on an estimate of host/target offset)
     /// rather than Zedmon time.
     pub use_host_timestamps: bool,
+
+    /// Whether to output just the power calculation (and not the entire `ZedmonRecord`).
+    pub output_power_only: bool,
 }
 
 /// Interface to a Zedmon device.
@@ -450,6 +453,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         v_bus_index: usize,
         reporting_interval_micros: Option<u64>,
         time_offset_micros: i64,
+        output_power_only: bool,
     ) -> std::thread::JoinHandle<Result<(), Error>> {
         std::thread::spawn(move || {
             // The CSV header is suppressed. Clients may query it by using `describe`.
@@ -513,12 +517,22 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
                     match downsampler.as_mut() {
                         Some(downsampler) => match downsampler.process(record) {
                             Some(r) => {
-                                writer.serialize(r)?;
+                                if output_power_only {
+                                    writer.serialize(r.power)?;
+                                } else {
+                                    writer.serialize(r)?;
+                                }
                                 writer.flush()?;
                             }
                             None => {}
                         },
-                        None => writer.serialize(record)?,
+                        None => {
+                            if output_power_only {
+                                writer.serialize(record.power)?;
+                            } else {
+                                writer.serialize(record)?;
+                            }
+                        }
                     }
 
                     if stopper.should_stop(report.timestamp_micros)? {
@@ -615,6 +629,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
             self.v_bus_index,
             options.interval.map(|d| d.as_micros() as u64),
             time_offset_micros,
+            options.output_power_only,
         );
 
         let report_io_result = self.run_report_io(packet_sender);
@@ -1211,10 +1226,12 @@ mod tests {
         report_queue
     }
 
-    fn run_zedmon_reporting<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write>(
+    fn run_zedmon_reporting_with_options<
+        InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write,
+    >(
         zedmon: &ZedmonClient<InterfaceType>,
         test_duration: Duration,
-        reporting_interval: Option<Duration>,
+        options: ReportingOptions,
     ) -> Result<Vec<u8>, Error> {
         // Implements Write by sending bytes over a channel. The holder of the channel's
         // Receiver can then inspect the data that was written to test expectations.
@@ -1239,7 +1256,6 @@ mod tests {
 
         let (sender, receiver) = mpsc::channel();
         let writer = Box::new(ChannelWriter { sender, buffer: Vec::new() });
-        let options = ReportingOptions { interval: reporting_interval, use_host_timestamps: false };
         zedmon.read_reports(writer, DurationStopper::new(test_duration), options)?;
 
         let mut output = Vec::new();
@@ -1248,6 +1264,20 @@ mod tests {
         }
 
         Ok(output)
+    }
+
+    fn run_zedmon_reporting<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write>(
+        zedmon: &ZedmonClient<InterfaceType>,
+        test_duration: Duration,
+        reporting_interval: Option<Duration>,
+    ) -> Result<Vec<u8>, Error> {
+        let options = ReportingOptions {
+            interval: reporting_interval,
+            use_host_timestamps: false,
+            output_power_only: false,
+        };
+
+        run_zedmon_reporting_with_options(zedmon, test_duration, options)
     }
 
     // Tests that ZedmonClient will disable reporting and drain enqueued packets on initialization.
@@ -1777,5 +1807,45 @@ mod tests {
 
         let timestamps: Vec<u64> = records_out.into_iter().map(|r| r.timestamp_micros).collect();
         assert_eq!(timestamps, vec![100_000, 200_000, 550_000, 650_000, 750_000, 850_000, 950_000]);
+    }
+
+    #[test]
+    fn test_record_power_only() {
+        let device_config = fake_device::DeviceConfiguration {
+            shunt_resistance: 0.01,
+            v_shunt_scale: 1e-4,
+            v_bus_scale: 1e-4,
+        };
+
+        let get_voltages = |_| (0.0025, 1.0); // v_shunt, v_bus
+        let test_duration = Duration::from_secs(1);
+        let raw_data_interval = Duration::from_secs(1);
+        let report_queue =
+            make_report_queue(get_voltages, &device_config, test_duration, raw_data_interval);
+
+        let builder = fake_device::CoordinatorBuilder::new(device_config);
+        let coordinator = builder.with_report_queue(report_queue.clone()).build();
+        let interface = fake_device::FakeZedmonInterface::new(coordinator);
+        let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
+
+        let reporting_options = ReportingOptions {
+            interval: None,
+            use_host_timestamps: false,
+            output_power_only: true,
+        };
+        let output = run_zedmon_reporting_with_options(&zedmon, test_duration, reporting_options)
+            .expect("Error running zedmon reporting");
+        let mut reader =
+            csv::ReaderBuilder::new().has_headers(false).from_reader(output.as_slice());
+        let mut deserialized = reader.deserialize::<f32>();
+        assert_eq!(
+            deserialized.next().expect("iter returned None").expect("deserialize error"),
+            0.25
+        );
+        assert_eq!(
+            deserialized.next().expect("iter returned None").expect("deserialize error"),
+            0.25
+        );
+        assert!(deserialized.next().is_none());
     }
 }
