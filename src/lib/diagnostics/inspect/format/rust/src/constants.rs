@@ -48,6 +48,9 @@ pub const DEFAULT_VMO_SIZE_BYTES: usize = 256 * 1024;
 /// Minimum size for the VMO: 4K
 pub const MINIMUM_VMO_SIZE_BYTES: usize = 4 * 1024;
 
+/// Maximum size for a VMO: 256MB
+pub const MAX_VMO_SIZE: usize = 256 * 1024 * 1024;
+
 /// Length in bytes of metadata in the payload of an array block.
 pub const ARRAY_PAYLOAD_METADATA_SIZE_BYTES: usize = 8;
 

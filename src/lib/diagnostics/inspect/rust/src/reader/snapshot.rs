@@ -11,6 +11,7 @@ use {
     fuchsia_zircon::Vmo,
     inspect_format::{constants, utils, Block, BlockType, ReadableBlockContainer},
     mapped_vmo::Mapping,
+    std::cmp,
     std::convert::TryFrom,
     std::sync::Arc,
 };
@@ -56,11 +57,12 @@ impl Snapshot {
         F: FnMut() -> (),
     {
         // Read the generation count one time
-        let mut header_bytes: [u8; 16] = [0; 16];
+        let mut header_bytes: [u8; 32] = [0; 32];
         vmo.read(&mut header_bytes, 0).map_err(ReaderError::Vmo)?;
-        let generation = header_generation_count(&header_bytes[..]);
+        let header_block = Block::new(&header_bytes[..], 0);
+        let generation = header_block.header_generation_count();
 
-        if let Some(gen) = generation {
+        if let Ok(gen) = generation {
             if gen == constants::VMO_FROZEN {
                 match BackingBuffer::try_from(vmo) {
                     Ok(buffer) => return Ok(Snapshot { buffer }),
@@ -70,8 +72,13 @@ impl Snapshot {
             }
 
             // Read the buffer
-            let size = vmo.get_size().map_err(ReaderError::Vmo)?;
-            let mut buffer = vec![0u8; size as usize];
+            let order = header_block.order();
+            let vmo_size = if order == constants::HeaderSize::LARGE as usize {
+                cmp::min(header_block.header_vmo_size()? as u64, constants::MAX_VMO_SIZE as u64)
+            } else {
+                cmp::min(vmo.get_size().map_err(ReaderError::Vmo)?, constants::MAX_VMO_SIZE as u64)
+            };
+            let mut buffer = vec![0u8; vmo_size as usize];
             vmo.read(&mut buffer[..], 0).map_err(ReaderError::Vmo)?;
             if cfg!(test) {
                 read_callback();
@@ -362,7 +369,8 @@ mod tests {
         let size = 4096;
         let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
-        let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
+        let mut header =
+            Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
         header.become_header(size)?;
         header.lock_header()?;
@@ -375,7 +383,8 @@ mod tests {
         let size = 4096;
         let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
-        let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
+        let mut header =
+            Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
         header.become_header(size)?;
         header.set_header_magic(3)?;
@@ -388,7 +397,8 @@ mod tests {
         let size = 4096;
         let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
-        let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
+        let mut header =
+            Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
         header.become_header(size)?;
         assert!(Snapshot::try_from_with_callback(&vmo, || {
@@ -413,7 +423,8 @@ mod tests {
         let size = 4096;
         let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
-        let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
+        let mut header =
+            Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
         header.become_header(size)?;
         vmo.write(&[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], 8).unwrap();
@@ -424,6 +435,54 @@ mod tests {
         vmo.write(&[2u8; 8], 8).unwrap();
         let snapshot = Snapshot::try_from(&vmo)?;
         assert!(matches!(snapshot.buffer, BackingBuffer::Vector(_)));
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn snapshot_vmo_with_unused_space() -> Result<(), Error> {
+        let size = 4 * constants::PAGE_SIZE_BYTES;
+        let (mapping, vmo) = Mapping::allocate(size)?;
+        let mapping_ref = Arc::new(mapping);
+        let mut header =
+            Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
+        header.become_reserved()?;
+        header.become_header(constants::PAGE_SIZE_BYTES)?;
+
+        let snapshot = Snapshot::try_from(&vmo)?;
+        assert_eq!(snapshot.buffer.len(), constants::PAGE_SIZE_BYTES);
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn snapshot_vmo_with_very_large_vmo() -> Result<(), Error> {
+        let size = 2 * constants::MAX_VMO_SIZE;
+        let (mapping, vmo) = Mapping::allocate(size)?;
+        let mapping_ref = Arc::new(mapping);
+        let mut header =
+            Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
+        header.become_reserved()?;
+        header.become_header(size)?;
+
+        let snapshot = Snapshot::try_from(&vmo)?;
+        assert_eq!(snapshot.buffer.len(), constants::MAX_VMO_SIZE);
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn snapshot_vmo_with_header_without_size_info() -> Result<(), Error> {
+        let size = 2 * constants::PAGE_SIZE_BYTES;
+        let (mapping, vmo) = Mapping::allocate(size)?;
+        let mapping_ref = Arc::new(mapping);
+        let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
+        header.become_reserved()?;
+        header.become_header(constants::PAGE_SIZE_BYTES)?;
+        header.set_order(0)?;
+
+        let snapshot = Snapshot::try_from(&vmo)?;
+        assert_eq!(snapshot.buffer.len(), size);
 
         Ok(())
     }
