@@ -7,473 +7,141 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-#include <algorithm>
-#include <limits>
+#include <memory>
+#include <utility>
 
-#include "src/media/audio/audio_core/mixer/constants.h"
+#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "src/media/audio/audio_core/mixer/position_manager.h"
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/processing/point_sampler.h"
 #include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
 
-// Point Sample Mixer implementation.
-template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-class PointSamplerImpl : public PointSampler {
- public:
-  explicit PointSamplerImpl(Gain::Limits gain_limits)
-      : PointSampler(Fixed::FromRaw(kFracPositiveFilterWidth),
-                     Fixed::FromRaw(kFracNegativeFilterWidth), gain_limits) {}
+namespace {
 
-  void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
-           const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
-           bool accumulate) override;
+using ::media_audio::Fixed;
+using ::media_audio::Sampler;
 
- private:
-  // Although selected by enum Resampler::SampleAndHold, the PointSampler implementation is actually
-  // "nearest neighbor", and specifically "forward nearest neighbor" because for a sampling position
-  // exactly midway between two source frames, we choose the newer one. Thus pos_width and neg_width
-  // are both approximately kHalfFrame, but pos_width > neg_width.
-  //
-  // If this implementation were actually "sample and hold", pos_width would be 0 and neg_width
-  // would be kOneFrame.raw_value() - 1.
-  //
-  // Why isn't this a truly "zero-phase" implementation? Here's why:
-  // For zero-phase, both filter widths are kHalfFrame.raw_value(), and to sample exactly midway
-  // between two source frames we return their AVERAGE. This makes a nearest-neighbor resampler
-  // truly zero-phase at ALL rate-conversion ratios, even though at that one particular position
-  // (exactly halfway bewtween frames) it behaves differently than it does for other positions:
-  // at that position it actually behaves like a linear-interpolation resampler by returning a
-  // "blur" of two neighbors. As with a linear resampler, this decreases output response at higher
-  // frequencies, but only to the extent that this resampler encounters that exact position. For
-  // arbitrary rate-conversion ratios, this effect is negligible, thus zero-phase point samplers are
-  // generally preferred to other implementation types such as strict "sample and hold".
-  // HOWEVER, in our system we use PointSampler only for UNITY rate-conversion. Thus if it needs to
-  // output a frame from a position exactly halfway between two source frames, it will likely need
-  // to do so for EVERY frame in that stream, leading to that stream sounding muffled or indistinct
-  // (from reduced high frequency content). This might be more frequently triggered by certain
-  // circumstances, but in (arguably) the worst-case scenario this would occur perhaps once out of
-  // every 8192 times (our fractional position precision).
-  //
-  // For this reason, we arbitrarily choose the forward source frame rather than averaging.
-  // Assuming that we continue limiting PointSampler to only UNITY rate-conversion scenarios, one
-  // could reasonably argue that "sample and hold" would actually be optimal: phase is moot for 1:1
-  // sampling so we receive no benefit from the additional half-frame of latency.
-  //
-
-  //
-  // As an optimization, we work with raw fixed-point values internally, but we pass Fixed types
-  // through our public interfaces (to MixStage etc.) for source position/filter width/step size.
-  static constexpr int64_t kFracPositiveFilterWidth = kHalfFrame.raw_value();
-  static constexpr int64_t kFracNegativeFilterWidth = kFracPositiveFilterWidth - 1;
-
-  static int64_t Ceiling(int64_t frac_position) {
-    return ((frac_position - 1) >> Fixed::Format::FractionalBits) + 1;
-  }
-  static int64_t Floor(int64_t frac_position) {
-    return frac_position >> Fixed::Format::FractionalBits;
-  }
-
-  template <media_audio::GainType GainType, bool DoAccumulate>
-  static inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
-                         const void* source_void_ptr, int64_t source_frames,
-                         Fixed* source_offset_ptr, Bookkeeping* info);
-};
-
-// TODO(fxbug.dev/13361): refactor to minimize code duplication, or even better eliminate NxN
-// implementations altogether, replaced by flexible rechannelization (fxbug.dev/13679).
-template <typename SourceSampleType>
-class NxNPointSamplerImpl : public PointSampler {
- public:
-  NxNPointSamplerImpl(int32_t chan_count, Gain::Limits gain_limits)
-      : PointSampler(Fixed::FromRaw(kFracPositiveFilterWidth),
-                     Fixed::FromRaw(kFracNegativeFilterWidth), gain_limits),
-        chan_count_(chan_count) {}
-
-  void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
-           const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
-           bool accumulate) override;
-
- private:
-  static constexpr int64_t kFracPositiveFilterWidth = kHalfFrame.raw_value();
-  static constexpr int64_t kFracNegativeFilterWidth = kFracPositiveFilterWidth - 1;
-
-  static int64_t Ceiling(int64_t frac_position) {
-    return ((frac_position - 1) >> Fixed::Format::FractionalBits) + 1;
-  }
-  static int64_t Floor(int64_t frac_position) {
-    return frac_position >> Fixed::Format::FractionalBits;
-  }
-
-  template <media_audio::GainType GainType, bool DoAccumulate>
-  static inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
-                         const void* source_void_ptr, int64_t source_frames,
-                         Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count);
-  int32_t chan_count_ = 0;
-};
-
-// If upper layers call with GainType MUTED, they must set DoAccumulate=TRUE. They guarantee new
-// buffers are cleared before usage; we optimize accordingly.
-template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-template <media_audio::GainType GainType, bool DoAccumulate>
-inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
-    float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
-    int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info) {
-  TRACE_DURATION("audio", "PointSamplerImpl::MixInternal");
-  static_assert(GainType != media_audio::GainType::kSilent || DoAccumulate == true,
-                "Mixing muted streams without accumulation is explicitly unsupported");
-
-  auto dest_offset = *dest_offset_ptr;
-
-  using SR = SourceReader<SourceSampleType, SourceChanCount, DestChanCount>;
-  auto frac_source_offset = source_offset_ptr->raw_value();
-  const auto* source_ptr = static_cast<const SourceSampleType*>(source_void_ptr);
-
-  // frac_source_end is the first subframe for which this Mix call cannot produce output. Producing
-  // output centered on this source position (or beyond) requires data that we don't have yet.
-  const int64_t frac_source_end =
-      (source_frames << Fixed::Format::FractionalBits) - kFracPositiveFilterWidth;
-
-  // Source_offset can be as large as source_frames. All samplers should produce no output and
-  // return true; those with significant history can also "prime" (cache) previous data as needed.
-  if (frac_source_offset >= frac_source_end) {
-    return;
-  }
-
-  const auto frames_to_mix =
-      std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
-
-  if constexpr (GainType != media_audio::GainType::kSilent) {
-    Gain::AScale amplitude_scale = media_audio::kUnityGainScale;
-    if constexpr (GainType == media_audio::GainType::kNonUnity) {
-      amplitude_scale = info->gain.GetGainScale();
-    }
-
-    int64_t source_sample_idx =
-        Floor(frac_source_offset + kFracPositiveFilterWidth) * SourceChanCount;
-    float* out = dest_ptr + (dest_offset * DestChanCount);
-
-    for (auto frame_num = 0; frame_num < frames_to_mix; ++frame_num) {
-      if constexpr (GainType == media_audio::GainType::kRamping) {
-        amplitude_scale = info->scale_arr[frame_num];
-      }
-
-      for (int32_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
-        float sample = SR::Read(source_ptr + source_sample_idx, dest_chan);
-        media_audio::MixSample<GainType, DoAccumulate>(sample, &out[dest_chan], amplitude_scale);
-      }
-
-      source_sample_idx += SourceChanCount;
-      out += DestChanCount;
-    }
-  }
-  // Otherwise we're muted, but we'll advance frac_source_offset and dest_offset as if we produced
-  // data.
-
-  // Either way, update all our returned in-out parameters
-  frac_source_offset += (frames_to_mix << Fixed::Format::FractionalBits);
-  *source_offset_ptr = Fixed::FromRaw(frac_source_offset);
-  *dest_offset_ptr = dest_offset + static_cast<uint32_t>(frames_to_mix);
-}
-
-// Regarding media_audio::GainType::kSilent - in that specialization, the mixer simply skips over
-// the appropriate range in the destination buffer, leaving whatever data is already there. We do
-// not take further effort to clear the buffer if 'accumulate' is false. In fact, we IGNORE
-// 'accumulate' if MUTED. The caller is responsible for clearing the destination buffer before Mix
-// is initially called. DoAccumulate is still valuable in the non-mute case, as it saves a read+FADD
-// per sample.
+// Although selected by enum Resampler::SampleAndHold, the `PointSampler` implementation is actually
+// "nearest neighbor", and specifically "forward nearest neighbor" because for a sampling position
+// exactly midway between two source frames, we choose the newer one. Thus pos_width and neg_width
+// are both approximately kHalfFrame, but pos_width > neg_width.
 //
-template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
-    float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
-    int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
-  TRACE_DURATION("audio", "PointSamplerImpl::Mix");
+// If this implementation were actually "sample and hold", pos_width would be 0 and neg_width
+// would be kOneFrame.raw_value() - 1.
+//
+// Why isn't this a truly "zero-phase" implementation? Here's why:
+// For zero-phase, both filter widths are kHalfFrame.raw_value(), and to sample exactly midway
+// between two source frames we return their AVERAGE. This makes a nearest-neighbor resampler
+// truly zero-phase at ALL rate-conversion ratios, even though at that one particular position
+// (exactly halfway bewtween frames) it behaves differently than it does for other positions:
+// at that position it actually behaves like a linear-interpolation resampler by returning a
+// "blur" of two neighbors. As with a linear resampler, this decreases output response at higher
+// frequencies, but only to the extent that this resampler encounters that exact position. For
+// arbitrary rate-conversion ratios, this effect is negligible, thus zero-phase point samplers are
+// generally preferred to other implementation types such as strict "sample and hold".
+// HOWEVER, in our system we use `PointSampler` only for UNITY rate-conversion. Thus if it needs to
+// output a frame from a position exactly halfway between two source frames, it will likely need
+// to do so for EVERY frame in that stream, leading to that stream sounding muffled or indistinct
+// (from reduced high frequency content). This might be more frequently triggered by certain
+// circumstances, but in (arguably) the worst-case scenario this would occur perhaps once out of
+// every 8192 times (our fractional position precision).
+//
+// For this reason, we arbitrarily choose the forward source frame rather than averaging.
+// Assuming that we continue limiting `PointSampler` to only UNITY rate-conversion scenarios, one
+// could reasonably argue that "sample and hold" would actually be optimal: phase is moot for 1:1
+// sampling so we receive no benefit from the additional half-frame of latency.
+//
 
-  auto info = &bookkeeping();
-  // CheckPositions expects a frac_pos_filter_length value that _includes_ [0], thus the '+1'
-  // TODO(fxbug.dev/72561): Convert Mixer class and the rest of audio_core to define filter width as
-  // including the center position in its count (as PositionManager and Filter::Length do). Then the
-  // distinction between filter length and filter width would go away, this kFracPositiveFilterWidth
-  // constant would be changed, and the below "+ 1" would be removed.
-  PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
-                                  source_offset_ptr->raw_value(), kFracPositiveFilterWidth + 1,
-                                  info);
+//
+// As an optimization, we work with raw fixed-point values internally, but we pass Fixed types
+// through our public interfaces (to MixStage etc.) for source position/filter width/step size.
+constexpr int64_t kFracPositiveFilterWidth = media_audio::kHalfFrame.raw_value();
+constexpr int64_t kFracNegativeFilterWidth = kFracPositiveFilterWidth - 1;
 
-  if (info->gain.IsUnity()) {
-    return accumulate
-               ? Mix<media_audio::GainType::kUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                          source_void_ptr, source_frames,
-                                                          source_offset_ptr, info)
-               : Mix<media_audio::GainType::kUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                           source_void_ptr, source_frames,
-                                                           source_offset_ptr, info);
-  }
-
-  if (info->gain.IsSilent()) {
-    return Mix<media_audio::GainType::kSilent, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                     source_void_ptr, source_frames,
-                                                     source_offset_ptr, info);
-  }
-
-  if (info->gain.IsRamping()) {
-    dest_frames = std::min(dest_frames, *dest_offset_ptr + Bookkeeping::kScaleArrLen);
-    return accumulate
-               ? Mix<media_audio::GainType::kRamping, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                            source_void_ptr, source_frames,
-                                                            source_offset_ptr, info)
-               : Mix<media_audio::GainType::kRamping, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                             source_void_ptr, source_frames,
-                                                             source_offset_ptr, info);
-  }
-
-  return accumulate
-             ? Mix<media_audio::GainType::kNonUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                           source_void_ptr, source_frames,
-                                                           source_offset_ptr, info)
-             : Mix<media_audio::GainType::kNonUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                            source_void_ptr, source_frames,
-                                                            source_offset_ptr, info);
-}
-
-// If upper layers call with GainType MUTED, they must set DoAccumulate=TRUE. They guarantee new
-// buffers are cleared before usage; we optimize accordingly.
-template <typename SourceSampleType>
-template <media_audio::GainType GainType, bool DoAccumulate>
-inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
-    float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
-    int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count) {
-  TRACE_DURATION("audio", "NxNPointSamplerImpl::MixInternal");
-  static_assert(GainType != media_audio::GainType::kSilent || DoAccumulate == true,
-                "Mixing muted streams without accumulation is explicitly unsupported");
-
-  using SR = SourceReader<SourceSampleType, 1, 1>;
-  auto dest_offset = *dest_offset_ptr;
-
-  auto frac_source_offset = source_offset_ptr->raw_value();
-  const auto* source_ptr = static_cast<const SourceSampleType*>(source_void_ptr);
-
-  // the first subframe for which this Mix call cannot produce output. Producing output centered on
-  // this source position (or beyond) requires data that we don't have yet.
-  const int64_t frac_source_end =
-      (source_frames << Fixed::Format::FractionalBits) - kFracPositiveFilterWidth;
-
-  // Source_offset can be as large as source_frames. All samplers should produce no output and
-  // return true; those with significant history can also "prime" (cache) previous data as needed.
-  if (frac_source_offset >= frac_source_end) {
-    return;
-  }
-
-  const auto frames_to_mix =
-      std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
-
-  if constexpr (GainType != media_audio::GainType::kSilent) {
-    Gain::AScale amplitude_scale = media_audio::kUnityGainScale;
-    if constexpr (GainType == media_audio::GainType::kNonUnity) {
-      amplitude_scale = info->gain.GetGainScale();
-    }
-
-    int64_t source_sample_idx = Floor(frac_source_offset + kFracPositiveFilterWidth) * chan_count;
-    float* out = dest_ptr + (dest_offset * chan_count);
-
-    for (auto frame_num = 0; frame_num < frames_to_mix; ++frame_num) {
-      if constexpr (GainType == media_audio::GainType::kRamping) {
-        amplitude_scale = info->scale_arr[frame_num];
-      }
-
-      for (int32_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
-        float sample = SR::Read(source_ptr + source_sample_idx, dest_chan);
-        media_audio::MixSample<GainType, DoAccumulate>(sample, &out[dest_chan], amplitude_scale);
-      }
-
-      source_sample_idx += chan_count;
-      out += chan_count;
-    }
-  }
-  // Otherwise we're muted, but advance frac_source_offset and dest_offset as if we produced data.
-
-  // Either way, update all our returned in-out parameters
-  frac_source_offset += (frames_to_mix << Fixed::Format::FractionalBits);
-  *source_offset_ptr = Fixed::FromRaw(frac_source_offset);
-  *dest_offset_ptr = dest_offset + static_cast<uint32_t>(frames_to_mix);
-}
-
-template <typename SourceSampleType>
-void NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_frames,
-                                                int64_t* dest_offset_ptr,
-                                                const void* source_void_ptr, int64_t source_frames,
-                                                Fixed* source_offset_ptr, bool accumulate) {
-  TRACE_DURATION("audio", "NxNPointSamplerImpl::Mix");
-
-  auto info = &bookkeeping();
-  // CheckPositions expects a frac_pos_filter_length value that _includes_ [0], thus the '+1'
-  // TODO(fxbug.dev/72561): Convert Mixer class and the rest of audio_core to define filter width as
-  // including the center position in its count (as PositionManager and Filter::Length do). Then the
-  // distinction between filter length and filter width would go away, this kFracPositiveFilterWidth
-  // constant would be changed, and the below "+ 1" would be removed.
-  PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
-                                  source_offset_ptr->raw_value(), kFracPositiveFilterWidth + 1,
-                                  info);
-
-  if (info->gain.IsUnity()) {
-    return accumulate
-               ? Mix<media_audio::GainType::kUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                          source_void_ptr, source_frames,
-                                                          source_offset_ptr, info, chan_count_)
-               : Mix<media_audio::GainType::kUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                           source_void_ptr, source_frames,
-                                                           source_offset_ptr, info, chan_count_);
-  }
-
-  if (info->gain.IsSilent()) {
-    return Mix<media_audio::GainType::kSilent, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                     source_void_ptr, source_frames,
-                                                     source_offset_ptr, info, chan_count_);
-  }
-
-  if (info->gain.IsRamping()) {
-    dest_frames = std::min(dest_frames, *dest_offset_ptr + Bookkeeping::kScaleArrLen);
-    return accumulate
-               ? Mix<media_audio::GainType::kRamping, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                            source_void_ptr, source_frames,
-                                                            source_offset_ptr, info, chan_count_)
-               : Mix<media_audio::GainType::kRamping, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                             source_void_ptr, source_frames,
-                                                             source_offset_ptr, info, chan_count_);
-  }
-
-  return accumulate
-             ? Mix<media_audio::GainType::kNonUnity, true>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                           source_void_ptr, source_frames,
-                                                           source_offset_ptr, info, chan_count_)
-             : Mix<media_audio::GainType::kNonUnity, false>(dest_ptr, dest_frames, dest_offset_ptr,
-                                                            source_void_ptr, source_frames,
-                                                            source_offset_ptr, info, chan_count_);
-}
-
-// Templates used to expand the combinations of possible PointSampler configurations.
-template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format,
-                                               Gain::Limits gain_limits) {
-  TRACE_DURATION("audio", "SelectPSM(dChan,sType,sChan)");
-  return std::make_unique<PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>>(
-      gain_limits);
-}
-
-template <int32_t DestChanCount, typename SourceSampleType>
-static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format,
-                                               Gain::Limits gain_limits) {
-  TRACE_DURATION("audio", "SelectPSM(dChan,sType)");
-
-  switch (source_format.channels) {
-    case 1:
-      if constexpr (DestChanCount <= 4) {
-        return SelectPSM<DestChanCount, SourceSampleType, 1>(source_format, dest_format,
-                                                             gain_limits);
-      }
-      break;
-    case 2:
-      if constexpr (DestChanCount <= 4) {
-        return SelectPSM<DestChanCount, SourceSampleType, 2>(source_format, dest_format,
-                                                             gain_limits);
-      }
-      break;
-    case 3:
-      if constexpr (DestChanCount <= 2) {
-        return SelectPSM<DestChanCount, SourceSampleType, 3>(source_format, dest_format,
-                                                             gain_limits);
-      }
-      break;
-    case 4:
-      if constexpr (DestChanCount <= 2) {
-        return SelectPSM<DestChanCount, SourceSampleType, 4>(source_format, dest_format,
-                                                             gain_limits);
-      }
-      break;
-    default:
-      break;
-  }
-  return nullptr;
-}
-
-template <int32_t DestChanCount>
-static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format,
-                                               Gain::Limits gain_limits) {
-  TRACE_DURATION("audio", "SelectPSM(dChan)");
-
-  switch (source_format.sample_format) {
+fuchsia_mediastreams::wire::AudioSampleFormat ToNewSampleFormat(
+    fuchsia::media::AudioSampleFormat sample_format) {
+  switch (sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return SelectPSM<DestChanCount, uint8_t>(source_format, dest_format, gain_limits);
+      return fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8;
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return SelectPSM<DestChanCount, int16_t>(source_format, dest_format, gain_limits);
+      return fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16;
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return SelectPSM<DestChanCount, int32_t>(source_format, dest_format, gain_limits);
+      return fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32;
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return SelectPSM<DestChanCount, float>(source_format, dest_format, gain_limits);
     default:
-      return nullptr;
+      return fuchsia_mediastreams::wire::AudioSampleFormat::kFloat;
   }
 }
 
-static inline std::unique_ptr<Mixer> SelectNxNPSM(
-    const fuchsia::media::AudioStreamType& source_format, Gain::Limits gain_limits) {
-  TRACE_DURATION("audio", "SelectNxNPSM");
-  switch (source_format.sample_format) {
-    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return std::make_unique<NxNPointSamplerImpl<uint8_t>>(source_format.channels, gain_limits);
-    case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return std::make_unique<NxNPointSamplerImpl<int16_t>>(source_format.channels, gain_limits);
-    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return std::make_unique<NxNPointSamplerImpl<int32_t>>(source_format.channels, gain_limits);
-    case fuchsia::media::AudioSampleFormat::FLOAT:
-      return std::make_unique<NxNPointSamplerImpl<float>>(source_format.channels, gain_limits);
-    default:
-      return nullptr;
-  }
+media_audio::Format ToNewFormat(const fuchsia::media::AudioStreamType& format) {
+  return media_audio::Format::CreateOrDie(
+      {ToNewSampleFormat(format.sample_format), format.channels, format.frames_per_second});
 }
+
+}  // namespace
 
 std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamType& source_format,
                                             const fuchsia::media::AudioStreamType& dest_format,
                                             Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "PointSampler::Select");
 
-  if (source_format.frames_per_second != dest_format.frames_per_second) {
-    FX_LOGS(WARNING) << "PointSampler source frame rate " << source_format.frames_per_second
-                     << " must equal dest frame rate " << dest_format.frames_per_second;
+  auto point_sampler =
+      media_audio::PointSampler::Create(ToNewFormat(source_format), ToNewFormat(dest_format));
+  if (!point_sampler) {
     return nullptr;
   }
 
-  // If num_channels for source and dest are equal and > 2, directly map these one-to-one.
-  // TODO(fxbug.dev/13361): eliminate NxN mixers; replace w/ flexible rechannelization (see below).
-  if (source_format.channels == dest_format.channels && source_format.channels > 2) {
-    return SelectNxNPSM(source_format, gain_limits);
-  }
+  struct MakePublicCtor : PointSampler {
+    MakePublicCtor(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits,
+                   std::shared_ptr<Sampler> point_sampler)
+        : PointSampler(pos_filter_width, neg_filter_width, gain_limits, std::move(point_sampler)) {}
+  };
+  return std::make_unique<MakePublicCtor>(Fixed::FromRaw(kFracPositiveFilterWidth),
+                                          Fixed::FromRaw(kFracNegativeFilterWidth), gain_limits,
+                                          std::move(point_sampler));
+}
 
-  if (source_format.channels < 1 || source_format.channels > 4) {
-    FX_LOGS(WARNING) << "PointSampler does not support this channelization: "
-                     << source_format.channels << " -> " << dest_format.channels;
-    return nullptr;
-  }
+void PointSampler::Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+                       const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
+                       bool accumulate) {
+  TRACE_DURATION("audio", "PointSampler::Mix");
 
-  switch (dest_format.channels) {
-    case 1:
-      return SelectPSM<1>(source_format, dest_format, gain_limits);
-    case 2:
-      return SelectPSM<2>(source_format, dest_format, gain_limits);
-    case 3:
-      return SelectPSM<3>(source_format, dest_format, gain_limits);
-    case 4:
-      // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
-      // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
-      // Audio formats do not include info needed to filter frequencies or 3D-locate channels.
-      // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
-      // TODO(fxbug.dev/13682): account for frequency range (e.g. "4-channel" stereo woofer+tweeter)
-      return SelectPSM<4>(source_format, dest_format, gain_limits);
-    default:
-      FX_LOGS(WARNING) << "PointSampler does not support this channelization: "
-                       << source_format.channels << " -> " << dest_format.channels;
-      return nullptr;
+  auto info = &bookkeeping();
+  // CheckPositions expects a frac_pos_filter_length value that _includes_ [0], thus the '+1'
+  // TODO(fxbug.dev/72561): Convert Mixer class and the rest of audio_core to define filter width as
+  // including the center position in its count (as PositionManager and Filter::Length do). Then the
+  // distinction between filter length and filter width would go away, this kFracPositiveFilterWidth
+  // constant would be changed, and the below "+ 1" would be removed.
+  PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
+                                  source_offset_ptr->raw_value(), kFracPositiveFilterWidth + 1,
+                                  info);
+
+  Sampler::Source source{source_void_ptr, source_offset_ptr, source_frames};
+  Sampler::Dest dest{dest_ptr, dest_offset_ptr, dest_frames};
+  if (info->gain.IsSilent()) {
+    // If the gain is silent, the mixer simply skips over the appropriate range in the destination
+    // buffer, leaving whatever data is already there. We do not take further effort to clear the
+    // buffer if `accumulate` is false. In fact, we IGNORE `accumulate` if silent. The caller is
+    // responsible for clearing the destination buffer before Mix is initially called.
+    point_sampler_->Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kSilent},
+                            true);
+  } else if (info->gain.IsUnity()) {
+    point_sampler_->Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kUnity},
+                            accumulate);
+  } else if (info->gain.IsRamping()) {
+    point_sampler_->Process(
+        source, dest,
+        Sampler::Gain{.type = media_audio::GainType::kRamping, .scale_ramp = info->scale_arr.get()},
+        accumulate);
+  } else {
+    point_sampler_->Process(
+        source, dest,
+        Sampler::Gain{.type = media_audio::GainType::kNonUnity, .scale = info->gain.GetGainScale()},
+        accumulate);
   }
 }
 

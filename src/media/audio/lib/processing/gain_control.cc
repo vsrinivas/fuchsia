@@ -117,7 +117,7 @@ void GainControl::ScheduleGain(zx::time reference_time, float gain_db,
     FX_LOGS(WARNING) << "ScheduleGain at reference_time=" << reference_time.get()
                      << " < last_advanced_time=" << last_advanced_time_.get();
   }
-  scheduled_commands_.emplace(reference_time, GainCommand{gain_db, std::move(ramp)});
+  scheduled_commands_.emplace(reference_time, GainCommand{gain_db, ramp});
 }
 
 void GainControl::ScheduleMute(zx::time reference_time, bool is_muted) {
@@ -129,7 +129,7 @@ void GainControl::ScheduleMute(zx::time reference_time, bool is_muted) {
 }
 
 void GainControl::SetGain(float gain_db, std::optional<GainRamp> ramp) {
-  immediate_gain_command_ = GainCommand{gain_db, std::move(ramp)};
+  immediate_gain_command_ = GainCommand{gain_db, ramp};
 }
 
 void GainControl::SetMute(bool is_muted) { immediate_mute_command_ = MuteCommand{is_muted}; }

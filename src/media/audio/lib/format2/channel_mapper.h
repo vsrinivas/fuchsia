@@ -25,7 +25,7 @@ class ChannelMapper;
 
 // N -> N channel mapper (passthrough).
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == DestChannelCount)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
@@ -35,7 +35,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 1 -> N channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 1 && DestChannelCount > 1)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, [[maybe_unused]] size_t dest_channel) {
@@ -45,7 +45,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 2 -> 1 channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 2 && DestChannelCount == 1)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, [[maybe_unused]] size_t dest_channel) {
@@ -57,7 +57,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 2 -> 3 channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 2 && DestChannelCount == 3)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
@@ -72,7 +72,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 2 -> 4 channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 2 && DestChannelCount == 4)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
@@ -82,7 +82,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 3 -> 1 channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 3 && DestChannelCount == 1)>> {
  public:
   // Assumes a configuration with equal weighting of each channel.
@@ -96,7 +96,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 3 -> 2 channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 3 && DestChannelCount == 2)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {
@@ -112,7 +112,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 4 -> 1 channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 4 && DestChannelCount == 1)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, [[maybe_unused]] size_t dest_channel) {
@@ -130,7 +130,7 @@ class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Cu
 
 // 4 -> 2 channel mapper.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable*/ false,
+class ChannelMapper<SourceSampleType, SourceChannelCount, DestChannelCount, /*Customizable=*/false,
                     typename std::enable_if_t<(SourceChannelCount == 4 && DestChannelCount == 2)>> {
  public:
   inline float Map(const SourceSampleType* source_frame, size_t dest_channel) {

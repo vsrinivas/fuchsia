@@ -164,7 +164,7 @@ class GainControl {
   zx::time last_advanced_time_ = zx::time(0);
   zx::time last_processed_gain_command_time_ = zx::time(0);
   zx::time last_processed_mute_command_time_ = zx::time(0);
-  State state_ = {/*gain_db=*/kUnityGainDb, /*is_muted=*/false, /*linear_scale_slope_per_ns*/ 0.0f};
+  State state_ = {/*gain_db=*/kUnityGainDb, /*is_muted=*/false, /*linear_scale_slope_per_ns=*/0.0f};
 };
 
 }  // namespace media_audio

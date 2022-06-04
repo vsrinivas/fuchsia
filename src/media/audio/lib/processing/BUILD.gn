@@ -11,16 +11,45 @@ group("tests") {
 
 source_set("processing") {
   sources = [
-    "gain.h",
     "gain_control.cc",
     "gain_control.h",
+  ]
+
+  public_deps = [ ":sampler" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("sampler") {
+  sources = [
+    "gain.h",
+    "point_sampler.cc",
+    "point_sampler.h",
     "sampler.h",
   ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/format2",
-    "//zircon/system/ulib/zx",
+  ]
+
+  # Building without optimizations causes significant slowdowns for these components; the additional
+  # CPU load may lead to audio glitches on debug builds. These config settings enable the needed
+  # code optimization while maintaining other 'debug' aspects (e.g. DCHECK is still enabled).
+  configs -= [ "//build/config:default_optimize" ]
+  configs += [ "//build/config:optimize_speed" ]
+
+  # Allow some of our loops to be vectorized by the compiler.
+  cflags = [
+    "-ffast-math",
+
+    # Allow inf/nan until we sanitize these out of streams (not normally allowed with -ffast-math).
+    "-fhonor-infinities",
+    "-fhonor-nans",
+    "-fno-finite-math-only",
   ]
 }
 
@@ -32,6 +61,7 @@ executable("unittest-bin") {
   sources = [
     "gain_control_unittest.cc",
     "gain_unittest.cc",
+    "point_sampler_unittest.cc",
     "sampler_unittest.cc",
   ]
 
