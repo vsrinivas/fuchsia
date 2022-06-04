@@ -7,7 +7,6 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/syslog/logger.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -110,26 +109,28 @@ zx_status_t Console::Log(fuchsia_logger::wire::LogMessage log) {
     }
   }
   switch (log.severity) {
-    case FX_LOG_TRACE:
+    case static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kTrace):
       buffer.Append("] TRACE: ");
       break;
-    case FX_LOG_DEBUG:
+    case static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kDebug):
       buffer.Append("] DEBUG: ");
       break;
-    case FX_LOG_INFO:
+    case static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kInfo):
       buffer.Append("] INFO: ");
       break;
-    case FX_LOG_WARNING:
+    case static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kWarn):
       buffer.Append("] WARNING: ");
       break;
-    case FX_LOG_ERROR:
+    case static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kError):
       buffer.Append("] ERROR: ");
       break;
-    case FX_LOG_FATAL:
+    case static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kFatal):
       buffer.Append("] FATAL: ");
       break;
     default:
-      buffer.AppendPrintf("] VLOG(%d): ", FX_LOG_INFO - log.severity);
+      buffer.AppendPrintf(
+          "] VLOG(%d): ",
+          static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kInfo) - log.severity);
   }
   buffer.Append(log.msg.data(), log.msg.size()).Append('\n');
   return tx_sink_(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size());

@@ -5,7 +5,6 @@
 #include "console.h"
 
 #include <lib/sync/completion.h>
-#include <lib/syslog/logger.h>
 
 #include <fbl/string_buffer.h>
 #include <zxtest/zxtest.h>
@@ -89,7 +88,7 @@ TEST(ConsoleTestCase, Log) {
       .pid = 1,
       .tid = 2,
       .time = 4321000000,
-      .severity = FX_LOG_INFO,
+      .severity = static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kInfo),
       .tags = fidl::VectorView<fidl::StringView>::FromExternal(&tag, 1),
       .msg = {"Hello World"},
   };
@@ -118,7 +117,7 @@ TEST(ConsoleTestCase, LogDenyTag) {
       .pid = 1,
       .tid = 2,
       .time = 4321000000,
-      .severity = FX_LOG_INFO,
+      .severity = static_cast<int32_t>(fuchsia_logger::LogLevelFilter::kInfo),
       .tags = fidl::VectorView<fidl::StringView>::FromExternal(&tag, 1),
       .msg = {"Goodbye World"},
   };

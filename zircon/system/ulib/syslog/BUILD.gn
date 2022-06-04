@@ -104,7 +104,6 @@ syslog_static_visibility_allowlist += [
 syslog_static_visibility_allowlist += [ "//zircon/system/ulib/syslog:*" ]
 
 syslog_headers_visibility_allowlist = [
-  "//src/bringup/bin/console:*",
   "//src/devices/lib/iommu:*",
   "//src/lib/ddk:*",
 ]
