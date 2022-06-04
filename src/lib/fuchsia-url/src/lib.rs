@@ -13,7 +13,6 @@ mod host;
 mod package_url;
 mod parse;
 mod pinned_absolute_package_url;
-pub mod pkg_url;
 mod relative_component_url;
 mod relative_package_url;
 mod repository_url;
@@ -38,6 +37,11 @@ use {
     crate::host::Host,
     percent_encoding::{AsciiSet, CONTROLS},
 };
+
+// Re-export during migration.
+pub mod pkg_url {
+    pub use crate::{PackageName, PackageVariant};
+}
 
 /// https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');

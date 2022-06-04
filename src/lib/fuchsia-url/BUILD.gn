@@ -36,7 +36,6 @@ rustc_library("fuchsia-url") {
     "src/package_url.rs",
     "src/parse.rs",
     "src/pinned_absolute_package_url.rs",
-    "src/pkg_url.rs",
     "src/relative_component_url.rs",
     "src/relative_package_url.rs",
     "src/repository_url.rs",
