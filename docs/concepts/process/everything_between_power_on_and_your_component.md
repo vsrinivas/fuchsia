@@ -20,7 +20,7 @@ everything needed to bootstrap Fuchsia.
 
 [Once the kernel (zircon) is running on the system][bootloader-and-kernel] its
 main objective is to start [userspace][userspace], where processes can be run.
-Since zircon is a [micro kernel][micro-kernel], it doesn't have to do a whole
+Since zircon is like a [microkernel][micro-kernel], it doesn't have to do a whole
 lot in this stage (especially compared to Linux). The executable for the first
 user process is baked into the kernel, which the kernel copies into a new
 process and starts. This program is called [userboot][userboot].
