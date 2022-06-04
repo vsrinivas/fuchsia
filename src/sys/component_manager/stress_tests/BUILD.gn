@@ -105,7 +105,12 @@ fuchsia_component("child_for_stress_test") {
 }
 
 fuchsia_test_package("component-manager-stress-tests") {
-  deps = [ ":child_for_stress_test" ]
+  deps = [
+    ":child_for_stress_test",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
+  ]
   test_specs = {
     parallel = 1
   }

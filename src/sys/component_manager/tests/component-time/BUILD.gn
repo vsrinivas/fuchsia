@@ -38,5 +38,10 @@ fuchsia_unittest_package("component-v1-time-unittests") {
 # Run with `fx test component-v2-time-unittests`.
 fuchsia_unittest_package("component-v2-time-unittests") {
   manifest = "meta/component-v2-time-unittests.cml"
-  deps = [ ":component-time-test" ]
+  deps = [
+    ":component-time-test",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
+  ]
 }

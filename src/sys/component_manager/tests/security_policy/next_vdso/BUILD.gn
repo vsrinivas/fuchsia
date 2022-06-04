@@ -17,5 +17,10 @@ executable("bin") {
 
 fuchsia_unittest_package("security-policy-next-vdso-test") {
   manifest = "meta/security-policy-next-vdso-test.cml"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
+  ]
 }
