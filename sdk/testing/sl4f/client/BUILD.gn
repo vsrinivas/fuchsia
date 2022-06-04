@@ -147,7 +147,7 @@ if (is_host) {
 
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-    deps = [ "//tools/zedmon:fake_zedmon_bin" ]
+    deps = [ "//tools/zedmon/fake_zedmon:bin" ]
   }
 }
 

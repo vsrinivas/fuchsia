@@ -68,6 +68,6 @@ if (is_host) {
 
     outputs = [ _fake_zedmon_path ]
 
-    deps = [ "//tools/zedmon:fake_zedmon_bin" ]
+    deps = [ "//tools/zedmon/fake_zedmon:bin" ]
   }
 }

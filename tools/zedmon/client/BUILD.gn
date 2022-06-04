@@ -64,6 +64,14 @@ install_host_tools("zedmon_client") {
   outputs = [ "zedmon" ]
 }
 
+group("client") {
+  testonly = true
+  deps = [
+    ":tests",
+    ":zedmon_client",
+  ]
+}
+
 group("tests") {
   public_deps = [
     ":bin_test($host_toolchain)",
