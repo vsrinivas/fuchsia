@@ -33,7 +33,6 @@ executable("bin") {
 
 fuchsia_shell_package("log") {
   deps = [ ":bin" ]
-  manifest = "log.cmx"
 }
 
 executable("tools_log_test_bin") {
