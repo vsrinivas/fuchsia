@@ -289,13 +289,15 @@ async fn run_interface_control<
     // TODO(https://fxbug.dev/100867): We're not supposed to cleanup if we're
     // detached.
 
-    let _: devices::DeviceInfo = ctx
-        .lock()
-        .await
-        .dispatcher
-        .devices
-        .remove_device(id)
-        .expect("device lifetime should be tied to channel lifetime");
+    {
+        let mut ctx = ctx.lock().await;
+        let info = ctx
+            .dispatcher
+            .devices
+            .remove_device(id)
+            .expect("device lifetime should be tied to channel lifetime");
+        netstack3_core::remove_device(&mut *ctx, info.core_id());
+    }
 }
 
 /// Sets interface with `id` to `admin_enabled = enabled`.

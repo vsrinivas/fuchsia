@@ -23,7 +23,7 @@ use net_types::{
     ethernet::Mac,
     ip::{
         AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
-        Ipv6SourceAddr,
+        Ipv6SourceAddr, Subnet,
     },
     MulticastAddr, SpecifiedAddr, UnicastAddr,
 };
@@ -663,19 +663,18 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
 
 /// Remove a device from the device layer.
 ///
-/// This function returns frames for the bindings to send if the shutdown is
-/// graceful - they can be safely ignored otherwise.
-///
 /// # Panics
 ///
 /// Panics if `device` does not refer to an existing device.
 pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
     ctx: &mut Ctx<D, C>,
     device: DeviceId,
-) -> Option<Vec<usize>> {
+) {
+    // Uninstall all routes associated with the device.
+    crate::ip::del_device_routes::<Ipv4, _, _>(ctx, &mut (), &device);
+    crate::ip::del_device_routes::<Ipv6, _, _>(ctx, &mut (), &device);
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            // TODO(rheacock): Generate any final frames to send here.
             crate::device::ethernet::deinitialize(ctx, &mut (), id);
             let EthernetDeviceId(id) = id;
             let _: IpLinkDeviceState<_, _> = ctx
@@ -685,15 +684,44 @@ pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
                 .remove(id)
                 .unwrap_or_else(|| panic!("no such Ethernet device: {}", id));
             debug!("removing Ethernet device with ID {}", id);
-            None
         }
         DeviceIdInner::Loopback => {
             let _: IpLinkDeviceState<_, _> =
                 ctx.state.device.loopback.take().expect("loopback device does not exist");
             debug!("removing Loopback device");
-            None
         }
     }
+}
+
+/// Adds a new Ethernet device to the stack.
+pub fn add_ethernet_device<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    mac: UnicastAddr<Mac>,
+    mtu: u32,
+) -> DeviceId {
+    let id = ctx.state.device.add_ethernet_device(mac, mtu);
+
+    const LINK_LOCAL_SUBNET: Subnet<Ipv6Addr> = net_declare::net_subnet_v6!("fe80::/64");
+    crate::add_route(
+        ctx,
+        crate::AddableEntryEither::new(LINK_LOCAL_SUBNET.into(), Some(id), None)
+            .expect("create link local entry"),
+    )
+    // Adding the link local route must succeed: we're providing correct
+    // arguments and the device has just been created.
+    .expect("add link local route");
+
+    id
+}
+
+/// Adds a new device loopback device to the stack.
+///
+/// Only one loopback device may be installed at any point in time.
+pub fn add_loopback_device<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &mut Ctx<D, C>,
+    mtu: u32,
+) -> Result<DeviceId, crate::error::ExistsError> {
+    ctx.state.device.add_loopback_device(mtu)
 }
 
 /// Receive a device layer frame from the network.
@@ -979,8 +1007,8 @@ mod tests {
         }
         check(&ctx, &[][..]);
 
-        let loopback_device =
-            ctx.state.add_loopback_device(55 /* mtu */).expect("error adding loopback device");
+        let loopback_device = crate::add_loopback_device(&mut ctx, 55 /* mtu */)
+            .expect("error adding loopback device");
         check(&ctx, &[loopback_device][..]);
 
         let DummyEventDispatcherConfig {
@@ -990,7 +1018,7 @@ mod tests {
             remote_ip: _,
             remote_mac: _,
         } = DUMMY_CONFIG_V4;
-        let ethernet_device = ctx.state.add_ethernet_device(local_mac, 0 /* mtu */);
+        let ethernet_device = crate::add_ethernet_device(&mut ctx, local_mac, 0 /* mtu */);
         check(&ctx, &[ethernet_device, loopback_device][..]);
     }
 }

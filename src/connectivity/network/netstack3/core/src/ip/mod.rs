@@ -2038,6 +2038,20 @@ pub(crate) fn del_route<
     })
 }
 
+pub(crate) fn del_device_routes<
+    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
+    SC: IpLayerContext<I, C>,
+    C,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    to_delete: &SC::DeviceId,
+) {
+    get_ip_layer_state_inner_mut(sync_ctx, ctx)
+        .table
+        .retain(|Entry { subnet: _, device, gateway: _ }| device != to_delete)
+}
+
 /// Returns all the routes for the provided `IpAddress` type.
 pub(crate) fn iter_all_routes<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
     ctx: &Ctx<D, C>,
@@ -2341,6 +2355,7 @@ mod tests {
     use core::{convert::TryFrom, num::NonZeroU16, time::Duration};
 
     use net_types::{
+        ethernet::Mac,
         ip::{AddrSubnet, Ipv4Addr, Ipv6Addr},
         MulticastAddr, UnicastAddr,
     };
@@ -2366,7 +2381,7 @@ mod tests {
         device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
         ip::device::set_routing_enabled,
         testutil::*,
-        DeviceId, Mac,
+        DeviceId,
     };
 
     // Some helper functions
@@ -3507,7 +3522,8 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
-        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device =
+            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device, |config| {
             config.ip_config.ip_enabled = true;
 
@@ -3579,7 +3595,8 @@ mod tests {
         // dropped.
         let cfg = DUMMY_CONFIG_V6;
         let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
-        let device = ctx.state.add_ethernet_device(cfg.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device =
+            crate::add_ethernet_device(&mut ctx, cfg.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, device);
 
         let ip: Ipv6Addr = cfg.local_mac.to_ipv6_link_local().addr().get();
@@ -3691,7 +3708,8 @@ mod tests {
             // assigned state rather than the tentative state.
             let mut ctx = DummyCtx::default();
             let local_mac = v6_config.local_mac;
-            let device = ctx.state.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+            let device =
+                crate::add_ethernet_device(&mut ctx, local_mac, Ipv6::MINIMUM_LINK_MTU.into());
             crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device, |config| {
                 config.ip_config.ip_enabled = true;
 

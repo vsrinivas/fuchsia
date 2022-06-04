@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use std::{convert::TryInto as _, mem::size_of};
+use std::{collections::HashMap, convert::TryInto as _, mem::size_of};
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
@@ -26,7 +26,9 @@ use net_types::{
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
     interfaces,
-    realms::{constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion},
+    realms::{
+        constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestSandboxExt as _,
+    },
     send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
     ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
@@ -1228,4 +1230,65 @@ async fn sending_ra_with_autoconf_flag_triggers_slaac() {
     )
     .await
     .expect("error waiting for address assignment");
+}
+
+#[variants_test]
+async fn add_device_adds_link_local_subnet_route<N: Netstack>(name: &str) {
+    // TODO(https://fxbug.dev/88797): Make this test variable on endpoint type
+    // once Netstack3 can administrate Ethernet interfaces over admin/Control.
+    type E = netemul::NetworkDevice;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let endpoint = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    endpoint.set_link_up(true).await.expect("set link up");
+    let iface = endpoint.into_interface_in_realm(&realm).await.expect("install interface");
+    let did_enable = iface.control().enable().await.expect("calling enable").expect("enable");
+    assert!(did_enable);
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol)");
+
+    let id = iface.id();
+    let forwarding_table = stack.get_forwarding_table().await.expect("get forwarding table");
+    assert!(
+        forwarding_table.iter().any(
+            |fidl_fuchsia_net_stack::ForwardingEntry { subnet, device_id, next_hop, metric: _ }| {
+                *device_id == id
+                    && next_hop.is_none()
+                    && *subnet == net_declare::fidl_subnet!("fe80::/64")
+            }
+        ),
+        "failed to find link local subnet through {} in {:?}",
+        id,
+        forwarding_table
+    );
+
+    // Removing the device should also remove the subnet route.
+    drop(iface);
+
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    // Wait until device no longer exists.
+    fidl_fuchsia_net_interfaces_ext::wait_interface(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("error getting interface state event stream"),
+        &mut HashMap::new(),
+        |interfaces| interfaces.get(&id).is_none().then(|| ()),
+    )
+    .await
+    .expect("waiting interface removal");
+
+    let forwarding_table = stack.get_forwarding_table().await.expect("get forwarding table");
+    assert_eq!(
+        forwarding_table.into_iter().find(
+            |fidl_fuchsia_net_stack::ForwardingEntry {
+                 subnet: _,
+                 device_id,
+                 next_hop: _,
+                 metric: _,
+             }| { *device_id == id }
+        ),
+        None
+    );
 }

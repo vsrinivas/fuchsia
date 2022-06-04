@@ -326,9 +326,11 @@ pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
         crate::context::testutil::DummyCtx::default(),
     );
     let FuzzInput { actions } = input;
-    let device_id = ctx
-        .state
-        .add_ethernet_device(UnicastAddr::new(net_mac!("10:20:30:40:50:60")).unwrap(), 1500);
+    let device_id = crate::add_ethernet_device(
+        &mut ctx,
+        UnicastAddr::new(net_mac!("10:20:30:40:50:60")).unwrap(),
+        1500,
+    );
     crate::device::testutil::enable_device(&mut ctx, device_id);
 
     log::info!("Processing {} actions", actions.len());

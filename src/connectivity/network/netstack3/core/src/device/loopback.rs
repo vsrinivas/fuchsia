@@ -74,7 +74,8 @@ mod tests {
     fn test_loopback_methods() {
         const MTU: u32 = 66;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
-        let device = ctx.state.add_loopback_device(MTU).expect("error adding loopback device");
+        let device =
+            crate::add_loopback_device(&mut ctx, MTU).expect("error adding loopback device");
         crate::device::testutil::enable_device(&mut ctx, device);
 
         assert_eq!(crate::ip::device::get_mtu::<Ipv4, _, _>(&ctx, device), MTU);

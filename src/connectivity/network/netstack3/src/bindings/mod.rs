@@ -689,9 +689,7 @@ impl NetstackSeed {
 
             // Add and initialize the loopback interface with the IPv4 and IPv6
             // loopback addresses and on-link routes to the loopback subnets.
-            let loopback = ctx
-                .state
-                .add_loopback_device(DEFAULT_LOOPBACK_MTU)
+            let loopback = netstack3_core::add_loopback_device(ctx, DEFAULT_LOOPBACK_MTU)
                 .expect("error adding loopback device");
             let devices: &mut Devices = ctx.dispatcher.as_mut();
             let _binding_id: u64 = devices

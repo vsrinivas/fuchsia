@@ -68,6 +68,7 @@ lib_deps = [
   # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
   "fakestd",
   "//src/connectivity/lib/internet-checksum",
+  "//src/connectivity/lib/net-declare",
   "//src/connectivity/lib/net-types",
   "//src/connectivity/lib/packet-formats",
   "//src/connectivity/network/lib/explicit",

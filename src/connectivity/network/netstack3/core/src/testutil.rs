@@ -525,7 +525,7 @@ impl DummyEventDispatcherBuilder {
             .into_iter()
             .enumerate()
             .map(|(idx, (mac, ip_subnet))| {
-                let id = ctx.state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into());
+                let id = crate::add_ethernet_device(&mut ctx, mac, Ipv6::MINIMUM_LINK_MTU.into());
                 crate::device::testutil::enable_device(&mut ctx, id);
                 match ip_subnet {
                     Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {

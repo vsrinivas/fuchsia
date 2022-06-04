@@ -222,6 +222,11 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
             )
         })
     }
+
+    /// Retains only the entries that pass the predicate.
+    pub(crate) fn retain<F: FnMut(&Entry<I::Addr, D>) -> bool>(&mut self, pred: F) {
+        self.table.retain(pred)
+    }
 }
 
 #[cfg(test)]

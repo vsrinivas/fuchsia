@@ -564,9 +564,7 @@ impl TestSetupBuilder {
             let mut stack = TestStack::new();
             stack
                 .with_ctx(|ctx| {
-                    let loopback = ctx
-                        .state
-                        .add_loopback_device(DEFAULT_LOOPBACK_MTU)
+                    let loopback = netstack3_core::add_loopback_device(ctx, DEFAULT_LOOPBACK_MTU)
                         .expect("add loopback device");
                     update_ipv4_configuration(ctx, loopback, |config| {
                         config.ip_config.ip_enabled = true;
@@ -1188,6 +1186,10 @@ async fn test_list_del_routes() {
 
     let routes = stack.get_forwarding_table().await.expect("Can get forwarding table");
     let route3_with_device = AddableEntryEither::new(sub10, device, sub10_gateway).unwrap();
+    // Link local route is added automatically by core.
+    let link_local_route =
+        AddableEntryEither::new(net_declare::net_subnet_v6!("fe80::/64").into(), device, None)
+            .unwrap();
     assert_eq!(
         test_stack
             .with_ctx(|ctx| {
@@ -1199,7 +1201,7 @@ async fn test_list_del_routes() {
                     .collect::<HashSet<_>>()
             })
             .await,
-        HashSet::from([route1, route2, route3_with_device])
+        HashSet::from([route1, route2, route3_with_device, link_local_route])
     );
 
     // delete route1:
@@ -1236,7 +1238,7 @@ async fn test_list_del_routes() {
                     .collect::<HashSet<_>>()
             })
             .await,
-        HashSet::from([route2, route3_with_device])
+        HashSet::from([route2, route3_with_device, link_local_route])
     );
 }
 

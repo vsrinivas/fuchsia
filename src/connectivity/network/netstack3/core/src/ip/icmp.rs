@@ -3567,11 +3567,9 @@ mod tests {
             IcmpConnectionType::Remote => (config.remote_ip, REMOTE_CTX_NAME),
         };
 
-        let loopback_device_id = net
-            .context(LOCAL_CTX_NAME)
-            .state
-            .add_loopback_device(u16::MAX.into())
-            .expect("create the loopback interface");
+        let loopback_device_id =
+            crate::add_loopback_device(net.context(LOCAL_CTX_NAME), u16::MAX.into())
+                .expect("create the loopback interface");
         crate::device::testutil::enable_device(net.context(LOCAL_CTX_NAME), loopback_device_id);
 
         let conn = I::new_icmp_connection(

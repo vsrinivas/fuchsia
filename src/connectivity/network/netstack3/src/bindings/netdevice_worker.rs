@@ -184,7 +184,7 @@ impl DeviceHandler {
             }
             Entry::Vacant(e) => e,
         };
-        let core_id = ctx.state.add_ethernet_device(mac_addr, mtu);
+        let core_id = netstack3_core::add_ethernet_device(&mut *ctx, mac_addr, mtu);
         let _: &mut DeviceId = state_entry.insert(core_id);
         let make_info = |id| {
             let name = name.unwrap_or_else(|| format!("eth{}", id));

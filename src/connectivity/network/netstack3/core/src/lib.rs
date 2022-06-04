@@ -49,8 +49,9 @@ use log::trace;
 pub use crate::{
     data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey},
     device::{
-        get_ipv4_configuration, get_ipv6_configuration, receive_frame, remove_device,
-        update_ipv4_configuration, update_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
+        add_ethernet_device, add_loopback_device, get_ipv4_configuration, get_ipv6_configuration,
+        receive_frame, remove_device, update_ipv4_configuration, update_ipv6_configuration,
+        DeviceId, DeviceLayerEventDispatcher,
     },
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError},
     ip::{
@@ -64,8 +65,8 @@ pub use crate::{
         forwarding::AddRouteError,
         icmp,
         socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-        AddableEntryEither, EntryEither, IpDeviceIdContext, IpExt, IpLayerEvent, Ipv4StateBuilder,
-        Ipv6StateBuilder, TransportIpContext,
+        AddableEntry, AddableEntryEither, EntryEither, IpDeviceIdContext, IpExt, IpLayerEvent,
+        Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
     },
     transport::{
         udp::{
@@ -84,9 +85,8 @@ use alloc::vec::Vec;
 use core::{fmt::Debug, time};
 
 use net_types::{
-    ethernet::Mac,
     ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
-    SpecifiedAddr, UnicastAddr,
+    SpecifiedAddr,
 };
 use packet::{Buf, BufferMut, EmptyBuf};
 
@@ -213,18 +213,6 @@ pub struct StackState<I: Instant> {
     device: DeviceLayerState<I>,
     #[cfg(test)]
     test_counters: core::cell::RefCell<testutil::TestCounters>,
-}
-
-impl<I: Instant> StackState<I> {
-    /// Add a new ethernet device to the device layer.
-    pub fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
-        self.device.add_ethernet_device(mac, mtu)
-    }
-
-    /// Add a new loopback device to the device layer.
-    pub fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, NetstackError> {
-        self.device.add_loopback_device(mtu).map_err(Into::into)
-    }
 }
 
 impl<I: Instant> Default for StackState<I> {
@@ -580,7 +568,8 @@ mod tests {
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
-        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device =
+            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, device);
 
         let ip: IpAddr = I::get_other_ip_address(1).get().into();

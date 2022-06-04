@@ -176,7 +176,7 @@ where
             UnicastAddr::new(Mac::new(mac_octets)).ok_or(fidl_net_stack::Error::NotSupported)?;
 
         let id = {
-            let eth_id = ctx.state.add_ethernet_device(mac_addr, mtu);
+            let eth_id = netstack3_core::add_ethernet_device(&mut *ctx, mac_addr, mtu);
 
             let devices: &mut Devices = ctx.dispatcher.as_mut();
             devices
@@ -287,8 +287,8 @@ where
         get_all_routes(&self.ctx)
             .filter_map(|entry| match entry.try_into_fidl_with_ctx(&self.ctx.dispatcher) {
                 Ok(entry) => Some(entry),
-                Err(_) => {
-                    error!("Failed to map forwarding entry into FIDL");
+                Err(e) => {
+                    error!("Failed to map forwarding entry into FIDL: {:?}", e);
                     None
                 }
             })
