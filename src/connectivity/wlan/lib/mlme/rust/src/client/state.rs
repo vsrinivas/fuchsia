@@ -91,7 +91,7 @@ impl Joined {
     fn on_sme_deauthenticate(&mut self, sta: &mut BoundClient<'_>) {
         // Clear assoc context at the device
         if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid().0) {
-            error!("Auth timeout: Error clearing association in vendor driver: {}", e);
+            warn!("SME Deauthenticate: Error clearing association in vendor driver: {}", e);
         }
     }
 }
