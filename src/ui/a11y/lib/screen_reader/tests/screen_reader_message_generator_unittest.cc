@@ -753,29 +753,48 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnteredList) {
   Node list;
   list.set_role(Role::LIST);
   list.mutable_attributes()->set_label("list label");
-  list.mutable_attributes()->mutable_list_attributes()->set_size(3);
 
   a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context;
   message_context.entered_containers = {&list};
 
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ENTERED_LIST),
                                                "entered list");
-  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::LIST_ITEMS),
-                                               "with N items");
   auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
-  ASSERT_EQ(result.size(), 4u);
+  ASSERT_EQ(result.size(), 3u);
   ASSERT_TRUE(result[0].utterance.has_message());
   EXPECT_EQ(result[0].utterance.message(), "entered list");
   ASSERT_TRUE(result[1].utterance.has_message());
   EXPECT_EQ(result[1].utterance.message(), "list label");
   ASSERT_TRUE(result[2].utterance.has_message());
-  EXPECT_EQ(result[2].utterance.message(), "with N items");
-  ASSERT_TRUE(result[3].utterance.has_message());
-  EXPECT_EQ(result[3].utterance.message(), "node label");
+  EXPECT_EQ(result[2].utterance.message(), "node label");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, EnteredListWithNumberOfItems) {
+  Node node;
+  node.mutable_attributes()->set_label("node label");
+
+  Node list;
+  list.set_role(Role::LIST);
+  list.mutable_attributes()->set_label("list label");
+  list.mutable_attributes()->mutable_list_attributes()->set_size(3);
+
+  a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context;
+  message_context.entered_containers = {&list};
+
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::ENTERED_LIST_DETAIL), "entered list with N items");
+  auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
+  ASSERT_EQ(result.size(), 3u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  EXPECT_EQ(result[0].utterance.message(), "entered list with N items");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  EXPECT_EQ(result[1].utterance.message(), "list label");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  EXPECT_EQ(result[2].utterance.message(), "node label");
 
   {
-    const auto& args =
-        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::LIST_ITEMS));
+    const auto& args = mock_message_formatter_ptr_->GetArgsForId(
+        static_cast<uint64_t>(MessageIds::ENTERED_LIST_DETAIL));
     ASSERT_EQ(args.size(), 1u);
     EXPECT_EQ(args[0].first, "num_items");
     EXPECT_EQ(std::get<int64_t>(args[0].second), 3);
@@ -810,15 +829,11 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnterAndExitListsAndTables) {
 
   Node entered_list;
   entered_list.set_role(Role::LIST);
-  entered_list.mutable_attributes()->mutable_list_attributes()->set_size(1);
-
   Node exited_list;
   exited_list.set_role(Role::LIST);
-  exited_list.mutable_attributes()->mutable_list_attributes()->set_size(2);
 
   Node entered_table;
   entered_table.set_role(Role::TABLE);
-
   Node exited_table;
   exited_table.set_role(Role::TABLE);
 
@@ -828,8 +843,6 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnterAndExitListsAndTables) {
 
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ENTERED_LIST),
                                                "entered list");
-  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::LIST_ITEMS),
-                                               "with N items");
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::EXITED_LIST),
                                                "exited list");
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ENTERED_TABLE),
@@ -839,31 +852,19 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnterAndExitListsAndTables) {
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TABLE),
                                                "table");
   auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
-  ASSERT_EQ(result.size(), 7u);
+  ASSERT_EQ(result.size(), 6u);
   ASSERT_TRUE(result[0].utterance.has_message());
   EXPECT_EQ(result[0].utterance.message(), "exited list");
   ASSERT_TRUE(result[1].utterance.has_message());
   EXPECT_EQ(result[1].utterance.message(), "exited table");
   ASSERT_TRUE(result[2].utterance.has_message());
   EXPECT_EQ(result[2].utterance.message(), "entered list");
-  ASSERT_TRUE(result[2].utterance.has_message());
-  EXPECT_EQ(result[2].utterance.message(), "entered list");
   ASSERT_TRUE(result[3].utterance.has_message());
-  EXPECT_EQ(result[3].utterance.message(), "with N items");
+  EXPECT_EQ(result[3].utterance.message(), "entered table");
   ASSERT_TRUE(result[4].utterance.has_message());
-  EXPECT_EQ(result[4].utterance.message(), "entered table");
+  EXPECT_EQ(result[4].utterance.message(), "table");
   ASSERT_TRUE(result[5].utterance.has_message());
-  EXPECT_EQ(result[5].utterance.message(), "table");
-  ASSERT_TRUE(result[6].utterance.has_message());
-  EXPECT_EQ(result[6].utterance.message(), "node label");
-
-  {
-    const auto& args =
-        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::LIST_ITEMS));
-    ASSERT_EQ(args.size(), 1u);
-    EXPECT_EQ(args[0].first, "num_items");
-    EXPECT_EQ(std::get<int64_t>(args[0].second), 1);
-  }
+  EXPECT_EQ(result[5].utterance.message(), "node label");
 }
 
 }  // namespace

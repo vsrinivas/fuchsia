@@ -494,32 +494,21 @@ ScreenReaderMessageGenerator::DescribeEnteredList(
 
   std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
 
-  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_LIST));
+  if (node->has_attributes() && node->attributes().has_list_attributes() &&
+      node->attributes().list_attributes().has_size()) {
+    description.emplace_back(
+        GenerateUtteranceByMessageId(MessageIds::ENTERED_LIST_DETAIL, zx::duration(zx::msec(0)),
+                                     {"num_items"}, {node->attributes().list_attributes().size()}));
+  } else {
+    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_LIST));
+  }
 
-  if (node->has_attributes()) {
-    const auto& attributes = node->attributes();
-
-    // Add the list label to the description.
-    std::string label;
-    if (attributes.has_label() && !attributes.label().empty()) {
-      label = attributes.label();
-      Utterance utterance;
-      utterance.set_message(label);
-      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
-    }
-
-    // Add the list size to the description.
-    if (attributes.has_list_attributes()) {
-      const auto& list_attributes = attributes.list_attributes();
-
-      if (list_attributes.has_size()) {
-        int64_t num_items = list_attributes.size();
-        // TODO(fxbug.dev/99346) There's kind of an uncanny pause, it sounds like 'Entered list ...
-        // with N items'. We can fix that by combining them into one message.
-        description.emplace_back(GenerateUtteranceByMessageId(
-            MessageIds::LIST_ITEMS, zx::duration(zx::msec(0)), {"num_items"}, {num_items}));
-      }
-    }
+  // Add the list label to the description, if it's present.
+  if (node->has_attributes() && node->attributes().has_label() &&
+      !node->attributes().label().empty()) {
+    Utterance utterance;
+    utterance.set_message(node->attributes().label());
+    description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
   }
 
   return description;

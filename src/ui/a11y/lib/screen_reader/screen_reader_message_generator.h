@@ -135,7 +135,7 @@ class ScreenReaderMessageGenerator {
   // Helper method to describe entering a node that represents a list.
   // The message will be:
   //
-  // Entered list, <label>*, with [0 items / 1 item / n items]
+  // Entered list with [0 items / 1 item / n items], <label>.
   // *If present.
   std::vector<UtteranceAndContext> DescribeEnteredList(
       const fuchsia::accessibility::semantics::Node* node);
