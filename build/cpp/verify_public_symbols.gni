@@ -19,6 +19,10 @@ import("//build/sdk/config.gni")
 #
 #   library_name
 #     A human-readable library name for debugging purposes.
+#
+# When adding a new library to be tracked by `verify_public_symbols`, you can
+# create an empty file, traditionally this would be named ${library_name}.ifs,
+# run the build, it will fail, and give a cp command to run.
 
 template("verify_public_symbols") {
   assert(defined(invoker.current), "current must be provided")

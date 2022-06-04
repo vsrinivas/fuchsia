@@ -319,7 +319,9 @@ template("sdk_shared_library") {
   # Don't verify the public symbols for non-publicized APIs.
   # TODO(abrachet): Make this required for all libraries.
   if (invoker.category == "partner" || invoker.category == "public") {
-    assert(defined(invoker.symbols_api), "Must define path to an ifs file")
+    assert(
+        defined(invoker.symbols_api),
+        "Must define path to an ifs file. See comment in //build/cpp/verify_public_symbols.gni")
     main_target_dir = get_label_info(":$main_target_name", "dir")
 
     verify_public_symbols_target_name =
