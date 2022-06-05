@@ -107,6 +107,9 @@ fuchsia_test_package("component-manager-stress-tests-alt") {
     ":no_binary",
     ":unreliable_echo_client",
     ":unreliable_echo_server",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
   test_components = [ ":test" ]
   test_specs = {
@@ -132,6 +135,9 @@ fuchsia_test_package("component-manager-stress-tests-short") {
     ":no_binary",
     ":unreliable_echo_client",
     ":unreliable_echo_server",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
   test_components = [ ":test_short" ]
   test_specs = {

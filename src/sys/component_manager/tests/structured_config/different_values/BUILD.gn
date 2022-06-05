@@ -60,6 +60,9 @@ fuchsia_unittest_package("different_values_false") {
     ":bin",
     ":receiver_component",
     ":values_with_false",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
 }
 
@@ -71,6 +74,9 @@ fuchsia_unittest_package("different_values_true") {
     ":my_flag_is_true",
     ":receiver_component",
     ":values_with_true",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
 }
 

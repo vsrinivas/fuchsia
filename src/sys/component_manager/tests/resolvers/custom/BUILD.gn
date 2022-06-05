@@ -83,6 +83,9 @@ fuchsia_test_package("package") {
   deps = [
     ":integration_test",
     ":resolver",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
     "//src/sys/component_manager/tests/resolvers:trigger-bin",
   ]
 }

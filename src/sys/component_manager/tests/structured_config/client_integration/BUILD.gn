@@ -30,5 +30,8 @@ fuchsia_unittest_package("client_integration") {
     "cpp_driver",
     "cpp_elf",
     "rust",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
 }

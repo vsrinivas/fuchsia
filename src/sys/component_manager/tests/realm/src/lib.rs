@@ -58,6 +58,10 @@ pub async fn query_echo_server_child() {
                 kind: files_async::DirentKind::Directory,
             },
             files_async::DirEntry {
+                name: "data".to_string(),
+                kind: files_async::DirentKind::Directory,
+            },
+            files_async::DirEntry {
                 name: "lib".to_string(),
                 kind: files_async::DirentKind::Directory,
             },
