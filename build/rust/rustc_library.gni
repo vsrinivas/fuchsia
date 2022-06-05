@@ -194,6 +194,7 @@ template("rustc_library") {
                              "sources",
                              "testonly",
                              "visibility",
+                             "disable_rbe",
                            ])
 
     # Avoid walking into data_deps when checking component manifest expected includes.

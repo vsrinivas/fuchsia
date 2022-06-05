@@ -83,6 +83,7 @@ import("plugins.gni")
 #
 template("ffx_plugin") {
   output_name = target_name
+
   if (defined(invoker.name)) {
     output_name = invoker.name
   }
@@ -170,6 +171,10 @@ template("ffx_plugin") {
 
     rustc_library(args) {
       source_root = args_source_root
+
+      # Due to size constraints, RBE slows down the build of plugins
+      # rather than speeding it up. Disable RBE for plugins.
+      disable_rbe = true
       deps = args_deps + [
                "//src/developer/ffx/core:lib",
                "//third_party/rust_crates:argh",
