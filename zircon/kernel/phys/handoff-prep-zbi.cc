@@ -21,6 +21,7 @@
 #include <phys/allocation.h>
 #include <phys/handoff.h>
 #include <phys/symbolize.h>
+#include <phys/zbitl-allocation.h>
 
 #include "handoff-entropy.h"
 #include "handoff-prep.h"
@@ -41,10 +42,10 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
   // the kernel as a whole range of pages that can be turned into a VMO.
   fbl::AllocChecker ac;
   Allocation mexec_buffer =
-      Allocation::New(ac, memalloc::Type::kPhysScratch, 16 * ZX_PAGE_SIZE, ZX_PAGE_SIZE);
+      Allocation::New(ac, memalloc::Type::kPhysScratch, ZX_PAGE_SIZE, ZX_PAGE_SIZE);
   ZX_ASSERT_MSG(ac.check(), "cannot allocate mexec data page!");
-  mexec_data_ = mexec_buffer.release();
-  auto result = zbitl::Image(mexec_data_).clear();
+  mexec_image_ = zbitl::Image(ktl::move(mexec_buffer));
+  auto result = mexec_image_.clear();
   if (result.is_error()) {
     zbitl::PrintViewError(result.error_value());
   }
@@ -184,14 +185,14 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
 
   // Copy mexec data into handoff temporary space.
   // TODO(fxbug.dev/84107): Later this won't be required since we'll pass
-  // the whole page at mexec_data_ to the kernel in the handoff by address.
-  ktl::span handoff_mexec = New(handoff_->mexec_data, ac, zbitl::View(mexec_data_).size_bytes());
+  // the contents of mexec_image_ to the kernel in the handoff by address.
+  ktl::span handoff_mexec = New(handoff_->mexec_data, ac, mexec_image_.size_bytes());
   ZX_ASSERT(ac.check());
-  memcpy(handoff_mexec.data(), mexec_data_.data(), handoff_mexec.size_bytes());
+  memcpy(handoff_mexec.data(), mexec_image_.storage().get(), handoff_mexec.size_bytes());
 }
 
 void HandoffPrep::SaveForMexec(const zbi_header_t& header, ktl::span<const ktl::byte> payload) {
-  auto result = zbitl::Image(mexec_data_).Append(header, payload);
+  auto result = mexec_image_.Append(header, payload);
   if (result.is_error()) {
     printf("%s: ERROR: failed to append item of %zu bytes to mexec image: ", ProgramName(),
            payload.size_bytes());

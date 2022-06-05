@@ -10,6 +10,7 @@
 #include <lib/trivial-allocator/basic-leaky-allocator.h>
 #include <lib/trivial-allocator/new.h>
 #include <lib/trivial-allocator/single-heap-allocator.h>
+#include <lib/zbitl/image.h>
 #include <zircon/boot/image.h>
 
 #include <fbl/alloc_checker.h>
@@ -18,9 +19,10 @@
 #include <ktl/move.h>
 #include <ktl/span.h>
 #include <phys/handoff-ptr.h>
+#include <phys/handoff.h>
+#include <phys/zbitl-allocation.h>
 
 struct BootOptions;
-struct PhysHandoff;
 class PhysBootTimes;
 
 class HandoffPrep {
@@ -100,7 +102,7 @@ class HandoffPrep {
 
   Allocator allocator_;
   PhysHandoff* handoff_ = nullptr;
-  ktl::span<ktl::byte> mexec_data_;
+  zbitl::Image<Allocation> mexec_image_;
 };
 
 #endif  // ZIRCON_KERNEL_PHYS_HANDOFF_PREP_H_

@@ -320,6 +320,10 @@ if (toolchain_environment == "kernel.phys" ||
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
 
+      # allocation.h has #include <lib/memalloc/pool.h>.
+      # allocation.h has #include <lib/memalloc/range.h>.
+      "//zircon/kernel/phys/lib/memalloc",
+
       # allocation.h has #include <fbl/alloc_checker.h>.
       "//zircon/system/ulib/fbl",
 
@@ -354,6 +358,12 @@ if (toolchain_environment == "kernel.phys" ||
     public_deps = [
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
+
+      # zbitl-allocation.h has #include "allocation.h".
+      ":allocation",
+
+      # zbitl-allocation.h has #include <lib/zbitl/storage-traits.h>.
+      "//zircon/system/ulib/zbitl",
 
       # zbitl-allocation.h has #include <lib/fitx/result.h>.
       "//zircon/system/ulib/zxc",
@@ -426,9 +436,12 @@ if (toolchain_environment == "kernel.phys" ||
     public = [ "handoff-prep.h" ]
 
     public_deps = [
+      ":handoff",
+      ":zbitl-allocation",
       "//src/lib/trivial-allocator",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -443,6 +456,7 @@ if (toolchain_environment == "kernel.phys" ||
       ":handoff",
       ":handoff-entropy",
       ":symbolize",
+      ":zbitl-allocation",
       "//src/lib/llvm-profdata",
       "//zircon/kernel/arch/$zircon_cpu/phys:arch-handoff-prep",
       "//zircon/kernel/lib/boot-options",

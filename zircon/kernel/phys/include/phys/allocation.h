@@ -8,6 +8,8 @@
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ALLOCATION_H_
 
 #include <lib/fitx/result.h>
+#include <lib/memalloc/pool.h>
+#include <lib/memalloc/range.h>
 
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
@@ -16,17 +18,6 @@
 #include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
-
-namespace memalloc {
-
-// Forward-declared; declared in <lib/memalloc/range.h>.
-enum class Type : uint64_t;
-struct Range;
-
-// Forward-declared; declared in <lib/memalloc/pool.h>.
-class Pool;
-
-}  // namespace memalloc
 
 // This object represents one memory allocation, and owns that allocation so
 // destroying this object frees the allocation.  It acts as a smart pointer
@@ -45,6 +36,8 @@ class Allocation {
 
   Allocation& operator=(Allocation&& other) noexcept {
     ktl::swap(data_, other.data_);
+    ktl::swap(alignment_, other.alignment_);
+    ktl::swap(type_, other.type_);
     return *this;
   }
 
@@ -56,16 +49,25 @@ class Allocation {
 
   auto get() const { return data_.data(); }
 
+  // Gives the intended minimal alignment.
+  size_t alignment() const { return alignment_; }
+
+  memalloc::Type type() const { return type_; }
+
   void reset();
 
   // This returns the span like data() but transfers ownership like a move.
   [[nodiscard]] auto release() {
     auto result = data_;
     data_ = {};
+    alignment_ = 0;
+    type_ = memalloc::Type::kMaxExtended;
     return result;
   }
 
   explicit operator bool() const { return !data_.empty(); }
+
+  void Resize(fbl::AllocChecker& ac, size_t new_size);
 
   // This must be called exactly once before using GetPool or New.
   static void Init(ktl::span<memalloc::Range> mem_ranges,
@@ -85,6 +87,8 @@ class Allocation {
 
  private:
   ktl::span<ktl::byte> data_;
+  size_t alignment_ = 0;
+  memalloc::Type type_ = memalloc::Type::kMaxExtended;
 };
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ALLOCATION_H_
