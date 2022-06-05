@@ -105,6 +105,7 @@ if (!is_kernel) {
     deps = [
       ":memalloc",
       ":testing",
+      "//sdk/lib/stdcompat",
     ]
   }
 

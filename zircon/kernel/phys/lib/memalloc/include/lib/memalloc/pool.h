@@ -196,8 +196,8 @@ class Pool {
   fitx::result<fitx::failed> UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size);
 
   // Attempts to free a subrange of a previously allocated range or one of
-  // extended type that had previously been passed to Init(). This subrange is
-  // updated to have type kFreeRam.
+  // an extended type that had previously been passed to Init(). This subrange
+  // is updated to have type kFreeRam.
   //
   // Freeing a range already tracked as kFreeRam is a no-op.
   //
@@ -205,6 +205,30 @@ class Pool {
   // (subdivided) ranges of memory that would result from freeing.
   //
   fitx::result<fitx::failed> Free(uint64_t addr, uint64_t size);
+
+  // Attempts to resize a previously allocated range or one of the ranges of
+  // extended type originally passed to Init(). The resizing occurs only at
+  // the level of bookkeeping; the start of the resized region is returned and,
+  // if it differs from the one originally supplied, it is the responsibility
+  // of the caller to actually std::memmove the old contents to the new region
+  // before another allocation is performed. If the new size is smaller than
+  // the original, then this method effectively just frees the range's tail.
+  //
+  // The original range - as opposed to just its root address - is required to
+  // be passed in as testimony; since the original allocation or
+  // initialization, the pool may have coalesced neighbouring regions into it
+  // or freed subregions of it, this method asserts that the associated tracked
+  // range does at least still have `original` as a subrange with the
+  // appropriate type. The provided range must also be of extended type.
+  //
+  // `new_size` must be positive; this method is not a backdoor `Free()`. The
+  // original range must already be `min_alignment`-aligned.
+  //
+  // fitx::failed is returned if there is insufficient memory to track the new
+  // (subdivided) ranges of memory that would result from resizing, or if the
+  // range is untracked. No failure mode will leave the original range freed.
+  fitx::result<fitx::failed, uint64_t> Resize(const Range& original, uint64_t new_size,
+                                              uint64_t min_alignment);
 
   // Pretty-prints the memory ranges contained in the pool.
   void PrintMemoryRanges(const char* prefix, FILE* f = stdout) const;

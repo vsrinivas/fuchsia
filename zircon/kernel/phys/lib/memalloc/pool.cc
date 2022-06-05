@@ -159,8 +159,6 @@ const Range* Pool::GetContainingRange(uint64_t addr) {
 fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, uint64_t alignment,
                                                     std::optional<uint64_t> min_addr,
                                                     std::optional<uint64_t> max_addr) {
-  // Try to proactively ensure two bookkeeping nodes, which might be required
-  // by InsertSubrange() below.
   TryToEnsureTwoBookkeepingNodes();
 
   uint64_t upper_bound = max_addr.value_or(default_max_addr_);
@@ -251,6 +249,128 @@ fitx::result<fitx::failed> Pool::Free(uint64_t addr, uint64_t size) {
   Coalesce(it);
 
   return fitx::ok();
+}
+
+fitx::result<fitx::failed, uint64_t> Pool::Resize(const Range& original, uint64_t new_size,
+                                                  uint64_t min_alignment) {
+  ZX_ASSERT(new_size > 0);
+  ZX_ASSERT(IsExtendedType(original.type));
+  ZX_ASSERT(cpp20::has_single_bit(min_alignment));
+  ZX_ASSERT(original.addr % min_alignment == 0);
+
+  auto it = GetContainingNode(original.addr, original.size);
+  ZX_ASSERT_MSG(it != ranges_.end(), "`original` is not a subset of a tracked range");
+
+  // Already appropriately sized; nothing to do.
+  if (new_size == original.size) {
+    return fitx::ok(original.addr);
+  }
+
+  // Smaller size; need only to free the tail.
+  if (new_size < original.size) {
+    if (auto result = Free(original.addr + new_size, original.size - new_size); result.is_error()) {
+      return fitx::failed();
+    }
+    return fitx::ok(original.addr);
+  }
+
+  //
+  // The strategy here onward is to see whether we can find a resize candidate
+  // that overlaps with `original`. If so, then we commit to that and directly
+  // update the relevant iterators to reflect the post-resize state; if not,
+  // then we can reallocate with knowledge that nothing could possibly be
+  // allocated into original range's space, allowing us to delay freeing it
+  // until the end without fear of poor memory utilization.
+  //
+
+  // Now we consider to what extent we have space off the end of `original` to
+  // resize into. This is only kosher if `original` is the tail of its tracked
+  // parent range (so that there aren't any separate, previously-coalesced
+  // ranges in the way) and if there is an adjacent free RAM range present to
+  // spill over into.
+  auto next = std::next(it);
+  uint64_t wiggle_room_end = original.end();
+  if (next != ranges_.end() && original.end() == next->addr && next->type == Type::kFreeRam) {
+    ZX_DEBUG_ASSERT(it->end() == original.end());
+    wiggle_room_end = next->end();
+
+    // Can extend in place.
+    if (wiggle_room_end - original.addr >= new_size) {
+      uint64_t next_spillover = new_size - original.size;
+      if (next->size == next_spillover) {
+        RemoveNodeAt(next);
+      } else {
+        next->addr += next_spillover;
+        next->size -= next_spillover;
+      }
+      it->size += next_spillover;
+      return fitx::ok(original.addr);
+    }
+  }
+
+  // At this point, we might have a little room in the next range to spill over
+  // into, but any range overlapping with `original` would need to spill over
+  // into the previous.
+  uint64_t need = new_size - (wiggle_room_end - original.addr);
+  auto prev = it == ranges_.begin() ? ranges_.end() : std::prev(it);
+  if (prev != ranges_.end() && prev->end() == it->addr &&  // Adjacent.
+      prev->type == Type::kFreeRam &&                      // Free RAM.
+      prev->size >= need) {                                // Enough space (% alignment).
+    ZX_DEBUG_ASSERT(it->addr == original.addr);            // No coalesced ranges in the way.
+
+    // Can take the maximal, aligned address at least `need` bytes away from
+    // the original range as a candidate for the new root, which will only work
+    // if it still lies within the previous range and isn't far enough away
+    // that we wouldn't have overlap with `original`.
+    uint64_t new_addr = (prev->end() - need) & -(min_alignment - 1);
+    if (new_addr >= prev->addr && original.addr - new_addr < new_size) {
+      uint64_t prev_spillover = original.addr - new_addr;
+      if (prev->size == prev_spillover) {
+        RemoveNodeAt(prev);
+      } else {
+        prev->size -= prev_spillover;
+      }
+      it->addr -= prev_spillover;
+      it->size += prev_spillover;
+
+      // If the new end spills over into the next range, we must update the
+      // bookkeeping there; if it falls short of the original end, then there
+      // is nothing left to do but free the tail.
+      if (uint64_t new_end = new_addr + new_size; new_end > original.end()) {
+        ZX_DEBUG_ASSERT(next != ranges_.end());
+        ZX_DEBUG_ASSERT(next->addr == original.end());
+        ZX_DEBUG_ASSERT(next->type == Type::kFreeRam);
+
+        uint64_t next_spillover = new_end - original.end();
+        if (next->size == next_spillover) {
+          RemoveNodeAt(next);
+        } else {
+          next->addr += next_spillover;
+          next->size -= next_spillover;
+        }
+        it->size += next_spillover;
+        ZX_DEBUG_ASSERT(it->size >= new_size);
+      } else if (new_end < original.end()) {
+        auto result = Free(new_end, original.end() - new_end);
+        if (result.is_error()) {
+          return fitx::failed();
+        }
+      }
+      return fitx::ok(new_addr);
+    }
+  }
+
+  // No option left but to allocate a replacement.
+  uint64_t new_addr = 0;
+  if (auto result = Allocate(original.type, new_size, min_alignment); result.is_error()) {
+    return fitx::failed();
+  } else {
+    new_addr = std::move(result).value();
+  }
+  if (auto result = Free(original.addr, original.size); result.is_error()) {
+    return fitx::failed();
+  }
+  return fitx::ok(new_addr);
 }
 
 fitx::result<fitx::failed> Pool::UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size) {

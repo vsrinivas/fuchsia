@@ -145,6 +145,17 @@ void TestPoolFreeRamSubrangeUpdating(Pool& pool, Type type, uint64_t addr, uint6
   EXPECT_FALSE(status.is_error());
 }
 
+void TestPoolResizing(Pool& pool, const Range& original, uint64_t new_size, uint64_t min_alignment,
+                      std::optional<uint64_t> expected) {
+  auto status = pool.Resize(original, new_size, min_alignment);
+  if (!expected) {
+    EXPECT_TRUE(status.is_error());
+    return;
+  }
+  ASSERT_FALSE(status.is_error());
+  EXPECT_EQ(*expected, status.value());
+}
+
 // Fills up a pool with two-byte allocations of varying types until its
 // bookkeeping space is used up.
 void Oom(Pool& pool) {
@@ -1196,6 +1207,590 @@ TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
         },
     };
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+  }
+}
+
+TEST(MemallocPoolTests, Resizing) {
+  constexpr uint64_t kMinAlignment = kChunkSize;
+
+  // kNewSize == kOldSize
+  {
+    constexpr uint64_t kOldAddr = kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        kRange,
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kOldSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kOldSize, kMinAlignment, kOldAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+
+    // Resizing with a smaller alignment should be a no-opt.
+    ASSERT_NO_FATAL_FAILURE(
+        TestPoolResizing(ctx.pool, kRange, kOldSize, kMinAlignment / 2, kOldAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize < kOldSize
+  {
+    constexpr uint64_t kOldAddr = kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = kChunkSize / 2;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        kRange,
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kOldAddr + kNewSize,
+            .size = kChunkSize / 2,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kOldAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // Room for extension in-place.
+  // No coalesced ranges.
+  {
+    constexpr uint64_t kOldAddr = kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 2 * kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        kRange,
+        {
+            .addr = 2 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kOldAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // Room for extension in-place.
+  // Coalesced range on left.
+  {
+    constexpr uint64_t kOldAddr = 2 * kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 2 * kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kChunkSize,
+            .size = kChunkSize + kOldSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = 3 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kChunkSize,
+            .size = kChunkSize + kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kOldAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // No wiggle room; must reallocate into discontiguous memory.
+  // No coalesced ranges.
+  {
+    constexpr uint64_t kOldAddr = kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 2 * kChunkSize;
+    constexpr uint64_t kNewAddr = 10 * kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        kRange,
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kOldSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kNewAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // No wiggle room; must reallocate into discontiguous memory.
+  // Coalesced range on left.
+  {
+    constexpr uint64_t kOldAddr = 2 * kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 2 * kChunkSize;
+    constexpr uint64_t kNewAddr = 10 * kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kChunkSize,
+            .size = kChunkSize + kOldSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kOldSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kNewAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // No wiggle room; must reallocate into discontiguous memory.
+  // Coalesced range on right.
+  {
+    constexpr uint64_t kOldAddr = kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 2 * kChunkSize;
+    constexpr uint64_t kNewAddr = 10 * kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kOldSize + kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kOldSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = 2 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kNewAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // No wiggle room; must reallocate into discontiguous memory.
+  // Coalesced ranges on both sides.
+  {
+    constexpr uint64_t kOldAddr = 2 * kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 2 * kChunkSize;
+    constexpr uint64_t kNewAddr = 10 * kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kChunkSize,
+            .size = kChunkSize + kOldSize + kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kOldSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = 3 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kNewAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // Must reallocate into preceding range.
+  // No coalesced range on right.
+  {
+    constexpr uint64_t kOldAddr = 2 * kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 3 * kChunkSize / 2;
+    constexpr uint64_t kNewAddr = kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = 2 * kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        kRange,
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kNewAddr + kNewSize,
+            .size = kChunkSize / 2,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kNewAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // Must reallocate into preceding range.
+  // Coalesced range on right.
+  {
+    constexpr uint64_t kOldAddr = 2 * kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 3 * kChunkSize / 2;
+    constexpr uint64_t kNewAddr = kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = 2 * kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kOldAddr,
+            .size = kOldSize + kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    const Range post_resize[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        {
+            .addr = kNewAddr,
+            .size = kNewSize,
+            .type = Type::kPoolTestPayload,
+        },
+        {
+            .addr = kNewAddr + kNewSize,
+            .size = kChunkSize / 2,
+            .type = Type::kFreeRam,
+        },
+        {
+            .addr = kOldAddr + kOldSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, kNewAddr));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {post_resize}));
+  }
+
+  // kNewSize > kOldSize
+  // OOM.
+  {
+    constexpr uint64_t kOldAddr = kChunkSize;
+    constexpr uint64_t kOldSize = kChunkSize;
+    constexpr uint64_t kNewSize = 2 * kChunkSize;
+
+    constexpr Range kRange{
+        .addr = kOldAddr,
+        .size = kOldSize,
+        .type = Type::kPoolTestPayload,
+    };
+
+    PoolContext ctx;
+    Range ranges[] = {
+        {
+            .addr = 0,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        kRange,
+        {
+            .addr = 2 * kChunkSize,
+            .size = kChunkSize / 2,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+    ASSERT_NO_FATAL_FAILURE(
+        TestPoolResizing(ctx.pool, kRange, kNewSize, kMinAlignment, std::nullopt));
   }
 }
 
