@@ -61,6 +61,11 @@ config("musl_internal.config") {
   ]
   cflags_c = [ "-Werror=incompatible-pointer-types" ]
 
+  if (is_gcc) {
+    # Some dubious but working musl code elicits GCC's pointer usage warnings.
+    cflags += [ "-Wno-dangling-pointer" ]
+  }
+
   if (!is_gcc) {
     # Some of this code runs before the TLS area for the canary is set up.
     # TODO(mcgrathr): Isolate this to exactly what code needs it.
