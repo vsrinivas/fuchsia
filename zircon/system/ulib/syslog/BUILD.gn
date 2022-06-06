@@ -67,7 +67,6 @@ syslog_visibility_allowlist = [
   "//src/lib/intl/lookup/rust:*",
   "//src/lib/syslog/rust:*",
   "//src/lib/vulkan/imagepipe_view:*",
-  "//src/media/codec/examples/use_media_decoder:*",
   "//src/media/drivers/amlogic_decoder:*",
   "//src/media/lib/codec_impl:*",
   "//src/media/lib/internal_buffer:*",
