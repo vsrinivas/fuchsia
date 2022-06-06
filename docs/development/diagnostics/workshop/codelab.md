@@ -162,17 +162,59 @@ A solution can be found in this patch: https://fuchsia-review.googlesource.com/c
 ### Inspect
 
 Inspect allows components to expose state about themselves. Unlike logs, which are a stream,
-inspect represents a live view into the component current state.
+Inspect represents a live view into the component current state.
 
 Reading through the [Inspect quickstart][inspect-quickstart] would be a good first step. If you'd
 like to dive deeper into Inspect, you can also follow the [Inspect codelab][inspect-codelab].
 
-Once those introductory documents have been read, what intrumentation could be useful to add to
+To get started, first add library dependencies:
+```
+source_set("lib") {
+  ...
+  public_deps = [
+    ...
+    "//sdk/lib/sys/inspect/cpp",
+  ]
+}
+```
+
+Next, initialize Inspect in `main.cc`:
+```
+#include <lib/sys/inspect/cpp/component.h>
+...
+// Immediately following the line defining "startup".
+auto inspector = std::make_unique<sys::ComponentInspector>(startup.get());
+inspector->Health().Ok();
+```
+
+Now you can view Inspect after restarting the `profile_store`:
+```
+# Note that double \\ is necessary! ':' must be escaped in a "diagnostic selector."
+ffx inspect show core/ffx-laboratory\\:profile_store/profile_store
+```
+
+You should see your component's status is "OK". Inspect is most
+useful when integrated with your class hierarchy. Arbitrary values
+are rooted on `inspect::Node`, including more Nodes! Try to modify ProfileStore such that the following compiles:
+```
+  // In main.cc
+  std::unique_ptr<ProfileStore> profile_store =
+      std::make_unique<ProfileStore>(loop.dispatcher(), inspector->GetRoot().CreateChild("store"));
+```
+
+Hint: You will need to update the `ProfileStoreTests` class if you
+change the constructor for `ProfileStore`. You can just pass
+`inspect::Node()` as the new parameter.
+
+Now that you have basic Inspect configured, what intrumentation could be useful to add to
 help prevent/find the bug in this component?
+- Consider adding an `inspect::Node` to each `Profile`, and create
+  them using `CreateChild` on the node you passed to `ProfileStore`.
+- Consider using `inspect::LazyNode` (`node.CreateLazyNode(...)`)
+  to dynamically create hierarchies.
 
 A possible solution can be found in this patch:
 https://fuchsia-review.googlesource.com/c/fuchsia/+/682671
-
 
 ### Triage
 
