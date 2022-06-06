@@ -108,7 +108,7 @@ use the following CIPD path naming conventions:
     host prebuilts while `x64` is only used for Fuchsia ELF prebuilts.
 
     For example, `fuchsia/third_party/swiftshader/arch/x64` is the path used for
-    the SwitfShader-based Vulkan ICD/driver that is built for Fuchsia.
+    the SwiftShader-based Vulkan ICD/driver that is built for Fuchsia.
 
 ## Set CIPD package versioning {#set-cipd-package-versioning}
 
@@ -179,7 +179,7 @@ package: myproject/fuchsia/mypackage-arm64
 description: mypackage's Fuchsia binaries from myproject.
 data:
   - file: LICENSE # or NOTICE(.txt)
-  - file: libpackage.so
+  - file: mypackage.far
 ```
 
 Don't forget to also upload a
