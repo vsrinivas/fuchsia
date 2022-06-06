@@ -250,7 +250,8 @@ def main():
                 additional_args = ''.join(args.additional_bootserver_arguments)
             script_file.write(
                 generate_script(
-                    binary_name, images, args.board_name, mode, additional_args))
+                    binary_name, images, args.board_name, mode,
+                    additional_args))
 
     # First write the local scripts that work relative to the build directory.
     if args.pave:

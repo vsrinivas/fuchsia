@@ -1,0 +1,127 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/board.gni")
+import("//build/images/archive/fastboot_targets.gni")
+import("//build/images/archive/paver_targets.gni")
+import("//build/images/args.gni")
+import("//build/sdk/config.gni")
+
+group("archive-extras") {
+  testonly = true
+  deps = [
+    ":build_args_metadata",
+    "//build/images/flash:fastboot_manifest_archive",
+    "//build/images/flash:flash_script_archive",
+  ]
+}
+
+group("build_args_metadata") {
+  metadata = {
+    # Not actually images, but historically required entries to be included in
+    # the relevant build archives.
+    images = [
+      {
+        label = get_label_info(":$target_name", "label_with_toolchain")
+        archive = true
+        name = "buildargs"
+        type = "gn"
+        path = "args.gn"
+      },
+    ]
+  }
+}
+
+# Name the entrypoint scripts in images.json as well, as that they are
+# presently the stable API to perform a pave/netboot/etc. without botanist.
+
+archive_formats = [
+  "tar",
+  "tgz",
+  "zip",
+]
+archive_targets = []
+generated_file("archive-images-manifest") {
+  testonly = true
+  outputs = [ "$root_build_dir/archive-images-manifest.json" ]
+  output_conversion = "json"
+  data_keys = [ "images" ]
+  deps = [
+    ":archive-extras",
+    "//build/images",
+    "//build/images/tools:bootserver",
+  ]
+}
+foreach(format, archive_formats) {
+  archive_targets += [
+    {
+      name = "archive-$format"
+      outputs = [ "$root_build_dir/build-archive.$format" ]
+      switch = "--archive="
+      extra_bootserver_arguments = ""
+      deps = [
+        ":archive-extras",
+        ":paver-script",
+        "//build/images/flash:fastboot_manifest_archive",
+        "//build/images/flash:flash_script_archive",
+      ]
+      metadata = {
+        archives = [
+          {
+            name = "archive"
+            path = "build-archive.$format"
+            type = "$format"
+          },
+        ]
+      }
+    },
+  ]
+}
+
+archive_deps = []
+foreach(target, archive_targets + paver_targets) {
+  archive_deps += [ ":${target.name}" ]
+}
+
+foreach(target, archive_targets + fastboot_targets + paver_targets) {
+  action(target.name) {
+    deps = []
+    if (defined(target.deps)) {
+      deps += target.deps
+    }
+    testonly = true
+    outputs = target.outputs
+    depfile = "${outputs[0]}.d"
+    script = "//build/images/pack-images.py"
+    args = [
+      "--depfile=" + rebase_path(depfile, root_build_dir),
+      target.switch + rebase_path(outputs[0], root_build_dir),
+      "--board_name=${board_name}",
+    ]
+
+    if (additional_bootserver_arguments != "") {
+      args += [
+        "--additional_bootserver_arguments=${additional_bootserver_arguments}",
+      ]
+    }
+    if (defined(target.extra_bootserver_arguments) &&
+        target.extra_bootserver_arguments != "") {
+      args += [ "--additional_bootserver_arguments=${target.extra_bootserver_arguments}" ]
+    }
+
+    args += [
+      "archive-images-manifest.json",
+      "checkout_artifacts.json",
+    ]
+
+    if (defined(target.metadata)) {
+      metadata = target.metadata
+    }
+  }
+}
+
+group("archive") {
+  testonly = true
+  deps = archive_deps
+}

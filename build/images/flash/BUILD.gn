@@ -1,0 +1,606 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/board.gni")
+import("//build/images/custom_signing.gni")
+import("//build/images/flash/parts.gni")
+import("//build/images/vboot/vboot.gni")
+import("//build/sdk/config.gni")
+import("//build/sdk/physical_device.gni")
+import("//build/sdk/product_metadata.gni")
+import("//build/sdk/virtual_device.gni")
+
+supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
+
+files = {
+  fvm = "obj/build/images/fuchsia/fuchsia/fvm.blk"
+  fvm_fastboot = "obj/build/images/fuchsia/fuchsia/fvm.fastboot.blk"
+}
+not_needed([ "files" ])
+
+# Deps that are added to the //build/images:default_image_deps target.
+flash_image_deps = []
+
+# Track some firmware information locally so we can flash it without
+# re-calculating all the names and paths.
+firmware_info = []
+
+if (use_gigaboot) {
+  # EFI ESP images.
+  esp("esp") {
+    output_name = "fuchsia"
+    testonly = true
+    if (always_zedboot) {
+      cmdline = "zedboot/efi_cmdline.txt"
+    } else {
+      cmdline = "efi_local_cmdline.txt"
+    }
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          archive = true
+          bootserver_pave = [ "--bootloader" ]
+          bootserver_pave_zedboot = [ "--bootloader" ]
+          fastboot_flash = [ "fuchsia-esp" ]
+          name = "fuchsia.esp"
+          path = "fuchsia.esp.blk"
+          type = "blk"
+        },
+      ]
+      image_paths = [ "IMAGE_ESP_RAW=fuchsia.esp.blk" ]
+    }
+  }
+  flash_image_deps += [ ":esp" ]
+
+  esp_outputs = get_target_outputs(":esp")
+
+  firmware_info += [
+    {
+      name = "esp"
+      partition = "fuchsia-esp"
+      out_path = rebase_path(esp_outputs[0], root_build_dir)
+    },
+  ]
+}
+
+foreach(firmware, firmware_prebuilts) {
+  if (firmware.type == "") {
+    # Don't add a trailing delimiter if firmware.type is empty.
+    name = "firmware"
+    bootserver_arg = "--firmware"
+  } else {
+    name = "firmware_${firmware.type}"
+    bootserver_arg = "--firmware-${firmware.type}"
+  }
+
+  # By convention image_paths shell variables are upper-case. There must
+  # be a better way to do this but I'm not sure what it is.
+  upper_name = name
+  upper_name = string_replace(upper_name, "a", "A")
+  upper_name = string_replace(upper_name, "b", "B")
+  upper_name = string_replace(upper_name, "c", "C")
+  upper_name = string_replace(upper_name, "d", "D")
+  upper_name = string_replace(upper_name, "e", "E")
+  upper_name = string_replace(upper_name, "f", "F")
+  upper_name = string_replace(upper_name, "g", "G")
+  upper_name = string_replace(upper_name, "h", "H")
+  upper_name = string_replace(upper_name, "i", "I")
+  upper_name = string_replace(upper_name, "j", "J")
+  upper_name = string_replace(upper_name, "k", "K")
+  upper_name = string_replace(upper_name, "l", "L")
+  upper_name = string_replace(upper_name, "m", "M")
+  upper_name = string_replace(upper_name, "n", "N")
+  upper_name = string_replace(upper_name, "o", "O")
+  upper_name = string_replace(upper_name, "p", "P")
+  upper_name = string_replace(upper_name, "q", "Q")
+  upper_name = string_replace(upper_name, "r", "R")
+  upper_name = string_replace(upper_name, "s", "S")
+  upper_name = string_replace(upper_name, "t", "T")
+  upper_name = string_replace(upper_name, "u", "U")
+  upper_name = string_replace(upper_name, "v", "V")
+  upper_name = string_replace(upper_name, "w", "W")
+  upper_name = string_replace(upper_name, "x", "X")
+  upper_name = string_replace(upper_name, "y", "Y")
+  upper_name = string_replace(upper_name, "z", "Z")
+
+  copy(name) {
+    testonly = true
+    sources = [ "${firmware.path}${firmware_prebuilts_path_suffix}" ]
+    outputs = [ "$root_out_dir/$name.img" ]
+
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$name", "label_with_toolchain")
+          archive = true
+          bootserver_pave = [ bootserver_arg ]
+          bootserver_pave_zedboot = [ bootserver_arg ]
+          name = name
+          path = "$name.img"
+          type = "img"
+
+          if (defined(firmware.partition)) {
+            fastboot_flash = [ firmware.partition ]
+          }
+        },
+      ]
+      image_paths = [ "IMAGE_${upper_name}=$name.img" ]
+    }
+  }
+
+  flash_image_deps += [ ":$name" ]
+
+  if (defined(firmware.partition)) {
+    firmware_info += [
+      {
+        name = name
+        partition = firmware.partition
+
+        # Both the output dir and the build archive put the image at this path.
+        out_path = "$name.img"
+      },
+    ]
+  }
+}
+
+# Stores bootstrap partition information to assemble the flashing manifest.
+bootstrap_parts = []
+archive_bootstrap_parts = []
+flash_script_deps = [ "//build/images/tools:fastboot" ]
+
+foreach(file, bootstrap_files) {
+  file_name = get_path_info(file.path, "file")
+  out_path = "${root_out_dir}/${file_name}"
+
+  copy(file_name) {
+    sources = [ file.path ]
+    outputs = [ out_path ]
+
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":${file_name}", "label_with_toolchain")
+          archive = true
+          name = get_path_info(file.path, "name")
+          path = rebase_path(out_path, root_build_dir)
+          type = get_path_info(file.path, "extension")
+          fastboot_flash = []
+        },
+      ]
+    }
+  }
+
+  flash_image_deps += [ ":${file_name}" ]
+  flash_script_deps += [ ":${file_name}" ]
+
+  if (defined(file.partition)) {
+    part = {
+    }
+    archive_part = {
+    }
+
+    # The only difference here is the path. For the normal partition map it
+    # should be the path relative to the build dir, whereas the archive needs it
+    # to be just the file name.
+    part.name = file.partition
+    part.path = rebase_path(out_path, root_build_dir)
+    archive_part.name = file.partition
+    archive_part.path = file_name
+    if (defined(file.condition)) {
+      part.condition = file.condition
+      archive_part.condition = file.condition
+    }
+
+    bootstrap_parts += [ part ]
+    archive_bootstrap_parts += [ archive_part ]
+  }
+}
+
+###
+### Paver and flash scripts, and archives using those images and zedboot's images.
+###
+
+# TODO(fxbug.dev/82862): Move the construction of the flash archive/manifest
+# into a separate BUILD.gn file.
+flash_script_outputs = [ "$root_out_dir/flash.sh" ]
+
+host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
+flash_script_args = [
+  "--image=" + rebase_path(image, root_build_dir),
+  "--recovery-image=" + rebase_path(recovery_image, root_build_dir),
+  "--output=" + rebase_path(flash_script_outputs[0], root_build_dir),
+  "--zircon-a=${zircon_a_partition}",
+  "--zircon-b=${zircon_b_partition}",
+  "--zircon-r=${zircon_r_partition}",
+  "--vbmeta-a=${vbmeta_a_partition}",
+  "--vbmeta-b=${vbmeta_b_partition}",
+  "--vbmeta-r=${vbmeta_r_partition}",
+  "--active=${active_partition}",
+  "--product=${fastboot_product}",
+  "--pre-erase-flash=${pre_erase_flash}",
+  "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
+]
+if (custom_signing_script != "") {
+  flash_script_args += [ "--signed=true" ]
+}
+
+bootloader_parts = []
+
+foreach(info, firmware_info) {
+  flash_script_args += [ "--firmware=${info.partition}:${info.out_path}" ]
+  flash_script_deps += [ ":${info.name}" ]
+  bootloader_parts += [
+    {
+      name = info.partition
+      path = rebase_path("$root_out_dir/${info.out_path}", root_build_dir)
+    },
+  ]
+}
+if (supports_fastboot_fvm) {
+  flash_script_args += [
+    "--fvm-image=" + files.fvm_fastboot,
+    "--fvm=${fvm_partition}",
+  ]
+  flash_script_deps += [ "//build/images/fuchsia" ]
+
+  parts += [
+    {
+      name = fvm_partition
+      path = files.fvm_fastboot
+    },
+  ]
+}
+
+action("flash_script") {
+  # Required for dependency on testonly firmware image targets.
+  testonly = true
+  script = generate_flash_script_path
+  outputs = flash_script_outputs
+  args = flash_script_args
+  deps = flash_script_deps
+  metadata = {
+    images = [
+      {
+        label = get_label_info(":$target_name", "label_with_toolchain")
+        name = "flash-script"
+        path = "flash.sh"
+        type = "script"
+      },
+    ]
+    image_paths = [ "IMAGE_FLASH_SH=netboot.sh" ]
+  }
+}
+
+fastboot_credential_deps = []
+fastboot_credential_paths = []
+fastboot_credential_archive_paths = []
+
+foreach(cred_path, board_fastboot_unlock_credentials) {
+  name = get_path_info(cred_path, "name")
+  ext = get_path_info(cred_path, "extension")
+  target_name = "unlock_creds_${name}"
+  out_path = "unlock_creds/${name}.${ext}"
+
+  copy(target_name) {
+    sources = [ cred_path ]
+    outputs = [ "${root_out_dir}/${out_path}" ]
+
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":${target_name}", "label_with_toolchain")
+          archive = true
+          name = name
+          path = out_path
+          type = ext
+          fastboot_flash = []
+        },
+      ]
+    }
+  }
+
+  fastboot_credential_deps += [ ":${target_name}" ]
+  fastboot_credential_paths += [ out_path ]
+  fastboot_credential_archive_paths += [ get_path_info(out_path, "file") ]
+}
+
+group("fastboot_credentials") {
+  deps = fastboot_credential_deps
+}
+flash_image_deps += [ ":fastboot_credentials" ]
+
+fuchsia_bootloader_partitions = bootloader_parts
+fuchsia_requires_unlock = false
+if (bootstrap_parts != []) {
+  fuchsia_bootloader_partitions += bootstrap_parts
+  fuchsia_requires_unlock = true
+}
+
+flash_manifest_products = []
+recovery_product = {
+  name = "recovery"
+  requires_unlock = false
+}
+fuchsia_only_product = {
+  name = "fuchsia_only"
+  requires_unlock = false
+}
+fuchsia_product = {
+  name = "fuchsia"
+  requires_unlock = fuchsia_requires_unlock
+}
+if (bootloader_parts != []) {
+  recovery_product.bootloader_partitions = bootloader_parts
+  fuchsia_only_product.bootloader_partitions = bootloader_parts
+}
+if (fuchsia_bootloader_partitions != []) {
+  fuchsia_product.bootloader_partitions = fuchsia_bootloader_partitions
+}
+if (recovery_parts != []) {
+  recovery_product.partitions = recovery_parts
+}
+if (parts != []) {
+  fuchsia_only_product.partitions = parts
+  fuchsia_product.partitions = parts
+}
+flash_manifest_products += [
+  recovery_product,
+  fuchsia_only_product,
+  fuchsia_product,
+]
+
+if (bootstrap_parts != []) {
+  # "bootstrap" product is only responsible for flashing any bootstrap
+  # files and the bootloader itself, at which point the device is
+  # ready to be flashed using the standard means.
+  flash_manifest_products += [
+    {
+      name = "bootstrap"
+      requires_unlock = true
+      bootloader_partitions = bootloader_parts + bootstrap_parts
+    },
+  ]
+}
+
+flash_manifest_content = {
+  hw_revision = "${board_name}"
+}
+if (fastboot_credential_paths != []) {
+  flash_manifest_content.credentials = fastboot_credential_paths
+}
+if (flash_manifest_products != []) {
+  flash_manifest_content.products = flash_manifest_products
+}
+
+fastboot_manifest_file = "$root_build_dir/flash.json"
+generated_file("fastboot_manifest") {
+  testonly = true
+  outputs = [ fastboot_manifest_file ]
+  output_conversion = "json"
+  deps = [
+    ":fastboot_credentials",
+    ":flash_script",
+    "//build/images/tools:board_tools",
+  ]
+
+  contents = {
+    version = flash_manifest_version
+    manifest = flash_manifest_content
+  }
+
+  metadata = {
+    images = [
+      {
+        label = get_label_info(":$target_name", "label_with_toolchain")
+        name = "flash-manifest"
+        path = "flash.json"
+        type = "manifest"
+      },
+    ]
+  }
+}
+
+##### BUILD ARCHIVE
+
+archive_outputs = [ "$root_out_dir/flash-archive.sh" ]
+archive_args = [
+  "--image=${archive_image}",
+  "--recovery-image=${archive_recovery_image}",
+  "--output=" + rebase_path(archive_outputs[0], root_build_dir),
+  "--zircon-a=${zircon_a_partition}",
+  "--zircon-b=${zircon_b_partition}",
+  "--zircon-r=${zircon_r_partition}",
+  "--vbmeta-a=${vbmeta_a_partition}",
+  "--vbmeta-b=${vbmeta_b_partition}",
+  "--vbmeta-r=${vbmeta_r_partition}",
+  "--active=${active_partition}",
+  "--product=${fastboot_product}",
+  "--pre-erase-flash=${pre_erase_flash}",
+  "--fastboot-path=fastboot.exe.$host_platform",
+]
+archive_deps = [ "//build/images/tools:fastboot" ]
+
+# A list of partitions for the flash json manifest that will be
+# generated.  The first item should be the partition name and the
+# second should be the path to the image for the partition. These
+# are the images flashed for the firmware/bootloader.
+archive_bootloader_parts = []
+
+foreach(info, firmware_info) {
+  archive_args += [ "--firmware=${info.partition}:${info.out_path}" ]
+  archive_deps += [ ":${info.name}" ]
+  archive_bootloader_parts += [
+    {
+      name = info.partition
+      path = info.out_path
+    },
+  ]
+}
+
+if (supports_fastboot_fvm) {
+  archive_deps += [ "//build/images/fuchsia" ]
+  archive_args += [
+    "--fvm-image=" + get_path_info(files.fvm_fastboot, "file"),
+    "--fvm=${fvm_partition}",
+  ]
+  archive_parts += [
+    {
+      name = fvm_partition
+      path = get_path_info(files.fvm_fastboot, "file")
+    },
+  ]
+}
+
+action("flash_script_archive") {
+  testonly = true
+  script = generate_flash_script_path
+  outputs = archive_outputs
+  args = archive_args
+  deps = archive_deps
+
+  metadata = {
+    images = [
+      {
+        label = get_label_info(":$target_name", "label_with_toolchain")
+        archive = true
+        name = "flash"
+        type = "sh"
+        path = "flash-archive.sh"
+      },
+    ]
+  }
+}
+
+fastboot_manifest_archive_file = "$root_build_dir/flash_archive.json"
+archive_fuchsia_bootloader_partitions = archive_bootloader_parts
+archive_fuchsia_requires_unlock = false
+if (archive_bootstrap_parts != []) {
+  archive_fuchsia_bootloader_partitions += archive_bootstrap_parts
+  archive_fuchsia_requires_unlock = true
+}
+archive_flash_manifest_products = [
+  {
+    name = "recovery"
+    bootloader_partitions = archive_bootloader_parts
+    partitions = archive_recovery_parts
+  },
+  {
+    name = "fuchsia_only"
+    bootloader_partitions = archive_bootloader_parts
+    partitions = archive_parts
+  },
+  {
+    name = "fuchsia"
+    requires_unlock = archive_fuchsia_requires_unlock
+    bootloader_partitions = archive_fuchsia_bootloader_partitions
+    partitions = archive_parts
+  },
+]
+
+if (archive_bootstrap_parts != []) {
+  # "bootstrap" product is only responsible for flashing any bootstrap
+  # files and the bootloader itself, at which point the device is
+  # ready to be flashed using the standard means.
+  archive_flash_manifest_products += [
+    {
+      name = "bootstrap"
+      requires_unlock = true
+      bootloader_partitions = archive_bootstrap_parts + archive_bootloader_parts
+      partitions = []
+    },
+  ]
+}
+
+archive_flash_manifest_content = {
+  hw_revision = "${board_name}"
+  credentials = fastboot_credential_archive_paths
+  products = archive_flash_manifest_products
+}
+
+generated_file("fastboot_manifest_archive") {
+  testonly = true
+  outputs = [ fastboot_manifest_archive_file ]
+  output_conversion = "json"
+  deps = [ ":flash_script_archive" ]
+  contents = [
+    {
+      version = flash_manifest_version
+      manifest = archive_flash_manifest_content
+    },
+  ]
+
+  metadata = {
+    images = [
+      {
+        label = get_label_info(":$target_name", "label_with_toolchain")
+        archive = true
+        name = "flash-manifest"
+        path = "flash_archive.json"
+        type = "manifest"
+      },
+    ]
+  }
+}
+
+## Product Bundle
+## TODO: Move this to it's own BUILD.gn file once the template are taught to
+## read a flash.json rather than taking the GN object.
+
+# We shouldn't generate a product metadata if we are building an SDK.
+if (!bootfs_only && !build_sdk_archives) {
+  compatible_devices = []
+
+  # Virtual device manifest should only be generated for emu compatible boards.
+  if (board_is_emu) {
+    # Append '-emu' to the end of the device_name in order to make it unique for
+    # cases where the board is compatible with a physical and virtual device.
+    device_name = "${board_name}-emu"
+    if (virtual_device_name_prefix != "") {
+      device_name = "${virtual_device_name_prefix}-${device_name}"
+    }
+
+    virtual_device_specification("virtual_device_specification") {
+      testonly = true
+      name = device_name
+    }
+    compatible_devices += [ device_name ]
+  }
+
+  # Physical device manifest should only be generated for physical boards.
+  if (board_is_phys) {
+    device_name = board_name
+
+    physical_device_manifest("physical_device_manifest") {
+      testonly = true
+      name = device_name
+    }
+    compatible_devices += [ device_name ]
+  }
+
+  product_metadata("product_metadata") {
+    testonly = true
+    devices = compatible_devices
+    deps = []
+
+    if (board_is_emu) {
+      deps += [ ":virtual_device_specification" ]
+      emu_manifest = {
+        initial_ramdisk = "fuchsia.zbi"
+        kernel = rebase_path(qemu_kernel_file, root_out_dir)
+        disk_images = [ rebase_path(files.fvm, root_out_dir) ]
+      }
+    }
+
+    if (board_is_phys) {
+      flash_manifest = flash_manifest_content
+      deps += [ ":physical_device_manifest" ]
+    }
+  }
+}
+
+group("flash") {
+  testonly = true
+  public_deps = flash_image_deps
+}

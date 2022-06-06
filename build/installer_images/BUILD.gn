@@ -83,7 +83,7 @@ if (bootfs_only) {
     # this pulls in all the image dependencies we need.
     deps = [
       ":$input_images_json",
-      "//build/images:paver-script",
+      "//build/images/archive:paver-script",
       "//tools/vboot_reference:cgpt_host",
     ]
 

@@ -520,7 +520,7 @@ if (is_fuchsia) {
 
     if (use_gigaboot) {
       esp_image_path = "${root_build_dir}/fuchsia.esp.blk"
-      deps = [ "//build/images:esp" ]
+      deps = [ "//build/images/flash:esp" ]
     }
   }
 

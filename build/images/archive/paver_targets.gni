@@ -1,0 +1,90 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/args.gni")
+import("//build/images/paths.gni")
+
+paver_targets = [
+  {
+    name = "netboot-script"
+    outputs = [ "$root_build_dir/netboot.sh" ]
+    switch = "--netboot="
+    extra_bootserver_arguments = ""
+
+    deps = [ "//build/images/tools:bootserver" ]
+
+    # XXX(46415): The build graph for "bringup" (bootfs_only) MUST only
+    # contain one zircon-a metadata target, which means that anything
+    # reaching fuchsia.zbi must be excluded from the build graph.
+    if (bootfs_only) {
+      deps += [ "//build/images/bringup" ]
+    } else {
+      deps += [ "//build/images/fuchsia:netboot" ]
+    }
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$name", "label_with_toolchain")
+          name = name
+          path = "netboot.sh"
+          type = "script"
+        },
+      ]
+      image_paths = [ "IMAGE_NETBOOT_SH=netboot.sh" ]
+    }
+  },
+  {
+    name = "paver-script"
+    outputs = [ "$root_build_dir/pave.sh" ]
+    deps = [ "//build/images/tools:bootserver" ]
+    if (bootfs_only) {
+      deps += [ "//build/images/bringup" ]
+      switch = "--netboot="
+    } else {
+      deps += [ "//build/images/fuchsia" ]
+      switch = "--pave="
+    }
+    extra_bootserver_arguments = ""
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$name", "label_with_toolchain")
+          name = name
+          path = "pave.sh"
+          type = "script"
+        },
+      ]
+      image_paths = [ "IMAGE_PAVE_SH=pave.sh" ]
+    }
+  },
+]
+
+if (recovery_is_zedboot) {
+  paver_targets += [
+    {
+      name = "zedboot-script"
+      outputs = [ "$root_build_dir/pave-zedboot.sh" ]
+      deps = [ "//build/images/tools:bootserver" ]
+      if (bootfs_only) {
+        deps += [ "//build/images/bringup" ]
+        switch = "--netboot="
+      } else {
+        deps += [ "//build/images/zedboot" ]
+        switch = "--pave_zedboot="
+      }
+      extra_bootserver_arguments = "--allow-zedboot-version-mismatch"
+      metadata = {
+        images = [
+          {
+            label = get_label_info(":$name", "label_with_toolchain")
+            name = name
+            path = "pave-zedboot.sh"
+            type = "script"
+          },
+        ]
+        image_paths = [ "IMAGE_PAVE_ZEDBOOT_SH=pave-zedboot.sh" ]
+      }
+    },
+  ]
+}

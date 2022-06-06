@@ -3,29 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/images/args.gni")
-
-recovery_is_zedboot =
-    get_label_info(recovery_label, "label_with_toolchain") ==
-    get_label_info("//build/images/zedboot", "label_with_toolchain")
-
-generate_flash_script_path = "//build/images/generate_flash_script.sh"
-
-flash_manifest_version = 3
-
-image_suffix = "zbi"
-if (custom_signing_script != "" || use_vboot) {
-  image_suffix = "zbi.signed"
-}
-
-image = "$root_out_dir/fuchsia.${image_suffix}"
-vbmeta = "$root_out_dir/fuchsia.vbmeta"
-
-recovery_image = "$root_out_dir/recovery.zbi"
-recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
-if (recovery_is_zedboot) {
-  recovery_image = "$root_out_dir/zedboot.${image_suffix}"
-  recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
-}
+import("//build/images/paths.gni")
 
 # A list of partitions for the flash json manifest that will be
 # generated.  The first item should be the partition name and the

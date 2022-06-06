@@ -58,7 +58,7 @@ legacy_universe_package_labels = [
   "//tools/net/device-finder:host",
 
   # For flash workflows (remove when flash is only ffx-based).
-  "//build/images:fastboot",
+  "//build/images/tools:fastboot",
 ]
 
 host_labels = [

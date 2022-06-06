@@ -140,7 +140,6 @@ build_api_module("api") {
   data_keys = [ "build_api_modules" ]
   deps = [
     ":all_package_manifest_paths",
-    ":archives",
     ":args",
     ":assembly_input_archives",
     ":binaries",
@@ -163,6 +162,7 @@ build_api_module("api") {
     ":tool_paths",
     ":triage_sources",
     ":zbi_tests",
+    "//build/images/archive",
   ]
 }
 
@@ -217,7 +217,7 @@ build_api_module("archives") {
   data_keys = [ "archives" ]
   deps = [
     "//build/gn:archives",
-    "//build/images:archives",
+    "//build/images/archive",
   ]
 }
 

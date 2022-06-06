@@ -44,7 +44,7 @@ group("fastboot") {
     # flashing workflow. When this fastboot implementation is ready, flashing
     # logic should be replaced by the new tool - and this depedency may safely
     # be removed.
-    "//build/images:fastboot",
+    "//build/images/tools:fastboot",
   ]
 }
 # TODO(fxbug.dev/78438): re-enable when tests build
