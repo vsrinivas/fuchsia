@@ -135,6 +135,7 @@ group("tests") {
     "mundane:tests",
     "network:tests",
     "process_builder:tests",
+    "pty:tests",
     "scoped_task:tests",
     "security:tests",
     "shared-buffer:tests",
