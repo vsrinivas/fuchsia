@@ -34,6 +34,9 @@ pub struct CodecState {
 
     /// Codec interface in use.
     proxy: CodecProxy,
+
+    /// DAI Channel, for instance TDM slot.
+    dai_channel: u8,
 }
 
 pub struct DaiState {
@@ -166,7 +169,7 @@ impl StreamConfig {
                 responder.send(&mut formats.into_iter())?;
             }
 
-            StreamConfigRequest::CreateRingBuffer { format, ring_buffer: _, control_handle: _ } => {
+            StreamConfigRequest::CreateRingBuffer { format, ring_buffer, control_handle: _ } => {
                 let mut inner = self.inner.lock().await;
                 tracing::trace!(
                     "StreamConfig create ring buffer DAI format: {:?}  ring buffer format: {:?}",
@@ -174,6 +177,8 @@ impl StreamConfig {
                     format
                 );
                 inner.ring_buffer_format = Some(format.clone());
+                inner.ring_buffer = Some(ring_buffer);
+                StreamConfig::try_to_create_ring_buffer(&mut inner).await?;
             }
 
             StreamConfigRequest::WatchGainState { responder } => {
@@ -215,6 +220,33 @@ impl StreamConfig {
                 // We ignore this API since we report no gain change support.
                 tracing::trace!("Set gain state");
             }
+        }
+        Ok(())
+    }
+
+    // Not an error if we can't create the ring buffer because not all preconditions are met.
+    async fn try_to_create_ring_buffer(
+        stream_config_state: &mut StreamConfigInner,
+    ) -> Result<(), Error> {
+        // Create a ring buffer from the DAI if the ring buffer was already requested and we have
+        // DAI state, codec state, a common DAI format and a ring buffer format.
+        if let (Some(ring_buffer), Some(dai_state), Some(dai_format), Some(ring_buffer_format)) = (
+            stream_config_state.ring_buffer.take(),
+            stream_config_state.dai_state.as_ref(),
+            stream_config_state.dai_format,
+            stream_config_state.ring_buffer_format.as_ref(),
+        ) {
+            tracing::info!(
+                "Creating ring buffer for DAI: {:?} {:?} formats: {:?} {:?}",
+                dai_state.manufacturer,
+                dai_state.product,
+                dai_format,
+                ring_buffer_format
+            );
+            let _ = dai_state
+                .interface
+                .create_ring_buffer(dai_format, ring_buffer_format.clone(), ring_buffer)
+                .await?;
         }
         Ok(())
     }
@@ -330,6 +362,28 @@ impl DefaultConfigurator {
         }
         None
     }
+    async fn set_dai_format(
+        proxy: &CodecProxy,
+        mut codec_dai_format: DaiFormat,
+        dai_channel: u8,
+        manufacturer: &str,
+        product: &str,
+    ) -> Result<(), Error> {
+        // Enable only the DAI channel as channel to use in the codec.
+        // TODO(95437): Add flexibility instead of only allowing one DAI channel per codec.
+        let bitmask: u64 = 1 << (dai_channel as u32 % codec_dai_format.number_of_channels);
+        codec_dai_format.channels_to_use_bitmask = bitmask;
+        tracing::info!(
+            "Setting Codec {:?} {:?} to DAI format {:?}",
+            manufacturer,
+            product,
+            codec_dai_format
+        );
+        if let Err(e) = proxy.set_dai_format(&mut codec_dai_format).await {
+            return Err(anyhow!("Error when setting the DAI format: {:?}", e));
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -429,8 +483,40 @@ impl Configurator for DefaultConfigurator {
             product: device.product.clone(),
             supported_formats: codec_formats.clone(),
             proxy: interface.get_proxy()?.clone(),
+            dai_channel: dai_channel,
         };
         stream_config_state2.codec_states.push(codec_state);
+
+        // If the DAI already got its formats, lets check we have a match.
+        if let Some(dai_state) = &stream_config_state2.dai_state {
+            if let Some(common_format) =
+                DefaultConfigurator::common_dai_format(&codec_formats, &dai_state.supported_formats)
+            {
+                stream_config_state2.dai_format = Some(common_format.clone());
+                DefaultConfigurator::set_dai_format(
+                    interface.get_proxy()?,
+                    common_format,
+                    dai_channel,
+                    &device.manufacturer,
+                    &device.product,
+                )
+                .await?;
+
+                StreamConfig::try_to_create_ring_buffer(&mut stream_config_state2).await?;
+            } else {
+                tracing::warn!(
+                    "Codec ({:?} {:?}) formats ({:?}) not found in DAI ({:?} {:?}) formats ({:?})",
+                    device.manufacturer,
+                    device.product,
+                    codec_formats,
+                    dai_state.manufacturer,
+                    dai_state.product,
+                    dai_state.supported_formats
+                );
+            }
+        } else {
+            tracing::info!("When codec was found, there was no format reported by the DAI yet");
+        }
 
         Ok(())
     }
@@ -495,10 +581,63 @@ impl Configurator for DefaultConfigurator {
         let dai_state = DaiState {
             manufacturer: device.manufacturer.clone(),
             product: device.product.clone(),
-            supported_formats: dai_formats,
+            supported_formats: dai_formats.clone(),
             interface: interface,
         };
         stream_config_state2.dai_state = Some(dai_state);
+
+        // If a codec is not needed lets go ahead and create the ring buffer
+        if !stream_config_state2.codec_needed {
+            // Pick the first format.
+            let dai_format = DaiFormat {
+                number_of_channels: dai_formats[0].number_of_channels[0],
+                channels_to_use_bitmask: 0,
+                sample_format: dai_formats[0].sample_formats[0],
+                frame_format: dai_formats[0].frame_formats[0],
+                frame_rate: dai_formats[0].frame_rates[0],
+                bits_per_sample: dai_formats[0].bits_per_sample[0],
+                bits_per_slot: dai_formats[0].bits_per_slot[0],
+            };
+            stream_config_state2.dai_format = Some(dai_format);
+            StreamConfig::try_to_create_ring_buffer(&mut stream_config_state2).await?;
+        } else {
+            // If the codecs already got state, lets check if we have a formats match.
+            // We only request one ring buffer for all codecs in a stream config, but we
+            // do configure all codecs via set_dai_format.
+            for i in 0..stream_config_state2.codec_states.len() {
+                let codec_state = &mut stream_config_state2.codec_states[i];
+                if let Some(common_format) = DefaultConfigurator::common_dai_format(
+                    &dai_formats,
+                    &codec_state.supported_formats,
+                ) {
+                    DefaultConfigurator::set_dai_format(
+                        &codec_state.proxy,
+                        common_format.clone(),
+                        codec_state.dai_channel,
+                        &codec_state.manufacturer,
+                        &codec_state.product,
+                    )
+                    .await?;
+
+                    stream_config_state2.dai_format = Some(common_format.clone());
+
+                    // Only one of these calls will actually create a ring buffer for a
+                    // given Stream Config.
+                    StreamConfig::try_to_create_ring_buffer(&mut stream_config_state2).await?;
+                } else {
+                    tracing::warn!(
+                        "DAI ({:?} {:?}) formats ({:?}) not found in\
+                             Codec ({:?} {:?}) formats ({:?})",
+                        device.manufacturer,
+                        device.product,
+                        dai_formats,
+                        codec_state.manufacturer,
+                        codec_state.product,
+                        codec_state.supported_formats
+                    );
+                }
+            }
+        }
 
         let configurator_product = "Driver Configurator for ".to_string() + &device.product;
         let stream_properties = StreamProperties {
@@ -665,6 +804,105 @@ mod tests {
                  _codec: false, dai_channel: 0 }) not in config"
             );
         }
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_configurator_create_ring_buffer() -> Result<()> {
+        let (_realm_instance, dai_proxy) = get_dev_proxy("class/dai").await?;
+        let mut config = Config::new()?;
+        // One DAI only, no codecs needed.
+        config.load_device(
+            Device {
+                manufacturer: "test".to_string(),
+                product: "test".to_string(),
+                is_codec: false,
+                dai_channel: 0,
+            },
+            STREAM_CONFIG_INDEX_SPEAKERS,
+        );
+
+        let configurator = Arc::new(Mutex::new(DefaultConfigurator::new(config)?));
+        assert_matches!(find_dais(dai_proxy, 1, configurator.clone()).await, Ok(()));
+
+        let configurator = configurator.clone();
+        let configurator = configurator.lock();
+        let stream_configs = &mut configurator.await.stream_configs;
+        let mut stream_config = stream_configs.pop().expect("Must have a Stream Config");
+        let pcm_format = PcmFormat {
+            number_of_channels: 2,
+            sample_format: SampleFormat::PcmSigned,
+            frame_rate: 48_000,
+            valid_bits_per_sample: 16,
+            bytes_per_sample: 2,
+        };
+        let ring_buffer_format = Format { pcm_format: Some(pcm_format), ..Format::EMPTY };
+        let (_client, server) = fidl::endpoints::create_endpoints::<RingBufferMarker>()
+            .expect("Error creating ring buffer endpoint");
+        let proxy = stream_config.client.take().expect("Must have a client").into_proxy()?;
+        let _task = fasync::Task::spawn(stream_config.process_requests());
+        proxy.create_ring_buffer(ring_buffer_format, server)?;
+
+        // To make sure we really complete running create ring buffer we call a 2-way method.
+        let _props = proxy.get_properties().await?;
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_configurator_create_ring_buffer_with_codec() -> Result<()> {
+        let (_realm_instance, dai_proxy) = get_dev_proxy("class/dai").await?;
+        let (_realm_instance, codec_proxy) = get_dev_proxy("class/codec").await?;
+        let mut config = Config::new()?;
+        // Codec.
+        config.load_device(
+            Device {
+                manufacturer: "456".to_string(),
+                product: "789".to_string(),
+                is_codec: true,
+                dai_channel: 0,
+            },
+            STREAM_CONFIG_INDEX_SPEAKERS,
+        );
+        // DAI.
+        config.load_device(
+            Device {
+                manufacturer: "test".to_string(),
+                product: "test".to_string(),
+                is_codec: false,
+                dai_channel: 0,
+            },
+            STREAM_CONFIG_INDEX_SPEAKERS,
+        );
+
+        let configurator = Arc::new(Mutex::new(DefaultConfigurator::new(config)?));
+        if let Err(e) = find_codecs(codec_proxy, 2, configurator.clone()).await {
+            // One of the test drivers reports bad formats.
+            assert_eq!(e.to_string(), "Codec processing error: Codec with bad format reported");
+        }
+        assert_matches!(find_dais(dai_proxy, 1, configurator.clone()).await, Ok(()));
+
+        let configurator = configurator.clone();
+        let configurator = configurator.lock();
+        let stream_configs = &mut configurator.await.stream_configs;
+        let mut stream_config = stream_configs.pop().expect("Must have a Stream Config");
+        let pcm_format = PcmFormat {
+            number_of_channels: 2,
+            sample_format: SampleFormat::PcmSigned,
+            frame_rate: 48_000,
+            valid_bits_per_sample: 16,
+            bytes_per_sample: 2,
+        };
+        let ring_buffer_format = Format { pcm_format: Some(pcm_format), ..Format::EMPTY };
+        let (_client, server) = fidl::endpoints::create_endpoints::<RingBufferMarker>()
+            .expect("Error creating ring buffer endpoint");
+        let proxy = stream_config.client.take().expect("Must have a client").into_proxy()?;
+        let _task = fasync::Task::spawn(stream_config.process_requests());
+        proxy.create_ring_buffer(ring_buffer_format, server)?;
+
+        // To make sure we really complete running create ring buffer we call a 2-way method.
+        let _props = proxy.get_properties().await?;
+
         Ok(())
     }
 

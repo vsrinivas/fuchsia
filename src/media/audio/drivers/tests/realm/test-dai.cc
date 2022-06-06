@@ -57,15 +57,38 @@ class TestDai : public TestDaiDeviceType,
   }
   void GetRingBufferFormats(GetRingBufferFormatsRequestView request,
                             GetRingBufferFormatsCompleter::Sync& completer) override {
-    // We support 0 ring buffer formats in this testing driver.
     fidl::Arena arena;
-    fidl::VectorView<fuchsia_hardware_audio::wire::SupportedFormats> formats(arena, 0);
+    fidl::VectorView<fuchsia_hardware_audio::wire::ChannelSet> channel_sets(arena, 1);
+    fidl::VectorView<fuchsia_hardware_audio::wire::ChannelAttributes> attributes(arena, 2);
+    fuchsia_hardware_audio::wire::SampleFormat sample_formats[1] = {
+        fuchsia_hardware_audio::wire::SampleFormat::kPcmSigned};
+    uint32_t rates[1] = {48'000};
+    uint8_t bytes_per_sample[1] = {2};
+    uint8_t valid_bits_per_sample[1] = {16};
+    auto formats =
+        fuchsia_hardware_audio::wire::PcmSupportedFormats::Builder(arena)
+            .channel_sets(std::move(channel_sets))
+            .sample_formats(
+                fidl::VectorView<fuchsia_hardware_audio::wire::SampleFormat>::FromExternal(
+                    sample_formats, 1))
+            .frame_rates(fidl::VectorView<uint32_t>::FromExternal(rates, 1))
+            .bytes_per_sample(fidl::VectorView<uint8_t>::FromExternal(bytes_per_sample, 1))
+            .valid_bits_per_sample(
+                fidl::VectorView<uint8_t>::FromExternal(valid_bits_per_sample, 1))
+            .Build();
+
+    fidl::VectorView<fuchsia_hardware_audio::wire::SupportedFormats> all_formats(arena, 1);
+    all_formats[0] = fuchsia_hardware_audio::wire::SupportedFormats::Builder(arena)
+                         .pcm_supported_formats(std::move(formats))
+                         .Build();
+
     fuchsia_hardware_audio::wire::DaiGetRingBufferFormatsResponse response;
-    response.ring_buffer_formats = formats;
-    auto result =
-        fuchsia_hardware_audio::wire::DaiGetRingBufferFormatsResult::WithResponse(arena, response);
+    response.ring_buffer_formats = std::move(all_formats);
+    auto result = fuchsia_hardware_audio::wire::DaiGetRingBufferFormatsResult::WithResponse(
+        arena, std::move(response));
     completer.Reply(std::move(result));
   }
+
   void GetDaiFormats(GetDaiFormatsRequestView request,
                      GetDaiFormatsCompleter::Sync& completer) override {
     fidl::Arena arena;

@@ -44,6 +44,8 @@ class Test : public SimpleCodecServer {
     };
   }
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+    if (format.channels_to_use_bitmask != 1)  // First Codec gets the first TDM slot.
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
     return zx::ok(CodecFormatInfo{});
   }
   GainFormat GetGainFormat() override { return {}; }
