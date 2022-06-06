@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use std::{collections::HashMap, convert::TryInto as _, mem::size_of};
+use std::{convert::TryInto as _, mem::size_of};
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
@@ -1244,51 +1244,67 @@ async fn add_device_adds_link_local_subnet_route<N: Netstack>(name: &str) {
     let iface = endpoint.into_interface_in_realm(&realm).await.expect("install interface");
     let did_enable = iface.control().enable().await.expect("calling enable").expect("enable");
     assert!(did_enable);
+
+    let id = iface.id();
+
+    // TODO(https://fxbug.dev/101842): Replace this with a proper routes API
+    // that we do not have to poll over. For now, the only flake-safe way of
+    // going about this is to poll the API.
     let stack = realm
         .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
         .expect("connect to protocol)");
+    let forwarding_table_stream = futures::stream::unfold(stack, |stack| async move {
+        let table = stack.get_forwarding_table().await.expect("get forwarding table");
+        Some((table, stack))
+    });
+    futures::pin_mut!(forwarding_table_stream);
 
-    let id = iface.id();
-    let forwarding_table = stack.get_forwarding_table().await.expect("get forwarding table");
-    assert!(
-        forwarding_table.iter().any(
-            |fidl_fuchsia_net_stack::ForwardingEntry { subnet, device_id, next_hop, metric: _ }| {
-                *device_id == id
-                    && next_hop.is_none()
-                    && *subnet == net_declare::fidl_subnet!("fe80::/64")
-            }
-        ),
-        "failed to find link local subnet through {} in {:?}",
-        id,
-        forwarding_table
-    );
+    forwarding_table_stream
+        .by_ref()
+        .filter_map(|forwarding_table| {
+            futures::future::ready(
+                forwarding_table
+                    .into_iter()
+                    .any(
+                        |fidl_fuchsia_net_stack::ForwardingEntry {
+                             subnet,
+                             device_id,
+                             next_hop,
+                             metric: _,
+                         }| {
+                            device_id == id
+                                && next_hop.is_none()
+                                && subnet == net_declare::fidl_subnet!("fe80::/64")
+                        },
+                    )
+                    .then(|| ()),
+            )
+        })
+        .next()
+        .await
+        .expect("stream ended");
 
     // Removing the device should also remove the subnet route.
     drop(iface);
 
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-    // Wait until device no longer exists.
-    fidl_fuchsia_net_interfaces_ext::wait_interface(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("error getting interface state event stream"),
-        &mut HashMap::new(),
-        |interfaces| interfaces.get(&id).is_none().then(|| ()),
-    )
-    .await
-    .expect("waiting interface removal");
-
-    let forwarding_table = stack.get_forwarding_table().await.expect("get forwarding table");
-    assert_eq!(
-        forwarding_table.into_iter().find(
-            |fidl_fuchsia_net_stack::ForwardingEntry {
-                 subnet: _,
-                 device_id,
-                 next_hop: _,
-                 metric: _,
-             }| { *device_id == id }
-        ),
-        None
-    );
+    forwarding_table_stream
+        .by_ref()
+        .filter_map(|forwarding_table| {
+            futures::future::ready(
+                forwarding_table
+                    .into_iter()
+                    .all(
+                        |fidl_fuchsia_net_stack::ForwardingEntry {
+                             subnet: _,
+                             device_id,
+                             next_hop: _,
+                             metric: _,
+                         }| { device_id != id },
+                    )
+                    .then(|| ()),
+            )
+        })
+        .next()
+        .await
+        .expect("stream ended");
 }
