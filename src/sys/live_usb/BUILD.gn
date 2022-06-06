@@ -62,6 +62,8 @@ rustc_binary("bin") {
 
   with_unit_tests = true
 
+  configs += [ "//build/config/rust:bootfs" ]
+
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
