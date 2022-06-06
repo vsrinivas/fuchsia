@@ -108,7 +108,7 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.bluetooth.gatt2/Handle handle,server_end:fuchsia.bluetooth.gatt2/RemoteService service)",
+        "declaration": "(fuchsia.bluetooth.gatt2/ServiceHandle handle,server_end:fuchsia.bluetooth.gatt2/RemoteService service)",
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.gatt2/Client.ConnectToService"
     },
@@ -411,6 +411,12 @@
         "name": "fuchsia.bluetooth.gatt2/Handle"
     },
     {
+        "declaration": "uint32",
+        "kind": "const",
+        "name": "fuchsia.bluetooth.gatt2/INITIAL_VALUE_CHANGED_CREDITS",
+        "value": "10"
+    },
+    {
         "declaration": "(fuchsia.bluetooth/PeerId peer_id,fuchsia.bluetooth.gatt2/Handle handle,bool notify,bool indicate) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.gatt2/LocalService.CharacteristicConfiguration"
@@ -421,14 +427,19 @@
         "name": "fuchsia.bluetooth.gatt2/LocalService.OnIndicateValue"
     },
     {
-        "declaration": " -> (fuchsia.bluetooth.gatt2/ValueChangedParameters update)",
+        "declaration": " -> (fuchsia.bluetooth.gatt2/ValueChangedParameters payload)",
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.gatt2/LocalService.OnNotifyValue"
     },
     {
         "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt2/LocalService.OnSupressDiscovery"
+        "name": "fuchsia.bluetooth.gatt2/LocalService.OnSuppressDiscovery"
+    },
+    {
+        "declaration": "(fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.gatt2/LocalService.PeerUpdate"
     },
     {
         "declaration": "(fuchsia.bluetooth/PeerId peer_id,fuchsia.bluetooth.gatt2/Handle handle,int32 offset) -> (fuchsia.bluetooth.gatt2/LocalService_ReadValue_Result result)",
@@ -441,13 +452,51 @@
         "name": "fuchsia.bluetooth.gatt2/LocalService.ValueChangedCredit"
     },
     {
-        "declaration": "(fuchsia.bluetooth.gatt2/WriteValueParameters params) -> (fuchsia.bluetooth.gatt2/LocalService_WriteValue_Result result)",
+        "declaration": "(fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest payload) -> (fuchsia.bluetooth.gatt2/LocalService_WriteValue_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.gatt2/LocalService.WriteValue"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.gatt2/LocalService"
+    },
+    {
+        "declaration": "uint16",
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest.mtu"
+    },
+    {
+        "declaration": "fuchsia.bluetooth/PeerId",
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest.peer_id"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest"
+    },
+    {
+        "declaration": "fuchsia.bluetooth.gatt2/Handle",
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.handle"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.offset"
+    },
+    {
+        "declaration": "fuchsia.bluetooth/PeerId",
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.peer_id"
+    },
+    {
+        "declaration": "vector<uint8>:512",
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.value"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest"
     },
     {
         "declaration": "vector<uint8>:512",
@@ -538,13 +587,28 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_CHARACTERISTICS",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_LOCAL_SERVICE",
         "value": "1"
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_UUID",
+        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_SERVICE_HANDLE",
         "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_UUID",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.UNLIKELY_ERROR",
+        "value": "5"
     },
     {
         "declaration": "uint32",
@@ -821,24 +885,33 @@
         "strictness": "strict"
     },
     {
+        "declaration": "uint64",
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.gatt2/ServiceHandle.value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.gatt2/ServiceHandle"
+    },
+    {
         "declaration": "vector<fuchsia.bluetooth.gatt2/Characteristic>:32767",
         "kind": "table/member",
         "name": "fuchsia.bluetooth.gatt2/ServiceInfo.characteristics"
     },
     {
-        "declaration": "fuchsia.bluetooth.gatt2/Handle",
+        "declaration": "fuchsia.bluetooth.gatt2/ServiceHandle",
         "kind": "table/member",
         "name": "fuchsia.bluetooth.gatt2/ServiceInfo.handle"
     },
     {
-        "declaration": "vector<fuchsia.bluetooth.gatt2/Handle>:65535",
+        "declaration": "vector<fuchsia.bluetooth.gatt2/ServiceHandle>:65535",
         "kind": "table/member",
         "name": "fuchsia.bluetooth.gatt2/ServiceInfo.includes"
     },
     {
-        "declaration": "bool",
+        "declaration": "fuchsia.bluetooth.gatt2/ServiceKind",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt2/ServiceInfo.primary"
+        "name": "fuchsia.bluetooth.gatt2/ServiceInfo.kind"
     },
     {
         "declaration": "fuchsia.bluetooth/Uuid",
@@ -848,6 +921,22 @@
     {
         "kind": "table",
         "name": "fuchsia.bluetooth.gatt2/ServiceInfo"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.gatt2/ServiceKind.PRIMARY",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.gatt2/ServiceKind.SECONDARY",
+        "value": "2"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.gatt2/ServiceKind",
+        "strictness": "strict"
     },
     {
         "kind": "struct",
@@ -906,30 +995,6 @@
     {
         "kind": "table",
         "name": "fuchsia.bluetooth.gatt2/WriteOptions"
-    },
-    {
-        "declaration": "fuchsia.bluetooth.gatt2/Handle",
-        "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt2/WriteValueParameters.handle"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt2/WriteValueParameters.offset"
-    },
-    {
-        "declaration": "fuchsia.bluetooth/PeerId",
-        "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt2/WriteValueParameters.peer_id"
-    },
-    {
-        "declaration": "vector<uint8>:512",
-        "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt2/WriteValueParameters.value"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.bluetooth.gatt2/WriteValueParameters"
     },
     {
         "kind": "library",

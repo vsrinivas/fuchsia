@@ -20,7 +20,7 @@ bits/member fuchsia.bluetooth.gatt2/CharacteristicPropertyBits.WRITABLE_AUXILIAR
 bits/member fuchsia.bluetooth.gatt2/CharacteristicPropertyBits.WRITE 8
 bits/member fuchsia.bluetooth.gatt2/CharacteristicPropertyBits.WRITE_WITHOUT_RESPONSE 4
 strict bits fuchsia.bluetooth.gatt2/CharacteristicPropertyBits uint16
-protocol/member fuchsia.bluetooth.gatt2/Client.ConnectToService(fuchsia.bluetooth.gatt2/Handle handle,server_end:fuchsia.bluetooth.gatt2/RemoteService service)
+protocol/member fuchsia.bluetooth.gatt2/Client.ConnectToService(fuchsia.bluetooth.gatt2/ServiceHandle handle,server_end:fuchsia.bluetooth.gatt2/RemoteService service)
 protocol/member fuchsia.bluetooth.gatt2/Client.WatchServices(vector<fuchsia.bluetooth/Uuid> uuids) -> (vector<fuchsia.bluetooth.gatt2/ServiceInfo>:65535 updated,vector<fuchsia.bluetooth.gatt2/Handle>:65535 removed)
 protocol fuchsia.bluetooth.gatt2/Client
 table/member fuchsia.bluetooth.gatt2/Descriptor.handle fuchsia.bluetooth.gatt2/Handle
@@ -81,14 +81,24 @@ enum/member fuchsia.bluetooth.gatt2/Error.WRITE_REQUEST_REJECTED 252
 strict enum fuchsia.bluetooth.gatt2/Error uint32
 struct/member fuchsia.bluetooth.gatt2/Handle.value uint64
 struct fuchsia.bluetooth.gatt2/Handle
+const fuchsia.bluetooth.gatt2/INITIAL_VALUE_CHANGED_CREDITS uint32 10
 protocol/member fuchsia.bluetooth.gatt2/LocalService.CharacteristicConfiguration(fuchsia.bluetooth/PeerId peer_id,fuchsia.bluetooth.gatt2/Handle handle,bool notify,bool indicate) -> ()
 protocol/member fuchsia.bluetooth.gatt2/LocalService.OnIndicateValue -> (fuchsia.bluetooth.gatt2/ValueChangedParameters update,zx/handle:EVENTPAIR confirmation)
-protocol/member fuchsia.bluetooth.gatt2/LocalService.OnNotifyValue -> (fuchsia.bluetooth.gatt2/ValueChangedParameters update)
-protocol/member fuchsia.bluetooth.gatt2/LocalService.OnSupressDiscovery -> ()
+protocol/member fuchsia.bluetooth.gatt2/LocalService.OnNotifyValue -> (fuchsia.bluetooth.gatt2/ValueChangedParameters payload)
+protocol/member fuchsia.bluetooth.gatt2/LocalService.OnSuppressDiscovery -> ()
+protocol/member fuchsia.bluetooth.gatt2/LocalService.PeerUpdate(fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest payload) -> ()
 protocol/member fuchsia.bluetooth.gatt2/LocalService.ReadValue(fuchsia.bluetooth/PeerId peer_id,fuchsia.bluetooth.gatt2/Handle handle,int32 offset) -> (fuchsia.bluetooth.gatt2/LocalService_ReadValue_Result result)
 protocol/member fuchsia.bluetooth.gatt2/LocalService.ValueChangedCredit(uint8 additional_credit)
-protocol/member fuchsia.bluetooth.gatt2/LocalService.WriteValue(fuchsia.bluetooth.gatt2/WriteValueParameters params) -> (fuchsia.bluetooth.gatt2/LocalService_WriteValue_Result result)
+protocol/member fuchsia.bluetooth.gatt2/LocalService.WriteValue(fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest payload) -> (fuchsia.bluetooth.gatt2/LocalService_WriteValue_Result result)
 protocol fuchsia.bluetooth.gatt2/LocalService
+table/member fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest.mtu uint16
+table/member fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest.peer_id fuchsia.bluetooth/PeerId
+table fuchsia.bluetooth.gatt2/LocalServicePeerUpdateRequest
+table/member fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.handle fuchsia.bluetooth.gatt2/Handle
+table/member fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.offset uint32
+table/member fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.peer_id fuchsia.bluetooth/PeerId
+table/member fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest.value vector<uint8>:512
+table fuchsia.bluetooth.gatt2/LocalServiceWriteValueRequest
 struct/member fuchsia.bluetooth.gatt2/LocalService_ReadValue_Response.value vector<uint8>:512
 struct fuchsia.bluetooth.gatt2/LocalService_ReadValue_Response
 union/member fuchsia.bluetooth.gatt2/LocalService_ReadValue_Result.err fuchsia.bluetooth.gatt2/Error
@@ -106,8 +116,11 @@ const fuchsia.bluetooth.gatt2/MAX_CHARACTERISTIC_COUNT uint16 32767
 const fuchsia.bluetooth.gatt2/MAX_DESCRIPTOR_COUNT uint16 65532
 const fuchsia.bluetooth.gatt2/MAX_SERVICE_COUNT uint16 65535
 const fuchsia.bluetooth.gatt2/MAX_VALUE_LENGTH uint16 512
+enum/member fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_CHARACTERISTICS 4
 enum/member fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_LOCAL_SERVICE 1
-enum/member fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_UUID 2
+enum/member fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_SERVICE_HANDLE 2
+enum/member fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_UUID 3
+enum/member fuchsia.bluetooth.gatt2/PublishServiceError.UNLIKELY_ERROR 5
 flexible enum fuchsia.bluetooth.gatt2/PublishServiceError uint32
 table/member fuchsia.bluetooth.gatt2/ReadByTypeResult.error fuchsia.bluetooth.gatt2/Error
 table/member fuchsia.bluetooth.gatt2/ReadByTypeResult.handle fuchsia.bluetooth.gatt2/Handle
@@ -165,12 +178,17 @@ struct fuchsia.bluetooth.gatt2/Server_PublishService_Response
 union/member fuchsia.bluetooth.gatt2/Server_PublishService_Result.err fuchsia.bluetooth.gatt2/PublishServiceError
 union/member fuchsia.bluetooth.gatt2/Server_PublishService_Result.response fuchsia.bluetooth.gatt2/Server_PublishService_Response
 strict union fuchsia.bluetooth.gatt2/Server_PublishService_Result
+struct/member fuchsia.bluetooth.gatt2/ServiceHandle.value uint64
+struct fuchsia.bluetooth.gatt2/ServiceHandle
 table/member fuchsia.bluetooth.gatt2/ServiceInfo.characteristics vector<fuchsia.bluetooth.gatt2/Characteristic>:32767
-table/member fuchsia.bluetooth.gatt2/ServiceInfo.handle fuchsia.bluetooth.gatt2/Handle
-table/member fuchsia.bluetooth.gatt2/ServiceInfo.includes vector<fuchsia.bluetooth.gatt2/Handle>:65535
-table/member fuchsia.bluetooth.gatt2/ServiceInfo.primary bool
+table/member fuchsia.bluetooth.gatt2/ServiceInfo.handle fuchsia.bluetooth.gatt2/ServiceHandle
+table/member fuchsia.bluetooth.gatt2/ServiceInfo.includes vector<fuchsia.bluetooth.gatt2/ServiceHandle>:65535
+table/member fuchsia.bluetooth.gatt2/ServiceInfo.kind fuchsia.bluetooth.gatt2/ServiceKind
 table/member fuchsia.bluetooth.gatt2/ServiceInfo.type fuchsia.bluetooth/Uuid
 table fuchsia.bluetooth.gatt2/ServiceInfo
+enum/member fuchsia.bluetooth.gatt2/ServiceKind.PRIMARY 1
+enum/member fuchsia.bluetooth.gatt2/ServiceKind.SECONDARY 2
+strict enum fuchsia.bluetooth.gatt2/ServiceKind uint32
 struct fuchsia.bluetooth.gatt2/ShortReadOptions
 table/member fuchsia.bluetooth.gatt2/ValueChangedParameters.handle fuchsia.bluetooth.gatt2/Handle
 table/member fuchsia.bluetooth.gatt2/ValueChangedParameters.peer_ids vector<fuchsia.bluetooth/PeerId>
@@ -183,9 +201,4 @@ flexible enum fuchsia.bluetooth.gatt2/WriteMode uint32
 table/member fuchsia.bluetooth.gatt2/WriteOptions.offset uint16
 table/member fuchsia.bluetooth.gatt2/WriteOptions.write_mode fuchsia.bluetooth.gatt2/WriteMode
 table fuchsia.bluetooth.gatt2/WriteOptions
-table/member fuchsia.bluetooth.gatt2/WriteValueParameters.handle fuchsia.bluetooth.gatt2/Handle
-table/member fuchsia.bluetooth.gatt2/WriteValueParameters.offset uint32
-table/member fuchsia.bluetooth.gatt2/WriteValueParameters.peer_id fuchsia.bluetooth/PeerId
-table/member fuchsia.bluetooth.gatt2/WriteValueParameters.value vector<uint8>:512
-table fuchsia.bluetooth.gatt2/WriteValueParameters
 library fuchsia.bluetooth.gatt2

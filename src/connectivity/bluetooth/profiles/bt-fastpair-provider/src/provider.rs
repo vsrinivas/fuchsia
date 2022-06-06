@@ -233,7 +233,8 @@ mod tests {
     use assert_matches::assert_matches;
     use fidl::endpoints::{create_proxy_and_stream, ControlHandle, Proxy, RequestStream};
     use fidl_fuchsia_bluetooth_gatt2::{
-        LocalServiceProxy, ValueChangedParameters, WriteValueParameters,
+        LocalServiceProxy, LocalServiceWriteValueRequest as WriteValueRequest,
+        ValueChangedParameters,
     };
     use fidl_fuchsia_bluetooth_le::{PeripheralMarker, PeripheralRequestStream};
     use fidl_fuchsia_bluetooth_sys::HostWatcherRequestStream;
@@ -376,12 +377,12 @@ mod tests {
         expect_item: bool,
     ) {
         let result = gatt
-            .write_value(WriteValueParameters {
+            .write_value(WriteValueRequest {
                 peer_id: Some(PeerId(123).into()),
                 handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
                 offset: Some(0),
                 value: Some(encrypted_buf),
-                ..WriteValueParameters::EMPTY
+                ..WriteValueRequest::EMPTY
             })
             .await
             .expect("valid FIDL request");

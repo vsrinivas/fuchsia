@@ -96,6 +96,7 @@ protocol Connection {
     /// + `ZX_ERR_ALREADY_BOUND`: A Client server has already been bound in this Connection
     ///                           protocol. The existing Client should be used.
     @transitional
+    @available(added=HEAD)
     RequestGattClient(resource struct {
         client server_end:gatt2.Client;
     });

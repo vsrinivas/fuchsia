@@ -151,11 +151,6 @@
         "name": "fuchsia.bluetooth.le/AdvertisingParameters"
     },
     {
-        "declaration": "(fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.le/ConnectionOptions options,server_end:fuchsia.bluetooth.le/Connection handle)",
-        "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.le/Central.Connect"
-    },
-    {
         "declaration": "(string:16 identifier,fuchsia.bluetooth.le/ConnectionOptions options,server_end:fuchsia.bluetooth.gatt/Client gatt_client) -> (fuchsia.bluetooth/Status status)",
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.le/Central.ConnectPeripheral"
@@ -234,11 +229,6 @@
         "kind": "enum",
         "name": "fuchsia.bluetooth.le/CentralError",
         "strictness": "strict"
-    },
-    {
-        "declaration": "(server_end:fuchsia.bluetooth.gatt2/Client client)",
-        "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.le/Connection.RequestGattClient"
     },
     {
         "kind": "protocol",

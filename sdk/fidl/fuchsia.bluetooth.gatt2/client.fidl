@@ -231,7 +231,7 @@ protocol Client {
     /// * error Returns a `ZX_ERR_NOT_CONNECTED` if the peer disconnects.
     /// * error Returns a `ZX_ERR_ALREADY_EXISTS` if the service is already connected.
     ConnectToService(resource struct {
-        handle Handle;
+        handle ServiceHandle;
         service server_end:RemoteService;
     });
 };

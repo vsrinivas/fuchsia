@@ -7,12 +7,13 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-use fidl::endpoints::{create_request_stream, ControlHandle, RequestStream};
+use fidl::endpoints::{create_request_stream, ControlHandle, RequestStream, Responder};
 use fidl_fuchsia_bluetooth_gatt2::{
     self as gatt, AttributePermissions, Characteristic, CharacteristicPropertyBits, Handle,
     LocalServiceMarker, LocalServiceReadValueResponder, LocalServiceRequest,
-    LocalServiceRequestStream, LocalServiceWriteValueResponder, SecurityRequirements,
-    Server_Marker, Server_Proxy, ServiceInfo, ValueChangedParameters, WriteValueParameters,
+    LocalServiceRequestStream, LocalServiceWriteValueRequest as WriteValueRequest,
+    LocalServiceWriteValueResponder, SecurityRequirements, Server_Marker, Server_Proxy,
+    ServiceHandle, ServiceInfo, ServiceKind, ValueChangedParameters,
 };
 use fuchsia_bluetooth::types::{PeerId, Uuid};
 use fuchsia_component::client::connect_to_protocol;
@@ -26,6 +27,8 @@ use crate::types::Error;
 
 /// The UUID of the Fast Pair Service.
 pub const FAST_PAIR_SERVICE_UUID: u16 = 0xFE2C;
+/// Arbitrary Handle assigned to the Fast Pair Service.
+const FAST_PAIR_SERVICE_HANDLE: ServiceHandle = ServiceHandle { value: 6 };
 
 /// Custom characteristic - Model ID.
 const MODEL_ID_CHARACTERISTIC_UUID: &str = "FE2C1233-8366-4814-8EB0-01DE32100BEA";
@@ -213,7 +216,8 @@ impl GattService {
     // Returns the GATT service definition for the Fast Pair Provider role.
     fn service_info() -> ServiceInfo {
         ServiceInfo {
-            primary: Some(true),
+            handle: Some(FAST_PAIR_SERVICE_HANDLE),
+            kind: Some(ServiceKind::Primary),
             type_: Some(Uuid::new16(FAST_PAIR_SERVICE_UUID).into()),
             characteristics: Some(Self::characteristics()),
             ..ServiceInfo::EMPTY
@@ -270,11 +274,11 @@ impl GattService {
 
     fn handle_write_request(
         &self,
-        params: WriteValueParameters,
+        params: WriteValueRequest,
         responder: LocalServiceWriteValueResponder,
     ) -> Option<GattRequest> {
-        // All the fields of the `WriteValueParameters` must be provided.
-        let (peer_id, handle, value) = if let WriteValueParameters {
+        // All the fields of the `WriteValueRequest` must be provided.
+        let (peer_id, handle, value) = if let WriteValueRequest {
             peer_id: Some(peer_id),
             handle: Some(handle),
             offset: Some(0),
@@ -318,13 +322,17 @@ impl GattService {
             LocalServiceRequest::ReadValue { handle, responder, .. } => {
                 self.handle_read_request(handle, responder);
             }
-            LocalServiceRequest::WriteValue { params, responder, .. } => {
-                return self.handle_write_request(params, responder);
+            LocalServiceRequest::WriteValue { payload, responder, .. } => {
+                return self.handle_write_request(payload, responder);
             }
             LocalServiceRequest::CharacteristicConfiguration { responder, .. } => {
                 let _ = responder.send();
             }
             LocalServiceRequest::ValueChangedCredit { .. } => {}
+            LocalServiceRequest::PeerUpdate { responder, .. } => {
+                // Per FIDL docs, this can be safely ignored
+                responder.drop_without_shutdown();
+            }
         }
         None
     }
@@ -402,7 +410,7 @@ pub(crate) mod tests {
                 x => panic!("Expected ready request but got: {:?}", x),
             };
         // Upstream server responds positively.
-        let _ = responder.send(&mut Ok({}));
+        let _ = responder.send(&mut Ok(()));
 
         // Publish service request should resolve successfully.
         let publish_result =
@@ -429,7 +437,7 @@ pub(crate) mod tests {
                     .into_publish_service()
                     .expect("only possible request");
                 // Respond positively.
-                let _ = responder.send(&mut Ok({}));
+                let _ = responder.send(&mut Ok(()));
                 // Publish service request should resolve.
                 let gatt_service = publish_fut.await.expect("should resolve ok");
                 (gatt_service, local_service_client.into_proxy().unwrap())
@@ -564,12 +572,12 @@ pub(crate) mod tests {
         pin_mut!(gatt_service_fut);
 
         // Model ID is a valid characteristic, but writes are not supported.
-        let params = WriteValueParameters {
+        let params = WriteValueRequest {
             peer_id: Some(PeerId(123).into()),
             handle: Some(MODEL_ID_CHARACTERISTIC_HANDLE),
             offset: Some(0),
             value: Some(vec![0x00, 0x01, 0x02]),
-            ..WriteValueParameters::EMPTY
+            ..WriteValueRequest::EMPTY
         };
         let write_request_fut = upstream_service_client.write_value(params);
         pin_mut!(write_request_fut);
@@ -581,12 +589,12 @@ pub(crate) mod tests {
         assert_matches!(write_result, Ok(Err(gatt::Error::InvalidHandle)));
 
         // Random characteristic handle that is not supported by this GATT server.
-        let params = WriteValueParameters {
+        let params = WriteValueRequest {
             peer_id: Some(PeerId(123).into()),
             handle: Some(Handle { value: 999 }),
             offset: Some(0),
             value: Some(vec![0x00, 0x01, 0x02]),
-            ..WriteValueParameters::EMPTY
+            ..WriteValueRequest::EMPTY
         };
         let write_request_fut = upstream_service_client.write_value(params);
         pin_mut!(write_request_fut);
@@ -604,12 +612,12 @@ pub(crate) mod tests {
         let (mut gatt_service, upstream_service_client) =
             exec.run_singlethreaded(setup_gatt_service());
 
-        let params = WriteValueParameters {
+        let params = WriteValueRequest {
             peer_id: Some(PeerId(123).into()),
             handle: Some(characteristic_handle),
             offset: Some(0),
             value: Some(vec![0x00, 0x01, 0x02]),
-            ..WriteValueParameters::EMPTY
+            ..WriteValueRequest::EMPTY
         };
         let write_request_fut = upstream_service_client.write_value(params);
         pin_mut!(write_request_fut);
@@ -673,12 +681,12 @@ pub(crate) mod tests {
         let (mut gatt_service, upstream_service_client) =
             exec.run_singlethreaded(setup_gatt_service());
 
-        let params = WriteValueParameters {
+        let params = WriteValueRequest {
             peer_id: Some(PeerId(123).into()),
             handle: Some(PASSKEY_CHARACTERISTIC_HANDLE),
             offset: Some(10), // Nonzero is not supported.
             value: Some(vec![0x00, 0x01, 0x02]),
-            ..WriteValueParameters::EMPTY
+            ..WriteValueRequest::EMPTY
         };
         let write_request_fut = upstream_service_client.write_value(params);
         pin_mut!(write_request_fut);

@@ -143,6 +143,7 @@ protocol Central {
     /// + request `options` Options used to configure the connection.
     /// + request `handle` Handle that remains valid for the duration of this
     ///   connection.
+    @available(added=HEAD)
     Connect(resource struct {
         id bt.PeerId;
         options ConnectionOptions;

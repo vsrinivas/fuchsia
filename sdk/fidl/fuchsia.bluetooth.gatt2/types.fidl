@@ -141,39 +141,61 @@ type Error = strict enum {
 type PublishServiceError = flexible enum {
     /// The provided LocalService client_end was not a valid instance of the protocol.
     INVALID_LOCAL_SERVICE = 1;
+    /// The service handle is invalid or already in use on the Server publishing the service.
+    INVALID_SERVICE_HANDLE = 2;
     /// Invalid service UUID provided.
-    INVALID_UUID = 2;
+    INVALID_UUID = 3;
+    /// The `ServiceInfo.characteristics` field was formatted invalidly or missing. If the service
+    /// is meant to be empty, the vector should be empty, but present.
+    INVALID_CHARACTERISTICS = 4;
+    /// A general error occurred that can not be classified as one of the more specific errors.
+    UNLIKELY_ERROR = 5;
 };
 
-// A Handle uniquely identifies a service, characteristic, or descriptor.
+// A Handle uniquely identifies a characteristic or descriptor.
 type Handle = struct {
     value uint64;
+};
+
+// A ServiceHandle uniquely identifies a GATT service within a particular scope.
+type ServiceHandle = struct {
+    value uint64;
+};
+
+/// The kind ("type") of a GATT Service as outlined in Bluetooth Core Spec v5.3 Vol. 1 Part A 6.5.1.
+type ServiceKind = strict enum {
+    /// A "service that provides functionality of a device that can be used on its own" (Ibid)
+    PRIMARY = 1;
+    /// A "service that provides additional functionality [...] in association with a primary
+    /// service and is included from at least one primary service" (Ibid)
+    SECONDARY = 2;
 };
 
 /// Represents encryption, authentication, and authorization permissions that can
 /// be assigned to a specific access permission.
 type SecurityRequirements = table {
-    /// If true, the physical link must be encrypted to access this attribute.
+    /// If true, the physical link must be encrypted to access this attribute. If not present or
+    /// false, this attribute permits unencrypted access.
     1: encryption_required bool;
 
-    /// If true, the physical link must be authenticated to access this
-    /// attribute.
+    /// If true, the physical link must be authenticated to access this attribute. If not present or
+    /// false, this attribute permits unauthenticated access.
     2: authentication_required bool;
 
-    /// If true, the client needs to be authorized before accessing this
-    /// attribute.
+    /// If true, the client needs to be authorized to access this attribute. If not present or
+    /// false, this attribute permits access without authorization.
     3: authorization_required bool;
 };
 
 /// Specifies the access permissions for a specific attribute value.
 type AttributePermissions = table {
-    /// Specifies whether or not an attribute has the read permission. If null,
-    /// then the attribute value cannot be read. Otherwise, it can be read only if
-    /// the permissions specified in the SecurityRequirements table are satisfied.
+    /// Specifies whether an attribute has the read permission. If not present,
+    /// the attribute value cannot be read. Otherwise, it can be read only if the
+    /// permissions specified in the SecurityRequirements table are satisfied.
     1: read SecurityRequirements;
 
-    /// Specifies whether or not an attribute has the write permission. If null,
-    /// then the attribute value cannot be written. Otherwise, it be written only
+    /// Specifies whether an attribute has the write permission. If not present,
+    /// the attribute value cannot be written. Otherwise, it can be written only
     /// if the permissions specified in the SecurityRequirements table are satisfied.
     2: write SecurityRequirements;
 
@@ -181,8 +203,8 @@ type AttributePermissions = table {
     /// notifications or indications on a characteristic. A characteristic's
     /// support for notifications or indiciations is specified using the NOTIFY and
     /// INDICATE characteristic properties. If a local characteristic has one of
-    /// these properties then this field can not be null. Otherwise, this field
-    /// must be left as null.
+    /// these properties then this field must be present. Otherwise, this field
+    /// must not be present.
     ///
     /// This field is ignored for Descriptors.
     3: update SecurityRequirements;
@@ -204,14 +226,18 @@ type CharacteristicPropertyBits = strict bits : uint16 {
 
 /// Represents a local or remote GATT service.
 type ServiceInfo = table {
-    /// Uniquely identifies this GATT service. Always present if this represents
-    /// a remote service. Ignored if present for local services.
-    1: handle Handle;
+    /// Unique identifier for this GATT service.
+    /// Always present if this represents a remote service, in which case this is unique across the
+    /// Client that returned this ServiceInfo.
+    /// Required for local services, in which case this must be unique across all services published
+    /// to a single Server instance. Can be used in the `ServiceInfo.includes` of other
+    /// PublishService calls to the Server where this service is published.
+    1: handle ServiceHandle;
 
     /// Indicates whether this is a primary or secondary service.
     /// Always present for remote services. Optional for local services
-    /// Default: true
-    2: primary bool;
+    /// Default: ServiceKind::PRIMARY
+    2: kind ServiceKind;
 
     /// The UUID that identifies the type of this service.
     /// There may be multiple services with the same UUID.
@@ -224,7 +250,8 @@ type ServiceInfo = table {
 
     /// Handles of other services that are included by this service.
     /// Optional for local services. Never present for remote services.
-    5: includes vector<Handle>:MAX_SERVICE_COUNT;
+    /// TODO(fxbug.dev/685): This is not currently supported for local services.
+    5: includes vector<ServiceHandle>:MAX_SERVICE_COUNT;
 };
 
 /// Represents a local or remote GATT characteristic.
@@ -246,7 +273,7 @@ type Characteristic = table {
     3: properties uint32;
 
     /// The attribute permissions of this characteristic. For remote
-    /// characteristics, this value will be null until the permissions are
+    /// characteristics, this value will not be present until the permissions are
     /// discovered via read and write requests.
     ///
     /// For local characteristics, this value is mandatory.
@@ -271,7 +298,7 @@ type Descriptor = table {
     2: type bt.Uuid;
 
     /// The attribute permissions of this descriptor. For remote
-    /// descriptors, this value will be null until the permissions are
+    /// descriptors, this value will not be present until the permissions are
     /// discovered via read and write requests.
     ///
     /// For local descriptors, this value is mandatory.
