@@ -41,19 +41,20 @@ impl UpdatePackagesManifest {
     /// Add a package to be updated by its PackageManifest.
     pub fn add_by_manifest(&mut self, package: PackageManifest) -> Result<()> {
         let path = package.package_path();
-        let meta_blob = package.into_blobs().into_iter().find(|blob| blob.path == "meta/");
+        let meta_blob = package.blobs().into_iter().find(|blob| blob.path == "meta/");
         match meta_blob {
-            Some(meta_blob) => self.add(path, meta_blob.merkle),
+            Some(meta_blob) => self.add(path, meta_blob.merkle, package.repository()),
             _ => bail!(format!("Failed to find the meta far in package {}", path)),
         }
     }
 
     /// Add a package to be updated by its path and meta far merkle.
-    pub fn add(&mut self, path: PackagePath, merkle: Hash) -> Result<()> {
+    pub fn add(&mut self, path: PackagePath, merkle: Hash, repository: Option<&str>) -> Result<()> {
+        let repository = repository.unwrap_or("fuchsia.com");
         let (name, variant) = path.into_name_and_variant();
         let url = PinnedAbsolutePackageUrl::new(
-            RepositoryUrl::parse_host("fuchsia.com".into())
-                .context("failed to convert 'fuchsia.com' to a RepositoryUrl")?,
+            RepositoryUrl::parse_host(repository.to_string())
+                .with_context(|| format!("failed to convert '{repository}' to a RepositoryUrl"))?,
             name,
             Some(variant),
             merkle,
@@ -84,19 +85,32 @@ impl UpdatePackagesManifest {
 #[cfg(test)]
 mod tests {
     use super::UpdatePackagesManifest;
+    use fuchsia_pkg::{BlobInfo, MetaPackage, PackageManifestBuilder};
     use serde_json::json;
 
     #[test]
     fn update_packages_manifest() {
         let mut manifest = UpdatePackagesManifest::default();
-        manifest.add("one/0".parse().unwrap(), [0u8; 32].into()).unwrap();
+        manifest.add("one/0".parse().unwrap(), [0u8; 32].into(), None).unwrap();
+        let package_manifest =
+            PackageManifestBuilder::new(MetaPackage::from_name("two".parse().unwrap()))
+                .repository("two.com")
+                .add_blob(BlobInfo {
+                    source_path: "source_path".into(),
+                    path: "meta/".into(),
+                    merkle: [0x22u8; 32].into(),
+                    size: 42,
+                })
+                .build();
+        manifest.add_by_manifest(package_manifest).unwrap();
         let out = serde_json::to_value(&manifest).unwrap();
         assert_eq!(
             out,
             json!({
                 "version": "1",
                 "content": [
-                    "fuchsia-pkg://fuchsia.com/one/0?hash=0000000000000000000000000000000000000000000000000000000000000000"
+                    "fuchsia-pkg://fuchsia.com/one/0?hash=0000000000000000000000000000000000000000000000000000000000000000",
+                    "fuchsia-pkg://two.com/two/0?hash=2222222222222222222222222222222222222222222222222222222222222222"
                 ],
             })
         );

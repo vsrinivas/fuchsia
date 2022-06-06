@@ -82,9 +82,9 @@ impl PackageManifest {
         }
     }
 
-    pub fn repository(&self) -> &Option<String> {
+    pub fn repository(&self) -> Option<&str> {
         match &self.0 {
-            VersionedPackageManifest::Version1(manifest) => &manifest.repository,
+            VersionedPackageManifest::Version1(manifest) => manifest.repository.as_deref(),
         }
     }
 
@@ -585,7 +585,7 @@ mod tests {
         let package = package_builder.build().unwrap();
         let package_manifest = PackageManifest::from_package(package, None).unwrap();
         assert_eq!(&"package-name".parse::<PackageName>().unwrap(), package_manifest.name());
-        assert_eq!(&None, package_manifest.repository());
+        assert_eq!(None, package_manifest.repository());
     }
 
     #[test]

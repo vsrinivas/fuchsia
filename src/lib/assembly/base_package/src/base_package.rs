@@ -128,10 +128,10 @@ fn add_package_to(list: &mut impl WritablePackageList, package: PackageManifest)
         return Err(anyhow!("system_image and update packages are not allowed"));
     }
 
-    let package_repository = package.repository().clone();
+    let package_repository = package.repository();
     let path = package_path.to_string();
     package
-        .into_blobs()
+        .blobs()
         .into_iter()
         .find(|blob| blob.path == "meta/")
         .ok_or(anyhow!("Failed to add package {} to the list, unable to find meta blob", path))

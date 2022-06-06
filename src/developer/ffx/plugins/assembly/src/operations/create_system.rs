@@ -198,6 +198,7 @@ fn create_package_manifest(
                 "0".parse().context("parse package variant")?,
             ),
             base_package.merkle,
+            None,
         )?;
     }
     Ok(ser::to_writer(packages_file, &packages_manifest).context("Writing packages manifest")?)

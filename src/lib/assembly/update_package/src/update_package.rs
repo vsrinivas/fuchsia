@@ -870,13 +870,13 @@ mod tests {
 
         let hash = Hash::from([0u8; HASH_SIZE]);
         let mut list1 = UpdatePackagesManifest::default();
-        list1.add(PackagePath::from_str("one/0").unwrap(), hash.clone()).unwrap();
-        list1.add(PackagePath::from_str("two/0").unwrap(), hash.clone()).unwrap();
+        list1.add(PackagePath::from_str("one/0").unwrap(), hash.clone(), None).unwrap();
+        list1.add(PackagePath::from_str("two/0").unwrap(), hash.clone(), None).unwrap();
         builder.add_packages(list1);
 
         let mut list2 = UpdatePackagesManifest::default();
-        list2.add(PackagePath::from_str("three/0").unwrap(), hash.clone()).unwrap();
-        list2.add(PackagePath::from_str("four/0").unwrap(), hash.clone()).unwrap();
+        list2.add(PackagePath::from_str("three/0").unwrap(), hash.clone(), None).unwrap();
+        list2.add(PackagePath::from_str("four/0").unwrap(), hash.clone(), None).unwrap();
         builder.add_packages(list2);
 
         assert!(builder.build().is_ok());
