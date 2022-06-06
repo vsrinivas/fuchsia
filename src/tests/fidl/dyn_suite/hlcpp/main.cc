@@ -76,12 +76,7 @@ class TestOrchestrator final {
       : impl_(observer_client),
         test_server_(&impl_),
         observer_client_(std::move(observer_client)),
-        entry_impl_(entry_impl) {
-    observer_client_.events().OnProgramPoint = [&](uint64_t program_point) {
-      observer_client_->Observe(
-          fidl::dynsuite::Observation::WithProgramPoint(std::move(program_point)));
-    };
-  }
+        entry_impl_(entry_impl) {}
   ~TestOrchestrator() {
     observer_client_->Observe(
         fidl::dynsuite::Observation::WithOnComplete(fidl::dynsuite::OnComplete()));
@@ -120,9 +115,6 @@ void EntryImpl::StartServerTest(
   auto observer_client = client_end_to_observer.Bind();
   auto test_orchestrator = std::make_unique<TestOrchestrator>(std::move(observer_client), this);
 
-  MethodObserver method_observer(test_orchestrator->observer_client(),
-                                 fidl::dynsuite::Method::START_SERVER_TEST);
-
   test_orchestrator->Bind(std::move(server_end_to_test));
   test_orchestrators_.push_back(std::move(test_orchestrator));
 }
@@ -134,10 +126,6 @@ class ClientTestOrchestrator final {
                          fidl::InterfaceHandle<fidl::dynsuite::Observer> client_end_to_observer)
       : entry_impl_(entry_impl) {
     observer_client_ = client_end_to_observer.Bind();
-    observer_client_.events().OnProgramPoint = [&](uint64_t program_point) {
-      observer_client_->Observe(
-          fidl::dynsuite::Observation::WithProgramPoint(std::move(program_point)));
-    };
     client_test_client_ = client_end_to_test.Bind();
     client_test_client_.events().OnPleaseDo = [&](auto action) {
       switch (action.Which()) {

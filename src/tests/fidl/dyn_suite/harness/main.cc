@@ -93,7 +93,7 @@ TEST_F(ServerTest, Bad_OneWayInteractionWithTxIdNotZero) {
                         fidl::MessageDynamicFlags::kStrictMethod);
     zx_channel_write(client_end, 0, &hdr, sizeof(fidl_message_header_t), nullptr, 0);
   }).wait_for([&](auto observations) {
-      return 2 <= observations.size();
+      return observations.has(Observation::Kind::kOnComplete);
     }).then_observe([&](auto observations) {
     // Some bindings observe an error, which will precede unbinding.
     ASSERT_TRUE(2u <= observations.size());

@@ -60,11 +60,6 @@ void ObserverOrchestrator::Observe(ObserveRequestView request, ObserveCompleter:
       case fidl_dynsuite::wire::Observation::Tag::kOnMethodInvocation:
         to_record_->emplace_back(Observation::Kind::kOnMethodInvocation);
         break;
-      case fidl_dynsuite::wire::Observation::Tag::kProgramPoint:
-        // Ignore: we do not expose program points to tests since these
-        // observations are only meant for coordination of the bindings under
-        // test and the harness.
-        break;
       default:
         ZX_PANIC("Unknown observation");
     }
@@ -84,24 +79,13 @@ void ObserverOrchestrator::Observe(ObserveRequestView request, ObserveCompleter:
     case fidl_dynsuite::wire::Observation::Tag::kOnMethodInvocation: {
       std::string name;
       switch (request->observation.on_method_invocation().method) {
-        case fidl_dynsuite::wire::Method::kStartServerTest:
-          name = "StartServerTest";
-          break;
         case fidl_dynsuite::wire::Method::kOneWayInteractionNoPayload:
           name = "OneWayInteractionNoPayload";
-          break;
-        case fidl_dynsuite::wire::Method::kOnPleaseDo:
-          name = "OnPleaseDo";
           break;
       }
       std::cout << "observed: on method invocation of " << name << " @ "
                 << static_cast<int32_t>(request->observation.on_method_invocation().method_point)
                 << std::endl;
-    } break;
-    case fidl_dynsuite::wire::Observation::Tag::kProgramPoint: {
-      uint64_t actual_program_point = request->observation.program_point();
-      std::cout << "observed: program point=" << actual_program_point << std::endl;
-      ReleaseProgramPoint(actual_program_point);
     } break;
     case fidl_dynsuite::wire::Observation::Tag::kOnError:
       std::cout << "observed: context=" << request->observation.on_error().context.get()
@@ -111,26 +95,6 @@ void ObserverOrchestrator::Observe(ObserveRequestView request, ObserveCompleter:
                 << std::endl;
       break;
   }
-}
-
-void ObserverOrchestrator::SyncOnProgramPoint(uint64_t program_point) {
-  EXPECT_FALSE(actual_program_point_.has_value());
-  auto result = fidl::WireSendEvent(server_ref_)->OnProgramPoint(program_point);
-  EXPECT_EQ(ZX_OK, result.status());
-}
-
-void ObserverOrchestrator::ReleaseProgramPoint(uint64_t actual_program_point) {
-  EXPECT_FALSE(actual_program_point_.has_value());
-  actual_program_point_ = actual_program_point;
-}
-
-bool ObserverOrchestrator::HasReachedProgramPoint(uint64_t expected_program_point) {
-  if (!actual_program_point_.has_value() ||
-      actual_program_point_.value() != expected_program_point) {
-    return false;
-  }
-  actual_program_point_.reset();
-  return true;
 }
 
 void ObserverOrchestrator::RecordInto(std::vector<Observation>* to_record) {
@@ -190,14 +154,6 @@ zx::channel TestContext::TakeServerEndToTest() {
 }
 
 bool TestContext::has_completed() { return (stage_ == Stage::kStopped); }
-
-void TestContext::SyncOnProgramPoint(uint64_t program_point) {
-  observer_orchestrator_->SyncOnProgramPoint(program_point);
-}
-
-bool TestContext::HasReachedProgramPoint(uint64_t program_point) {
-  return observer_orchestrator_->HasReachedProgramPoint(program_point);
-}
 
 void TestContext::run(std::function<void()> when, std::function<bool(const Observations)> wait_for,
                       std::function<void(const Observations)> then_observe) {
@@ -283,16 +239,10 @@ bool TestBase::run_until(std::function<bool()> condition) {
 
 When TestBase::when(std::function<void()> when_fn) { return When(context_.value(), when_fn); }
 
-static const uint64_t kSomeProgramPoint = 5678;
-
 void ServerTest::SetUp() {
   ::TestBase::SetUp();
   context().start_server_test();
   client_end = context().TakeClientEndToTest().release();
-  context().SyncOnProgramPoint(kSomeProgramPoint);
-  bool reached_initial_program_point =
-      run_until([&] { return context().HasReachedProgramPoint(kSomeProgramPoint); });
-  ASSERT_TRUE(reached_initial_program_point) << "timed out reaching program point";
 }
 
 void ServerTest::TearDown() {

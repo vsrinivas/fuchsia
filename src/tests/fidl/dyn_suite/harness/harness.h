@@ -28,11 +28,13 @@
 class Observation final {
  public:
   enum class Kind {
-    kOnBind,
-    kOnUnbind,
-    kOnComplete,
-    kOnError,
-    kOnMethodInvocation,
+    // Make the numeric enum values match the Observation union values for
+    // ease of debugging.
+    kOnBind = 1,
+    kOnMethodInvocation = 2,
+    kOnUnbind = 3,
+    kOnComplete = 4,
+    kOnError = 5,
   };
   Observation(Kind kind) : kind_(kind) {}
   Kind kind() { return kind_; }
@@ -62,8 +64,7 @@ class Observations final {
 
 // The ObserverOrchestrator is responsible for listening to
 // `fidl.dynsuite/Observation` sent by the bindings under test, and orchestating
-// the actions that these should lead to, e.g. record them, release a program
-// point, etc.
+// the actions that these should lead to.
 class ObserverOrchestrator final : public fidl::WireServer<fidl_dynsuite::Observer> {
  public:
   ObserverOrchestrator(async_dispatcher_t* dispatcher,
@@ -75,15 +76,10 @@ class ObserverOrchestrator final : public fidl::WireServer<fidl_dynsuite::Observ
   void Observe(ObserveRequestView request, ObserveCompleter::Sync& _completer);
 
   void RecordInto(std::vector<Observation>* observations);
-  void SyncOnProgramPoint(uint64_t program_point);
-  bool HasReachedProgramPoint(uint64_t program_point);
 
  private:
-  void ReleaseProgramPoint(uint64_t actual_program_point);
-
   fidl::ServerBindingRef<fidl_dynsuite::Observer> server_ref_;
 
-  std::optional<uint64_t> actual_program_point_;
   std::function<void()> on_completion_callback_;
   std::vector<Observation>* to_record_ = nullptr;
 };
@@ -107,8 +103,6 @@ class TestContext final {
   zx::channel TakeClientEndToTest();
   zx::channel TakeServerEndToTest();
   bool has_completed();
-  void SyncOnProgramPoint(uint64_t program_point);
-  bool HasReachedProgramPoint(uint64_t program_point);
   void run(std::function<void()> when, std::function<bool(const Observations)> wait_for,
            std::function<void(const Observations)> then_observe);
   std::vector<Observation> when_then_observe(std::function<void()> fn);

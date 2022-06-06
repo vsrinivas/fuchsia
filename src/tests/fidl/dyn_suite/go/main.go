@@ -24,23 +24,7 @@ type observer struct {
 }
 
 func newObserver(client_end dynsuite.ObserverWithCtxInterface) *observer {
-	obs := &observer{client_end}
-	go obs.serveOnProgramPointEvents()
-	return obs
-}
-
-func (obs *observer) serveOnProgramPointEvents() {
-	for {
-		program_point, err := obs.client_end.ExpectOnProgramPoint(context.Background())
-		if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrPeerClosed {
-			return
-		} else if err != nil {
-			log.Println(err)
-			obs.onError("ExpectOnProgramPoint", err)
-			continue
-		}
-		obs.client_end.Observe(context.Background(), dynsuite.ObservationWithProgramPoint(program_point))
-	}
+	return &observer{client_end}
 }
 
 func (obs *observer) onError(description string, err error) {
@@ -81,10 +65,6 @@ func (*entryImpl) StartServerTest(_ fidl.Context,
 	client_end_to_observer dynsuite.ObserverWithCtxInterface) error {
 
 	obs := newObserver(client_end_to_observer)
-
-	// Observe: method invocation entry & exit.
-	obs.onEnter(dynsuite.MethodStartServerTest)
-	defer obs.onExit(dynsuite.MethodStartServerTest)
 
 	// Start server test.
 	stub := dynsuite.ServerTestWithCtxStub{
