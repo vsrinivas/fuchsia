@@ -229,8 +229,8 @@ TEST_F(SimpleCodecTest, PlugStateCanAsyncNotify) {
       fuchsia::hardware::audio::PlugState plug_state;
       plug_state.set_plugged(true);
       plug_state.set_plug_state_time(kTestPlugStateTime);
-      callback(std::move(plug_state));
       watch_state_called_ = true;
+      callback(std::move(plug_state));
     }
     bool watch_state_called() { return watch_state_called_; }
 
