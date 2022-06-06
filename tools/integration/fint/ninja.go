@@ -478,8 +478,12 @@ func affectedTestsNoWork(
 		logs: map[string]string{},
 	}
 
+	// Map from "... is dirty" line printed by Ninja to affected test
 	testsByDirtyLine := map[string][]string{}
+	// Map from test path (if defined) to test name
 	testsByPath := map[string]string{}
+	// Map from path to BUILD.gn file defining the test to the test
+	testsByBuildGn := map[string][]string{}
 
 	for _, test := range allTests {
 		// Ignore any tests that shouldn't be considered affected.
@@ -494,9 +498,17 @@ func affectedTestsNoWork(
 			testsByPath[path] = test.Name
 			continue
 		}
+
 		for _, packageManifest := range test.PackageManifests {
 			dirtyLine := dirtyLineForPackageManifest(packageManifest)
 			testsByDirtyLine[dirtyLine] = append(testsByDirtyLine[dirtyLine], test.Name)
+		}
+
+		var buildGnPath = buildGnPathForLabel(test.Label)
+		testsByBuildGn[buildGnPath] = append(testsByBuildGn[buildGnPath], test.Name)
+		if test.PackageLabel != "" {
+			buildGnPath = buildGnPathForLabel(test.PackageLabel)
+			testsByBuildGn[buildGnPath] = append(testsByBuildGn[buildGnPath], test.Name)
 		}
 	}
 
@@ -507,6 +519,15 @@ func affectedTestsNoWork(
 			gnFiles = append(gnFiles, path)
 		} else {
 			nonGNFiles = append(nonGNFiles, path)
+		}
+	}
+
+	var affectedTests []string
+	for _, gnFile := range gnFiles {
+		gnFile = strings.TrimPrefix(gnFile, "build/secondary/")
+		match, ok := testsByBuildGn[gnFile]
+		if ok {
+			affectedTests = append(affectedTests, match...)
 		}
 	}
 
@@ -525,7 +546,6 @@ func affectedTestsNoWork(
 	}
 	ninjaOutput := strings.Join([]string{stdout, stderr}, "\n\n")
 
-	var affectedTests []string
 	for _, line := range strings.Split(ninjaOutput, "\n") {
 		match, ok := testsByDirtyLine[line]
 		if ok {
@@ -578,6 +598,12 @@ func affectedTestsNoWork(
 
 func dirtyLineForPackageManifest(label string) string {
 	return "ninja explain: " + label + " is dirty"
+}
+
+func buildGnPathForLabel(label string) string {
+	var result = strings.TrimPrefix(label, "//")
+	result = strings.Split(result, ":")[0]
+	return result + "/BUILD.gn"
 }
 
 // ninjaGraph runs the ninja graph tool and pipes its stdout to the file at the

@@ -522,8 +522,9 @@ func TestCheckNinjaNoop(t *testing.T) {
 func TestAffectedTestsNoWork(t *testing.T) {
 	mockTestManifest := []build.Test{
 		{Name: "host_test", Path: "host/run.sh"},
-		{Name: "fuchsia_test", PackageLabel: "//src/path/to:fuchsia_test(//toolchain)", PackageManifests: []string{"obj/src/path/to/fuchsia_test/package_manifest.json"}},
-		{Name: "unaffected_test", PackageLabel: "//src/path/to:unaffected_test(//toolchain)", PackageManifests: []string{"obj/src/path/to/unaffected_test/package_manifest.json"}},
+		{Name: "fuchsia_test", Label: "//src/path/to:fuchsia_test(//toolchain)", PackageLabel: "//src/path/to:fuchsia_test_pkg(//toolchain)", PackageManifests: []string{"obj/src/path/to/fuchsia_test/package_manifest.json"}},
+		{Name: "fuchsia_test2", Label: "//src/path2:fuchsia_test(//toolchain)", PackageLabel: "//src/path2/test:pkg(//toolchain)", PackageManifests: []string{"obj/src/path2/test/pkg/package_manifest.json"}},
+		{Name: "unaffected_test", Label: "//src/path/to:unaffected_test(//toolchain)", PackageLabel: "//src/path/to:unaffected_test_pkg(//toolchain)", PackageManifests: []string{"obj/src/path/to/unaffected_test/package_manifest.json"}},
 		{Name: "never_affected_test", PackageLabel: neverAffectedTestLabels[0] + "(//toolchain)"},
 	}
 
@@ -568,6 +569,22 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 			// but the second one should.
 			expectedDryRuns: 2,
 		},
+		{
+			name:                  "affected BUILD.gn file defining fuchsia_test2",
+			ninjaOutput:           "ninja: entering directory /foo" + noWorkString,
+			affectedFiles:         []string{"src/path2/BUILD.gn"},
+			expectedAffectedTests: []string{"fuchsia_test2"},
+			expectedNoWork:        true,
+			expectedDryRuns:       2,
+		},
+		{
+			name:                  "affected BUILD.gn file defining fuchsia_test2 package",
+			ninjaOutput:           "ninja: entering directory /foo" + noWorkString,
+			affectedFiles:         []string{"src/path2/test/BUILD.gn"},
+			expectedAffectedTests: []string{"fuchsia_test2"},
+			expectedNoWork:        true,
+			expectedDryRuns:       2,
+		},
 	}
 
 	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
@@ -580,6 +597,10 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 			}
 			sort.Strings(tc.expectedAffectedTests)
 			checkoutDir := t.TempDir()
+			err := os.Chdir(checkoutDir)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			subprocessRunner := fakeSubprocessRunner{
 				mockStdout: []byte(tc.ninjaOutput),
@@ -587,14 +608,13 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 			r := ninjaRunner{
 				runner:    &subprocessRunner,
 				ninjaPath: "ninja",
-				buildDir:  filepath.Join(checkoutDir, "build"),
+				buildDir:  "build",
 			}
 
-			var affectedFilesAbs []string
 			for _, path := range tc.affectedFiles {
-				affectedFilesAbs = append(affectedFilesAbs, filepath.Join(checkoutDir, path))
-			}
-			for _, path := range affectedFilesAbs {
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					t.Fatal(err)
+				}
 				if _, err := os.Create(path); err != nil {
 					t.Fatal(err)
 				}
@@ -604,7 +624,7 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 			}
 
 			targets := []string{"foo", "bar"}
-			result, err := affectedTestsNoWork(context.Background(), r, mockTestManifest, affectedFilesAbs, targets)
+			result, err := affectedTestsNoWork(context.Background(), r, mockTestManifest, tc.affectedFiles, targets)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -624,7 +644,7 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 			}
 
 			// Ensure file timestamps weren't modified
-			for _, path := range affectedFilesAbs {
+			for _, path := range tc.affectedFiles {
 				stat, err := os.Stat(path)
 				if err != nil {
 					t.Fatal(err)
