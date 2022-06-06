@@ -208,3 +208,27 @@ TEST_F(ServiceReconnectorTest, SupportsCallsFromMultipleThreads) {
   ASSERT_EQ(protocol().ActionsAttempted(), 2U);
   ASSERT_EQ(protocol().ActionsSuccessful(), 2U);
 }
+
+TEST_F(ServiceReconnectorTest, BacksOff) {
+  int connect_count = 0;
+  auto protocol = ServiceReconnector<SimpleProtocol>::Create(
+      dispatcher(), "simple", [&](ServiceReconnector<SimpleProtocol>::ConnectResolver resolver) {
+        connect_count += 1;
+
+        auto endpoints = fidl::CreateEndpoints<SimpleProtocol>();
+
+        // By providing an unbound client endpoint, this simulates a PEER_CLOSED event.
+        resolver.resolve(std::move(endpoints->client));
+      });
+
+  protocol->Do([](fidl::Client<SimpleProtocol>& client) {
+    client->DoAction().Then([](fidl::Result<test_protocol::SimpleProtocol::DoAction>& resp) {});
+  });
+
+  RunLoopFor(zx::min(5));
+
+  // In 5 minutes, approximately 12 reconnects should be tried:
+  //    100 + 200 + 400 + 800 + 1.6s + 3.2s + 6.4s + 12.8s + 25.6s + 51.2s + 102.4s + 204.8s
+  ASSERT_LT(connect_count, 15);
+  ASSERT_GT(connect_count, 9);
+}

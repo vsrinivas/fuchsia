@@ -265,16 +265,16 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
         service_client_ =
             fidl::Client<Service>(std::move(client_end.value()), dispatcher_, event_handler());
         is_connected_ = true;
-        backoff_.Reset();
       } else {
         InnerReconnect();
       }
     }
-    // Attempt to run callbacks. If the connection failed, this is a noop.
+    // Attempt to run callbacks.
     RunCallbacks();
   }
 
   void RunCallbacks() FXL_LOCKS_EXCLUDED(mutex_) {
+    bool callback_run = false;
     while (true) {
       DoCallback callback;
 
@@ -284,13 +284,18 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
         if (!is_connected_) {
           async::PostTask(dispatcher_, [weak_this = get_this()]() {
             if (auto shared_this = weak_this.lock()) {
-              shared_this->Connect();
+              shared_this->Reconnect();
             }
           });
           return;
         }
 
         if (callbacks_to_run_.empty()) {
+          if (callback_run) {
+            // If we ran at least 1 callback, and the service is still connected, then we should
+            // reset the backoff.
+            backoff_.Reset();
+          }
           return;
         }
 
@@ -298,6 +303,7 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
         callbacks_to_run_.pop();
       }
 
+      callback_run = true;
       callback(service_client_);
     }
   }
