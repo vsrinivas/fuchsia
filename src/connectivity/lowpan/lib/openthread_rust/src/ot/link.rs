@@ -15,6 +15,9 @@ pub trait Link {
     /// Functional equivalent of [`otsys::otLinkSetChannel`](crate::otsys::otLinkSetChannel).
     fn set_channel(&self, index: ChannelIndex) -> Result;
 
+    /// Functional equivalent of [`otsys::otLinkGetCounters`](crate::otsys::otLinkGetCounters).
+    fn link_get_counters(&self) -> &MacCounters;
+
     /// Functional equivalent of
     /// [`otsys::otLinkGetExtendedAddress`](crate::otsys::otLinkGetExtendedAddress).
     fn get_extended_address(&self) -> &ExtAddress;
@@ -85,6 +88,10 @@ impl<T: Link + Boxable> Link for ot::Box<T> {
         self.as_ref().set_channel(index)
     }
 
+    fn link_get_counters(&self) -> &MacCounters {
+        self.as_ref().link_get_counters()
+    }
+
     fn get_extended_address(&self) -> &ExtAddress {
         self.as_ref().get_extended_address()
     }
@@ -150,6 +157,13 @@ impl Link for Instance {
 
     fn set_channel(&self, index: ChannelIndex) -> Result {
         Error::from(unsafe { otLinkSetChannel(self.as_ot_ptr(), index) }).into()
+    }
+
+    fn link_get_counters(&self) -> &MacCounters {
+        unsafe {
+            let mac_counters = otLinkGetCounters(self.as_ot_ptr());
+            MacCounters::ref_from_ot_ptr(mac_counters).unwrap()
+        }
     }
 
     fn get_extended_address(&self) -> &ExtAddress {
