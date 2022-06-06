@@ -32,9 +32,7 @@ use core::{
 
 use log::{debug, trace};
 use net_types::{
-    ip::{
-        Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet,
-    },
+    ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet},
     SpecifiedAddr, UnicastAddr, Witness,
 };
 use nonzero_ext::nonzero;
@@ -54,7 +52,7 @@ use crate::{
     ip::{
         device::{
             get_ipv4_device_state, get_ipv6_device_state, iter_ipv4_devices, iter_ipv6_devices,
-            state::{AddressState, AssignedAddress as _, IpDeviceState},
+            state::{AssignedAddress as _, IpDeviceState},
         },
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
@@ -279,24 +277,34 @@ impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6TransportLayerContext<()> fo
     type Proto17 = crate::transport::udp::UdpIpTransportContext;
 }
 
-impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext> TransportIpContext<I, ()> for Ctx<D, C>
-where
-    Ctx<D, C>: IpSocketHandler<I, ()>,
+impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C>> TransportIpContext<Ipv4, C>
+    for SC
 {
-    fn is_assigned_local_addr(&self, addr: I::Addr) -> bool {
-        match addr.to_ip_addr() {
-            IpAddr::V4(addr) => crate::ip::device::iter_ipv4_devices(self)
-                .any(|(_, state)| state.find_addr(&addr).is_some()),
-            IpAddr::V6(addr) => crate::ip::device::iter_ipv6_devices(self).any(|(_, state)| {
-                state
-                    .find_addr(&addr)
-                    .map(|entry| match entry.state {
-                        AddressState::Assigned => true,
-                        AddressState::Tentative { .. } => false,
-                    })
-                    .unwrap_or(false)
-            }),
-        }
+    fn is_assigned_local_addr(&self, addr: Ipv4Addr) -> bool {
+        SpecifiedAddr::new(addr).map_or(false, |addr| match self.address_status(None, addr) {
+            AddressStatus::Present(state) => match state {
+                Ipv4PresentAddressStatus::Unicast => true,
+                Ipv4PresentAddressStatus::LimitedBroadcast
+                | Ipv4PresentAddressStatus::SubnetBroadcast
+                | Ipv4PresentAddressStatus::Multicast => false,
+            },
+            AddressStatus::Unassigned => false,
+        })
+    }
+}
+
+impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C>> TransportIpContext<Ipv6, C>
+    for SC
+{
+    fn is_assigned_local_addr(&self, addr: Ipv6Addr) -> bool {
+        SpecifiedAddr::new(addr).map_or(false, |addr| match self.address_status(None, addr) {
+            AddressStatus::Present(status) => match status {
+                Ipv6PresentAddressStatus::Multicast
+                | Ipv6PresentAddressStatus::UnicastTentative => false,
+                Ipv6PresentAddressStatus::UnicastAssigned => true,
+            },
+            AddressStatus::Unassigned => false,
+        })
     }
 }
 
@@ -329,6 +337,14 @@ pub(crate) enum AddressStatus<S> {
     Unassigned,
 }
 
+/// The status of an IPv4 address.
+pub(crate) enum Ipv4PresentAddressStatus {
+    LimitedBroadcast,
+    SubnetBroadcast,
+    Multicast,
+    Unicast,
+}
+
 /// The status of an IPv6 address.
 pub(crate) enum Ipv6PresentAddressStatus {
     Multicast,
@@ -342,7 +358,7 @@ pub(crate) trait IpLayerIpExt: IpExt {
 }
 
 impl IpLayerIpExt for Ipv4 {
-    type AddressStatus = AddressStatus<()>;
+    type AddressStatus = AddressStatus<Ipv4PresentAddressStatus>;
 }
 
 impl IpLayerIpExt for Ipv6 {
@@ -1843,10 +1859,15 @@ fn receive_ipv4_packet_action<C, SC: IpLayerContext<Ipv4, C>>(
     // routing table.
     let address_device = if device.is_loopback() { None } else { Some(device) };
     match sync_ctx.address_status(address_device, dst_ip) {
-        AddressStatus::Present(()) => {
-            sync_ctx.increment_counter("receive_ipv4_packet_action::deliver");
-            ReceivePacketAction::Deliver
-        }
+        AddressStatus::Present(state) => match state {
+            Ipv4PresentAddressStatus::LimitedBroadcast
+            | Ipv4PresentAddressStatus::SubnetBroadcast
+            | Ipv4PresentAddressStatus::Multicast
+            | Ipv4PresentAddressStatus::Unicast => {
+                sync_ctx.increment_counter("receive_ipv4_packet_action::deliver");
+                ReceivePacketAction::Deliver
+            }
+        },
         AddressStatus::Unassigned => {
             receive_ip_packet_action_common::<Ipv4, _, _>(sync_ctx, ctx, dst_ip, device)
         }
@@ -2356,7 +2377,7 @@ mod tests {
 
     use net_types::{
         ethernet::Mac,
-        ip::{AddrSubnet, Ipv4Addr, Ipv6Addr},
+        ip::{AddrSubnet, IpAddr, Ipv4Addr, Ipv6Addr},
         MulticastAddr, UnicastAddr,
     };
     use packet::{Buf, ParseBuffer};

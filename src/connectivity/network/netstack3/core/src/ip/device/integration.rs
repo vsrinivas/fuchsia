@@ -48,8 +48,8 @@ use crate::{
             mld::{MldContext, MldFrameMetadata, MldGroupState},
             GmpHandler, MulticastGroupSet,
         },
-        send_ipv6_packet_from_device, AddressStatus, IpLayerIpExt, Ipv6PresentAddressStatus,
-        SendIpPacketMeta, DEFAULT_TTL,
+        send_ipv6_packet_from_device, AddressStatus, IpLayerIpExt, Ipv4PresentAddressStatus,
+        Ipv6PresentAddressStatus, SendIpPacketMeta, DEFAULT_TTL,
     },
 };
 
@@ -396,20 +396,32 @@ impl<C, SC: device::IpDeviceContext<Ipv4, C>> ip::IpDeviceContext<Ipv4, C> for S
         &self,
         device_id: Option<SC::DeviceId>,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
-    ) -> AddressStatus<()> {
+    ) -> AddressStatus<Ipv4PresentAddressStatus> {
         let get_status = |dev_state: &IpDeviceState<SC::Instant, Ipv4>| {
-            if dev_state
-                .iter_addrs()
-                .map(|addr| addr.addr_subnet())
-                .any(|(addr, subnet)| addr == dst_ip || dst_ip.get() == subnet.broadcast())
-                || dst_ip.is_limited_broadcast()
-                || MulticastAddr::from_witness(dst_ip)
-                    .map_or(false, |addr| dev_state.multicast_groups.contains(&addr))
-            {
-                AddressStatus::Present(())
-            } else {
-                AddressStatus::Unassigned
+            if dst_ip.is_limited_broadcast() {
+                return AddressStatus::Present(Ipv4PresentAddressStatus::LimitedBroadcast);
             }
+
+            if MulticastAddr::new(dst_ip.get())
+                .map_or(false, |addr| dev_state.multicast_groups.contains(&addr))
+            {
+                return AddressStatus::Present(Ipv4PresentAddressStatus::Multicast);
+            }
+
+            dev_state
+                .iter_addrs()
+                .find_map(|addr| {
+                    let (addr, subnet) = addr.addr_subnet();
+
+                    if addr == dst_ip {
+                        Some(AddressStatus::Present(Ipv4PresentAddressStatus::Unicast))
+                    } else if dst_ip.get() == subnet.broadcast() {
+                        Some(AddressStatus::Present(Ipv4PresentAddressStatus::SubnetBroadcast))
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(AddressStatus::Unassigned)
         };
 
         if let Some(device_id) = device_id {
@@ -417,7 +429,7 @@ impl<C, SC: device::IpDeviceContext<Ipv4, C>> ip::IpDeviceContext<Ipv4, C> for S
         } else {
             iter_ipv4_devices(self)
                 .find_map(|(_device_id, state)| match get_status(state) {
-                    AddressStatus::Present(()) => Some(AddressStatus::Present(())),
+                    state @ AddressStatus::Present(_) => Some(state),
                     AddressStatus::Unassigned => None,
                 })
                 .unwrap_or(AddressStatus::Unassigned)
