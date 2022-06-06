@@ -62,6 +62,35 @@ TEST_F(Max98373Test, GetInfo) {
   }
 }
 
+TEST_F(Max98373Test, GetDaiFormats) {
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  ddk::GpioProtocolClient unused_gpio;
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
+      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  auto codec = child_dev->GetDeviceContext<Max98373Codec>();
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  {
+    auto formats = client.GetDaiFormats();
+    EXPECT_EQ(formats.value().number_of_channels.size(), 1);
+    EXPECT_EQ(formats.value().number_of_channels[0], 8);
+    EXPECT_EQ(formats.value().sample_formats.size(), 1);
+    EXPECT_EQ(formats.value().sample_formats[0], SampleFormat::PCM_SIGNED);
+    EXPECT_EQ(formats.value().frame_formats.size(), 1);
+    EXPECT_EQ(formats.value().frame_formats[0], FrameFormat::TDM1);
+    EXPECT_EQ(formats.value().frame_rates.size(), 1);
+    EXPECT_EQ(formats.value().frame_rates[0], 48'000);
+    EXPECT_EQ(formats.value().bits_per_slot.size(), 2);
+    EXPECT_EQ(formats.value().bits_per_slot[0], 16);
+    EXPECT_EQ(formats.value().bits_per_slot[1], 32);
+    EXPECT_EQ(formats.value().bits_per_sample.size(), 1);
+    EXPECT_EQ(formats.value().bits_per_sample[0], 16);
+  }
+}
+
 TEST_F(Max98373Test, Reset) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
 

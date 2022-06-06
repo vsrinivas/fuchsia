@@ -45,7 +45,8 @@ static const std::vector<uint32_t> kSupportedNumberOfChannels = {8};
 static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
 static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::TDM1};
 static const std::vector<uint32_t> kSupportedRates = {48'000};
-static const std::vector<uint8_t> kSupportedBitsPerSlot = {16};
+// TODO(101508): Advertise only the supported and configured bits per slot.
+static const std::vector<uint8_t> kSupportedBitsPerSlot = {16, 32};
 static const std::vector<uint8_t> kSupportedBitsPerSample = {16};
 static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .number_of_channels = kSupportedNumberOfChannels,
@@ -222,7 +223,7 @@ zx_status_t Max98373::WriteReg(uint16_t reg, uint8_t value) {
   write_buffer[0] = static_cast<uint8_t>((reg >> 8) & 0xff);
   write_buffer[1] = static_cast<uint8_t>((reg >> 0) & 0xff);
   write_buffer[2] = value;
-//#define TRACE_I2C
+// #define TRACE_I2C
 #ifdef TRACE_I2C
   printf("Writing register 0x%02X to value 0x%02X\n", reg, value);
 #endif
