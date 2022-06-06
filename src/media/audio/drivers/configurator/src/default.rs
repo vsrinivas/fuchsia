@@ -243,7 +243,94 @@ pub struct DefaultConfigurator {
     stream_configs: Vec<StreamConfig>,
 }
 
-impl DefaultConfigurator {}
+impl DefaultConfigurator {
+    pub fn common_dai_format(
+        formats1: &Vec<DaiSupportedFormats>,
+        formats2: &Vec<DaiSupportedFormats>,
+    ) -> Option<DaiFormat> {
+        // TODO(95437): Add heuristics and configurability for the decision of what DAI formats
+        // to use when there is more than one match here..
+        for i in formats1 {
+            for j in formats2 {
+                // All these values must be set before we say we found the common dai_format.
+                let mut dai_format = DaiFormat {
+                    number_of_channels: 0,
+                    channels_to_use_bitmask: 0,
+                    sample_format: DaiSampleFormat::PcmSigned,
+                    frame_format: DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                    frame_rate: 0,
+                    bits_per_sample: 0,
+                    bits_per_slot: 0,
+                };
+                let mut found = false;
+                for k in &i.number_of_channels {
+                    if j.number_of_channels.contains(k) {
+                        dai_format.number_of_channels = *k;
+                        found = true;
+                    }
+                }
+                if !found {
+                    continue;
+                }
+                // Default to use all channels.
+                dai_format.channels_to_use_bitmask = (1 << dai_format.number_of_channels) - 1;
+                found = false;
+                for k in &i.sample_formats {
+                    if j.sample_formats.contains(k) {
+                        dai_format.sample_format = *k;
+                        found = true;
+                    }
+                }
+                if !found {
+                    continue;
+                }
+                found = false;
+                for k in &i.frame_formats {
+                    if j.frame_formats.contains(k) {
+                        dai_format.frame_format = *k;
+                        found = true;
+                    }
+                }
+                if !found {
+                    continue;
+                }
+                found = false;
+                for k in &i.frame_rates {
+                    if j.frame_rates.contains(k) {
+                        dai_format.frame_rate = *k;
+                        found = true;
+                    }
+                }
+                if !found {
+                    continue;
+                }
+                found = false;
+                for k in &i.bits_per_sample {
+                    if j.bits_per_sample.contains(k) {
+                        dai_format.bits_per_sample = *k;
+                        found = true;
+                    }
+                }
+                if !found {
+                    continue;
+                }
+                found = false;
+                for k in &i.bits_per_slot {
+                    if j.bits_per_slot.contains(k) {
+                        dai_format.bits_per_slot = *k;
+                        found = true;
+                    }
+                }
+                if !found {
+                    continue;
+                }
+                tracing::trace!("Found common DAI format {:?}", dai_format);
+                return Some(dai_format);
+            }
+        }
+        None
+    }
+}
 
 #[async_trait]
 impl Configurator for DefaultConfigurator {
@@ -582,6 +669,204 @@ mod tests {
     }
 
     // Unit tests.
+
+    #[fuchsia::test]
+    fn test_common_dai_format() -> Result<()> {
+        // Empty vectors return none.
+        let mut all_formats_left: Vec<DaiSupportedFormats> = vec![];
+        let mut all_formats_right: Vec<DaiSupportedFormats> = vec![];
+        let common = DefaultConfigurator::common_dai_format(&all_formats_left, &all_formats_right);
+        assert!(common.is_none());
+
+        // One format in both side returns the format.
+        let formats_left = DaiSupportedFormats {
+            number_of_channels: vec![2],
+            sample_formats: vec![DaiSampleFormat::PcmSigned],
+            frame_formats: vec![DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S)],
+            frame_rates: vec![48000],
+            bits_per_sample: vec![24],
+            bits_per_slot: vec![32],
+        };
+        all_formats_left.push(formats_left.clone());
+        all_formats_right.push(formats_left.clone());
+        let common = DefaultConfigurator::common_dai_format(&all_formats_left, &all_formats_right);
+        assert!(common.is_some());
+        assert!(common.unwrap().number_of_channels == formats_left.number_of_channels[0]);
+        assert!(common.unwrap().sample_format == formats_left.sample_formats[0]);
+        assert!(common.unwrap().frame_format == formats_left.frame_formats[0]);
+        assert!(common.unwrap().frame_rate == formats_left.frame_rates[0]);
+        assert!(common.unwrap().bits_per_sample == formats_left.bits_per_sample[0]);
+        assert!(common.unwrap().bits_per_slot == formats_left.bits_per_slot[0]);
+
+        // A format non-matching returns none.
+        let formats_right = DaiSupportedFormats {
+            number_of_channels: vec![8],
+            sample_formats: vec![DaiSampleFormat::PcmSigned],
+            frame_formats: vec![DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S)],
+            frame_rates: vec![48000],
+            bits_per_sample: vec![24],
+            bits_per_slot: vec![32],
+        };
+        all_formats_left = vec![formats_left.clone()];
+        all_formats_right = vec![formats_right];
+        let common = DefaultConfigurator::common_dai_format(&all_formats_left, &all_formats_right);
+        assert!(common.is_none());
+
+        // Matching format found. Left only advertises one format.
+        let formats_right = DaiSupportedFormats {
+            number_of_channels: vec![2, 4, 6, 8],
+            sample_formats: vec![DaiSampleFormat::PcmUnsigned, DaiSampleFormat::PcmSigned],
+            frame_formats: vec![
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoLeft),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoRight),
+            ],
+            frame_rates: vec![16000, 24000, 48000, 96000],
+            bits_per_sample: vec![16, 24, 32],
+            bits_per_slot: vec![16, 32],
+        };
+        all_formats_left = vec![formats_left.clone()];
+        all_formats_right = vec![formats_right];
+        let common = DefaultConfigurator::common_dai_format(&all_formats_left, &all_formats_right);
+        assert!(common.is_some());
+        assert!(common.unwrap().number_of_channels == formats_left.number_of_channels[0]);
+        assert!(common.unwrap().sample_format == formats_left.sample_formats[0]);
+        assert!(common.unwrap().frame_format == formats_left.frame_formats[0]);
+        assert!(common.unwrap().frame_rate == formats_left.frame_rates[0]);
+        assert!(common.unwrap().bits_per_sample == formats_left.bits_per_sample[0]);
+        assert!(common.unwrap().bits_per_slot == formats_left.bits_per_slot[0]);
+
+        // Matching format found. Right only advertises one format.
+        let formats_right = formats_left;
+        let formats_left = DaiSupportedFormats {
+            number_of_channels: vec![2, 4, 6, 8],
+            sample_formats: vec![DaiSampleFormat::PcmUnsigned, DaiSampleFormat::PcmSigned],
+            frame_formats: vec![
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoLeft),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoRight),
+            ],
+            frame_rates: vec![16000, 24000, 48000, 96000],
+            bits_per_sample: vec![16, 24, 32],
+            bits_per_slot: vec![16, 32],
+        };
+        all_formats_left = vec![formats_left];
+        all_formats_right = vec![formats_right.clone()];
+        let common = DefaultConfigurator::common_dai_format(&all_formats_left, &all_formats_right);
+        assert!(common.is_some());
+        assert!(common.unwrap().number_of_channels == formats_right.number_of_channels[0]);
+        assert!(common.unwrap().sample_format == formats_right.sample_formats[0]);
+        assert!(common.unwrap().frame_format == formats_right.frame_formats[0]);
+        assert!(common.unwrap().frame_rate == formats_right.frame_rates[0]);
+        assert!(common.unwrap().bits_per_sample == formats_right.bits_per_sample[0]);
+        assert!(common.unwrap().bits_per_slot == formats_right.bits_per_slot[0]);
+
+        // Matching format found. Both sides have multiple formats.
+        let formats_right = DaiSupportedFormats {
+            number_of_channels: vec![2, 4, 8],
+            sample_formats: vec![DaiSampleFormat::PcmUnsigned, DaiSampleFormat::PcmSigned],
+            frame_formats: vec![
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoRight),
+            ],
+            frame_rates: vec![16000, 24000, 48000],
+            bits_per_sample: vec![16, 24, 32],
+            bits_per_slot: vec![16, 32],
+        };
+        let formats_left = DaiSupportedFormats {
+            number_of_channels: vec![1, 2, 3],
+            sample_formats: vec![DaiSampleFormat::PcmSigned],
+            frame_formats: vec![
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoLeft),
+            ],
+            frame_rates: vec![48000, 96000],
+            bits_per_sample: vec![20, 24],
+            bits_per_slot: vec![32],
+        };
+        all_formats_left = vec![formats_left];
+        all_formats_right = vec![formats_right];
+        let common = DefaultConfigurator::common_dai_format(&all_formats_left, &all_formats_right);
+        assert!(common.is_some());
+        assert!(common.unwrap().number_of_channels == 2);
+        assert!(common.unwrap().sample_format == DaiSampleFormat::PcmSigned);
+        assert!(
+            common.unwrap().frame_format
+                == DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S)
+        );
+        assert!(common.unwrap().frame_rate == 48000);
+        assert!(common.unwrap().bits_per_sample == 24);
+        assert!(common.unwrap().bits_per_slot == 32);
+
+        // Matching format found.
+        // Both sides have vectors with multiple entries and each entry has multiple values formats.
+        let formats_right1 = DaiSupportedFormats {
+            number_of_channels: vec![8],
+            sample_formats: vec![DaiSampleFormat::PcmSigned],
+            frame_formats: vec![DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S)],
+            frame_rates: vec![48000],
+            bits_per_sample: vec![32],
+            bits_per_slot: vec![16, 32],
+        };
+        let formats_right2 = DaiSupportedFormats {
+            number_of_channels: vec![2, 4, 8],
+            sample_formats: vec![DaiSampleFormat::PcmUnsigned, DaiSampleFormat::PcmUnsigned],
+            frame_formats: vec![
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoRight),
+            ],
+            frame_rates: vec![16000, 24000, 48000],
+            bits_per_sample: vec![16, 24, 32],
+            bits_per_slot: vec![16, 32],
+        };
+        let formats_left1 = DaiSupportedFormats {
+            number_of_channels: vec![1],
+            sample_formats: vec![DaiSampleFormat::PcmSigned],
+            frame_formats: vec![
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoLeft),
+            ],
+            frame_rates: vec![48000, 96000],
+            bits_per_sample: vec![20, 24],
+            bits_per_slot: vec![32],
+        };
+        let formats_left2 = DaiSupportedFormats {
+            number_of_channels: vec![1, 2, 3],
+            sample_formats: vec![DaiSampleFormat::PcmSigned],
+            frame_formats: vec![
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::I2S),
+                DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoLeft),
+            ],
+            frame_rates: vec![48000],
+            bits_per_sample: vec![16, 20, 24],
+            bits_per_slot: vec![16, 32],
+        };
+        let formats_left3 = DaiSupportedFormats {
+            number_of_channels: vec![1, 2, 3],
+            sample_formats: vec![DaiSampleFormat::PcmUnsigned],
+            frame_formats: vec![DaiFrameFormat::FrameFormatStandard(
+                DaiFrameFormatStandard::StereoRight,
+            )],
+            frame_rates: vec![48000],
+            bits_per_sample: vec![16],
+            bits_per_slot: vec![16],
+        };
+        all_formats_left = vec![formats_left1, formats_left2, formats_left3];
+        all_formats_right = vec![formats_right1, formats_right2];
+        let common = DefaultConfigurator::common_dai_format(&all_formats_left, &all_formats_right);
+        assert!(common.is_some());
+        assert!(common.unwrap().number_of_channels == 2);
+        assert!(common.unwrap().sample_format == DaiSampleFormat::PcmUnsigned);
+        assert!(
+            common.unwrap().frame_format
+                == DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::StereoRight)
+        );
+        assert!(common.unwrap().frame_rate == 48000);
+        assert!(common.unwrap().bits_per_sample == 16);
+        assert!(common.unwrap().bits_per_slot == 16);
+
+        Ok(())
+    }
 
     fn with_stream_config_stream<F>(_name: &str, test: F)
     where
