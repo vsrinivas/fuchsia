@@ -2,29 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_cobalt::CobaltEvent;
-use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy};
-use fidl_fuchsia_time_external::TimeSample;
-use fuchsia_async as fasync;
-use fuchsia_cobalt::CobaltEventExt;
-use fuchsia_zircon::{self as zx};
-use futures::{stream::StreamExt, Future};
-use std::sync::Arc;
-use test_util::{assert_geq, assert_leq, assert_lt};
-use time_metrics_registry::{
-    RealTimeClockEventsMetricDimensionEventType as RtcEventType,
-    TimeMetricDimensionExperiment as Experiment, TimeMetricDimensionTrack as Track,
-    TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType,
-    TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
-    TimekeeperTrackEventsMetricDimensionEventType as TrackEvent, REAL_TIME_CLOCK_EVENTS_METRIC_ID,
-    TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-    TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID, TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
-    TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
-};
-use timekeeper_integration_lib::{
-    create_cobalt_event_stream, new_clock, poll_until, poll_until_some, rtc_time_to_zx_time,
-    NestedTimekeeper, PushSourcePuppet, RtcUpdates, BACKSTOP_TIME, BEFORE_BACKSTOP_TIME,
-    BETWEEN_SAMPLES, STD_DEV, VALID_RTC_TIME, VALID_TIME, VALID_TIME_2,
+use {
+    fidl_fuchsia_cobalt::CobaltEvent,
+    fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy},
+    fidl_fuchsia_time_external::TimeSample,
+    fuchsia_async as fasync,
+    fuchsia_cobalt::CobaltEventExt,
+    fuchsia_zircon::{self as zx},
+    futures::{stream::StreamExt, Future},
+    std::sync::Arc,
+    test_util::{assert_geq, assert_leq, assert_lt},
+    time_metrics_registry::{
+        RealTimeClockEventsMetricDimensionEventType as RtcEventType,
+        TimeMetricDimensionExperiment as Experiment, TimeMetricDimensionTrack as Track,
+        TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType,
+        TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
+        TimekeeperTrackEventsMetricDimensionEventType as TrackEvent,
+        REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
+        TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
+        TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID, TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+    },
+    timekeeper_integration_lib::{
+        create_cobalt_event_stream, new_clock, poll_until, poll_until_some, rtc_time_to_zx_time,
+        NestedTimekeeper, PushSourcePuppet, RtcUpdates, BACKSTOP_TIME, BEFORE_BACKSTOP_TIME,
+        BETWEEN_SAMPLES, STD_DEV, VALID_RTC_TIME, VALID_TIME, VALID_TIME_2,
+    },
 };
 
 /// Run a test against an instance of timekeeper. Timekeeper will maintain the provided clock.
@@ -39,13 +41,13 @@ where
     let mut executor = fasync::LocalExecutor::new().unwrap();
     executor.run_singlethreaded(async move {
         let clock_arc = Arc::new(clock);
-        let (timekeeper, push_source_controller, rtc, cobalt, _) = NestedTimekeeper::new(
+        let (_timekeeper, push_source_controller, rtc, cobalt, _) = NestedTimekeeper::new(
             Arc::clone(&clock_arc),
             initial_rtc_time,
             false, // no fake clock.
-        );
+        )
+        .await;
         test_fn(push_source_controller, rtc, cobalt).await;
-        timekeeper.teardown().await;
     });
 }
 

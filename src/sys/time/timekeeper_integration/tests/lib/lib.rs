@@ -2,37 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use chrono::{Datelike, TimeZone, Timelike};
-use fidl::endpoints::{create_endpoints, ServerEnd};
-use fidl_fuchsia_cobalt::{CobaltEvent, LoggerFactoryMarker};
-use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProxy};
-use fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream};
-use fidl_fuchsia_io as fio;
-use fidl_fuchsia_logger::LogSinkMarker;
-use fidl_fuchsia_testing::{
-    FakeClockControlMarker, FakeClockControlProxy, FakeClockMarker, FakeClockProxy,
+use {
+    chrono::{Datelike, TimeZone, Timelike},
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_cobalt::CobaltEvent,
+    fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProxy},
+    fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream},
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_testing::{
+        FakeClockControlMarker, FakeClockControlProxy, FakeClockMarker, FakeClockProxy,
+    },
+    fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream},
+    fidl_fuchsia_time_external::{PushSourceMarker, Status, TimeSample},
+    fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream},
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{
+        Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, RealmInstance,
+        Ref, Route,
+    },
+    fuchsia_zircon::{self as zx, HandleBased, Rights},
+    futures::{
+        channel::mpsc::Sender,
+        stream::{Stream, StreamExt, TryStreamExt},
+        Future, FutureExt, SinkExt,
+    },
+    lazy_static::lazy_static,
+    parking_lot::Mutex,
+    push_source::{PushSource, TestUpdateAlgorithm, Update},
+    std::{ops::Deref, sync::Arc},
+    time_metrics_registry::PROJECT_ID,
+    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, pseudo_directory},
 };
-use fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream};
-use fidl_fuchsia_time_external::{PushSourceMarker, Status, TimeSample};
-use fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream};
-use fuchsia_async as fasync;
-use fuchsia_component::{
-    client::{launcher, App, AppBuilder},
-    server::{NestedEnvironment, ServiceFs},
-};
-use fuchsia_zircon::{self as zx, HandleBased, Rights};
-use futures::{
-    channel::mpsc::Sender,
-    stream::{Stream, StreamExt, TryStreamExt},
-    Future, SinkExt,
-};
-use lazy_static::lazy_static;
-use log::{debug, info};
-use parking_lot::Mutex;
-use push_source::{PushSource, TestUpdateAlgorithm, Update};
-use std::{ops::Deref, sync::Arc};
-use time_metrics_registry::PROJECT_ID;
-use vfs::{directory::entry::DirectoryEntry, pseudo_directory};
 
 /// URL for timekeeper.
 const TIMEKEEPER_URL: &str =
@@ -40,33 +41,185 @@ const TIMEKEEPER_URL: &str =
 /// URL for timekeeper with fake time.
 const TIMEKEEPER_FAKE_TIME_URL: &str =
     "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/timekeeper_with_fake_time.cmx";
-/// URL for the fake time component.
-const FAKE_TIME_URL: &str = "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/fake_clock.cmx";
 /// URL for fake cobalt.
-const COBALT_URL: &str = "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx";
+const COBALT_URL: &str = "#meta/mock_cobalt.cm";
+/// URL for the fake clock component.
+const FAKE_CLOCK_URL: &str = "#meta/fake_clock.cm";
 
 /// A reference to a timekeeper running inside a nested environment which runs fake versions of
 /// the services timekeeper requires.
 pub struct NestedTimekeeper {
-    /// Application object for timekeeper. Kept in memory to keep the component alive.
-    _timekeeper_app: App,
-
-    /// Application objects for additional launched components. Kept in memory to keep components
-    /// alive.
-    _launched_apps: Vec<App>,
-
-    /// The nested environment timekeeper is running in. Needs to be kept
-    /// in scope to keep the nested environment alive.
-    _nested_envronment: NestedEnvironment,
-
-    /// Task running fake services injected into the nested environment.
-    _task: fasync::Task<()>,
+    _realm_instance: RealmInstance,
 }
 
-/// Services injected and implemented by `NestedTimekeeper`.
-enum InjectedServices {
-    TimeSourceControl(TimeSourceControlRequestStream),
-    Maintenance(MaintenanceRequestStream),
+impl NestedTimekeeper {
+    /// Launches an instance of timekeeper maintaining the provided |clock| in a nested
+    /// environment. If |initial_rtc_time| is provided, then the environment contains a fake RTC
+    /// device that reports the time as |initial_rtc_time|.
+    /// If use_fake_clock is true, also launches a fake clock service.
+    /// Returns a `NestedTimekeeper`, handles to the PushSource and RTC it obtains updates from,
+    /// Cobalt debug querier, and a fake clock control handle if use_fake_clock is true.
+    pub async fn new(
+        clock: Arc<zx::Clock>,
+        initial_rtc_time: Option<zx::Time>,
+        use_fake_clock: bool,
+    ) -> (Self, Arc<PushSourcePuppet>, RtcUpdates, LoggerQuerierProxy, Option<FakeClockController>)
+    {
+        let push_source_puppet = Arc::new(PushSourcePuppet::new());
+
+        let builder = RealmBuilder::new().await.unwrap();
+        let mock_cobalt =
+            builder.add_child("mock_cobalt", COBALT_URL, ChildOptions::new()).await.unwrap();
+
+        let timekeeper_url = if use_fake_clock { TIMEKEEPER_FAKE_TIME_URL } else { TIMEKEEPER_URL };
+        let timekeeper = builder
+            .add_legacy_child("timekeeper_test", timekeeper_url, ChildOptions::new().eager())
+            .await
+            .unwrap();
+
+        let timesource_server = builder
+            .add_local_child(
+                "timesource_mock",
+                {
+                    let push_source_puppet = Arc::clone(&push_source_puppet);
+                    move |handles: LocalComponentHandles| {
+                        Box::pin(timesource_mock_server(handles, Arc::clone(&push_source_puppet)))
+                    }
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        let maintenance_server = builder
+            .add_local_child(
+                "maintenance_mock",
+                move |handles: LocalComponentHandles| {
+                    Box::pin(maintenance_mock_server(handles, Arc::clone(&clock)))
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        // Launch fake clock if needed.
+        if use_fake_clock {
+            let fake_clock =
+                builder.add_child("fake_clock", FAKE_CLOCK_URL, ChildOptions::new()).await.unwrap();
+
+            builder
+                .add_route(
+                    Route::new()
+                        .capability(Capability::protocol_by_name(
+                            "fuchsia.testing.FakeClockControl",
+                        ))
+                        .from(&fake_clock)
+                        .to(Ref::parent()),
+                )
+                .await
+                .unwrap();
+
+            builder
+                .add_route(
+                    Route::new()
+                        .capability(Capability::protocol_by_name("fuchsia.testing.FakeClock"))
+                        .from(&fake_clock)
+                        .to(Ref::parent())
+                        .to(&timekeeper),
+                )
+                .await
+                .unwrap();
+
+            builder
+                .add_route(
+                    Route::new()
+                        .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                        .from(Ref::parent())
+                        .to(&fake_clock),
+                )
+                .await
+                .unwrap();
+        };
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.time.Maintenance"))
+                    .from(&maintenance_server)
+                    .to(&timekeeper),
+            )
+            .await
+            .unwrap();
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("test.time.TimeSourceControl"))
+                    .from(&timesource_server)
+                    .to(&timekeeper),
+            )
+            .await
+            .unwrap();
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.cobalt.test.LoggerQuerier"))
+                    .from(&mock_cobalt)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .from(&mock_cobalt)
+                    .to(&timekeeper),
+            )
+            .await
+            .unwrap();
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&mock_cobalt)
+                    .to(&timekeeper)
+                    .to(&timesource_server)
+                    .to(&maintenance_server),
+            )
+            .await
+            .unwrap();
+
+        let rtc_updates = setup_rtc(initial_rtc_time, &builder, &timekeeper).await;
+        let realm_instance = builder.build().await.unwrap();
+
+        let fake_clock_control = if use_fake_clock {
+            let control_proxy = realm_instance
+                .root
+                .connect_to_protocol_at_exposed_dir::<FakeClockControlMarker>()
+                .unwrap();
+            let clock_proxy = realm_instance
+                .root
+                .connect_to_protocol_at_exposed_dir::<FakeClockMarker>()
+                .unwrap();
+            Some(FakeClockController { control_proxy, clock_proxy })
+        } else {
+            None
+        };
+
+        let cobalt_querier = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<LoggerQuerierMarker>()
+            .unwrap();
+
+        let nested_timekeeper = Self { _realm_instance: realm_instance };
+
+        (nested_timekeeper, push_source_puppet, rtc_updates, cobalt_querier, fake_clock_control)
+    }
 }
 
 /// A `PushSource` that allows a single client and can be controlled by a test.
@@ -195,169 +348,159 @@ impl FakeClockController {
     }
 }
 
-impl NestedTimekeeper {
-    /// Launches an instance of timekeeper maintaining the provided |clock| in a nested
-    /// environment. If |initial_rtc_time| is provided, then the environment contains a fake RTC
-    /// device that reports the time as |initial_rtc_time|.
-    /// If use_fake_clock is true, also launches a fake clock service.
-    /// Returns a `NestedTimekeeper`, handles to the PushSource and RTC it obtains updates from,
-    /// Cobalt debug querier, and a fake clock control handle if use_fake_clock is true.
-    pub fn new(
-        clock: Arc<zx::Clock>,
-        initial_rtc_time: Option<zx::Time>,
-        use_fake_clock: bool,
-    ) -> (Self, Arc<PushSourcePuppet>, RtcUpdates, LoggerQuerierProxy, Option<FakeClockController>)
-    {
-        let mut service_fs = ServiceFs::new();
-        // Route logs for components in nested env to the same logsink as the test.
-        service_fs.add_proxy_service::<LogSinkMarker, _>();
+async fn setup_rtc(
+    initial_rtc_time: Option<zx::Time>,
+    builder: &RealmBuilder,
+    timekeeper: &ChildRef,
+) -> RtcUpdates {
+    let rtc_updates = RtcUpdates(Arc::new(Mutex::new(vec![])));
 
-        let mut launched_apps = vec![];
-        // Launch a new instance of cobalt for each environment. This allows verifying
-        // the events cobalt receives for each test case.
-        let cobalt_app = AppBuilder::new(COBALT_URL).spawn(&launcher().unwrap()).unwrap();
-        service_fs.add_proxy_service_to::<LoggerFactoryMarker, _>(Arc::clone(
-            cobalt_app.directory_request(),
-        ));
-        let cobalt_querier = cobalt_app.connect_to_protocol::<LoggerQuerierMarker>().unwrap();
-        launched_apps.push(cobalt_app);
+    let rtc_dir = match initial_rtc_time {
+        Some(initial_time) => pseudo_directory! {
+            "class" => pseudo_directory! {
+                "rtc" => pseudo_directory! {
+                    "000" => vfs::service::host({
+                        let rtc_updates = rtc_updates.clone();
+                        move |stream| {
+                            serve_fake_rtc(initial_time, rtc_updates.clone(), stream)
+                        }
+                    })
+                }
+            }
+        },
+        None => pseudo_directory! {
+            "class" => pseudo_directory! {
+                "rtc" => pseudo_directory! {
+                }
+            }
+        },
+    };
 
-        // Launch fake clock if needed, again a new instance for each environment.
-        let fake_clock_control = if use_fake_clock {
-            let fake_clock_app =
-                AppBuilder::new(FAKE_TIME_URL).spawn(&launcher().unwrap()).unwrap();
-            service_fs.add_proxy_service_to::<FakeClockMarker, _>(Arc::clone(
-                fake_clock_app.directory_request(),
-            ));
-            let control_proxy =
-                fake_clock_app.connect_to_protocol::<FakeClockControlMarker>().unwrap();
-            let clock_proxy = fake_clock_app.connect_to_protocol::<FakeClockMarker>().unwrap();
-            launched_apps.push(fake_clock_app);
-            Some(FakeClockController { control_proxy, clock_proxy })
-        } else {
-            None
-        };
-
-        // Inject test control and maintenence services.
-        service_fs.add_fidl_service(InjectedServices::TimeSourceControl);
-        service_fs.add_fidl_service(InjectedServices::Maintenance);
-        // Inject fake devfs.
-        let rtc_updates = RtcUpdates(Arc::new(Mutex::new(vec![])));
-        let rtc_update_clone = rtc_updates.clone();
-        let (devmgr_client, devmgr_server) = create_endpoints::<fio::NodeMarker>().unwrap();
-        let fake_devfs = match initial_rtc_time {
-            Some(initial_time) => pseudo_directory! {
-                "class" => pseudo_directory! {
-                    "rtc" => pseudo_directory! {
-                        "000" => vfs::service::host(move |stream| {
-                            debug!("Fake RTC connected.");
-                            Self::serve_fake_rtc(initial_time, rtc_update_clone.clone(), stream)
-                        })
+    let fake_rtc_server = builder
+        .add_local_child(
+            "fake_rtc",
+            {
+                move |handles| {
+                    let rtc_dir = rtc_dir.clone();
+                    async move {
+                        let scope = ExecutionScope::new();
+                        let (client_end, server_end) =
+                            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
+                        let () = rtc_dir.open(
+                            scope.clone(),
+                            fio::OpenFlags::RIGHT_READABLE
+                                | fio::OpenFlags::RIGHT_WRITABLE
+                                | fio::OpenFlags::RIGHT_EXECUTABLE,
+                            0,
+                            vfs::path::Path::dot(),
+                            ServerEnd::new(server_end.into_channel()),
+                        );
+                        let mut fs = ServiceFs::new();
+                        fs.add_remote("dev", client_end.into_proxy().unwrap());
+                        fs.serve_connection(handles.outgoing_dir.into_channel())
+                            .expect("failed to serve fake RTC ServiceFs");
+                        fs.collect::<()>().await;
+                        Ok(())
                     }
+                    .boxed()
                 }
             },
-            None => pseudo_directory! {
-                "class" => pseudo_directory! {
-                    "rtc" => pseudo_directory! {
-                    }
-                }
-            },
-        };
-        fake_devfs.open(
-            vfs::execution_scope::ExecutionScope::new(),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-            fio::MODE_TYPE_DIRECTORY,
-            vfs::path::Path::dot(),
-            devmgr_server,
-        );
+            ChildOptions::new().eager(),
+        )
+        .await
+        .unwrap();
 
-        let timekeeper_url = if use_fake_clock { TIMEKEEPER_FAKE_TIME_URL } else { TIMEKEEPER_URL };
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::directory("dev").path("/dev").rights(fio::RW_STAR_DIR))
+                .from(&fake_rtc_server)
+                .to(&*timekeeper),
+        )
+        .await
+        .unwrap();
 
-        let nested_environment =
-            service_fs.create_salted_nested_environment("timekeeper_test").unwrap();
-        let timekeeper_app = AppBuilder::new(timekeeper_url)
-            .add_handle_to_namespace("/dev".to_string(), devmgr_client.into_handle())
-            .spawn(nested_environment.launcher())
-            .unwrap();
+    rtc_updates
+}
 
-        let push_source_puppet = Arc::new(PushSourcePuppet::new());
-        let puppet_clone = Arc::clone(&push_source_puppet);
-
-        let injected_service_fut = async move {
-            service_fs
-                .for_each_concurrent(None, |conn_req| async {
-                    match conn_req {
-                        InjectedServices::TimeSourceControl(stream) => {
-                            debug!("Time source control service connected.");
-                            Self::serve_test_control(&*puppet_clone, stream).await;
-                        }
-                        InjectedServices::Maintenance(stream) => {
-                            debug!("Maintenance service connected.");
-                            Self::serve_maintenance(Arc::clone(&clock), stream).await;
-                        }
-                    }
-                })
-                .await;
-        };
-
-        let nested_timekeeper = NestedTimekeeper {
-            _timekeeper_app: timekeeper_app,
-            _launched_apps: launched_apps,
-            _nested_envronment: nested_environment,
-            _task: fasync::Task::spawn(injected_service_fut),
-        };
-
-        (nested_timekeeper, push_source_puppet, rtc_updates, cobalt_querier, fake_clock_control)
-    }
-
-    async fn serve_test_control(puppet: &PushSourcePuppet, stream: TimeSourceControlRequestStream) {
-        stream
-            .try_for_each_concurrent(None, |req| async {
-                let TimeSourceControlRequest::ConnectPushSource { push_source, .. } = req;
-                puppet.serve_client(push_source);
-                Ok(())
-            })
-            .await
-            .unwrap();
-    }
-
-    async fn serve_fake_rtc(
-        initial_time: zx::Time,
-        rtc_updates: RtcUpdates,
-        mut stream: DeviceRequestStream,
-    ) {
-        while let Some(req) = stream.try_next().await.unwrap() {
-            match req {
-                DeviceRequest::Get { responder } => {
-                    // Since timekeeper only pulls a time off of the RTC device once on startup, we
-                    // don't attempt to update the sent time.
-                    responder.send(&mut zx_time_to_rtc_time(initial_time)).unwrap();
-                    info!("Sent response from fake RTC.");
-                }
-                DeviceRequest::Set { rtc, responder } => {
-                    rtc_updates.0.lock().push(rtc);
-                    responder.send(zx::Status::OK.into_raw()).unwrap();
-                }
+async fn serve_fake_rtc(
+    initial_time: zx::Time,
+    rtc_updates: RtcUpdates,
+    mut stream: DeviceRequestStream,
+) {
+    while let Some(req) = stream.try_next().await.unwrap() {
+        match req {
+            DeviceRequest::Get { responder } => {
+                // Since timekeeper only pulls a time off of the RTC device once on startup, we
+                // don't attempt to update the sent time.
+                responder.send(&mut zx_time_to_rtc_time(initial_time)).unwrap();
+            }
+            DeviceRequest::Set { rtc, responder } => {
+                rtc_updates.0.lock().push(rtc);
+                responder.send(zx::Status::OK.into_raw()).unwrap();
             }
         }
     }
+}
 
-    async fn serve_maintenance(clock_handle: Arc<zx::Clock>, mut stream: MaintenanceRequestStream) {
-        while let Some(req) = stream.try_next().await.unwrap() {
-            let MaintenanceRequest::GetWritableUtcClock { responder } = req;
-            responder.send(clock_handle.duplicate_handle(Rights::SAME_RIGHTS).unwrap()).unwrap();
-        }
-    }
+async fn serve_test_control(puppet: &PushSourcePuppet, stream: TimeSourceControlRequestStream) {
+    stream
+        .try_for_each_concurrent(None, |req| async {
+            let TimeSourceControlRequest::ConnectPushSource { push_source, .. } = req;
+            puppet.serve_client(push_source);
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
 
-    /// Cleanly tear down the timekeeper and fakes. This is done manually so that timekeeper is
-    /// always torn down first, avoiding the situation where timekeeper sees a dependency close
-    /// its channel and log an error in response.
-    pub async fn teardown(self) {
-        let mut app = self._timekeeper_app;
-        app.kill().unwrap();
-        app.wait().await.unwrap();
-        let _ = self._task.cancel();
+async fn serve_maintenance(clock_handle: Arc<zx::Clock>, mut stream: MaintenanceRequestStream) {
+    while let Some(req) = stream.try_next().await.unwrap() {
+        let MaintenanceRequest::GetWritableUtcClock { responder } = req;
+        responder.send(clock_handle.duplicate_handle(Rights::SAME_RIGHTS).unwrap()).unwrap();
     }
+}
+
+async fn timesource_mock_server(
+    handles: LocalComponentHandles,
+    push_source_puppet: Arc<PushSourcePuppet>,
+) -> Result<(), anyhow::Error> {
+    let mut fs = ServiceFs::new();
+    let mut tasks = vec![];
+
+    fs.dir("svc").add_fidl_service(move |stream: TimeSourceControlRequestStream| {
+        let puppet_clone = Arc::clone(&push_source_puppet);
+
+        tasks.push(fasync::Task::local(async move {
+            serve_test_control(&*puppet_clone, stream).await;
+        }));
+    });
+
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+
+    Ok(())
+}
+
+async fn maintenance_mock_server(
+    handles: LocalComponentHandles,
+    clock: Arc<zx::Clock>,
+) -> Result<(), anyhow::Error> {
+    let mut fs = ServiceFs::new();
+    let mut tasks = vec![];
+
+    fs.dir("svc").add_fidl_service(move |stream: MaintenanceRequestStream| {
+        let clock_clone = Arc::clone(&clock);
+
+        tasks.push(fasync::Task::local(async move {
+            serve_maintenance(clock_clone, stream).await;
+        }));
+    });
+
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+
+    Ok(())
 }
 
 fn from_rfc2822(date: &str) -> zx::Time {
