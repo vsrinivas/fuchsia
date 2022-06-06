@@ -20,6 +20,7 @@ Note: Replace core.x64 with your product and board configuration.
 
 ```
 fx set core.x64 \
+--release \
 --with //examples/diagnostics/workshop \
 --with //examples/diagnostics/workshop:tests
 ```
