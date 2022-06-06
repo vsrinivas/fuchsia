@@ -79,7 +79,6 @@ group("cmx_allowlist") {
     "//garnet/examples/benchmark:*",
     "//garnet/examples/http/httpget_cpp:*",
     "//garnet/examples/http/httpget_rust:*",
-    "//garnet/examples/tcp/tcp_file_sender:*",
     "//garnet/lib/perfmon:*",
     "//garnet/lib/process:*",
     "//garnet/lib/rust/files_async:*",

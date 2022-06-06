@@ -38,7 +38,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//examples/diagnostics/logs/rust:*",
   "//garnet/bin/run_test_component/test:*",
   "//garnet/bin/setui_client:*",
-  "//garnet/examples/tcp/tcp_file_sender:*",
   "//src/bringup/bin/pwrbtn-monitor/test:*",
   "//src/cobalt/bin/testing/mock_cobalt:*",
   "//src/connectivity/bluetooth/core/bt-init:*",

@@ -31,7 +31,6 @@ group("all") {
     "//garnet/packages/examples:http",
     "//garnet/packages/examples:rust",
     "//garnet/packages/examples:scenic",
-    "//garnet/packages/examples:tcp",
   ]
 }
 
@@ -68,11 +67,6 @@ group("benchmark") {
 group("bluetooth") {
   testonly = true
   public_deps = [ "//src/connectivity/bluetooth/examples" ]
-}
-
-group("tcp") {
-  testonly = true
-  public_deps = [ "//garnet/examples/tcp/tcp_file_sender" ]
 }
 
 group("rust") {
