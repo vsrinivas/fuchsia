@@ -122,10 +122,13 @@ impl ViewAssistant for ConsoleViewAssistant {
         if let Some(console_message) = message.downcast_ref::<ConsoleMessages>() {
             match console_message {
                 ConsoleMessages::AddText(text) => {
-                    while self.lines.len() >= MAX_CONSOLE_LINE_COUNT {
-                        self.lines.remove(0);
+                    for line in text.split("\n") {
+                        self.lines.push(line.to_string());
                     }
-                    self.lines.push(text.to_string());
+
+                    if self.lines.len() > MAX_CONSOLE_LINE_COUNT {
+                        self.lines.drain(0..self.lines.len() - MAX_CONSOLE_LINE_COUNT);
+                    }
 
                     // Force scene to be rebuilt with new lines on next render().
                     self.scene_details = None;
@@ -142,6 +145,9 @@ mod tests {
     use carnelian::make_message;
 
     const TEST_MESSAGE: &str = "Test message";
+    const SMALL_MULTILINE_TEST_MESSAGE: &str = "1\n2\n3\n4\n5";
+    const GIANT_MULTILINE_TEST_MESSAGE: &str =
+        "1\n2\n3\n4\n5\n6\n7\n8\n9\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\nQ\nR\nS\nT";
 
     #[test]
     fn test_add_text_message_modifies_lines() -> std::result::Result<(), anyhow::Error> {
@@ -163,6 +169,53 @@ mod tests {
             console_view_assistant.lines.last().unwrap().to_string(),
             TEST_MESSAGE.to_string()
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_small_multiline_messages_get_split() -> std::result::Result<(), anyhow::Error> {
+        let mut console_view_assistant = ConsoleViewAssistant::new().unwrap();
+
+        // Add a multiline message to Console.
+        console_view_assistant.handle_message(make_message(ConsoleMessages::AddText(
+            SMALL_MULTILINE_TEST_MESSAGE.to_string(),
+        )));
+
+        // Verify the tail of our Console messages are the individual lines.
+        let expected_lines = SMALL_MULTILINE_TEST_MESSAGE.split("\n").collect::<Vec<&str>>();
+        for (i, expected) in expected_lines.iter().enumerate() {
+            let actual = &console_view_assistant.lines
+                [console_view_assistant.lines.len() - expected_lines.len() + i];
+            assert_eq!(expected, actual, "Multiline message not split as expected");
+        }
+
+        // Verify our overall line count still "fills the screen."
+        assert_eq!(console_view_assistant.lines.len(), MAX_CONSOLE_LINE_COUNT);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_giant_multiline_messages_get_split() -> std::result::Result<(), anyhow::Error> {
+        let mut console_view_assistant = ConsoleViewAssistant::new().unwrap();
+
+        // Add a giant (more rows than the screen can display) multiline message to Console.
+        console_view_assistant.handle_message(make_message(ConsoleMessages::AddText(
+            GIANT_MULTILINE_TEST_MESSAGE.to_string(),
+        )));
+
+        // Verify the lines in our Console are just the "underflow" lines from the giant message.
+        let expected_lines = &GIANT_MULTILINE_TEST_MESSAGE.rsplit("\n").collect::<Vec<&str>>()
+            [..MAX_CONSOLE_LINE_COUNT];
+        for (i, expected) in expected_lines.iter().rev().enumerate() {
+            let actual = &console_view_assistant.lines
+                [console_view_assistant.lines.len() - expected_lines.len() + i];
+            assert_eq!(expected, actual, "Multiline message not split as expected");
+        }
+
+        // Verify our overall line count still "fills the screen."
+        assert_eq!(console_view_assistant.lines.len(), MAX_CONSOLE_LINE_COUNT);
 
         Ok(())
     }
