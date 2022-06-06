@@ -763,13 +763,18 @@ pub mod fuchsia_pkg_cup {
         pub async fn serve(self: Arc<Self>, mut stream: CupRequestStream) {
             while let Some(request) = stream.try_next().await.unwrap() {
                 match request {
-                    CupRequest::Write { url, cup: _, responder } => {
+                    CupRequest::Write { url, cup, responder } => {
                         let url: PinnedAbsolutePackageUrl = url.url.parse().unwrap();
                         assert_eq!(url.host(), "integration.test.fuchsia.com");
                         assert_eq!(
                             url.hash().to_string(),
                             "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
                         );
+                        assert!(cup.request.is_some());
+                        assert!(cup.key_id.is_some());
+                        assert!(cup.nonce.is_some());
+                        assert!(cup.response.is_some());
+                        assert!(cup.signature.is_some());
                         responder.send(&mut Ok(())).unwrap();
                     }
                     CupRequest::GetInfo { url, responder } => {
@@ -1042,11 +1047,31 @@ async fn test_omaha_client_update_eager_package() {
                 },
             ),
         ])
-        .eager_package_config_builder(|_url: &str| {
+        .private_keys(PrivateKeys {
+            latest: PrivateKeyAndId {
+                id: 100_i32.try_into().unwrap(),
+                key: make_default_private_key_for_test(),
+            },
+            historical: vec![PrivateKeyAndId {
+                id: 42_i32.try_into().unwrap(),
+                key: make_default_private_key_for_test(),
+            }],
+        })
+        .eager_package_config_builder(|url: &str| {
             json!(
             {
                 "eager_package_configs": [
                     {
+                        "server": {
+                            "service_url": url,
+                            "public_keys": {
+                                "latest": {
+                                    "id": 42,
+                                    "key": RAW_PUBLIC_KEY_FOR_TEST,
+                                },
+                                "historical": [],
+                            }
+                        },
                         "packages":
                         [
                             {

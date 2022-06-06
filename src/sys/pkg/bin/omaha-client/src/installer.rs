@@ -123,6 +123,9 @@ pub enum FuchsiaInstallError {
 
     #[error("eager package cup write failed: {0:?}")]
     CupWrite(WriteError),
+
+    #[error("CupWrite failed, missing request metadata")]
+    MissingRequestMetadata,
 }
 
 #[derive(Debug)]
@@ -223,12 +226,23 @@ where
     async fn perform_install_eager_package<'a>(
         &'a mut self,
         url: &'a PinnedAbsolutePackageUrl,
-        response_bytes: &'a [u8],
+        install_plan: &'a FuchsiaInstallPlan,
     ) -> Result<(), FuchsiaInstallError> {
         let proxy = self.cup_connector.connect().map_err(FuchsiaInstallError::Connect)?;
         let mut url = fpkg::PackageUrl { url: url.to_string() };
-        let cup = CupData { response: Some(response_bytes.to_vec()), ..CupData::EMPTY };
-        proxy.write(&mut url, cup).await?.map_err(FuchsiaInstallError::CupWrite)
+        let rm = install_plan
+            .request_metadata
+            .as_ref()
+            .ok_or(FuchsiaInstallError::MissingRequestMetadata)?;
+        let cup_data: CupData = CupData {
+            request: Some(rm.request_body.clone()),
+            key_id: Some(rm.public_key_id),
+            nonce: Some(rm.nonce.into()),
+            response: Some(install_plan.omaha_response.clone()),
+            signature: install_plan.ecdsa_signature.as_ref().cloned(),
+            ..CupData::EMPTY
+        };
+        proxy.write(&mut url, cup_data).await?.map_err(FuchsiaInstallError::CupWrite)
     }
 }
 
@@ -260,10 +274,8 @@ where
                         if is_system_update {
                             AppInstallResult::Deferred
                         } else {
-                            let result = self
-                                .perform_install_eager_package(&url, &install_plan.omaha_response)
-                                .await
-                                .into();
+                            let result =
+                                self.perform_install_eager_package(&url, install_plan).await.into();
                             if let Some(observer) = observer {
                                 observer
                                     .receive_progress(
@@ -646,6 +658,12 @@ mod tests {
             update_package_urls: vec![UpdatePackageUrl::Package(TEST_URL.parse().unwrap())],
             install_source: InstallSource::OnDemand,
             omaha_response: vec![1, 2, 3],
+            request_metadata: Some(RequestMetadata {
+                request_body: vec![4, 5, 6],
+                public_key_id: 7_u64,
+                nonce: [8_u8; 32].into(),
+            }),
+            ecdsa_signature: Some(vec![10, 11, 12]),
             ..FuchsiaInstallPlan::default()
         };
         let observer = MockProgressObserver::new();
@@ -661,8 +679,12 @@ mod tests {
             match stream.next().await.unwrap() {
                 Ok(CupRequest::Write { url, cup, responder }) => {
                     assert_eq!(url.url, TEST_URL);
-                    let CupData { response, .. } = cup;
+                    let CupData { request, key_id, nonce, response, signature, .. } = cup;
+                    assert_eq!(request, Some(vec![4, 5, 6]));
+                    assert_eq!(key_id, Some(7_u64));
+                    assert_eq!(nonce, Some([8_u8; 32]));
                     assert_eq!(response, Some(vec![1, 2, 3]));
+                    assert_eq!(signature, Some(vec![10, 11, 12]));
                     responder.send(&mut Ok(())).unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
