@@ -46,7 +46,7 @@ use packet_formats::{
 use specialize_ip_macro::specialize_ip;
 
 use crate::{
-    context::{CounterContext, EventContext, InstantContext},
+    context::{CounterContext, EventContext, InstantContext, StateContext},
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
@@ -57,9 +57,10 @@ use crate::{
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
-            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, Icmpv4Error,
-            Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State, Icmpv4StateBuilder, Icmpv6ErrorCode,
-            Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder, InnerIcmpContext,
+            BufferIcmpHandler, IcmpContext, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext,
+            IcmpState, Icmpv4Error, Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State,
+            Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder,
+            InnerIcmpContext,
         },
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
@@ -246,35 +247,36 @@ impl<I: IpExt, B: BufferMut, C, SC: TransportIpContext<I, C> + BufferIpSocketHan
 // it. For the time being, however, we only support protocol numbers that we
 // actually use (TCP and UDP).
 
-/// The execution context for IPv4's transport layer.
+/// The execution context for IP's transport layer.
 ///
-/// `Ipv4TransportLayerContext` defines the [`IpTransportContext`] for each IPv4
-/// protocol number. The protocol numbers 1 (ICMP) and 2 (IGMP) are used by the
-/// stack itself, and cannot be overridden.
-pub(crate) trait Ipv4TransportLayerContext<C>: IpDeviceIdContext<Ipv4> {
-    type Proto6: IpTransportContext<Ipv4, C, Self>;
-    type Proto17: IpTransportContext<Ipv4, C, Self>;
+/// `IpTransportLayerContext` defines the [`IpTransportContext`] for each IP
+/// protocol number that is common to all IP protocols.
+trait IpTransportLayerContext<I: IpExt, C>: IpDeviceIdContext<I> {
+    type Tcp: IpTransportContext<I, C, Self>;
+    type Udp: IpTransportContext<I, C, Self>;
 }
 
-/// The execution context for IPv6's transport layer.
-///
-/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for
-/// each IPv6 protocol number. The protocol numbers 0 (Hop-by-Hop Options), 58
-/// (ICMPv6), 59 (No Next Header), and 60 (Destination Options) are used by the
-/// stack itself, and cannot be overridden.
-pub(crate) trait Ipv6TransportLayerContext<C>: IpDeviceIdContext<Ipv6> {
-    type Proto6: IpTransportContext<Ipv6, C, Self>;
-    type Proto17: IpTransportContext<Ipv6, C, Self>;
+impl<I: IpExt, C, SC: crate::transport::udp::UdpStateContext<I, C>> IpTransportLayerContext<I, C>
+    for SC
+{
+    type Tcp = ();
+    type Udp = crate::transport::udp::UdpIpTransportContext;
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> Ipv4TransportLayerContext<()> for Ctx<D, C> {
-    type Proto6 = ();
-    type Proto17 = crate::transport::udp::UdpIpTransportContext;
+/// Execution context for IP's transport layer with a buffer.
+trait BufferIpTransportLayerContext<I: IpExt, C, B: BufferMut>: IpTransportLayerContext<I, C> {
+    type Tcp: BufferIpTransportContext<I, C, Self, B>;
+    type Udp: BufferIpTransportContext<I, C, Self, B>;
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6TransportLayerContext<()> for Ctx<D, C> {
-    type Proto6 = ();
-    type Proto17 = crate::transport::udp::UdpIpTransportContext;
+impl<I: IpExt, B: BufferMut, C, SC: IpTransportLayerContext<I, C>>
+    BufferIpTransportLayerContext<I, C, B> for SC
+where
+    SC::Tcp: BufferIpTransportContext<I, C, SC, B>,
+    SC::Udp: BufferIpTransportContext<I, C, SC, B>,
+{
+    type Tcp = SC::Tcp;
+    type Udp = SC::Udp;
 }
 
 impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C>> TransportIpContext<Ipv4, C>
@@ -609,12 +611,13 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6> for Ctx<D, 
 }
 
 /// The transport context provided to the IP layer requiring a buffer type.
-pub(crate) trait BufferTransportContext<I: IpLayerIpExt, B: BufferMut>:
+pub(crate) trait BufferTransportContext<I: IpLayerIpExt, C, B: BufferMut>:
     IpDeviceIdContext<I> + CounterContext
 {
     /// Dispatches a received incoming IP packet to the appropriate protocol.
     fn dispatch_receive_ip_packet(
         &mut self,
+        ctx: &mut C,
         device: Self::DeviceId,
         src_ip: I::RecvSrcAddr,
         dst_ip: SpecifiedAddr<I::Addr>,
@@ -643,7 +646,7 @@ pub(crate) trait BufferIpLayerContext<
     C,
     B: BufferMut,
 >:
-    BufferTransportContext<I, B>
+    BufferTransportContext<I, C, B>
     + BufferIpDeviceContext<I, C, B>
     + BufferIcmpHandler<I, C, B>
     + IpLayerContext<I, C>
@@ -654,7 +657,7 @@ impl<
         I: IpLayerStateIpExt<SC::Instant, <SC as IpDeviceIdContext<I>>::DeviceId> + IcmpHandlerIpExt,
         C,
         B: BufferMut,
-        SC: BufferTransportContext<I, B>
+        SC: BufferTransportContext<I, C, B>
             + BufferIpDeviceContext<I, C, B>
             + BufferIcmpHandler<I, C, B>
             + IpLayerContext<I, C>,
@@ -662,12 +665,20 @@ impl<
 {
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTransportContext<Ipv4, B>
-    for Ctx<D, C>
+impl<
+        C,
+        SC: BufferIpTransportLayerContext<Ipv4, C, B>
+            + IgmpPacketHandler<C, SC::DeviceId, B>
+            + CounterContext,
+        B: BufferMut,
+    > BufferTransportContext<Ipv4, C, B> for SC
+where
+    IcmpIpTransportContext: BufferIpTransportContext<Ipv4, C, SC, B>,
 {
     fn dispatch_receive_ip_packet(
         &mut self,
-        device: DeviceId,
+        ctx: &mut C,
+        device: SC::DeviceId,
         src_ip: Ipv4Addr,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
         proto: Ipv4Proto,
@@ -683,27 +694,27 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTranspor
                 _,
                 _,
             >>::receive_ip_packet(
-                self, &mut (), device, src_ip, dst_ip, body
+                self, ctx, device, src_ip, dst_ip, body
             ),
             Ipv4Proto::Igmp => {
-                IgmpPacketHandler::receive_igmp_packet(self, &mut (), device, src_ip, dst_ip, body);
+                IgmpPacketHandler::receive_igmp_packet(self, ctx, device, src_ip, dst_ip, body);
                 Ok(())
             }
             Ipv4Proto::Proto(IpProto::Udp) => {
-                <<Ctx<D, C> as Ipv4TransportLayerContext<_>>::Proto17 as BufferIpTransportContext<
+                <<SC as BufferIpTransportLayerContext<_, _, _>>::Udp as BufferIpTransportContext<
                     Ipv4,
                     _,
                     _,
                     _,
-                >>::receive_ip_packet(self, &mut (), device, src_ip, dst_ip, body)
+                >>::receive_ip_packet(self, ctx, device, src_ip, dst_ip, body)
             }
             Ipv4Proto::Proto(IpProto::Tcp) => {
-                <<Ctx<D, C> as Ipv4TransportLayerContext<_>>::Proto6 as BufferIpTransportContext<
+                <<SC as BufferIpTransportLayerContext<_, _, _>>::Tcp as BufferIpTransportContext<
                     Ipv4,
                     _,
                     _,
                     _,
-                >>::receive_ip_packet(self, &mut (), device, src_ip, dst_ip, body)
+                >>::receive_ip_packet(self, ctx, device, src_ip, dst_ip, body)
             }
             // TODO(joshlf): Once all IP protocol numbers are covered, remove
             // this default case.
@@ -715,12 +726,15 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTranspor
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTransportContext<Ipv6, B>
-    for Ctx<D, C>
+impl<C, SC: BufferIpTransportLayerContext<Ipv6, C, B> + CounterContext, B: BufferMut>
+    BufferTransportContext<Ipv6, C, B> for SC
+where
+    IcmpIpTransportContext: BufferIpTransportContext<Ipv6, C, SC, B>,
 {
     fn dispatch_receive_ip_packet(
         &mut self,
-        device: DeviceId,
+        ctx: &mut C,
+        device: SC::DeviceId,
         src_ip: Ipv6SourceAddr,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         proto: Ipv6Proto,
@@ -736,27 +750,27 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferTranspor
                 _,
                 _,
             >>::receive_ip_packet(
-                self, &mut (), device, src_ip, dst_ip, body
+                self, ctx, device, src_ip, dst_ip, body
             ),
             // A value of `Ipv6Proto::NoNextHeader` tells us that there is no
             // header whatsoever following the last lower-level header so we stop
             // processing here.
             Ipv6Proto::NoNextHeader => Ok(()),
             Ipv6Proto::Proto(IpProto::Tcp) => {
-                <<Ctx<D, C> as Ipv6TransportLayerContext<_>>::Proto6 as BufferIpTransportContext<
+                <<SC as BufferIpTransportLayerContext<_, _, _>>::Tcp as BufferIpTransportContext<
                     Ipv6,
                     _,
                     _,
                     _,
-                >>::receive_ip_packet(self, &mut (), device, src_ip, dst_ip, body)
+                >>::receive_ip_packet(self, ctx, device, src_ip, dst_ip, body)
             }
             Ipv6Proto::Proto(IpProto::Udp) => {
-                <<Ctx<D, C> as Ipv6TransportLayerContext<_>>::Proto17 as BufferIpTransportContext<
+                <<SC as BufferIpTransportLayerContext<_, _, _>>::Udp as BufferIpTransportContext<
                     Ipv6,
                     _,
                     _,
                     _,
-                >>::receive_ip_packet(self, &mut (), device, src_ip, dst_ip, body)
+                >>::receive_ip_packet(self, ctx, device, src_ip, dst_ip, body)
             }
             // TODO(joshlf): Once all IP Next Header numbers are covered, remove
             // this default case.
@@ -1030,7 +1044,7 @@ fn dispatch_receive_ipv4_packet<C, B: BufferMut, SC: BufferIpLayerContext<Ipv4, 
     sync_ctx.increment_counter("dispatch_receive_ipv4_packet");
 
     let (mut body, err) =
-        match sync_ctx.dispatch_receive_ip_packet(device, src_ip, dst_ip, proto, body) {
+        match sync_ctx.dispatch_receive_ip_packet(ctx, device, src_ip, dst_ip, proto, body) {
             Ok(()) => return,
             Err(e) => e,
         };
@@ -1106,7 +1120,7 @@ fn dispatch_receive_ipv6_packet<C, B: BufferMut, SC: BufferIpLayerContext<Ipv6, 
     sync_ctx.increment_counter("dispatch_receive_ipv6_packet");
 
     let (mut body, err) =
-        match sync_ctx.dispatch_receive_ip_packet(device, src_ip, dst_ip, proto, body) {
+        match sync_ctx.dispatch_receive_ip_packet(ctx, device, src_ip, dst_ip, proto, body) {
             Ok(()) => return,
             Err(e) => e,
         };
@@ -2289,11 +2303,20 @@ impl<D: EventDispatcher, C: BlanketCoreContext> PmtuHandler<Ipv6> for Ctx<D, C> 
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv4, ()> for Ctx<D, C> {
+impl<
+        C,
+        SC: IpTransportLayerContext<Ipv4, C>
+            + IcmpContext<Ipv4>
+            + StateContext<IcmpState<Ipv4Addr, SC::Instant, IpSock<Ipv4, SC::DeviceId>>>
+            + IpSocketHandler<Ipv4, C>
+            + InstantContext
+            + CounterContext,
+    > InnerIcmpContext<Ipv4, C> for SC
+{
     fn receive_icmp_error(
         &mut self,
-        ctx: &mut (),
-        device: Self::DeviceId,
+        ctx: &mut C,
+        device: SC::DeviceId,
         original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv4Addr>,
         original_proto: Ipv4Proto,
@@ -2308,7 +2331,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv4, ()> for C
                 match original_proto {
                     Ipv4Proto::Icmp => <IcmpIpTransportContext as IpTransportContext<Ipv4, _, _>>
                                 ::receive_icmp_error(self,ctx, device, original_src_ip, original_dst_ip, original_body, err),
-                    $($cond => <<Ctx<D, C> as Ipv4TransportLayerContext<_>>::$ty as IpTransportContext<Ipv4, _, _>>
+                    $($cond => <<SC as IpTransportLayerContext<_, _>>::$ty as IpTransportContext<Ipv4, _, _>>
                                 ::receive_icmp_error(self,ctx, device, original_src_ip, original_dst_ip, original_body, err),)*
                     // TODO(joshlf): Once all IP protocol numbers are covered,
                     // remove this default case.
@@ -2319,17 +2342,26 @@ impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv4, ()> for C
 
         #[rustfmt::skip]
         mtch!(
-            Ipv4Proto::Proto(IpProto::Tcp) => Proto6,
-            Ipv4Proto::Proto(IpProto::Udp) => Proto17
+            Ipv4Proto::Proto(IpProto::Tcp) => Tcp,
+            Ipv4Proto::Proto(IpProto::Udp) => Udp
         );
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv6, ()> for Ctx<D, C> {
+impl<
+        C,
+        SC: IpTransportLayerContext<Ipv6, C>
+            + IcmpContext<Ipv6>
+            + StateContext<IcmpState<Ipv6Addr, SC::Instant, IpSock<Ipv6, SC::DeviceId>>>
+            + IpSocketHandler<Ipv6, C>
+            + InstantContext
+            + CounterContext,
+    > InnerIcmpContext<Ipv6, C> for SC
+{
     fn receive_icmp_error(
         &mut self,
-        ctx: &mut (),
-        device: Self::DeviceId,
+        ctx: &mut C,
+        device: SC::DeviceId,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv6Addr>,
         original_next_header: Ipv6Proto,
@@ -2344,7 +2376,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv6, ()> for C
                 match original_next_header {
                     Ipv6Proto::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _, _>>
                     ::receive_icmp_error(self, ctx, device, original_src_ip, original_dst_ip, original_body, err),
-                    $($cond => <<Ctx<D, C> as Ipv6TransportLayerContext<_>>::$ty as IpTransportContext<Ipv6, _, _>>
+                    $($cond => <<SC as IpTransportLayerContext<_, _>>::$ty as IpTransportContext<Ipv6, _, _>>
                                 ::receive_icmp_error(self, ctx, device, original_src_ip, original_dst_ip, original_body, err),)*
                     // TODO(joshlf): Once all IP protocol numbers are covered,
                     // remove this default case.
@@ -2355,8 +2387,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext> InnerIcmpContext<Ipv6, ()> for C
 
         #[rustfmt::skip]
         mtch!(
-            Ipv6Proto::Proto(IpProto::Tcp) => Proto6,
-            Ipv6Proto::Proto(IpProto::Udp) => Proto17
+            Ipv6Proto::Proto(IpProto::Tcp) => Tcp,
+            Ipv6Proto::Proto(IpProto::Udp) => Udp
         );
     }
 }
