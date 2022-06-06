@@ -141,10 +141,10 @@ executable("fxl_unittests") {
   testonly = true
 
   sources = [
-    "//src/lib/fxl/log_settings_command_line_unittest.cc",
     "command_line_unittest.cc",
     "functional/apply_unittest.cc",
     "functional/cancelable_callback_unittest.cc",
+    "log_settings_command_line_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
     "observer_list_unittest.cc",
@@ -175,7 +175,7 @@ if (is_fuchsia) {
   import("//build/components.gni")
 
   fuchsia_unittest_package("fxl_tests") {
-    manifest = "meta/fxl_unittests.cmx"
+    manifest = "meta/fxl_unittests.cml"
     deps = [ ":fxl_unittests" ]
     test_specs = {
       log_settings = {
