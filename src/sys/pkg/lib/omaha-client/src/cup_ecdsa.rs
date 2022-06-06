@@ -115,6 +115,7 @@ impl fmt::Display for Nonce {
 /// Request decoration return type, containing request internals. Clients of this
 /// library can call .hash() and store/retrieve the hash, or they can inspect the
 /// request, public key ID, nonce used if necessary.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RequestMetadata {
     pub request_body: Vec<u8>,
     pub public_key_id: PublicKeyId,
@@ -150,7 +151,7 @@ pub trait Cupv2RequestHandler {
         request_metadata: &RequestMetadata,
         resp: &Response<Vec<u8>>,
         public_key_id: PublicKeyId,
-    ) -> Result<(), CupVerificationError>;
+    ) -> Result<DerSignature, CupVerificationError>;
 }
 
 // General trait for something which can verify CUPv2 signatures.
@@ -159,7 +160,7 @@ pub trait Cupv2Verifier {
     /// signatures which are not hyper-aware.
     fn verify_response_with_signature(
         &self,
-        ecdsa_signature: DerSignature,
+        ecdsa_signature: &DerSignature,
         request_body: &[u8],
         response_body: &[u8],
         public_key_id: PublicKeyId,
@@ -221,7 +222,7 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
         request_metadata: &RequestMetadata,
         resp: &Response<Vec<u8>>,
         public_key_id: PublicKeyId,
-    ) -> Result<(), CupVerificationError> {
+    ) -> Result<DerSignature, CupVerificationError> {
         // Per
         // https://github.com/google/omaha/blob/master/doc/ClientUpdateProtocolEcdsa.md#top-level-description,
         //
@@ -261,13 +262,15 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
                 .map_err(|_| CupVerificationError::SignatureMalformed)?,
         )?;
 
-        self.verify_response_with_signature(
-            signature,
+        let () = self.verify_response_with_signature(
+            &signature,
             &request_metadata.request_body,
             resp.body(),
             public_key_id,
             &request_metadata.nonce,
-        )
+        )?;
+
+        Ok(signature)
     }
 }
 
@@ -291,7 +294,7 @@ pub fn make_transaction_hash(
 impl Cupv2Verifier for StandardCupv2Handler {
     fn verify_response_with_signature(
         &self,
-        ecdsa_signature: DerSignature,
+        ecdsa_signature: &DerSignature,
         request_body: &[u8],
         response_body: &[u8],
         public_key_id: PublicKeyId,
@@ -304,7 +307,14 @@ impl Cupv2Verifier for StandardCupv2Handler {
             .parameters_by_id
             .get(&public_key_id)
             .ok_or(CupVerificationError::SpecifiedPublicKeyIdMissing)?;
-        Ok(public_key.verify(&transaction_hash, &ecdsa_signature.try_into()?)?)
+        // Since we pass DerSignature by reference, and it doesn't implement
+        // clone, we must reconstitute it into bytes and then back into
+        // der::Signature,
+        let der_signature: ecdsa::der::Signature<p256::NistP256> =
+            ecdsa_signature.as_ref().try_into()?;
+        // and then into Signature for verification.
+        let signature: ecdsa::Signature<p256::NistP256> = der_signature.try_into()?;
+        Ok(public_key.verify(&transaction_hash, &signature)?)
     }
 }
 
@@ -450,21 +460,33 @@ pub mod test_support {
 
         fn verify_response(
             &self,
-            _request_metadata: &RequestMetadata,
-            _resp: &Response<Vec<u8>>,
-            _public_key_id: PublicKeyId,
-        ) -> Result<(), CupVerificationError> {
-            match (self.verification_error)() {
-                Some(e) => Err(e),
-                None => Ok(()),
-            }
+            request_metadata: &RequestMetadata,
+            resp: &Response<Vec<u8>>,
+            public_key_id: PublicKeyId,
+        ) -> Result<DerSignature, CupVerificationError> {
+            use rand::rngs::OsRng;
+            let signing_key = SigningKey::random(&mut OsRng);
+            let signature = DerSignature::from_bytes(&make_expected_signature_for_test(
+                &signing_key,
+                request_metadata,
+                resp.body(),
+            ))
+            .unwrap();
+            let () = self.verify_response_with_signature(
+                &signature,
+                &request_metadata.request_body,
+                resp.body(),
+                public_key_id,
+                &request_metadata.nonce,
+            )?;
+            Ok(signature)
         }
     }
 
     impl Cupv2Verifier for MockCupv2Handler {
         fn verify_response_with_signature(
             &self,
-            _ecdsa_signature: DerSignature,
+            _ecdsa_signature: &DerSignature,
             _request_body: &[u8],
             _response_body: &[u8],
             _public_key_id: PublicKeyId,
@@ -731,7 +753,7 @@ mod tests {
             make_verify_response_arguments(&cup_handler, private_key_a, response_body_a)?;
         assert_matches!(
             cup_handler.verify_response(&request_metadata_a, &response_a, public_key_id_a),
-            Ok(())
+            Ok(_)
         );
 
         // Now introduce a new set of keys,
@@ -751,13 +773,13 @@ mod tests {
         // and verify that the cup handler can verify a newly generated response,
         assert_matches!(
             cup_handler.verify_response(&request_metadata_b, &response_b, public_key_id_b),
-            Ok(())
+            Ok(_)
         );
 
         // as well as a response which has already been generated and stored.
         assert_matches!(
             cup_handler.verify_response(&request_metadata_a, &response_a, public_key_id_a),
-            Ok(())
+            Ok(_)
         );
 
         // finally, assert that verification fails if either (1) the hash, (2)

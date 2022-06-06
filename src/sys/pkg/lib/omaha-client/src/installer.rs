@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{protocol::response::Response, request_builder::RequestParams};
+use crate::{
+    cup_ecdsa::RequestMetadata, protocol::response::Response, request_builder::RequestParams,
+};
 use futures::future::{BoxFuture, LocalBoxFuture};
 
 pub mod stub;
@@ -53,8 +55,10 @@ pub trait Installer {
     fn try_create_install_plan<'a>(
         &'a self,
         request_params: &'a RequestParams,
+        request_metadata: Option<&'a RequestMetadata>,
         response: &'a Response,
         response_bytes: Vec<u8>,
+        ecdsa_signature: Option<Vec<u8>>,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>>;
 }
 

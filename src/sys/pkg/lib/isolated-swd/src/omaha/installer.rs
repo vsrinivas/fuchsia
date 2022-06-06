@@ -14,6 +14,7 @@ use {
     futures::prelude::*,
     log::warn,
     omaha_client::{
+        cup_ecdsa::RequestMetadata,
         installer::{AppInstallResult, Installer, ProgressObserver},
         protocol::response::{OmahaStatus, Response},
         request_builder::RequestParams,
@@ -124,8 +125,10 @@ impl Installer for IsolatedInstaller {
     fn try_create_install_plan<'a>(
         &'a self,
         request_params: &'a RequestParams,
+        _request_metadata: Option<&'a RequestMetadata>,
         response: &'a Response,
         _response_bytes: Vec<u8>,
+        _ecdsa_signature: Option<Vec<u8>>,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
         async move { try_create_install_plan(request_params, response) }.boxed_local()
     }

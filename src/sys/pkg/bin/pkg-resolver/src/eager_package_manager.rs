@@ -50,7 +50,7 @@ async fn verify_cup_signature(
     let der_signature = DerSignature::from_bytes(&cup.signature)?;
     cup_handler
         .verify_response_with_signature(
-            der_signature,
+            &der_signature,
             &cup.request,
             &cup.response,
             cup.key_id,

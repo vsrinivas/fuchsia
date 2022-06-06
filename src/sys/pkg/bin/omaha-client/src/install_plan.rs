@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_url::PinnedAbsolutePackageUrl;
-use omaha_client::{installer::Plan, protocol::request::InstallSource};
+use omaha_client::{cup_ecdsa::RequestMetadata, installer::Plan, protocol::request::InstallSource};
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
@@ -29,6 +29,8 @@ pub struct FuchsiaInstallPlan {
     pub install_source: InstallSource,
     pub urgent_update: bool,
     pub omaha_response: Vec<u8>,
+    pub request_metadata: Option<RequestMetadata>,
+    pub ecdsa_signature: Option<Vec<u8>>,
 }
 
 impl Plan for FuchsiaInstallPlan {
@@ -47,6 +49,8 @@ impl FuchsiaInstallPlan {
             install_source: InstallSource::OnDemand,
             urgent_update: false,
             omaha_response: vec![],
+            request_metadata: None,
+            ecdsa_signature: None,
         }
     }
 

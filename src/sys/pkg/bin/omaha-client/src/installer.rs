@@ -27,6 +27,7 @@ use futures::{future::LocalBoxFuture, lock::Mutex as AsyncMutex, prelude::*};
 use log::{info, warn};
 use omaha_client::{
     app_set::AppSet as _,
+    cup_ecdsa::RequestMetadata,
     installer::{AppInstallResult, Installer, ProgressObserver},
     protocol::{
         request::InstallSource,
@@ -315,12 +316,21 @@ where
     fn try_create_install_plan<'a>(
         &'a self,
         request_params: &'a RequestParams,
+        request_metadata: Option<&'a RequestMetadata>,
         response: &'a Response,
         response_bytes: Vec<u8>,
+        ecdsa_signature: Option<Vec<u8>>,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
         async move {
             let system_app_id = self.app_set.lock().await.get_system_app_id().to_owned();
-            try_create_install_plan_impl(request_params, response, response_bytes, system_app_id)
+            try_create_install_plan_impl(
+                request_params,
+                request_metadata,
+                response,
+                response_bytes,
+                ecdsa_signature,
+                system_app_id,
+            )
         }
         .boxed_local()
     }
@@ -328,8 +338,10 @@ where
 
 fn try_create_install_plan_impl(
     request_params: &RequestParams,
+    request_metadata: Option<&RequestMetadata>,
     response: &Response,
     response_bytes: Vec<u8>,
+    ecdsa_signature: Option<Vec<u8>>,
     system_app_id: String,
 ) -> Result<FuchsiaInstallPlan, FuchsiaInstallError> {
     let mut update_package_urls = vec![];
@@ -416,6 +428,8 @@ fn try_create_install_plan_impl(
         install_source: request_params.source.clone(),
         urgent_update,
         omaha_response: response_bytes,
+        request_metadata: request_metadata.cloned(),
+        ecdsa_signature: ecdsa_signature.clone(),
     })
 }
 
@@ -795,6 +809,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_simple_response() {
         let request_params = RequestParams::default();
+        let request_metadata = RequestMetadata {
+            request_body: vec![4, 5, 6],
+            public_key_id: 7_u64,
+            nonce: [8_u8; 32].into(),
+        };
+        let signature = Some(vec![13, 14, 15]);
         let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.manifest = Some(Manifest {
             packages: Packages::new(vec![Package::with_name(TEST_PACKAGE_NAME)]),
@@ -810,7 +830,13 @@ mod tests {
         };
 
         let install_plan = new_installer()
-            .try_create_install_plan(&request_params, &response, vec![1, 2, 3])
+            .try_create_install_plan(
+                &request_params,
+                Some(&request_metadata),
+                &response,
+                vec![1, 2, 3],
+                signature,
+            )
             .await
             .unwrap();
         assert_eq!(
@@ -820,15 +846,34 @@ mod tests {
         assert_eq!(install_plan.install_source, request_params.source);
         assert_eq!(install_plan.urgent_update, false);
         assert_eq!(install_plan.omaha_response, vec![1, 2, 3]);
+        assert_eq!(
+            install_plan.request_metadata,
+            Some(RequestMetadata {
+                request_body: vec![4, 5, 6],
+                public_key_id: 7_u64,
+                nonce: [8_u8; 32].into(),
+            })
+        );
+        assert_eq!(install_plan.ecdsa_signature, Some(vec![13, 14, 15]));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_no_app() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let response = Response::default();
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
+            new_installer()
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata,
+                    &response,
+                    vec![],
+                    signature
+                )
+                .await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -836,6 +881,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_app() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
 
         let system_app = App {
             update_check: Some(UpdateCheck {
@@ -857,7 +904,13 @@ mod tests {
         };
 
         let install_plan = new_installer()
-            .try_create_install_plan(&request_params, &response, vec![])
+            .try_create_install_plan(
+                &request_params,
+                request_metadata,
+                &response,
+                vec![],
+                signature,
+            )
             .await
             .unwrap();
         assert_eq!(
@@ -870,6 +923,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_package_updates() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
 
         let system_app = App {
             update_check: Some(UpdateCheck::no_update()),
@@ -909,7 +964,13 @@ mod tests {
         };
 
         let install_plan = new_installer()
-            .try_create_install_plan(&request_params, &response, vec![])
+            .try_create_install_plan(
+                &request_params,
+                request_metadata,
+                &response,
+                vec![],
+                signature,
+            )
             .await
             .unwrap();
         assert_eq!(
@@ -925,6 +986,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_mixed_update() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let system_app = App {
             update_check: Some(UpdateCheck {
                 manifest: Some(Manifest {
@@ -950,7 +1013,13 @@ mod tests {
         let response = Response { apps: vec![package_app, system_app], ..Response::default() };
 
         let install_plan = new_installer()
-            .try_create_install_plan(&request_params, &response, vec![])
+            .try_create_install_plan(
+                &request_params,
+                request_metadata,
+                &response,
+                vec![],
+                signature,
+            )
             .await
             .unwrap();
         assert_eq!(
@@ -966,13 +1035,23 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_no_update_check() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let response = Response {
             apps: vec![App { id: "system_id".into(), ..App::default() }],
             ..Response::default()
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
+            new_installer()
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata,
+                    &response,
+                    vec![],
+                    signature
+                )
+                .await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -980,6 +1059,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_no_urls() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let response = Response {
             apps: vec![App {
                 update_check: Some(UpdateCheck::default()),
@@ -990,7 +1071,15 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
+            new_installer()
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata,
+                    &response,
+                    vec![],
+                    signature
+                )
+                .await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -998,6 +1087,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_app_error_status() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let response = Response {
             apps: vec![App {
                 status: OmahaStatus::Error("error-unknownApplication".to_string()),
@@ -1007,7 +1098,15 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
+            new_installer()
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata,
+                    &response,
+                    vec![],
+                    signature
+                )
+                .await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -1015,13 +1114,23 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_no_update() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let response = Response {
             apps: vec![App { update_check: Some(UpdateCheck::no_update()), ..App::default() }],
             ..Response::default()
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
+            new_installer()
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata,
+                    &response,
+                    vec![],
+                    signature
+                )
+                .await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -1029,6 +1138,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_invalid_url() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let response = Response {
             apps: vec![App {
                 update_check: Some(UpdateCheck::ok(["invalid-url"])),
@@ -1039,7 +1150,15 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
+            new_installer()
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata,
+                    &response,
+                    vec![],
+                    signature
+                )
+                .await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -1047,6 +1166,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_no_manifest() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let response = Response {
             apps: vec![App {
                 update_check: Some(UpdateCheck::ok([TEST_URL_BASE])),
@@ -1057,7 +1178,15 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
+            new_installer()
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata,
+                    &response,
+                    vec![],
+                    signature
+                )
+                .await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -1065,6 +1194,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_urgent_update_attribute_true() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.urgent_update = Some(true);
         update_check.manifest = Some(Manifest {
@@ -1081,7 +1212,13 @@ mod tests {
         };
 
         let install_plan = new_installer()
-            .try_create_install_plan(&request_params, &response, vec![])
+            .try_create_install_plan(
+                &request_params,
+                request_metadata,
+                &response,
+                vec![],
+                signature,
+            )
             .await
             .unwrap();
 
@@ -1091,6 +1228,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_urgent_update_attribute_false() {
         let request_params = RequestParams::default();
+        let request_metadata = None;
+        let signature = None;
         let mut update_check = UpdateCheck::ok([TEST_URL_BASE]);
         update_check.urgent_update = Some(false);
         update_check.manifest = Some(Manifest {
@@ -1107,7 +1246,13 @@ mod tests {
         };
 
         let install_plan = new_installer()
-            .try_create_install_plan(&request_params, &response, vec![])
+            .try_create_install_plan(
+                &request_params,
+                request_metadata,
+                &response,
+                vec![],
+                signature,
+            )
             .await
             .unwrap();
 

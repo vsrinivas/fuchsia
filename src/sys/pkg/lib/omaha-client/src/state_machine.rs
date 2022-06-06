@@ -6,7 +6,7 @@ use crate::{
     app_set::{AppSet, AppSetExt as _},
     common::{App, CheckOptions, CheckTiming},
     configuration::Config,
-    cup_ecdsa::{CupDecorationError, CupVerificationError, Cupv2Handler},
+    cup_ecdsa::{CupDecorationError, CupVerificationError, Cupv2Handler, RequestMetadata},
     http_request::{self, HttpRequest},
     installer::{AppInstallResult, Installer, Plan},
     metrics::{ClockType, Metrics, MetricsReporter, UpdateCheckFailureReason},
@@ -31,6 +31,7 @@ use futures::{
 };
 use http::{response::Parts, Response as HttpResponse};
 use log::{error, info, warn};
+use p256::ecdsa::DerSignature;
 use std::{
     cmp::min,
     collections::HashMap,
@@ -819,7 +820,7 @@ where
             successful: loop_result.is_ok(),
         });
 
-        let (_parts, data) = loop_result?;
+        let (_parts, data, request_metadata, signature) = loop_result?;
 
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
@@ -876,7 +877,13 @@ where
                 .collect();
             let install_plan = match self
                 .installer
-                .try_create_install_plan(&request_params, &response, data)
+                .try_create_install_plan(
+                    &request_params,
+                    request_metadata.as_ref(),
+                    &response,
+                    data,
+                    signature.map(|s| s.as_bytes().to_vec()),
+                )
                 .await
             {
                 Ok(plan) => plan,
@@ -1191,7 +1198,7 @@ where
         }
         request_builder = request_builder.session_id(GUID::new()).request_id(GUID::new());
 
-        let (_parts, data) =
+        let (_parts, data, _request_metadata, _signature) =
             match self.do_omaha_request_and_update_context(&request_builder, co).await {
                 Ok(res) => res,
                 Err(e) => {
@@ -1241,18 +1248,24 @@ where
         &'a mut self,
         builder: &RequestBuilder<'a>,
         co: &mut async_generator::Yield<StateMachineEvent>,
-    ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
+    ) -> Result<(Parts, Vec<u8>, Option<RequestMetadata>, Option<DerSignature>), OmahaRequestError>
+    {
         let (request, request_metadata) = builder.build(self.cup_handler.as_ref())?;
         let response = Self::make_request(&mut self.http, request).await?;
 
-        if let (Some(handler), Some(metadata)) = (self.cup_handler.as_ref(), request_metadata) {
-            let () = handler
-                .verify_response(&metadata, &response, metadata.public_key_id)
+        let signature: Option<DerSignature> = if let (Some(handler), Some(metadata)) =
+            (self.cup_handler.as_ref(), &request_metadata)
+        {
+            let signature = handler
+                .verify_response(metadata, &response, metadata.public_key_id)
                 .map_err(|e| {
                     error!("Could not verify response: {:?}", e);
                     e
                 })?;
-        }
+            Some(signature)
+        } else {
+            None
+        };
 
         let (parts, body) = response.into_parts();
 
@@ -1287,7 +1300,7 @@ where
         } else {
             // Pass successful responses to the caller.
             info!("Omaha HTTP response: {}", parts.status);
-            Ok((parts, body))
+            Ok((parts, body, request_metadata, signature))
         }
     }
 
@@ -2835,8 +2848,10 @@ mod tests {
         fn try_create_install_plan<'a>(
             &'a self,
             _request_params: &'a RequestParams,
+            _request_metadata: Option<&'a RequestMetadata>,
             _response: &'a Response,
             _response_bytes: Vec<u8>,
+            _ecdsa_signature: Option<Vec<u8>>,
         ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
             future::ready(Ok(StubPlan)).boxed_local()
         }
@@ -3662,8 +3677,10 @@ mod tests {
         fn try_create_install_plan<'a>(
             &'a self,
             _request_params: &'a RequestParams,
+            _request_metadata: Option<&'a RequestMetadata>,
             _response: &'a Response,
             _response_bytes: Vec<u8>,
+            _ecdsa_signature: Option<Vec<u8>>,
         ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
             future::ready(Ok(StubPlan)).boxed_local()
         }
