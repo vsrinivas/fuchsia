@@ -357,6 +357,17 @@ mod tests {
             }]
         );
 
+        // Component Manager serves the exposed dir with the `bar` protocol
+        let exposed_dir = resolved.exposed_dir.into_proxy().unwrap();
+        let entries = files_async::readdir(&exposed_dir).await.unwrap();
+        assert_eq!(
+            entries,
+            vec![files_async::DirEntry {
+                name: "bar".to_string(),
+                kind: files_async::DirentKind::Unknown
+            }]
+        );
+
         // Test runners don't provide an out dir or a runtime dir
         assert!(started.out_dir.is_none());
         assert!(started.runtime_dir.is_none());

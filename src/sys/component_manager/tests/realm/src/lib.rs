@@ -72,6 +72,26 @@ pub async fn query_echo_server_child() {
         ]
     );
 
+    let exposed_dir = resolved.exposed_dir.into_proxy().unwrap();
+    let entries = files_async::readdir(&exposed_dir).await.unwrap();
+    assert_eq!(
+        entries,
+        vec![
+            files_async::DirEntry {
+                name: "fidl.examples.routing.echo.Echo".to_string(),
+                kind: files_async::DirentKind::Unknown,
+            },
+            files_async::DirEntry {
+                name: "fuchsia.component.Binder".to_string(),
+                kind: files_async::DirentKind::Unknown,
+            },
+            files_async::DirEntry {
+                name: "hub".to_string(),
+                kind: files_async::DirentKind::Unknown,
+            }
+        ]
+    );
+
     let started = resolved.started.unwrap();
 
     let out_dir = started.out_dir.unwrap();

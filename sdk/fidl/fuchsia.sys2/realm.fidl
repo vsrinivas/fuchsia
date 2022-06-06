@@ -61,6 +61,10 @@ type ResolvedState = resource struct {
 
     /// The execution state of this instance.
     started box<StartedState>;
+
+    /// The directory containing all capabilities exposed by the component.
+    /// This directory has RW permissions.
+    exposed_dir client_end:<fuchsia.io.Directory>;
 };
 
 /// The detailed started state of a component instance

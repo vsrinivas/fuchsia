@@ -523,7 +523,25 @@ impl ComponentInstance {
                     None
                 };
 
-                Some(Box::new(fsys::ResolvedState { uses, exposes, config, pkg_dir, started }))
+                let (exposed_dir, expose_server) = fidl::endpoints::create_endpoints().unwrap();
+                r.get_exposed_dir().open(
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    fio::MODE_TYPE_DIRECTORY,
+                    vfs::path::Path::dot(),
+                    expose_server,
+                );
+                let exposed_dir = exposed_dir.into_channel();
+                let exposed_dir =
+                    fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::new(exposed_dir);
+
+                Some(Box::new(fsys::ResolvedState {
+                    uses,
+                    exposes,
+                    config,
+                    pkg_dir,
+                    started,
+                    exposed_dir,
+                }))
             }
             _ => None,
         }

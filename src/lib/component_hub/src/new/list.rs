@@ -461,7 +461,11 @@ mod tests {
 
     #[fuchsia::test]
     async fn basic_cmx() {
-        let (_temp_dir, out_dir) = create_appmgr_out();
+        let (_temp_out_dir, out_dir) = create_appmgr_out();
+
+        // The exposed dir is not used by this library
+        let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
         let query = serve_realm_query(HashMap::from([(
             "./core/appmgr".to_string(),
             (
@@ -481,6 +485,7 @@ mod tests {
                         runtime_dir: None,
                         start_reason: "Debugging Workflow".to_string(),
                     })),
+                    exposed_dir,
                 })),
             ),
         )]));
@@ -522,6 +527,10 @@ mod tests {
 
         // Serve RealmQuery to provide /core/appmgr and hence the CMX hub
         let (temp_dir, out_dir) = create_appmgr_out();
+
+        // The exposed dir is not used by this library
+        let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
         let query = serve_realm_query(HashMap::from([(
             "./core/appmgr".to_string(),
             (
@@ -541,6 +550,7 @@ mod tests {
                         runtime_dir: None,
                         start_reason: "Debugging Workflow".to_string(),
                     })),
+                    exposed_dir,
                 })),
             ),
         )]));
