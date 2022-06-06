@@ -535,7 +535,7 @@ impl CurrentTask {
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let dir = if !path.is_empty() && path[0] == b'/' {
             path = &path[1..];
-            self.fs.root.clone()
+            self.fs.root()
         } else if dir_fd == FdNumber::AT_FDCWD {
             self.fs.cwd()
         } else {
@@ -601,7 +601,7 @@ impl CurrentTask {
                     context.remaining_follows -= 1;
                     match name.entry.node.readlink(self)? {
                         SymlinkTarget::Path(path) => {
-                            let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
+                            let dir = if path[0] == b'/' { self.fs.root() } else { parent };
                             self.resolve_open_path(context, dir, &path, mode, flags)
                         }
                         SymlinkTarget::Node(node) => Ok(node),
@@ -775,7 +775,7 @@ impl CurrentTask {
     /// Resolves symlinks.
     pub fn lookup_path_from_root(&self, path: &FsStr) -> Result<NamespaceNode, Errno> {
         let mut context = LookupContext::default();
-        self.lookup_path(&mut context, self.fs.root.clone(), path)
+        self.lookup_path(&mut context, self.fs.root(), path)
     }
 
     pub fn exec(

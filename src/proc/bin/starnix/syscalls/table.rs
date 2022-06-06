@@ -60,6 +60,7 @@ pub fn dispatch_syscall(
         capget[2],
         chdir[1],
         chmod[2],
+        chroot[1],
         clock_getres[2],
         clock_gettime[2],
         clone[5],

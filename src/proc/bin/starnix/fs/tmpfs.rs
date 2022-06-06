@@ -201,7 +201,7 @@ mod test {
         let path = b"test.bin";
         let _file = current_task
             .fs
-            .root
+            .root()
             .create_node(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
             .unwrap();
 
@@ -245,7 +245,7 @@ mod test {
         let path = b"test.bin";
         let _file = current_task
             .fs
-            .root
+            .root()
             .create_node(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
             .unwrap();
         let rd_file = current_task.open_file(path, OpenFlags::RDONLY).unwrap();

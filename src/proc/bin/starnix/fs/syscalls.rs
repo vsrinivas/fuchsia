@@ -369,6 +369,20 @@ pub fn sys_getdents64(
     Ok(sink.actual())
 }
 
+pub fn sys_chroot(current_task: &CurrentTask, user_path: UserCString) -> Result<(), Errno> {
+    if !current_task.read().creds.has_capability(CAP_SYS_CHROOT) {
+        return error!(EPERM);
+    }
+
+    let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
+    if !name.entry.node.is_dir() {
+        return error!(ENOTDIR);
+    }
+
+    current_task.fs.chroot(name);
+    Ok(())
+}
+
 pub fn sys_chdir(current_task: &CurrentTask, user_path: UserCString) -> Result<(), Errno> {
     let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     if !name.entry.node.is_dir() {
@@ -956,7 +970,14 @@ pub fn sys_getcwd(
     buf: UserAddress,
     size: usize,
 ) -> Result<usize, Errno> {
-    let mut bytes = current_task.fs.cwd().path();
+    let mut cwd = current_task.fs.cwd().path();
+
+    let mut bytes = vec![];
+    if !cwd.starts_with(&current_task.fs.root().path()) {
+        bytes.append(&mut b"(unreachable)".to_vec());
+    }
+
+    bytes.append(&mut cwd);
     bytes.push(b'\0');
     if bytes.len() > size {
         return error!(ERANGE);

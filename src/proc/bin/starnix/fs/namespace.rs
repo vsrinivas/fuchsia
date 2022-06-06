@@ -366,7 +366,10 @@ impl NamespaceNode {
         } else if basename == b"." || basename == b"" {
             Ok(self.clone())
         } else if basename == b".." {
-            // TODO: make sure this can't escape a chroot
+            // Make sure this can't escape a chroot
+            if *self == current_task.fs.root() {
+                return Ok(self.clone());
+            }
             Ok(self.parent().unwrap_or_else(|| self.clone()))
         } else {
             let mut child = self.with_new_entry(self.entry.component_lookup(basename)?);
@@ -383,7 +386,7 @@ impl NamespaceNode {
                         child = match child.entry.node.readlink(current_task)? {
                             SymlinkTarget::Path(link_target) => {
                                 let link_directory = if link_target[0] == b'/' {
-                                    current_task.fs.root.clone()
+                                    current_task.fs.root()
                                 } else {
                                     self.clone()
                                 };

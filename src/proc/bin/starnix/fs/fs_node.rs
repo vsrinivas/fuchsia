@@ -538,7 +538,7 @@ mod tests {
         // registered in the kernel).
         current_task
             .fs
-            .root
+            .root()
             .create_node(b"zero", FileMode::IFCHR | FileMode::from_bits(0o666), DeviceType::ZERO)
             .expect("create_node");
 
@@ -567,7 +567,7 @@ mod tests {
         // Create a node.
         let node = &current_task
             .fs
-            .root
+            .root()
             .create_node(b"zero", FileMode::IFCHR, DeviceType::ZERO)
             .expect("create_node")
             .entry

@@ -18,6 +18,12 @@ struct FsContextState {
     /// This field owns the mount table for this FsContext.
     namespace: Arc<Namespace>,
 
+    /// The root of the namespace tree for this FsContext.
+    ///
+    /// Operations on the file system are typically either relative to this
+    /// root or to the cwd().
+    root: NamespaceNode,
+
     /// The current working directory.
     cwd: NamespaceNode,
 
@@ -30,12 +36,6 @@ struct FsContextState {
 /// File system operations, such as opening a file or mounting a directory, are
 /// performed using this context.
 pub struct FsContext {
-    /// The root of the namespace tree for this FsContext.
-    ///
-    /// Operations on the file system are typically either relative to this
-    /// root or to the cwd().
-    pub root: NamespaceNode,
-
     /// The mutable state for this FsContext.
     state: RwLock<FsContextState>,
 }
@@ -49,9 +49,9 @@ impl FsContext {
         let namespace = Namespace::new(root);
         let root = namespace.root();
         Arc::new(FsContext {
-            root: root.clone(),
             state: RwLock::new(FsContextState {
                 namespace,
+                root: root.clone(),
                 cwd: root,
                 umask: FileMode::DEFAULT_UMASK,
             }),
@@ -64,10 +64,7 @@ impl FsContext {
         //
         // See <https://man7.org/linux/man-pages/man2/umask.2.html>
 
-        Arc::new(FsContext {
-            root: self.root.clone(),
-            state: RwLock::new(self.state.read().clone()),
-        })
+        Arc::new(FsContext { state: RwLock::new(self.state.read().clone()) })
     }
 
     /// Returns a reference to the current working directory.
@@ -76,10 +73,22 @@ impl FsContext {
         state.cwd.clone()
     }
 
+    /// Returns the root.
+    pub fn root(&self) -> NamespaceNode {
+        let state = self.state.read();
+        state.root.clone()
+    }
+
     /// Change the current working directory.
     pub fn chdir(&self, name: NamespaceNode) {
         let mut state = self.state.write();
         state.cwd = name;
+    }
+
+    /// Change the root.
+    pub fn chroot(&self, name: NamespaceNode) {
+        let mut state = self.state.write();
+        state.root = name.clone();
     }
 
     pub fn apply_umask(&self, mode: FileMode) -> FileMode {
