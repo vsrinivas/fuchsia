@@ -95,6 +95,7 @@ if (!is_mac) {
       "tcp.c",
       "tcp_test.cc",
       "utf_conversion.c",
+      "utf_conversion_test.cc",
       "util.c",
       "util_test.cc",
       "variable.c",
