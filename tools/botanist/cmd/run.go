@@ -277,12 +277,18 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// logs will be streamed from.
 	t0 := targetSlice[0]
 	ffxOutputsDir := filepath.Join(os.Getenv(testrunnerconstants.TestOutDirEnvKey), "ffx_outputs")
+	removeFFXOutputsDir := false
 	ffx, err := ffxutil.NewFFXInstance(r.ffxPath, "", []string{}, t0.Nodename(), t0.SSHKey(), ffxOutputsDir)
 	if err != nil {
 		return err
 	}
 	if ffx != nil {
-		defer ffx.Stop()
+		defer func() {
+			ffx.Stop()
+			if removeFFXOutputsDir {
+				os.RemoveAll(ffxOutputsDir)
+			}
+		}()
 		if err := ffx.SetLogLevel(ffxutil.Trace); err != nil {
 			return err
 		}
@@ -434,7 +440,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	if err == nil {
 		// In the case of a successful run, remove the ffx_outputs dir which contains ffx logs.
 		// These logs can be very large, so we should only upload them in the case of a failure.
-		os.RemoveAll(ffxOutputsDir)
+		removeFFXOutputsDir = true
 	}
 	return err
 }
