@@ -17,6 +17,5 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/member_connector.h": "aec2b102664515af4891e6482d816bf0",
   "pkg/fidl_cpp/include/lib/fidl/cpp/service_connector.h": "921dc36b03d9c1854b05ebed40c00644",
   "pkg/fidl_cpp/include/lib/fidl/cpp/service_handler_base.h": "4a422b98568937fae5340575ac8d4303",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/thread_safe_binding_set.h": "729eeddc1e62d1cd92a4830b9f9f8349",
   "pkg/fidl_cpp/include/lib/fidl/cpp/type_converter.h": "81ea87e9526f104ff4bbebd502c6a7ec"
 }
