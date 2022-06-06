@@ -187,11 +187,22 @@ impl FxfsServer {
                 };
                 Ok(())
             }
-            VolumesRequest::Remove { name: _, responder } => {
-                // TODO(fxbug.dev/99182)
-                responder
-                    .send_no_shutdown_on_err(&mut Err(zx::Status::INTERNAL.into_raw()))
-                    .unwrap();
+            VolumesRequest::Remove { name, responder } => {
+                log::info!("Remove volume {:?}", name);
+                match self.volumes.remove_volume(&name).await {
+                    Ok(()) => {
+                        responder.send(&mut Ok(())).unwrap_or_else(|e| {
+                            log::warn!("Failed to send remove volume response: {}", e)
+                        });
+                    }
+                    Err(status) => {
+                        responder
+                            .send_no_shutdown_on_err(&mut Err(status.into_raw()))
+                            .unwrap_or_else(|e| {
+                                log::warn!("Failed to send remove volume response: {}", e)
+                            });
+                    }
+                };
                 Ok(())
             }
         }

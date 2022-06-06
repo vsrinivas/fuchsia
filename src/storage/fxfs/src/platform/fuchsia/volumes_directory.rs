@@ -143,9 +143,9 @@ impl VolumesDirectory {
         Ok(volume)
     }
 
-    /// Deletes a volume. The volume must exist but encrypted volume keys are not required.
+    /// Removes a volume. The volume must exist but encrypted volume keys are not required.
     #[allow(unused)]
-    pub async fn delete_volume(&self, name: &str) -> Result<(), Status> {
+    pub async fn remove_volume(&self, name: &str) -> Result<(), Status> {
         // Cowardly refuse to delete a mounted volume.
         if self.mounted_volumes.lock().unwrap().contains_key(name) {
             return Err(Status::ALREADY_BOUND);
@@ -413,7 +413,7 @@ mod tests {
         // We have the volume mounted so delete attempts should fail.
         assert_eq!(
             volumes_directory
-                .delete_volume(VOLUME_NAME)
+                .remove_volume(VOLUME_NAME)
                 .await
                 .err()
                 .expect("Deleting volume should fail"),
