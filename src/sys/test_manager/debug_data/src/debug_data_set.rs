@@ -449,6 +449,7 @@ mod inner {
             {
                 self.sender.close_channel();
                 self.on_capability_event.lock().await.take().map(|callback| callback(false));
+                drop(self.finish_timeout_task.take());
             }
         }
     }

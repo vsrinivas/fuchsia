@@ -709,6 +709,52 @@ async fn debug_data_test() {
 }
 
 #[fuchsia::test]
+async fn debug_data_stress_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_spam_test.cm";
+    let debug_data_contents = "a".repeat(4096);
+    const NUM_EXPECTED_VMOS: usize = 3250;
+
+    let builder = TestBuilder::new(
+        connect_test_manager().await.expect("cannot connect to run builder proxy"),
+    );
+    let suite_instance = builder
+        .add_suite(test_url, default_run_option())
+        .await
+        .expect("Cannot create suite instance");
+    let (run_events_result, suite_events_result) =
+        futures::future::join(builder.run(), collect_suite_events(suite_instance)).await;
+
+    let suite_events = suite_events_result.unwrap().0;
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("publish_debug_data"),
+        RunEvent::case_started("publish_debug_data"),
+        RunEvent::case_stopped("publish_debug_data", CaseStatus::Passed),
+        RunEvent::case_finished("publish_debug_data"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ];
+
+    assert_eq!(
+        suite_events.into_iter().group_by_test_case_unordered(),
+        expected_events.into_iter().group_by_test_case_unordered(),
+    );
+
+    let test_run_events = run_events_result.unwrap();
+    // There may be a number of files in debug data due to the processing done
+    // in debug data. In addition, the names of the files are set by some libraries
+    // which we aren't concerned about. So here, we'll just check that a file that contains
+    // the content our test wrote exists.
+    let debug_data_events: Vec<_> = test_run_events
+        .into_iter()
+        .filter(|run_event| {
+            let TestRunEventPayload::DebugData { contents, .. } = &run_event.payload;
+            contents == &debug_data_contents
+        })
+        .collect();
+    assert_eq!(debug_data_events.len(), NUM_EXPECTED_VMOS);
+}
+
+#[fuchsia::test]
 async fn custom_artifact_realm_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/custom_artifact_realm_test.cm";
 
