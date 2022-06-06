@@ -6,6 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/span.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <condition_variable>
@@ -149,9 +151,7 @@ void CodecAdapterVaApiDecoder::CoreCodecResetStreamAfterCurrentFrame() {
   CoreCodecStartStream();
 }
 
-void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
-  media::DecoderBuffer buffer(std::move(data), nullptr, 0, {});
-
+void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
   media_decoder_->SetStream(next_stream_id_++, buffer);
 
   while (true) {
@@ -168,7 +168,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
                                         nullptr, 0, &context_id);
       if (va_res != VA_STATUS_SUCCESS) {
         SetCodecFailure("vaCreateContext failed: %s", vaErrorStr(va_res));
-        return;
+        break;
       }
       context_id_.emplace(context_id);
       std::vector<VASurfaceID> va_surfaces;
@@ -186,7 +186,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
                                 static_cast<uint32_t>(va_surfaces.size()), nullptr, 0);
       if (va_res != VA_STATUS_SUCCESS) {
         SetCodecFailure("vaCreateSurfaces failed: %s", vaErrorStr(va_res));
-        return;
+        break;
       }
 
       for (VASurfaceID id : va_surfaces) {
@@ -213,10 +213,10 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
         events_->onCoreCodecResetStreamAfterCurrentFrame();
       }
 
-      return;
+      break;
     }
   }
-}
+}  // ~buffer
 
 const char* CodecAdapterVaApiDecoder::DecoderStateName(DecoderState state) {
   switch (state) {
@@ -263,7 +263,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
         // Force frames to be processed.
         std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, kEndOfStreamNalUnitType};
 
-        media::DecoderBuffer buffer(std::move(end_of_stream_delimiter), nullptr, 0, {});
+        media::DecoderBuffer buffer(end_of_stream_delimiter);
         media_decoder_->SetStream(next_stream_id_++, buffer);
         state_ = DecoderState::kDecoding;
         auto result = media_decoder_->Decode();
@@ -282,22 +282,37 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
     } else if (input_item.is_packet()) {
       auto* packet = input_item.packet();
       ZX_DEBUG_ASSERT(packet->has_start_offset());
-      uint8_t* buffer_start = packet->buffer()->base() + packet->start_offset();
-      // TODO(fxbug.dev/94139): Remove this copy.
-      std::vector<uint8_t> data(buffer_start, buffer_start + packet->valid_length_bytes());
       if (packet->has_timestamp_ish()) {
         stream_to_pts_map_.emplace_back(next_stream_id_, packet->timestamp_ish());
         constexpr size_t kMaxPtsMapSize = 64;
         if (stream_to_pts_map_.size() > kMaxPtsMapSize)
           stream_to_pts_map_.pop_front();
       }
-      events_->onCoreCodecInputPacketDone(input_item.packet());
+
+      const uint8_t* buffer_start = packet->buffer()->base() + packet->start_offset();
+      size_t buffer_size = packet->valid_length_bytes();
+
+      bool returned_buffer = false;
+      auto return_input_packet =
+          fit::defer_callback(fit::closure([this, &input_item, &returned_buffer] {
+            events_->onCoreCodecInputPacketDone(input_item.packet());
+            returned_buffer = true;
+          }));
 
       if (is_h264_ && avcc_processor_.is_avcc()) {
-        DecodeAnnexBBuffer(avcc_processor_.ParseVideoAvcc(std::move(data)));
+        // TODO(fxbug.dev/94139): Remove this copy.
+        auto output_avcc_vec = avcc_processor_.ParseVideoAvcc(buffer_start, buffer_size);
+        media::DecoderBuffer buffer(output_avcc_vec, packet->buffer(), packet->start_offset(),
+                                    std::move(return_input_packet));
+        DecodeAnnexBBuffer(std::move(buffer));
       } else {
-        DecodeAnnexBBuffer(std::move(data));
+        media::DecoderBuffer buffer({buffer_start, buffer_size}, packet->buffer(),
+                                    packet->start_offset(), std::move(return_input_packet));
+        DecodeAnnexBBuffer(std::move(buffer));
       }
+
+      // Ensure that the decode buffer has been destroyed and the input packet has been returned
+      ZX_ASSERT(returned_buffer);
 
       // TODO(stefanbossbaly): Encapsulate in abstraction
       if (is_h264_) {
@@ -307,7 +322,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
         std::vector<uint8_t> access_unit_delimiter{0, 0, 1, kAccessUnitDelimiterNalUnitType,
                                                    kPrimaryPicType};
 
-        media::DecoderBuffer buffer(std::move(access_unit_delimiter), nullptr, 0, {});
+        media::DecoderBuffer buffer(access_unit_delimiter);
         media_decoder_->SetStream(next_stream_id_++, buffer);
         state_ = DecoderState::kDecoding;
         auto result = media_decoder_->Decode();
@@ -328,7 +343,7 @@ void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
       // Force frames to be processed.
       std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, 11};
 
-      media::DecoderBuffer buffer(std::move(end_of_stream_delimiter), nullptr, 0, {});
+      media::DecoderBuffer buffer(end_of_stream_delimiter);
       media_decoder_->SetStream(next_stream_id_++, buffer);
       auto result = media_decoder_->Decode();
       if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {

@@ -4,6 +4,10 @@
 
 #include "src/media/codec/codecs/vaapi/avcc_processor.h"
 
+#include <lib/fit/defer.h>
+
+#include <limits>
+
 #define LOG(x, ...) fprintf(stderr, __VA_ARGS__)
 
 void AvccProcessor::ProcessOobBytes(const fuchsia::media::FormatDetails& format_details) {
@@ -124,7 +128,13 @@ void AvccProcessor::ProcessOobBytes(const fuchsia::media::FormatDetails& format_
         offset += pps_length;
       }
 
-      return decode_annex_b_(std::move(accumulation));
+      bool returned_buffer = false;
+      auto return_input_packet =
+          fit::defer_callback(fit::closure([&returned_buffer] { returned_buffer = true; }));
+      decode_annex_b_(
+          media::DecoderBuffer(accumulation, nullptr, 0u, std::move(return_input_packet)));
+      ZX_ASSERT(returned_buffer);
+      return;
     }
     default:
       LOG(ERROR, "unexpected first oob byte");
@@ -133,9 +143,12 @@ void AvccProcessor::ProcessOobBytes(const fuchsia::media::FormatDetails& format_
   }
 }
 
-std::vector<uint8_t> AvccProcessor::ParseVideoAvcc(std::vector<uint8_t> input) const {
-  const uint8_t* data = input.data();
-  const uint32_t length = static_cast<uint32_t>(input.size());
+std::vector<uint8_t> AvccProcessor::ParseVideoAvcc(const uint8_t* data, size_t data_size) const {
+  if (data_size > std::numeric_limits<uint32_t>::max()) {
+    events_->onCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+    return {};
+  }
+  const uint32_t length = static_cast<uint32_t>(data_size);
 
   // So far, the "avcC"/"AVCC" we've seen has emulation prevention bytes on it
   // already.  So we don't add those here.  But if we did need to add them, we'd

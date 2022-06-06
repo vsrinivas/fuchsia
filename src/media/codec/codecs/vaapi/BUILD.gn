@@ -18,6 +18,7 @@ source_set("avcc_processor") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/media/lib/codec_impl",
+    "//src/media/third_party/chromium_media",
   ]
 }
 source_set("vaapi_utils") {

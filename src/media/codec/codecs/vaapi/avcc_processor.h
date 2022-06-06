@@ -11,20 +11,23 @@
 
 #include <vector>
 
+#include "media/base/decoder_buffer.h"
+
 // TODO(fxbug.dev/95162): Move to a centralized location.
 class AvccProcessor {
  public:
-  explicit AvccProcessor(fit::function<void(std::vector<uint8_t>)> decode_annex_b,
-                         CodecAdapterEvents* codec_adapter_events)
+  using BufferCallback = fit::function<void(media::DecoderBuffer)>;
+
+  explicit AvccProcessor(BufferCallback decode_annex_b, CodecAdapterEvents* codec_adapter_events)
       : decode_annex_b_(std::move(decode_annex_b)), events_(codec_adapter_events) {}
 
   void ProcessOobBytes(const fuchsia::media::FormatDetails& format_details);
-  std::vector<uint8_t> ParseVideoAvcc(std::vector<uint8_t> input) const;
+  std::vector<uint8_t> ParseVideoAvcc(const uint8_t* data, size_t data_size) const;
 
   bool is_avcc() const { return is_avcc_; }
 
  private:
-  fit::function<void(std::vector<uint8_t>)> decode_annex_b_;
+  BufferCallback decode_annex_b_;
   CodecAdapterEvents* events_;
   bool is_avcc_ = false;
   uint32_t pseudo_nal_length_field_bytes_ = 0;

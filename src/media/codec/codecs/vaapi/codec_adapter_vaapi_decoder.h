@@ -23,6 +23,7 @@
 #include <va/va.h>
 
 #include "buffer_pool.h"
+#include "media/base/decoder_buffer.h"
 #include "media/gpu/accelerated_video_decoder.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
@@ -418,7 +419,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // Releases any resources from the just-ended stream.
   void CleanUpAfterStream();
 
-  void DecodeAnnexBBuffer(std::vector<uint8_t> data);
+  void DecodeAnnexBBuffer(media::DecoderBuffer buffer);
 
   uint32_t GetOutputStride() {
     // bytes_per_row_divisor must be a multiple of the size from in the output constraints.
