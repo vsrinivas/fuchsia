@@ -17,9 +17,6 @@
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry"
-        ],
-        "system": [
-            "bin"
         ]
     }
 }
