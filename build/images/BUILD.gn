@@ -10,7 +10,6 @@ import("//build/config/clang/clang.gni")
 import("//build/dist/fini_manifest.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/args.gni")
-import("//build/images/assembly/package_list.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/paths.gni")
 import("//build/images/shell_commands.gni")
@@ -18,22 +17,17 @@ import("//build/images/size_checker/size_checker_input.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
-import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/sdk/config.gni")
 import("//build/security.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
-import("//src/sys/pkg/bin/pm/pm.gni")
-import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
 
 labels = {
   images = "//build/images/fuchsia"
-  images_prime = "//build/images/fuchsia:fuchsia_prime"
   images_netboot = "//build/images/fuchsia:netboot"
   base_packages = "//build/images/fuchsia:fuchsia.base_packages"
   cache_packages = "//build/images/fuchsia:fuchsia.cache_packages"
-  meta_packages = "//build/images/fuchsia:fuchsia.meta_packages"
 }
 
 supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
@@ -44,15 +38,6 @@ files = {
   blobfs = "${root_out_dir}/obj/build/images/blob.blk"
   flash_manifest =
       "${root_out_dir}/obj/build/images/fuchsia/flash_manifest/flash.json"
-
-  # TODO(https://fxbug.dev/98480) move these to image-relative paths along with tools' usages
-  base_package_manifests = "$root_build_dir/base_package_manifests.list"
-  cache_package_manifests = "$root_build_dir/cache_package_manifests.list"
-  manifests_from_metadata =
-      "$root_build_dir/package_manifests_from_metadata.list"
-  base_package_names = "$root_build_dir/base_packages.list"
-  cache_package_names = "$root_build_dir/cache_packages.list"
-  universe_package_names = "$root_build_dir/universe_packages.list"
 
   if (!bootfs_only) {
     fvm = "${outdir}/fvm.blk"
@@ -72,65 +57,6 @@ default_image_deps = [ labels.images ]
 
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
-
-#####
-# These are the package groups that are used to build the system:
-
-group("universe_packages") {
-  testonly = fuchsia_zbi_testonly
-  visibility = [ ":*" ]
-  public_deps = [
-    "//:developer_universe_packages",
-    "//:legacy_universe_packages",
-  ]
-}
-
-group("packages") {
-  testonly = true
-  public_deps = [
-    ":universe_packages",
-    labels.meta_packages,
-  ]
-}
-
-#####
-# These are lists of the packages in the above groups
-
-package_list_from_assembly("base_packages.list") {
-  testonly = true
-  system_label = labels.images
-  package_set = "base"
-  contents = "name"
-  outputs = [ files.base_package_names ]
-}
-
-package_list_from_assembly("cache_packages.list") {
-  testonly = true
-  system_label = labels.images
-  package_set = "cache"
-  contents = "name"
-  outputs = [ files.cache_package_names ]
-}
-
-generate_package_metadata("universe_packages.list") {
-  testonly = true
-  visibility = [ ":*" ]
-  data_keys = [ "package_names" ]
-  outputs = [ files.universe_package_names ]
-  deps = [ ":universe_packages" ]
-}
-
-group("package_lists") {
-  testonly = true
-  visibility = [ ":*" ]
-
-  deps = [
-    ":all_package_manifests.list",
-    ":base_packages.list",
-    ":cache_packages.list",
-    ":universe_packages.list",
-  ]
-}
 
 ###
 ### Zircon Boot Images
@@ -261,97 +187,6 @@ default_image_deps += [ ":fastboot_manifest" ]
 
 default_image_deps += [ recovery_label ]
 
-###
-### Amber updates.
-###
-
-recovery_images_list = root_build_dir + "/recovery_images_list"
-generated_file("recovery_images_list") {
-  testonly = true
-  outputs = [ recovery_images_list ]
-  output_conversion = "list lines"
-  data_keys = [ "update_target" ]
-  deps = [ recovery_label ]
-}
-
-generate_epoch("epoch.json") {
-  output_file = "${target_out_dir}/${target_name}"
-}
-
-# This output is a manifest of manifests that is usable as an input to `pm
-# publish -lp`, a tool for publishing a set of packages from a build produced
-# list of package manifests.
-all_package_manifests_list = root_build_dir + "/all_package_manifests.list"
-generate_package_metadata("package_manifests_from_metadata.list") {
-  testonly = true
-  outputs = [ files.manifests_from_metadata ]
-  data_keys = [ "package_output_manifests" ]
-  rebase = root_build_dir
-  deps = [
-    ":packages",
-    labels.images,
-    labels.images_prime,
-  ]
-}
-
-package_list_from_assembly("base_package_manifests.list") {
-  testonly = true
-  system_label = labels.images
-  package_set = "base"
-  contents = "manifest"
-  outputs = [ files.base_package_manifests ]
-}
-
-package_list_from_assembly("cache_package_manifests.list") {
-  testonly = true
-  system_label = labels.images
-  package_set = "cache"
-  contents = "manifest"
-  outputs = [ files.cache_package_manifests ]
-}
-
-action("all_package_manifests.list") {
-  testonly = true
-  script = "//build/cat.sh"
-  outputs = [ all_package_manifests_list ]
-  deps = [
-    ":base_package_manifests.list",
-    ":cache_package_manifests.list",
-    ":package_manifests_from_metadata.list",
-  ]
-  args = rebase_path(outputs, root_build_dir)
-  sources = []
-  foreach(_dep, deps) {
-    _dep_outputs = []  # tell gn its ok to rewrite each iteration
-    _dep_outputs = get_target_outputs(_dep)
-    args += [ rebase_path(_dep_outputs[0], root_build_dir) ]
-    sources += [ _dep_outputs[0] ]
-  }
-}
-
-# initialize and prepare the package repository.
-pm_prepare_publish("prepare_publish") {
-  testonly = true
-}
-
-# publish all packages to the package repository.
-pm_publish("publish") {
-  testonly = true
-  deps = [
-    ":all_package_manifests.list",
-    ":prepare_publish",
-  ]
-  inputs = [ all_package_manifests_list ]
-}
-
-group("updates") {
-  testonly = true
-  deps = [
-    ":package_lists",
-    ":publish",
-  ]
-}
-
 # Build the UEFI disk image.
 # GCE, a consumer of this image, requires it to be named disk.raw
 uefi_disk_path = "$target_out_dir/disk.raw"
@@ -480,7 +315,7 @@ group("default-images") {
   if (!bootfs_only) {
     deps += [
       ":record_filesystem_sizes",
-      ":updates",
+      "//build/images/updates",
     ]
 
     if (!build_sdk_archives) {

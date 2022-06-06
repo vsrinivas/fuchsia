@@ -421,7 +421,7 @@ func constructNinjaTargets(
 		}
 
 		// TODO(fxbug.dev/43568): Remove once it is always false, and move
-		// "build/images:updates" into `extraTargetsForImages`.
+		// "build/images/updates" into `extraTargetsForImages`.
 		if staticSpec.IncludeArchives {
 			archivesToBuild := []string{
 				"archive",  // Images and scripts for paving/netbooting.
@@ -438,7 +438,7 @@ func constructNinjaTargets(
 				}
 			}
 		} else {
-			targets = append(targets, "build/images:updates")
+			targets = append(targets, "build/images/updates")
 		}
 	}
 

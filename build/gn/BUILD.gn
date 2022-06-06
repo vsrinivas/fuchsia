@@ -81,12 +81,13 @@ pm_tool_target = "//src/sys/pkg/bin/pm:pm_bin($host_toolchain)"
 # This contains one package_manifest.json path per line and is parsed
 # to populate ${tuf_repo_name}/repository/blobs/ in the archive.
 all_package_manifests_list = root_build_dir + "/all_package_manifests.list"
-all_package_manifests_target = "//build/images:all_package_manifests.list"
+all_package_manifests_target =
+    "//build/images/updates:all_package_manifests.list"
 
 # The top-level timestamp.json file which will be parsed to extract the
 # properly versioned snapshot.json file, which will itself will be parsed
 # to get the properly versioned root.json and targets.json.
-# Note that these files are created by //build/images:publish, though it is
+# Note that these files are created by //build/images/updates:publish, though it is
 # not properly listed as an output for its action.
 timestamp_json_file =
     "$root_build_dir/${tuf_repo_name}/repository/timestamp.json"
@@ -133,7 +134,7 @@ python_action("package_archive") {
   }
 
   deps = [
-    "//build/images:publish",
+    "//build/images/updates:publish",
     all_package_manifests_target,
     pm_tool_target,
     tarmaker_tool_target,

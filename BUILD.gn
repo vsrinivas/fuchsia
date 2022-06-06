@@ -188,7 +188,7 @@ build_api_module("api") {
 build_api_module("package-repositories") {
   testonly = true
   data_keys = [ "package_repository" ]
-  deps = [ "//build/images:updates" ]
+  deps = [ "//build/images/updates" ]
 }
 
 # This describes all the archives the build can produce, in:
@@ -415,7 +415,7 @@ build_api_module("generated_sources") {
   testonly = true
   data_keys = [ "generated_sources" ]
   deps = [
-    "//build/images:packages",
+    "//build/images/updates:packages",
     "//sdk",
   ]
 }
@@ -444,7 +444,7 @@ build_api_module("generated_sources") {
 build_api_module("fuzzers") {
   testonly = true
   data_keys = [ "fuzz_spec" ]
-  deps = [ "//build/images:packages" ]
+  deps = [ "//build/images/updates:packages" ]
 }
 
 # This describes all the "image" files the build can produce, in the file:
@@ -611,7 +611,7 @@ build_api_module("prebuilt_binaries") {
   testonly = true
   data_keys = [ "prebuilt_binaries" ]
   deps = [
-    "//build/images:packages",
+    "//build/images/updates:packages",
     "//build/prebuilt",
     "//sdk",
   ]
@@ -643,7 +643,7 @@ build_api_module("prebuilt_binaries") {
 build_api_module("prebuilt_package_flavors") {
   testonly = true
   data_keys = [ "prebuilt_package_with_flavors" ]
-  deps = [ "//build/images:packages" ]
+  deps = [ "//build/images/updates:packages" ]
 }
 
 # Tests in the build.
@@ -699,7 +699,7 @@ build_api_module("tests") {
     "//:host",
 
     # Pull in tests from *_package_labels.
-    "//build/images:packages",
+    "//build/images/updates:packages",
   ]
   if (include_zbi_host_tests) {
     deps += [ "//build/zircon/zbi_tests" ]
@@ -814,7 +814,7 @@ build_api_module("tool_paths") {
     "//build/rust:tool_paths.llvm-profdata-rust($host_toolchain)",
     ":tool_paths.llvm-tools",
     ":tool_paths.metadata",
-    "//build/images:packages",
+    "//build/images/updates:packages",
     "//src/sys/pkg/tests/system-tests:system_tests_tools($host_toolchain)",
     "//src/storage/bin/fvm($host_toolchain)",
     "//third_party/cobalt/src/bin/config_change_validator/src:bin($host_toolchain)",
@@ -933,7 +933,7 @@ build_api_module("triage_sources") {
   testonly = true
   data_keys = [ "triage_sources" ]
   deps = [
-    "//build/images:packages",
+    "//build/images/updates:packages",
     "//src/diagnostics/config/triage",
   ]
 }
@@ -1011,7 +1011,7 @@ build_api_module("zbi_tests") {
 build_api_module("all_package_manifest_paths") {
   testonly = true
 
-  deps = [ "//build/images:all_package_manifests.list" ]
+  deps = [ "//build/images/updates:all_package_manifests.list" ]
 
   contents = [ "all_package_manifests.list" ]
 }
@@ -1076,7 +1076,7 @@ check_included_drivers("drivers-check") {
   testonly = true
   deps = [
     "//build/images:default-images",
-    "//build/images:packages",
+    "//build/images/updates:packages",
   ]
 }
 
@@ -1085,7 +1085,7 @@ create_all_drivers_doc("create-all-drivers-doc") {
   testonly = true
   deps = [
     "//build/images:default-images",
-    "//build/images:packages",
+    "//build/images/updates:packages",
   ]
 }
 
@@ -1161,7 +1161,7 @@ group("default") {
     "//:host",
     "//:test-list",
     "//build/assembly:validate_product_defs",
-    "//build/images:packages",
+    "//build/images/updates:packages",
     "//build/input:build_only",
     "//build/zircon/zbi_tests",
     "//sdk",

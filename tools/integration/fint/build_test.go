@@ -343,7 +343,7 @@ func TestBuild(t *testing.T) {
 					{Name: "should-be-ignored", Path: "different_path"},
 				},
 			},
-			expectedTargets: append(extraTargetsForImages, "build/images:updates", "qemu_image_path"),
+			expectedTargets: append(extraTargetsForImages, "build/images/updates", "qemu_image_path"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{Name: qemuImageNames[0], Path: "qemu_image_path"}),
