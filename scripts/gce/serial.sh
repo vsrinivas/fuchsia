@@ -7,6 +7,6 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/env.sh
 fi
 
-# ctlpath frequently gets too long here, so instead, just ssh without it.
-# was: gcloud compute connect-to-serial-port $instance
-ssh -S none -p 9600 $FUCHSIA_GCE_PROJECT.$FUCHSIA_GCE_ZONE.$FUCHSIA_GCE_INSTANCE.$FUCHSIA_GCE_USER@ssh-serialport.googleapis.com
+# Control Path can often get too long with this command.
+# If you run into this, add ControlPath=none to your SSH config.
+gcloud compute connect-to-serial-port $FUCHSIA_GCE_INSTANCE
