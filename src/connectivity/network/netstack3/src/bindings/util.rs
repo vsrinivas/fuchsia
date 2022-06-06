@@ -6,11 +6,14 @@ use core::{convert::Infallible as Never, num::NonZeroU64};
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
+use fidl_fuchsia_posix as fposix;
 use net_types::ip::{
     AddrSubnetEither, AddrSubnetError, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither, SubnetError,
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{AddRouteError, AddableEntryEither, DeviceId, EntryEither, NetstackError};
+
+use crate::bindings::socket::IntoErrno;
 
 /// A core type which can be fallibly converted from the FIDL type `F`.
 ///
@@ -402,6 +405,12 @@ impl TryIntoFidlWithContext<u64> for DeviceId {
         ctx: &C,
     ) -> Result<u64, DeviceNotFoundError> {
         ctx.get_binding_id(self).ok_or(DeviceNotFoundError)
+    }
+}
+
+impl IntoErrno for DeviceNotFoundError {
+    fn into_errno(self) -> fposix::Errno {
+        fposix::Errno::Enodev
     }
 }
 

@@ -812,6 +812,42 @@ impl<I: Ip> From<UdpListenerId<I>> for UdpBoundId<I> {
     }
 }
 
+/// A unique identifier for a bound or unbound UDP socket.
+///
+/// Contains either a [`UdpBoundId`] or [`UdpUnboundId`] in contexts where
+/// either can be present.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum UdpSocketId<I: Ip> {
+    /// A bound UDP socket ID.
+    Bound(UdpBoundId<I>),
+    /// An unbound UDP socket ID.
+    Unbound(UdpUnboundId<I>),
+}
+
+impl<I: Ip> From<UdpBoundId<I>> for UdpSocketId<I> {
+    fn from(id: UdpBoundId<I>) -> Self {
+        Self::Bound(id)
+    }
+}
+
+impl<I: Ip> From<UdpUnboundId<I>> for UdpSocketId<I> {
+    fn from(id: UdpUnboundId<I>) -> Self {
+        Self::Unbound(id)
+    }
+}
+
+impl<I: Ip> From<UdpListenerId<I>> for UdpSocketId<I> {
+    fn from(id: UdpListenerId<I>) -> Self {
+        Self::Bound(id.into())
+    }
+}
+
+impl<I: Ip> From<UdpConnId<I>> for UdpSocketId<I> {
+    fn from(id: UdpConnId<I>) -> Self {
+        Self::Bound(id.into())
+    }
+}
+
 /// An execution context for the UDP protocol.
 pub trait UdpContext<I: IcmpIpExt> {
     /// Receives an ICMP error message related to a previously-sent UDP packet.
@@ -1496,6 +1532,45 @@ pub fn set_bound_udp_device<I: IpExt, C, SC: UdpStateContext<I, C>>(
     }
 }
 
+/// Gets the device the specified socket is bound to.
+///
+/// # Panics
+///
+/// Panics if `id` is not a valid socket ID.
+pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C>(
+    sync_ctx: &SC,
+    _ctx: &mut C,
+    id: UdpSocketId<I>,
+) -> Option<SC::DeviceId> {
+    match id {
+        UdpSocketId::Unbound(id) => {
+            let UnboundSocketState { device, sharing: _ } = sync_ctx
+                .get_first_state()
+                .unbound
+                .get(id.into())
+                .expect("unbound UDP socket not found");
+            *device
+        }
+        UdpSocketId::Bound(id) => {
+            let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
+            match id {
+                UdpBoundId::Listening(id) => {
+                    let (_, addr): &(ListenerState, _) =
+                        bound.get_listener_by_id(&id).expect("UDP listener not found");
+                    let ListenerAddr { device, ip: _ } = addr;
+                    *device
+                }
+                UdpBoundId::Connected(id) => {
+                    let (_, addr): &(ConnState<_>, _) =
+                        bound.get_conn_by_id(&id).expect("UDP connected socket not found");
+                    let ConnAddr { device, ip: _ } = addr;
+                    *device
+                }
+            }
+        }
+    }
+}
+
 /// Sets the POSIX `SO_REUSEPORT` option for the specified socket.
 ///
 /// # Panics
@@ -1512,6 +1587,44 @@ pub fn set_udp_posix_reuse_port<I: IpExt, C, SC: UdpStateContext<I, C>>(
         unbound.get_mut(id.into()).expect("unbound UDP socket not found");
     *sharing =
         if reuse_port { PosixSharingOptions::ReusePort } else { PosixSharingOptions::Exclusive };
+}
+
+/// Gets the POSIX `SO_REUSEPORT` option for the specified socket.
+///
+/// # Panics
+///
+/// Panics if `id` is not a valid `UdpSocketId`.
+pub fn get_udp_posix_reuse_port<I: IpExt, SC: UdpStateContext<I, C>, C>(
+    sync_ctx: &SC,
+    _ctx: &mut C,
+    id: UdpSocketId<I>,
+) -> bool {
+    match id {
+        UdpSocketId::Unbound(id) => {
+            let unbound = &sync_ctx.get_first_state().unbound;
+            let UnboundSocketState { device: _, sharing } =
+                unbound.get(id.into()).expect("unbound UDP socket not found");
+            sharing
+        }
+        UdpSocketId::Bound(id) => {
+            let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
+            match id {
+                UdpBoundId::Listening(id) => {
+                    let (state, _): &(_, ListenerAddr<_>) =
+                        bound.get_listener_by_id(&id).expect("listener UDP socket not found");
+                    let ListenerState { sharing } = state;
+                    sharing
+                }
+                UdpBoundId::Connected(id) => {
+                    let (state, _): &(_, ConnAddr<_>) =
+                        bound.get_conn_by_id(&id).expect("conneted UDP socket not found");
+                    let ConnState { socket: _, sharing } = state;
+                    sharing
+                }
+            }
+        }
+    }
+    .is_reuse_port()
 }
 
 /// Removes a previously registered UDP connection.
@@ -3685,6 +3798,94 @@ mod tests {
         let info = get_udp_listener_info(&ctx, &mut (), list);
         assert_eq!(info.local_ip, None);
         assert_eq!(info.local_port.get(), 200);
+    }
+
+    #[ip_test]
+    fn test_get_reuse_port<I: Ip + TestIpExt>()
+    where
+        DummyCtx<I>: DummyCtxBound<I>,
+    {
+        let mut ctx = DummyCtx::<I>::default();
+        let unbound = create_udp_unbound(&mut ctx);
+        assert_eq!(get_udp_posix_reuse_port(&ctx, &mut (), unbound.into()), false,);
+
+        set_udp_posix_reuse_port(&mut ctx, &mut (), unbound, true);
+
+        assert_eq!(get_udp_posix_reuse_port(&ctx, &mut (), unbound.into()), true);
+
+        let listen = listen_udp(&mut ctx, &mut (), unbound, Some(local_ip::<I>()), None)
+            .expect("listen failed");
+        assert_eq!(get_udp_posix_reuse_port(&ctx, &mut (), listen.into()), true);
+        let _: UdpListenerInfo<_> = remove_udp_listener(&mut ctx, &mut (), listen);
+
+        let unbound = create_udp_unbound(&mut ctx);
+        set_udp_posix_reuse_port(&mut ctx, &mut (), unbound, true);
+        let conn =
+            connect_udp(&mut ctx, &mut (), unbound, None, None, remote_ip::<I>(), nonzero!(569u16))
+                .expect("connect failed");
+
+        assert_eq!(get_udp_posix_reuse_port(&ctx, &mut (), conn.into()), true);
+    }
+
+    #[ip_test]
+    fn test_get_bound_device_unbound<I: Ip + TestIpExt>()
+    where
+        DummyCtx<I>: DummyCtxBound<I>,
+    {
+        let mut ctx = DummyCtx::<I>::default();
+        let unbound = create_udp_unbound(&mut ctx);
+
+        assert_eq!(get_udp_bound_device(&ctx, &mut (), unbound.into()), None);
+
+        set_unbound_udp_device(&mut ctx, &mut (), unbound.into(), Some(DummyDeviceId));
+        assert_eq!(get_udp_bound_device(&ctx, &mut (), unbound.into()), Some(DummyDeviceId));
+    }
+
+    #[ip_test]
+    fn test_get_bound_device_listener<I: Ip + TestIpExt>()
+    where
+        DummyCtx<I>: DummyCtxBound<I>,
+    {
+        let mut ctx = DummyCtx::<I>::default();
+        let unbound = create_udp_unbound(&mut ctx);
+
+        set_unbound_udp_device(&mut ctx, &mut (), unbound, Some(DummyDeviceId));
+        let listen = listen_udp(
+            &mut ctx,
+            &mut (),
+            unbound,
+            Some(local_ip::<I>()),
+            Some(NonZeroU16::new(100).unwrap()),
+        )
+        .expect("failed to listen");
+        assert_eq!(get_udp_bound_device(&ctx, &mut (), listen.into()), Some(DummyDeviceId));
+
+        set_bound_udp_device(&mut ctx, &mut (), listen.into(), None).expect("failed to set device");
+        assert_eq!(get_udp_bound_device(&ctx, &mut (), listen.into()), None);
+    }
+
+    #[ip_test]
+    fn test_get_bound_device_connected<I: Ip + TestIpExt>()
+    where
+        DummyCtx<I>: DummyCtxBound<I>,
+    {
+        let mut ctx = DummyCtx::<I>::default();
+        let unbound = create_udp_unbound(&mut ctx);
+
+        set_unbound_udp_device(&mut ctx, &mut (), unbound, Some(DummyDeviceId));
+        let conn = connect_udp(
+            &mut ctx,
+            &mut (),
+            unbound,
+            Some(local_ip::<I>()),
+            Some(NonZeroU16::new(100).unwrap()),
+            remote_ip::<I>(),
+            NonZeroU16::new(200).unwrap(),
+        )
+        .expect("failed to connect");
+        assert_eq!(get_udp_bound_device(&ctx, &mut (), conn.into()), Some(DummyDeviceId));
+        set_bound_udp_device(&mut ctx, &mut (), conn.into(), None).expect("failed to set device");
+        assert_eq!(get_udp_bound_device(&ctx, &mut (), conn.into()), None);
     }
 
     #[ip_test]

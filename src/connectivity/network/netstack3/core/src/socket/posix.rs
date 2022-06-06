@@ -328,6 +328,13 @@ impl PosixSharingOptions {
             (PosixSharingOptions::ReusePort, PosixSharingOptions::ReusePort) => true,
         }
     }
+
+    pub(crate) fn is_reuse_port(&self) -> bool {
+        match self {
+            PosixSharingOptions::Exclusive => false,
+            PosixSharingOptions::ReusePort => true,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]

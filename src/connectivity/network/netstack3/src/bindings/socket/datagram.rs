@@ -33,14 +33,15 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
-    connect_udp, create_udp_unbound, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp,
-    remove_udp_conn, remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn,
-    send_udp_listener, set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device,
-    BlanketCoreContext, BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx,
-    EventDispatcher, IdMap, IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt,
-    IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo,
-    UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-    UdpSockCreationError, UdpStateContext, UdpUnboundId,
+    connect_udp, create_udp_unbound, get_udp_bound_device, get_udp_conn_info,
+    get_udp_listener_info, get_udp_posix_reuse_port, icmp, listen_udp, remove_udp_conn,
+    remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
+    set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BlanketCoreContext,
+    BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
+    IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError,
+    LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
+    UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+    UdpSocketId, UdpStateContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -54,8 +55,8 @@ use thiserror::Error;
 
 use crate::bindings::{
     devices::Devices,
-    util::{DeviceNotFoundError, TryFromFidlWithContext},
-    Lockable, LockableContext,
+    util::{DeviceNotFoundError, TryFromFidlWithContext, TryIntoFidlWithContext},
+    CommonInfo, Lockable, LockableContext,
 };
 
 use super::{
@@ -265,7 +266,11 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         device: Option<SC::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError>;
 
+    fn get_bound_device(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> Option<SC::DeviceId>;
+
     fn set_reuse_port(sync_ctx: &mut SC, ctx: &mut C, id: Self::UnboundId, reuse_port: bool);
+
+    fn get_reuse_port(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> bool;
 }
 
 /// An abstraction over transport protocols that allows data to be sent via the Core.
@@ -319,6 +324,15 @@ impl<I: Ip> From<BoundSocketId<I, Udp>> for UdpBoundId<I> {
         match id {
             BoundSocketId::Connected(c) => UdpBoundId::Connected(c),
             BoundSocketId::Listener(c) => UdpBoundId::Listening(c),
+        }
+    }
+}
+
+impl<I: Ip> From<SocketId<I, Udp>> for UdpSocketId<I> {
+    fn from(id: SocketId<I, Udp>) -> Self {
+        match id {
+            SocketId::Unbound(id) => Self::Unbound(id),
+            SocketId::Bound(id) => Self::Bound(id.into()),
         }
     }
 }
@@ -429,8 +443,16 @@ impl<I: IpExt, C, SC: UdpStateContext<I, C>> TransportState<I, C, SC> for Udp {
         }
     }
 
+    fn get_bound_device(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> Option<SC::DeviceId> {
+        get_udp_bound_device(sync_ctx, ctx, id.into())
+    }
+
     fn set_reuse_port(sync_ctx: &mut SC, ctx: &mut C, id: Self::UnboundId, reuse_port: bool) {
         set_udp_posix_reuse_port(sync_ctx, ctx, id, reuse_port)
+    }
+
+    fn get_reuse_port(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> bool {
+        get_udp_posix_reuse_port(sync_ctx, ctx, id.into())
     }
 }
 
@@ -842,12 +864,24 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext> TransportState
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
+    fn get_bound_device(
+        _sync_ctx: &Ctx<D, C>,
+        _ctx: &mut (),
+        _id: SocketId<I, Self>,
+    ) -> Option<<Ctx<D, C> as IpDeviceIdContext<I>>::DeviceId> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
     fn set_reuse_port(
         _sync_ctx: &mut Ctx<D, C>,
         _ctx: &mut (),
         _id: Self::UnboundId,
         _reuse_port: bool,
     ) {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn get_reuse_port(_sync_ctx: &Ctx<D, C>, _ctx: &mut (), _id: SocketId<I, Self>) -> bool {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
@@ -1019,6 +1053,20 @@ enum SocketState<I: Ip, T: Transport<I>> {
     BoundConnect { conn_id: T::ConnId, shutdown_read: bool, shutdown_write: bool },
 }
 
+impl<'a, I: Ip, T: Transport<I>> From<&'a SocketState<I, T>> for SocketId<I, T> {
+    fn from(id: &'a SocketState<I, T>) -> Self {
+        match id {
+            SocketState::Unbound { unbound_id } => SocketId::Unbound(*unbound_id),
+            SocketState::BoundListen { listener_id } => {
+                BoundSocketId::Listener(*listener_id).into()
+            }
+            SocketState::BoundConnect { conn_id, shutdown_read: _, shutdown_write: _ } => {
+                BoundSocketId::Connected(*conn_id).into()
+            }
+        }
+    }
+}
+
 pub(crate) trait SocketWorkerDispatcher:
     RequestHandlerDispatcher<Ipv4, Udp>
     + RequestHandlerDispatcher<Ipv6, Udp>
@@ -1113,8 +1161,9 @@ where
     <Ctx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
         <SC as RequestHandlerContext<I, T>>::Context,
-    > as IpDeviceIdContext<I>>::DeviceId:
-        IdMapCollectionKey + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>,
+    > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
+        + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
+        + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
     <SC as RequestHandlerContext<I, T>>::Dispatcher: AsRef<
         Devices<
             <Ctx<
@@ -1478,7 +1527,9 @@ where
                             });
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetReusePort { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, {
+                                &mut Ok(self.make_handler().await.get_reuse_port())
+                            });
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetAcceptConn { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -1519,7 +1570,9 @@ where
                                 }.await);
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetBindToDevice { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.get_bound_device().map(|d|
+                                    d.unwrap_or("".to_string())));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetBroadcast {
                             value: _,
@@ -2224,8 +2277,9 @@ where
     <Ctx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
         <SC as RequestHandlerContext<I, T>>::Context,
-    > as IpDeviceIdContext<I>>::DeviceId:
-        IdMapCollectionKey + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>,
+    > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
+        + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
+        + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
     <SC as RequestHandlerContext<I, T>>::Dispatcher: AsRef<
         Devices<
             <Ctx<
@@ -2332,16 +2386,28 @@ where
                     .map_err(|DeviceNotFoundError {}| fposix::Errno::Enodev)
             })
             .transpose()?;
-        let id = match self.get_state_mut().info.state {
-            SocketState::Unbound { unbound_id } => SocketId::Unbound(unbound_id),
-            SocketState::BoundListen { listener_id } => BoundSocketId::Listener(listener_id).into(),
-            SocketState::BoundConnect { conn_id, shutdown_read: _, shutdown_write: _ } => {
-                BoundSocketId::Connected(conn_id).into()
-            }
-        };
+        let state: &SocketState<_, _> = &self.get_state_mut().info.state;
+        let id = state.into();
 
         T::set_socket_device(self.ctx.deref_mut(), &mut (), id, device)
             .map_err(IntoErrno::into_errno)
+    }
+
+    fn get_bound_device(mut self) -> Result<Option<String>, fposix::Errno> {
+        let state: &SocketState<_, _> = &self.get_state_mut().info.state;
+        let id = state.into();
+
+        let device = match T::get_bound_device(self.ctx.deref(), &mut (), id) {
+            None => return Ok(None),
+            Some(d) => d,
+        };
+        let index =
+            device.try_into_fidl_with_ctx(&self.ctx.dispatcher).map_err(IntoErrno::into_errno)?;
+        Ok(self.ctx.dispatcher.as_ref().get_device(index).map(|device_info| {
+            let CommonInfo { name, mtu: _, admin_enabled: _, events: _ } =
+                device_info.info().common_info();
+            name.to_string()
+        }))
     }
 
     fn set_reuse_port(mut self, reuse_port: bool) -> Result<(), fposix::Errno> {
@@ -2355,6 +2421,13 @@ where
                 Err(fposix::Errno::Eopnotsupp)
             }
         }
+    }
+
+    fn get_reuse_port(self) -> bool {
+        let state = &self.get_state().info.state;
+        let id = state.into();
+
+        T::get_reuse_port(&self.ctx.deref(), &mut (), id)
     }
 
     fn shutdown(mut self, how: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {
