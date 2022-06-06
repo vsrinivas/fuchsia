@@ -105,8 +105,11 @@ zx::status<> Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   outgoing->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                     fbl::MakeRefCounted<AdminService>(dispatcher_, *this));
+  outgoing->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+      fbl::MakeRefCounted<AdminService>(dispatcher_, [this](fs::FuchsiaVfs::ShutdownCallback cb) {
+        this->Shutdown(std::move(cb));
+      }));
 
   zx_status_t status = ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {

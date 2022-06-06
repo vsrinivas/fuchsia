@@ -9,14 +9,14 @@
 
 namespace minfs {
 
-AdminService::AdminService(async_dispatcher_t* dispatcher, Runner& runner)
+AdminService::AdminService(async_dispatcher_t* dispatcher, ShutdownRequester shutdown)
     : fs::Service([dispatcher, this](fidl::ServerEnd<fuchsia_fs::Admin> server_end) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
       }),
-      runner_(runner) {}
+      shutdown_(std::move(shutdown)) {}
 
 void AdminService::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) {
-  runner_.Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
+  shutdown_([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "filesystem shutdown failed: " << zx_status_get_string(status);
     }
