@@ -31,7 +31,7 @@ impl DaiInterface {
     }
 
     /// Get the DAI proxy.
-    fn get_proxy(&self) -> Result<&DaiProxy, Error> {
+    pub fn get_proxy(&self) -> Result<&DaiProxy, Error> {
         self.proxy.as_ref().ok_or(format_err!("Proxy not connected"))
     }
 
@@ -90,16 +90,16 @@ impl DaiInterface {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::configurator::Configurator, crate::discover::find_dais,
-        crate::testing::tests::get_dev_proxy, anyhow::Context, anyhow::Result,
-        async_trait::async_trait,
+        super::*, crate::config::Config, crate::configurator::Configurator,
+        crate::discover::find_dais, crate::testing::tests::get_dev_proxy, anyhow::Context,
+        anyhow::Result, async_trait::async_trait, futures::lock::Mutex, std::sync::Arc,
     };
 
     pub struct TestConfigurator {}
 
     #[async_trait]
     impl Configurator for TestConfigurator {
-        fn new() -> Result<Self, Error> {
+        fn new(_config: Config) -> Result<Self, Error> {
             Ok(Self {})
         }
 
@@ -152,7 +152,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dai_api() -> Result<(), Error> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/dai").await?;
-        let configurator = TestConfigurator::new()?;
+        let config = Config::new()?;
+        let configurator = Arc::new(Mutex::new(TestConfigurator::new(config)?));
         find_dais(dev_proxy, 1, configurator).await?;
         Ok(())
     }

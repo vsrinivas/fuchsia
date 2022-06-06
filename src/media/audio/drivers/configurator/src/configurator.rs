@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use {crate::config::Config, anyhow::Error};
 
 #[async_trait::async_trait]
 pub trait Configurator {
-    /// A new configurator.
-    fn new() -> Result<Self, Error>
+    /// A new configator.
+    fn new(config: Config) -> Result<Self, Error>
     where
         Self: Sized;
 

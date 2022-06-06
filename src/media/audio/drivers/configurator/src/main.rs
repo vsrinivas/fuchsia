@@ -2,26 +2,44 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_inspect::{component, health::Reporter};
-use io_util::{open_directory_in_namespace, OpenFlags};
-use tracing;
+use {
+    anyhow::anyhow,
+    fuchsia_inspect::{component, health::Reporter},
+    futures::lock::Mutex,
+    io_util::{open_directory_in_namespace, OpenFlags},
+    std::sync::Arc,
+    tracing,
+};
 
 mod codec;
+mod config;
 mod configurator;
 mod dai;
 mod default;
 mod discover;
+mod indexes;
 mod testing;
 
-use crate::configurator::Configurator;
-use crate::default::DefaultConfigurator;
+use crate::{config::Config, configurator::Configurator, default::DefaultConfigurator};
 
 #[fuchsia::main(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
     component::health().set_ok();
     tracing::trace!("Initialized.");
-    let dev_proxy = open_directory_in_namespace("/dev/class/codec", OpenFlags::RIGHT_READABLE)?;
-    let configurator = DefaultConfigurator::new()?;
-    discover::find_codecs(dev_proxy, 0, configurator).await?;
-    unreachable!();
+    let codec_proxy = open_directory_in_namespace("/dev/class/codec", OpenFlags::RIGHT_READABLE)?;
+    let dai_proxy = open_directory_in_namespace("/dev/class/dai", OpenFlags::RIGHT_READABLE)?;
+    let config = Config::new()?;
+    let configurator = Arc::new(Mutex::new(DefaultConfigurator::new(config)?));
+    let codec_future = discover::find_codecs(codec_proxy, 0, configurator.clone());
+    let dai_future = discover::find_dais(dai_proxy, 0, configurator);
+    match futures::try_join!(codec_future, dai_future) {
+        Ok(value) => {
+            tracing::error!("Find devices returned: {:?}", value);
+            return Err(anyhow!("Find devices returned: {:?}", value));
+        }
+        Err(e) => {
+            tracing::error!("Find devices error: {:?}", e);
+            return Err(e);
+        }
+    };
 }

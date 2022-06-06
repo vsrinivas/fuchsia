@@ -4,20 +4,20 @@
 
 #[cfg(test)]
 pub mod tests {
-    use anyhow::Error;
-    use async_trait::async_trait;
-    use device_watcher;
-    use fidl_fuchsia_io as fio;
-    use fuchsia_component_test::{RealmBuilder, RealmInstance};
-    use fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance};
-
-    use crate::configurator::Configurator;
+    use {
+        crate::{config::Config, configurator::Configurator},
+        anyhow::Error,
+        async_trait::async_trait,
+        device_watcher, fidl_fuchsia_io as fio,
+        fuchsia_component_test::{RealmBuilder, RealmInstance},
+        fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
+    };
 
     pub struct NullConfigurator {}
 
     #[async_trait]
     impl Configurator for NullConfigurator {
-        fn new() -> Result<Self, Error> {
+        fn new(_config: Config) -> Result<Self, Error> {
             Ok(Self {})
         }
         async fn process_new_codec(

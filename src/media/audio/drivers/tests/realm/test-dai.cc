@@ -68,11 +68,37 @@ class TestDai : public TestDaiDeviceType,
   }
   void GetDaiFormats(GetDaiFormatsRequestView request,
                      GetDaiFormatsCompleter::Sync& completer) override {
-    // We support 0 DAI formats in this testing driver.
     fidl::Arena arena;
-    fidl::VectorView<fuchsia_hardware_audio::wire::DaiSupportedFormats> formats(arena, 0);
+    fidl::VectorView<fuchsia_hardware_audio::wire::DaiSupportedFormats> all_formats(arena, 1);
+    fuchsia_hardware_audio::wire::DaiSupportedFormats formats;
+    uint32_t number_of_channels[] = {2};
+    fuchsia_hardware_audio::wire::DaiSampleFormat sample_formats[] = {
+        fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned};
+    fuchsia_hardware_audio::wire::DaiFrameFormat frame_formats[] = {
+        fuchsia_hardware_audio::wire::DaiFrameFormat::WithFrameFormatStandard(
+            fuchsia_hardware_audio::wire::DaiFrameFormatStandard::kI2S)};
+    uint32_t frame_rates[] = {48'000};
+    uint8_t bits_per_slot[] = {32};
+    uint8_t bits_per_sample[] = {24};
+    formats.number_of_channels =
+        fidl::VectorView<uint32_t>::FromExternal(number_of_channels, countof(number_of_channels));
+    formats.sample_formats =
+        fidl::VectorView<fuchsia_hardware_audio::wire::DaiSampleFormat>::FromExternal(
+            sample_formats, countof(sample_formats));
+    formats.frame_formats =
+        fidl::VectorView<fuchsia_hardware_audio::wire::DaiFrameFormat>::FromExternal(
+            frame_formats, countof(frame_formats));
+    formats.frame_rates =
+        fidl::VectorView<uint32_t>::FromExternal(frame_rates, countof(frame_rates));
+    formats.bits_per_slot =
+        fidl::VectorView<uint8_t>::FromExternal(bits_per_slot, countof(bits_per_slot));
+    formats.bits_per_sample =
+        fidl::VectorView<uint8_t>::FromExternal(bits_per_sample, countof(bits_per_sample));
+
+    all_formats[0] = formats;
+
     fuchsia_hardware_audio::wire::DaiGetDaiFormatsResponse response;
-    response.dai_formats = formats;
+    response.dai_formats = std::move(all_formats);
     auto result = fuchsia_hardware_audio::wire::DaiGetDaiFormatsResult::WithResponse(
         arena, std::move(response));
     completer.Reply(std::move(result));

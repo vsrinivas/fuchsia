@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(andresoportus): Remove this as usage of it is added.
-#![allow(dead_code)]
-
 use {
     crate::{codec::CodecInterface, configurator::Configurator, dai::DaiInterface},
     anyhow::{anyhow, Error},
     fidl_fuchsia_io as fio,
-    futures::TryStreamExt,
-    std::path::Path,
+    futures::{lock::Mutex, TryStreamExt},
+    std::{path::Path, sync::Arc},
 };
 
 /// Finds any codec devices and calls the `process_new_codec` Configurator callback.
@@ -19,7 +16,7 @@ use {
 pub async fn find_codecs<T: Configurator>(
     dev_proxy: fio::DirectoryProxy,
     break_count: u32,
-    mut configurator: T,
+    configurator: Arc<Mutex<T>>,
 ) -> Result<(), Error> {
     let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dev_proxy_local).await?;
@@ -36,7 +33,8 @@ pub async fn find_codecs<T: Configurator>(
                         let path = Path::new(&msg.filename);
                         tracing::info!("Found new codec in devfs node: {:?}", path);
                         let interface = CodecInterface::new(local, &path);
-                        if let Err(e) = configurator.process_new_codec(interface).await {
+                        if let Err(e) = configurator.lock().await.process_new_codec(interface).await
+                        {
                             if break_count != 0 {
                                 // Error when we want to break on count, then report it and exit.
                                 return Err(anyhow!("Codec processing error: {:?}", e));
@@ -53,7 +51,7 @@ pub async fn find_codecs<T: Configurator>(
                     Err(e) => tracing::warn!("Error in devfs proxy: {}", e),
                 }
             }
-            _ => (),
+            _ => continue,
         }
     }
     Ok(())
@@ -65,7 +63,7 @@ pub async fn find_codecs<T: Configurator>(
 pub async fn find_dais<T: Configurator>(
     dev_proxy: fio::DirectoryProxy,
     break_count: u32,
-    mut configurator: T,
+    configurator: Arc<Mutex<T>>,
 ) -> Result<(), Error> {
     let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dev_proxy_local).await?;
@@ -82,6 +80,7 @@ pub async fn find_dais<T: Configurator>(
                         let path = Path::new(&msg.filename);
                         tracing::info!("Found new DAI in devfs node: {:?}", path);
                         let interface = DaiInterface::new(local, &path);
+                        let mut configurator = configurator.lock().await;
                         if let Err(e) = configurator.process_new_dai(interface).await {
                             if break_count != 0 {
                                 // Error when we want to break on count, then report it and exit.
@@ -99,7 +98,7 @@ pub async fn find_dais<T: Configurator>(
                     Err(e) => tracing::warn!("Error in devfs proxy: {}", e),
                 }
             }
-            _ => (),
+            _ => continue,
         }
     }
     Ok(())
@@ -107,15 +106,20 @@ pub async fn find_dais<T: Configurator>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testing::tests::get_dev_proxy;
-    use crate::testing::tests::NullConfigurator;
-    use anyhow::Result;
+    use {
+        super::*,
+        crate::{
+            config::Config,
+            testing::tests::{get_dev_proxy, NullConfigurator},
+        },
+        anyhow::Result,
+    };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_find_codecs() -> Result<()> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/codec").await?;
-        let configurator = NullConfigurator::new()?;
+        let config = Config::new()?;
+        let configurator = Arc::new(Mutex::new(NullConfigurator::new(config)?));
         find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())
     }
@@ -123,7 +127,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_find_dais() -> Result<()> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/dai").await?;
-        let configurator = NullConfigurator::new()?;
+        let config = Config::new()?;
+        let configurator = Arc::new(Mutex::new(NullConfigurator::new(config)?));
         find_dais(dev_proxy, 1, configurator).await?;
         Ok(())
     }

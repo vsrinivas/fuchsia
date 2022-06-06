@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
-use fidl::endpoints::Proxy;
-use fidl_fuchsia_hardware_audio::*;
-use fidl_fuchsia_io as fio;
-use fuchsia_zircon as zx;
-use futures::TryFutureExt;
-use std::path::{Path, PathBuf};
+// TODO(andresoportus): Remove this as usage of it is added.
+#![allow(dead_code)]
+
+use {
+    anyhow::{format_err, Error},
+    fidl::endpoints::Proxy,
+    fidl_fuchsia_hardware_audio::*,
+    fidl_fuchsia_io as fio,
+    futures::TryFutureExt,
+    std::path::{Path, PathBuf},
+};
 
 pub struct CodecInterface {
     /// The proxy to the devfs "/dev".
@@ -16,7 +20,7 @@ pub struct CodecInterface {
     /// The path under "/dev" used to connect to the device.
     path: PathBuf,
     /// The proxy to the device if connected.
-    proxy: Option<fidl_fuchsia_hardware_audio::CodecProxy>,
+    proxy: Option<CodecProxy>,
 }
 
 impl CodecInterface {
@@ -27,7 +31,7 @@ impl CodecInterface {
     }
 
     /// Get the codec proxy.
-    fn get_proxy(&self) -> Result<&fidl_fuchsia_hardware_audio::CodecProxy, Error> {
+    pub fn get_proxy(&self) -> Result<&CodecProxy, Error> {
         self.proxy.as_ref().ok_or(format_err!("Proxy not connected"))
     }
 
@@ -35,15 +39,14 @@ impl CodecInterface {
     pub fn connect(&mut self) -> Result<(), Error> {
         let path = self.path.to_str().ok_or(format_err!("invalid codec path"))?;
         let (codec_connect_proxy, codec_connect_server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_audio::CodecConnectorMarker>()?;
+            fidl::endpoints::create_proxy::<CodecConnectorMarker>()?;
         fdio::service_connect_at(
             self.dev_proxy.as_channel().as_ref(),
             path,
             codec_connect_server.into_channel(),
         )?;
 
-        let (ours, theirs) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_audio::CodecMarker>()?;
+        let (ours, theirs) = fidl::endpoints::create_proxy::<CodecMarker>()?;
         codec_connect_proxy.connect(theirs)?;
 
         self.proxy = Some(ours);
@@ -51,7 +54,7 @@ impl CodecInterface {
     }
 
     /// Get information from the codec.
-    pub async fn get_info(&self) -> Result<fidl_fuchsia_hardware_audio::CodecInfo, Error> {
+    pub async fn get_info(&self) -> Result<CodecInfo, Error> {
         self.get_proxy()?.clone().get_info().err_into().await
     }
 
@@ -66,22 +69,8 @@ impl CodecInterface {
     }
 
     /// Get supported DAI formats.
-    pub async fn get_dai_formats(
-        &self,
-    ) -> Result<fidl_fuchsia_hardware_audio::DaiGetDaiFormatsResult, Error> {
+    pub async fn get_dai_formats(&self) -> Result<DaiGetDaiFormatsResult, Error> {
         self.get_proxy()?.clone().get_dai_formats().err_into().await
-    }
-
-    /// Set DAI format on the codec.
-    pub async fn set_dai_format(
-        &self,
-        mut dai_format: fidl_fuchsia_hardware_audio::DaiFormat,
-    ) -> Result<fidl_fuchsia_hardware_audio::CodecFormatInfo, Error> {
-        self.get_proxy()?
-            .clone()
-            .set_dai_format(&mut dai_format)
-            .await?
-            .map_err(|e| zx::Status::from_raw(e).into())
     }
 }
 
@@ -89,18 +78,21 @@ impl CodecInterface {
 mod tests {
     use {
         super::*,
+        crate::config::Config,
         crate::configurator::Configurator,
         crate::discover::find_codecs,
         crate::testing::tests::get_dev_proxy,
         anyhow::{anyhow, Context},
         async_trait::async_trait,
+        futures::lock::Mutex,
+        std::sync::Arc,
     };
 
     pub struct TestConfigurator {}
 
     #[async_trait]
     impl Configurator for TestConfigurator {
-        fn new() -> Result<Self, Error> {
+        fn new(_config: Config) -> Result<Self, Error> {
             Ok(Self {})
         }
 
@@ -131,18 +123,6 @@ mod tests {
 
             // Good test codec checks.
             assert_eq!(formats[0].number_of_channels[0], 2);
-            // Configure the first option for each field supported by the test codec.
-            let format = fidl_fuchsia_hardware_audio::DaiFormat {
-                number_of_channels: formats[0].number_of_channels[0],
-                // Use all channels.
-                channels_to_use_bitmask: (1 << formats[0].number_of_channels[0]) - 1,
-                sample_format: formats[0].sample_formats[0],
-                frame_format: formats[0].frame_formats[0],
-                frame_rate: formats[0].frame_rates[0],
-                bits_per_slot: formats[0].bits_per_slot[0],
-                bits_per_sample: formats[0].bits_per_sample[0],
-            };
-            let _codec_format_info = device.set_dai_format(format).await;
             Ok(())
         }
 
@@ -157,7 +137,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_codec_api() -> Result<(), Error> {
         let (_realm_instance, dev_proxy) = get_dev_proxy("class/codec").await?;
-        let configurator = TestConfigurator::new()?;
+        let config = Config::new()?;
+        let configurator = Arc::new(Mutex::new(TestConfigurator::new(config)?));
         find_codecs(dev_proxy, 2, configurator).await?;
         Ok(())
     }
