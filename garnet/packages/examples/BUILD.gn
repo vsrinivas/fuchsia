@@ -28,7 +28,7 @@ group("escher") {
 group("all") {
   testonly = true
   public_deps = [
-    "//garnet/packages/examples:benchmark",
+    "//examples/benchmark",
     "//garnet/packages/examples:bluetooth",
     "//garnet/packages/examples:escher",
     "//garnet/packages/examples:fidl",
@@ -61,11 +61,6 @@ group("fidl") {
     "//examples/fidl/rust:echo-rust-client-sync",
     "//examples/fidl/rust/server:echo-rust-server",
   ]
-}
-
-group("benchmark") {
-  testonly = true
-  public_deps = [ "//garnet/examples/benchmark" ]
 }
 
 group("bluetooth") {

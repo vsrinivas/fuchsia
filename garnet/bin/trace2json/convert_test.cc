@@ -97,7 +97,7 @@ TEST(ConvertTest, SimpleTrace) {
 TEST(ConvertTest, ExampleBenchmark) {
   // example_benchmark.fxt is the trace written by the program in
   // garnet/examples/benchmark, in this case run on qemu. To collect the trace,
-  // include //garnet/packages/examples:benchmark in your build and then run
+  // include //src/examples/benchmark in your build and then run
   // `fx traceutil record -binary -spawn /bin/run
   // fuchsia-pkg://fuchsia.com/benchmark#meta/benchmark.cmx`
   std::string test_data_path = GetTestDataPath();

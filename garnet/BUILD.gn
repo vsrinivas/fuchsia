@@ -7,8 +7,6 @@ group("garnet") {
 
   deps = [
     "bin",
-    "examples",
-
     # TODO(fxbug.dev/36063): Add more.
   ]
 }

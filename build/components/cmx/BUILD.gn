@@ -40,6 +40,7 @@ group("cmx_allowlist") {
   visibility = [
     "//build/components/tests:*",
     "//build/dart/tests:*",
+    "//examples/benchmark:*",
     "//examples/components/realm_builder:*",
     "//examples/dart/fuchsia_inspect_flutter/torus15:*",
     "//examples/dart/fuchsia_services/mind_reader/bin/client:*",
@@ -76,7 +77,6 @@ group("cmx_allowlist") {
     "//garnet/bin/trace_manager:*",
     "//garnet/bin/trace_manager/tests:*",
     "//garnet/bin/trace_stress:*",
-    "//garnet/examples/benchmark:*",
     "//garnet/examples/http/httpget_cpp:*",
     "//garnet/examples/http/httpget_rust:*",
     "//garnet/lib/perfmon:*",
