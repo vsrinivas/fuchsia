@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [ ":pty_tests" ]
+  deps = [ ":pty_tests" ]
 }
 
 rustc_library("pty") {
@@ -39,9 +39,10 @@ rustc_library("pty") {
 
 fuchsia_test_component("pty_tests_component") {
   component_name = "pty_tests"
-  manifest = "meta/pty_tests.cmx"
+  manifest = "meta/pty_tests.cml"
   deps = [
     ":pty_test",
+    "//src/bringup/bin/ptysvc:component",
     "//src/lib/zircon/rust:exit_with_code_util",
     "//zircon/third_party/uapp/dash",
   ]

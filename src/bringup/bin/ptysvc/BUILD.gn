@@ -79,8 +79,22 @@ test("ptysvc-test") {
   ]
 }
 
+# Use this for including ptysvc.cml in bootfs
 component_manifest_resources("bootfs") {
   sources = [ "meta/ptysvc.cml" ]
+}
+
+# Use this for including ptysvc in a test package for integration testing
+fuchsia_component("component") {
+  testonly = true
+  component_name = "ptysvc"
+  manifest = "meta/ptysvc.cml"
+  deps = [ ":ptysvc" ]
+
+  # ptysvc uses the boot log.
+  # The includes checker wants the syslog shard because ptysvc gets the
+  # injected dep on the legacy syslog backend.
+  check_includes = false
 }
 
 fuchsia_unittest_package("ptysvc-test-pkg") {
