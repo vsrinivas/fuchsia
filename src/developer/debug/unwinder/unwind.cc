@@ -30,9 +30,14 @@ class CFIUnwinder {
       return err;
     }
 
-    // is_return_address indicates whether pc in the current registers is a return address.
-    // If it is, we need to subtract 1 to find the call site because "call" could be the last
-    // instruction of a nonreturn function.
+    // is_return_address indicates whether pc in the current registers is a return address from a
+    // previous "Step". If it is, we need to subtract 1 to find the call site because "call" could
+    // be the last instruction of a nonreturn function and now the PC is pointing outside of the
+    // valid code boundary.
+    //
+    // Subtracting 1 is sufficient here because in DwarfCfiParser::ParseInstructions, we scan CFI
+    // until pc > pc_limit. So it's still correct even if pc_limit is not pointing to the beginning
+    // of an instruction.
     if (is_return_address) {
       pc -= 1;
       current.SetPC(pc);

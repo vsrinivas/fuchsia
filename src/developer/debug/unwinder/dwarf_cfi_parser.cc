@@ -44,17 +44,17 @@ DwarfCfiParser::DwarfCfiParser(Registers::Arch arch, uint64_t code_alignment_fac
       RegisterID::kX64_rbx, RegisterID::kX64_rbp, RegisterID::kX64_r12,
       RegisterID::kX64_r13, RegisterID::kX64_r14, RegisterID::kX64_r15,
   };
-  // x18 (shadow call stack pointer) is not considered preserved, because even those SCS-enabled
-  // functions do not generate CFI for x18, so the value is likely clobbered.
+  // x18 (shadow call stack pointer) is considered preserved. SCS-enabled functions will have
+  // DW_CFA_val_expression rules for x18, and SCS-disabled functions don't touch x18.
   //
   // LR/SP are considered to be preserved, because a function has to ensure that when the function
   // returns, the values in LR/SP are the same as when the function begins.
   static RegisterID kArm64Preserved[] = {
-      RegisterID::kArm64_x19, RegisterID::kArm64_x20, RegisterID::kArm64_x21,
-      RegisterID::kArm64_x22, RegisterID::kArm64_x23, RegisterID::kArm64_x24,
-      RegisterID::kArm64_x25, RegisterID::kArm64_x26, RegisterID::kArm64_x27,
-      RegisterID::kArm64_x28, RegisterID::kArm64_x29, RegisterID::kArm64_x30,
-      RegisterID::kArm64_x31,
+      RegisterID::kArm64_x18, RegisterID::kArm64_x19, RegisterID::kArm64_x20,
+      RegisterID::kArm64_x21, RegisterID::kArm64_x22, RegisterID::kArm64_x23,
+      RegisterID::kArm64_x24, RegisterID::kArm64_x25, RegisterID::kArm64_x26,
+      RegisterID::kArm64_x27, RegisterID::kArm64_x28, RegisterID::kArm64_x29,
+      RegisterID::kArm64_x30, RegisterID::kArm64_x31,
   };
 
   RegisterID* preserved;
@@ -106,8 +106,34 @@ DwarfCfiParser::DwarfCfiParser(Registers::Arch arch, uint64_t code_alignment_fac
 // DW_CFA_hi_user             0            0x3f
 Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t instructions_begin,
                                         uint64_t instructions_end, uint64_t pc_limit) {
+  // Boundary is tricky here! Consider the following program
+  //
+  //         .cfi_startproc
+  //     0:  push    rbp
+  //         .cfi_def_cfa_offset 16
+  //         .cfi_offset rbp, -16
+  //     1:  mov     rbp, rsp
+  //         .cfi_def_cfa_register rbp
+  //     4:  call    f()
+  //     9:  pop     rbp
+  //         .cfi_def_cfa rsp, 8
+  //    10:  ret
+  //         .cfi_endproc
+  //
+  // ..which produces the following CFI.
+  //
+  //         DW_CFA_advance_loc: 1           // pc = 1
+  //         DW_CFA_def_cfa_offset: +16
+  //         DW_CFA_offset: RBP -16
+  //         DW_CFA_advance_loc: 3           // pc = 4
+  //         DW_CFA_def_cfa_register: RBP
+  //         DW_CFA_advance_loc: 6           // pc = 10
+  //         DW_CFA_def_cfa: RSP +8
+  //
+  // Suppose we have some exception at address 0x1 (pc_limit = 1), we want to stop at
+  // "DW_CFA_advance_loc: 3" (pc = 4), not at "DW_CFA_advance_loc: 1" (pc = 1).
   uint64_t pc = 0;
-  while (instructions_begin < instructions_end && pc < pc_limit) {
+  while (instructions_begin < instructions_end && pc <= pc_limit) {
     uint8_t opcode;
     LOG_DEBUG("%#" PRIx64 "   ", instructions_begin);
     if (auto err = elf->Read(instructions_begin, opcode); err.has_err()) {
@@ -132,8 +158,8 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t instructions_begin
         continue;
       }
       case 0x3: {  // DW_CFA_restore
-        LOG_DEBUG("DW_CFA_restore %d\n", opcode & 0x3F);
         RegisterID reg = static_cast<RegisterID>(opcode & 0x3F);
+        LOG_DEBUG("DW_CFA_restore %hhu\n", reg);
         register_locations_[reg] = initial_register_locations_[reg];
         continue;
       }
@@ -229,37 +255,40 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t instructions_begin
       }
       case 0xA: {  // DW_CFA_remember_state
         LOG_DEBUG("DW_CFA_remember_state\n");
-        state_stack_.push_back(register_locations_);
+        state_stack_.emplace_back(cfa_location_, register_locations_);
         continue;
       }
       case 0xB: {  // DW_CFA_restore_state
         LOG_DEBUG("DW_CFA_restore_state\n");
-        register_locations_ = std::move(state_stack_.back());
+        if (state_stack_.empty()) {
+          return Error("invalid DW_CFA_restore_state");
+        }
+        std::tie(cfa_location_, register_locations_) = std::move(state_stack_.back());
         state_stack_.pop_back();
         continue;
       }
       case 0xC: {  // DW_CFA_def_cfa  ULEB128 register  ULEB128 offset
-        if (auto err = ReadRegisterID(elf, instructions_begin, cfa_register_); err.has_err()) {
+        if (auto err = ReadRegisterID(elf, instructions_begin, cfa_location_.reg); err.has_err()) {
           return err;
         }
-        if (auto err = elf->ReadULEB128(instructions_begin, cfa_register_offset_); err.has_err()) {
+        if (auto err = elf->ReadULEB128(instructions_begin, cfa_location_.offset); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_def_cfa %hhu %" PRIu64 "\n", cfa_register_, cfa_register_offset_);
+        LOG_DEBUG("DW_CFA_def_cfa %hhu %" PRIu64 "\n", cfa_location_.reg, cfa_location_.offset);
         continue;
       }
       case 0xD: {  // DW_CFA_def_cfa_register  ULEB128 register
-        if (auto err = ReadRegisterID(elf, instructions_begin, cfa_register_); err.has_err()) {
+        if (auto err = ReadRegisterID(elf, instructions_begin, cfa_location_.reg); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_def_cfa_register %hhu\n", cfa_register_);
+        LOG_DEBUG("DW_CFA_def_cfa_register %hhu\n", cfa_location_.reg);
         continue;
       }
       case 0xE: {  // DW_CFA_def_cfa_offset  ULEB128 offset
-        if (auto err = elf->ReadULEB128(instructions_begin, cfa_register_offset_); err.has_err()) {
+        if (auto err = elf->ReadULEB128(instructions_begin, cfa_location_.offset); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_def_cfa_offset %" PRIu64 "\n", cfa_register_offset_);
+        LOG_DEBUG("DW_CFA_def_cfa_offset %" PRIu64 "\n", cfa_location_.offset);
         continue;
       }
       // case 0xF:  // DW_CFA_def_cfa_expression  BLOCK
@@ -272,7 +301,7 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t instructions_begin
         if (auto err = elf->ReadULEB128(instructions_begin, length); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_expression length=%" PRIu64 "\n", length);
+        LOG_DEBUG("DW_CFA_expression %hhu length=%" PRIu64 "\n", reg, length);
         register_locations_[reg].type = RegisterLocation::Type::kExpression;
         register_locations_[reg].expression = DwarfExpr(elf, instructions_begin, length);
         instructions_begin += length;
@@ -292,7 +321,7 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t instructions_begin
         if (auto err = elf->ReadULEB128(instructions_begin, length); err.has_err()) {
           return err;
         }
-        LOG_DEBUG("DW_CFA_val_expression length=%" PRIu64 "\n", length);
+        LOG_DEBUG("DW_CFA_val_expression %hhu length=%" PRIu64 "\n", reg, length);
         register_locations_[reg].type = RegisterLocation::Type::kValExpression;
         register_locations_[reg].expression = DwarfExpr(elf, instructions_begin, length);
         instructions_begin += length;
@@ -306,15 +335,16 @@ Error DwarfCfiParser::ParseInstructions(Memory* elf, uint64_t instructions_begin
 
 Error DwarfCfiParser::Step(Memory* stack, RegisterID return_address_register,
                            const Registers& current, Registers& next) {
-  if (cfa_register_ == RegisterID::kInvalid || cfa_register_offset_ == static_cast<uint64_t>(-1)) {
+  if (cfa_location_.reg == RegisterID::kInvalid ||
+      cfa_location_.offset == static_cast<uint64_t>(-1)) {
     return Error("undefined CFA");
   }
 
   uint64_t cfa;
-  if (auto err = current.Get(cfa_register_, cfa); err.has_err()) {
+  if (auto err = current.Get(cfa_location_.reg, cfa); err.has_err()) {
     return err;
   }
-  cfa += cfa_register_offset_;
+  cfa += cfa_location_.offset;
 
   for (auto& [reg, location] : register_locations_) {
     // Always allow failures when recovering individual registers.
@@ -363,7 +393,7 @@ Error DwarfCfiParser::Step(Memory* stack, RegisterID return_address_register,
   // the unwinding. We don't consider it an error.
   if (uint64_t return_address; next.Get(return_address_register, return_address).ok()) {
     // It's important to unset the return_address_register because we want to restore all registers
-    // to the previous frame. While the value of return_address_register is changed during the call,
+    // to the previous frame. Since the value of return_address_register is changed during the call,
     // it's not possible to recover it any more. The same holds true when return_address_register is
     // IP, e.g., on x64.
     next.Unset(return_address_register);

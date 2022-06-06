@@ -59,8 +59,10 @@ class DwarfCfiParser {
   const uint64_t code_alignment_factor_;
   const int64_t data_alignment_factor_;
 
-  RegisterID cfa_register_ = RegisterID::kInvalid;
-  uint64_t cfa_register_offset_ = -1;
+  struct CfaLocation {
+    RegisterID reg = RegisterID::kInvalid;
+    uint64_t offset = -1;
+  } cfa_location_;
 
   using RegisterLocations = std::map<RegisterID, RegisterLocation>;
   RegisterLocations register_locations_;
@@ -69,7 +71,7 @@ class DwarfCfiParser {
   RegisterLocations initial_register_locations_;
 
   // Stack of states for DW_CFA_remember_state and DW_CFA_restore_state.
-  std::vector<RegisterLocations> state_stack_;
+  std::vector<std::pair<CfaLocation, RegisterLocations>> state_stack_;
 };
 
 }  // namespace unwinder
