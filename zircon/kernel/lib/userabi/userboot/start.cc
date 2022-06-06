@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <cstring>
 #include <optional>
+#include <string_view>
 #include <utility>
 
 #include "bootfs.h"
@@ -218,6 +219,68 @@ zx::debuglog DuplicateOrDie(const zx::debuglog& log,
                             unsigned int line = cpp20::source_location::current().line()) {
   return DuplicateOrDie(log, log, line);
 }
+
+struct ChildContext {
+  // Process creation handles
+  zx::process process;
+  zx::vmar vmar;
+  zx::vmar reserved_vmar;
+  zx::thread thread;
+
+  // to_child and bootstrap are peers, such that the child process receives the |bootstrap|
+  // end and userboot uses |to_child| to send the process arguments.
+
+  // Used to send initial message to the child with the process protocol,
+  // including handles.
+  zx::channel to_child;
+
+  // Handed off when the process starts, so it can bootstrap itself.
+  zx::channel bootstrap;
+};
+
+ChildContext CreateChildContext(const zx::debuglog& log, std::string_view name,
+                                cpp20::span<const zx_handle_t> handles) {
+  ChildContext child;
+  auto status =
+      zx::process::create(*zx::unowned_job{handles[kRootJob]}, name.data(),
+                          static_cast<uint32_t>(name.size()), 0, &child.process, &child.vmar);
+  check(log, status, "Failed to create child process(%.*s).", static_cast<int>(name.length()),
+        name.data());
+
+  // Squat on some address space before we start loading it up.
+  child.reserved_vmar = {ReserveLowAddressSpace(log, child.vmar)};
+
+  // Create the initial thread in the new process
+  status = zx::thread::create(child.process, name.data(), static_cast<uint32_t>(name.size()), 0,
+                              &child.thread);
+  check(log, status, "Failed to create main thread for child process(%.*s).",
+        static_cast<int>(name.length()), name.data());
+
+  status = zx::channel::create(0, &child.to_child, &child.bootstrap);
+  check(log, status, "Failed to create bootstrap channels for child process(%.*s).",
+        static_cast<int>(name.length()), name.data());
+  return child;
+}
+
+void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const zx::vmo& bootfs_vmo,
+                     cpp20::span<zx_handle_t, kChildHandleCount> child_handles) {
+  child_handles[kBootfsVmo] = DuplicateOrDie(log, bootfs_vmo).release();
+  child_handles[kDebugLog] = DuplicateOrDie(log).release();
+  child_handles[kProcSelf] = DuplicateOrDie(log, child.process).release();
+  child_handles[kVmarRootSelf] = DuplicateOrDie(log, child.vmar).release();
+  child_handles[kThreadSelf] = DuplicateOrDie(log, child.thread).release();
+
+  // Verify all child handles.
+  for (size_t i = 0; i < child_handles.size(); ++i) {
+    auto handle = child_handles[i];
+    zx_info_handle_basic_t info;
+    auto status =
+        zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    check(log, status, "Failed to obtain handle information. Bad handle at %zu with value %x", i,
+          handle);
+  }
+}
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -262,18 +325,17 @@ zx::debuglog DuplicateOrDie(const zx::debuglog& log,
                                 nullptr, 0, &power_resource);
   check(log, status, "zx_resource_create");
 
+  // Strips any arguments passed along with the filename to userboot.next.
+  std::string_view filename = GetUserbootNextFilename(opts);
+
   ChildMessageLayout child_message = CreateChildMessage();
+  ChildContext child = CreateChildContext(log, filename, handles);
+  SetChildHandles(log, child, bootfs_vmo, handles);
 
   // Fill in any '+' separated arguments provided by `userboot.next`. If arguments are longer than
   // kProcessArgsMaxBytes, this function will fail process creation.
   ParseNextProcessArguments(log, opts, child_message.header.args_num, child_message.args.data());
 
-  handles[kDebugLog] = DuplicateOrDie(log).release();
-
-  // Strips any arguments passed along with the filename to userboot.next.
-  std::string_view filename = GetUserbootNextFilename(opts);
-
-  zx::process proc;
   {
     // Map in the bootfs so we can look for files in it.
     zx::resource vmex_resource;
@@ -281,38 +343,16 @@ zx::debuglog DuplicateOrDie(const zx::debuglog& log,
     status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE,
                                   1, nullptr, 0, &vmex_resource);
     check(log, status, "zx_resource_create failed");
-    Bootfs bootfs{vmar_self.borrow(), DuplicateOrDie(log, bootfs_vmo), std::move(vmex_resource),
+    Bootfs bootfs{vmar_self.borrow(), std::move(bootfs_vmo), std::move(vmex_resource),
                   DuplicateOrDie(log)};
-
-    // Pass the decompressed bootfs VMO on.
-    handles[kBootfsVmo] = bootfs_vmo.release();
-
-    // Make the channel for the bootstrap message.
-    zx::channel to_child, child_start_handle;
-    status = zx::channel::create(0, &to_child, &child_start_handle);
-    check(log, status, "zx_channel_create failed");
-
-    // Create the process itself.
-    zx::vmar vmar;
-    status = zx::process::create(*zx::unowned_job{handles[kRootJob]}, filename.data(),
-                                 static_cast<uint32_t>(filename.size()), 0, &proc, &vmar);
-    check(log, status, "zx_process_create");
-
-    // Squat on some address space before we start loading it up.
-    zx::vmar reserve_vmar{ReserveLowAddressSpace(log, vmar)};
-
-    // Create the initial thread in the new process
-    zx::thread thread;
-    status = zx::thread::create(proc, filename.data(), static_cast<uint32_t>(filename.size()), 0,
-                                &thread);
-    check(log, status, "zx_thread_create");
 
     // Map in the code.
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     zx::channel loader_service_channel;
-    LoadChildProcess(log, opts, filename, bootfs, *zx::unowned_vmo{handles[kFirstVdso]}, proc, vmar,
-                     thread, to_child, &entry, &vdso_base, &stack_size, &loader_service_channel);
+    LoadChildProcess(log, opts, filename, bootfs, *zx::unowned_vmo{handles[kFirstVdso]},
+                     child.process, child.vmar, child.thread, child.to_child, &entry, &vdso_base,
+                     &stack_size, &loader_service_channel);
 
     // Allocate the stack for the child.
     uintptr_t sp;
@@ -324,8 +364,8 @@ zx::debuglog DuplicateOrDie(const zx::debuglog& log,
       check(log, status, "zx_vmo_create failed for child stack");
       stack_vmo.set_property(ZX_PROP_NAME, kStackVmoName, sizeof(kStackVmoName) - 1);
       zx_vaddr_t stack_base;
-      status =
-          vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, stack_vmo, 0, stack_size, &stack_base);
+      status = child.vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, stack_vmo, 0, stack_size,
+                              &stack_base);
       check(log, status, "zx_vmar_map failed for child stack");
       sp = compute_initial_stack_pointer(stack_base, stack_size);
       printl(log, "stack [%p, %p) sp=%p", reinterpret_cast<void*>(stack_base),
@@ -333,33 +373,20 @@ zx::debuglog DuplicateOrDie(const zx::debuglog& log,
     }
 
     // We're done doing mappings, so clear out the reservation VMAR.
-    check(log, reserve_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
-    reserve_vmar.reset();
-
-    // Pass along the child's root VMAR.  We're done with it.
-    handles[kVmarRootSelf] = vmar.release();
-
-    // Duplicate the child's process handle to pass to it.
-    handles[kProcSelf] = DuplicateOrDie(log, proc).release();
-    handles[kThreadSelf] = DuplicateOrDie(log, thread).release();
-
-    for (const auto& h : handles) {
-      zx_info_handle_basic_t info;
-      status = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-      check(log, status, "bad handle %d is %x", static_cast<int>(&h - handles.begin()), h);
-    }
+    check(log, child.reserved_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
+    child.reserved_vmar.reset();
 
     // Now send the bootstrap message.  This transfers away all the handles
     // we have left except the process and thread themselves.
-    status =
-        to_child.write(0, &child_message, sizeof(child_message), handles.data(), handles.size());
+    status = child.to_child.write(0, &child_message, sizeof(child_message), handles.data(),
+                                  handles.size());
     check(log, status, "zx_channel_write to child failed");
-    to_child.reset();
+    child.to_child.reset();
 
     // Start the process going.
-    status = proc.start(thread, entry, sp, std::move(child_start_handle), vdso_base);
+    status = child.process.start(child.thread, entry, sp, std::move(child.bootstrap), vdso_base);
     check(log, status, "zx_process_start failed");
-    thread.reset();
+    child.thread.reset();
 
     printl(log, "process %.*s started.", static_cast<int>(filename.size()), filename.data());
 
@@ -372,13 +399,14 @@ zx::debuglog DuplicateOrDie(const zx::debuglog& log,
     // All done with bootfs! Let it go out of scope.
   }
 
-  auto wait_till_child_exits = [child_name = filename, &log, &proc]() {
+  auto wait_till_child_exits = [child_name = filename, &log, &child]() {
     printl(log, "Waiting for %.*s to exit...", static_cast<int>(child_name.size()),
            child_name.data());
-    zx_status_t status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+    zx_status_t status =
+        child.process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     check(log, status, "zx_object_wait_one on process failed");
     zx_info_process_t info;
-    status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+    status = child.process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
     check(log, status, "zx_object_get_info on process failed");
     printl(log, "*** Exit status %zd ***\n", info.return_code);
     if (info.return_code == 0) {
@@ -392,7 +420,7 @@ zx::debuglog DuplicateOrDie(const zx::debuglog& log,
   // Now we've accomplished our purpose in life, and we can die happy.
   switch (opts.epilogue) {
     case Epilogue::kExitAfterChildLaunch:
-      proc.reset();
+      child.process.reset();
       printl(log, "finished!");
       zx_process_exit(0);
     case Epilogue::kRebootAfterChildExit:
