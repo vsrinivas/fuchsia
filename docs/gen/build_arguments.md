@@ -87,7 +87,7 @@ From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesou
 ### api_compatibility_testing
 Whether to run API compatibility tests.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //build/fidl/fidl_library.gni:19
 
@@ -819,28 +819,28 @@ Include the vulkan validation layers in carnelian examples.
 
 **Current value (from the default):** `false`
 
-From //src/lib/ui/carnelian/BUILD.gn:13
+From //src/lib/ui/carnelian/BUILD.gn:14
 
 ### carnelian_static_images_extras
 Point this to the location of external image files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/lib/ui/carnelian/BUILD.gn:16
+From //src/lib/ui/carnelian/BUILD.gn:17
 
 ### carnelian_static_rives_extras
 Point this to the location of external rive files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/lib/ui/carnelian/BUILD.gn:19
+From //src/lib/ui/carnelian/BUILD.gn:20
 
 ### carnelian_static_txts_extras
 Point this to the location of external txt files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/lib/ui/carnelian/BUILD.gn:22
+From //src/lib/ui/carnelian/BUILD.gn:23
 
 ### check_output_dir_leaks
 If enabled, check that the output dir path does not leak into
@@ -4590,7 +4590,7 @@ direct.
 
 **Current value (from the default):** `false`
 
-From //src/lib/ui/carnelian/BUILD.gn:29
+From //src/lib/ui/carnelian/BUILD.gn:30
 
 ### use_flatland_by_default
 If true, Flatland is the default graphics protocol in Scenic.
@@ -4713,7 +4713,7 @@ Include a config in the example packages to attempt to use Spinel
 
 **Current value (from the default):** `false`
 
-From //src/lib/ui/carnelian/BUILD.gn:25
+From //src/lib/ui/carnelian/BUILD.gn:26
 
 ### use_swiftshader_vulkan_icd_on_host
 
