@@ -50,7 +50,10 @@ source_set("cpp") {
     "any_error_in.cc",
     "internal/natural_message_encoder.cc",
   ]
-  public_deps = [ "//src/lib/fidl/cpp:cpp_base" ]
+  public_deps = [
+    "//src/lib/fidl/cpp:cpp_base",
+    "//zircon/system/ulib/fidl:fidl_base",
+  ]
 }
 
 # The support header for HLCPP / Natural conversion

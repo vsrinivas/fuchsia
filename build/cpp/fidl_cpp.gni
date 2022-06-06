@@ -495,9 +495,19 @@ template("fidl_cpp_family") {
       layer = "type_conversions"
       headers = [ "fidl/$library_name/cpp/type_conversions.h" ]
       sources = [ "fidl/$library_name/cpp/type_conversions.cc" ]
+
+      # TODO(fxbug.dev/101525): Type conversion should not depend on messaging layer.
+      # We should only need `cpp_base` here.
+      if (is_fuchsia) {
+        public_deps = [ "//src/lib/fidl/cpp" ]
+      } else {
+        public_deps = [ "//src/lib/fidl/cpp:cpp_base" ]
+      }
+
       layer_deps = [
+        # TODO(fxbug.dev/101525): Replace with "wire_types".
+        "llcpp",
         "natural_types",
-        "wire_types",
       ]
     },
 

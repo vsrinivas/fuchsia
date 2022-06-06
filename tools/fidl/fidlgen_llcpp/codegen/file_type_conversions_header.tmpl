@@ -33,7 +33,8 @@ fidl/{{ .LibraryDots }}/cpp/type_conversions.h
 {{ range .Tables }}{{ template "Table:Traits:TypeConversionsHeader" . }}{{ end }}
 {{ range .Unions }}{{ template "Union:Traits:TypeConversionsHeader" . }}{{ end }}
 
-{{ IfdefFuchsia -}}
+{{/* TODO(fxbug.dev/101525): Type conversion should not depend on messaging layer. */}}
+{{- IfdefFuchsia -}}
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
 {{- range $transport, $_ := .Transports }}
