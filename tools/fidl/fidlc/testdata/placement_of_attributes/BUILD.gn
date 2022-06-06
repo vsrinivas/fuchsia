@@ -9,10 +9,12 @@ fidl("test.placementofattributes") {
   sources = [ "example.test.fidl" ]
   public_deps = [ ":test.exampleusing" ]
   host_llcpp = true
+  golden_fuzzer = true
 }
 
 fidl("test.exampleusing") {
   testonly = true
   sources = [ "exampleusing.test.fidl" ]
   host_llcpp = true
+  golden_fuzzer = true
 }

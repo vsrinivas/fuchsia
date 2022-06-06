@@ -8,6 +8,7 @@ fidl("test.dependent") {
   testonly = true
   sources = [ "dependent.test.fidl" ]
   host_llcpp = true
+  golden_fuzzer = true
 }
 
 fidl("test.bindingsdenylist") {
@@ -15,4 +16,5 @@ fidl("test.bindingsdenylist") {
   sources = [ "example.test.fidl" ]
   public_deps = [ ":test.dependent" ]
   host_llcpp = true
+  golden_fuzzer = true
 }

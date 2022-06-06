@@ -24,6 +24,7 @@
 #include <fidl/test.protocols/cpp/markers.h>
 
 namespace test_protocols {
+
 namespace wire {
 using ErrorEnum = ::test_protocols::ErrorEnum;
 

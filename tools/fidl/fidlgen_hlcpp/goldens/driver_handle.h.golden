@@ -4,10 +4,15 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace test {
+namespace driverhandle {
+
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
 
+}  // namespace driverhandle
+}  // namespace test
 namespace fidl {
 
 //

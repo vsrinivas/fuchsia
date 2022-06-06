@@ -6,12 +6,13 @@
 #include <test/middle/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
+namespace test {
+namespace transitivedependenciescompose {
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace transitivedependenciescompose {
+
 #ifdef __Fuchsia__
 
 class Top;

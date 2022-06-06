@@ -4,11 +4,13 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace test {
+namespace inheritancewithrecursivedecl {
+
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace inheritancewithrecursivedecl {
+
 class ParentFirstRequest;
 
 #ifdef __Fuchsia__

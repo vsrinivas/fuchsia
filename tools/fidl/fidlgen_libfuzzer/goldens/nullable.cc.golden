@@ -46,7 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   [[maybe_unused]] zx_status_t status_;
   if (protocol_selection_ == 0) {
-#if !defined(PROTOCOL_test_nullable_SimpleProtocol)
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_nullable_SimpleProtocol))
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf("Early exit: Chose disabled protocol: test_nullable_SimpleProtocol\n");
     return 0;
@@ -76,7 +76,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     uint8_t method_selector_ = data_[1];
     uint8_t method_selection_ = method_selector_ % 1;
     if (method_selection_ == 0) {
-#if !(ALL_METHODS || defined(METHOD_Add))
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_Add))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: Add\n");
       return 0;

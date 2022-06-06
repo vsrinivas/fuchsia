@@ -42,44 +42,11 @@ void fidl::Server<::test_bindingsdenylist::Allowed>::dispatch_message(
 }
 #endif  // __Fuchsia__
 
-namespace test_bindingsdenylist {
-[[maybe_unused]] constexpr inline uint64_t kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal = 2342407566057198902lu;
-
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
-
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
-::fidl::internal::NaturalThenable<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::LibfuzzerNeedsNonemptyProtocol() const {
-  return ::fidl::internal::NaturalThenable<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>(
-      &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal, ::test_bindingsdenylist::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags,
-      [](NaturalMessageEncoder& encoder) mutable {
-        return ZX_OK;
-      },
-      [](
-          ::fidl::internal::ThenableBase* base,
-          ::fidl::internal::NaturalMessageEncoder& encoder,
-          ::fidl::internal::ResponseContext* response_context) {
-        ::fidl::OutgoingMessage msg = encoder.GetMessage();
-        return base->SendTwoWay(msg, response_context);
-      });
-}
 
-namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-}  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
-
-::fidl::Result<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::LibfuzzerNeedsNonemptyProtocol() {
-  ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal, ::test_bindingsdenylist::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags};
-  ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> response_storage;
-  return ::fidl::internal::DecodeResponseAndFoldError<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>(
-      msg.Call(_client_end().handle(), response_storage.view()), nullptr);
-}
 
 #endif  // __Fuchsia__
 
@@ -97,35 +64,12 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndD
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>::Reply() {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal, ::test_bindingsdenylist::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags};
-  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
-  SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
-}
-
 #ifdef __Fuchsia__
 
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::entries_[] = {
-    {
-        ::test_bindingsdenylist::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
-          if (decoded.is_error()) {
-            return decoded.error_value();
-          }
-          ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> request;
-          ::fidl::internal::NaturalCompleter<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>::Sync completer(txn);
-          static_cast<::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>*>(interface)->LibfuzzerNeedsNonemptyProtocol(
-              request, completer);
-          return ::fidl::Status::Ok();
-        },
-    },
-};
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::entries_[] = {};
 
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::entries_end_ =
-    &entries_[1];
+    &entries_[0];
 
 void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {

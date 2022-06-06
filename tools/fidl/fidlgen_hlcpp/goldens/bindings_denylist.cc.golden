@@ -1575,10 +1575,6 @@ OnlyLibfuzzerAndDeps::~OnlyLibfuzzerAndDeps() = default;
 const fidl_type_t* ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   *out_needs_response = false;
   switch (ordinal) {
-    case ::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal:
-      *out_needs_response = true;
-      return nullptr;
-      ;
     default:
       return nullptr;
   }
@@ -1586,9 +1582,6 @@ const fidl_type_t* ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestDecoder
 
 const fidl_type_t* OnlyLibfuzzerAndDeps_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case ::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal:
-      return nullptr;
-      ;
     default:
       return nullptr;
   }
@@ -1616,27 +1609,6 @@ zx_status_t OnlyLibfuzzerAndDeps_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage m
   return status;
 }
 
-namespace {
-
-::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_ResponseHandler(OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocolCallback&& callback) {
-  ZX_DEBUG_ASSERT_MSG(callback,
-                      "Callback must not be empty for OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol\n");
-  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
-        callback_();
-        return ZX_OK;
-      },
-      nullptr);
-}
-
-}  // namespace
-void OnlyLibfuzzerAndDeps_Proxy::LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocolCallback callback) {
-  ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal, ::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags);
-  const fidl_type_t* req_type = nullptr;
-  controller_->Send(req_type, ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestEncoder::LibfuzzerNeedsNonemptyProtocol(&_encoder), OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_ResponseHandler(std::move(callback)));
-}
-
 OnlyLibfuzzerAndDeps_Stub::OnlyLibfuzzerAndDeps_Stub(::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Stub::OnlyLibfuzzerAndDeps_clazz* impl) : impl_(impl) {
   (void)impl_;
 }
@@ -1644,21 +1616,6 @@ OnlyLibfuzzerAndDeps_Stub::OnlyLibfuzzerAndDeps_Stub(::test::bindingsdenylist::O
 OnlyLibfuzzerAndDeps_Stub::~OnlyLibfuzzerAndDeps_Stub() = default;
 
 namespace {
-
-class OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Responder final {
- public:
-  OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Responder(::fidl::internal::PendingResponse response)
-      : response_(std::move(response)) {}
-
-  void operator()() {
-    ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal, ::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags);
-    const fidl_type_t* resp_type = nullptr;
-    response_.Send(resp_type, ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_ResponseEncoder::LibfuzzerNeedsNonemptyProtocol(&_encoder));
-  }
-
- private:
-  ::fidl::internal::PendingResponse response_;
-};
 
 }  // namespace
 
@@ -1690,10 +1647,6 @@ zx_status_t OnlyLibfuzzerAndDeps_Stub::Dispatch_(
 
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case ::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal: {
-      impl_->LibfuzzerNeedsNonemptyProtocol(OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Responder(std::move(response)));
-      break;
-    }
     default: {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -1705,18 +1658,6 @@ OnlyLibfuzzerAndDeps_SyncProxy::OnlyLibfuzzerAndDeps_SyncProxy(::zx::channel cha
     : proxy_(::std::move(channel)) {}
 
 OnlyLibfuzzerAndDeps_SyncProxy::~OnlyLibfuzzerAndDeps_SyncProxy() = default;
-
-zx_status_t OnlyLibfuzzerAndDeps_SyncProxy::LibfuzzerNeedsNonemptyProtocol() {
-  ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal, ::test::bindingsdenylist::internal::kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags);
-  ::fidl::IncomingMessageBuffer buffer_;
-  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  const fidl_type_t* req_type = nullptr;
-  const fidl_type_t* resp_type = nullptr;
-  zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestEncoder::LibfuzzerNeedsNonemptyProtocol(&_encoder), &response_);
-  if (status_ != ZX_OK)
-    return status_;
-  return ZX_OK;
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

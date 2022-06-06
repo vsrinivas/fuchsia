@@ -21,6 +21,7 @@
 #include <fidl/test.unionsandwich/cpp/markers.h>
 
 namespace test_unionsandwich {
+
 namespace wire {
 struct SandwichUnionSize8Alignment4;
 

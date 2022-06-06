@@ -23,6 +23,7 @@
 #include <fidl/test.protocolpayloads/cpp/markers.h>
 
 namespace test_protocolpayloads {
+
 namespace wire {
 struct MainProtocolTwoWayImportWithErrorTopResponse;
 

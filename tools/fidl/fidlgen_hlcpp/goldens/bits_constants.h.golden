@@ -4,11 +4,13 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace test {
+namespace bitsconstants {
+
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace bitsconstants {
+
 enum class BitsType : uint32_t {
 
   A = 1u,

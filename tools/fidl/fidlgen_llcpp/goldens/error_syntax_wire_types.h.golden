@@ -23,6 +23,7 @@
 #include <fidl/test.errorsyntax/cpp/markers.h>
 
 namespace test_errorsyntax {
+
 namespace wire {
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 

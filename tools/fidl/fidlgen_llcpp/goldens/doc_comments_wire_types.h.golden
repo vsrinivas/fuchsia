@@ -22,6 +22,7 @@
 #include <fidl/test.doccomments/cpp/markers.h>
 
 namespace test_doccomments {
+
 namespace wire {
 using MyStrictBits = ::test_doccomments::MyStrictBits;
 using MyFlexibleBits = ::test_doccomments::MyFlexibleBits;

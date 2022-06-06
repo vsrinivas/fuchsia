@@ -15,6 +15,7 @@
 #endif  // __Fuchsia__
 
 namespace test_arrays {
+
 class StructSmallArray;
 
 class StructLargeArray;

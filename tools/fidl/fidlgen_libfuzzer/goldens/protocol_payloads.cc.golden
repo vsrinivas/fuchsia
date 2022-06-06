@@ -46,7 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   [[maybe_unused]] zx_status_t status_;
   if (protocol_selection_ == 0) {
-#if !defined(PROTOCOL_test_protocolpayloads_MainProtocol)
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocolpayloads_MainProtocol))
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf("Early exit: Chose disabled protocol: test_protocolpayloads_MainProtocol\n");
     return 0;
@@ -74,9 +74,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     FuzzInput src_(data_, size_);
 
     uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 20;
+    uint8_t method_selection_ = method_selector_ % 12;
     if (method_selection_ == 0) {
-#if !(ALL_METHODS || defined(METHOD_OneWayComposed))
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_OneWayComposed))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: OneWayComposed\n");
       return 0;
@@ -104,7 +104,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 #endif
     }
     if (method_selection_ == 1) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayComposed))
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayComposed))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayComposed\n");
       return 0;
@@ -138,7 +138,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 #endif
     }
     if (method_selection_ == 2) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayComposedWithError))
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayComposedWithError))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayComposedWithError\n");
       return 0;
@@ -171,8 +171,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       });
 #endif
     }
-    if (method_selection_ == 5) {
-#if !(ALL_METHODS || defined(METHOD_OneWayLocal))
+    if (method_selection_ == 3) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_OneWayLocal))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: OneWayLocal\n");
       return 0;
@@ -202,8 +202,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       protocol_->OneWayLocal(std::move(a), std::move(b));
 #endif
     }
-    if (method_selection_ == 6) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayLocal))
+    if (method_selection_ == 4) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayLocal))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayLocal\n");
       return 0;
@@ -239,8 +239,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       });
 #endif
     }
-    if (method_selection_ == 7) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayLocalWithError))
+    if (method_selection_ == 5) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayLocalWithError))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayLocalWithError\n");
       return 0;
@@ -276,8 +276,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       });
 #endif
     }
-    if (method_selection_ == 10) {
-#if !(ALL_METHODS || defined(METHOD_OneWayImport))
+    if (method_selection_ == 6) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_OneWayImport))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: OneWayImport\n");
       return 0;
@@ -304,8 +304,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       protocol_->OneWayImport(std::move(a));
 #endif
     }
-    if (method_selection_ == 11) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayImport))
+    if (method_selection_ == 7) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayImport))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayImport\n");
       return 0;
@@ -338,8 +338,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       });
 #endif
     }
-    if (method_selection_ == 12) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayImportWithError))
+    if (method_selection_ == 8) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayImportWithError))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayImportWithError\n");
       return 0;
@@ -372,8 +372,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       });
 #endif
     }
-    if (method_selection_ == 15) {
-#if !(ALL_METHODS || defined(METHOD_OneWayAnon))
+    if (method_selection_ == 9) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_OneWayAnon))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: OneWayAnon\n");
       return 0;
@@ -403,8 +403,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       protocol_->OneWayAnon(std::move(a), std::move(b));
 #endif
     }
-    if (method_selection_ == 16) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayAnon))
+    if (method_selection_ == 10) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayAnon))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayAnon\n");
       return 0;
@@ -440,8 +440,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       });
 #endif
     }
-    if (method_selection_ == 17) {
-#if !(ALL_METHODS || defined(METHOD_TwoWayAnonWithError))
+    if (method_selection_ == 11) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TwoWayAnonWithError))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TwoWayAnonWithError\n");
       return 0;

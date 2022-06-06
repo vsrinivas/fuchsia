@@ -18,7 +18,9 @@
 
 #include <fidl/test.bottom/cpp/natural_types.h>
 #include <fidl/test.middle/cpp/natural_types.h>
+namespace test_foreigntypeinresponseusedthroughcompose {
 
+}  // namespace test_foreigntypeinresponseusedthroughcompose
 namespace fidl {
 
 }  // namespace fidl

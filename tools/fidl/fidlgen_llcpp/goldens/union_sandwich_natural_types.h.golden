@@ -15,6 +15,7 @@
 #endif  // __Fuchsia__
 
 namespace test_unionsandwich {
+
 class SandwichUnionSize8Alignment4;
 
 class SandwichUnionSize36Alignment4;

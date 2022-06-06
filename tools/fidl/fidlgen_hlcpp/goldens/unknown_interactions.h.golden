@@ -4,11 +4,13 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace test {
+namespace unknowninteractions {
+
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace unknowninteractions {
+
 class Example_FlexibleTwoWay_Response;
 
 class Example_FlexibleTwoWay_Result;

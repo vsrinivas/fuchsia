@@ -43,8 +43,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/fdf/cpp/natural_types.h>
-
 namespace test_handles {
+
 class Handles;
 
 class FdfHandles;

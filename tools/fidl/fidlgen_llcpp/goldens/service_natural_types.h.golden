@@ -16,6 +16,9 @@
 
 #endif  // __Fuchsia__
 
+namespace test_service {
+
+}  // namespace test_service
 namespace fidl {
 
 }  // namespace fidl

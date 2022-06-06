@@ -41,6 +41,8 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
     #include <{{ . | Filename "WireTypesHeader" }}>
   {{ end }}
 
+  {{ EnsureNamespace . }}
+
   {{ range .Bits }}{{ template "Bits:WireTypesHeader" . }}{{ end }}
   {{ range .Enums }}{{ template "Enum:WireTypesHeader" . }}{{ end }}
   {{ range .Structs }}{{ template "Struct:ForwardDeclaration:WireTypesHeader" . }}{{ end }}

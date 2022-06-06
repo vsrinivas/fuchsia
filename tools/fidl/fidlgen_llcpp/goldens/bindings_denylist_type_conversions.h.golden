@@ -422,36 +422,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_bindingsdenylist::DenyEachB
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>, ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> {
-  static ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> ToNatural(::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> src);
-  static ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> {
-  using type = ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> {
-  using type = ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>;
-};
-
-template <>
-struct WireNaturalConversionTraits<::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>, ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> {
-  static ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> ToNatural(::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> src);
-  static ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> {
-  using type = ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> {
-  using type = ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
   static ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src);
   static ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src);

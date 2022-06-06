@@ -17,8 +17,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.protocolpayloads.imported/cpp/natural_types.h>
-
 namespace test_protocolpayloads {
+
 class MainProtocolTwoWayImportWithErrorTopResponse;
 
 class MainProtocolTwoWayAnonWithErrorResponse;

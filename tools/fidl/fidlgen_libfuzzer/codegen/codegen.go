@@ -15,6 +15,14 @@ import (
 //go:embed *.tmpl
 var templates embed.FS
 
+// A fuzzableProtocol is a protocol with at least one fuzzable method (method
+// that has at least one request argument). Identifying fuzzable protocols up
+// front makes it easier to avoid dividing by zero in the generated code.
+type fuzzableProtocol struct {
+	*cpp.Protocol
+	FuzzableMethods []*cpp.Method
+}
+
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
 	return cpp.NewGenerator(flags, templates, template.FuncMap{
 		"DoubleColonToUnderscore": func(s string) string {
@@ -25,19 +33,32 @@ func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
 			}
 			return s2
 		},
-		"Protocols":            protocols,
+		"FuzzableProtocols":    fuzzableProtocols,
 		"CountDecoderEncoders": countDecoderEncoders,
 	})
 }
 
-func protocols(decls []cpp.Kinded) []*cpp.Protocol {
-	protocols := make([]*cpp.Protocol, 0, len(decls))
+func fuzzableProtocols(decls []cpp.Kinded) []fuzzableProtocol {
+	var result []fuzzableProtocol
 	for _, decl := range decls {
-		if decl.Kind() == cpp.Kinds.Protocol {
-			protocols = append(protocols, decl.(*cpp.Protocol))
+		if decl.Kind() != cpp.Kinds.Protocol {
+			continue
+		}
+		protocol := decl.(*cpp.Protocol)
+		var fuzzableMethods []*cpp.Method
+		for i := range protocol.Methods {
+			if len(protocol.Methods[i].RequestArgs) != 0 {
+				fuzzableMethods = append(fuzzableMethods, &protocol.Methods[i])
+			}
+		}
+		if len(fuzzableMethods) != 0 {
+			result = append(result, fuzzableProtocol{
+				Protocol:        protocol,
+				FuzzableMethods: fuzzableMethods,
+			})
 		}
 	}
-	return protocols
+	return result
 }
 
 // countDecoderEncoders duplicates template logic that inlines protocol, struct, and table

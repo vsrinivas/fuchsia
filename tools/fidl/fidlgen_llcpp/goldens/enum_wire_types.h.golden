@@ -21,6 +21,7 @@
 #include <fidl/test.enum/cpp/markers.h>
 
 namespace test_enum {
+
 namespace wire {
 using MyStrictEnum = ::test_enum::MyStrictEnum;
 using MyFlexibleEnumWithCustomUnknown = ::test_enum::MyFlexibleEnumWithCustomUnknown;

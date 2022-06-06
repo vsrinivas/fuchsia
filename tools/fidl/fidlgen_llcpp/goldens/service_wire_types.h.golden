@@ -21,6 +21,9 @@
 #include <fidl/test.service/cpp/common_types.h>
 #include <fidl/test.service/cpp/markers.h>
 
+namespace test_service {
+
+}  // namespace test_service
 namespace fidl {
 
 }  // namespace fidl

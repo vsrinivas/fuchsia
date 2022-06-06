@@ -22,6 +22,7 @@
 #include <fidl/test.handlesintypes/cpp/markers.h>
 
 namespace test_handlesintypes {
+
 namespace wire {
 using ObjType = ::test_handlesintypes::ObjType;
 

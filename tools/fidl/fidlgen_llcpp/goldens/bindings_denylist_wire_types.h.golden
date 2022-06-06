@@ -23,6 +23,7 @@
 #include <fidl/test.dependent/cpp/wire_types.h>
 
 namespace test_bindingsdenylist {
+
 namespace wire {
 struct MemberOnlyAppearsInImportingLibrary;
 

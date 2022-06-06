@@ -46,7 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   [[maybe_unused]] zx_status_t status_;
   if (protocol_selection_ == 0) {
-#if !defined(PROTOCOL_test_emptystruct_EmptyProtocol)
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_emptystruct_EmptyProtocol))
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf("Early exit: Chose disabled protocol: test_emptystruct_EmptyProtocol\n");
     return 0;
@@ -74,9 +74,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     FuzzInput src_(data_, size_);
 
     uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 3;
+    uint8_t method_selection_ = method_selector_ % 2;
     if (method_selection_ == 0) {
-#if !(ALL_METHODS || defined(METHOD_Send))
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_Send))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: Send\n");
       return 0;
@@ -103,8 +103,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       protocol_->Send(std::move(e));
 #endif
     }
-    if (method_selection_ == 2) {
-#if !(ALL_METHODS || defined(METHOD_SendAndReceive))
+    if (method_selection_ == 1) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_SendAndReceive))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: SendAndReceive\n");
       return 0;

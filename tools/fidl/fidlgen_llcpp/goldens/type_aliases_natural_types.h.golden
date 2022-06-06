@@ -17,8 +17,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.someotherlibrary/cpp/natural_types.h>
-
 namespace test_typealiases {
+
 class ExampleOfUseOfAliases;
 
 #ifdef __Fuchsia__

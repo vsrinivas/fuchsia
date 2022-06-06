@@ -4,11 +4,13 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace test {
+namespace error {
+
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace error {
+
 class Example_foo_Response;
 
 class Example_foo_Result;

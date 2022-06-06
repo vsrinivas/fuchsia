@@ -43,6 +43,10 @@ standalone_libraries = [
 foreach(filename, standalone_libraries) {
   library = "test." +
             string_replace(string_replace(filename, ".test.fidl", ""), "_", "")
+
+  # TODO(fxbug.dev/96842): Make a special template for golden FIDL libraries so
+  # that they are configured consistently here and in the subdirectories used
+  # for multi-library goldens.
   fidl(library) {
     testonly = true
     sources = [ filename ]
@@ -59,6 +63,9 @@ foreach(filename, standalone_libraries) {
       # Some test files use the driver transport.
       contains_drivers = true
     }
+
+    # Generate fuzzers to make sure they build.
+    golden_fuzzer = true
   }
 }
 

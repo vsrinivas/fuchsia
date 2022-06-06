@@ -64,10 +64,6 @@ fidl_testdata_info = [
   {
     name = "arrays"
     target = "//tools/fidl/fidlc/testdata:test.arrays"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "bindings_denylist"
@@ -84,26 +80,14 @@ fidl_testdata_info = [
   {
     name = "bits"
     target = "//tools/fidl/fidlc/testdata:test.bits"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "byte_and_bytes"
     target = "//tools/fidl/fidlc/testdata:test.byteandbytes"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "consts"
     target = "//tools/fidl/fidlc/testdata:test.consts"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
     build_denylist = [
       # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
       "fidlgen_hlcpp",
@@ -149,14 +133,26 @@ fidl_testdata_info = [
   {
     name = "driver_one_way"
     target = "//tools/fidl/fidlc/testdata:test.driveroneway"
+    build_denylist = [
+      # TODO(fxbug.dev/101744): Fix.
+      "fidlgen_libfuzzer",
+    ]
   },
   {
     name = "driver_two_way"
     target = "//tools/fidl/fidlc/testdata:test.drivertwoway"
+    build_denylist = [
+      # TODO(fxbug.dev/101744): Fix.
+      "fidlgen_libfuzzer",
+    ]
   },
   {
     name = "empty_struct"
     target = "//tools/fidl/fidlc/testdata:test.emptystruct"
+    build_denylist = [
+      # TODO(fxbug.dev/101743): Fix.
+      "fidlgen_libfuzzer",
+    ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -168,16 +164,12 @@ fidl_testdata_info = [
   {
     name = "encapsulated_structs"
     target = "//tools/fidl/fidlc/testdata:test.encapsulatedstructs"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "enum"
     target = "//tools/fidl/fidlc/testdata:test.enum"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
+    build_denylist = [
+      # TODO(fxbug.dev/101713): Make libfuzzer work with empty flexible enums.
       "fidlgen_libfuzzer",
     ]
   },
@@ -201,10 +193,6 @@ fidl_testdata_info = [
   {
     name = "escaping"
     target = "//tools/fidl/fidlc/testdata:test.escaping"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "experimental_maybe_from_type_alias"
@@ -230,10 +218,6 @@ fidl_testdata_info = [
   {
     name = "handles"
     target = "//tools/fidl/fidlc/testdata:test.handles"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
     build_denylist = [
       "fidlgen_libfuzzer",
 
@@ -244,10 +228,6 @@ fidl_testdata_info = [
   {
     name = "handles_in_types"
     target = "//tools/fidl/fidlc/testdata:test.handlesintypes"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "imported_const_values"
@@ -286,10 +266,6 @@ fidl_testdata_info = [
   {
     name = "padding"
     target = "//tools/fidl/fidlc/testdata:test.padding"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "placement_of_attributes"
@@ -335,6 +311,10 @@ fidl_testdata_info = [
   {
     name = "protocols"
     target = "//tools/fidl/fidlc/testdata:test.protocols"
+    build_denylist = [
+      # TODO(fxbug.dev/101744): Fix.
+      "fidlgen_libfuzzer",
+    ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -365,18 +345,11 @@ fidl_testdata_info = [
   {
     name = "struct"
     target = "//tools/fidl/fidlc/testdata:test.struct"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "struct_default_value_enum_library_reference"
     target = "//tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference:test.structdefaultvalueenumlibraryreference"
     denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-
       # TODO(fxbug.dev/45007): Syzkaller does not support enum member references
       # in struct defaults.
       "fidlgen_syzkaller",
@@ -389,18 +362,10 @@ fidl_testdata_info = [
   {
     name = "table"
     target = "//tools/fidl/fidlc/testdata:test.table"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "transitive_dependencies"
     target = "//tools/fidl/fidlc/testdata/transitive_dependencies:test.transitivedependencies"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "transitive_dependencies_compose"
@@ -416,10 +381,6 @@ fidl_testdata_info = [
   {
     name = "type_aliases"
     target = "//tools/fidl/fidlc/testdata/type_aliases:test.typealiases"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "union"
@@ -437,10 +398,6 @@ fidl_testdata_info = [
   {
     name = "union_sandwich"
     target = "//tools/fidl/fidlc/testdata:test.unionsandwich"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -453,18 +410,10 @@ fidl_testdata_info = [
   {
     name = "vectors"
     target = "//tools/fidl/fidlc/testdata:test.vectors"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
   },
   {
     name = "versions"
     target = "//tools/fidl/fidlc/testdata:test.versions"
-    denylist = [
-      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
-      "fidlgen_libfuzzer",
-    ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",

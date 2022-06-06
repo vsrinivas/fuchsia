@@ -17,6 +17,7 @@
 #endif  // __Fuchsia__
 
 namespace test_protocolrequest {
+
 class ParentTakeChildRequestRequest;
 
 class ParentTakeChildRequest;

@@ -22,6 +22,7 @@
 #include <fidl/test.inheritance/cpp/markers.h>
 
 namespace test_inheritance {
+
 namespace wire {
 struct SuperFooTopResponse;
 

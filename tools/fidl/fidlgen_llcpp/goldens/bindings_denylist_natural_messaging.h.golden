@@ -121,45 +121,12 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowe
 };
 #endif  // __Fuchsia__
 
-template <>
-struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>&)>;
-
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
-
-  static constexpr bool IsAbsentBody = true;
-};
-
 #ifdef __Fuchsia__
-
-template <>
-class ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-template <>
-class ::fidl::Result<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> final : public ::fitx::result<::fidl::Error> {
- public:
-  using ::fitx::result<::fidl::Error>::result;
-
- protected:
-  Result() = default;
-};
 
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> LibfuzzerNeedsNonemptyProtocol() const;
 };
 #endif  // __Fuchsia__
 
@@ -169,8 +136,6 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
  public:
-  ::fidl::Result<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> LibfuzzerNeedsNonemptyProtocol();
-
  private:
   ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
@@ -231,29 +196,6 @@ class ::fidl::internal::NaturalEventSender<::test_bindingsdenylist::OnlyLibfuzze
 };
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol> : public ::fidl::CompleterBase {
- public:
-  void Reply();
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
 template <>
 class ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -262,11 +204,6 @@ class ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::f
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_bindingsdenylist::OnlyLibfuzzerAndDeps;
-
-  using LibfuzzerNeedsNonemptyProtocolRequest = ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>;
-  using LibfuzzerNeedsNonemptyProtocolCompleter = ::fidl::internal::NaturalCompleter<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocol>;
-
-  virtual void LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocolRequest& request, LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

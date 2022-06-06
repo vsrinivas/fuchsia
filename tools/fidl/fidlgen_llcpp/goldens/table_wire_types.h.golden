@@ -21,6 +21,7 @@
 #include <fidl/test.table/cpp/markers.h>
 
 namespace test_table {
+
 namespace wire {
 class TableWithAttributes;
 

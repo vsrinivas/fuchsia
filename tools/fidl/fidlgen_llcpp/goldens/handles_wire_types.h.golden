@@ -49,6 +49,7 @@
 #include <fidl/test.handles/cpp/markers.h>
 
 namespace test_handles {
+
 namespace wire {
 struct Handles;
 

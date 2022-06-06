@@ -5,12 +5,13 @@
 #include <fdf/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
+namespace test {
+namespace handles {
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace handles {
+
 class Handles;
 
 #ifdef __Fuchsia__

@@ -21,6 +21,7 @@
 #include <fidl/test.byteandbytes/cpp/markers.h>
 
 namespace test_byteandbytes {
+
 namespace wire {
 struct ByteAndBytes;
 

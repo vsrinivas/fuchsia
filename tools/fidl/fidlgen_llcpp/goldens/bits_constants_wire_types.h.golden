@@ -21,6 +21,7 @@
 #include <fidl/test.bitsconstants/cpp/markers.h>
 
 namespace test_bitsconstants {
+
 namespace wire {
 using BitsType = ::test_bitsconstants::BitsType;
 

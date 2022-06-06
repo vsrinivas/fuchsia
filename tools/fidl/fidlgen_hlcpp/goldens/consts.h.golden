@@ -4,11 +4,12 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace test {
+namespace consts {
+
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace consts {
 
 enum class EnumType : int32_t {
 

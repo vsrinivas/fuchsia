@@ -5,12 +5,12 @@
 #include <test/someotherlibrary/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
+namespace test {
+namespace typealiases {
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace typealiases {
 
 enum class obj_type : uint32_t {
 

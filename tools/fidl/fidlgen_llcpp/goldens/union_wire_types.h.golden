@@ -22,6 +22,7 @@
 #include <fidl/test.union/cpp/markers.h>
 
 namespace test_union {
+
 namespace wire {
 struct StructWithNullableXUnion;
 

@@ -17,6 +17,7 @@
 #endif  // __Fuchsia__
 
 namespace test_encapsulatedstructs {
+
 class NonInlineStructTestStruct;
 
 class Int8Int32;

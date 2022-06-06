@@ -4,11 +4,13 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+namespace test {
+namespace bits {
+
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace bits {
+
 enum class StrictBits : uint64_t {
 
   SMALLEST = 1u,

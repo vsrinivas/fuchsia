@@ -39,14 +39,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   size_ -= 2;
 
   uint8_t protocol_selector_ = data_[0];
-  uint8_t protocol_selection_ = protocol_selector_ % 2;
+  uint8_t protocol_selection_ = protocol_selector_ % 1;
 
   xprintf("Starting fuzzer with %zu bytes of data\n", size_);
 
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
   [[maybe_unused]] zx_status_t status_;
   if (protocol_selection_ == 0) {
-#if !defined(PROTOCOL_test_protocolrequest_Parent)
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocolrequest_Parent))
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf("Early exit: Chose disabled protocol: test_protocolrequest_Parent\n");
     return 0;
@@ -74,9 +74,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     FuzzInput src_(data_, size_);
 
     uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 4;
-    if (method_selection_ == 2) {
-#if !(ALL_METHODS || defined(METHOD_TakeChild))
+    uint8_t method_selection_ = method_selector_ % 2;
+    if (method_selection_ == 0) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TakeChild))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TakeChild\n");
       return 0;
@@ -103,8 +103,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       protocol_->TakeChild(std::move(c));
 #endif
     }
-    if (method_selection_ == 3) {
-#if !(ALL_METHODS || defined(METHOD_TakeChildRequest))
+    if (method_selection_ == 1) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_TakeChildRequest))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: TakeChildRequest\n");
       return 0;

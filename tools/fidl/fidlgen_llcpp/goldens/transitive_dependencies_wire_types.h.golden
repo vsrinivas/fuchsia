@@ -22,6 +22,7 @@
 #include <fidl/test.transitivedependencies/cpp/markers.h>
 
 namespace test_transitivedependencies {
+
 namespace wire {
 struct Baz;
 

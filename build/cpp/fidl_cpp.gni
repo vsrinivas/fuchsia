@@ -46,6 +46,10 @@ template("_fidl_cpp_codegen_impl") {
     }
   }
 
+  if (defined(invoker.golden_fuzzer) && invoker.golden_fuzzer) {
+    generation_visibility += [ ":${target_name}__golden" ]
+  }
+
   compiled_action(generation_target_name) {
     # supply defaults for various options
     forward_variables_from(invoker, [ "testonly" ])
@@ -122,12 +126,16 @@ template("_fidl_cpp_codegen_impl") {
 #  fidlgen_tool (required)
 #    The code generation tool to use, as an absolute GN label.
 #
-#   fuzzers (optional)
-#     A list of { protocol = ..., methods = ... } scopes declaring which
-#     methods will be fuzzed by a fuzzer.
+#  fuzzers (optional)
+#    A list of { protocol = ..., methods = ... } scopes declaring which
+#    methods will be fuzzed by a fuzzer.
 #
-#   additional_visibility (optional)
-#     A list of labels which are allowed to depend on the generated code.
+#  golden_fuzzer (optional)
+#    Boolean flag to generate a LibFuzzer fuzz target for all protocols, used
+#    to ensure fuzzers for golden libraries compile successfully.
+#
+#  additional_visibility (optional)
+#    A list of labels which are allowed to depend on the generated code.
 
 template("fidl_cpp_codegen") {
   if (current_toolchain == fidl_toolchain) {
@@ -630,7 +638,11 @@ template("fidl_cpp_family") {
 
   # Define fuzzer targets.
   fidl_cpp_codegen("${target_name}_libfuzzer") {
-    forward_variables_from(invoker, [ "fuzzers" ])
+    forward_variables_from(invoker,
+                           [
+                             "fuzzers",
+                             "golden_fuzzer",
+                           ])
     forward_variables_from(common_options, "*")
     forward_variables_from(libfuzzer_options, "*")
     generated_headers = libfuzzer_headers
@@ -647,6 +659,7 @@ template("fidl_cpp_family") {
                            ])
     forward_variables_from(common_options, "*")
     forward_variables_from(libfuzzer_options, "*")
+    testonly = true
     additional_public_deps = [
       "//sdk/lib/fidl/cpp/fuzzing",
       "//zircon/system/ulib/async-default",
@@ -707,6 +720,26 @@ template("fidl_cpp_family") {
         additional_public_deps = [ ":${fidl_target_name}_libfuzzer" ]
         generated_sources = libfuzzer_sources
       }
+    }
+  }
+
+  # If requested, generate a fuzz target that includes all protocols and methods
+  # so we can make sure the fuzzers for golden libraries compile successfully.
+  if (defined(invoker.golden_fuzzer) && invoker.golden_fuzzer) {
+    # Note: double underscore to prevent clashes with the fuzzer targets below.
+    fidl_cpp_library("${target_name}_libfuzzer__golden") {
+      forward_variables_from(invoker,
+                             [
+                               "visibility",
+                               "public_deps",
+                               "library_name",
+                             ])
+      forward_variables_from(common_options, "*")
+      forward_variables_from(libfuzzer_options, "*")
+      testonly = true
+      defines = [ "GOLDEN_FUZZER" ]
+      additional_public_deps = [ ":${fidl_target_name}_libfuzzer" ]
+      generated_sources = libfuzzer_sources
     }
   }
 }

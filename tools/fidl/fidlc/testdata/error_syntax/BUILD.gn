@@ -8,6 +8,7 @@ fidl("test.errorsyntax.parent") {
   testonly = true
   sources = [ "parent.test.fidl" ]
   host_llcpp = true
+  golden_fuzzer = true
 }
 
 fidl("test.errorsyntax") {
@@ -15,4 +16,5 @@ fidl("test.errorsyntax") {
   sources = [ "child.test.fidl" ]
   public_deps = [ ":test.errorsyntax.parent" ]
   host_llcpp = true
+  golden_fuzzer = true
 }

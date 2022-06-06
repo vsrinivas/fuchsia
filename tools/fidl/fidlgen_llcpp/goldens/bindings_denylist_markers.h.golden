@@ -18,14 +18,6 @@ class OnlyLibfuzzerAndDeps final {
 
  public:
   using Transport = ::fidl::internal::ChannelTransport;
-  class LibfuzzerNeedsNonemptyProtocol final {
-    LibfuzzerNeedsNonemptyProtocol() = delete;
-
-   public:
-    using Protocol = ::test_bindingsdenylist::OnlyLibfuzzerAndDeps;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-  };
 };
 
 class OnlyCppAndDeps final {

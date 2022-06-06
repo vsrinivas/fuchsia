@@ -51,6 +51,10 @@ import("//build/go/toolchain.gni")
 #         ...
 #       ]
 #
+#   golden_fuzzer (optional)
+#     Boolean flag to generate a LibFuzzer fuzz target for all protocols, used
+#     to ensure fuzzers for golden libraries compile successfully.
+#
 #   experimental_flags (optional)
 #     A list of experimental fidlc features to enable.
 #
@@ -99,6 +103,9 @@ template("fidl") {
   }
   if (defined(invoker.fuzzers)) {
     not_needed(invoker, [ "fuzzers" ])
+  }
+  if (defined(invoker.golden_fuzzer)) {
+    not_needed(invoker, [ "golden_fuzzer" ])
   }
   if (defined(invoker.experimental_flags)) {
     not_needed(invoker, [ "experimental_flags" ])

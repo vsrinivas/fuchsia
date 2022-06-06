@@ -18,6 +18,7 @@
 #endif  // __Fuchsia__
 
 namespace test_nullable {
+
 class StructWithNullableVector;
 
 class StructWithNullableUnion;

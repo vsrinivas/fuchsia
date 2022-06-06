@@ -5,12 +5,13 @@
 #include <test/dependent/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
+namespace test {
+namespace bindingsdenylist {
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace bindingsdenylist {
+
 #ifdef __Fuchsia__
 
 class Allowed;
@@ -104,16 +105,10 @@ class Allowed_ResponseEncoder {
 
 class OnlyLibfuzzerAndDeps_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(::fidl::MessageEncoder* _encoder) {
-    return _encoder->GetMessage();
-  }
 };
 
 class OnlyLibfuzzerAndDeps_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(::fidl::MessageEncoder* _encoder) {
-    return _encoder->GetMessage();
-  }
 };
 #endif  // __Fuchsia__
 
@@ -1911,10 +1906,6 @@ class OnlyLibfuzzerAndDeps_Sync;
 using OnlyLibfuzzerAndDepsSyncPtr = ::fidl::SynchronousInterfacePtr<OnlyLibfuzzerAndDeps>;
 class OnlyLibfuzzerAndDeps_SyncProxy;
 
-namespace internal {
-constexpr uint64_t kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal = 0x2081e7454e06d536lu;
-constexpr ::fidl::MessageDynamicFlags kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
-}  // namespace internal
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2058,10 +2049,6 @@ class OnlyLibfuzzerAndDeps {
   using EventSender_ = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_EventSender;
   using Sync_ = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Sync;
   virtual ~OnlyLibfuzzerAndDeps();
-  using LibfuzzerNeedsNonemptyProtocolCallback =
-      fit::function<void()>;
-
-  virtual void LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocolCallback callback) = 0;
 };
 
 class OnlyLibfuzzerAndDeps_RequestDecoder {
@@ -2069,7 +2056,6 @@ class OnlyLibfuzzerAndDeps_RequestDecoder {
   OnlyLibfuzzerAndDeps_RequestDecoder() = default;
   virtual ~OnlyLibfuzzerAndDeps_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  virtual void LibfuzzerNeedsNonemptyProtocol() = 0;
 };
 
 class OnlyLibfuzzerAndDeps_ResponseDecoder {
@@ -2077,7 +2063,6 @@ class OnlyLibfuzzerAndDeps_ResponseDecoder {
   OnlyLibfuzzerAndDeps_ResponseDecoder() = default;
   virtual ~OnlyLibfuzzerAndDeps_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  virtual void LibfuzzerNeedsNonemptyProtocol() = 0;
 };
 
 class OnlyLibfuzzerAndDeps_EventSender {
@@ -2089,7 +2074,6 @@ class OnlyLibfuzzerAndDeps_Sync {
  public:
   using Proxy_ = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_SyncProxy;
   virtual ~OnlyLibfuzzerAndDeps_Sync();
-  virtual zx_status_t LibfuzzerNeedsNonemptyProtocol() = 0;
 };
 
 class OnlyLibfuzzerAndDeps_Proxy final : public ::fidl::internal::Proxy, public OnlyLibfuzzerAndDeps {
@@ -2098,8 +2082,6 @@ class OnlyLibfuzzerAndDeps_Proxy final : public ::fidl::internal::Proxy, public 
   ~OnlyLibfuzzerAndDeps_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
-  void LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocolCallback callback) override;
 
  private:
   OnlyLibfuzzerAndDeps_Proxy(const ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy&) = delete;
@@ -2125,8 +2107,6 @@ class OnlyLibfuzzerAndDeps_SyncProxy : public ::test::bindingsdenylist::OnlyLibf
  public:
   explicit OnlyLibfuzzerAndDeps_SyncProxy(::zx::channel channel);
   ~OnlyLibfuzzerAndDeps_SyncProxy() override;
-  // cts-coverage-fidl-name:test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
-  zx_status_t LibfuzzerNeedsNonemptyProtocol() override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

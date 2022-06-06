@@ -17,8 +17,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.protocollayouts.imported/cpp/natural_types.h>
-
 namespace test_protocollayouts {
+
 class MainProtocolTwoWayImportWithErrorTopResponse;
 
 class MainProtocolTwoWayAnonWithErrorTopResponse;

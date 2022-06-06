@@ -22,6 +22,7 @@
 #include <fidl/test.protocolrequest/cpp/markers.h>
 
 namespace test_protocolrequest {
+
 namespace wire {
 struct ParentTakeChildRequestRequest;
 

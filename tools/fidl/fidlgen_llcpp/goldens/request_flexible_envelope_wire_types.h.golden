@@ -22,6 +22,7 @@
 #include <fidl/test.requestflexibleenvelope/cpp/markers.h>
 
 namespace test_requestflexibleenvelope {
+
 namespace wire {
 struct ProtocolRequestStrictResponseFlexibleRequest;
 

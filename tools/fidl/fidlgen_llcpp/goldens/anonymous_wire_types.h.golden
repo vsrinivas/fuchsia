@@ -22,6 +22,7 @@
 #include <fidl/test.anonymous/cpp/markers.h>
 
 namespace test_anonymous {
+
 namespace wire {
 using Flags = ::test_anonymous::Flags;
 using BitsMember = ::test_anonymous::BitsMember;

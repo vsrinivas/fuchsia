@@ -15,6 +15,7 @@
 #endif  // __Fuchsia__
 
 namespace test_byteandbytes {
+
 class ByteAndBytes;
 
 extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;

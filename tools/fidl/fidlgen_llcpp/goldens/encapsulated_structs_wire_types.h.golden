@@ -22,6 +22,7 @@
 #include <fidl/test.encapsulatedstructs/cpp/markers.h>
 
 namespace test_encapsulatedstructs {
+
 namespace wire {
 struct NonInlineStructTestStruct;
 

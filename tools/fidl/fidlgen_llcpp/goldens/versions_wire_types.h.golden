@@ -22,6 +22,7 @@
 #include <fidl/test.versions/cpp/markers.h>
 
 namespace test_versions {
+
 namespace wire {
 using Bits = ::test_versions::Bits;
 

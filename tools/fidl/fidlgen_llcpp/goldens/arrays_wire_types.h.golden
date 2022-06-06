@@ -21,6 +21,7 @@
 #include <fidl/test.arrays/cpp/markers.h>
 
 namespace test_arrays {
+
 namespace wire {
 struct StructSmallArray;
 

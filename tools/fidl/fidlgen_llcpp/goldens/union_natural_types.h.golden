@@ -17,6 +17,7 @@
 #endif  // __Fuchsia__
 
 namespace test_union {
+
 class StructWithNullableXUnion;
 
 class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;

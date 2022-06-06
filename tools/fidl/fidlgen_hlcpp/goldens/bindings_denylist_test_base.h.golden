@@ -17,9 +17,6 @@ class OnlyLibfuzzerAndDeps_TestBase : public ::test::bindingsdenylist::OnlyLibfu
  public:
   virtual ~OnlyLibfuzzerAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocolCallback callback) override {
-    NotImplemented_("LibfuzzerNeedsNonemptyProtocol");
-  }
 };
 
 class OnlyCppAndDeps_TestBase : public ::test::bindingsdenylist::OnlyCppAndDeps {

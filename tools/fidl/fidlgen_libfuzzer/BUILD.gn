@@ -89,7 +89,7 @@ group("goldens") {
   foreach(info, fidl_testdata_info) {
     if (info.build_denylist + [ "fidlgen_libfuzzer" ] -
         [ "fidlgen_libfuzzer" ] == info.build_denylist) {
-      deps += [ "${info.target}_libfuzzer" ]
+      deps += [ "${info.target}_libfuzzer__golden" ]
     }
   }
 }

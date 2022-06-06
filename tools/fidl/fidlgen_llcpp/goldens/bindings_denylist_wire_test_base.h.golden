@@ -25,10 +25,6 @@ class WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fid
  public:
   virtual ~WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-  virtual void LibfuzzerNeedsNonemptyProtocol(
-      LibfuzzerNeedsNonemptyProtocolRequestView request, LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) override {
-    NotImplemented_("LibfuzzerNeedsNonemptyProtocol", completer);
-  }
 };
 
 template <>

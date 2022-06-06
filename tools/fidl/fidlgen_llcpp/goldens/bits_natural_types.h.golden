@@ -14,6 +14,9 @@
 
 #endif  // __Fuchsia__
 
+namespace test_bits {
+
+}  // namespace test_bits
 namespace fidl {
 
 template <>

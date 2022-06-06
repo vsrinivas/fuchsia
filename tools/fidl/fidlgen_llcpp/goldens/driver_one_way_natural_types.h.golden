@@ -17,6 +17,7 @@
 #endif  // __Fuchsia__
 
 namespace test_driveroneway {
+
 class Payload;
 
 class OneWaySendRequest;

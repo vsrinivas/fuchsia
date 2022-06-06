@@ -22,6 +22,7 @@
 #include <fidl/test.error/cpp/markers.h>
 
 namespace test_error {
+
 namespace wire {
 struct ExampleFooResponse;
 

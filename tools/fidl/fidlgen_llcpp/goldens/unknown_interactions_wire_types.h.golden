@@ -22,6 +22,7 @@
 #include <fidl/test.unknowninteractions/cpp/markers.h>
 
 namespace test_unknowninteractions {
+
 namespace wire {
 struct ExampleFlexibleTwoWayResponse;
 

@@ -15,8 +15,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.dependent/cpp/natural_types.h>
-
 namespace test_importedconstvalues {
+
 class MyStruct;
 
 constexpr ::test_dependent::MyEnum kEnumMember = ::test_dependent::MyEnum::kMember;

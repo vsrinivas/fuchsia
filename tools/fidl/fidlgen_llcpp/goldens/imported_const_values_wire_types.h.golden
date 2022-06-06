@@ -22,6 +22,7 @@
 #include <fidl/test.importedconstvalues/cpp/markers.h>
 
 namespace test_importedconstvalues {
+
 namespace wire {
 struct MyStruct;
 

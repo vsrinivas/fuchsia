@@ -23,6 +23,9 @@
 #include <fidl/test.transitivedependenciescompose/cpp/common_types.h>
 #include <fidl/test.transitivedependenciescompose/cpp/markers.h>
 
+namespace test_transitivedependenciescompose {
+
+}  // namespace test_transitivedependenciescompose
 namespace fidl {
 
 }  // namespace fidl

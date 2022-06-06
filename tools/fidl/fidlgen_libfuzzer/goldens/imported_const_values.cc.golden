@@ -24,29 +24,6 @@ using namespace ::test::importedconstvalues;
 #endif
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
-  static ::async::Loop* loop_ = nullptr;
-
-  if (loop_ == nullptr) {
-    xprintf("Starting client async loop\n");
-    loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
-  }
-
-  // Must fuzz some protocol; first two bytes used to select protocol and method.
-  if (size_ < 2) {
-    xprintf("Early exit: Input too small: %zu\n", size_);
-    return 0;
-  }
-  size_ -= 2;
-
-  uint8_t protocol_selector_ = data_[0];
-  uint8_t protocol_selection_ = protocol_selector_ % 0;
-
-  xprintf("Starting fuzzer with %zu bytes of data\n", size_);
-
-  // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
-  [[maybe_unused]] zx_status_t status_;
-
-  xprintf("Fuzzer stopped!\n");
-
+  xprintf("Early exit: FIDL library has no fuzzable protocols");
   return 0;
 }

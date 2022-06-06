@@ -37,6 +37,8 @@ fidl/{{ .LibraryDots }}/cpp/natural_types.h
 #include <{{ . | Filename "NaturalTypesHeader" }}>
 {{ end -}}
 
+{{ EnsureNamespace . }}
+
 {{ range .Structs }}{{ template "Struct:ForwardDeclaration:NaturalTypesHeader" . }}{{ end }}
 {{ range .Tables }}{{ template "Table:ForwardDeclaration:NaturalTypesHeader" . }}{{ end }}
 {{ range .Unions }}{{ template "Union:ForwardDeclaration:NaturalTypesHeader" . }}{{ end }}

@@ -21,6 +21,7 @@
 #include <fidl/test.struct/cpp/markers.h>
 
 namespace test_struct {
+
 namespace wire {
 struct Simple;
 

@@ -19,6 +19,7 @@
 #endif  // __Fuchsia__
 
 namespace test_driverhandle {
+
 class HandlesInProtocolSendHandlesRequest;
 
 class ServerEndWrapper;

@@ -17,8 +17,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.errorsyntax.parent/cpp/natural_types.h>
-
 namespace test_errorsyntax {
+
 class ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;

@@ -34,9 +34,7 @@ type OnlyLlcpp = strict union {
 // TODO(fxbug.dev/72247): Libfuzzer depends on hlcpp and llcpp. A decision needs to be made on how
 // to manage these dependencies. For now, this test does not denylist the dependencies.
 @bindings_denylist("cpp, dart, go, rust, syzkaller")
-protocol OnlyLibfuzzerAndDeps {
-    LibfuzzerNeedsNonemptyProtocol() -> ();
-};
+protocol OnlyLibfuzzerAndDeps {};
 
 // TODO(fxbug.dev/72247): Unified C++ bindings depends on hlcpp and llcpp. A decision needs to be
 // made on how to manage these dependencies. For now, this test does not denylist the dependencies.
@@ -49,7 +47,7 @@ service OnlyHlcpp {};
 // This exists to test that when a particular method is denied to a binding, it's anonymous message
 // body structs are also omitted.
 protocol DenyEachBinding {
-    @bindings_denylist("cpp, hlcpp, llcpp")
+    @bindings_denylist("cpp, hlcpp, llcpp, libfuzzer")
     OnlyDenyCpp(struct {
         a bool;
     }) -> (struct {

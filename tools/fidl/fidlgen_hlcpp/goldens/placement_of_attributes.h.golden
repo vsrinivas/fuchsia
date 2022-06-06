@@ -5,12 +5,13 @@
 #include <test/exampleusing/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
+namespace test {
+namespace placementofattributes {
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace placementofattributes {
+
 class ExampleXUnion;
 
 class ExampleUnion;

@@ -14,6 +14,9 @@
 
 #endif  // __Fuchsia__
 
+namespace test_enum {
+
+}  // namespace test_enum
 namespace fidl {
 
 template <>

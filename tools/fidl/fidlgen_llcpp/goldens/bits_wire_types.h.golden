@@ -21,6 +21,7 @@
 #include <fidl/test.bits/cpp/markers.h>
 
 namespace test_bits {
+
 namespace wire {
 using StrictBits = ::test_bits::StrictBits;
 using MyBits = ::test_bits::MyBits;

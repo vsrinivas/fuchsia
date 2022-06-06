@@ -17,8 +17,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.dependent/cpp/natural_types.h>
-
 namespace test_bindingsdenylist {
+
 class MemberOnlyAppearsInImportingLibrary;
 
 class OnlyAppearsInImportingLibrary;

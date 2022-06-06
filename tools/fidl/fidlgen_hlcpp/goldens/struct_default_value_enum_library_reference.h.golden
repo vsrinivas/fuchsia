@@ -5,12 +5,13 @@
 #include <test/dependent/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
+namespace test {
+namespace structdefaultvalueenumlibraryreference {
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace test {
-namespace structdefaultvalueenumlibraryreference {
+
 class Foo;
 
 class Foo final {

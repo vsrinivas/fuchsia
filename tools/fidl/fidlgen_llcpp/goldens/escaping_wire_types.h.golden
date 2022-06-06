@@ -21,6 +21,7 @@
 #include <fidl/test.escaping/cpp/markers.h>
 
 namespace test_escaping {
+
 namespace wire {
 struct DocCommentWithQuotes;
 

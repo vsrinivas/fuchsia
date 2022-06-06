@@ -21,6 +21,7 @@
 #include <fidl/test.vectors/cpp/markers.h>
 
 namespace test_vectors {
+
 namespace wire {
 struct ExampleUseOfVectors;
 

@@ -17,8 +17,8 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.exampleusing/cpp/natural_types.h>
-
 namespace test_placementofattributes {
+
 class ExampleStruct;
 
 class ExampleProtocolMethodRequest;

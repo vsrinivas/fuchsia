@@ -22,6 +22,7 @@
 #include <fidl/test.inheritancewithrecursivedecl/cpp/markers.h>
 
 namespace test_inheritancewithrecursivedecl {
+
 namespace wire {
 struct ParentFirstRequest;
 
