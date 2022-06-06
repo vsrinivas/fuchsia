@@ -16,7 +16,7 @@ declare_args() {
   vendor_linting = false
 
   # Whether to run API compatibility tests.
-  api_compatibility_testing = false
+  api_compatibility_testing = true
 }
 
 # Generates some representation of a FIDL library that's consumable by Language
@@ -216,7 +216,8 @@ template("fidl_library") {
 
     # Check for compatibility with supported API levels.
     foreach(level, platform_version.supported_fuchsia_api_levels) {
-      fidl_ir("${main_target_name}_compile_$level") {
+      fidl_ir_target_name = "${main_target_name}_compile_$level"
+      fidl_ir(fidl_ir_target_name) {
         forward_variables_from(invoker,
                                [
                                  "deps",
@@ -236,28 +237,31 @@ template("fidl_library") {
         json_representation = "$gen_dir/$target_name.fidl.json"
         deps = non_fidl_deps
       }
+      sdk_atom_deps += [ ":$fidl_ir_target_name" ]
 
-      test_target = "${target_name}_${level}_compatibility_test"
-      fidl_api_compatibility_test(test_target) {
-        forward_variables_from(invoker, [ "testonly" ])
-        warn_on_changes = lenient_api_summary
-        target_api_level = "$level"
+      if (api_compatibility_testing) {
+        test_target = "${target_name}_${level}_compatibility_test"
+        fidl_api_compatibility_test(test_target) {
+          forward_variables_from(invoker, [ "testonly" ])
+          warn_on_changes = lenient_api_summary
+          target_api_level = "$level"
 
-        goldens_dir = "//sdk/history"
-        if (defined(invoker.goldens_dir)) {
-          goldens_dir = invoker.goldens_dir
+          goldens_dir = "//sdk/history"
+          if (defined(invoker.goldens_dir)) {
+            goldens_dir = invoker.goldens_dir
+          }
+
+          golden = "$goldens_dir/$level/$library_name.api_summary.json"
+          current = "$target_gen_dir/$level/$library_name.api_summary.json"
+          if (level == platform_version.current_fuchsia_api_level) {
+            policy = "no_breaking_changes"
+          } else {
+            policy = "no_changes"
+          }
+          deps = [ ":$fidl_ir_target_name" ]
         }
-
-        golden = "$goldens_dir/$level/$library_name.api_summary.json"
-        current = "$target_gen_dir/$level/$library_name.api_summary.json"
-        if (level == platform_version.current_fuchsia_api_level) {
-          policy = "no_breaking_changes"
-        } else {
-          policy = "no_changes"
-        }
-        deps = [ ":${main_target_name}_compile_$level" ]
+        sdk_atom_deps += [ ":$test_target" ]
       }
-      sdk_atom_deps += [ ":$test_target" ]
     }
   }
 
