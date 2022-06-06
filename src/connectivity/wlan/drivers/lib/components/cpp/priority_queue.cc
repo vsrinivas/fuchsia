@@ -7,9 +7,13 @@
 
 namespace wlan::drivers::components {
 
-bool PriorityQueue::push(Frame&& frame) {
+bool PriorityQueue::push(Frame&& frame, std::unique_ptr<Frame>* dropped) {
   const uint8_t priority = frame.Priority();
   if (unlikely(priority >= kNumPriorities)) {
+    // This frame cannot be pushed, indicate failure and return the frame.
+    if (dropped) {
+      *dropped = std::make_unique<Frame>(std::move(frame));
+    }
     return false;
   }
   if (unlikely(current_queue_depth_ >= max_queue_depth_)) {
@@ -20,16 +24,25 @@ bool PriorityQueue::push(Frame&& frame) {
     // networking stack so the capacity of this queue should rarely be exceeded except possibly for
     // frames that are sent outside of the netstack data plane (such as EAPOL frames). This is a
     // very unlikely situation however and so we rarely pay the price for this eviction.
-    bool evicted = false;
+    bool evicted_frame = false;
     for (uint8_t i = 0; i < priority; ++i) {
       if (!queues_[i].empty()) {
+        // We can push this frame but another frame has to be evicted, return the evicted frame so
+        // that the caller can dispose of it properly.
+        if (dropped) {
+          *dropped = std::make_unique<Frame>(std::move(queues_[i].front()));
+        }
         queues_[i].pop_front();
         --current_queue_depth_;
-        evicted = true;
+        evicted_frame = true;
         break;
       }
     }
-    if (!evicted) {
+    if (!evicted_frame) {
+      // Could not find a frame to evict, there is no room in the queue.
+      if (dropped) {
+        *dropped = std::make_unique<Frame>(std::move(frame));
+      }
       return false;
     }
     // If we evicted a frame, proceed as usual, there's now room

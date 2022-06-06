@@ -2443,17 +2443,33 @@ static zx_status_t brcmf_sdio_bus_txframes(brcmf_bus* bus_if,
   struct brcmf_sdio* bus = sdiodev->bus;
 
   if (sdiodev->state != BRCMF_SDIOD_DATA) {
+    brcmf_proto_bcdc_txcomplete(bus->sdiodev->drvr, frames, ZX_ERR_IO);
     return ZX_ERR_IO;
   }
 
-  size_t enqueued = 0;
+  std::unique_ptr<std::vector<wlan::drivers::components::Frame>> failed_frames;
   {
+    std::unique_ptr<wlan::drivers::components::Frame> dropped;
     std::lock_guard lock(bus->tx_queue->txq_lock);
     // Queue as many frames as we can
     for (auto& frame : frames) {
       frame.GrowHead(bus->tx_hdrlen);
       frame.SetPriority(PriorityToPrecedence(frame.Priority()));
-      if (!bus->tx_queue->tx_queue.push(std::move(frame))) {
+      if (bus->tx_queue->tx_queue.push(std::move(frame), &dropped)) {
+        ++bus->tx_queue->enqueue_count;
+      }
+      if (dropped) {
+        if (!failed_frames) {
+          // Defer allocation of this vector so that we only create it if there is a frame that
+          // needs to be completed, either because it was evicted or because the frame we're trying
+          // to push didn't fit. This should not be a common case so we don't want to perform this
+          // step every time, only when it's  needed.
+          failed_frames = std::make_unique<std::vector<wlan::drivers::components::Frame>>();
+        }
+        // Keep the evicted/failed frame for later, we want to complete them all in one batch.
+        failed_frames->emplace_back(std::move(*dropped));
+        failed_frames->back().ShrinkHead(bus->tx_hdrlen);
+
         // TODO(fxbug.dev/42151): Remove once bug resolved
         ++brcmf_sdio_txq_full_errors;
         if (brcmf_sdio_txq_full_errors >= 30 && !brcmf_sdio_txq_full_debug_log) {
@@ -2462,16 +2478,16 @@ static zx_status_t brcmf_sdio_bus_txframes(brcmf_bus* bus_if,
           BRCMF_WARN("Excessive out of bus->txq errors, enabling debug logging");
           brcmf_sdio_txq_full_debug_log = true;
         }
-        frame.ShrinkHead(bus->tx_hdrlen);
         sdiodev->drvr->device->GetInspect()->LogTxQueueFull();
-        break;
+        // Reset the pointer so that it's not used in the next loop iteration.
+        dropped.reset();
+        continue;
       }
       // TODO(fxbug.dev/42151): Remove once bug resolved
       // Reset the counter here in case there was just a spurious queue issue.
       // Also stop the debug logging so we don't spam the logs unnecessarily.
       brcmf_sdio_txq_full_errors = 0;
       brcmf_sdio_txq_full_debug_log = false;
-      ++enqueued;
 
 #if !defined(NDEBUG)
       if (frame.Priority() < std::size(qcount) &&
@@ -2480,10 +2496,17 @@ static zx_status_t brcmf_sdio_bus_txframes(brcmf_bus* bus_if,
       }
 #endif
     }
-    bus->tx_queue->enqueue_count += enqueued;
   }
 
   brcmf_sdio_trigger_dpc(bus);
+
+  if (failed_frames) {
+    // Some or all frames did not end up on the TX queue, complete them with an indication that
+    // we could not process them. Don't do this while holding the TX queue lock in case additional
+    // frames are queued up as part of completing frames.
+    bus->sdcnt.tx_qfull += failed_frames->size();
+    brcmf_proto_bcdc_txcomplete(bus->sdiodev->drvr, *failed_frames, ZX_ERR_NO_RESOURCES);
+  }
 
   return ZX_OK;
 }

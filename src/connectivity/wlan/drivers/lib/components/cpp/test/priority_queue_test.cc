@@ -3,6 +3,7 @@
 
 #include <wlan/drivers/components/frame.h>
 #include <wlan/drivers/components/frame_container.h>
+#include <wlan/drivers/components/frame_storage.h>
 #include <wlan/drivers/components/priority_queue.h>
 #include <zxtest/zxtest.h>
 
@@ -10,19 +11,20 @@ namespace {
 
 using wlan::drivers::components::Frame;
 using wlan::drivers::components::FrameContainer;
+using wlan::drivers::components::FrameStorage;
 using wlan::drivers::components::PriorityQueue;
 
 constexpr size_t kQueueDepth = 2048;
 constexpr uint8_t kAllPrioritiesAllowed = 0xFF;
 
 uint8_t data[256] = {};
-Frame CreateTestFrame(uint8_t priority = 0) {
+Frame CreateTestFrame(uint8_t priority = 0, FrameStorage* storage = nullptr) {
   constexpr uint8_t kVmoId = 13;
   constexpr size_t kVmoOffset = 0x0c00;
   constexpr uint8_t kPortId = 7;
   static uint16_t bufferId = 1;
 
-  Frame frame(nullptr, kVmoId, kVmoOffset, bufferId++, data, sizeof(data), kPortId);
+  Frame frame(storage, kVmoId, kVmoOffset, bufferId++, data, sizeof(data), kPortId);
   frame.SetPriority(priority);
   return frame;
 }
@@ -112,6 +114,48 @@ TEST(PriorityQueueTest, PopMultiple) {
   EXPECT_TRUE(queue.empty());
 }
 
+TEST(PriorityQueueTest, FailedPopPreservesFrame) {
+  wlan::drivers::components::FrameStorage storage;
+  constexpr size_t kQueueCapacity = 1;
+  PriorityQueue queue(kQueueCapacity);
+
+  {
+    FrameContainer frames;
+    {
+      std::lock_guard lock(storage);
+      storage.Store(CreateTestFrame(0, &storage));
+      storage.Store(CreateTestFrame(0, &storage));
+      storage.Store(CreateTestFrame(0, &storage));
+      frames = storage.Acquire(2u);
+    }
+    // We should have acquired two frames.
+    ASSERT_EQ(2u, frames.size());
+
+    {
+      // One frame should remain
+      std::lock_guard lock(storage);
+      EXPECT_EQ(1u, storage.size());
+    }
+    // First push succeeds
+    EXPECT_TRUE(queue.push(std::move(frames[0])));
+    // But second one does not
+    EXPECT_FALSE(queue.push(std::move(frames[1])));
+    // At this point we let FrameContainer destruct.
+  }
+  // Both frames in the FrameContainer should now be destructed but the first frame that was
+  // successfully pushed should not be returned to storage, it's still alive in the queue. Moving
+  // from it should have cleared the storage pointer so that our reference to it doesn't have
+  // storage anymore. The second frame however was not placed on the queue, it's important that it
+  // retains its storage pointer and at this point it should have been returned to storage as part
+  // of its destruction.
+
+  std::lock_guard lock(storage);
+  // Since the un-pushed frame should have been returned we should have 2 frames in storage and one
+  // in the queue.
+  EXPECT_EQ(1u, queue.size());
+  EXPECT_EQ(2u, storage.size());
+}
+
 TEST(PriorityQueueTest, EvictByPriority) {
   constexpr size_t kQueueCapacity = 3;
   PriorityQueue queue(kQueueCapacity);
@@ -122,19 +166,35 @@ TEST(PriorityQueueTest, EvictByPriority) {
   Frame frame6 = CreateTestFrame(3u);
   Frame frame7 = CreateTestFrame(1u);
   Frame frame8 = CreateTestFrame(5u);
+  Frame frame9 = CreateTestFrame(0u);
+  Frame frame10 = CreateTestFrame(2u);
   // Store the buffer IDs before we move the frames.
   uint16_t buffer_id5 = frame5.BufferId();
   uint16_t buffer_id6 = frame6.BufferId();
+  uint16_t buffer_id7 = frame7.BufferId();
   uint16_t buffer_id8 = frame8.BufferId();
+  uint16_t buffer_id9 = frame9.BufferId();
+  uint16_t buffer_id10 = frame10.BufferId();
 
   queue.push(std::move(frame5));
   queue.push(std::move(frame6));
   queue.push(std::move(frame7));
 
   // Fails for lower priorities, succeeds on same or higher priority, lower priority frames evicted.
-  ASSERT_FALSE(queue.push(CreateTestFrame(0u)));
-  ASSERT_TRUE(queue.push(CreateTestFrame(2u)));
-  ASSERT_TRUE(queue.push(std::move(frame8)));
+  // Ensure that the correct frame is returned in evicted.
+  std::unique_ptr<Frame> evicted;
+  ASSERT_FALSE(queue.push(std::move(frame9), &evicted));
+  ASSERT_NOT_NULL(evicted.get());
+  ASSERT_EQ(buffer_id9, evicted->BufferId());
+  evicted.reset();
+  ASSERT_TRUE(queue.push(std::move(frame10), &evicted));
+  ASSERT_NOT_NULL(evicted.get());
+  // This push succeeded but one frame was evicted, it should have been the lowest priority frame.
+  ASSERT_EQ(buffer_id7, evicted->BufferId());
+  ASSERT_TRUE(queue.push(std::move(frame8), &evicted));
+  ASSERT_NOT_NULL(evicted.get());
+  // This push succeeded but one frame was evicted, it should have been the lowest priority frame.
+  ASSERT_EQ(buffer_id10, evicted->BufferId());
   // Queue should still be full afterwards, only one frame should have been evicted.
   ASSERT_EQ(queue.size(), kQueueCapacity);
 
@@ -416,6 +476,7 @@ TEST(PriorityQueueTest, PopIfEverything) {
 
   // Insert frames with varying priority, insert them in priority order so that it will be easier to
   // reason about how they will be popped. Higher priorities will be popped first.
+
   queue.push(CreateTestFrame(7u));
   queue.push(CreateTestFrame(7u));
   queue.push(CreateTestFrame(6u));

@@ -28,8 +28,15 @@ class PriorityQueue {
   explicit PriorityQueue(size_t max_queue_depth) : max_queue_depth_(max_queue_depth) {}
 
   // Push a frame onto the queue. The frame's Priority() will be used to determine the priority in
-  // the queue.
-  bool push(Frame&& frame);
+  // the queue. Returns true on success, if a lower priority frame was evicted as a result of this
+  // push the evicted frame will be placed in |dropped|. This allows the caller to return the
+  // evicted frame to storage or netdevice as needed. If this parameter is used it should be an
+  // uninitialized std::unique_ptr and afterwards the caller should check to see if it's still empty
+  // or not to determine if eviction happened. Returns false if the frame is not placed on the
+  // queue. When this happens |frame| is moved into |dropped| (if provided) since a moved from
+  // object should not be used. Similarly to the eviction case this allows the caller to safely
+  // return the frame to storage or complete it.
+  bool push(Frame&& frame, std::unique_ptr<Frame>* dropped = nullptr);
 
   // Pop |count| number of frames from the queue. |allowed_priorities| specify a bit field
   // indicating which priorities are allowed to be popped from. Each bit index corresponds to a
