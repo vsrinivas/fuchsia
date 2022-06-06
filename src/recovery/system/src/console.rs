@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::font;
 use anyhow::Error;
 use carnelian::{
     color::Color,
+    drawing::FontFace,
     render::Context as RenderContext,
     scene::{
         facets::{TextFacetOptions, TextHorizontalAlignment, TextVerticalAlignment},
@@ -30,6 +30,7 @@ pub struct SceneDetails {
 }
 
 pub struct ConsoleViewAssistant {
+    font_face: FontFace,
     // SceneDetails created and cached by console_scene().
     scene_details: Option<SceneDetails>,
     // Console output lines.
@@ -37,7 +38,7 @@ pub struct ConsoleViewAssistant {
 }
 
 impl ConsoleViewAssistant {
-    pub fn new() -> Result<ConsoleViewAssistant, Error> {
+    pub fn new(font_face: FontFace) -> Result<ConsoleViewAssistant, Error> {
         // Fill with blanks to "maximize" the area consumed for display.
         let mut lines: Vec<String> = Vec::new();
         for _ in 1..MAX_CONSOLE_LINE_COUNT {
@@ -45,7 +46,7 @@ impl ConsoleViewAssistant {
         }
         lines.push(CONSOLE_WELCOME_MESSAGE.to_string());
 
-        Ok(ConsoleViewAssistant { scene_details: None, lines })
+        Ok(ConsoleViewAssistant { font_face, scene_details: None, lines })
     }
 
     // Returns cached SceneDetails if available, otherwise builds one from scratch and caches result.
@@ -53,7 +54,6 @@ impl ConsoleViewAssistant {
         let scene_details = self.scene_details.take().unwrap_or_else(|| {
             let target_size = context.size;
             let mut builder = SceneBuilder::new().background_color(Color::new());
-            let face = font::load_default_font_face_or_panic();
             builder
                 .group()
                 .column()
@@ -69,7 +69,7 @@ impl ConsoleViewAssistant {
                         )),
                     );
                     builder.text(
-                        face.clone(),
+                        self.font_face.clone(),
                         &self.lines.join("\n"),
                         24.0,
                         Point::zero(),
@@ -138,13 +138,15 @@ impl ViewAssistant for ConsoleViewAssistant {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::font;
     use carnelian::make_message;
 
     const TEST_MESSAGE: &str = "Test message";
 
     #[test]
     fn test_add_text_message_modifies_lines() -> std::result::Result<(), anyhow::Error> {
-        let mut console_view_assistant = ConsoleViewAssistant::new().unwrap();
+        let font_face = font::load_default_font_face()?;
+        let mut console_view_assistant = ConsoleViewAssistant::new(font_face).unwrap();
 
         // Verify line buffer is "initialized full" after console_view_assistant is constructed.
         assert_eq!(console_view_assistant.lines.len(), MAX_CONSOLE_LINE_COUNT);

@@ -187,9 +187,10 @@ impl AppAssistant for RecoveryAppAssistant {
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let body = get_recovery_body(self.fdr_restriction.is_initially_enabled());
         let file = load_rive(LOGO_IMAGE_PATH).ok();
+        let font_face = font::load_default_font_face()?;
 
         #[cfg(feature = "debug_console")]
-        let console_view_assistant_ptr = Box::new(ConsoleViewAssistant::new()?);
+        let console_view_assistant_ptr = Box::new(ConsoleViewAssistant::new(font_face.clone())?);
 
         let view_assistant_ptr = Box::new(RecoveryViewAssistant::new(
             &self.app_sender,
@@ -198,6 +199,7 @@ impl AppAssistant for RecoveryAppAssistant {
             RECOVERY_MODE_HEADLINE,
             body.map(Into::into),
             self.fdr_restriction,
+            font_face,
         )?);
 
         // ProxyView is a root view that conditionally displays the top View
@@ -496,7 +498,7 @@ impl RenderResources {
 }
 
 struct RecoveryViewAssistant {
-    face: FontFace,
+    font_face: FontFace,
     heading: &'static str,
     body: Option<Cow<'static, str>>,
     fdr_restriction: FdrRestriction,
@@ -523,12 +525,12 @@ impl RecoveryViewAssistant {
         heading: &'static str,
         body: Option<Cow<'static, str>>,
         fdr_restriction: FdrRestriction,
+        font_face: FontFace,
     ) -> Result<RecoveryViewAssistant, Error> {
         RecoveryViewAssistant::setup(app_sender, view_key)?;
 
-        let face = font::load_default_font_face()?;
         Ok(RecoveryViewAssistant {
-            face,
+            font_face,
             heading,
             body,
             fdr_restriction,
@@ -901,7 +903,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                 &self.wifi_password,
                 #[cfg(feature = "http_setup_server")]
                 &self.connected,
-                &self.face,
+                &self.font_face,
                 self.reset_state_machine.is_counting_down(),
             ));
         }
