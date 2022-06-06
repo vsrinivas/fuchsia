@@ -100,6 +100,7 @@ void Reporter::Report(std::unique_ptr<Diagnostic> diag) {
 
 std::vector<Diagnostic*> Reporter::Diagnostics() const {
   std::vector<Diagnostic*> diagnostics;
+  diagnostics.reserve(errors_.size() + warnings_.size());
   for (const auto& err : errors_) {
     diagnostics.push_back(err.get());
   }

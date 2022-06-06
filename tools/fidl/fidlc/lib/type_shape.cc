@@ -66,28 +66,28 @@ namespace flat = fidl::flat;
 namespace types = fidl::types;
 using WireFormat = fidl::WireFormat;
 
-DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format);
-DataSize UnalignedSize(const flat::Object* object, const WireFormat wire_format);
-[[maybe_unused]] DataSize Alignment(const flat::Object& object, const WireFormat wire_format);
-[[maybe_unused]] DataSize Alignment(const flat::Object* object, const WireFormat wire_format);
-DataSize Depth(const flat::Object& object, const WireFormat wire_format);
-[[maybe_unused]] DataSize Depth(const flat::Object* object, const WireFormat wire_format);
+DataSize UnalignedSize(const flat::Object& object, WireFormat wire_format);
+DataSize UnalignedSize(const flat::Object* object, WireFormat wire_format);
+[[maybe_unused]] DataSize Alignment(const flat::Object& object, WireFormat wire_format);
+[[maybe_unused]] DataSize Alignment(const flat::Object* object, WireFormat wire_format);
+DataSize Depth(const flat::Object& object, WireFormat wire_format);
+[[maybe_unused]] DataSize Depth(const flat::Object* object, WireFormat wire_format);
 DataSize MaxHandles(const flat::Object& object);
 [[maybe_unused]] DataSize MaxHandles(const flat::Object* object);
-DataSize MaxOutOfLine(const flat::Object& object, const WireFormat wire_format);
-[[maybe_unused]] DataSize MaxOutOfLine(const flat::Object* object, const WireFormat wire_format);
-bool HasPadding(const flat::Object& object, const WireFormat wire_format);
-[[maybe_unused]] bool HasPadding(const flat::Object* object, const WireFormat wire_format);
-bool HasEnvelope(const flat::Object& object, const WireFormat wire_format);
-[[maybe_unused]] bool HasEnvelope(const flat::Object* object, const WireFormat wire_format);
-bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_format);
-[[maybe_unused]] bool HasFlexibleEnvelope(const flat::Object* object, const WireFormat wire_format);
+DataSize MaxOutOfLine(const flat::Object& object, WireFormat wire_format);
+[[maybe_unused]] DataSize MaxOutOfLine(const flat::Object* object, WireFormat wire_format);
+bool HasPadding(const flat::Object& object, WireFormat wire_format);
+[[maybe_unused]] bool HasPadding(const flat::Object* object, WireFormat wire_format);
+bool HasEnvelope(const flat::Object& object, WireFormat wire_format);
+[[maybe_unused]] bool HasEnvelope(const flat::Object* object, WireFormat wire_format);
+bool HasFlexibleEnvelope(const flat::Object& object, WireFormat wire_format);
+[[maybe_unused]] bool HasFlexibleEnvelope(const flat::Object* object, WireFormat wire_format);
 
-DataSize AlignedSize(const flat::Object& object, const WireFormat wire_format) {
+DataSize AlignedSize(const flat::Object& object, WireFormat wire_format) {
   return AlignTo(UnalignedSize(object, wire_format), Alignment(object, wire_format));
 }
 
-[[maybe_unused]] DataSize AlignedSize(const flat::Object* object, const WireFormat wire_format) {
+[[maybe_unused]] DataSize AlignedSize(const flat::Object* object, WireFormat wire_format) {
   return AlignedSize(*object, wire_format);
 }
 
@@ -95,7 +95,7 @@ template <typename T>
 class TypeShapeVisitor : public flat::Object::Visitor<T> {
  public:
   TypeShapeVisitor() = delete;
-  explicit TypeShapeVisitor(const WireFormat wire_format) : wire_format_(wire_format) {}
+  explicit TypeShapeVisitor(WireFormat wire_format) : wire_format_(wire_format) {}
 
  protected:
   WireFormat wire_format() const { return wire_format_; }
@@ -491,7 +491,7 @@ class OldWireFormatDepthVisitor final : public DepthVisitor {
   // A wire format is provided here because the default constructor is disabled. In actuality,
   // the wire format does not matter as this class is hardcoded to return depth under the
   // "old" wire format.
-  explicit OldWireFormatDepthVisitor(const WireFormat wire_format) : DepthVisitor(wire_format) {}
+  explicit OldWireFormatDepthVisitor(WireFormat wire_format) : DepthVisitor(wire_format) {}
 
   // A nullable static union introduces an extra level of depth, since it gets replaced with
   // a presence pointer.
@@ -1106,30 +1106,30 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::Protocol& object) override { return false; }
 };
 
-DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format) {
+DataSize UnalignedSize(const flat::Object& object, WireFormat wire_format) {
   UnalignedSizeVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-[[maybe_unused]] DataSize UnalignedSize(const flat::Object* object, const WireFormat wire_format) {
+[[maybe_unused]] DataSize UnalignedSize(const flat::Object* object, WireFormat wire_format) {
   return UnalignedSize(*object, wire_format);
 }
 
-DataSize Alignment(const flat::Object& object, const WireFormat wire_format) {
+DataSize Alignment(const flat::Object& object, WireFormat wire_format) {
   AlignmentVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-[[maybe_unused]] DataSize Alignment(const flat::Object* object, const WireFormat wire_format) {
+[[maybe_unused]] DataSize Alignment(const flat::Object* object, WireFormat wire_format) {
   return Alignment(*object, wire_format);
 }
 
-DataSize Depth(const flat::Object& object, const WireFormat wire_format) {
+DataSize Depth(const flat::Object& object, WireFormat wire_format) {
   DepthVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-[[maybe_unused]] DataSize Depth(const flat::Object* object, const WireFormat wire_format) {
+[[maybe_unused]] DataSize Depth(const flat::Object* object, WireFormat wire_format) {
   return Depth(*object, wire_format);
 }
 
@@ -1140,40 +1140,39 @@ DataSize MaxHandles(const flat::Object& object) {
 
 [[maybe_unused]] DataSize MaxHandles(const flat::Object* object) { return MaxHandles(*object); }
 
-DataSize MaxOutOfLine(const flat::Object& object, const WireFormat wire_format) {
+DataSize MaxOutOfLine(const flat::Object& object, WireFormat wire_format) {
   MaxOutOfLineVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-[[maybe_unused]] DataSize MaxOutOfLine(const flat::Object* object, const WireFormat wire_format) {
+[[maybe_unused]] DataSize MaxOutOfLine(const flat::Object* object, WireFormat wire_format) {
   return MaxOutOfLine(*object, wire_format);
 }
 
-bool HasPadding(const flat::Object& object, const WireFormat wire_format) {
+bool HasPadding(const flat::Object& object, WireFormat wire_format) {
   HasPaddingVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-[[maybe_unused]] bool HasPadding(const flat::Object* object, const WireFormat wire_format) {
+[[maybe_unused]] bool HasPadding(const flat::Object* object, WireFormat wire_format) {
   return HasPadding(*object, wire_format);
 }
 
-bool HasEnvelope(const flat::Object& object, const WireFormat wire_format) {
+bool HasEnvelope(const flat::Object& object, WireFormat wire_format) {
   HasEnvelopeVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-[[maybe_unused]] bool HasEnvelope(const flat::Object* object, const WireFormat wire_format) {
+[[maybe_unused]] bool HasEnvelope(const flat::Object* object, WireFormat wire_format) {
   return HasEnvelope(*object, wire_format);
 }
 
-bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_format) {
+bool HasFlexibleEnvelope(const flat::Object& object, WireFormat wire_format) {
   HasFlexibleEnvelopeVisitor v(wire_format);
   return object.Accept(&v);
 }
 
-[[maybe_unused]] bool HasFlexibleEnvelope(const flat::Object* object,
-                                          const WireFormat wire_format) {
+[[maybe_unused]] bool HasFlexibleEnvelope(const flat::Object* object, WireFormat wire_format) {
   return HasFlexibleEnvelope(*object, wire_format);
 }
 
@@ -1203,7 +1202,7 @@ TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)
 
 TypeShape TypeShape::ForEmptyPayload() { return TypeShape(0, 0); }
 
-FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_format) {
+FieldShape::FieldShape(const flat::StructMember& member, WireFormat wire_format) {
   ZX_ASSERT(member.parent);
   const flat::Struct& parent = *member.parent;
 
@@ -1234,10 +1233,10 @@ FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_f
   }
 }
 
-FieldShape::FieldShape(const flat::TableMemberUsed& member, const WireFormat wire_format)
+FieldShape::FieldShape(const flat::TableMemberUsed& member, WireFormat wire_format)
     : padding(::Padding(UnalignedSize(member, wire_format), 8)) {}
 
-FieldShape::FieldShape(const flat::UnionMemberUsed& member, const WireFormat wire_format)
+FieldShape::FieldShape(const flat::UnionMemberUsed& member, WireFormat wire_format)
     : padding(
           ::Padding(UnalignedSize(member, wire_format), Alignment(member.parent, wire_format))) {}
 

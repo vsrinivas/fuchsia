@@ -42,7 +42,7 @@ bool IsValidFullyQualifiedMethodIdentifier(std::string_view fq_identifier) {
 }
 
 bool ends_with_underscore(std::string_view str) {
-  ZX_ASSERT(str.size() > 0);
+  ZX_ASSERT(!str.empty());
   return str.back() == '_';
 }
 
@@ -77,17 +77,17 @@ std::string strip_konstant_k(std::string_view str) {
 
 bool is_lower_no_separator_case(std::string_view str) {
   static re2::RE2 re{"^[a-z][a-z0-9]*$"};
-  return str.size() > 0 && re2::RE2::FullMatch(str, re);
+  return !str.empty() && re2::RE2::FullMatch(str, re);
 }
 
 bool is_lower_snake_case(std::string_view str) {
   static re2::RE2 re{"^[a-z][a-z0-9_]*$"};
-  return str.size() > 0 && re2::RE2::FullMatch(str, re);
+  return !str.empty() && re2::RE2::FullMatch(str, re);
 }
 
 bool is_upper_snake_case(std::string_view str) {
   static re2::RE2 re{"^[A-Z][A-Z0-9_]*$"};
-  return str.size() > 0 && re2::RE2::FullMatch(str, re);
+  return !str.empty() && re2::RE2::FullMatch(str, re);
 }
 
 bool is_lower_camel_case(std::string_view str) {
@@ -95,13 +95,13 @@ bool is_lower_camel_case(std::string_view str) {
     return false;
   }
   static re2::RE2 re{"^[a-z][a-z0-9]*(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*([A-Z][a-z0-9]*)?$"};
-  return str.size() > 0 && re2::RE2::FullMatch(str, re);
+  return !str.empty() && re2::RE2::FullMatch(str, re);
 }
 
 bool is_upper_camel_case(std::string_view str) {
   static re2::RE2 re{
       "^(([A-Z]{1,2}[a-z0-9]+)(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*)?([A-Z][a-z0-9]*)?$"};
-  return str.size() > 0 && re2::RE2::FullMatch(str, re);
+  return !str.empty() && re2::RE2::FullMatch(str, re);
 }
 
 bool is_konstant_case(std::string_view astr) {
@@ -129,7 +129,7 @@ std::vector<std::string> id_to_words(std::string_view astr, std::set<std::string
   for (size_t i = 0; i < str.size(); i++) {
     char ch = str[i];
     if (ch == '_' || ch == '-' || ch == '.') {
-      if (word.size() > 0) {
+      if (!word.empty()) {
         add_word(word, words, stop_words);
         word.clear();
       }
@@ -137,7 +137,7 @@ std::vector<std::string> id_to_words(std::string_view astr, std::set<std::string
     } else {
       bool next_char_is_lower = ((i + 1) < str.size()) && islower(str[i + 1]);
       if (isupper(ch) && (!last_char_was_upper_or_begin || next_char_is_lower)) {
-        if (word.size() > 0) {
+        if (!word.empty()) {
           add_word(word, words, stop_words);
           word.clear();
         }
@@ -146,7 +146,7 @@ std::vector<std::string> id_to_words(std::string_view astr, std::set<std::string
       last_char_was_upper_or_begin = isupper(ch);
     }
   }
-  if (word.size() > 0) {
+  if (!word.empty()) {
     add_word(word, words, stop_words);
   }
   return words;
@@ -165,7 +165,7 @@ std::string to_lower_snake_case(std::string_view astr) {
   std::string str = strip_konstant_k(astr);
   std::string newid;
   for (const auto& word : id_to_words(str)) {
-    if (newid.size() > 0) {
+    if (!newid.empty()) {
       newid.push_back('_');
     }
     newid.append(word);
@@ -185,7 +185,7 @@ std::string to_lower_camel_case(std::string_view astr) {
   bool prev_char_was_digit = false;
   std::string newid;
   for (const auto& word : id_to_words(str)) {
-    if (newid.size() == 0) {
+    if (newid.empty()) {
       newid.append(word);
     } else {
       if (prev_char_was_digit && isdigit(word[0])) {

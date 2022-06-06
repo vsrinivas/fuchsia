@@ -340,7 +340,7 @@ void EmitClientMethodDecl(std::ostream* file, std::string_view method_name,
     *file << ", ";
     EmitMethodInParamDecl(file, member);
   }
-  for (auto member : response) {
+  for (const auto& member : response) {
     *file << ", ";
     EmitMethodOutParamDecl(file, member);
   }
@@ -388,23 +388,26 @@ bool IsStoredOutOfLine(const CGenerator::Member& member) {
   if (member.kind == flat::Type::Kind::kVector || member.kind == flat::Type::Kind::kString)
     return true;
   if (member.kind == flat::Type::Kind::kIdentifier) {
-    if (member.decl_kind.value() == flat::Decl::Kind::kTable)
+    if (member.decl_kind.value() == flat::Decl::Kind::kTable) {
       return true;
-    if (member.nullability == types::Nullability::kNullable)
+    }
+    if (member.nullability == types::Nullability::kNullable) {
       return member.decl_kind.value() == flat::Decl::Kind::kStruct ||
              member.decl_kind.value() == flat::Decl::Kind::kUnion;
+    }
   }
   return false;
 }
 
 void EmitMeasureInParams(std::ostream* file, const std::vector<CGenerator::Member>& params) {
   for (const auto& member : params) {
-    if (member.kind == flat::Type::Kind::kVector)
+    if (member.kind == flat::Type::Kind::kVector) {
       *file << " + FIDL_ALIGN(sizeof(*" << member.name << "_data) * " << member.name << "_count)";
-    else if (member.kind == flat::Type::Kind::kString)
+    } else if (member.kind == flat::Type::Kind::kString) {
       *file << " + FIDL_ALIGN(" << member.name << "_size)";
-    else if (IsStoredOutOfLine(member))
+    } else if (IsStoredOutOfLine(member)) {
       *file << " + (" << member.name << " ? FIDL_ALIGN(sizeof(*" << member.name << ")) : 0u)";
+    }
   }
 }
 
@@ -429,14 +432,15 @@ void EmitParameterSizeValidation(std::ostream* file,
 
 void EmitMeasureOutParams(std::ostream* file, const std::vector<CGenerator::Member>& params) {
   for (const auto& member : params) {
-    if (member.kind == flat::Type::Kind::kVector)
+    if (member.kind == flat::Type::Kind::kVector) {
       *file << " + FIDL_ALIGN(sizeof(*" << member.name << "_buffer) * " << member.name
             << "_capacity)";
-    else if (member.kind == flat::Type::Kind::kString)
+    } else if (member.kind == flat::Type::Kind::kString) {
       *file << " + FIDL_ALIGN(" << member.name << "_capacity)";
-    else if (IsStoredOutOfLine(member))
+    } else if (IsStoredOutOfLine(member)) {
       *file << " + (out_" << member.name << " ? FIDL_ALIGN(sizeof(*out_" << member.name
             << ")) : 0u)";
+    }
   }
 }
 
@@ -1010,7 +1014,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       }
       named_protocol.methods.push_back(std::move(named_method));
     }
-    if (named_protocol.methods.size() > 0) {
+    if (!named_protocol.methods.empty()) {
       named_protocols.emplace(protocol_info, std::move(named_protocol));
     }
   }
@@ -1304,9 +1308,10 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
 
       file_ << kIndent << "FIDL_ALIGNDECL uint8_t _rd_bytes_storage[_rd_num_bytes_max];\n";
       file_ << kIndent << "uint8_t* _rd_bytes = _rd_bytes_storage;\n";
-      if (!response.empty())
+      if (!response.empty()) {
         file_ << kIndent << method_info.response->c_name << "* _response = ("
               << method_info.response->c_name << "*)_rd_bytes;\n";
+      }
       switch (named_protocol.transport) {
         case Transport::Channel:
           file_ << kIndent << "zx_channel_call_etc_args_t _args = {\n";

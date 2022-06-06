@@ -20,11 +20,11 @@ std::string_view HandleClassName(HandleClass handle_class) {
 std::optional<HandleClass> HandleClassFromName(std::string_view name) {
   if (name == "zx.handle") {
     return HandleClass::kZircon;
-  } else if (name == "fdf.handle") {
-    return HandleClass::kDriver;
-  } else {
-    return std::nullopt;
   }
+  if (name == "fdf.handle") {
+    return HandleClass::kDriver;
+  }
+  return std::nullopt;
 }
 
 bool Transport::IsCompatible(HandleClass handle_class) const {
@@ -42,7 +42,7 @@ std::optional<Transport> Transport::FromTransportName(std::string_view transport
 
 std::set<std::string_view> Transport::AllTransportNames() {
   std::set<std::string_view> names;
-  for (auto entry : transports) {
+  for (const auto& entry : transports) {
     names.insert(entry.name);
   }
   return names;

@@ -94,13 +94,13 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
         "one check is excluded, with --exclude-check.");
   }
 
-  if (params->size() > 0) {
+  if (!params->empty()) {
     if ((*params)[0] == "printcurrentoptions") {
       std::stringstream current_options;
-      for (auto check : options->included_checks) {
+      for (const auto& check : options->included_checks) {
         current_options << "include-check: " << check << std::endl;
       }
-      for (auto check : options->excluded_checks) {
+      for (const auto& check : options->excluded_checks) {
         current_options << "exclude-check: " << check << std::endl;
       }
       current_options << "format: " << options->format << std::endl;

@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
   fidl::SourceManager source_manager;
 
   // Process filenames.
-  for (auto filepath : filepaths) {
+  for (const auto& filepath : filepaths) {
     if (!source_manager.CreateSource(filepath)) {
       Fail("Couldn't read in source data from %s\n", filepath.c_str());
     }
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
         std::set<std::string>(options.excluded_checks.begin(), options.excluded_checks.end());
   }
 
-  bool exclude_by_default = (options.included_checks.size() > 0) && options.excluded_checks.empty();
+  bool exclude_by_default = !options.included_checks.empty() && options.excluded_checks.empty();
 
   // Convert command line vectors to sets, and add internally-disabled checks to excluded
   auto included_checks =

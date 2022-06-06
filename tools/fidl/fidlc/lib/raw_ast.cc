@@ -163,12 +163,11 @@ void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
     visitor->OnModifiers(modifiers);
   }
   visitor->OnIdentifier(identifier);
-  for (auto composed_protocol = composed_protocols.begin();
-       composed_protocol != composed_protocols.end(); ++composed_protocol) {
-    visitor->OnProtocolCompose(*composed_protocol);
+  for (const auto& composed_protocol : composed_protocols) {
+    visitor->OnProtocolCompose(composed_protocol);
   }
-  for (auto method = methods.begin(); method != methods.end(); ++method) {
-    visitor->OnProtocolMethod(*method);
+  for (const auto& method : methods) {
+    visitor->OnProtocolMethod(method);
   }
 }
 
@@ -190,8 +189,8 @@ void ResourceDeclaration::Accept(TreeVisitor* visitor) const {
   if (maybe_type_ctor != nullptr) {
     visitor->OnTypeConstructor(maybe_type_ctor);
   }
-  for (auto property = properties.begin(); property != properties.end(); ++property) {
-    visitor->OnResourceProperty(*property);
+  for (const auto& property : properties) {
+    visitor->OnResourceProperty(property);
   }
 }
 
@@ -210,8 +209,8 @@ void ServiceDeclaration::Accept(TreeVisitor* visitor) const {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(identifier);
-  for (auto member = members.begin(); member != members.end(); ++member) {
-    visitor->OnServiceMember(*member);
+  for (const auto& member : members) {
+    visitor->OnServiceMember(member);
   }
 }
 

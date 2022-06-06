@@ -20,7 +20,7 @@ SourceFile::SourceFile(std::string filename, std::string data)
   for (auto it = data_.cbegin(); it != data_.cend(); ++it) {
     if (*it == '\n' || *it == '\0') {
       auto& position = *start_of_line;
-      lines_.push_back(std::string_view(&position, size));
+      lines_.emplace_back(&position, size);
 
       size = 0u;
       start_of_line = it + 1;
@@ -33,7 +33,7 @@ SourceFile::SourceFile(std::string filename, std::string data)
   if (size > 0u) {
     ZX_ASSERT(start_of_line != data_.cend());
     auto& position = *start_of_line;
-    lines_.push_back(std::string_view(&position, size));
+    lines_.emplace_back(&position, size);
   }
 }
 
@@ -55,14 +55,13 @@ std::string_view SourceFile::LineContaining(std::string_view view, Position* pos
     if (file_size == 0) {
       *position_out = {1, 1};
       return std::string_view(view.data(), 0);
-    } else {
-      ZX_ASSERT_MSG(lines_.size() > 0, "file size is greater than 0 but no lines were parsed");
-      auto line = lines_.back();
-      int line_number = static_cast<int>(lines_.size());
-      int column_number = static_cast<int>(line.size() + 1);
-      *position_out = {line_number, column_number};
-      return line;
     }
+    ZX_ASSERT_MSG(!lines_.empty(), "file size is greater than 0 but no lines were parsed");
+    auto line = lines_.back();
+    int line_number = static_cast<int>(lines_.size());
+    int column_number = static_cast<int>(line.size() + 1);
+    *position_out = {line_number, column_number};
+    return line;
   }
 
   ZX_ASSERT_MSG(ptr_less_equal(file_data, view.data()), "the view is not part of this SourceFile");

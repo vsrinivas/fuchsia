@@ -24,10 +24,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
 
    public:
     explicit CallbackTreeVisitor(const LintingTreeCallbacks& callbacks)
-        : callbacks_(callbacks),
-          kGapTextRegex_(GapTextRegex()),
-          end_of_last_gap_(nullptr),
-          end_of_last_token_(nullptr) {}
+        : callbacks_(callbacks), kGapTextRegex_(GapTextRegex()) {}
 
     void OnFile(std::unique_ptr<raw::File> const& element) override {
       for (auto& callback : callbacks_.file_callbacks_) {
@@ -308,8 +305,8 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
 
     const LintingTreeCallbacks& callbacks_;
     re2::RE2 kGapTextRegex_;
-    const char* end_of_last_gap_;
-    const char* end_of_last_token_;
+    const char* end_of_last_gap_ = nullptr;
+    const char* end_of_last_token_ = nullptr;
   };
 
   tree_visitor_ = std::make_unique<CallbackTreeVisitor>(*this);

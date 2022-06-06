@@ -21,7 +21,7 @@ std::string Display(std::string_view s) { return std::string(s); }
 // {'A', 'B', 'C'} -> "A, B, C"
 std::string Display(const std::set<std::string>& s) {
   std::set<std::string_view> sv;
-  for (auto str : s) {
+  for (const auto& str : s) {
     sv.insert(str);
   }
   return Display(sv);

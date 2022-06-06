@@ -76,7 +76,7 @@ std::vector<CodedTypesGenerator::FlattenedStructMember> CodedTypesGenerator::Fla
       result.push_back(flattened_member);
       continue;
     }
-    if (struct_decl->members.size() == 0) {
+    if (struct_decl->members.empty()) {
       result.push_back(flattened_member);
       continue;
     }
@@ -201,19 +201,18 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         channel_end_map_[channel_end] = coded_protocol_type.get();
         coded_types_.push_back(std::move(coded_protocol_type));
         return coded_types_.back().get();
-      } else {
-        // In the old syntax this would be represented as a RequestType,
-        // so the code in this if statement is copied from the
-        // kRequestHandle code path below in order to maintain the same
-        // behavior.
-        auto name = NameCodedRequestHandle(NameCodedName(channel_end->protocol_decl->name),
-                                           channel_end->nullability);
-        auto coded_request_type =
-            std::make_unique<coded::RequestHandleType>(std::move(name), channel_end->nullability);
-        channel_end_map_[channel_end] = coded_request_type.get();
-        coded_types_.push_back(std::move(coded_request_type));
-        return coded_types_.back().get();
       }
+      // In the old syntax this would be represented as a RequestType,
+      // so the code in this if statement is copied from the
+      // kRequestHandle code path below in order to maintain the same
+      // behavior.
+      auto name = NameCodedRequestHandle(NameCodedName(channel_end->protocol_decl->name),
+                                         channel_end->nullability);
+      auto coded_request_type =
+          std::make_unique<coded::RequestHandleType>(std::move(name), channel_end->nullability);
+      channel_end_map_[channel_end] = coded_request_type.get();
+      coded_types_.push_back(std::move(coded_request_type));
+      return coded_types_.back().get();
     }
     case flat::Type::Kind::kPrimitive: {
       auto primitive_type = static_cast<const flat::PrimitiveType*>(type);

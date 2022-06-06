@@ -861,10 +861,9 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
     if (Peek().kind() == Token::Kind::kRightCurly) {
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
-    } else {
-      ParseProtocolMember(&composed_protocols, &methods);
-      return More;
     }
+    ParseProtocolMember(&composed_protocols, &methods);
+    return More;
   };
 
   while (parse_member() == More) {
@@ -872,7 +871,8 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
       const auto result = RecoverToEndOfMember();
       if (result == RecoverResult::Failure) {
         return Fail();
-      } else if (result == RecoverResult::EndOfScope) {
+      }
+      if (result == RecoverResult::EndOfScope) {
         continue;
       }
     }
@@ -947,10 +947,9 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
     if (Peek().kind() == Token::Kind::kRightCurly) {
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
-    } else {
-      add(&properties, [&] { return ParseResourcePropertyDeclaration(); });
-      return More;
     }
+    add(&properties, [&] { return ParseResourcePropertyDeclaration(); });
+    return More;
   };
 
   auto checkpoint = reporter_->Checkpoint();
@@ -959,7 +958,8 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
       const auto result = RecoverToEndOfMember();
       if (result == RecoverResult::Failure) {
         return Fail();
-      } else if (result == RecoverResult::EndOfScope) {
+      }
+      if (result == RecoverResult::EndOfScope) {
         continue;
       }
     }
@@ -1025,10 +1025,9 @@ std::unique_ptr<raw::ServiceDeclaration> Parser::ParseServiceDeclaration(
     if (Peek().kind() == Token::Kind::kRightCurly) {
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
-    } else {
-      add(&members, [&] { return ParseServiceMember(); });
-      return More;
     }
+    add(&members, [&] { return ParseServiceMember(); });
+    return More;
   };
 
   while (parse_member() == More) {
@@ -1696,7 +1695,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       auto result = RecoverToEndOfDecl();
       if (result == RecoverResult::Failure) {
         return Fail();
-      } else if (result == RecoverResult::EndOfScope) {
+      }
+      if (result == RecoverResult::EndOfScope) {
         break;
       }
     }
@@ -1717,9 +1717,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
   auto p = [&](const Token& token) -> std::unique_ptr<Diagnostic> {
     for (const auto& exit_token : exit_tokens) {
-      if (token.kind() == exit_token)
+      if (token.kind() == exit_token) {
         // signal to ReadToken to stop by returning an error
         return Diagnostic::MakeError(ErrUnexpectedToken, token.span());
+      }
     }
     // nullptr return value indicates -> yes, consume to ReadToken
     return nullptr;

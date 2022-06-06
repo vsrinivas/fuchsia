@@ -42,6 +42,7 @@ void ResolveStep::RunImpl() {
 
   // Run the temporal decomposition algorithm.
   std::vector<const Element*> worklist;
+  worklist.reserve(graph_.size());
   for (auto& [element, info] : graph_) {
     worklist.push_back(element);
   }

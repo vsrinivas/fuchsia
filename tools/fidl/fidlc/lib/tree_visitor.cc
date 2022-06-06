@@ -68,7 +68,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     if (using_decls_it != element->using_list.end()) {
       m[(*using_decls_it)->start_.previous_end().data().data()] = using_t;
     }
-    if (m.size() == 0)
+    if (m.empty())
       break;
 
     // And the earliest top level declaration is...

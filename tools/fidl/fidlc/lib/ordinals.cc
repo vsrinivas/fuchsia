@@ -57,7 +57,7 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
                                      const std::string_view& protocol_name,
                                      const std::string_view& selector_name,
                                      const raw::SourceElement& source_element) {
-  if (selector_name.find("/") != selector_name.npos)
+  if (selector_name.find("/") != std::string_view::npos)
     return raw::Ordinal64(source_element, CalcOrdinal(selector_name));
 
   // TODO(pascallouis): Move this closer (code wise) to NameFlatName, ideally

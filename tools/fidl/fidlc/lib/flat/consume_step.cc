@@ -337,9 +337,8 @@ bool ConsumeStep::CreateMethodResult(
   // Make a new response struct for the method containing just the
   // result union.
   std::vector<Struct::Member> response_members;
-  response_members.push_back(Struct::Member(IdentifierTypeForDecl(result_decl),
-                                            result_context->name(), nullptr,
-                                            std::make_unique<AttributeList>()));
+  response_members.emplace_back(IdentifierTypeForDecl(result_decl), result_context->name(), nullptr,
+                                std::make_unique<AttributeList>());
 
   const auto& response_context = result_context->parent();
   const Name response_name = Name::CreateAnonymous(library(), response_span, response_context);
@@ -631,7 +630,7 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   if (layout->modifiers != nullptr && layout->modifiers->maybe_strictness.has_value())
     strictness = layout->modifiers->maybe_strictness->value;
 
-  if (layout->members.size() == 0) {
+  if (layout->members.empty()) {
     if (!std::is_same<T, Enum>::value || strictness != types::Strictness::kFlexible)
       return Fail(ErrMustHaveOneMember, layout->span());
   }

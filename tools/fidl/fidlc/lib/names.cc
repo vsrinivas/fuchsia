@@ -29,7 +29,7 @@ std::string NameSize(uint64_t size) {
 
 std::string FormatName(const flat::Name& name, std::string_view library_separator,
                        std::string_view name_separator) {
-  std::string compiled_name("");
+  std::string compiled_name;
   if (name.library() != nullptr && !name.is_intrinsic()) {
     compiled_name += flat::LibraryName(name.library()->name, library_separator);
     compiled_name += name_separator;

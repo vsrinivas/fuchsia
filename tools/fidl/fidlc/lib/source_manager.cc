@@ -28,7 +28,7 @@ bool SourceManager::CreateSource(std::string_view filename) {
   auto filesize = ftell(file);
   data.resize(filesize);
   rewind(file);
-  fread(&data[0], 1, filesize, file);
+  fread(data.data(), 1, filesize, file);
   fclose(file);
 
   AddSourceFile(std::make_unique<SourceFile>(std::string(filename), std::move(data)));

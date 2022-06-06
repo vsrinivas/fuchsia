@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
   bool in_place = false;
   size_t pos = 1;
   // Process options
-  while (pos < args.size() && args[pos] != "--" && args[pos].find("-") == 0) {
+  while (pos < args.size() && args[pos] != "--" && args[pos].find('-') == 0) {
     if (args[pos] == "-i" || args[pos] == "--in-place") {
       in_place = true;
     } else if (args[pos] == "-h" || args[pos] == "--help") {

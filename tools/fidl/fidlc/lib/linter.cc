@@ -294,7 +294,7 @@ void Linter::CheckInvalidCopyright(SourceSpan span, std::string line_comment,
   }
   auto end_it = line_comment.end();
   if (line_comment.size() > line_to_match.size()) {
-    end_it = line_comment.begin() + line_to_match.size();
+    end_it = line_comment.begin() + static_cast<ssize_t>(line_to_match.size());
   }
   auto first_mismatch = std::mismatch(line_comment.begin(), end_it, line_to_match.begin());
   auto index = first_mismatch.first - line_comment.begin();
