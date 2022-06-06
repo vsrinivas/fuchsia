@@ -6,7 +6,10 @@ import("//build/bind/bind.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":example_bind_test" ]
+  deps = [
+    ":example_bind_test",
+    ":example_composite_bind_test",
+  ]
 }
 
 bind_test("example_bind_test") {
@@ -16,7 +19,7 @@ bind_test("example_bind_test") {
 }
 
 bind_test("example_composite_bind_test") {
-  rules = "composite_gizmo.bind"
+  rules = "composite-gizmo.bind"
   tests = "composite-tests.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",

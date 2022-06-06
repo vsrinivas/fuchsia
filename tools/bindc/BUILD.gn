@@ -60,7 +60,10 @@ if (is_host) {
       "//third_party/rust_crates:structopt",
     ]
 
-    sources = [ "src/main.rs" ]
+    sources = [
+      "src/generate_cpp.rs",
+      "src/main.rs",
+    ]
 
     inputs = [
       "src/templates/bind_lib.template",
@@ -68,12 +71,14 @@ if (is_host) {
       "src/templates/bind_v1.h.template",
       "src/templates/bind_v2.h.template",
       "src/templates/composite_bind.h.template",
+      "src/templates/cpp_header.template",
       "src/templates/fragment.template",
       "src/templates/fidl.template",
       "src/tests/expected_bind_lib_gen",
       "src/tests/expected_code_gen",
       "src/tests/expected_composite_code",
       "src/tests/expected_composite_code_w_dashes",
+      "src/tests/expected_cpp_header_gen",
       "src/tests/test_library.bind",
     ]
   }

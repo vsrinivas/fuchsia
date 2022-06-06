@@ -4,6 +4,8 @@
 
 library test.lib;
 
+using another.bindlibrary as another;
+
 // Enum with a single value.
 enum KINGFISHER {
     BELTED,
