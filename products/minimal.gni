@@ -1,0 +1,137 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This `minimal` product is intended to be the "smallest thing we'd still call Fuchsia," which
+# implies simplicity, security, updatability and performance. Importantly, that differs from "all
+# current products use this feature;" today, that is what the `core` product is for.
+# `minimal` will change over time, both by addition and subtraction -- for example, should the
+# team ship a mechanism for updating Fuchsia that does not require IP networking, that functionality
+# should be moved to a higher-level product definition.
+
+import("//build/security/policies.gni")
+import("//products/bringup.gni")
+
+bootfs_only = false
+
+# Kernel command line arguments.
+product_bootfs_labels -=
+    [ "//products/kernel_cmdline:kernel.oom.behavior--jobkill" ]
+product_bootfs_labels +=
+    [ "//products/kernel_cmdline:kernel.oom.behavior--reboot" ]
+
+# Core scheduler profiles.
+product_bootfs_labels += [ "//src/sys/core:bootfs" ]
+
+product_system_image_deps = [ "//src/connectivity/bluetooth:core-system" ]
+
+core_realm_package_name = "core-minimal"
+core_realm_shards = [
+  "//src/connectivity/network:virtualization-core-shard",
+  "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
+  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
+  "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
+  "//src/developer/build_info:build_info_core_shard",
+  "//src/developer/debug/debug_agent:core_shard",
+  "//src/developer/memory/mem:core_shard",
+  "//src/developer/memory/monitor:memory_monitor_core_shard",
+  "//src/intl/intl_services:intl_services_small_shard",
+  "//src/recovery/factory_reset:factory_reset_core_shard",
+  "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
+  "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
+
+  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
+  # needed in core.gni for tests that use the core image.
+  "//src/intl/intl_services:intl_services_small_timezones_shard",
+]
+core_realm_restrict_persistent_storage = true
+
+legacy_base_package_labels += [
+  "//build/info:build-info",
+  "//src/diagnostics/log_listener:log_listener_shell",
+  "//src/intl/intl_services:pkg_small",
+
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
+  "//src/intl/intl_services/config:sysmgr_small",
+  "//src/sys/sysmgr",
+  "//src/sys/sysmgr:services_config",
+  "//src/cobalt/bin/app:cobalt",
+  "//src/cobalt/bin/app:cobalt_registry",
+  "//src/cobalt/bin/app:config",
+  "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
+  "//src/connectivity/bluetooth:core",
+  "//src/connectivity/network/mdns/bundles:config",
+  "//src/connectivity/network/mdns/bundles:services",
+  "//src/connectivity/network/netcfg:config-default",
+  "//src/connectivity/network",
+
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
+  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
+  # needed in core.gni for tests that use the core image.
+  "//src/intl/intl_services/config:sysmgr_small_timezones",
+
+  # TODO(https://fxbug.dev/85821): remove once out-of-tree users no longer
+  # reference v1 components.
+  "//src/connectivity/network:network-legacy-deprecated",
+
+  "//src/connectivity/wlan:packages",
+  "//src/developer/build_info:build-info-service",
+  "//src/developer/forensics:pkg",
+  "//src/developer/forensics/snapshot:pkg",
+  "//src/developer/memory/monitor",
+  "//src/diagnostics/config/persistence",
+  "//src/diagnostics/config/triage:triage-detect",
+  "//src/diagnostics/detect:triage-detect",
+  "//src/diagnostics/kcounter:diagnostics-kcounter",
+  "//src/diagnostics/persistence:diagnostics-persistence",
+  "//src/diagnostics/log-stats:package",
+  "//src/diagnostics/sampler",
+  "//src/hwinfo:hwinfo",
+  "//src/hwinfo:default_product_config",
+  "//src/recovery/factory_reset",
+  "//src/security/policy:appmgr_policy_eng",
+  "//src/security/root_ssl_certificates",
+  "//src/sys/activity",
+  "//src/sys/appmgr",
+  "//src/sys/appmgr:appmgr_scheme_config",
+
+  # All v1 components are allowed to use isolated-persistent-storage, even if
+  # they're not listed in the component ID index.
+  "//src/sys/appmgr:component_id_index_no_restrict_storage",
+  "//src/sys/appmgr:core_component_id_index",
+
+  "//src/sys/device_settings:device_settings_manager",
+  "//src/sys/pkg:core",
+  "//src/sys/pkg:system-update-checker",
+  "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
+  "//src/sys/stash:pkg",
+  "//src/sys/time/httpsdate_time_source:httpsdate-time-source",
+  "//src/sys/time/timekeeper",
+  "//src/sys/universe-resolver",  # This seems needed to run the session manager
+]
+
+product_bootfs_labels += [
+  # Core products have pkgfs, so include the base resolver.
+  "//src/sys/base-resolver:bootfs",
+]
+
+# Set the SWD policy for core.gni, details can be found in
+# //build/security/policies_swd.gni.
+policy_labels.swd = "unrestricted"
+
+# Set the update_checker policy for core.gni, details can be found in
+# //build/security/policies_swd.gni.
+policy_labels.update_checker = "system_update_checker"
+
+# Enable input injection for testing through `fuchsia.input.injection.InputDeviceRegistry`.
+use_modern_input_injection = true
+
+# session_manager also needs a core realm shard but they currently vary between products, they
+# must be added in individual product configs.
+legacy_base_package_labels += [ "//src/session/bin/session_manager" ]
+
+# Use the product assembly config file to specify the product configuration.
+#
+# This should be overridden by products which inherit from minimal.
+fuchsia_product_assembly_config_file =
+    "//build/assembly/empty_product_config.json"
