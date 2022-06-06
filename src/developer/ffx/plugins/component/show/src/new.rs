@@ -64,8 +64,10 @@ fn add_basic_info_to_table(table: &mut Table, instance: &Instance) {
     table.add_row(row!(r->"Moniker:", instance.moniker));
     table.add_row(row!(r->"URL:", instance.url));
 
-    if let Some(component_id) = &instance.component_id {
-        table.add_row(row!(r->"Component ID:", component_id));
+    if let Some(instance_id) = &instance.instance_id {
+        table.add_row(row!(r->"Instance ID:", instance_id));
+    } else {
+        table.add_row(row!(r->"Instance ID:", "None"));
     }
 
     if instance.is_cmx {

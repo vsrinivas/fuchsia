@@ -30,7 +30,7 @@ pub async fn make_directory(storage_admin: StorageAdminProxy, path: String) -> R
 
     // Open the storage
     storage_admin
-        .open_component_storage_by_id(&remote_path.component_instance_id, server.into())
+        .open_component_storage_by_id(&remote_path.instance_id, server.into())
         .await?
         .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
 

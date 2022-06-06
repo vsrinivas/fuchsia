@@ -21,7 +21,7 @@ pub async fn list(storage_admin: StorageAdminProxy, path: String) -> Result<Vec<
     let storage_dir = Directory::from_proxy(dir_proxy);
 
     storage_admin
-        .open_component_storage_by_id(&remote_path.component_instance_id, server.into())
+        .open_component_storage_by_id(&remote_path.instance_id, server.into())
         .await?
         .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
 

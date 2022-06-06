@@ -91,7 +91,7 @@ impl RealmQuery {
         let resolved = instance.create_fidl_resolved_state().await;
 
         let relative_moniker = extract_relative_moniker(scope_moniker, &moniker);
-        let component_id = self.model.component_id_index().look_up_moniker(&moniker).cloned();
+        let instance_id = self.model.component_id_index().look_up_moniker(&moniker).cloned();
 
         let state = match &resolved {
             Some(r) => {
@@ -107,7 +107,7 @@ impl RealmQuery {
         let info = fsys::InstanceInfo {
             moniker: relative_moniker.to_string(),
             url: instance.component_url.clone(),
-            component_id,
+            instance_id,
             state,
         };
 
@@ -326,7 +326,7 @@ mod tests {
         assert_eq!(info.moniker, ".");
         assert_eq!(info.url, "test:///root");
         assert_eq!(info.state, fsys::InstanceState::Started);
-        assert_eq!(info.component_id.clone().unwrap(), iid);
+        assert_eq!(info.instance_id.clone().unwrap(), iid);
 
         let resolved = resolved.unwrap();
         let started = resolved.started.unwrap();
@@ -430,7 +430,7 @@ mod tests {
         assert_eq!(info.moniker, "./my_coll:a");
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Unresolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
         assert!(resolved.is_none());
 
         let moniker_a = AbsoluteMoniker::parse_str("/my_coll:a").unwrap();
@@ -518,7 +518,7 @@ mod tests {
         assert_eq!(info.moniker, ".");
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Unresolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
         assert!(resolved.is_none());
 
         let moniker_a = AbsoluteMoniker::parse_str("/a").unwrap();

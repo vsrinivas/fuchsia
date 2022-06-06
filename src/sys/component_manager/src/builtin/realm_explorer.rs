@@ -97,7 +97,7 @@ impl RealmExplorer {
         instance: &Arc<ComponentInstance>,
     ) -> (fsys::InstanceInfo, Vec<Arc<ComponentInstance>>) {
         let relative_moniker = extract_relative_moniker(scope_moniker, &instance.abs_moniker);
-        let component_id =
+        let instance_id =
             self.model.component_id_index().look_up_moniker(&instance.abs_moniker).cloned();
 
         let (state, children) = {
@@ -120,7 +120,7 @@ impl RealmExplorer {
             fsys::InstanceInfo {
                 moniker: relative_moniker.to_string(),
                 url: instance.component_url.clone(),
-                component_id,
+                instance_id,
                 state,
             },
             children,
@@ -377,7 +377,7 @@ mod tests {
         let info = get_instance_info(&explorer, 1, ".").await;
         assert_eq!(info.url, "test:///root");
         assert_eq!(info.state, fsys::InstanceState::Started);
-        assert_eq!(info.component_id.clone().unwrap(), iid);
+        assert_eq!(info.instance_id.clone().unwrap(), iid);
     }
 
     #[fuchsia::test]
@@ -438,7 +438,7 @@ mod tests {
         let info = get_instance_info(&explorer, 2, "./my_coll:a").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Unresolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
 
         let moniker_a = AbsoluteMoniker::parse_str("/my_coll:a").unwrap();
         let component_a = model.look_up(&moniker_a).await.unwrap();
@@ -447,7 +447,7 @@ mod tests {
         let info = get_instance_info(&explorer, 2, "./my_coll:a").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Resolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
 
         let result = component_a.start(&StartReason::Debug).await.unwrap();
         assert_eq!(result, fsys::StartResult::Started);
@@ -456,7 +456,7 @@ mod tests {
         let info = get_instance_info(&explorer, 2, "./my_coll:a").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Started);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
 
         component_a.stop_instance(false, false).await.unwrap();
 
@@ -464,7 +464,7 @@ mod tests {
         let info = get_instance_info(&explorer, 2, "./my_coll:a").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Resolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
 
         let child_moniker = ChildMoniker::parse("my_coll:a").unwrap();
         component_root.remove_dynamic_child(&child_moniker).await.unwrap();
@@ -503,7 +503,7 @@ mod tests {
         let info = get_instance_info(&explorer, 1, ".").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Unresolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
 
         let moniker_a = AbsoluteMoniker::parse_str("/a").unwrap();
         let component_a = model.look_up(&moniker_a).await.unwrap();
@@ -512,7 +512,7 @@ mod tests {
         let info = get_instance_info(&explorer, 1, ".").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Resolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
 
         let result = component_a.start(&StartReason::Debug).await.unwrap();
         assert_eq!(result, fsys::StartResult::Started);
@@ -521,7 +521,7 @@ mod tests {
         let info = get_instance_info(&explorer, 1, ".").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Started);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
 
         component_a.stop_instance(false, false).await.unwrap();
 
@@ -529,6 +529,6 @@ mod tests {
         let info = get_instance_info(&explorer, 1, ".").await;
         assert_eq!(info.url, "test:///a");
         assert_eq!(info.state, fsys::InstanceState::Resolved);
-        assert!(info.component_id.is_none());
+        assert!(info.instance_id.is_none());
     }
 }

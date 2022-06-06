@@ -144,7 +144,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::root(),
                 url: Some("fuchsia-boot:///#meta/root.cm".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: false,
                 state: InstanceState::Resolved,
                 hub_dir: None,
@@ -152,7 +152,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::parse_str("/appmgr").unwrap(),
                 url: Some("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: false,
                 state: InstanceState::Started,
                 hub_dir: None,
@@ -160,7 +160,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::parse_str("/appmgr/foo.cmx").unwrap(),
                 url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: true,
                 state: InstanceState::Started,
                 hub_dir: None,
@@ -168,7 +168,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::parse_str("/appmgr/bar_baz.cmx").unwrap(),
                 url: Some("fuchsia-pkg://fuchsia.com/bar#meta/bar_baz.cmx".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: true,
                 state: InstanceState::Started,
                 hub_dir: None,
@@ -176,7 +176,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::parse_str("/sys").unwrap(),
                 url: Some("fuchsia-pkg://fuchsia.com/sys#meta/sys.cm".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: false,
                 state: InstanceState::Resolved,
                 hub_dir: None,
@@ -184,7 +184,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::parse_str("/sys/baz").unwrap(),
                 url: Some("fuchsia-pkg://fuchsia.com/baz#meta/baz.cm".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: false,
                 state: InstanceState::Started,
                 hub_dir: None,
@@ -192,7 +192,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::parse_str("/sys/fuzz").unwrap(),
                 url: Some("fuchsia-pkg://fuchsia.com/fuzz#meta/fuzz.cm".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: false,
                 state: InstanceState::Resolved,
                 hub_dir: None,
@@ -200,7 +200,7 @@ mod test {
             Instance {
                 moniker: AbsoluteMoniker::parse_str("/sys/fuzz/hello").unwrap(),
                 url: Some("fuchsia-pkg://fuchsia.com/hello#meta/hello.cm".to_owned()),
-                component_id: None,
+                instance_id: None,
                 is_cmx: false,
                 state: InstanceState::Resolved,
                 hub_dir: None,

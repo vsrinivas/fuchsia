@@ -41,7 +41,7 @@ pub struct Instance {
     pub url: Option<String>,
 
     // Unique identifier of component.
-    pub component_id: Option<String>,
+    pub instance_id: Option<String>,
 
     // True if instance is CMX component/realm
     // TODO: Remove this when CMX is deprecated
@@ -191,7 +191,7 @@ pub async fn get_all_cml_instances(explorer: &fsys::RealmExplorerProxy) -> Resul
         let instance = Instance {
             moniker,
             url: Some(info.url),
-            component_id: info.component_id,
+            instance_id: info.instance_id,
             is_cmx: false,
             state: info.state.into(),
             hub_dir: None,
@@ -250,7 +250,7 @@ fn parse_cmx_realm(
         children.push(Instance {
             moniker,
             url: None, // CMX realms don't have a URL
-            component_id: None,
+            instance_id: None,
             is_cmx: true,
             state: InstanceState::Started,
             hub_dir: None,
@@ -280,7 +280,7 @@ fn parse_cmx_component(
         instances.push(Instance {
             moniker,
             url: Some(url),
-            component_id: None,
+            instance_id: None,
             is_cmx: true,
             state: InstanceState::Started,
             hub_dir: Some(dir.clone()?),
@@ -443,7 +443,7 @@ mod tests {
         let explorer = serve_realm_explorer(vec![fsys::InstanceInfo {
             moniker: "./".to_string(),
             url: "fuchsia-pkg://fuchsia.com/foo#meta/bar.cm".to_string(),
-            component_id: Some("1234567890".to_string()),
+            instance_id: Some("1234567890".to_string()),
             state: fsys::InstanceState::Started,
         }]);
 
@@ -453,7 +453,7 @@ mod tests {
 
         assert_eq!(instance.moniker, AbsoluteMoniker::root());
         assert_eq!(instance.url, Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cm".to_string()));
-        assert_eq!(instance.component_id, Some("1234567890".to_string()));
+        assert_eq!(instance.instance_id, Some("1234567890".to_string()));
         assert!(!instance.is_cmx);
         assert!(instance.hub_dir.is_none());
         assert_eq!(instance.state, InstanceState::Started);
@@ -472,7 +472,7 @@ mod tests {
                 fsys::InstanceInfo {
                     moniker: "./core/appmgr".to_string(),
                     url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
-                    component_id: None,
+                    instance_id: None,
                     state: fsys::InstanceState::Started,
                 },
                 Some(Box::new(fsys::ResolvedState {
@@ -496,7 +496,7 @@ mod tests {
 
         assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap());
         assert_eq!(instance.url, Some("fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx".to_string()));
-        assert!(instance.component_id.is_none());
+        assert!(instance.instance_id.is_none());
         assert!(instance.is_cmx);
         assert!(instance.hub_dir.is_some());
         assert_eq!(instance.state, InstanceState::Started);
@@ -508,19 +508,19 @@ mod tests {
             fsys::InstanceInfo {
                 moniker: "./core".to_string(),
                 url: "fuchsia-pkg://fuchsia.com/core#meta/core.cm".to_string(),
-                component_id: None,
+                instance_id: None,
                 state: fsys::InstanceState::Started,
             },
             fsys::InstanceInfo {
                 moniker: "./core/appmgr".to_string(),
                 url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
-                component_id: None,
+                instance_id: None,
                 state: fsys::InstanceState::Started,
             },
             fsys::InstanceInfo {
                 moniker: "./".to_string(),
                 url: "fuchsia-pkg://fuchsia.com/root#meta/root.cm".to_string(),
-                component_id: None,
+                instance_id: None,
                 state: fsys::InstanceState::Resolved,
             },
         ]);
@@ -537,7 +537,7 @@ mod tests {
                 fsys::InstanceInfo {
                     moniker: "./core/appmgr".to_string(),
                     url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
-                    component_id: None,
+                    instance_id: None,
                     state: fsys::InstanceState::Started,
                 },
                 Some(Box::new(fsys::ResolvedState {

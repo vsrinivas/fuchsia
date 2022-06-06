@@ -14,13 +14,18 @@ mod make_directory;
 
 pub use {copy::copy, list::list, make_directory::make_directory};
 
-pub const REMOTE_PATH_HELP: &'static str = "Remote paths have the following format:\n\n\
-[component instance ID]::[path relative to storage]\n\n\
-Example: \"c1a6d0aebbf7c092c53e8e696636af8ec0629ff39b7f2e548430b0034d809da4::/path/to/file\"\n\n
-`..` is not valid anywhere in the remote path.";
+pub const REMOTE_PATH_HELP: &'static str = "Remote paths have the following format:
+
+[instance ID]::[path relative to storage]
+
+Example: \"c1a6d0aebbf7c092c53e8e696636af8ec0629ff39b7f2e548430b0034d809da4::/path/to/file\"
+
+`..` is not valid anywhere in the remote path.
+
+To learn about component instance IDs, see https://fuchsia.dev/go/components/instance-id";
 
 pub struct RemotePath {
-    pub component_instance_id: String,
+    pub instance_id: String,
     pub relative_path: PathBuf,
 }
 
@@ -35,7 +40,7 @@ impl RemotePath {
                     )
                 }
 
-                let component_instance_id = first.to_string();
+                let instance_id = first.to_string();
                 let relative_path = PathBuf::from(second);
 
                 // Path checks (ignore `.`) (no `..`, `/` or prefix allowed).
@@ -49,7 +54,7 @@ impl RemotePath {
                     }
                 }
 
-                Ok(Self { component_instance_id, relative_path: normalized_relative_path })
+                Ok(Self { instance_id, relative_path: normalized_relative_path })
             }
             None => ffx_bail!(
                 "Remote path must contain exactly one `::` separator. {}",

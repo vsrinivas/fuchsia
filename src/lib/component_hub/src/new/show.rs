@@ -38,7 +38,7 @@ pub async fn find_instances(
         .filter(|i| {
             let url_match = i.url.as_ref().map_or(false, |url| url.contains(&query));
             let moniker_match = i.moniker.to_string().contains(&query);
-            let id_match = i.component_id.as_ref().map_or(false, |id| id.contains(&query));
+            let id_match = i.instance_id.as_ref().map_or(false, |id| id.contains(&query));
             url_match || moniker_match || id_match
         })
         .collect();
@@ -341,7 +341,7 @@ pub struct Instance {
     pub moniker: AbsoluteMoniker,
     pub url: String,
     pub is_cmx: bool,
-    pub component_id: Option<String>,
+    pub instance_id: Option<String>,
     pub resolved: Option<Resolved>,
 }
 
@@ -365,7 +365,7 @@ impl Instance {
             moniker,
             url: info.url,
             is_cmx: false,
-            component_id: info.component_id,
+            instance_id: info.instance_id,
             resolved,
         })
     }
@@ -375,7 +375,7 @@ impl Instance {
 
         let url = hub_dir.read_file("url").await?;
 
-        Ok(Instance { moniker, url, is_cmx: true, component_id: None, resolved })
+        Ok(Instance { moniker, url, is_cmx: true, instance_id: None, resolved })
     }
 }
 
@@ -529,13 +529,13 @@ mod tests {
             fsys::InstanceInfo {
                 moniker: "./my_foo".to_string(),
                 url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm".to_string(),
-                component_id: Some("1234567890".to_string()),
+                instance_id: Some("1234567890".to_string()),
                 state: fsys::InstanceState::Resolved,
             },
             fsys::InstanceInfo {
                 moniker: "./core/appmgr".to_string(),
                 url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
-                component_id: None,
+                instance_id: None,
                 state: fsys::InstanceState::Started,
             },
         ]);
@@ -557,7 +557,7 @@ mod tests {
                     fsys::InstanceInfo {
                         moniker: "./my_foo".to_string(),
                         url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm".to_string(),
-                        component_id: Some("1234567890".to_string()),
+                        instance_id: Some("1234567890".to_string()),
                         state: fsys::InstanceState::Resolved,
                     },
                     Some(Box::new(fsys::ResolvedState {
@@ -598,7 +598,7 @@ mod tests {
                     fsys::InstanceInfo {
                         moniker: "./core/appmgr".to_string(),
                         url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
-                        component_id: None,
+                        instance_id: None,
                         state: fsys::InstanceState::Started,
                     },
                     Some(Box::new(fsys::ResolvedState {
@@ -629,7 +629,7 @@ mod tests {
 
         assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
         assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm");
-        assert_eq!(instance.component_id.unwrap(), "1234567890");
+        assert_eq!(instance.instance_id.unwrap(), "1234567890");
         assert!(!instance.is_cmx);
         assert!(instance.resolved.is_some());
 
@@ -669,7 +669,7 @@ mod tests {
 
         assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap());
         assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx");
-        assert!(instance.component_id.is_none());
+        assert!(instance.instance_id.is_none());
         assert!(instance.is_cmx);
         assert!(instance.resolved.is_some());
 
@@ -704,11 +704,11 @@ mod tests {
 
         assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
         assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm");
-        assert_eq!(instance.component_id.unwrap(), "1234567890");
+        assert_eq!(instance.instance_id.unwrap(), "1234567890");
     }
 
     #[fuchsia::test]
-    async fn find_by_component_id() {
+    async fn find_by_instance_id() {
         let (_temp_dirs, explorer, query) = create_explorer_and_query();
 
         let mut instances = find_instances("1234567".to_string(), &explorer, &query).await.unwrap();
@@ -717,6 +717,6 @@ mod tests {
 
         assert_eq!(instance.moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
         assert_eq!(instance.url, "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm");
-        assert_eq!(instance.component_id.unwrap(), "1234567890");
+        assert_eq!(instance.instance_id.unwrap(), "1234567890");
     }
 }

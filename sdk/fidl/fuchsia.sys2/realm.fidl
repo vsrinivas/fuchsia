@@ -9,10 +9,10 @@ using fuchsia.component.decl;
 using fuchsia.component.config;
 using fuchsia.url;
 
-/// The maximum length of a component ID.
-/// A component ID is a 128-bit UUID, which when encoded
-/// in hex notation is 32 characters long.
-const MAX_COMPONENT_ID_LENGTH uint32 = 32;
+/// The maximum length of an instance ID.
+/// An instance ID is a 256-bit identifier, which when encoded
+/// in hex notation is 64 characters long.
+const MAX_INSTANCE_ID_LENGTH uint32 = 64;
 
 /// Describes the current state of instance
 type InstanceState = strict enum {
@@ -37,7 +37,7 @@ type InstanceInfo = struct {
     url fuchsia.url.Url;
 
     /// The stable identifier for this instance.
-    component_id string:<MAX_COMPONENT_ID_LENGTH, optional>;
+    instance_id string:<MAX_INSTANCE_ID_LENGTH, optional>;
 
     /// The current state of this instance.
     state InstanceState;

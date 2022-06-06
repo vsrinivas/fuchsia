@@ -38,7 +38,7 @@ pub async fn copy(
             let host_destination_path = PathBuf::from(destination_path);
 
             storage_admin
-                .open_component_storage_by_id(&remote_source.component_instance_id, server.into())
+                .open_component_storage_by_id(&remote_source.instance_id, server.into())
                 .await?
                 .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
             let data = storage_dir.read_file_bytes(remote_source_path).await?;
@@ -52,10 +52,7 @@ pub async fn copy(
             let remote_destination_path = remote_destination.relative_path;
 
             storage_admin
-                .open_component_storage_by_id(
-                    &remote_destination.component_instance_id,
-                    server.into(),
-                )
+                .open_component_storage_by_id(&remote_destination.instance_id, server.into())
                 .await?
                 .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
             let data = read(host_source_path)
