@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/lib/vulkan/layers.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 declare_args() {
   # Include the vulkan validation layers in carnelian examples.
@@ -561,10 +562,29 @@ template("carnelian_example") {
   if (use_direct_for_carnelian_examples) {
     example_deps += [ ":direct_config" ]
   }
-  fuchsia_package_with_single_component(target_name) {
-    forward_variables_from(invoker, [ "manifest" ])
+
+  example_component_target = "$target_name" + "_v2"
+  component_name = "$target_name"
+  fuchsia_component(example_component_target) {
+    component_name = component_name
+    manifest = invoker.manifest
     deps = example_deps
     manifest_deps = invoker.manifest_deps
+  }
+
+  example_v1_component_target = "$target_name" + "_v1"
+  fuchsia_component(example_v1_component_target) {
+    component_name = component_name
+    manifest = invoker.v1_manifest
+    deps = example_deps
+    manifest_deps = invoker.v1_manifest_deps
+  }
+
+  fuchsia_package(target_name) {
+    deps = [
+      ":$example_component_target",
+      ":$example_v1_component_target",
+    ]
   }
 }
 
@@ -635,19 +655,31 @@ carnelian_examples_deps = []
 
 # Rebased path to the example shard
 carnelian_example_manifest_include =
+    "//" + rebase_path("meta/example.shard.cml", "//")
+
+# Temporarily generate v1 and v2 components until workstation is migrated
+# to using the v2 examples exclusively.
+# TODO(http://fxbug.dev/100933): Remove this.
+carnelian_example_v1_manifest_include =
     "//" + rebase_path("meta/example.shard.cmx", "//")
 
 foreach(carnelian_example_details, carnelian_examples) {
   carnelian_example_package_name =
       string_replace(carnelian_example_details.name, "_", "-") + "-rs"
+
   carnelian_example_manifest_label =
+      "generate_${carnelian_example_details.name}_cml"
+  carnelian_example_v1_manifest_label =
       "generate_${carnelian_example_details.name}_cmx"
+
   carnelian_example_manifest_path =
+      "${target_gen_dir}/${carnelian_example_package_name}.cml"
+  carnelian_example_v1_manifest_path =
       "${target_gen_dir}/${carnelian_example_package_name}.cmx"
 
   # Generate a manifest file for the example
   # that has the name of the binary but otherwise
-  # just depends on the example.shard.cmx for needed
+  # just depends on the example.shard.cml for needed
   # content
   generated_file(carnelian_example_manifest_label) {
     visibility = [ ":*" ]
@@ -656,6 +688,20 @@ foreach(carnelian_example_details, carnelian_examples) {
     output_conversion = "json"
     contents = {
       include = [ carnelian_example_manifest_include ]
+      program = {
+        runner = "elf"
+        binary = "bin/${carnelian_example_details.name}"
+      }
+    }
+  }
+
+  generated_file(carnelian_example_v1_manifest_label) {
+    visibility = [ ":*" ]
+
+    outputs = [ carnelian_example_v1_manifest_path ]
+    output_conversion = "json"
+    contents = {
+      include = [ carnelian_example_v1_manifest_include ]
       program = {
         binary = "bin/${carnelian_example_details.name}"
       }
@@ -666,14 +712,21 @@ foreach(carnelian_example_details, carnelian_examples) {
   # for the example
   carnelian_example(carnelian_example_package_name) {
     manifest = rebase_path(carnelian_example_manifest_path)
+    v1_manifest = rebase_path(carnelian_example_v1_manifest_path)
+
     deps = [ ":" + carnelian_example_details.name ]
     manifest_deps = [ ":${carnelian_example_manifest_label}" ]
+    v1_manifest_deps = [ ":${carnelian_example_v1_manifest_label}" ]
     if (defined(carnelian_example_details.additional_deps)) {
       deps += carnelian_example_details.additional_deps
     }
   }
   carnelian_examples_deps +=
       [ "//src/lib/ui/carnelian:" + carnelian_example_package_name ]
+}
+
+core_shard("carnelian_examples_shard") {
+  shard_file = "meta/carnelian_examples.core_shard.cml"
 }
 
 group("examples") {

@@ -1,0 +1,69 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    collections: [
+        {
+            name: "carnelian-examples",
+
+            // The examples come from universe package set, so we have to set
+            // the resolver to the universe resolver, instead of the base resolver.
+            environment: "#full-resolver-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#carnelian-examples",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: "#carnelian-examples",
+        },
+        {
+            protocol: [
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "self",
+            to: "#carnelian-examples",
+        },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: "#carnelian-examples",
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: "#carnelian-examples",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: "#carnelian-examples",
+            subdir: "class/input-report",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: "#carnelian-examples",
+            subdir: "class/display-controller",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input",
+            to: "#carnelian-examples",
+            subdir: "class/input",
+        },
+    ],
+}

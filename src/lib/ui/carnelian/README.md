@@ -17,6 +17,7 @@ instructions for more details.
         --release \
         --auto-dir \
         --args=rust_cap_lints='"warn"' \
+        --args='core_realm_shards += [ "//src/lib/ui/carnelian:carnelian_examples_shard" ]'
         --cargo-toml-gen
 
 To disable virtcon, add
@@ -29,6 +30,21 @@ example in `BUILD.gn`
 # Examples
 
 The examples directory contains a set of Carnelian example programs.
+
+## Running
+
+To run the examples, use `ffx component`. The `core_realm_shard` added above
+installs a collection into the `/core` realm that can be used to launch examples.
+
+The basic workflow is:
+
+1. `ffx component create /core/carnelian-examples:square-rs fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cm`
+2. `ffx component start /core/carnelian-examples:square-rs`
+
+Note that `carnelian-examples` is the collection name and *must* be typed.
+However, the name of the created component, `square-rs` above, is user-defined
+when invoking `ffx component create`. To run another example, replace
+`spinning-square-rs` in the component URL with the example name.
 
 ## Layout-based Examples
 

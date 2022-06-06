@@ -1,0 +1,50 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+        },
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+        {
+            directory: "dev-input-report",
+            rights: [ "r*" ],
+            path: "/dev/class/input-report",
+        },
+        {
+            directory: "dev-display-controller",
+            rights: [ "r*" ],
+            path: "/dev/class/display-controller",
+        },
+        {
+            directory: "dev-input",
+            rights: [ "r*" ],
+            path: "/dev/class/input",
+        },
+    ],
+    expose: [
+        // This is necessary to start the component from a session. A session
+        // would connect to this protocol in order to start the component.
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}
