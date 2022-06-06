@@ -15,6 +15,8 @@ namespace fidl {
 // When adding new functionalities to this struct, the data layout should not be changed.
 template <typename T, size_t N>
 struct Array final {
+  using value_type = T;
+
   static constexpr size_t size() { return N; }
 
   const T* data() const { return data_; }
