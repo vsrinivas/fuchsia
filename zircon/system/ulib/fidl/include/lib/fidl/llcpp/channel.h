@@ -526,6 +526,18 @@ internal::SyncEndpointVeneer<internal::WireEventSender, FidlProtocol> WireSendEv
       fidl::internal::MakeAnyUnownedTransport(server_end.channel()));
 }
 
+// Return an interface for sending FIDL events containing wire domain objects
+// over |server_end|. Call it like:
+//
+//     fidl::WireSendEvent(server_end)->FooEvent(args...);
+//
+template <typename FidlProtocol>
+internal::SyncEndpointVeneer<internal::WireEventSender, FidlProtocol> WireSendEvent(
+    UnownedServerEnd<FidlProtocol> server_end) {
+  return internal::SyncEndpointVeneer<internal::WireEventSender, FidlProtocol>(
+      fidl::internal::MakeAnyUnownedTransport(server_end.handle()));
+}
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_CHANNEL_H_

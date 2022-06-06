@@ -26,6 +26,8 @@ class UnownedClientEnd;
 template <typename Protocol>
 class ServerEnd;
 template <typename Protocol>
+class UnownedServerEnd;
+template <typename Protocol>
 class ServerBindingRef;
 template <typename FidlMethod>
 class WireUnownedResult;
@@ -51,6 +53,8 @@ struct ChannelTransport {
   using UnownedClientEnd = fidl::UnownedClientEnd<Protocol>;
   template <typename Protocol>
   using ServerEnd = fidl::ServerEnd<Protocol>;
+  template <typename Protocol>
+  using UnownedServerEnd = fidl::UnownedServerEnd<Protocol>;
   template <typename Protocol>
   using ServerBindingRef = fidl::ServerBindingRef<Protocol>;
   template <typename FidlMethod>
@@ -238,6 +242,27 @@ class ServerEnd : public internal::ServerEndBase<Protocol, internal::ChannelTran
     zx::channel channel = TakeChannel();
     return fidl_epitaph_write(channel.get(), epitaph_value);
   }
+};
+
+// A typed server endpoint that does not claim ownership. It is typically
+// created from an owning |fidl::ServerEnd<Protocol>|.
+// These types are used by generated FIDL APIs that do not take ownership.
+//
+// The remote (client) counterpart of the channel expects this end of the
+// channel to speak the protocol represented by |Protocol|.
+//
+// Compared to a |const fidl::ServerEnd<Protocol>&|,
+// |fidl::UnownedServerEnd<Protocol>| has the additional flexibility of being
+// able to be stored in a member variable or field, while still remembering
+// the associated FIDL protocol.
+template <typename Protocol>
+class UnownedServerEnd final
+    : public internal::UnownedServerEndBase<Protocol, internal::ChannelTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, internal::ChannelTransport>);
+  using UnownedServerEndBase = internal::UnownedServerEndBase<Protocol, internal::ChannelTransport>;
+
+ public:
+  using UnownedServerEndBase::UnownedServerEndBase;
 };
 
 }  // namespace fidl

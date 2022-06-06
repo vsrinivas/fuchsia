@@ -20,6 +20,8 @@ class UnownedClientEnd;
 template <typename Protocol>
 class ServerEnd;
 template <typename Protocol>
+class UnownedServerEnd;
+template <typename Protocol>
 class ServerBindingRef;
 template <typename FidlMethod>
 class WireUnownedResult;
@@ -53,6 +55,8 @@ struct DriverTransport {
   using UnownedClientEnd = fdf::UnownedClientEnd<Protocol>;
   template <typename Protocol>
   using ServerEnd = fdf::ServerEnd<Protocol>;
+  template <typename Protocol>
+  using UnownedServerEnd = fdf::UnownedServerEnd<Protocol>;
   template <typename Protocol>
   using ServerBindingRef = fdf::ServerBindingRef<Protocol>;
   template <typename FidlMethod>
@@ -160,6 +164,16 @@ class ServerEnd final
 
  public:
   using fidl::internal::ServerEndBase<Protocol, fidl::internal::DriverTransport>::ServerEndBase;
+};
+
+template <typename Protocol>
+class UnownedServerEnd final
+    : public fidl::internal::UnownedServerEndBase<Protocol, fidl::internal::DriverTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, fidl::internal::DriverTransport>);
+
+ public:
+  using fidl::internal::UnownedServerEndBase<Protocol,
+                                             fidl::internal::DriverTransport>::UnownedServerEndBase;
 };
 
 template <typename Protocol>

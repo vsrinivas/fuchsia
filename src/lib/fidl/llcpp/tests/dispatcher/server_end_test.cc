@@ -94,3 +94,54 @@ TEST(ServerEnd, CloseTwice) {
 
   ASSERT_DEATH(server_end.Close(ZX_OK), "Cannot close an invalid ServerEnd.");
 }
+
+TEST(UnownedServerEnd, Constructors) {
+  auto endpoints = fidl::CreateEndpoints<llcpp_test::Frobinator>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+  fidl::ServerEnd<llcpp_test::Frobinator> server_end = std::move(endpoints->server);
+
+  {
+    // Construct from a |fidl::ServerEnd|.
+    fidl::UnownedServerEnd<llcpp_test::Frobinator> unowned_server_end(server_end);
+    ASSERT_EQ(unowned_server_end.handle(), server_end.channel().get());
+
+    // Implicit construction during parameter passing.
+    auto id = [](fidl::UnownedServerEnd<llcpp_test::Frobinator> unowned) { return unowned; };
+    auto roundtrip = id(server_end);
+    ASSERT_EQ(roundtrip.handle(), server_end.channel().get());
+  }
+
+  {
+    // Construct from a |zx_handle_t|.
+    fidl::UnownedServerEnd<llcpp_test::Frobinator> unowned_server_end(server_end.channel().get());
+    ASSERT_EQ(unowned_server_end.handle(), server_end.channel().get());
+  }
+
+  {
+    // Copy construction.
+    fidl::UnownedServerEnd<llcpp_test::Frobinator> unowned_server_end(server_end);
+    fidl::UnownedServerEnd<llcpp_test::Frobinator> unowned_server_end2(unowned_server_end);
+    ASSERT_EQ(unowned_server_end.handle(), unowned_server_end2.handle());
+  }
+}
+
+TEST(UnownedServerEnd, IsValid) {
+  fidl::ServerEnd<llcpp_test::Frobinator> invalid{};
+  fidl::UnownedServerEnd<llcpp_test::Frobinator> unowned_server_end(invalid);
+  ASSERT_FALSE(unowned_server_end.is_valid());
+
+  auto endpoints = fidl::CreateEndpoints<llcpp_test::Frobinator>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+  fidl::UnownedServerEnd<llcpp_test::Frobinator> unowned_server_end_valid(endpoints->server);
+  ASSERT_TRUE(unowned_server_end_valid.is_valid());
+}
+
+TEST(UnownedServerEnd, BorrowFromServerEnd) {
+  auto endpoints = fidl::CreateEndpoints<llcpp_test::Frobinator>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+
+  auto unowned_server_end = endpoints->client.borrow();
+  static_assert(std::is_same_v<decltype(unowned_server_end),
+                               decltype(fidl::UnownedClientEnd<llcpp_test::Frobinator>(0))>);
+  ASSERT_EQ(unowned_server_end.channel(), endpoints->client.channel().get());
+}

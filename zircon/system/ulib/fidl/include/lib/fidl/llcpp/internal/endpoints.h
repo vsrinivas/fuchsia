@@ -114,6 +114,23 @@ class ServerEndBase : public TransportEnd<Protocol, Transport> {
 };
 
 template <typename Protocol, typename Transport>
+class UnownedServerEndBase : public UnownedTransportEnd<Protocol, Transport> {
+  using UnownedTransportEnd = UnownedTransportEnd<Protocol, Transport>;
+
+ public:
+  using UnownedTransportEnd::UnownedTransportEnd;
+
+  // An unowned server end can only be constructed from an existing handle.
+  //
+  // This constructor defines an implicit conversion to facilitate invoking
+  // generated FIDL APIs with either an unowned server end, or a const
+  // reference to a |TransportEndSubclass|.
+  // NOLINTNEXTLINE
+  UnownedServerEndBase(const fidl::internal::ServerEndType<Protocol>& owner)
+      : UnownedServerEndBase(owner.handle()->get()) {}
+};
+
+template <typename Protocol, typename Transport>
 class ClientEndBase : public TransportEnd<Protocol, Transport> {
   using TransportEnd = TransportEnd<Protocol, Transport>;
 

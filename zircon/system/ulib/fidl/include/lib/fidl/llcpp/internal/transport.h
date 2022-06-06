@@ -295,6 +295,8 @@ class AnyUnownedTransport {
 // the transport types.
 class AnyTransport {
  public:
+  AnyTransport() = default;
+
   template <typename Transport>
   static AnyTransport Make(fidl_handle_t handle) noexcept {
     return AnyTransport(&Transport::VTable, handle);
@@ -366,8 +368,8 @@ class AnyTransport {
   explicit constexpr AnyTransport(const TransportVTable* vtable, fidl_handle_t handle)
       : vtable_(vtable), handle_(handle) {}
 
-  const TransportVTable* vtable_;
-  fidl_handle_t handle_;
+  const TransportVTable* vtable_ = nullptr;
+  fidl_handle_t handle_ = FIDL_HANDLE_INVALID;
 };
 
 template <typename TransportObject>
@@ -407,6 +409,10 @@ using UnownedClientEndType = typename Protocol::Transport::template UnownedClien
 // The ServerEnd type for a given protocol, e.g. fidl::ServerEnd or fdf::ServerEnd.
 template <typename Protocol>
 using ServerEndType = typename Protocol::Transport::template ServerEnd<Protocol>;
+
+// The UnownedServerEnd type for a given protocol, e.g. fidl::UnownedServerEnd.
+template <typename Protocol>
+using UnownedServerEndType = typename Protocol::Transport::template UnownedServerEnd<Protocol>;
 
 // The ServerBindingRef type for a given protocol, e.g. fidl::ServerBindingRef.
 template <typename Protocol>

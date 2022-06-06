@@ -1606,4 +1606,20 @@ TEST(BindServerTestCase, MultipleInheritanceServer) {
   EXPECT_EQ(ZX_OK, epitaph.error);
 }
 
+TEST(WireSendEvent, UnownedServerEnd) {
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_EQ(endpoints.status_value(), ZX_OK);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  fidl::UnownedServerEnd<Example> server_end(endpoints->server);
+  auto result = fidl::WireSendEvent(server_end)->OnEvent("abcd");
+  ASSERT_OK(result.status());
+
+  // For simplicity, just ensure that *some* message was received on the other side.
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  uint32_t byte_actual, handle_actual;
+  ASSERT_OK(endpoints->client.channel().read(0, bytes, nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0,
+                                             &byte_actual, &handle_actual));
+}
+
 }  // namespace
