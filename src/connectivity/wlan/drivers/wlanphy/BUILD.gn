@@ -17,7 +17,6 @@ wlanphy_sources = [
 wlanphy_deps = [
   ":wlanphy_bind",
   "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
-  "//sdk/fidl/fuchsia.wlan.device",
   "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
   "//src/connectivity/wlan/drivers/lib/log/cpp",
   "//src/connectivity/wlan/lib/common/cpp:common",
@@ -65,6 +64,8 @@ test("wlanphy_convert_unittest") {
   sources = wlanphy_sources + [ "tests/convert_unittest.cc" ]
 
   deps = wlanphy_deps + [
+           "//src/lib/testing/loop_fixture",
+           "//third_party/googletest:gmock",
            "//src/lib/fxl/test:gtest_main",
            "//third_party/googletest:gtest",
          ]

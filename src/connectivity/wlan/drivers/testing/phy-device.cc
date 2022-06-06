@@ -5,7 +5,6 @@
 #include "phy-device.h"
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
-#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
 
@@ -21,11 +20,7 @@
 namespace wlan {
 namespace testing {
 
-namespace wlan_common = ::fuchsia::wlan::common;
-namespace wlan_device = ::fuchsia::wlan::device;
-namespace wlan_internal = ::fuchsia::wlan::internal;
-
-#define DEV(c) static_cast<PhyDevice*>(c)
+#define DEV(c) (static_cast<PhyDevice*>(c))
 static zx_protocol_device_t wlanphy_test_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
@@ -37,9 +32,9 @@ static zx_protocol_device_t wlanphy_test_device_ops = {
 
 class DeviceConnector : public fidl::WireServer<fuchsia_wlan_device::Connector> {
  public:
-  DeviceConnector(PhyDevice* device) : device_(device) {}
+  explicit DeviceConnector(PhyDevice* device) : device_(device) {}
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
-    device_->Connect(request->request.TakeChannel());
+    device_->Connect(std::move(request->request));
   }
 
  private:
@@ -51,7 +46,8 @@ PhyDevice::PhyDevice(zx_device_t* device) : parent_(device) {}
 zx_status_t PhyDevice::Bind() {
   zxlogf(INFO, "wlan::testing::phy::PhyDevice::Bind()");
 
-  dispatcher_ = std::make_unique<wlan::common::Dispatcher<wlan_device::Phy>>(wlanphy_async_t());
+  dispatcher_ =
+      std::make_unique<wlan::common::Dispatcher<fuchsia_wlan_device::Phy>>(wlanphy_async_t());
 
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
@@ -89,18 +85,18 @@ zx_status_t PhyDevice::Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void PhyDevice::GetSupportedMacRoles(GetSupportedMacRolesCallback callback) {
+void PhyDevice::GetSupportedMacRoles(GetSupportedMacRolesRequestView req,
+                                     GetSupportedMacRolesCompleter::Sync& completer) {
   zxlogf(INFO, "wlan::testing::phy::PhyDevice::GetSupportedMacRoles()");
 
-  callback(wlan_device::Phy_GetSupportedMacRoles_Result::WithResponse(
-      wlan_device::Phy_GetSupportedMacRoles_Response(
-          {wlan_common::WlanMacRole::CLIENT, wlan_common::WlanMacRole::AP})));
+  fuchsia_wlan_common::WlanMacRole roles[] = {fuchsia_wlan_common::WlanMacRole::kClient,
+                                              fuchsia_wlan_common::WlanMacRole::kAp};
+  completer.ReplySuccess(fidl::VectorView<fuchsia_wlan_common::WlanMacRole>::FromExternal(roles));
 }
 
-void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {
-  zxlogf(INFO, "CreateRequest: role=%u", req.role);
+void PhyDevice::CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sync& completer) {
+  zxlogf(INFO, "CreateRequest: role=%u", req->req.role);
   std::lock_guard<std::mutex> guard(lock_);
-  wlan_device::CreateIfaceResponse resp;
 
   // We leverage wrapping of unsigned ints to cycle back through ids to find an unused one.
   bool found_unused = false;
@@ -118,35 +114,37 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
   }
   ZX_DEBUG_ASSERT(found_unused);
   if (!found_unused) {
-    resp.status = ZX_ERR_NO_RESOURCES;
-    callback(std::move(resp));
+    completer.Reply({
+        .status = ZX_ERR_NO_RESOURCES,
+    });
     return;
   }
 
   wlan_mac_role_t role = 0;
-  switch (req.role) {
-    case wlan_common::WlanMacRole::CLIENT:
+  switch (req->req.role) {
+    case fuchsia_wlan_common::WlanMacRole::kClient:
       role = WLAN_MAC_ROLE_CLIENT;
       break;
-    case wlan_common::WlanMacRole::AP:
+    case fuchsia_wlan_common::WlanMacRole::kAp:
       role = WLAN_MAC_ROLE_AP;
       break;
-    case wlan_common::WlanMacRole::MESH:
+    case fuchsia_wlan_common::WlanMacRole::kMesh:
       role = WLAN_MAC_ROLE_MESH;
       break;
     default:
-      resp.status = ZX_ERR_NOT_SUPPORTED;
-      callback(std::move(resp));
+      completer.Reply({
+          .status = ZX_ERR_NOT_SUPPORTED,
+      });
       return;
   }
 
   // Create the interface device and bind it.
   auto macdev = std::make_unique<IfaceDevice>(zxdev_, role);
-  zx_status_t status = macdev->Bind();
-  if (status != ZX_OK) {
+  if (zx_status_t status = macdev->Bind(); status != ZX_OK) {
     zxlogf(ERROR, "could not bind child wlan-softmac device: %d", status);
-    resp.status = status;
-    callback(std::move(resp));
+    completer.Reply({
+        .status = status,
+    });
     return;
   }
 
@@ -158,60 +156,61 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
   // Since we successfully used the id, increment the next id counter.
   next_id_ = id + 1;
 
-  resp.iface_id = id;
-  resp.status = ZX_OK;
-  callback(std::move(resp));
+  completer.Reply({
+      .status = ZX_OK,
+      .iface_id = id,
+  });
 }
 
-void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCallback callback) {
-  zxlogf(INFO, "DestroyRequest: id=%u", req.id);
-
-  wlan_device::DestroyIfaceResponse resp;
+void PhyDevice::DestroyIface(DestroyIfaceRequestView req, DestroyIfaceCompleter::Sync& completer) {
+  zxlogf(INFO, "DestroyRequest: id=%u", req->req.id);
 
   std::lock_guard<std::mutex> guard(lock_);
-  auto intf = ifaces_.find(req.id);
+  auto intf = ifaces_.find(req->req.id);
   if (intf == ifaces_.end()) {
-    resp.status = ZX_ERR_NOT_FOUND;
-    callback(std::move(resp));
+    completer.Reply({
+        .status = ZX_ERR_NOT_FOUND,
+    });
     return;
   }
 
   device_async_remove(intf->second->zxdev());
   // Remove the device from our map. We do NOT free the memory, since the devhost owns it and will
   // call release when it's safe to free the memory.
-  ifaces_.erase(req.id);
+  ifaces_.erase(intf);
 
-  resp.status = ZX_OK;
-  callback(std::move(resp));
+  completer.Reply({
+      .status = ZX_OK,
+  });
 }
 
-void PhyDevice::SetCountry(wlan_device::CountryCode req, SetCountryCallback callback) {
-  zxlogf(INFO, "testing/PHY: SetCountry [%s]", wlan::common::Alpha2ToStr(req.alpha2).c_str());
-  callback(ZX_OK);
+void PhyDevice::SetCountry(SetCountryRequestView req, SetCountryCompleter::Sync& completer) {
+  zxlogf(INFO, "testing/PHY: SetCountry [%s]", wlan::common::Alpha2ToStr(req->req.alpha2).c_str());
+  completer.Reply(ZX_OK);
 }
 
-void PhyDevice::GetCountry(GetCountryCallback callback) {
+void PhyDevice::GetCountry(GetCountryRequestView req, GetCountryCompleter::Sync& completer) {
   zxlogf(INFO, "testing/PHY: GetCountry");
-  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void PhyDevice::ClearCountry(ClearCountryCallback callback) {
+void PhyDevice::ClearCountry(ClearCountryRequestView req, ClearCountryCompleter::Sync& completer) {
   zxlogf(INFO, "testing/PHY: ClearCountry");
-  callback(ZX_OK);
+  completer.Reply(ZX_OK);
 }
 
-void PhyDevice::SetPsMode(wlan_common::PowerSaveType req, SetPsModeCallback callback) {
-  zxlogf(INFO, "testing/PHY: SetPsMode [%d]", req);
-  callback(ZX_OK);
+void PhyDevice::SetPsMode(SetPsModeRequestView req, SetPsModeCompleter::Sync& completer) {
+  zxlogf(INFO, "testing/PHY: SetPsMode [%d]", req->req);
+  completer.Reply(ZX_OK);
 }
 
-void PhyDevice::GetPsMode(GetPsModeCallback callback) {
+void PhyDevice::GetPsMode(GetPsModeRequestView req, GetPsModeCompleter::Sync& completer) {
   zxlogf(INFO, "testing/PHY: GetPSMode");
-  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t PhyDevice::Connect(zx::channel request) {
-  return dispatcher_->AddBinding(std::move(request), this);
+zx_status_t PhyDevice::Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end) {
+  return dispatcher_->AddBinding(std::move(server_end), this);
 }
 
 }  // namespace testing

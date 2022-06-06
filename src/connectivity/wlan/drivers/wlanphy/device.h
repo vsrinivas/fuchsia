@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
 
+#include <fidl/fuchsia.wlan.device/cpp/wire.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <fuchsia/wlan/device/cpp/fidl.h>
 #include <lib/ddk/driver.h>
 
 #include <wlan/common/dispatcher.h>
@@ -15,10 +15,10 @@ namespace wlanphy {
 
 class DeviceConnector;
 
-class Device : public ::fuchsia::wlan::device::Phy {
+class Device : public fidl::WireServer<fuchsia_wlan_device::Phy> {
  public:
   Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto);
-  ~Device();
+  ~Device() override;
 
   zx_status_t Bind();
 
@@ -27,28 +27,26 @@ class Device : public ::fuchsia::wlan::device::Phy {
   void Release();
   void Unbind();
 
-  // wlanphy_protocol_t from ::fuchsia::wlan::device::Phy
-  virtual void GetSupportedMacRoles(GetSupportedMacRolesCallback callback) override;
-  virtual void CreateIface(::fuchsia::wlan::device::CreateIfaceRequest req,
-                           CreateIfaceCallback callback) override;
-  virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,
-                            DestroyIfaceCallback callback) override;
-  virtual void SetCountry(::fuchsia::wlan::device::CountryCode req,
-                          SetCountryCallback callback) override;
-  virtual void GetCountry(GetCountryCallback callback) override;
-  virtual void ClearCountry(ClearCountryCallback callback) override;
-  void SetPsMode(::fuchsia::wlan::common::PowerSaveType req, SetPsModeCallback callback) override;
-  void GetPsMode(GetPsModeCallback callback) override;
+  // wlanphy_protocol_t from fuchsia_wlan_device::Phy
+  void GetSupportedMacRoles(GetSupportedMacRolesRequestView req,
+                            GetSupportedMacRolesCompleter::Sync& completer) override;
+  void CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sync& completer) override;
+  void DestroyIface(DestroyIfaceRequestView req, DestroyIfaceCompleter::Sync& completer) override;
+  void SetCountry(SetCountryRequestView req, SetCountryCompleter::Sync& completer) override;
+  void GetCountry(GetCountryRequestView req, GetCountryCompleter::Sync& completer) override;
+  void ClearCountry(ClearCountryRequestView req, ClearCountryCompleter::Sync& completer) override;
+  void SetPsMode(SetPsModeRequestView req, SetPsModeCompleter::Sync& completer) override;
+  void GetPsMode(GetPsModeRequestView req, GetPsModeCompleter::Sync& completer) override;
 
  private:
-  zx_status_t Connect(zx::channel request);
+  zx_status_t Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end);
 
   zx_device_t* parent_;
   zx_device_t* zxdev_;
 
   wlanphy_impl_protocol_t wlanphy_impl_;
 
-  wlan::common::Dispatcher<::fuchsia::wlan::device::Phy> dispatcher_;
+  wlan::common::Dispatcher<fuchsia_wlan_device::Phy> dispatcher_;
 
   friend class DeviceConnector;
 };

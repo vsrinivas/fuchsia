@@ -9,6 +9,7 @@
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
+#include <lib/fidl/cpp/binding.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
