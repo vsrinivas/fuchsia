@@ -5,6 +5,7 @@
 //! Utilities for Product Bundle Metadata (PBM).
 
 use anyhow::{bail, Context, Result};
+use ffx_emulator_common::instances::get_instance_dir;
 use ffx_emulator_common::{
     config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE, KVM_PATH},
     split_once, tap_available,
@@ -13,7 +14,6 @@ use ffx_emulator_config::{
     convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
     NetworkingMode, OperatingSystem,
 };
-use ffx_emulator_engines::get_instance_dir;
 use ffx_emulator_start_args::StartCommand;
 use fms;
 use futures::executor::block_on;

@@ -5,8 +5,8 @@
 use anyhow::Result;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
-use ffx_emulator_common::config::FfxConfigWrapper;
-use ffx_emulator_engines::{get_all_instances, serialization::read_from_disk};
+use ffx_emulator_commands::get_engine_by_name;
+use ffx_emulator_common::{config::FfxConfigWrapper, instances::get_all_instances};
 use ffx_emulator_list_args::ListCommand;
 
 // TODO(fxbug.dev/94232): Update this error message once shut down is more robust.
@@ -22,28 +22,27 @@ appear anymore.
 #[ffx_plugin()]
 pub async fn list(_cmd: ListCommand) -> Result<()> {
     let ffx_config = FfxConfigWrapper::new();
-    let instance_list = match get_all_instances(&ffx_config).await {
-        Ok(list) => list,
+    let instance_list: Vec<Option<String>> = match get_all_instances(&ffx_config).await {
+        Ok(list) => list.into_iter().map(|v| Some(v)).collect(),
         Err(e) => ffx_bail!("Error encountered looking up emulator instances: {:?}", e),
     };
     let mut broken = false;
-    for entry in instance_list {
-        if let Some(instance) = entry.as_path().file_name() {
-            let name = instance.to_str().unwrap();
-            let engine = match read_from_disk(&entry) {
-                Ok(val) => val,
-                Err(_) => {
-                    println!("[Broken]    {}", name);
-                    broken = true;
-                    continue;
+    for mut some_name in instance_list {
+        match get_engine_by_name(&ffx_config, &mut some_name).await {
+            Ok(engine) => {
+                let name = some_name.unwrap();
+                if engine.is_running() {
+                    println!("[Active]    {}", name);
+                } else {
+                    println!("[Inactive]  {}", name);
                 }
-            };
-            if engine.is_running() {
-                println!("[Active]    {}", name);
-            } else {
-                println!("[Inactive]  {}", name);
             }
-        }
+            Err(_) => {
+                println!("[Broken]    {}", some_name.unwrap_or("<unspecified>".to_string()));
+                broken = true;
+                continue;
+            }
+        };
     }
     if broken {
         eprintln!("{}", BROKEN_MESSAGE);

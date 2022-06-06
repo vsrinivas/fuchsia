@@ -11,6 +11,7 @@ if (is_host) {
     edition = "2018"
     sources = [
       "src/config.rs",
+      "src/instances.rs",
       "src/lib.rs",
       "src/process.rs",
       "src/target.rs",
@@ -32,6 +33,7 @@ if (is_host) {
       "//third_party/rust_crates:shared_child",
       "//third_party/rust_crates:signal-hook",
     ]
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
   }
 
   group("tests") {

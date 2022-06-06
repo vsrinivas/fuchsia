@@ -11,6 +11,7 @@ if (is_host) {
     with_unit_tests = true
     deps = [
       "//src/developer/ffx/lib/errors:lib",
+      "//src/developer/ffx/plugins/emulator/commands:ffx_emulator_commands",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",

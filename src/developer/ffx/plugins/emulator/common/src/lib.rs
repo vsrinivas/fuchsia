@@ -16,6 +16,7 @@ use std::{
 
 // Provides access to ffx_config properties.
 pub mod config;
+pub mod instances;
 pub mod process;
 pub mod target;
 
