@@ -15,22 +15,31 @@ use crate::{
     ip::{
         self,
         icmp::{Icmpv4State, Icmpv6State},
+        reassembly::FragmentStateContext,
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
         socket::{BufferIpSocketContext, IpSock, IpSocketContext},
-        IpDeviceIdContext, IpLayerStateIpExt, IpPacketFragmentCache, IpStateContext, IpStateInner,
-        SendIpPacketMeta,
+        IpDeviceIdContext, IpPacketFragmentCache, IpStateContext, SendIpPacketMeta,
     },
 };
 
-impl<I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>, SC: IpStateContext<I>>
-    StateContext<IpPacketFragmentCache<I>> for SC
-{
-    fn get_state_with(&self, _id: ()) -> &IpPacketFragmentCache<I> {
-        &AsRef::<IpStateInner<_, _, _>>::as_ref(self.get_ip_layer_state()).fragment_cache
-    }
+// Note: we can't provide a single impl for `FragmentStateContext` which is
+// generic over all `I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>` because
+// we have a `DummyCtx` type in the reassembly tests module which implements
+// `FragmentStateContext` resulting in a conflicting implementations error.
+// Manually implementing `FragmentStateContext` for each `I: Ip` we support
+// seems to workaround this issue.
+//
+// See https://doc.rust-lang.org/error-index.html#E0119 for more details.
 
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut IpPacketFragmentCache<I> {
-        &mut AsMut::<IpStateInner<_, _, _>>::as_mut(self.get_ip_layer_state_mut()).fragment_cache
+impl<SC: IpStateContext<Ipv4>> FragmentStateContext<Ipv4> for SC {
+    fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<Ipv4> {
+        &mut self.get_ip_layer_state_mut().as_mut().fragment_cache
+    }
+}
+
+impl<SC: IpStateContext<Ipv6>> FragmentStateContext<Ipv6> for SC {
+    fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<Ipv6> {
+        &mut self.get_ip_layer_state_mut().as_mut().fragment_cache
     }
 }
 
