@@ -44,6 +44,8 @@ type Image struct {
 	Args []string
 	// IsExecutable is true if the image is actually a script or executable.
 	IsExecutable bool
+	// IsFlashable is true if the image can be used via fastboot flash.
+	IsFlashable bool
 }
 
 func getImageArgs(img build.Image, bootMode Mode) []string {
@@ -60,6 +62,10 @@ func getImageArgs(img build.Image, bootMode Mode) []string {
 
 func isExecutable(imgType string) bool {
 	return imgType == "script" || imgType == "exe.linux-x64"
+}
+
+func isFlashable(img build.Image) bool {
+	return len(img.FastbootFlashArgs) > 0 || len(img.FastbootBootArgs) > 0
 }
 
 // ConvertFromBuildImages filters and returns Images corresponding to build Images of a given bootMode.
@@ -91,6 +97,7 @@ func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode, imageDir s
 			Size:         fi.Size(),
 			Args:         args,
 			IsExecutable: isExecutable(buildImg.Type),
+			IsFlashable:  isFlashable(buildImg),
 		})
 	}
 	closeFunc = func() error {

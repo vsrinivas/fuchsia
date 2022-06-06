@@ -29,6 +29,13 @@ type Image struct {
 	// NetbootArgs is the list of associated arguments to pass to the bootserver
 	// when netbooting.
 	NetbootArgs []string `json:"bootserver_netboot,omitempty"`
+
+	// FastbootBootArgs is the list of arguments to pass to fastboot boot.
+	FastbootBootArgs []string `json:"fastboot_boot, omitempty"`
+
+	// FastbootFlashArgs is the list of associated arguments to pass to fastboot
+	// flash.
+	FastbootFlashArgs []string `json:"fastboot_flash, omitempty"`
 }
 
 // ImageManifest is a JSON list of images produced by the Fuchsia build.

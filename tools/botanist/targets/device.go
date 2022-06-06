@@ -277,7 +277,9 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		var imgs []*bootserver.Image
 		for _, img := range images {
 			img := img
-			imgs = append(imgs, &img)
+			if img.IsFlashable {
+				imgs = append(imgs, &img)
+			}
 		}
 		if err := copyImagesToDir(ctx, wd, true, imgs...); err != nil {
 			return err

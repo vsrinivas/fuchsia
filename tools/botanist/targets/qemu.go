@@ -24,14 +24,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/build"
-	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 
 	"github.com/creack/pty"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -436,71 +434,6 @@ func (t *QEMUTarget) Wait(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-}
-
-func copyImagesToDir(ctx context.Context, dir string, preservePath bool, imgs ...*bootserver.Image) error {
-	// Copy each in a goroutine for efficiency's sake.
-	eg, ctx := errgroup.WithContext(ctx)
-	for _, img := range imgs {
-		if img.Reader != nil {
-			img := img
-			eg.Go(func() error {
-				base := img.Name
-				if preservePath {
-					base = img.Path
-				}
-				dest := filepath.Join(dir, base)
-				return bootserver.DownloadWithRetries(ctx, dest, func() error {
-					return copyImageToDir(ctx, dest, img)
-				})
-			})
-		}
-	}
-	return eg.Wait()
-}
-
-func copyImageToDir(ctx context.Context, dest string, img *bootserver.Image) error {
-	f, ok := img.Reader.(*os.File)
-	if ok {
-		if err := osmisc.CopyFile(f.Name(), dest); err != nil {
-			return err
-		}
-		img.Path = dest
-		return nil
-	}
-
-	f, err := osmisc.CreateFile(dest)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	// Log progress to avoid hitting I/O timeout in case of slow transfers.
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	go func() {
-		for range ticker.C {
-			logger.Debugf(ctx, "transferring %s...\n", img.Name)
-		}
-	}()
-
-	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
-		return fmt.Errorf("%s (%q): %w", constants.FailedToCopyImageMsg, img.Name, err)
-	}
-	img.Path = dest
-
-	if img.IsExecutable {
-		if err := os.Chmod(img.Path, os.ModePerm); err != nil {
-			return fmt.Errorf("failed to make %s executable: %w", img.Path, err)
-		}
-	}
-
-	// We no longer need the reader at this point.
-	if c, ok := img.Reader.(io.Closer); ok {
-		c.Close()
-	}
-	img.Reader = nil
-	return nil
 }
 
 func normalizeFile(path string) (string, error) {
