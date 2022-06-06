@@ -22,6 +22,8 @@ $ scripts/owner/suggest_owners.py --path third_party/crashpad --csv csv.out
 $ scripts/owner/suggest_owners.py --path third_party/* --csv csv.out
 
 $ scripts/owner/suggest_owners.py --path third_party/* --all_refs --csv csv.out
+
+$ scripts/owner/suggest_owners.py --path third_party/* --all_refs --generate_missing
 """
 
 import argparse
@@ -95,6 +97,33 @@ def get_owners(path):
     return {owner for owner in owners if EMAIL.match(owner)}
 
 
+def get_owners_file_path(path):
+    # Look for the OWNERS file in the given path.
+    owners_path = os.path.join(path, "OWNERS")
+    if os.path.exists(owners_path):
+        return owners_path
+    # If not found, search one directory up.
+    parent_path = os.path.dirname(path)
+    if parent_path and parent_path != path:
+        return get_owners_file_path(parent_path)
+    return ""
+
+
+def generate_owners_files(project_path, refs):
+    # Find and include the OWNERS files of all references.
+    includes = set()
+    for ref in refs:
+        path = get_owners_file_path(ref)
+        if path:
+            includes.add("include /" + path + "\n")
+
+    generated_owners_path = os.path.join(project_path, "OWNERS")
+    print(f"Generating {generated_owners_path}...")
+    file = open(generated_owners_path, "w")
+    file.write("".join(sorted(includes)))
+    file.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Suggests owners for projects")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -109,10 +138,11 @@ def main():
         help=
         "Search for references to all targets and all files in input projects")
     parser.add_argument(
-        "--csv",
-        help="Output csv file",
-        type=argparse.FileType('w'),
-        required=True)
+        "--csv", help="Output csv file", type=argparse.FileType('w'))
+    parser.add_argument(
+        "--generate_missing",
+        action='store_true',
+        help="Generates OWNERS files for projects that are missing owners.")
     args = parser.parse_args()
 
     # Set working directory to //
@@ -174,6 +204,9 @@ def main():
         print("\n".join(sorted(refs)))
         print()
         args.csv.write(f"{project_path},{owners},{refs}\n")
+
+        if args.generate_missing:
+            generate_owners_files(project_path, refs)
 
 
 if __name__ == "__main__":
