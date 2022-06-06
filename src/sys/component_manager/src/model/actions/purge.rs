@@ -4,7 +4,10 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionKey, ActionSet, PurgeChildAction, ResolveAction, StartAction},
+        actions::{
+            Action, ActionKey, ActionSet, DiscoverAction, PurgeChildAction, ResolveAction,
+            ShutdownAction, StartAction,
+        },
         component::{ComponentInstance, InstanceState, StartReason},
         error::ModelError,
     },
@@ -44,15 +47,15 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
         }
     }
 
-    // Component should have been shut down.
-    {
-        let execution = component.lock_execution().await;
-        assert!(
-            execution.is_shut_down(),
-            "Component was not shut down before being purged? {}",
-            component.abs_moniker
-        );
-    }
+    // Require the component to be discovered before deleting it so a Destroyed event is
+    // always preceded by a Discovered.
+    ActionSet::register(component.clone(), DiscoverAction::new()).await?;
+
+    // For destruction to behave correctly, the component has to be shut down first.
+    // NOTE: This will recursively shut down the whole subtree. If this component has children,
+    // we'll call DestroyChild on them which in turn will call Shutdown on the child. Because
+    // the parent's subtree was shutdown, this shutdown is a no-op.
+    ActionSet::register(component.clone(), ShutdownAction::new()).await?;
 
     let nfs = {
         match *component.lock_state().await {
@@ -116,7 +119,7 @@ pub mod tests {
         super::*,
         crate::model::{
             actions::{
-                test_utils::{is_child_deleted, is_destroyed, is_executing, is_purged},
+                test_utils::{is_child_deleted, is_executing, is_purged},
                 ActionNotifier, DiscoverAction, ShutdownAction,
             },
             component::StartReason,
@@ -165,9 +168,6 @@ pub mod tests {
         ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
             .expect("purge failed");
-        // PurgeChild should not mark the instance non-live. That's done by Destroy which we
-        // don't call here.
-        assert!(!is_destroyed(&component_root, &"a:0".into()).await);
         assert!(is_child_deleted(&component_root, &component_a).await);
         {
             let events: Vec<_> = test
@@ -195,7 +195,6 @@ pub mod tests {
         ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
             .expect("purge failed");
-        assert!(!is_destroyed(&component_root, &"a:0".into()).await);
         assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
@@ -236,9 +235,6 @@ pub mod tests {
 
         // Register purge child action, and wait for it. Components should be purged.
         let component_container = test.look_up(vec!["container"].into()).await;
-        ActionSet::register(component_container.clone(), ShutdownAction::new())
-            .await
-            .expect("shutdown failed");
         ActionSet::register(component_root.clone(), PurgeChildAction::new("container:0".into()))
             .await
             .expect("purge failed");
@@ -390,51 +386,18 @@ pub mod tests {
     #[fuchsia::test]
     async fn purge_blocks_on_discover() {
         let (test, mut event_stream) = setup_purge_blocks_test(vec![EventType::Discovered]).await;
-
-        let event =
-            event_stream.wait_until(EventType::Discovered, vec!["a:0"].into()).await.unwrap();
-
-        // Register purge child action, while `action` is stalled.
-        let component_root = test.look_up(vec![].into()).await;
-        let component_a = match *component_root.lock_state().await {
-            InstanceState::Resolved(ref s) => {
-                s.get_live_child(&ChildMoniker::from("a")).expect("child a not found")
-            }
-            _ => panic!("not resolved"),
-        };
-        let (f, delete_handle) = {
-            let component_root = component_root.clone();
-            async move {
-                ActionSet::register(component_root, PurgeChildAction::new("a:0".into()))
-                    .await
-                    .expect("purge failed");
-            }
-            .remote_handle()
-        };
-        fasync::Task::spawn(f).detach();
-
-        // Check that `action` is being waited on. DestroyChild, not Purge, blocks on Discover.
-        loop {
-            let actions = component_a.lock_actions().await;
-            assert!(actions.contains(&ActionKey::Discover));
-            let rx = &actions.rep[&ActionKey::Discover];
-            let rx = rx
-                .downcast_ref::<ActionNotifier<<DiscoverAction as Action>::Output>>()
-                .expect("action notifier has unexpected type");
-            let refcount = rx.refcount.load(Ordering::Relaxed);
-            if refcount == 2 {
-                let actions = component_root.lock_actions().await;
-                assert!(actions.contains(&ActionKey::DestroyChild("a:0".into())));
-                break;
-            }
-            drop(actions);
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(100))).await;
-        }
-
-        // Resuming the action should allow deletion to proceed.
-        event.resume();
-        delete_handle.await;
-        assert!(is_child_deleted(&component_root, &component_a).await);
+        run_purge_blocks_test(
+            &test,
+            &mut event_stream,
+            EventType::Discovered,
+            DiscoverAction::new(),
+            // expected_ref_count:
+            // - 1 for the ActionSet
+            // - 1 for PurgeAction to wait on the action
+            // (the task that registers the action does not wait on it
+            2,
+        )
+        .await;
     }
 
     #[fuchsia::test]
@@ -895,9 +858,6 @@ pub mod tests {
 
         // Register delete action on "a", and wait for it. "b"'s component is deleted, but "b"
         // returns an error so the delete action on "a" does not succeed.
-        ActionSet::register(component_a.clone(), ShutdownAction::new())
-            .await
-            .expect("shutdown failed");
         ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
             .expect_err("purge succeeded unexpectedly");
@@ -962,6 +922,69 @@ pub mod tests {
                     Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
                     Lifecycle::Destroy(vec!["a:0"].into())
                 ]
+            );
+        }
+    }
+
+    #[fuchsia::test]
+    async fn destroy_runs_after_new_instance_created() {
+        // We want to demonstrate that running two destroy child actions for the same child
+        // instance, which should be idempotent, works correctly if a new instance of the child
+        // under the same name is created between them.
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, Some(vec![].into())).await;
+
+        // Create dynamic instance in "coll".
+        test.create_dynamic_child("coll", "a").await;
+
+        // Start the component so we can witness it getting stopped.
+        test.start(vec!["coll:a"].into()).await;
+
+        // We're going to run the destroy action for `a` twice. One after the other finishes, so
+        // the actions semantics don't dedup them to the same work item.
+        let component_root = test.look_up(vec![].into()).await;
+        let destroy_fut_1 =
+            ActionSet::register(component_root.clone(), PurgeChildAction::new("coll:a:1".into()));
+        let destroy_fut_2 =
+            ActionSet::register(component_root.clone(), PurgeChildAction::new("coll:a:1".into()));
+
+        let component_a = test.look_up(vec!["coll:a"].into()).await;
+        assert!(!is_child_deleted(&component_root, &component_a).await);
+
+        destroy_fut_1.await.expect("destroy failed");
+        assert!(is_child_deleted(&component_root, &component_a).await);
+
+        // Now recreate `a`
+        test.create_dynamic_child("coll", "a").await;
+        test.start(vec!["coll:a"].into()).await;
+
+        // Run the second destroy fut, it should leave the newly created `a` alone
+        destroy_fut_2.await.expect("destroy failed");
+        let component_a = test.look_up(vec!["coll:a"].into()).await;
+        assert!(!has_child(&component_root, "coll:a:1").await);
+        assert!(has_child(&component_root, "coll:a:2").await);
+        assert!(!is_child_deleted(&component_root, &component_a).await);
+
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["coll:a:1"].into()),
+                    Lifecycle::Destroy(vec!["coll:a:1"].into()),
+                ],
             );
         }
     }

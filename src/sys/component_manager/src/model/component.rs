@@ -1392,6 +1392,8 @@ pub struct ResolvedInstanceState {
     execution_scope: ExecutionScope,
     /// The component's declaration.
     decl: ComponentDecl,
+    // TODO(fxbug.dev/100652): `children` and `live_children` contain the same data now, merge
+    // them.
     /// All child instances, indexed by instanced moniker.
     children: HashMap<InstancedChildMoniker, Arc<ComponentInstance>>,
     /// Child instances that have not been deleted, indexed by child moniker.
@@ -1575,8 +1577,9 @@ impl ResolvedInstanceState {
         deleting_children
     }
 
-    /// Marks a live child deleting. No-op if the child is already deleting.
-    pub fn mark_child_deleted(&mut self, child_moniker: &ChildMoniker) {
+    /// Removes a child.
+    pub fn remove_child(&mut self, instanced_moniker: &InstancedChildMoniker) {
+        let child_moniker = instanced_moniker.without_instance_id();
         if self.live_children.remove(&child_moniker).is_none() {
             return;
         }
@@ -1597,11 +1600,8 @@ impl ResolvedInstanceState {
                 });
             !source_matches && !target_matches
         });
-    }
 
-    /// Removes a child.
-    pub fn remove_child(&mut self, moniker: &InstancedChildMoniker) {
-        self.children.remove(moniker);
+        self.children.remove(&instanced_moniker);
     }
 
     /// Creates a set of Environments instantiated from their EnvironmentDecls.
@@ -2068,7 +2068,7 @@ pub mod tests {
     use {
         super::*,
         crate::model::{
-            actions::{test_utils::is_discovered, DestroyChildAction, ShutdownAction},
+            actions::{test_utils::is_discovered, ShutdownAction},
             events::{registry::EventSubscription, stream::EventStream},
             hooks::EventType,
             starter::Starter,
@@ -3013,7 +3013,7 @@ pub mod tests {
 
         // Destroy `coll_1:b`. It should still be listed, but shouldn't be live.
         // The dynamic offer should be deleted.
-        ActionSet::register(root_component.clone(), DestroyChildAction::new("coll_1:b:2".into()))
+        ActionSet::register(root_component.clone(), PurgeChildAction::new("coll_1:b:2".into()))
             .await
             .expect("destroy failed");
 
@@ -3038,11 +3038,6 @@ pub mod tests {
                         moniker: "coll_1:a:1".into(),
                         environment_name: None,
                         is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:b:2".into(),
-                        environment_name: None,
-                        is_live: false
                     },
                     shutdown::Child {
                         moniker: "coll_2:a:3".into(),
@@ -3118,11 +3113,6 @@ pub mod tests {
                         is_live: true
                     },
                     shutdown::Child {
-                        moniker: "coll_1:b:2".into(),
-                        environment_name: None,
-                        is_live: false
-                    },
-                    shutdown::Child {
                         moniker: "coll_1:b:4".into(),
                         environment_name: None,
                         is_live: true
@@ -3136,52 +3126,6 @@ pub mod tests {
                 children
             );
 
-            pretty_assertions::assert_eq!(
-                vec![example_offer.clone(), example_dynamic_offer2.clone()],
-                shutdown::Component::offers(&*root_resolved)
-            )
-        }
-
-        // Finish destroying the original `coll_1:b`.
-        ActionSet::register(root_component.clone(), PurgeChildAction::new("coll_1:b:2".into()))
-            .await
-            .expect("purge failed");
-
-        {
-            let root_resolved = root_component.lock_resolved_state().await.expect("resolving");
-
-            let mut children = shutdown::Component::children(&*root_resolved);
-            children.sort();
-            pretty_assertions::assert_eq!(
-                vec![
-                    shutdown::Child {
-                        moniker: "a:0".into(),
-                        environment_name: Some("env_a".to_string()),
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "b:0".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:a:1".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:b:4".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_2:a:3".into(),
-                        environment_name: Some("env_b".to_string()),
-                        is_live: true
-                    },
-                ],
-                children
-            );
             pretty_assertions::assert_eq!(
                 vec![example_offer.clone(), example_dynamic_offer2.clone()],
                 shutdown::Component::offers(&*root_resolved)

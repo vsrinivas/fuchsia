@@ -147,7 +147,6 @@ template("component_manager") {
     "src/framework.rs",
     "src/fuchsia_pkg_resolver.rs",
     "src/lib.rs",
-    "src/model/actions/destroy_child.rs",
     "src/model/actions/discover.rs",
     "src/model/actions/mod.rs",
     "src/model/actions/purge.rs",

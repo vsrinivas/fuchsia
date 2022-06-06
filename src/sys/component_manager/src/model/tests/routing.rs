@@ -17,9 +17,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource},
         framework::SDK_REALM_SERVICE,
         model::{
-            actions::{
-                ActionSet, DestroyChildAction, PurgeAction, PurgeChildAction, ShutdownAction,
-            },
+            actions::{ActionSet, PurgeAction, PurgeChildAction, ShutdownAction},
             error::ModelError,
             events::registry::EventSubscription,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -1254,9 +1252,6 @@ async fn destroying_instance_kills_framework_service_task() {
 
     // Destroy `b`. This should cause the task hosted for `Realm` to be cancelled.
     let root = test.model.look_up(&vec![].into()).await.unwrap();
-    ActionSet::register(root.clone(), DestroyChildAction::new("b:0".into()))
-        .await
-        .expect("destroy failed");
     ActionSet::register(root.clone(), PurgeChildAction::new("b:0".into()))
         .await
         .expect("destroy failed");

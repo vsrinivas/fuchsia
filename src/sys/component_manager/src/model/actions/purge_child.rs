@@ -4,13 +4,15 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionKey, ActionSet, DestroyChildAction, PurgeAction},
+        actions::{Action, ActionKey, ActionSet, PurgeAction},
         component::{ComponentInstance, InstanceState},
         error::ModelError,
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
     cm_moniker::InstancedChildMoniker,
+    moniker::AbsoluteMonikerBase,
+    routing::component_instance::ComponentInstanceInterface,
     std::sync::Arc,
 };
 
@@ -44,16 +46,28 @@ async fn do_purge_child(
     let child = {
         let state = component.lock_state().await;
         match *state {
-            InstanceState::Resolved(ref s) => s.all_children().get(&moniker).map(|r| r.clone()),
+            InstanceState::Resolved(ref s) => {
+                let child = s.get_live_child(&moniker.without_instance_id()).map(|r| r.clone());
+                child
+            }
             InstanceState::Purged => None,
             InstanceState::New | InstanceState::Discovered => {
-                panic!("do_purge_child: not resolved");
+                panic!("DestroyChild: target is not resolved");
             }
         }
     };
     if let Some(child) = child {
-        // Mark the child destroyed
-        ActionSet::register(component.clone(), DestroyChildAction::new(moniker.clone())).await?;
+        if child.instanced_moniker().path().last() != Some(&moniker) {
+            // The instance of the child we pulled from our live children does not match the
+            // instance of the child we were asked to delete. This is possible if a
+            // `DestroyChild` action was registered twice on the same component, and after the
+            // first action was run a child with the same name was recreated.
+            //
+            // If there's already a live child with a different instance than what we were asked to
+            // destroy, then surely the instance we wanted to destroy is long gone, and we can
+            // safely return without doing any work.
+            return Ok(());
+        }
 
         // Wait for the child component to be destroyed
         ActionSet::register(child.clone(), PurgeAction::new()).await?;
@@ -72,6 +86,9 @@ async fn do_purge_child(
             }
         }
 
+        // TODO(fxbug.dev/100652): Replace Purged event with Destroyed
+        let event = Event::new(&child, Ok(EventPayload::Destroyed));
+        component.hooks.dispatch(&event).await?;
         // Send the Purged event for the component
         let event = Event::new(&child, Ok(EventPayload::Purged));
         component.hooks.dispatch(&event).await?;

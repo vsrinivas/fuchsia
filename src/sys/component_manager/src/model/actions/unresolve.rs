@@ -139,10 +139,8 @@ async fn do_unresolve(component: &Arc<ComponentInstance>) -> Result<(), ModelErr
 pub mod tests {
     use {
         crate::model::{
-            actions::test_utils::{
-                is_destroyed, is_discovered, is_executing, is_purged, is_resolved, is_unresolved,
-            },
-            actions::{ActionSet, DestroyChildAction, ShutdownAction, UnresolveAction},
+            actions::test_utils::{is_discovered, is_executing, is_purged, is_resolved},
+            actions::{ActionSet, ShutdownAction, UnresolveAction},
             component::{ComponentInstance, InstanceState, StartReason},
             error::ModelError,
             events::{registry::EventSubscription, stream::EventStream},
@@ -404,34 +402,6 @@ pub mod tests {
     #[fuchsia::test]
     async fn unresolve_action_on_single_run_collection() {
         test_collection(fdecl::Durability::SingleRun).await;
-    }
-
-    /// Check unresolve on a destroyed component. The system has a root with the child `a`.
-    #[fuchsia::test]
-    async fn unresolve_action_on_destroyed_component() {
-        let components = vec![
-            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
-            ("a", component_decl_with_test_runner()),
-        ];
-        let test = ActionsTest::new("root", components, None).await;
-
-        // Start component, then destroy it.
-        let component_a = test.start(vec!["a"].into()).await;
-        let component_root = test.look_up(vec![].into()).await;
-        ActionSet::register(component_root.clone(), DestroyChildAction::new("a:0".into()))
-            .await
-            .expect("destroy failed");
-        // Destroying the child leaves it resolved, but with the shut_down flag set.
-        assert!(is_destroyed(&component_root, &"a:0".into()).await);
-        assert!(is_resolved(&component_root).await);
-        assert!(is_resolved(&component_a).await);
-
-        // Unresolve.
-        ActionSet::register(component_a.clone(), UnresolveAction::new())
-            .await
-            .expect("unresolve failed");
-        assert!(is_discovered(&component_a).await);
-        assert!(is_unresolved(&component_a).await);
     }
 
     /// Check unresolve on a new component. The system has a root with the child `a`.

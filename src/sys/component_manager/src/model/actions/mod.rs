@@ -51,7 +51,6 @@
 //!   child and marks `DestroyChild` finished, which will notify the client that the action is
 //!   complete.
 
-mod destroy_child;
 mod discover;
 mod purge;
 mod purge_child;
@@ -69,9 +68,9 @@ pub use {
 
 // Limit visibility of internal actions
 #[cfg(test)]
-pub use {destroy_child::DestroyChildAction, purge::PurgeAction};
+pub use purge::PurgeAction;
 #[cfg(not(test))]
-pub(self) use {destroy_child::DestroyChildAction, purge::PurgeAction};
+pub(self) use purge::PurgeAction;
 
 use {
     crate::model::component::ComponentInstance,
@@ -436,32 +435,6 @@ pub(crate) mod test_utils {
 
     pub async fn is_executing(component: &ComponentInstance) -> bool {
         component.lock_execution().await.runtime.is_some()
-    }
-
-    pub async fn is_destroyed(
-        component: &ComponentInstance,
-        instanced_moniker: &InstancedChildMoniker,
-    ) -> bool {
-        let moniker = instanced_moniker.without_instance_id();
-        match *component.lock_state().await {
-            InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
-                Some(child) => {
-                    let child_execution = child.lock_execution().await;
-                    match s.get_live_child(&moniker) {
-                        None => child_execution.is_shut_down(),
-                        Some(child) => {
-                            // There's a live child under this name! But is it the same instance?
-                            child.instanced_moniker().path().last() != Some(instanced_moniker)
-                        }
-                    }
-                }
-                None => false,
-            },
-            InstanceState::Purged => false,
-            InstanceState::New | InstanceState::Discovered => {
-                panic!("not resolved")
-            }
-        }
     }
 
     /// Verifies that a child component is deleted by checking its InstanceState and verifying that

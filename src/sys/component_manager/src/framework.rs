@@ -1048,35 +1048,11 @@ mod tests {
         let (f, destroy_handle) = test.realm_proxy.destroy_child(&mut child_ref).remote_handle();
         fasync::Task::spawn(f).detach();
 
-        // The component should be stopped (shut down) before it is marked deleted.
+        // The component should be stopped (shut down) before it is destroyed.
         let event = event_stream
             .wait_until(EventType::Stopped, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
-        event.resume();
-        let event = event_stream
-            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
-            .await
-            .unwrap();
-
-        // Child is not marked deleted yet, but should be shut down.
-        {
-            let actual_children = get_live_children(test.component()).await;
-            let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
-            expected_children.insert("coll:a".into());
-            expected_children.insert("coll:b".into());
-            assert_eq!(actual_children, expected_children);
-            let child_a = get_live_child(test.component(), "coll:a").await;
-            let child_b = get_live_child(test.component(), "coll:b").await;
-            assert!(execution_is_shut_down(&child_a).await);
-            assert!(!execution_is_shut_down(&child_b).await);
-        }
-
-        // The destruction of "a" was arrested during `Destroy`. The old "a" should still exist,
-        // although it's not live.
-        assert!(has_child(test.component(), "coll:a:1").await);
-
-        // Move past the `Destroy` event for "a", and wait for `Purged`
         event.resume();
         let event = event_stream
             .wait_until(EventType::Purged, vec!["system:0", "coll:a:1"].into())
@@ -1090,6 +1066,8 @@ mod tests {
             let actual_children = get_live_children(test.component()).await;
             let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
             expected_children.insert("coll:b".into());
+            let child_b = get_live_child(test.component(), "coll:b").await;
+            assert!(!execution_is_shut_down(&child_b).await);
             assert_eq!(actual_children, expected_children);
             assert_eq!("(system(coll:b))", test.hook.print());
         }
