@@ -122,7 +122,6 @@ group("runtime_with_root_presenter") {
   deps = [
     ":runtime",
     "bin/input-pipeline",
-    "bin/input-pipeline:configs",
     "bin/root_presenter",
 
     # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to

@@ -222,7 +222,6 @@ group("package_deps") {
     # These are used by garnet_input_latency_benchmarks.
     "//src/sys/activity",
     "//src/ui/bin/input-pipeline",
-    "//src/ui/bin/input-pipeline:configs",
     "//src/ui/examples/simplest_app",
     "//src/ui/examples/yuv_to_image_pipe",
     "//src/ui/tools:present_view",

@@ -14,6 +14,8 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
         },
@@ -21,6 +23,10 @@
     use: [
         {
             protocol: [
+                "fuchsia.media.sounds.Player",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.pointerinjector.configuration.Setup",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
@@ -43,6 +49,8 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
             from: "self",

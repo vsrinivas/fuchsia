@@ -9,6 +9,10 @@
             url: "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cm",
         },
         {
+            name: "input_pipeline",
+            url: "fuchsia-pkg://fuchsia.com/input-pipeline#meta/input-pipeline.cm",
+        },
+        {
             name: "root_presenter",
             url: "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cm",
         },
@@ -19,6 +23,17 @@
             from: "parent",
             to: "#root_presenter",
             subdir: "root_presenter",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#input_pipeline",
+            subdir: "input_pipeline",
+        },
+        {
+            directory: "dev-input-report",
+            from: "parent",
+            to: [ "#input_pipeline" ],
         },
         {
             storage: "data",
@@ -36,6 +51,7 @@
             from: "parent",
             to: [
                 "#a11y_manager",
+                "#input_pipeline",
                 "#root_presenter",
             ],
         },
@@ -50,6 +66,14 @@
             ],
             from: "parent",
             to: [ "#a11y_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.media.sounds.Player",
+                "fuchsia.recovery.FactoryReset",
+            ],
+            from: "parent",
+            to: [ "#input_pipeline" ],
         },
         {
             protocol: [
@@ -76,6 +100,11 @@
             from: "#root_presenter",
             to: "#a11y_manager",
         },
+        {
+            protocol: [ "fuchsia.ui.pointerinjector.configuration.Setup" ],
+            from: "#root_presenter",
+            to: "#input_pipeline",
+        },
     ],
     expose: [
         {
@@ -87,6 +116,15 @@
                 "fuchsia.accessibility.virtualkeyboard.Registry",
             ],
             from: "#a11y_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "#input_pipeline",
         },
         {
             protocol: [
