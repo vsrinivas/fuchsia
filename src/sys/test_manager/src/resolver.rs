@@ -60,7 +60,9 @@ pub async fn serve_hermetic_resolver(
                                 Err(fresolution::ResolverError::Internal)
                             })
                         };
-                        responder.send(&mut result).expect("failed sending response");
+                        if let Err(e) = responder.send(&mut result) {
+                            warn!("Failed sending load response for {}: {}", component_url, e);
+                        }
                     }
                     fresolution::ResolverRequest::ResolveWithContext {
                         component_url,
@@ -83,7 +85,9 @@ pub async fn serve_hermetic_resolver(
                                     Err(fresolution::ResolverError::Internal)
                                 })
                         };
-                        responder.send(&mut result).expect("failed sending response");
+                        if let Err(e) = responder.send(&mut result) {
+                            warn!("Failed sending load response for {}: {}", component_url, e);
+                        }
                     }
                 }
             }
@@ -137,7 +141,9 @@ pub async fn serve_hermetic_loader(
             .await
             .map(|p| *p);
 
-        responder.send(result.as_mut()).expect("failed sending response");
+        if let Err(e) = responder.send(result.as_mut()) {
+            warn!("Failed sending load response for {}: {}", url, e);
+        }
     }
 }
 
@@ -272,6 +278,31 @@ mod tests {
         universe_resolver_task.await;
     }
 
+    #[fuchsia::test]
+    async fn drop_connection_on_resolve() {
+        let pkg_name = "package-one".to_string();
+
+        let (resolver_proxy, mut resolver_request_stream) =
+            create_proxy_and_stream::<fresolution::ResolverMarker>()
+                .expect("failed to create mock universe resolver proxy");
+        let universe_resolver_task = fasync::Task::spawn(async move {
+            respond_to_resolve_requests(&mut resolver_request_stream).await;
+            drop(resolver_request_stream);
+        });
+
+        let realm = construct_test_realm(pkg_name.into(), Arc::new(resolver_proxy))
+            .await
+            .expect("failed to construct test realm");
+        let hermetic_resolver_proxy =
+            realm.root.connect_to_protocol_at_exposed_dir::<fresolution::ResolverMarker>().unwrap();
+
+        let _ =
+            hermetic_resolver_proxy.resolve("fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm");
+        drop(hermetic_resolver_proxy); // code should not crash
+
+        universe_resolver_task.await;
+    }
+
     // Logging disabled as this outputs ERROR log, which will fail the test.
     #[fuchsia::test(logging = false)]
     async fn test_package_not_allowed() {
@@ -365,6 +396,28 @@ mod tests {
                 proxy.load_url("fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm").await.unwrap(),
                 Some(_)
             );
+        }
+
+        #[fuchsia::test]
+        async fn drop_connection_on_load() {
+            let pkg_name = "package-one".to_string();
+
+            let (loader_proxy, mut loader_request_stream) =
+                create_proxy_and_stream::<fv1sys::LoaderMarker>()
+                    .expect("failed to create mock loader proxy");
+            let (proxy, stream) = create_proxy_and_stream::<fv1sys::LoaderMarker>().unwrap();
+
+            let loader_task = fasync::Task::spawn(async move {
+                respond_to_loader_requests(&mut loader_request_stream).await;
+                drop(loader_request_stream);
+            });
+
+            let _serve_task =
+                fasync::Task::spawn(serve_hermetic_loader(stream, pkg_name.into(), loader_proxy));
+
+            let _ = proxy.load_url("fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm");
+            drop(proxy);
+            loader_task.await;
         }
 
         // Logging disabled as this outputs ERROR log, which will fail the test.
