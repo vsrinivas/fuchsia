@@ -576,6 +576,9 @@
           "dependencies": {
             "type": "object",
             "properties": {
+              "platform_metrics_node": {
+                "type": "string"
+              },
               "system_shutdown_node": {
                 "type": "string"
               },
@@ -594,6 +597,7 @@
             },
             "additionalProperties": false,
             "required": [
+              "platform_metrics_node",
               "system_shutdown_node",
               "thermal_load_notify_nodes",
               "temperature_handler_node_names"

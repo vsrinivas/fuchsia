@@ -5,6 +5,7 @@
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::platform_metrics::PlatformMetric;
 use crate::shutdown_request::{RebootReason, ShutdownRequest};
 use crate::temperature_handler::TemperatureFilter;
 use crate::types::{Celsius, Seconds, ThermalLoad};
@@ -46,12 +47,14 @@ use std::rc::Rc;
 ///   - SystemShutdown
 ///   - UpdateThermalLoad
 ///   - GetDriverPath
+///   - LogPlatformMetric
 ///
 /// FIDL dependencies: N/A
 
 pub struct ThermalLoadDriverBuilder<'a> {
     temperature_input_configs: Vec<TemperatureInputConfig>,
     system_shutdown_node: Rc<dyn Node>,
+    platform_metrics_node: Rc<dyn Node>,
     thermal_load_notify_nodes: Vec<Rc<dyn Node>>,
     inspect_root: Option<&'a inspect::Node>,
 }
@@ -76,6 +79,7 @@ impl ThermalLoadDriverBuilder<'_> {
         struct Dependencies {
             system_shutdown_node: String,
             thermal_load_notify_nodes: Vec<String>,
+            platform_metrics_node: String,
         }
 
         #[derive(Deserialize)]
@@ -87,6 +91,7 @@ impl ThermalLoadDriverBuilder<'_> {
         let data: JsonData = json::from_value(json_data).unwrap();
         Self {
             system_shutdown_node: nodes[&data.dependencies.system_shutdown_node].clone(),
+            platform_metrics_node: nodes[&data.dependencies.platform_metrics_node].clone(),
             temperature_input_configs: data
                 .config
                 .temperature_input_configs
@@ -116,6 +121,7 @@ impl ThermalLoadDriverBuilder<'_> {
         let node = Rc::new(ThermalLoadDriver {
             system_shutdown_node: self.system_shutdown_node,
             inspect: inspect_root.create_child("ThermalLoadDriver"),
+            platform_metrics: self.platform_metrics_node,
             thermal_load_notify_nodes: self.thermal_load_notify_nodes,
             polling_tasks: RefCell::new(Vec::new()),
         });
@@ -141,6 +147,9 @@ pub struct ThermalLoadDriver {
     /// Parent Inspect node for the ThermalLoadDriver node (named as "ThermalLoadDriver"). Each
     /// polling task / temperature input source has a corresponding child node underneath this one.
     inspect: inspect::Node,
+
+    /// Node that we'll notify with relevant platform metrics.
+    platform_metrics: Rc<dyn Node>,
 
     /// Stores the Task objects that handle polling temperature sensors and taking appropriate
     /// action as their thermal loads change. The bulk of the ThermalLoadDriver's real work happens
@@ -226,6 +235,15 @@ impl ThermalLoadDriver {
     /// Sends a message to the SystemShutdown node to initiate a system shutdown due to extreme
     /// temperatures.
     async fn initiate_thermal_shutdown(&self) -> Result<()> {
+        log_if_err!(
+            self.send_message(
+                &self.platform_metrics,
+                &Message::LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown)
+            )
+            .await,
+            "Failed to send ThrottlingResultShutdown metric"
+        );
+
         match self
             .send_message(
                 &self.system_shutdown_node,
@@ -424,6 +442,7 @@ mod tests {
               ]
             },
             "dependencies": {
+              "platform_metrics_node": "platform_metrics",
               "system_shutdown_node": "shutdown",
               "thermal_load_notify_nodes": [
                 "thermal_load_notify"
@@ -440,6 +459,7 @@ mod tests {
         nodes.insert("temp_sensor_2".to_string(), create_dummy_node());
         nodes.insert("shutdown".to_string(), create_dummy_node());
         nodes.insert("thermal_load_notify".to_string(), create_dummy_node());
+        nodes.insert("platform_metrics".to_string(), create_dummy_node());
         let _ = ThermalLoadDriverBuilder::new_from_json(json_data, &nodes);
     }
 
@@ -528,6 +548,7 @@ mod tests {
         // Create mock nodes
         let mut mock_maker = MockNodeMaker::new();
         let system_shutdown_node = create_dummy_node();
+        let platform_metrics_node = create_dummy_node();
         let mock_thermal_load_receiver = mock_maker.make("mock_thermal_load_receiver", vec![]);
         let mock_temperature_handler_1 = mock_maker.make("temperature_handler_1", vec![]);
         let mock_temperature_handler_2 = mock_maker.make("temperature_handler_2", vec![]);
@@ -564,6 +585,7 @@ mod tests {
                 },
             ],
             system_shutdown_node,
+            platform_metrics_node,
             thermal_load_notify_nodes: vec![mock_thermal_load_receiver.clone()],
             inspect_root: None,
         }
@@ -606,6 +628,7 @@ mod tests {
 
         // Create mock nodes
         let mut mock_maker = MockNodeMaker::new();
+        let platform_metrics_node = create_dummy_node();
         let mock_temperature_handler = mock_maker.make("temperature_handler", vec![]);
         let mock_thermal_load_receiver = mock_maker.make("mock_thermal_load_receiver", vec![]);
         let system_shutdown_node = mock_maker.make(
@@ -632,6 +655,7 @@ mod tests {
                 filter_time_constant: Seconds(1.0),
             }],
             system_shutdown_node,
+            platform_metrics_node,
             thermal_load_notify_nodes: vec![mock_thermal_load_receiver],
             inspect_root: None,
         }
@@ -656,6 +680,7 @@ mod tests {
 
         // Create mock nodes
         let mut mock_maker = MockNodeMaker::new();
+        let platform_metrics_node = create_dummy_node();
         let mock_temperature_handler_1 = mock_maker.make("temperature_handler_1", vec![]);
         let mock_temperature_handler_2 = mock_maker.make("temperature_handler_2", vec![]);
         let mock_thermal_load_receiver = mock_maker.make("mock_thermal_load_receiver", vec![]);
@@ -690,6 +715,7 @@ mod tests {
                 },
             ],
             system_shutdown_node,
+            platform_metrics_node,
             thermal_load_notify_nodes: vec![mock_thermal_load_receiver.clone()],
             inspect_root: Some(inspector.root()),
         }
@@ -730,5 +756,56 @@ mod tests {
                 },
             }
         );
+    }
+
+    /// Tests for correct platform metrics sent to the PlatformMetrics node.
+    #[test]
+    fn test_platform_metrics() {
+        let exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+
+        // Create mock nodes
+        let mut mock_maker = MockNodeMaker::new();
+        let mock_platform_metrics = mock_maker.make("mock_platform_metrics", vec![]);
+        let mock_temperature_handler = mock_maker.make("temperature_handler", vec![]);
+        let mock_thermal_load_receiver = mock_maker.make("mock_thermal_load_receiver", vec![]);
+        let mock_system_shutdown_node = mock_maker.make("mock_system_shutdown_node", vec![]);
+
+        // The ThermalLoadDriver asks for the driver path of all TemperatureHandler nodes during
+        // initialization
+        mock_temperature_handler.add_msg_response_pair((
+            msg_eq!(GetDriverPath),
+            msg_ok_return!(GetDriverPath("fake_driver_path".to_string())),
+        ));
+
+        let node = ThermalLoadDriverBuilder {
+            temperature_input_configs: vec![TemperatureInputConfig {
+                temperature_handler_node: mock_temperature_handler.clone(),
+                onset_temperature: Celsius(0.0),
+                reboot_temperature: Celsius(50.0),
+                poll_interval: Seconds(1.0),
+                filter_time_constant: Seconds(1.0),
+            }],
+            system_shutdown_node: mock_system_shutdown_node.clone(),
+            platform_metrics_node: mock_platform_metrics.clone(),
+            thermal_load_notify_nodes: vec![mock_thermal_load_receiver.clone()],
+            inspect_root: None,
+        }
+        .build()
+        .unwrap();
+
+        // Create the test runner
+        let mut node_runner = NodeTestRunner::new(exec, node, vec![mock_temperature_handler]);
+
+        // Verify if a sensor causes thermal shutdown then `ThrottlingResultShutdown` is sent
+        mock_system_shutdown_node.add_msg_response_pair((
+            msg_eq!(SystemShutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature))),
+            msg_ok_return!(SystemShutdown),
+        ));
+        mock_platform_metrics.add_msg_response_pair((
+            msg_eq!(LogPlatformMetric(PlatformMetric::ThrottlingResultShutdown)),
+            msg_ok_return!(LogPlatformMetric),
+        ));
+
+        node_runner.iterate_with_temperature_inputs(&[50.0]);
     }
 }

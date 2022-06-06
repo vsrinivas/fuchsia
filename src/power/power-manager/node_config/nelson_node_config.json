@@ -113,6 +113,7 @@
       ]
     },
     "dependencies": {
+      "platform_metrics_node": "platform_metrics",
       "system_shutdown_node": "sys_shutdown",
       "thermal_load_notify_nodes": [
         "thermal_state_handler"

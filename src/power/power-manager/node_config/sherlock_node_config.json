@@ -289,7 +289,8 @@
       ],
       "temperature_handler_node_names": [
         "temperature_soc_pll"
-      ]
+      ],
+      "platform_metrics_node": "platform_metrics"
     }
   },
   {
