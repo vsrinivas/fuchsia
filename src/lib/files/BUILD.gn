@@ -65,7 +65,7 @@ if (is_fuchsia) {
   import("//build/components.gni")
 
   fuchsia_unittest_package("files-tests") {
-    manifest = "meta/files_unittests.cmx"
+    manifest = "meta/files_unittests.cml"
     deps = [ ":files_unittests" ]
   }
 
