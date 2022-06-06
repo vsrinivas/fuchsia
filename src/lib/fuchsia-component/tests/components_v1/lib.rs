@@ -9,13 +9,13 @@
 use {
     anyhow::{Context as _, Error},
     assert_matches::assert_matches,
-    fidl::endpoints::{create_proxy, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_proxy, Proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_test::{
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
     },
     fidl_fuchsia_io as fio,
     files_async::readdir,
-    fuchsia_async::{self as fasync, run_until_stalled},
+    fuchsia_async::{self as fasync, run_singlethreaded, run_until_stalled, OnSignals},
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, stream::TryStreamExt, FutureExt, StreamExt},
@@ -52,11 +52,14 @@ async fn check_bad_flags_root() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to open . with CREATE flags
-        let flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::DIRECTORY | fio::OpenFlags::CREATE;
+        let flags = fio::OpenFlags::DESCRIBE
+            | fio::OpenFlags::DIRECTORY
+            | fio::OpenFlags::CREATE
+            | fio::OpenFlags::CREATE_IF_ABSENT;
         let mode = fio::MODE_TYPE_DIRECTORY;
         let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, ".", server_end.into()).unwrap();
-        assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
+        assert_open_status(&node_proxy, zx::Status::ALREADY_EXISTS).await;
         Ok::<(), Error>(())
     };
 
@@ -72,11 +75,14 @@ async fn check_bad_flags_folder() -> Result<(), Error> {
 
     let test_fut = async move {
         // attempt to create a folder that already exists in ServiceFS
-        let flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::DIRECTORY | fio::OpenFlags::CREATE;
+        let flags = fio::OpenFlags::DESCRIBE
+            | fio::OpenFlags::DIRECTORY
+            | fio::OpenFlags::CREATE
+            | fio::OpenFlags::CREATE_IF_ABSENT;
         let mode = fio::MODE_TYPE_DIRECTORY;
         let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "foo", server_end.into()).unwrap();
-        assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
+        assert_open_status(&node_proxy, zx::Status::ALREADY_EXISTS).await;
         Ok::<(), Error>(())
     };
 
@@ -84,14 +90,14 @@ async fn check_bad_flags_folder() -> Result<(), Error> {
     Ok(())
 }
 
-#[run_until_stalled(test)]
+#[run_singlethreaded(test)]
 async fn check_bad_flags_file() -> Result<(), Error> {
     let (mut fs, dir_proxy) = fs_with_connection::<'_, ()>();
-    fs.dir("foo").add_service_at("bar", |_chan| Some(()));
+    fs.dir("foo").add_service_at("bar", |_chan| unreachable!());
     let serve_fut = fs.collect().map(Ok);
 
     let test_fut = async move {
-        // attempt to create a file that already exists in ServiceFS
+        // DESCRIBE is not a valid flag for a service.
         let flags = fio::OpenFlags::DESCRIBE
             | fio::OpenFlags::NOT_DIRECTORY
             | fio::OpenFlags::CREATE
@@ -99,7 +105,9 @@ async fn check_bad_flags_file() -> Result<(), Error> {
         let mode = fio::MODE_TYPE_FILE;
         let (node_proxy, server_end) = create_proxy::<fio::NodeMarker>()?;
         dir_proxy.open(flags, mode, "foo/bar", server_end.into()).unwrap();
-        assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
+        // We won't get events and epitaphs aren't supported, so all we can do is expect that the
+        // channel is closed.
+        OnSignals::new(node_proxy.as_channel(), zx::Signals::CHANNEL_PEER_CLOSED).await.unwrap();
         Ok::<(), Error>(())
     };
 
@@ -152,7 +160,7 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
         fs: &mut ServiceFs<ServiceObj<'_, ()>>,
         dir_proxy: &fio::DirectoryProxy,
     ) {
-        let flags = fio::OpenFlags::empty();
+        let flags = fio::OpenFlags::RIGHT_READABLE;
         let mode = fio::MODE_TYPE_SERVICE;
         let (server_end, client_end) = zx::Channel::create().expect("create channel");
         dir_proxy.open(flags, mode, SERVICE_NAME, server_end.into()).expect("open");
@@ -170,7 +178,7 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
     assert_has_service_child(&mut fs, &dir_proxy).await;
 
     // attempt to connect to the /fooey dir
-    let flags = fio::OpenFlags::DIRECTORY;
+    let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
     let mode = fio::MODE_TYPE_DIRECTORY;
     let (subdir_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
     dir_proxy.open(flags, mode, "fooey", server_end.into_channel().into())?;
@@ -270,27 +278,46 @@ async fn handles_dir_not_dir_flags() -> Result<(), Error> {
 
     let service_open_count = &service_open_count;
     let test_fut = async move {
-        let dir_flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::DIRECTORY;
-        let not_dir_flags = fio::OpenFlags::DESCRIBE | fio::OpenFlags::NOT_DIRECTORY;
-
         // Verify flags when opening a directory.
         let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
-        root_proxy.open(dir_flags, 0, "dir", node_end)?;
+        root_proxy.open(
+            fio::OpenFlags::DESCRIBE | fio::OpenFlags::DIRECTORY,
+            0,
+            "dir",
+            node_end,
+        )?;
         assert_open_status(&node_proxy, zx::Status::OK).await;
 
         let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
-        root_proxy.open(not_dir_flags, 0, "dir", node_end)?;
+        root_proxy.open(
+            fio::OpenFlags::DESCRIBE | fio::OpenFlags::NOT_DIRECTORY,
+            0,
+            "dir",
+            node_end,
+        )?;
         assert_open_status(&node_proxy, zx::Status::NOT_FILE).await;
 
         // Verify flags when opening a file.
         assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 0);
         let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
-        root_proxy.open(dir_flags, 0, "dir/notdir", node_end)?;
-        assert_open_status(&node_proxy, zx::Status::NOT_DIR).await;
+        root_proxy.open(
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            0,
+            "dir/notdir",
+            node_end,
+        )?;
+        // It's a service which won't send an event and doesn't support epitaphs, so all we can do
+        // is wait for the service to close.
+        OnSignals::new(node_proxy.as_channel(), zx::Signals::CHANNEL_PEER_CLOSED).await.unwrap();
         assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 0);
 
         let (node_proxy, node_end) = create_proxy::<fio::NodeMarker>()?;
-        root_proxy.open(not_dir_flags, 0, "dir/notdir", node_end)?;
+        root_proxy.open(
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::NOT_DIRECTORY,
+            0,
+            "dir/notdir",
+            node_end,
+        )?;
         assert_open_status(&node_proxy, zx::Status::OK).await;
         assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 1);
 
@@ -649,7 +676,7 @@ fn set_up_and_connect_to_vmo_file(
 ) -> Result<(impl Future<Output = Result<(), Error>>, fio::FileProxy, Vec<u8>), Error> {
     const PATH: &str = "foo";
     const VMO_SIZE: u64 = 256;
-    const VMO_FILE_OFFSET: usize = 5;
+    const VMO_FILE_OFFSET: usize = 0;
     const VMO_FILE_LENGTH: usize = 22;
 
     // 0, 1, 2, 3, 4, 5...

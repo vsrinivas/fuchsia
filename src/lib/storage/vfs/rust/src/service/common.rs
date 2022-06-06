@@ -74,10 +74,8 @@ pub fn new_connection_validate_flags(
             | fio::OpenFlags::NODE_REFERENCE
     ));
 
-    // A service might only be connected to when both read and write permissions are present.
-    if !flags.intersects(fio::OpenFlags::RIGHT_READABLE)
-        || !flags.intersects(fio::OpenFlags::RIGHT_WRITABLE)
-    {
+    // A service might only be connected to when read permissions are present.
+    if !flags.intersects(fio::OpenFlags::RIGHT_READABLE) {
         return Err(Status::ACCESS_DENIED);
     }
     let allowed_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
@@ -173,7 +171,7 @@ mod tests {
     fn service_basic() {
         // Access flags are required and preserved.
         ncvf_ok(READ_WRITE, 0, READ_WRITE);
-        ncvf_err(fio::OpenFlags::RIGHT_READABLE, 0, Status::ACCESS_DENIED);
+        ncvf_ok(fio::OpenFlags::RIGHT_READABLE, 0, fio::OpenFlags::RIGHT_READABLE);
         ncvf_err(fio::OpenFlags::RIGHT_WRITABLE, 0, Status::ACCESS_DENIED);
 
         // OPEN_FLAG_DESCRIBE is not allowed.
