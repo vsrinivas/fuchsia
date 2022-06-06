@@ -5,7 +5,7 @@
 use {
     crate::devmgr_config::DevmgrConfigError,
     fuchsia_merkle::Hash,
-    fuchsia_url::pkg_url::{PackageName, PackageVariant},
+    fuchsia_url::{PackageName, PackageVariant},
     scrutiny::prelude::DataCollection,
     serde::{
         de::{self, Deserializer, Error as _, MapAccess, Visitor},

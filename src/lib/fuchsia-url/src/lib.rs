@@ -38,11 +38,6 @@ use {
     percent_encoding::{AsciiSet, CONTROLS},
 };
 
-// Re-export during migration.
-pub mod pkg_url {
-    pub use crate::{PackageName, PackageVariant};
-}
-
 /// https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
 

@@ -11,7 +11,7 @@ use {
     fuchsia_archive::Reader as FarReader,
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
-    fuchsia_url::pkg_url::{PackageName, PackageVariant},
+    fuchsia_url::{PackageName, PackageVariant},
     maplit::hashset,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{
@@ -335,7 +335,7 @@ mod tests {
         anyhow::{anyhow, Context, Result},
         fuchsia_archive::write as far_write,
         fuchsia_merkle::{Hash, MerkleTree, HASH_SIZE},
-        fuchsia_url::pkg_url::{PackageName, PackageVariant},
+        fuchsia_url::{PackageName, PackageVariant},
         maplit::{btreemap, hashmap, hashset},
         scrutiny::model::collector::DataCollector,
         scrutiny_testing::{artifact::MockArtifactReader, fake::fake_data_model},

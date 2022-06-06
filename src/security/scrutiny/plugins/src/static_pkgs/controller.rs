@@ -50,7 +50,7 @@ mod tests {
         crate::static_pkgs::collection::{StaticPkgsCollection, StaticPkgsError},
         anyhow::{Context, Result},
         fuchsia_hash::Hash,
-        fuchsia_url::pkg_url::{PackageName, PackageVariant},
+        fuchsia_url::{PackageName, PackageVariant},
         maplit::{hashmap, hashset},
         scrutiny::model::controller::DataController,
         scrutiny::prelude::DataCollection,
