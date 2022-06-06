@@ -50,12 +50,19 @@ class Device : public std::enable_shared_from_this<Device> {
   // Unbinds a device from a DFv2 node.
   void Unbind();
 
+  // Removes all of the child devices.
+  fpromise::promise<void> RemoveChildren();
+
   const char* Name() const;
   bool HasChildren() const;
 
   // Functions to implement the DFv1 device API.
   zx_status_t Add(device_add_args_t* zx_args, zx_device_t** out);
-  void Remove();
+
+  // Remove this device. This call will make sure that DFv1 unbind and release
+  // are called in the correct order. This promise will finish once the device
+  // has been completely removed.
+  fpromise::promise<void> Remove();
   zx_status_t GetProtocol(uint32_t proto_id, void* out) const;
   zx_status_t AddMetadata(uint32_t type, const void* data, size_t size);
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
@@ -126,6 +133,10 @@ class Device : public std::enable_shared_from_this<Device> {
   // The default protocol of the device.
   device_t compat_symbol_;
   const zx_protocol_device_t* ops_;
+
+  // A list of completers for promises that are waiting for this device to be
+  // removed.
+  std::vector<fpromise::completer<void>> remove_completers_;
 
   std::optional<fpromise::promise<>> controller_teardown_finished_;
 

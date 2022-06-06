@@ -90,6 +90,10 @@ Device::~Device() {
       ops_->release(compat_symbol_.context);
     }
   }
+
+  for (auto& completer : remove_completers_) {
+    completer.complete_ok();
+  }
 }
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
@@ -341,7 +345,29 @@ zx_status_t Device::CreateNode() {
   return ZX_OK;
 }
 
-void Device::Remove() {
+fpromise::promise<void> Device::RemoveChildren() {
+  std::vector<fpromise::promise<void>> promises;
+  for (auto& child : children_) {
+    promises.push_back(child->Remove());
+  }
+  return fpromise::join_promise_vector(std::move(promises))
+      .then([](fpromise::result<std::vector<fpromise::result<void>>>& results) {
+        if (results.is_error()) {
+          return fpromise::make_error_promise();
+        }
+        for (auto& result : results.value()) {
+          if (result.is_error()) {
+            return fpromise::make_error_promise();
+          }
+        }
+        return fpromise::make_ok_promise();
+      });
+}
+
+fpromise::promise<void> Device::Remove() {
+  fpromise::bridge<void> finished_bridge;
+  remove_completers_.push_back(std::move(finished_bridge.completer));
+
   executor_.schedule_task(
       WaitForInitToComplete().then([this](fpromise::result<void, zx_status_t>& init) {
         pending_removal_ = true;
@@ -371,6 +397,7 @@ void Device::Remove() {
         }
         schedule_removal.cancel();
       }));
+  return finished_bridge.consumer.promise();
 }
 
 void Device::RemoveChild(std::shared_ptr<Device>& child) { children_.remove(child); }

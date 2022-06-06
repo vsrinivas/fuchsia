@@ -152,7 +152,11 @@ void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& comple
 
 void DevfsVnode::UnbindChildren(UnbindChildrenRequestView request,
                                 UnbindChildrenCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  auto async = completer.ToAsync();
+  dev_->executor().schedule_task(dev_->RemoveChildren().then(
+      [completer = std::move(async)](fpromise::result<>& result) mutable {
+        completer.ReplySuccess();
+      }));
 }
 
 void DevfsVnode::ScheduleUnbind(ScheduleUnbindRequestView request,

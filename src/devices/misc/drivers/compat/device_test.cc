@@ -239,6 +239,53 @@ TEST_F(DeviceTest, AddChildDevice) {
   ASSERT_TRUE(RunLoopUntilIdle());
 }
 
+TEST_F(DeviceTest, RemoveChildren) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a node.
+  TestNode node(dispatcher());
+  auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
+
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device parent(compat::kDefaultDevice, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  parent.Bind({std::move(endpoints->client), dispatcher()});
+
+  // Add a child device.
+  device_add_args_t args{.name = "child"};
+  zx_device_t* child = nullptr;
+  ASSERT_EQ(ZX_OK, parent.Add(&args, &child));
+  ASSERT_EQ(ZX_OK, child->CreateNode());
+  EXPECT_NE(nullptr, child);
+  EXPECT_STREQ("child", child->Name());
+  EXPECT_TRUE(parent.HasChildren());
+
+  // Ensure that AddChild was executed.
+  ASSERT_TRUE(RunLoopUntilIdle());
+
+  // Add a second child device.
+  device_add_args_t args2{.name = "child2"};
+  zx_device_t* child2 = nullptr;
+  ASSERT_EQ(ZX_OK, parent.Add(&args2, &child2));
+  ASSERT_EQ(ZX_OK, child2->CreateNode());
+  EXPECT_NE(nullptr, child2);
+  EXPECT_STREQ("child2", child2->Name());
+  EXPECT_TRUE(parent.HasChildren());
+
+  // Ensure that AddChild was executed.
+  ASSERT_TRUE(RunLoopUntilIdle());
+
+  // Call Remove children and check that the callback finished and the children
+  // were removed.
+  bool callback_finished = false;
+  parent.executor().schedule_task(parent.RemoveChildren().and_then(
+      [&callback_finished]() mutable { callback_finished = true; }));
+  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(callback_finished);
+  ASSERT_FALSE(parent.HasChildren());
+}
+
 TEST_F(DeviceTest, AddChildWithProtoPropAndProtoId) {
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
 
