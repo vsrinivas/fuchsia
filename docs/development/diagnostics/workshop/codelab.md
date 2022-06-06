@@ -199,7 +199,7 @@ are rooted on `inspect::Node`, including more Nodes! Try to modify ProfileStore 
 ```
   // In main.cc
   std::unique_ptr<ProfileStore> profile_store =
-      std::make_unique<ProfileStore>(loop.dispatcher(), inspector->GetRoot().CreateChild("store"));
+      std::make_unique<ProfileStore>(loop.dispatcher(), inspector->GetRoot().CreateChild("profiles"));
 ```
 
 Hint: You will need to update the `ProfileStoreTests` class if you
@@ -224,10 +224,36 @@ or gather stats that the snapshots might contain.
 Reading through the [Triage codelab][triage-codelab] would be a good first step as well as reading
 through the [triage config guide][triage-config-guide].
 
-Try writing a triage configuration that could have help spot the bug in snapshots gathered in the
+To get started, create a new file at `examples/diagnostics/workshop/triage/profile_store.triage`
+with the following contents:
+```
+{
+  select: {
+    profile_status: "INSPECT:core/ffx-laboratory\\:profile_store/profile_store:fuchsia.inspect.Health:status",
+  },
+  act: {
+    profile_status_ok: {
+      type: "Warning",
+      trigger: "profile_status != 'OK'",
+      print: "Profile store is not healthy.",
+    }
+  }
+}
+```
+
+Note: Before checking in a `.triage` file, you would need to update a list in the `BUILD.gn` file.
+For this example, that step is omitted.
+
+If you followed the Inspect quick start in the last section, run
+`ffx triage --config examples/diagnostics/workshop/triage/`. If `profile_store` is running and
+reporting its status is OK, you won't see any failures! Try changing the call to
+`Health().Ok()` in `main.cc` to `Health().StartingUp()` and run
+`ffx triage --config examples/diagnostics/workshop/triage/` again. This time you should see the warning.
+
+Try writing a triage configuration that could have helped spot the bug in snapshots gathered in the
 field.
 
-A possible solution (built on top of the inspect solution) can be found in this patch:
+A possible solution (built on top of the Inspect solution) can be found in this patch:
 https://fuchsia-review.googlesource.com/c/fuchsia/+/684762
 
 ## Verifying with tests
