@@ -107,7 +107,8 @@ class VmStressTest : public StressTest {
 
 class TestInstance {
  public:
-  TestInstance(VmStressTest* test) : test_(test) {}
+  TestInstance(VmStressTest* test, uint64_t instance_id)
+      : test_(test), test_instance_id_(instance_id) {}
   virtual ~TestInstance() {}
 
   virtual zx_status_t Start() = 0;
@@ -131,12 +132,13 @@ class TestInstance {
   std::mt19937_64 RngGen() { return test_->RngGen(); }
 
   VmStressTest* const test_;
+  const uint64_t test_instance_id_;
 };
 
 class SingleVmoTestInstance : public TestInstance {
  public:
-  SingleVmoTestInstance(VmStressTest* test, bool use_pager, uint64_t vmo_size)
-      : TestInstance(test), use_pager_(use_pager), vmo_size_(vmo_size) {}
+  SingleVmoTestInstance(VmStressTest* test, uint64_t instance_id, bool use_pager, uint64_t vmo_size)
+      : TestInstance(test, instance_id), use_pager_(use_pager), vmo_size_(vmo_size) {}
 
   zx_status_t Start() final;
   zx_status_t Stop() final;
@@ -268,7 +270,7 @@ void SingleVmoTestInstance::CheckVmoThreadError(zx_status_t status, const char* 
   // Ignore errors while shutting down, since they're almost certainly due to the
   // pager disappearing.
   if (!shutdown_ && status != ZX_OK) {
-    fprintf(stderr, "%s, error %d\n", error, status);
+    fprintf(stderr, "[test instance 0x%zx]: %s, error %d\n", test_instance_id_, error, status);
   }
 }
 
@@ -290,28 +292,43 @@ int SingleVmoTestInstance::pager_thread() {
     zx::vmo tmp_vmo;
     zx_status_t status = zx::vmo::create(len, 0, &tmp_vmo);
     if (status != ZX_OK) {
-      fprintf(stderr, "failed to create tmp vmo, error %d (%s)\n", status,
-              zx_status_get_string(status));
+      fprintf(stderr, "[test instance 0x%zx]: failed to create tmp vmo, error %d (%s)\n",
+              test_instance_id_, status, zx_status_get_string(status));
       return;
     }
     status = tmp_vmo.op_range(ZX_VMO_OP_COMMIT, 0, len, nullptr, 0);
     if (status != ZX_OK) {
-      fprintf(stderr, "failed to commit tmp vmo, error %d (%s)\n", status,
-              zx_status_get_string(status));
+      fprintf(stderr, "[test instance 0x%zx]: failed to commit tmp vmo, error %d (%s)\n",
+              test_instance_id_, status, zx_status_get_string(status));
       return;
     }
     // SingleVmoTestInstance doesn't currently resize the VMO, so this should work.
     status = pager_.supply_pages(vmo_, off, len, tmp_vmo, 0);
     if (status != ZX_OK) {
-      fprintf(stderr, "failed to supply pages %d, error %d (%s)\n", pager_.get(), status,
-              zx_status_get_string(status));
+      fprintf(stderr, "[test instance 0x%zx]: failed to supply pages %d, error %d (%s)\n",
+              test_instance_id_, pager_.get(), status, zx_status_get_string(status));
       return;
     }
   };
 
   auto rng = RngGen();
 
+  // Counters to log pager thread progress for debugging stalls.
+  zx::duration logging_interval = zx::duration(ZX_MIN(2));
+  zx::time time_prev = zx::clock::get_monotonic();
+  uint64_t ops_per_interval = 0;
+
   while (!shutdown_.load()) {
+    ++ops_per_interval;
+    zx::time time_now = zx::clock::get_monotonic();
+    if (time_now > time_prev + logging_interval) {
+      fprintf(
+          stderr, "[test instance 0x%zx]: pager ops in last %" PRIi64 " minute(s): %" PRIu64 "\n",
+          test_instance_id_, (time_now - time_prev) / zx::duration(ZX_MIN(1)), ops_per_interval);
+      time_prev = time_now;
+      ops_per_interval = 0;
+    }
+
     zx::vmo tmp_vmo;
     uint64_t off, size;
     zx::time deadline;
@@ -347,13 +364,13 @@ int SingleVmoTestInstance::pager_thread() {
         status = port_.wait(deadline, &packet);
         if (status != ZX_OK) {
           if (status != ZX_ERR_TIMED_OUT) {
-            fprintf(stderr, "failed to read port, error %d (%s)\n", status,
-                    zx_status_get_string(status));
+            fprintf(stderr, "[test instance 0x%zx]: failed to read port, error %d (%s)\n",
+                    test_instance_id_, status, zx_status_get_string(status));
           }
         } else if (packet.type != ZX_PKT_TYPE_PAGE_REQUEST ||
                    packet.page_request.command != ZX_PAGER_VMO_READ) {
-          fprintf(stderr, "unexpected packet, error %d %d\n", packet.type,
-                  packet.page_request.command);
+          fprintf(stderr, "[test instance 0x%zx]: unexpected packet, error %d %d\n",
+                  test_instance_id_, packet.type, packet.page_request.command);
         } else {
           fbl::AutoLock lock(&mtx_);
           requests_.push_back(packet.page_request);
@@ -521,7 +538,8 @@ zx_status_t SingleVmoTestInstance::Stop() {
 // of various parts of the test makes the chance of overflow vanishingly small.
 class CowCloneTestInstance : public TestInstance {
  public:
-  CowCloneTestInstance(VmStressTest* test) : TestInstance(test) {}
+  CowCloneTestInstance(VmStressTest* test, uint64_t instance_id)
+      : TestInstance(test, instance_id) {}
 
   zx_status_t Start() final;
   zx_status_t Stop() final;
@@ -886,8 +904,8 @@ int CowCloneTestInstance::op_thread() {
 // so this only catches bugs where we can ultimately trip a kernel assert or something similar.
 class MultiVmoTestInstance : public TestInstance {
  public:
-  MultiVmoTestInstance(VmStressTest* test, uint64_t mem_limit)
-      : TestInstance(test),
+  MultiVmoTestInstance(VmStressTest* test, uint64_t instance_id, uint64_t mem_limit)
+      : TestInstance(test, instance_id),
         memory_limit_pages_(mem_limit / zx_system_get_page_size()),
         // Scale our maximum threads to ensure that if all threads allocate a full size vmo (via
         // copy-on-write or otherwise) we wouldn't exceed our memory limit
@@ -1412,13 +1430,15 @@ int VmStressTest::test_thread() {
 
   PrintfAlways("VM stress test: using vmo of size %" PRIu64 "\n", vmo_test_size);
 
+  uint64_t total_test_instances = 0;
+
   // The MultiVmoTestInstance already does spin up / tear down of threads internally and there is
   // no benefit in also spinning up and tearing down the whole thing. So we just run 1 of them
   // explicitly as a static instance and randomize the others as variable instances. We give this
   // instance a 'full slice' of free memory as it is incredibly unlikely that it even allocates
   // anywhere near that.
-  test_instances[kVariableInstances] =
-      std::make_unique<MultiVmoTestInstance>(this, free_bytes / kMaxInstances);
+  test_instances[kVariableInstances] = std::make_unique<MultiVmoTestInstance>(
+      this, total_test_instances++, free_bytes / kMaxInstances);
   test_instances[kVariableInstances]->Start();
 
   zx::time deadline = zx::clock::get_monotonic();
@@ -1431,13 +1451,15 @@ int VmStressTest::test_thread() {
     } else {
       switch (uniform_rand(3, rng)) {
         case 0:
-          test_instances[r] = std::make_unique<SingleVmoTestInstance>(this, true, vmo_test_size);
+          test_instances[r] = std::make_unique<SingleVmoTestInstance>(this, total_test_instances++,
+                                                                      true, vmo_test_size);
           break;
         case 1:
-          test_instances[r] = std::make_unique<SingleVmoTestInstance>(this, false, vmo_test_size);
+          test_instances[r] = std::make_unique<SingleVmoTestInstance>(this, total_test_instances++,
+                                                                      false, vmo_test_size);
           break;
         case 2:
-          test_instances[r] = std::make_unique<CowCloneTestInstance>(this);
+          test_instances[r] = std::make_unique<CowCloneTestInstance>(this, total_test_instances++);
           break;
       }
 
