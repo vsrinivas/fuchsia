@@ -11,6 +11,9 @@
 extern "C" {
 #endif
 
+// At the moment magma is statically linked into ICDs, so symbols don't need to be exported.
+#define MAGMA_EXPORT
+
 // This is a list of vendor-neutral queries that can be passed to magma_query.
 // Returns the hardware vendor ID (simple result) - should be the PCI ID of the GPU vendor
 // if possible, or the Khronos vendor ID otherwise.

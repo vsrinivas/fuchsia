@@ -40,7 +40,7 @@ def format_export(export):
         for arg in export['arguments'])
     lines.append('///')
     # Function signature
-    lines.append(f'{export["type"]} {export["name"]}(')
+    lines.append(f'MAGMA_EXPORT {export["type"]} {export["name"]}(')
     lines.append(
         ',\n'.join(
             f'    {arg["type"]} {arg["name"]}' for arg in export['arguments']))
