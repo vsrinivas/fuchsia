@@ -98,16 +98,6 @@
             moniker: "/core/tee_manager",
         },
         {
-            instance_id: "e9c49c28c1a0543cbd3ad4233467838c5d808285fd020ea17c8f3a9aeb6161fd",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
-        },
-        {
             instance_id: "ab7a3ec7a062f943c00f3f62eb1a0f4a2ad50356600efffab46c1969ce49f3d8",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx",
