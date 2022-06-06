@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::config::Config, anyhow::Error};
+use {crate::config::Config, anyhow::Error, fuchsia_async as fasync};
 
 #[async_trait::async_trait]
 pub trait Configurator {
@@ -19,4 +19,7 @@ pub trait Configurator {
 
     /// Process a new DAI interface.
     async fn process_new_dai(&mut self, mut device: crate::dai::DaiInterface) -> Result<(), Error>;
+
+    /// Serve interfaces based on Codecs and DAIs.
+    fn serve_interface(&mut self) -> Result<Vec<fasync::Task<()>>, Error>;
 }

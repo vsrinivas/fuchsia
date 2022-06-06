@@ -109,6 +109,9 @@ mod tests {
         ) -> Result<(), Error> {
             Ok(())
         }
+        fn serve_interface(&mut self) -> Result<Vec<fuchsia_async::Task<()>>, Error> {
+            Ok(vec![])
+        }
         async fn process_new_dai(
             &mut self,
             mut device: crate::dai::DaiInterface,

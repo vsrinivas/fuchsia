@@ -8,7 +8,7 @@ pub mod tests {
         crate::{config::Config, configurator::Configurator},
         anyhow::Error,
         async_trait::async_trait,
-        device_watcher, fidl_fuchsia_io as fio,
+        device_watcher, fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_component_test::{RealmBuilder, RealmInstance},
         fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     };
@@ -31,6 +31,9 @@ pub mod tests {
             mut _device: crate::dai::DaiInterface,
         ) -> Result<(), Error> {
             Ok(())
+        }
+        fn serve_interface(&mut self) -> Result<Vec<fasync::Task<()>>, Error> {
+            Ok(vec![])
         }
     }
 

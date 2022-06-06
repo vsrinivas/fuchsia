@@ -69,6 +69,7 @@ pub async fn find_dais<T: Configurator>(
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dev_proxy_local).await?;
 
     let mut dais_found = 0;
+    let mut stream_config_serve_tasks = Vec::new();
 
     while let Some(msg) = watcher.try_next().await? {
         match msg.event {
@@ -88,6 +89,16 @@ pub async fn find_dais<T: Configurator>(
                             } else {
                                 // Otherwise we continue finding DAIs.
                                 tracing::warn!("DAI processing error: {:?}", e);
+                            }
+                        } else {
+                            // If we are not breaking then serve the required interfaces.
+                            if break_count == 0 {
+                                match configurator.serve_interface() {
+                                    Err(e) => tracing::warn!("Interface serving error: {:?}", e),
+                                    Ok(task) => {
+                                        stream_config_serve_tasks.push(task);
+                                    }
+                                }
                             }
                         }
                         dais_found += 1;

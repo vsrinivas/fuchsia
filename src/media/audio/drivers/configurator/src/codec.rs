@@ -132,6 +132,10 @@ mod tests {
         ) -> Result<(), Error> {
             Ok(())
         }
+
+        fn serve_interface(&mut self) -> Result<Vec<fuchsia_async::Task<()>>, Error> {
+            Ok(vec![])
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
