@@ -18,6 +18,7 @@ group("tests") {
 
 test("syscalls_test_bin") {
   sources = [
+    "fs_test.cc",
     "restart_read_test.cc",
     "terminal_test.cc",
     "trivial_test.cc",
