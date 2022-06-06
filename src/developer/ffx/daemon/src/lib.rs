@@ -39,7 +39,8 @@ pub async fn get_daemon_proxy_single_link(
     // - A timeout
     // - Getting a FIDL proxy over the link
 
-    let link = hoist::hoist().run_single_ascendd_link().fuse();
+    let ascendd_socket_path = constants::get_socket().await;
+    let link = hoist::hoist().run_single_ascendd_link(ascendd_socket_path.clone()).fuse();
     let mut link = Box::pin(link);
     let find = find_next_daemon(exclusions).fuse();
     let mut find = Box::pin(find);
@@ -47,12 +48,12 @@ pub async fn get_daemon_proxy_single_link(
 
     let res = futures::select! {
         r = link => {
-            Err(ffx_error!("Daemon link lost while attempting to connect: {:#?}\nRun `ffx doctor` for further diagnostics.", r))
+            Err(ffx_error!("Daemon link lost while attempting to connect to socket {}: {:#?}\nRun `ffx doctor` for further diagnostics.", ascendd_socket_path, r))
         }
         _ = timeout => {
-            Err(ffx_error!("Timed out waiting for the ffx daemon on the Overnet mesh.\nRun `ffx doctor --restart-daemon` for further diagnostics."))
+            Err(ffx_error!("Timed out waiting for the ffx daemon on the Overnet mesh over socket {}.\nRun `ffx doctor --restart-daemon` for further diagnostics.", ascendd_socket_path))
         }
-        proxy = find => proxy.map_err(|e| ffx_error!("Error connecting to Daemon: {:#?}.\nRun `ffx doctor` for further diagnostics.", e)),
+        proxy = find => proxy.map_err(|e| ffx_error!("Error connecting to Daemon at socket: {}: {:#?}\nRun `ffx doctor` for further diagnostics.", ascendd_socket_path, e)),
     };
     res.map(|(nodeid, proxy)| (nodeid, proxy, link))
 }

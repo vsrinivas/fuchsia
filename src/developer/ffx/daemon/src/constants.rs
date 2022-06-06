@@ -5,9 +5,13 @@ pub const LOG_FILE_PREFIX: &str = "ffx.daemon";
 
 #[cfg(not(test))]
 pub async fn get_socket() -> String {
-    const OVERNET_SOCKET: &str = "overnet.socket";
-    const DEFAULT_SOCKET: &str = "/tmp/ascendd";
-    ffx_config::get(OVERNET_SOCKET).await.unwrap_or(DEFAULT_SOCKET.to_string())
+    if let Ok(sock_path) = std::env::var("ASCENDD") {
+        String::from(sock_path)
+    } else if let Ok(sock_path) = ffx_config::get("overnet.socket").await {
+        sock_path
+    } else {
+        String::from(hoist::DEFAULT_ASCENDD_PATH)
+    }
 }
 
 #[cfg(test)]

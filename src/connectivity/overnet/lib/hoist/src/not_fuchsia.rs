@@ -6,7 +6,7 @@
 
 use {
     crate::HOIST,
-    anyhow::{bail, format_err, Error},
+    anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
     fidl_fuchsia_overnet::{
         HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
@@ -69,18 +69,9 @@ impl HostOvernet {
     }
 }
 
-static AUTOCONNECT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-
-/// Disable automatic connections to ascendd. This function will panic if
-/// called more than once, or if hoist has already initialized.
-pub fn disable_autoconnect() {
-    assert_eq!(true, AUTOCONNECT.swap(false, std::sync::atomic::Ordering::SeqCst));
-}
-
 pub struct Hoist {
     host_overnet: HostOvernet,
     node: Arc<Router>,
-    _task: Option<Task<()>>,
 }
 
 impl Hoist {
@@ -94,36 +85,58 @@ impl Hoist {
             Box::new(hard_coded_security_context()),
         )?;
 
-        let mut task = None;
-        if AUTOCONNECT.swap(false, std::sync::atomic::Ordering::SeqCst) {
-            task.replace(spawn_ascendd_link());
-        }
-
-        Ok(Self { host_overnet: HostOvernet::new(node.clone())?, node: node.clone(), _task: task })
+        Ok(Self { host_overnet: HostOvernet::new(node.clone())?, node: node.clone() })
     }
 
     pub fn node(&self) -> Arc<Router> {
         self.node.clone()
     }
 
+    /// Performs initial configuration with appropriate defaults for the implementation and platform.
+    ///
+    /// On a fuchsia device this will likely do nothing, so that is the default implementation.
+    /// On a host platform it will use the environment variable ASCENDD to find the socket, or
+    /// use a default address.
+    #[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
+    pub fn start_default_link() -> Result<Task<()>, Error> {
+        Ok(Hoist::start_socket_link(
+            std::env::var("ASCENDD")
+                .map(String::from)
+                .context("No ASCENDD socket provided in environment")?,
+        ))
+    }
+
+    /// Spawn and return a task that will persistently keep a link connected
+    /// to a local ascendd socket. For a single use variant, see
+    /// Hoist.run_single_ascendd_link.
+    #[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
+    pub fn start_socket_link(ascend_path: String) -> Task<()> {
+        Task::spawn(async move {
+            let ascend_path = ascend_path.clone();
+            retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || async {
+                crate::hoist().run_single_ascendd_link(ascend_path.clone()).await
+            })
+            .await
+        })
+    }
+
     /// Start a one-time ascendd connection, attempting to connect to the
     /// unix socket a few times, but only running a single successful
     /// connection to completion. This function will timeout with an
     /// error after one second if no connection could be established.
-    pub async fn run_single_ascendd_link(&self) -> Result<(), Error> {
+    pub async fn run_single_ascendd_link(&self, path: String) -> Result<(), Error> {
         const MAX_SINGLE_CONNECT_TIME: u64 = 1;
-        let path = ascendd_path(Option::<String>::None);
         let label = connection_label(Option::<String>::None);
 
         log::trace!("Ascendd path: {}", path);
         log::trace!("Overnet connection label: {:?}", label);
         let now = SystemTime::now();
         let uds = loop {
-            match async_net::unix::UnixStream::connect(path.clone())
+            match async_net::unix::UnixStream::connect(&path)
                 .on_timeout(Duration::from_millis(100), || {
                     Err(std::io::Error::new(
                         TimedOut,
-                        format_err!("connecting to ascendd socket at {:#?}", path),
+                        format_err!("connecting to ascendd socket at {}", path),
                     ))
                 })
                 .await
@@ -131,29 +144,15 @@ impl Hoist {
                 Ok(uds) => break uds,
                 Err(e) => {
                     if now.elapsed()?.as_secs() > MAX_SINGLE_CONNECT_TIME {
-                        bail!(
-                            "took too long connecting to ascendd socket at {:#?}: {:#?}",
-                            path,
-                            e
-                        );
+                        bail!("took too long connecting to ascendd socket at {}: {:#?}", path, e);
                     }
                 }
             }
         };
         let (mut rx, mut tx) = uds.split();
 
-        run_ascendd_connection(&mut rx, &mut tx, Some(label), Some(path)).await
+        run_ascendd_connection(&mut rx, &mut tx, Some(label), path.clone()).await
     }
-}
-
-/// Spawn and return a task that will persistently keep a link connected
-/// to a local ascendd socket. For a single use variant, see
-/// Hoist.run_single_ascendd_link.
-#[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
-pub fn spawn_ascendd_link() -> Task<()> {
-    Task::spawn(retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || async {
-        crate::hoist().run_single_ascendd_link().await
-    }))
 }
 
 impl super::OvernetInstance for Hoist {
@@ -174,12 +173,12 @@ fn run_ascendd_connection<'a>(
     rx: &'a mut (dyn AsyncRead + Unpin + Send),
     tx: &'a mut (dyn AsyncWrite + Unpin + Send),
     label: Option<String>,
-    path: Option<String>,
+    path: String,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                path: path.clone(),
+                path: Some(path.clone()),
                 connection_label: label.clone(),
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
@@ -350,15 +349,6 @@ pub fn hard_coded_security_context() -> impl SecurityContext {
     .unwrap();
 }
 
-const ASCENDD: &'static str = "ASCENDD";
-
-fn ascendd_path<S>(o: Option<S>) -> String
-where
-    S: Into<String>,
-{
-    o.map(Into::into).or(std::env::var(ASCENDD).ok()).unwrap_or(DEFAULT_ASCENDD_PATH.into())
-}
-
 const OVERNET_CONNECTION_LABEL: &'static str = "OVERNET_CONNECTION_LABEL";
 
 fn connection_label<S>(o: Option<S>) -> String
@@ -404,24 +394,5 @@ mod test {
         assert_eq!("onetwothree", connection_label(Option::<String>::None));
 
         assert_eq!("precedence", connection_label(Some("precedence")));
-    }
-
-    #[test]
-    fn test_ascendd_path() {
-        let original = std::env::var_os(ASCENDD);
-        guard(original, |orig| {
-            orig.map(|v| std::env::set_var(ASCENDD, v));
-        });
-
-        std::env::remove_var(ASCENDD);
-
-        let p = ascendd_path(Option::<String>::None);
-        assert_eq!(p, DEFAULT_ASCENDD_PATH);
-
-        std::env::set_var(ASCENDD, "foobar");
-
-        assert_eq!(ascendd_path(Option::<String>::None), "foobar");
-
-        assert_eq!("precedence", ascendd_path(Some("precedence")));
     }
 }

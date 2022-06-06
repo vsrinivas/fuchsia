@@ -6,6 +6,5 @@ use {anyhow::Error, ascendd::Ascendd};
 
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
-    hoist::disable_autoconnect();
     Ascendd::new(argh::from_env(), Box::new(blocking::Unblock::new(std::io::stderr()))).await?.await
 }

@@ -199,6 +199,8 @@ async fn exec_server(args: Command) -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let _t = hoist::Hoist::start_default_link()?;
+
     match argh::from_env::<TestArgs>().subcommand {
         Subcommand::Server(server_args) => exec_server(server_args.into()).await,
         Subcommand::Client(client_args) => exec_client(client_args.into()).await,

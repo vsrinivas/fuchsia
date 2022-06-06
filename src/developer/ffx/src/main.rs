@@ -412,7 +412,6 @@ fn write_exit_code<T, W: Write>(res: &Result<T>, out: &mut W) -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    hoist::disable_autoconnect();
     let app: Ffx = from_env();
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
@@ -445,13 +444,6 @@ async fn run() -> Result<()> {
     let log_level = app.log_level().await?;
     let _:  simplelog::LevelFilter = simplelog::LevelFilter::from_str(log_level.as_str()).with_context(||
         ffx_error!("'{}' is not a valid log level. Supported log levels are 'Off', 'Error', 'Warn', 'Info', 'Debug', and 'Trace'", log_level))?;
-
-    // TODO(https://fxbug.dev/64499): hoist uses a lazy static initializer
-    // obfuscating access to inject this value by other means, so:
-    let () = match ffx_config::get::<String, _>("overnet.socket").await {
-        Ok(sockpath) => std::env::set_var("ASCENDD", sockpath),
-        Err(ffx_config::api::ConfigError { .. }) => (),
-    };
 
     let analytics_disabled = ffx_config::get("ffx.analytics.disabled").await.unwrap_or(false);
     let ffx_invoker = ffx_config::get("fuchsia.analytics.ffx_invoker").await.unwrap_or(None);
@@ -606,6 +598,7 @@ mod test {
             ..VersionInfo::EMPTY
         };
         let daemon_hoist = Arc::new(hoist::Hoist::new().unwrap());
+        let _t = hoist::Hoist::start_socket_link(sockpath.to_str().unwrap().to_string());
 
         let (s, p) = fidl::Channel::create().unwrap();
         daemon_hoist.publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p)).unwrap();
