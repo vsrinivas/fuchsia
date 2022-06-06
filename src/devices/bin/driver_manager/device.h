@@ -74,6 +74,9 @@ struct UnbindTaskOpts;
 // Device should not go through auto-bind process
 #define DEV_CTX_SKIP_AUTOBIND      0x0100
 
+// Device is a bus device.
+#define DEV_CTX_BUS_DEVICE         0x0200
+
 // clang-format on
 
 // Tags used for container membership identification

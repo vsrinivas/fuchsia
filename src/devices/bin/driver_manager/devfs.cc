@@ -189,7 +189,7 @@ bool devnode_is_local(Devnode* dn) {
   if (!dn->device->device_controller().is_valid()) {
     return true;
   }
-  if (dn->device->flags & DEV_CTX_MUST_ISOLATE) {
+  if (dn->device->flags & DEV_CTX_BUS_DEVICE || dn->device->flags & DEV_CTX_IMMORTAL) {
     return true;
   }
   return false;

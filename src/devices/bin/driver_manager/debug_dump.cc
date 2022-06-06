@@ -71,10 +71,11 @@ void DumpDeviceProps(VmoWriter* vmo, const Device* dev) {
     vmo->Printf("Name [%s]%s%s%s\n", dev->name().data(), dev->libname().empty() ? "" : " Driver [",
                 dev->libname().empty() ? "" : dev->libname().data(),
                 dev->libname().empty() ? "" : "]");
-    vmo->Printf("Flags   :%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
+    vmo->Printf("Flags   :%s%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
                 dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate" : "",
                 dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
                 dev->flags & DEV_CTX_BOUND ? " Bound" : "",
+                dev->flags & DEV_CTX_BUS_DEVICE ? " Bus" : "",
                 (dev->state() == Device::State::kDead) ? " Dead" : "",
                 dev->flags & DEV_CTX_PROXY ? " Proxy" : "");
 
