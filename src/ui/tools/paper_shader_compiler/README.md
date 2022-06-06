@@ -9,6 +9,6 @@ To use:
 
 1) Migrate to your fuchsia root directory.
 
-2) fx set terminal.x64 --with //garnet/packages/examples:escher --args escher_use_null_vulkan_config_on_host=false
+2) fx set terminal.x64 --with //src/ui/examples/escher
 
 3) fx build host_x64/paper_shader_compiler && out/default/host_x64/paper_shader_compiler

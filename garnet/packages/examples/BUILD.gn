@@ -15,6 +15,10 @@ group("scenic") {
 
 group("escher") {
   testonly = true
+
+  # Marking as private to :all so it won't be used. Once ":all" is removed, this
+  # target can also be removed.
+  visibility = [ ":all" ]
   public_deps = [
     "//src/ui/examples/escher:escher_rainfall",
     "//src/ui/examples/escher:escher_waterfall",
