@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/input_report_reader/reader.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/status.h>
@@ -18,8 +19,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
-
-#include "src/ui/input/lib/input-report-reader/reader.h"
 
 namespace tcs {
 
@@ -113,7 +112,7 @@ class Tcs3400Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_I
   time_t lastSaturatedLog_ = 0;
   sync_completion_t next_reader_wait_;
   async::Loop loop_;
-  input::InputReportReaderManager<Tcs3400InputReport> readers_;
+  input_report_reader::InputReportReaderManager<Tcs3400InputReport> readers_;
 
   zx::status<Tcs3400InputReport> ReadInputRpt();
   zx_status_t InitGain(uint8_t gain);

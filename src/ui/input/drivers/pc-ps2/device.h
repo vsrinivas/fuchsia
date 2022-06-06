@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/input_report_reader/reader.h>
 #include <lib/zx/interrupt.h>
 
 #include <condition_variable>
@@ -19,7 +20,6 @@
 #include <hid/boot.h>
 
 #include "src/ui/input/drivers/pc-ps2/controller.h"
-#include "src/ui/input/lib/input-report-reader/reader.h"
 
 namespace i8042 {
 
@@ -142,7 +142,8 @@ class I8042Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INP
   std::optional<ddk::UnbindTxn> unbind_ __TA_GUARDED(unbind_lock_);
 
   std::mutex hid_lock_;
-  input::InputReportReaderManager<PS2InputReport> input_report_readers_ __TA_GUARDED(hid_lock_);
+  input_report_reader::InputReportReaderManager<PS2InputReport> input_report_readers_
+      __TA_GUARDED(hid_lock_);
 #ifdef PS2_TEST
   sync_completion_t next_reader_wait_;
 #endif

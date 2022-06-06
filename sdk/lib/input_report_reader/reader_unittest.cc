@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/input/lib/input-report-reader/reader.h"
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/input_report_reader/reader.h>
 
 #include <zxtest/zxtest.h>
 
@@ -53,7 +52,7 @@ class MouseDevice : public fidl::WireServer<fuchsia_input_report::InputDevice> {
 
  private:
   sync_completion_t next_reader_wait_;
-  input::InputReportReaderManager<MouseReport> input_report_readers_;
+  input_report_reader::InputReportReaderManager<MouseReport> input_report_readers_;
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 };
 

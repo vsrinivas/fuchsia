@@ -8,6 +8,5 @@ group("tests") {
   deps = [
     "hid-input-report:test",
     "injector/tests",
-    "input-report-reader:test",
   ]
 }

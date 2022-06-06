@@ -7,13 +7,13 @@
 #include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fpromise/result.h>
+#include <lib/input_report_reader/reader.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 
 #include "lib/fidl/llcpp/arena.h"
 #include "src/ui/input/drivers/goldfish_sensor/parser.h"
-#include "src/ui/input/lib/input-report-reader/reader.h"
 
 namespace goldfish::sensor {
 
@@ -116,7 +116,7 @@ class AccelerationInputDevice : public InputDevice {
                      GetDescriptorCompleter::Sync& completer) override;
 
  private:
-  input::InputReportReaderManager<InputReport> input_report_readers_;
+  input_report_reader::InputReportReaderManager<InputReport> input_report_readers_;
 };
 
 class GyroscopeInputDevice : public InputDevice {
@@ -148,7 +148,7 @@ class GyroscopeInputDevice : public InputDevice {
                      GetDescriptorCompleter::Sync& completer) override;
 
  private:
-  input::InputReportReaderManager<InputReport> input_report_readers_;
+  input_report_reader::InputReportReaderManager<InputReport> input_report_readers_;
 };
 
 class RgbcLightInputDevice : public InputDevice {
@@ -180,7 +180,7 @@ class RgbcLightInputDevice : public InputDevice {
                      GetDescriptorCompleter::Sync& completer) override;
 
  private:
-  input::InputReportReaderManager<InputReport> input_report_readers_;
+  input_report_reader::InputReportReaderManager<InputReport> input_report_readers_;
 };
 
 }  // namespace goldfish::sensor

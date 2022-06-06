@@ -12,6 +12,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/input_report_reader/reader.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -20,8 +21,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-
-#include "src/ui/input/lib/input-report-reader/reader.h"
 
 namespace touch {
 
@@ -165,7 +164,7 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
 
   thrd_t thread_ = {};
 
-  input::InputReportReaderManager<Gt6853InputReport> input_report_readers_;
+  input_report_reader::InputReportReaderManager<Gt6853InputReport> input_report_readers_;
   sync_completion_t next_reader_wait_;
   async::Loop loop_;
 
