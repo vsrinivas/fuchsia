@@ -22,12 +22,12 @@
 
 #include <fbl/unique_fd.h>
 
-#include "garnet/lib/loader/package_loader.h"
 #include "src/lib/cmx/runtime.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/loader/package_loader.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/sys/appmgr/cache_control.h"
 #include "src/sys/appmgr/component_container.h"

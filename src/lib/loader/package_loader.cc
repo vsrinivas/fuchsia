@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/loader/package_loader.h"
+#include "src/lib/loader/package_loader.h"
 
 #include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_LOADER_PACKAGE_LOADER_H_
-#define GARNET_LIB_LOADER_PACKAGE_LOADER_H_
+#ifndef SRC_LIB_LOADER_PACKAGE_LOADER_H_
+#define SRC_LIB_LOADER_PACKAGE_LOADER_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmo.h>
@@ -46,4 +46,4 @@ class PackageLoader : public fuchsia::sys::Loader {
 
 }  // namespace component
 
-#endif  // GARNET_LIB_LOADER_PACKAGE_LOADER_H_
+#endif  // SRC_LIB_LOADER_PACKAGE_LOADER_H_

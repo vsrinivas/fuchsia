@@ -15,8 +15,8 @@
 
 #include <src/lib/fostr/fidl/fuchsia/pkg/formatting.h>
 
-#include "garnet/lib/loader/package_loader.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/loader/package_loader.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace sysmgr {
