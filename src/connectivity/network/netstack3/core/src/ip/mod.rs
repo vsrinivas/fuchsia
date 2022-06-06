@@ -398,6 +398,9 @@ pub(crate) trait IpStateContext<I: IpLayerStateIpExt<Self::Instant, Self::Device
 
 /// The IP device context provided to the IP layer.
 pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
+    /// Is the device enabled?
+    fn is_ip_device_enabled(&self, device_id: Self::DeviceId) -> bool;
+
     /// Gets the status of an address.
     ///
     /// If the device ID is specified, only the specified device will be checked
@@ -414,6 +417,9 @@ pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
 
     /// Returns the hop limit.
     fn get_hop_limit(&self, device_id: Self::DeviceId) -> NonZeroU8;
+
+    /// Returns the MTU of the device.
+    fn get_mtu(&self, device_id: Self::DeviceId) -> u32;
 }
 
 /// Events observed at the IP layer.
@@ -652,6 +658,7 @@ pub(crate) trait BufferIpLayerContext<
     + BufferIpDeviceContext<I, C, B>
     + BufferIcmpHandler<I, C, B>
     + IpLayerContext<I, C>
+    + FragmentHandler<I, C>
 {
 }
 
@@ -662,7 +669,8 @@ impl<
         SC: BufferTransportContext<I, C, B>
             + BufferIpDeviceContext<I, C, B>
             + BufferIcmpHandler<I, C, B>
-            + IpLayerContext<I, C>,
+            + IpLayerContext<I, C>
+            + FragmentHandler<I, C>,
     > BufferIpLayerContext<I, C, B> for SC
 {
 }
@@ -1191,10 +1199,10 @@ macro_rules! drop_packet_and_undo_parse {
 /// ready to do so. If the packet isn't fragmented, or a packet was reassembled,
 /// attempt to dispatch the packet.
 macro_rules! process_fragment {
-    ($ctx:expr, $dispatch:ident, $device:ident, $frame_dst:expr, $buffer:expr, $packet:expr, $src_ip:expr, $dst_ip:expr, $ip:ident) => {{
+    ($sync_ctx:expr, $ctx:expr, $dispatch:ident, $device:ident, $frame_dst:expr, $buffer:expr, $packet:expr, $src_ip:expr, $dst_ip:expr, $ip:ident) => {{
         match FragmentHandler::<$ip, _>::process_fragment::<&mut [u8]>(
+            $sync_ctx,
             $ctx,
-            &mut (),
             $packet,
         ) {
             // Handle the packet right away since reassembly is not needed.
@@ -1204,8 +1212,8 @@ macro_rules! process_fragment {
                 // - Check for already-expired TTL?
                 let (_, _, proto, meta) = packet.into_metadata();
                 $dispatch(
+                    $sync_ctx,
                     $ctx,
-                    &mut (),
                     $device,
                     $frame_dst,
                     $src_ip,
@@ -1223,8 +1231,8 @@ macro_rules! process_fragment {
 
                 // Attempt to reassemble the packet.
                 match FragmentHandler::<$ip, _>::reassemble_packet(
+                    $sync_ctx,
                     $ctx,
-                    &mut (),
                     &key,
                     buffer.buffer_view_mut(),
                 ) {
@@ -1235,8 +1243,8 @@ macro_rules! process_fragment {
                         // - Check for already-expired TTL?
                         let (_, _, proto, meta) = packet.into_metadata();
                         $dispatch::<_, Buf<Vec<u8>>, _>(
+                            $sync_ctx,
                             $ctx,
-                            &mut (),
                             $device,
                             $frame_dst,
                             $src_ip,
@@ -1323,8 +1331,8 @@ pub(crate) fn receive_ip_packet<
     buffer: B,
 ) {
     match I::VERSION {
-        IpVersion::V4 => receive_ipv4_packet(ctx, device, frame_dst, buffer),
-        IpVersion::V6 => receive_ipv6_packet(ctx, device, frame_dst, buffer),
+        IpVersion::V4 => receive_ipv4_packet(ctx, &mut (), device, frame_dst, buffer),
+        IpVersion::V6 => receive_ipv6_packet(ctx, &mut (), device, frame_dst, buffer),
     }
 }
 
@@ -1332,17 +1340,22 @@ pub(crate) fn receive_ip_packet<
 ///
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
-pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
-    device: DeviceId,
+pub(crate) fn receive_ipv4_packet<
+    C,
+    B: BufferMut,
+    SC: BufferIpLayerContext<Ipv4, C, B> + BufferIpLayerContext<Ipv4, C, Buf<Vec<u8>>>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     mut buffer: B,
 ) {
-    if !crate::ip::device::is_ip_device_enabled::<Ipv4, _, _>(ctx, device) {
+    if !sync_ctx.is_ip_device_enabled(device) {
         return;
     }
 
-    increment_counter!(ctx, "receive_ipv4_packet");
+    increment_counter!(sync_ctx, "receive_ipv4_packet");
     trace!("receive_ip_packet({})", device);
 
     let mut packet: Ipv4Packet<_> = match try_parse_ip_packet!(buffer) {
@@ -1381,8 +1394,8 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                 }
             };
             BufferIcmpHandler::<Ipv4, _, _>::send_icmp_error_message(
+                sync_ctx,
                 ctx,
-                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -1414,7 +1427,7 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
 
     // TODO(ghanan): Act upon options.
 
-    match receive_ipv4_packet_action(ctx, &mut (), device, dst_ip) {
+    match receive_ipv4_packet_action(sync_ctx, ctx, device, dst_ip) {
         ReceivePacketAction::Deliver => {
             trace!("receive_ipv4_packet: delivering locally");
             let src_ip = packet.src_ip();
@@ -1433,6 +1446,7 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
             // always present (even if the fragment data has values that implies
             // that the packet is not fragmented).
             process_fragment!(
+                sync_ctx,
                 ctx,
                 dispatch_receive_ipv4_packet,
                 device,
@@ -1453,8 +1467,8 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                 let _: (Ipv4Addr, Ipv4Addr, Ipv4Proto, ParseMetadata) =
                     drop_packet_and_undo_parse!(packet, buffer);
                 match BufferIpDeviceContext::<Ipv4, _, _>::send_ip_frame(
+                    sync_ctx,
                     ctx,
-                    &mut (),
                     dst.device,
                     dst.next_hop,
                     buffer,
@@ -1483,8 +1497,8 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                     }
                 };
                 BufferIcmpHandler::<Ipv4, _, _>::send_icmp_error_message(
+                    sync_ctx,
                     ctx,
-                    &mut (),
                     device,
                     frame_dst,
                     src_ip,
@@ -1511,8 +1525,8 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                 }
             };
             BufferIcmpHandler::<Ipv4, _, _>::send_icmp_error_message(
+                sync_ctx,
                 ctx,
-                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -1540,17 +1554,22 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
 ///
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
-pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
-    device: DeviceId,
+pub(crate) fn receive_ipv6_packet<
+    C,
+    B: BufferMut,
+    SC: BufferIpLayerContext<Ipv6, C, B> + BufferIpLayerContext<Ipv6, C, Buf<Vec<u8>>>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device: SC::DeviceId,
     frame_dst: FrameDestination,
     mut buffer: B,
 ) {
-    if !crate::ip::device::is_ip_device_enabled::<Ipv6, _, _>(ctx, device) {
+    if !sync_ctx.is_ip_device_enabled(device) {
         return;
     }
 
-    increment_counter!(ctx, "receive_ipv6_packet");
+    increment_counter!(sync_ctx, "receive_ipv6_packet");
     trace!("receive_ipv6_packet({})", device);
 
     let mut packet: Ipv6Packet<_> = match try_parse_ip_packet!(buffer) {
@@ -1584,8 +1603,8 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                 }
             };
             BufferIcmpHandler::<Ipv6, _, _>::send_icmp_error_message(
+                sync_ctx,
                 ctx,
-                &mut (),
                 device,
                 frame_dst,
                 src_ip,
@@ -1613,7 +1632,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                 "receive_ipv6_packet: received packet from non-unicast source {}; dropping",
                 packet.src_ip()
             );
-            increment_counter!(ctx, "receive_ipv6_packet: non-unicast source");
+            increment_counter!(sync_ctx, "receive_ipv6_packet: non-unicast source");
             return;
         }
     };
@@ -1625,7 +1644,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
         }
     };
 
-    match receive_ipv6_packet_action(ctx, &mut (), device, dst_ip) {
+    match receive_ipv6_packet_action(sync_ctx, ctx, device, dst_ip) {
         ReceivePacketAction::Deliver => {
             trace!("receive_ipv6_packet: delivering locally");
 
@@ -1642,7 +1661,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
             // Once the packet gets to the last destination in the routing
             // header, that node will process the fragment extension header and
             // handle reassembly.
-            match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, true) {
+            match ipv6::handle_extension_headers(sync_ctx, device, frame_dst, &packet, true) {
                 Ipv6PacketAction::_Discard => {
                     trace!(
                         "receive_ipv6_packet: handled IPv6 extension headers: discarding packet"
@@ -1659,8 +1678,8 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                     // - Check for already-expired TTL?
                     let (_, _, proto, meta): (Ipv6Addr, Ipv6Addr, _, _) = packet.into_metadata();
                     dispatch_receive_ipv6_packet(
+                        sync_ctx,
                         ctx,
-                        &mut (),
                         device,
                         frame_dst,
                         src_ip,
@@ -1692,6 +1711,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                     //               could be some more in a reassembled packet
                     //               (after the fragment header).
                     process_fragment!(
+                        sync_ctx,
                         ctx,
                         dispatch_receive_ipv6_packet,
                         device,
@@ -1706,13 +1726,13 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
             }
         }
         ReceivePacketAction::Forward { dst } => {
-            increment_counter!(ctx, "receive_ipv6_packet::forward");
+            increment_counter!(sync_ctx, "receive_ipv6_packet::forward");
             let ttl = packet.ttl();
             if ttl > 1 {
                 trace!("receive_ipv6_packet: forwarding");
 
                 // Handle extension headers first.
-                match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, false) {
+                match ipv6::handle_extension_headers(sync_ctx, device, frame_dst, &packet, false) {
                     Ipv6PacketAction::_Discard => {
                         trace!("receive_ipv6_packet: handled IPv6 extension headers: discarding packet");
                         return;
@@ -1727,8 +1747,8 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                 let (_, _, proto, meta): (Ipv6Addr, Ipv6Addr, _, _) =
                     drop_packet_and_undo_parse!(packet, buffer);
                 if let Err(buffer) = BufferIpDeviceContext::<Ipv6, _, _>::send_ip_frame(
+                    sync_ctx,
                     ctx,
-                    &mut (),
                     dst.device,
                     dst.next_hop,
                     buffer,
@@ -1747,10 +1767,10 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                         // the sender's ability to figure out the minimum path
                         // MTU. This may break other logic, though, so we should
                         // still fix it eventually.
-                        let mtu = crate::ip::device::get_mtu::<Ipv6, _, _>(ctx, device);
+                        let mtu = sync_ctx.get_mtu(device);
                         BufferIcmpHandler::<Ipv6, _, _>::send_icmp_error_message(
+                            sync_ctx,
                             ctx,
-                            &mut (),
                             device,
                             frame_dst,
                             src_ip,
@@ -1773,8 +1793,8 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
                     let (_, _, proto, meta): (Ipv6Addr, Ipv6Addr, _, _) =
                         drop_packet_and_undo_parse!(packet, buffer);
                     BufferIcmpHandler::<Ipv6, _, _>::send_icmp_error_message(
+                        sync_ctx,
                         ctx,
-                        &mut (),
                         device,
                         frame_dst,
                         src_ip,
@@ -1792,8 +1812,8 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
 
             if let Ipv6SourceAddr::Unicast(src_ip) = src_ip {
                 BufferIcmpHandler::<Ipv6, _, _>::send_icmp_error_message(
+                    sync_ctx,
                     ctx,
-                    &mut (),
                     device,
                     frame_dst,
                     src_ip,
@@ -1804,7 +1824,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>, C: Blank
             }
         }
         ReceivePacketAction::Drop { reason } => {
-            increment_counter!(ctx, "receive_ipv6_packet::drop");
+            increment_counter!(sync_ctx, "receive_ipv6_packet::drop");
             debug!(
                 "receive_ipv6_packet: dropping packet from {} to {} received on {}: {}",
                 packet.src_ip(),
@@ -2581,7 +2601,7 @@ mod tests {
         body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
         let buffer =
             Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap().into_inner();
-        receive_ipv4_packet(ctx, device, FrameDestination::Unicast, buffer);
+        receive_ipv4_packet(ctx, &mut (), device, FrameDestination::Unicast, buffer);
     }
 
     /// Generate and 'receive' an IPv6 fragment packet.
@@ -2614,7 +2634,7 @@ mod tests {
         let payload_len = u16::try_from(bytes.len() - 40).unwrap();
         bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let buffer = Buf::new(bytes, ..);
-        receive_ipv6_packet(ctx, device, FrameDestination::Unicast, buffer);
+        receive_ipv6_packet(ctx, &mut (), device, FrameDestination::Unicast, buffer);
     }
 
     #[test]
@@ -2644,7 +2664,7 @@ mod tests {
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let buf = Buf::new(bytes, ..);
 
-        receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buf);
 
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), 0);
@@ -2687,7 +2707,7 @@ mod tests {
         bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let buf = Buf::new(bytes, ..);
-        receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buf);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
@@ -2715,7 +2735,7 @@ mod tests {
             ExtensionHeaderOptionAction::SkipAndContinue,
             false,
         );
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
         assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
@@ -2728,7 +2748,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacket,
             false,
         );
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
 
@@ -2741,7 +2761,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             false,
         );
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
@@ -2761,7 +2781,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendIcmp,
             true,
         );
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
@@ -2781,7 +2801,7 @@ mod tests {
             ExtensionHeaderOptionAction::DiscardPacketSendIcmpNoMulticast,
             false,
         );
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
@@ -2802,7 +2822,7 @@ mod tests {
             true,
         );
         // Do not expect an ICMP response for this packet
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
 
@@ -3060,7 +3080,7 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
         // Receive the IP packet.
-        receive_ipv6_packet(&mut ctx, device, frame_dst, ipv6_packet_buf.clone());
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, ipv6_packet_buf.clone());
 
         // Should not have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
@@ -3301,7 +3321,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, &mut (), device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
@@ -3328,7 +3348,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, &mut (), device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 2);
@@ -3355,7 +3375,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, &mut (), device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 3);
@@ -3385,7 +3405,7 @@ mod tests {
         );
 
         // Receive the IP packet.
-        receive_ipv4_packet(&mut ctx, device, frame_dst, packet_buf);
+        receive_ipv4_packet(&mut ctx, &mut (), device, frame_dst, packet_buf);
 
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 4);
@@ -3429,7 +3449,7 @@ mod tests {
             .unwrap();
 
         crate::device::testutil::enable_device(&mut ctx, device);
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
 
         // Should not have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet"), 1);
@@ -3471,7 +3491,7 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
-        receive_ipv4_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv4_packet(&mut ctx, &mut (), device, frame_dst, buf);
 
         // Should have dispatched the packet but resulted in an ICMP error.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
@@ -3600,7 +3620,7 @@ mod tests {
             .into_inner();
 
         // Received packet should not have been dispatched.
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
 
         // Wait until DAD is complete. Arbitrarily choose a year in the future
@@ -3617,7 +3637,7 @@ mod tests {
         );
 
         // Received packet should have been dispatched.
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
 
         // Set the new IP (this should trigger DAD).
@@ -3632,7 +3652,7 @@ mod tests {
             .into_inner();
 
         // Received packet should not have been dispatched.
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
 
         // Make sure all timers are done (DAD to complete on the interface due
@@ -3643,7 +3663,7 @@ mod tests {
         let _: Vec<_> = ctx.trigger_timers_until_instant(DummyInstant::LATEST, crate::handle_timer);
 
         // Received packet should have been dispatched.
-        receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
+        receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 2);
     }
 
@@ -3669,7 +3689,7 @@ mod tests {
             .unwrap()
             .into_inner();
 
-        receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf.clone());
+        receive_ipv6_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet: non-unicast source"), 1);
     }
 

@@ -6,6 +6,7 @@
 
 use core::iter::Iterator;
 
+use net_types::ip::Ipv6;
 use packet_formats::ipv6::{
     ext_hdrs::{
         DestinationOptionData, ExtensionHeaderOption, FragmentData, HopByHopOptionData,
@@ -15,10 +16,7 @@ use packet_formats::ipv6::{
 };
 use zerocopy::ByteSlice;
 
-use crate::{
-    device::{DeviceId, FrameDestination},
-    BlanketCoreContext, Ctx, EventDispatcher,
-};
+use crate::{device::FrameDestination, ip::IpDeviceIdContext};
 
 /// What to do with an IPv6 packet after parsing an extension header.
 #[derive(Debug, PartialEq, Eq)]
@@ -46,9 +44,9 @@ pub(crate) enum Ipv6PacketAction {
 /// headers in `packet`. Otherwise, we will only attempt to process the
 /// hop-by-hop extension header (which MUST be the first extension header if
 /// present) as per RFC 8200 section 4.
-pub(crate) fn handle_extension_headers<D: EventDispatcher, C: BlanketCoreContext, B: ByteSlice>(
-    ctx: &mut Ctx<D, C>,
-    device: DeviceId,
+pub(crate) fn handle_extension_headers<C: IpDeviceIdContext<Ipv6>, B: ByteSlice>(
+    ctx: &mut C,
+    device: C::DeviceId,
     frame_dst: FrameDestination,
     packet: &Ipv6Packet<B>,
     at_destination: bool,
@@ -120,13 +118,12 @@ pub(crate) fn handle_extension_headers<D: EventDispatcher, C: BlanketCoreContext
 // and so this function will never be called.
 fn handle_hop_by_hop_options_ext_hdr<
     'a,
-    D: EventDispatcher,
-    C: BlanketCoreContext,
+    C: IpDeviceIdContext<Ipv6>,
     B: ByteSlice,
     I: Iterator<Item = ExtensionHeaderOption<HopByHopOptionData<'a>>>,
 >(
-    _ctx: &mut Ctx<D, C>,
-    _device: DeviceId,
+    _ctx: &mut C,
+    _device: C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     options: I,
@@ -148,9 +145,9 @@ fn handle_hop_by_hop_options_ext_hdr<
 
 /// Handles a routing extension header for a `packet`.
 // TODO(rheacock): Remove `_` prefix when this is used.
-fn _handle_routing_ext_hdr<'a, D: EventDispatcher, C: BlanketCoreContext, B: ByteSlice>(
-    _ctx: &mut Ctx<D, C>,
-    _device: DeviceId,
+fn _handle_routing_ext_hdr<'a, C: IpDeviceIdContext<Ipv6>, B: ByteSlice>(
+    _ctx: &mut C,
+    _device: C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     _routing_data: &RoutingData<'a>,
@@ -162,9 +159,9 @@ fn _handle_routing_ext_hdr<'a, D: EventDispatcher, C: BlanketCoreContext, B: Byt
 }
 
 /// Handles a fragment extension header for a `packet`.
-fn handle_fragment_ext_hdr<'a, D: EventDispatcher, C: BlanketCoreContext, B: ByteSlice>(
-    _ctx: &mut Ctx<D, C>,
-    _device: DeviceId,
+fn handle_fragment_ext_hdr<'a, C: IpDeviceIdContext<Ipv6>, B: ByteSlice>(
+    _ctx: &mut C,
+    _device: C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     _fragment_data: &FragmentData<'a>,
@@ -179,13 +176,12 @@ fn handle_fragment_ext_hdr<'a, D: EventDispatcher, C: BlanketCoreContext, B: Byt
 // and so this function will never be called.
 fn handle_destination_options_ext_hdr<
     'a,
-    D: EventDispatcher,
-    C: BlanketCoreContext,
+    C: IpDeviceIdContext<Ipv6>,
     B: ByteSlice,
     I: Iterator<Item = ExtensionHeaderOption<DestinationOptionData<'a>>>,
 >(
-    _ctx: &mut Ctx<D, C>,
-    _device: DeviceId,
+    _ctx: &mut C,
+    _device: C::DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
     options: I,
@@ -216,7 +212,10 @@ mod tests {
     };
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V6};
+    use crate::{
+        testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V6},
+        DeviceId,
+    };
 
     #[test]
     fn test_no_extension_headers() {

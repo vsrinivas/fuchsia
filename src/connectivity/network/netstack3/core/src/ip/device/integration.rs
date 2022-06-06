@@ -29,8 +29,8 @@ use crate::{
             self, add_ipv6_addr_subnet,
             dad::{DadHandler, Ipv6DeviceDadContext, Ipv6LayerDadContext},
             del_ipv6_addr_with_reason, get_ipv4_addr_subnet, get_ipv4_device_state,
-            get_ipv6_device_state, get_ipv6_hop_limit, is_ipv4_routing_enabled,
-            is_ipv6_routing_enabled, iter_ipv4_devices, iter_ipv6_devices,
+            get_ipv6_device_state, get_ipv6_hop_limit, is_ip_device_enabled,
+            is_ipv4_routing_enabled, is_ipv6_routing_enabled, iter_ipv4_devices, iter_ipv6_devices,
             route_discovery::{Ipv6RouteDiscoveryState, Ipv6RouteDiscoveryStateContext},
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
@@ -392,6 +392,10 @@ impl<C, SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf> + device::Ipv6DeviceCon
 }
 
 impl<C, SC: device::IpDeviceContext<Ipv4, C>> ip::IpDeviceContext<Ipv4, C> for SC {
+    fn is_ip_device_enabled(&self, device_id: SC::DeviceId) -> bool {
+        is_ip_device_enabled(self, device_id)
+    }
+
     fn address_status(
         &self,
         device_id: Option<SC::DeviceId>,
@@ -443,9 +447,17 @@ impl<C, SC: device::IpDeviceContext<Ipv4, C>> ip::IpDeviceContext<Ipv4, C> for S
     fn get_hop_limit(&self, _device_id: SC::DeviceId) -> NonZeroU8 {
         DEFAULT_TTL
     }
+
+    fn get_mtu(&self, device_id: Self::DeviceId) -> u32 {
+        self.get_mtu(device_id)
+    }
 }
 
 impl<C, SC: device::IpDeviceContext<Ipv6, C>> ip::IpDeviceContext<Ipv6, C> for SC {
+    fn is_ip_device_enabled(&self, device_id: SC::DeviceId) -> bool {
+        is_ip_device_enabled(self, device_id)
+    }
+
     fn address_status(
         &self,
         device_id: Option<SC::DeviceId>,
@@ -489,6 +501,10 @@ impl<C, SC: device::IpDeviceContext<Ipv6, C>> ip::IpDeviceContext<Ipv6, C> for S
 
     fn get_hop_limit(&self, device_id: SC::DeviceId) -> NonZeroU8 {
         get_ipv6_hop_limit(self, device_id)
+    }
+
+    fn get_mtu(&self, device_id: Self::DeviceId) -> u32 {
+        self.get_mtu(device_id)
     }
 }
 

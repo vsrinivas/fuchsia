@@ -2537,6 +2537,7 @@ mod tests {
         // Generate stable and temporary SLAAC addresses.
         receive_ipv6_packet(
             &mut ctx,
+            &mut (),
             device_id,
             FrameDestination::Multicast,
             build_slaac_ra_packet(

@@ -101,7 +101,7 @@ impl<I: Ip, C, SC: FragmentStateContext<I> + TimerContext<FragmentCacheKey<I::Ad
 }
 
 /// An implementation of a fragment cache.
-pub(super) trait FragmentHandler<I: Ip, C> {
+pub(crate) trait FragmentHandler<I: Ip, C> {
     /// Attempts to process a packet fragment.
     ///
     /// # Panics

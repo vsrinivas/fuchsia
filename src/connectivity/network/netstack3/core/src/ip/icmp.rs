@@ -2975,10 +2975,10 @@ mod tests {
             .expect("error setting routing enabled");
         match I::VERSION {
             IpVersion::V4 => {
-                receive_ipv4_packet(&mut ctx, device, FrameDestination::Unicast, buffer)
+                receive_ipv4_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buffer)
             }
             IpVersion::V6 => {
-                receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buffer)
+                receive_ipv6_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buffer)
             }
         }
 

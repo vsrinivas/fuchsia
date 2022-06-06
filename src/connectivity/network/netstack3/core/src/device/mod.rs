@@ -144,11 +144,17 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
 {
     fn receive_frame(
         &mut self,
-        _ctx: &mut (),
+        ctx: &mut (),
         metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv4>,
         frame: B,
     ) {
-        crate::ip::receive_ipv4_packet(self, metadata.device.into(), metadata.frame_dst, frame);
+        crate::ip::receive_ipv4_packet(
+            self,
+            ctx,
+            metadata.device.into(),
+            metadata.frame_dst,
+            frame,
+        );
     }
 }
 
@@ -157,11 +163,17 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
 {
     fn receive_frame(
         &mut self,
-        _ctx: &mut (),
+        ctx: &mut (),
         metadata: RecvIpFrameMeta<EthernetDeviceId, Ipv6>,
         frame: B,
     ) {
-        crate::ip::receive_ipv6_packet(self, metadata.device.into(), metadata.frame_dst, frame);
+        crate::ip::receive_ipv6_packet(
+            self,
+            ctx,
+            metadata.device.into(),
+            metadata.frame_dst,
+            frame,
+        );
     }
 }
 

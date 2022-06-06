@@ -755,16 +755,6 @@ pub(crate) fn set_ipv6_routing_enabled<
     Ok(())
 }
 
-/// Gets the MTU for a device.
-///
-/// The MTU is the maximum size of an IP packet.
-pub(crate) fn get_mtu<I: IpDeviceIpExt<SC::Instant, SC::DeviceId>, C, SC: IpDeviceContext<I, C>>(
-    sync_ctx: &SC,
-    device_id: SC::DeviceId,
-) -> u32 {
-    sync_ctx.get_mtu(device_id)
-}
-
 /// Adds `device_id` to a multicast group `multicast_addr`.
 ///
 /// Calling `join_ip_multicast` multiple times is completely safe. A counter

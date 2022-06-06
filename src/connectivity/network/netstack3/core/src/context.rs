@@ -505,7 +505,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext> CounterContext for Ctx<D, C> {
     // no longer a problem.
     #[allow(unused)]
     fn increment_counter(&self, key: &'static str) {
-        increment_counter!(self, key);
+        #[cfg(test)]
+        self.state.test_counters.borrow_mut().increment(key);
     }
 }
 

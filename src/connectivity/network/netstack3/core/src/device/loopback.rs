@@ -78,8 +78,8 @@ mod tests {
             crate::add_loopback_device(&mut ctx, MTU).expect("error adding loopback device");
         crate::device::testutil::enable_device(&mut ctx, device);
 
-        assert_eq!(crate::ip::device::get_mtu::<Ipv4, _, _>(&ctx, device), MTU);
-        assert_eq!(crate::ip::device::get_mtu::<Ipv6, _, _>(&ctx, device), MTU);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv4, _>::get_mtu(&ctx, device), MTU);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&ctx, device), MTU);
 
         fn test<
             I: TestIpExt + IpDeviceStateIpExt<C::Instant>,

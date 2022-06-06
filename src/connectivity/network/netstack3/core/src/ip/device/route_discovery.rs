@@ -571,6 +571,7 @@ mod tests {
         // yet and prefix does not make on-link determination.
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(0, false, as_secs(ONE_SECOND).into()),
@@ -582,6 +583,7 @@ mod tests {
         // lifetime.
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(as_secs(ONE_SECOND), true, 0),
@@ -605,6 +607,7 @@ mod tests {
         // router.
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(as_secs(TWO_SECONDS), true, as_secs(ONE_SECOND).into()),
@@ -627,6 +630,7 @@ mod tests {
         // prefix.
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(0, true, as_secs(TWO_SECONDS).into()),
@@ -646,7 +650,7 @@ mod tests {
 
         // Do nothing as prefix does not make on-link determination and router
         // with valid lifetime is not discovered.
-        receive_ipv6_packet(ctx, device_id, FrameDestination::Unicast, buf(0, false, 0));
+        receive_ipv6_packet(ctx, &mut (), device_id, FrameDestination::Unicast, buf(0, false, 0));
         check_event(ctx, None);
         ctx.ctx.timer_ctx().assert_timers_installed([(
             timer_id(on_link_route),
@@ -654,7 +658,7 @@ mod tests {
         )]);
 
         // Invalidate on-link prefix.
-        receive_ipv6_packet(ctx, device_id, FrameDestination::Unicast, buf(0, true, 0));
+        receive_ipv6_packet(ctx, &mut (), device_id, FrameDestination::Unicast, buf(0, true, 0));
         check_event(
             ctx,
             Some(Ipv6RouteDiscoveryEvent {
@@ -705,6 +709,7 @@ mod tests {
         let prefix_lifetime_secs = u32::MAX;
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -736,6 +741,7 @@ mod tests {
         let prefix_lifetime_secs = u32::MAX - 1;
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -757,6 +763,7 @@ mod tests {
         let prefix_lifetime_secs = u32::MAX;
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -771,6 +778,7 @@ mod tests {
         let prefix_lifetime_secs = 0;
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -820,6 +828,7 @@ mod tests {
         // Discover both an on-link prefix and default router.
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device_id,
             FrameDestination::Unicast,
             router_advertisement_buf(

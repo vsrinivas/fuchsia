@@ -1326,7 +1326,7 @@ mod tests {
         },
         ip::{
             device::{
-                get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
+                get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit,
                 is_ipv6_routing_enabled,
                 router_solicitation::{MAX_RTR_SOLICITATION_DELAY, RTR_SOLICITATION_INTERVAL},
                 set_ipv6_routing_enabled,
@@ -2441,7 +2441,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
-        assert_eq!(get_mtu::<Ipv6, _, _>(&ctx, device), hw_mtu);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&ctx, device), hw_mtu);
 
         // Receive a new RA with an invalid MTU option (value is lower than IPv6
         // min MTU).
@@ -2459,7 +2459,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
-        assert_eq!(get_mtu::<Ipv6, _, _>(&ctx, device), hw_mtu);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&ctx, device), hw_mtu);
 
         // Receive a new RA with a valid MTU option (value is exactly IPv6 min
         // MTU).
@@ -2477,7 +2477,10 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
-        assert_eq!(get_mtu::<Ipv6, _, _>(&ctx, device), Ipv6::MINIMUM_LINK_MTU.into());
+        assert_eq!(
+            crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&ctx, device),
+            Ipv6::MINIMUM_LINK_MTU.into()
+        );
     }
 
     #[test]
@@ -3238,7 +3241,13 @@ mod tests {
             100,
             0,
         );
-        receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
+        receive_ipv6_packet(
+            &mut ctx,
+            &mut (),
+            device,
+            FrameDestination::Multicast,
+            icmpv6_packet_buf,
+        );
 
         assert_empty(iter_global_ipv6_addrs(&ctx, &mut (), device.try_into().unwrap()));
 
@@ -3626,7 +3635,13 @@ mod tests {
             9000,
             10000,
         );
-        receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
+        receive_ipv6_packet(
+            &mut ctx,
+            &mut (),
+            device,
+            FrameDestination::Multicast,
+            icmpv6_packet_buf,
+        );
         assert_empty(iter_global_ipv6_addrs(&ctx, &mut (), device_id));
 
         // Address invalidation timers were added.
@@ -3736,7 +3751,7 @@ mod tests {
             valid_lifetime,
             preferred_lifetime,
         );
-        receive_ipv6_packet(ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
+        receive_ipv6_packet(ctx, &mut (), device, FrameDestination::Multicast, icmpv6_packet_buf);
     }
 
     fn get_matching_slaac_address_entries<F: FnMut(&&Ipv6AddressEntry<DummyInstant>) -> bool>(
@@ -4016,6 +4031,7 @@ mod tests {
         let src_ip = source_ip.get();
         receive_ipv6_packet(
             ctx,
+            &mut (),
             device,
             FrameDestination::Multicast,
             Buf::new(
@@ -4653,7 +4669,13 @@ mod tests {
             VALID_LIFETIME_SECS,
             PREFERRED_LIFETIME_SECS,
         );
-        receive_ipv6_packet(&mut ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
+        receive_ipv6_packet(
+            &mut ctx,
+            &mut (),
+            device,
+            FrameDestination::Multicast,
+            icmpv6_packet_buf,
+        );
 
         // Should have gotten a new IP.
         let now = ctx.now();
