@@ -110,6 +110,7 @@ hmac = "0.11.0"
 humansize = "1.1.1"
 http = "0.2.4"
 hyper = { version = "0.13.10", default-features = false, features = ["stream"] }
+indexmap = "1.7.0"
 iota = "0.2.2"
 itertools = "0.10"
 itoa = "0.4"

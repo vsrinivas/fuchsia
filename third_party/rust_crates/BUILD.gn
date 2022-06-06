@@ -380,6 +380,10 @@ if (current_os == "fuchsia") {
   }
 }
 
+group("indexmap") {
+  public_deps = [ ":indexmap-v1_7_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("indoc") {
     public_deps = [ ":indoc-v1_0_3($host_toolchain)" ]

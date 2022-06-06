@@ -1379,6 +1379,7 @@ dependencies = [
  "humansize",
  "hyper",
  "hyper-rustls",
+ "indexmap",
  "indoc",
  "inotify",
  "iota",
