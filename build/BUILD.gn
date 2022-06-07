@@ -16,7 +16,6 @@ group("tests") {
     "components:tests",
     "dart:tests",
     "fidl:tests",
-    "images:tests",
     "python:tests",
     "rbe:tests",
     "rust:tests",

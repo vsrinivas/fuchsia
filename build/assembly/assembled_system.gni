@@ -3,14 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/assembly/compare_image_assembly_configs.gni")
+import("//build/assembly/compare_json_list.gni")
+import("//build/assembly/generated_image_assembly_config.gni")
+import("//build/assembly/generated_images_config.gni")
+import("//build/assembly/hermetic_inputs_for_image_assembly.gni")
 import("//build/assembly/legacy_assembly_input_bundle.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
-import("//build/images/assembly/compare_json_list.gni")
-import("//build/images/assembly/generated_image_assembly_config.gni")
-import("//build/images/assembly/generated_images_config.gni")
-import("//build/images/assembly/hermetic_inputs_for_image_assembly.gni")
 import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")

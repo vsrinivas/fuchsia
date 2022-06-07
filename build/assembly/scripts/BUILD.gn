@@ -8,6 +8,49 @@ import("//build/python/python_host_test.gni")
 
 assert(is_host, "Only include assembly build scripts via the host toolchain")
 
+python_binary("generated_assembly_inputs") {
+  main_source = "generated_assembly_inputs.py"
+  deps = [ "//build/python/modules/assembly" ]
+}
+
+python_binary("check_size_hermetic_inputs") {
+  main_source = "check_size_hermetic_inputs.py"
+  deps = [ "//build/python/modules/assembly" ]
+}
+
+python_host_test("compare_json_list_test") {
+  main_source = "compare_json_list_test.py"
+  sources = [ "compare_json_list.py" ]
+  libraries = [ "//third_party/parameterized" ]
+}
+
+python_host_test("convert_size_limits_test") {
+  main_source = "convert_size_limits_test.py"
+  sources = [ "convert_size_limits.py" ]
+  libraries = [ "//third_party/parameterized" ]
+}
+
+python_host_test("check_size_hermetic_inputs_test") {
+  main_source = "check_size_hermetic_inputs_test.py"
+  sources = [ "check_size_hermetic_inputs.py" ]
+  libraries = [
+    "//build/python/modules/assembly",
+    "//third_party/parameterized",
+  ]
+}
+
+python_binary("hermetic_inputs_for_image_assembly") {
+  main_source = "hermetic_inputs_for_image_assembly.py"
+  deps = [
+    "//build/python/modules/assembly",
+    "//build/python/modules/depfile",
+  ]
+}
+
+python_binary("hermetic_inputs_for_update_and_flash") {
+  main_source = "hermetic_inputs_for_update_and_flash.py"
+}
+
 python_binary("make_legacy_config") {
   main_source = "make_legacy_config.py"
   deps = [
@@ -62,5 +105,9 @@ python_binary("product_def_gn_arg_validator") {
 
 group("tests") {
   testonly = true
-  deps = [ ":test_make_legacy_config" ]
+  deps = [
+    ":check_size_hermetic_inputs_test",
+    ":compare_json_list_test",
+    ":test_make_legacy_config",
+  ]
 }

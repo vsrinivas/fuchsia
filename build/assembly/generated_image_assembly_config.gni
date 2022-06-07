@@ -239,7 +239,7 @@ template("generated_image_assembly_config") {
                              "testonly",
                              "visibility",
                            ])
-    script = "//build/images/assembly/generated_image_assembly_config.py"
+    script = "//build/assembly/scripts/generated_image_assembly_config.py"
 
     outputs = [ invoker.output_path ]
     inputs = [

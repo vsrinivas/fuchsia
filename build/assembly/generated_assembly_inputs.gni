@@ -37,7 +37,7 @@ template("generated_assembly_inputs") {
                              "testonly",
                              "visibility",
                            ])
-    binary_label = "//build/images/assembly:generated_assembly_inputs"
+    binary_label = "//build/assembly/scripts:generated_assembly_inputs"
 
     depfile_path = "$target_out_dir/$target_name.depfile"
     depfile = depfile_path

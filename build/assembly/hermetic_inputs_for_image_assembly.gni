@@ -47,7 +47,7 @@ template("hermetic_inputs_for_image_assembly") {
                              "testonly",
                              "visibility",
                            ])
-    binary_label = "//build/images/assembly:hermetic_inputs_for_image_assembly"
+    binary_label = "//build/assembly/scripts:hermetic_inputs_for_image_assembly"
 
     depfile_path = "${target_out_dir}/${target_name}_depfile"
 

@@ -29,7 +29,7 @@ template("compare_json_list") {
                              "testonly",
                              "visibility",
                            ])
-    script = "//build/images/assembly/compare_json_list.py"
+    script = "//build/assembly/scripts/compare_json_list.py"
     stamp = "${target_out_dir}/${target_name}_compare_json_list.stamp"
     outputs = [ stamp ]
     inputs = [

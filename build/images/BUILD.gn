@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/assembly/package_list.gni")
 import("//build/board.gni")
 import("//build/compiled_action.gni")
 import("//build/component/component_id_index.gni")
@@ -340,9 +341,4 @@ generated_file("image_paths") {
   output_conversion = "list lines"
   data_keys = [ "image_paths" ]
   deps = [ ":images" ]
-}
-
-group("tests") {
-  deps = [ "assembly:tests($host_toolchain)" ]
-  testonly = true
 }

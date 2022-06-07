@@ -6,7 +6,7 @@
 This tool converts the old size budget file to the new format as part of RFC-0144 migration plan.
 
 Usage example:
-  python3 build/images/assembly/convert_size_limits.py \
+  python3 build/assembly/scripts/convert_size_limits.py \
     --size_limits out/default/size_checker.json \
     --product_config out/default/obj/build/images/fuchsia/fuchsia_product_config.json \
     --output out/default/size_budgets.json

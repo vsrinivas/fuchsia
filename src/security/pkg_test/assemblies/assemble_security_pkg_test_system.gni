@@ -3,14 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/assembly/assembled_system.gni")
+import("//build/assembly/generated_partitions_config.gni")
+import("//build/assembly/update_package.gni")
 import("//build/compiled_action.gni")
 import("//build/components/fuchsia_package.gni")
 import("//build/components/fuchsia_test_component.gni")
 import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//build/dist/zip_resource.gni")
-import("//build/images/assembly/generated_partitions_config.gni")
-import("//build/images/assembly/update_package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/security/pkg_test/assemblies/build_info.gni")
 

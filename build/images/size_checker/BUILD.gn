@@ -28,7 +28,7 @@ generated_file("size_checker_json") {
 }
 
 action("convert_size_limits_to_size_budgets") {
-  script = "//build/images/assembly/convert_size_limits.py"
+  script = "//build/assembly/scripts/convert_size_limits.py"
   inputs = [
     "$root_build_dir/size_checker.json",
     _image_assembly_config,
@@ -63,7 +63,7 @@ _blobfs_hermetic_inputs_target =
     "create_verify_size_budget_blobfs_hermetic_inputs"
 
 python_hermetic_inputs_action(_blobfs_hermetic_inputs_target) {
-  binary_label = "//build/images/assembly:check_size_hermetic_inputs"
+  binary_label = "//build/assembly/scripts:check_size_hermetic_inputs"
   inputs = [ _size_budgets_blobfs_file ]
   outputs = [ _blobfs_hermetic_inputs ]
   deps = [ ":convert_size_limits_to_size_budgets" ]
@@ -117,7 +117,7 @@ _non_blobfs_hermetic_inputs_target =
     "create_verify_size_budget_non_blobfs_hermetic_inputs"
 
 python_hermetic_inputs_action(_non_blobfs_hermetic_inputs_target) {
-  binary_label = "//build/images/assembly:check_size_hermetic_inputs"
+  binary_label = "//build/assembly/scripts:check_size_hermetic_inputs"
   inputs = [ _size_budgets_non_blobfs_file ]
   outputs = [ _non_blobfs_hermetic_inputs ]
   deps = [

@@ -41,7 +41,7 @@ template("package_list_from_assembly") {
   _binary_target = "${target_name}_bin"
   python_binary(_binary_target) {
     testonly = true
-    main_source = "//build/images/assembly/package_list.py"
+    main_source = "//build/assembly/scripts/package_list.py"
   }
 
   python_action(target_name) {

@@ -62,7 +62,7 @@ template("update_package") {
                              "visibility",
                            ])
     binary_label =
-        "//build/images/assembly:hermetic_inputs_for_update_and_flash"
+        "//build/assembly/scripts:hermetic_inputs_for_update_and_flash"
 
     inputs = [ invoker.partitions ]
     outputs = [ files.hermetic_inputs ]
