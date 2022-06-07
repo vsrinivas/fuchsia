@@ -67,7 +67,7 @@ template("legacy_assembly_input_bundle") {
     image_assembly_dir = get_label_info(image_assembly_label, "dir")
 
     # Compute the assembly config and config_data labels that are generated within
-    # assemble_system()
+    # assembled_system()
     assemble_system_image_assembly_config =
         "${image_assembly_dir}:${image_assembly_name}.image_assembly_config"
     assemble_system_config_data = "${image_assembly_dir}:${image_assembly_name}.config-data_config_package_entries"

@@ -205,12 +205,12 @@ instructions may not be necessary.
 
 All `component_id_index()`s in a system build are merged together using the
 `component_id_index_config()` template. This template is currently used in
-`assemble_system.gni`, and assembly will fail if you define your own alongside
-the one from `assemble_system.gni`.
+`assembled_system.gni`, and assembly will fail if you define your own alongside
+the one from `assembled_system.gni`.
 
 ### Steps
 
 1. Define any `component_id_index()`s you want included in the system.
-1. Add these targets as dependencies of `base_packages` in your `assemble_system()`
+1. Add these targets as dependencies of `base_packages` in your `assembled_system()`
 target.
 

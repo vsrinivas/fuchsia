@@ -2,17 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/assemble_system.gni")
+import("//build/assembly/assembled_system.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
-# Wraps assemble_system to allow adding internal network-conformance test stubs.
+# Wraps assembled_system to allow adding internal network-conformance test stubs.
 #
 # Parameters
 #
 #   additional_base_packages
-#     Additional package labels to include in the `base_packages` passed to `assemble_system`.
+#     Additional package labels to include in the `base_packages` passed to `assembled_system`.
 #
 template("assemble_network_conformance_system") {
   core_name = "core-${target_name}"
@@ -36,7 +36,7 @@ template("assemble_network_conformance_system") {
     core_package_name = core_name
   }
 
-  assemble_system(target_name) {
+  assembled_system(target_name) {
     testonly = true
 
     base_packages = [
@@ -93,7 +93,7 @@ template("assemble_network_conformance_system") {
       "//src/diagnostics/archivist:default-service-config",
     ]
 
-    # TODO(https://fxbug.dev/81569): Move this metadata to assemble_system.gni.
+    # TODO(https://fxbug.dev/81569): Move this metadata to assembled_system.gni.
     metadata = {
       images = [
         {

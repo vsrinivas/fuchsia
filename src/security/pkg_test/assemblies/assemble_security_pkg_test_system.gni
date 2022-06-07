@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/assembly/assembled_system.gni")
 import("//build/compiled_action.gni")
 import("//build/components/fuchsia_package.gni")
 import("//build/components/fuchsia_test_component.gni")
 import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//build/dist/zip_resource.gni")
-import("//build/images/assemble_system.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/update_package.gni")
 import("//build/rust/rustc_binary.gni")
@@ -22,10 +22,10 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 #   Assembly parameters:
 #
 #   board_name (required):
-#     [string] board_name forwarded to assemble_system(target_name).
+#     [string] board_name forwarded to assembled_system(target_name).
 #
 #   base_packages (required):
-#     [list of labels] base_packages forwarded to assemble_system(target_name).
+#     [list of labels] base_packages forwarded to assembled_system(target_name).
 #
 #   system_version_file (required):
 #     [string] The file used to designate system version in the assembly's
@@ -58,7 +58,7 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 # Public targets:
 #
 #   ${target_name}:
-#     The assemble_system(target_name) { ... } used as a basis for other
+#     The assembled_system(target_name) { ... } used as a basis for other
 #     targets.
 #
 #   ${target_name}_update_package:
@@ -184,7 +184,7 @@ template("assemble_security_pkg_test_system") {
     not_needed(invoker, [ "root_ssl_cert" ])
   }
 
-  # `assemble_system(...) { base_packages }` requires a package with the name
+  # `assembled_system(...) { base_packages }` requires a package with the name
   # "pkgfs".
   fuchsia_package(labels.empty_pkgfs) {
     testonly = true
@@ -227,7 +227,7 @@ template("assemble_security_pkg_test_system") {
                         ]
 
   # Main system assembly.
-  assemble_system(labels.assembly) {
+  assembled_system(labels.assembly) {
     forward_variables_from(invoker, [ "fvm_truncate_to_length" ])
     testonly = true
     board_name = invoker.board_name

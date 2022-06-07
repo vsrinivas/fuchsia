@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/assemble_system.gni")
+import("//build/assembly/assembled_system.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
@@ -158,13 +158,13 @@ recovery_installer_packages =
       "//src/recovery/system:config_installer",
     ]
 
-assemble_system("recovery-eng") {
+assembled_system("recovery-eng") {
   forward_variables_from(recovery_base, "*")
   base_packages = recovery_eng_packages + [ ":core-eng" ]
   system_image_deps = recovery_system_image_deps
   sysmgr_golden = "sysmgr-eng-golden.json"
 
-  # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
+  # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
   metadata = {
     images = [
       {
@@ -191,7 +191,7 @@ assemble_system("recovery-eng") {
   }
 }
 
-assemble_system("recovery-fdr") {
+assembled_system("recovery-fdr") {
   base_packages = recovery_packages + [ ":core" ]
   generate_fvm = !bootfs_only
 
@@ -236,7 +236,7 @@ assemble_system("recovery-fdr") {
   }
 }
 
-assemble_system("recovery-installer") {
+assembled_system("recovery-installer") {
   forward_variables_from(recovery_base, "*")
   base_packages = recovery_installer_packages + [ ":core-eng" ]
   system_image_deps = recovery_system_image_deps
@@ -248,7 +248,7 @@ assemble_system("recovery-installer") {
     gpt_all = true
   }
 
-  # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
+  # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
   metadata = {
     images = [
       {

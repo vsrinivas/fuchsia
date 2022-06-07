@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/assemble_system.gni")
+import("//build/assembly/assembled_system.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
@@ -24,7 +24,7 @@ root_realm("root") {
   testonly = true
 }
 
-assemble_system("overnet") {
+assembled_system("overnet") {
   testonly = true
 
   base_packages = [
@@ -64,7 +64,7 @@ assemble_system("overnet") {
   ramdisk_fvm_in_zbi = true
   include_component_id_index = true
 
-  # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
+  # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
   metadata = {
     images = [
       {
