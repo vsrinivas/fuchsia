@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 // [START imports]
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -13,6 +14,7 @@
 
 // [START main]
 int main(int argc, const char* argv[], char* envp[]) {
+  syslog::SetTags({"echo"});
   // Read program arguments, and exclude the binary name in argv[0]
   std::vector<std::string> arguments;
   for (int i = 1; i < argc; i++) {
@@ -24,7 +26,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   arguments.push_back(favorite_animal);
 
   // Print a greeting to syslog
-  FX_LOGF(INFO, "echo", "Hello, %s!", echo::greeting(arguments).c_str());
+  FX_SLOG(INFO, "Hello", KV("greeting", echo::greeting(arguments).c_str()));
 
   return 0;
 }
