@@ -192,7 +192,7 @@ if is_feature_enabled "incremental"; then
   fi
   $verbose && echo -n >&2 "Preparing the package repository..."
   # only show output of prepare_publish if it fails
-  out="$(fx-command-run build build/images:prepare_publish 2>&1)"
+  out="$(fx-command-run build build/images/updates:prepare_publish 2>&1)"
   if [[ $? -ne 0 ]]; then
     echo >&2 "${out}"
     exit $?
