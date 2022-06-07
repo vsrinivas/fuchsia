@@ -401,9 +401,11 @@ static void fx_slog_internal(syslog::LogSeverity flag, const char* file, int lin
   MakeValue(msg, MakeKV<Args...>(std::make_tuple(args...))).LogNew(flag, file, line, nullptr);
 }
 
-#define FX_SLOG_ETC(flag, args...)                    \
-  do {                                                \
-    fx_slog_internal(flag, __FILE__, __LINE__, args); \
+#define FX_SLOG_ETC(flag, args...)                      \
+  do {                                                  \
+    if (::syslog::ShouldCreateLogMessage(flag)) {       \
+      fx_slog_internal(flag, __FILE__, __LINE__, args); \
+    }                                                   \
   } while (0)
 
 #define FX_SLOG(flag, msg...) FX_SLOG_ETC(::syslog::LOG_##flag, msg)

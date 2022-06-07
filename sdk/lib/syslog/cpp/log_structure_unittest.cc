@@ -25,6 +25,20 @@ TEST(StructuredLogging, Log) {
   // TODO(fxbug.dev/57482): Figure out how to verify this appropriately.
 }
 
+class SideEffectTracker {
+ public:
+  explicit SideEffectTracker(bool* output) { *output = true; }
+  operator int64_t() { return 0; }
+};
+
+TEST(StructuredLogging, NoSideEffectsIfLoggingIsDisabled) {
+  bool called = false;
+  FX_SLOG(DEBUG, "test", KV("a", static_cast<int64_t>(SideEffectTracker(&called))));
+  ASSERT_FALSE(called);
+  FX_SLOG(INFO, "test", KV("a", static_cast<int64_t>(SideEffectTracker(&called))));
+  ASSERT_TRUE(called);
+}
+
 // Test to validate that SetLogSettings and log initialization is thread-safe.
 TEST(StructuredLogging, ThreadInitialization) {
   // TODO(bbosak): Convert to actual stress test.
