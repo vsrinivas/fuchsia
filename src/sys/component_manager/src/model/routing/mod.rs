@@ -154,11 +154,11 @@ fn request_for_namespace_capability_expose(
 async fn get_default_provider(
     target: WeakComponentInstance,
     source: &CapabilitySource,
-) -> Option<Box<dyn CapabilityProvider>> {
+) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
     match source {
         CapabilitySource::Component { capability, component } => {
             // Route normally for a component capability with a source path
-            match capability.source_path() {
+            Ok(match capability.source_path() {
                 Some(path) => Some(Box::new(DefaultComponentCapabilityProvider {
                     target,
                     source: component.clone(),
@@ -169,11 +169,11 @@ async fn get_default_provider(
                     path: path.clone(),
                 })),
                 _ => None,
-            }
+            })
         }
         CapabilitySource::Namespace { capability, .. } => match capability.source_path() {
-            Some(path) => Some(Box::new(NamespaceCapabilityProvider { path: path.clone() })),
-            _ => None,
+            Some(path) => Ok(Some(Box::new(NamespaceCapabilityProvider { path: path.clone() }))),
+            _ => Ok(None),
         },
         CapabilitySource::FilteredService {
             capability,
@@ -194,29 +194,17 @@ async fn get_default_provider(
                         path: path.clone(),
                     });
 
-                    match component.upgrade() {
-                        Ok(source_component) => {
-                            match FilteredServiceProvider::new(
-                                &source_component,
-                                source_instance_filter.clone(),
-                                instance_name_source_to_target.clone(),
-                                base_capability_provider,
-                            )
-                            .await
-                            {
-                                Ok(filtered_service_provider) => {
-                                    Some(Box::new(filtered_service_provider))
-                                }
-                                _ => None,
-                            }
-                        }
-                        Err(e) => {
-                            error!("Error upgrading source component when creating FilteredServiceProvider: {}", e);
-                            None
-                        }
-                    }
+                    let source_component = component.upgrade()?;
+                    let provider = FilteredServiceProvider::new(
+                        &source_component,
+                        source_instance_filter.clone(),
+                        instance_name_source_to_target.clone(),
+                        base_capability_provider,
+                    )
+                    .await?;
+                    Ok(Some(Box::new(provider)))
                 }
-                _ => None,
+                _ => Ok(None),
             }
         }
         CapabilitySource::Framework { .. }
@@ -224,7 +212,7 @@ async fn get_default_provider(
         | CapabilitySource::Builtin { .. }
         | CapabilitySource::Collection { .. } => {
             // There is no default provider for a framework or builtin capability
-            None
+            Ok(None)
         }
     }
 }
@@ -238,7 +226,7 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
     let OpenRequest { flags, open_mode, relative_path, source, target, server_chan } = open_request;
 
     let capability_provider =
-        Arc::new(Mutex::new(get_default_provider(target.as_weak(), &source).await));
+        Arc::new(Mutex::new(get_default_provider(target.as_weak(), &source).await?));
 
     let event = Event::new(
         &target,
