@@ -42,8 +42,8 @@ if (is_linux) {
     ]
     non_go_deps = [ ":installer_image" ]
 
-    # The installer test is slow.
-    timeout = "30m"
+    # The installer test is really slow.
+    timeout = "60m"
     environments = [
       {
         dimensions = linux_env.dimensions
