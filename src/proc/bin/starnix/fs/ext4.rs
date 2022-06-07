@@ -185,7 +185,7 @@ impl FileOps for ExtDirFileObject {
             return Ok(());
         }
 
-        for entry in dir_entries.iter() {
+        for entry in dir_entries[(*offset as usize)..].iter() {
             let next_offset = *offset + 1;
             let inode_num = entry.e2d_ino.into();
             let entry_type = directory_entry_type(
