@@ -35,7 +35,7 @@ Note: It is recommended checking out to the revision that's currently used for
 Fuchsia.
 The latest upstream revision may be broken or fail to build Fuchsia, whereas it is
 guaranteed that the prebuilt revision can always build Fuchsia. This
-revision can be found in `[//integration/prebuilts]`. Search for the package
+revision can be found in `[//integration/toolchain]`. Search for the package
 `fuchsia/third_party/clang/${platform}`, and checkout the `git_revision`
 associated with it.
 
