@@ -6,7 +6,8 @@
 #include <fidl/examples/routing/echo/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -18,6 +19,9 @@ int main(int argc, const char* argv[], char* envp[]) {
   // [START_EXCLUDE silent]
   // TODO(fxbug.dev/97170): Consider migrating to async FIDL API
   // [END_EXCLUDE]
+  // Set tags for logging.
+  syslog::SetTags({"echo_client"});
+
   // Connect to FIDL protocol
   fidl::examples::routing::echo::EchoSyncPtr echo_proxy;
   auto context = sys::ComponentContext::Create();
@@ -28,9 +32,9 @@ int main(int argc, const char* argv[], char* envp[]) {
   for (int i = 1; i < argc; i++) {
     ZX_ASSERT(echo_proxy->EchoString(argv[i], &response) == ZX_OK);
     if (!response.has_value()) {
-      FX_LOG(INFO, "echo_client", "echo_string got empty result");
+      FX_SLOG(INFO, "echo_string got empty result");
     } else {
-      FX_LOGF(INFO, "echo_client", "Server response: %s", response->c_str());
+      FX_SLOG(INFO, "Server response", KV("response", response->c_str()));
     }
   }
 
