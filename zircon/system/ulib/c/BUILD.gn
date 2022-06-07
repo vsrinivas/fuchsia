@@ -7,8 +7,8 @@ import("//build/config/zircon/standard.gni")
 import("//build/test.gni")
 import("//build/toolchain/ifs_shared_library.gni")
 import("//build/zircon/migrated_targets.gni")
-
 import("libc.gni")
+import("libc_toolchain.gni")
 
 assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
        get_path_info(get_path_info(".", "abspath"), "dir"))
@@ -99,8 +99,6 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
-import("libc_toolchain.gni")
-
 # When in a toolchain variant of the Fuchsia base toolchain, find the
 # corresponding toolchain variant of user.libc_$target_cpu to build
 # the C library with it.
@@ -125,11 +123,6 @@ if (zircon_toolchain == false) {
   config("headers.config") {
     include_dirs = [ "include" ]
   }
-
-  group("libc.so") {
-    public_deps = [ ":libc.so($libc_toolchain)" ]
-    visibility = [ ":*" ]
-  }
 } else {
   config("headers.config") {
     include_dirs = [ "include" ]
@@ -144,6 +137,8 @@ if (zircon_toolchain == false) {
     ]
   }
 
+  # This builds the actual shared library.  It's only used indirectly via the
+  # "libc" target, see below.
   shared_library("libc.so") {
     output_name = "c"
 
@@ -226,26 +221,40 @@ if (zircon_toolchain == false) {
   }
 }
 
-libc_label = ":libc.so($libc_toolchain)"
+# This gets the actual shared_library() target defined above.
+libc_impl_label = ":libc.so($libc_toolchain)"
+
+# This is used by the sysroot creation (see libc_toolchain.gni and
+# sysroot_entries.gni).  It reaches the actual implementation binary, to get it
+# built and packaged, and also ensures the implementation has been checked
+# against the checked-in libc.ifs file.
+group("libc") {
+  visibility = [
+    ":*",
+    "//zircon/public/sysroot/*",
+  ]
+
+  # This has to be public_deps so that the shared_library() target's output
+  # files can be input files of the setup and packaging targets that depend on
+  # this "libc" wrapper target.
+  public_deps = [ libc_impl_label ]
+
+  deps = [ ":verify_abi" ]
+}
 
 verify_public_symbols("verify_abi") {
-  deps = [ libc_label ]
+  visibility = [ ":*" ]
 
-  current = get_label_info(libc_label, "root_out_dir") + "/libc.ifs"
+  deps = [ libc_impl_label ]
+  current = get_label_info(libc_impl_label, "root_out_dir") + "/libc.ifs"
+
   reference = "libc.ifs"
   library_name = "libc"
 }
 
-group("libc") {
-  public_deps = [ libc_label ]
-  deps = [ ":verify_abi" ]
-  visibility = [
-    ":*",
-    "//zircon/public/sysroot:*",
-    "//zircon/public/sysroot/sdk:*",
-  ]
-}
-
+# This is the linking stub that binaries are actually linked against.
+# //zircon/public/sysroot:cpp_binary_deps is in the implicit deps added to
+# every target, and it uses this.
 ifs_shared_library("c") {
   abi = "libc.ifs"
 }
