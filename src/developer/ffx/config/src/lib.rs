@@ -44,7 +44,7 @@ mod persistent_config;
 mod priority_config;
 mod runtime;
 
-pub use cache::{env_file, init};
+pub use cache::{env_file, init, test_env_file, test_init};
 
 pub use paths::default_env_path;
 
@@ -430,6 +430,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_config_backed_attribute() {
+        ffx_config::test_init().expect("create test config");
         let mut empty_config_struct = TestConfigBackedStruct::default();
         assert!(empty_config_struct.value.is_none());
         assert_eq!(empty_config_struct.value().await.unwrap(), "thing");

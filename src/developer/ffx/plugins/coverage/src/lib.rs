@@ -201,7 +201,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_coverage() {
-        ffx_config::init(&[], None, None).unwrap();
+        ffx_config::test_init().unwrap();
 
         let test_dir = TempDir::new().unwrap();
         let test_dir_path = test_dir.path().to_path_buf();

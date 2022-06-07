@@ -36,7 +36,6 @@ lazy_static::lazy_static! {
     static ref CACHE: Cache = RwLock::new(HashMap::new());
 }
 
-#[cfg(not(test))]
 pub fn env_file() -> Option<PathBuf> {
     ENV_FILE.lock().unwrap().as_ref().map(|p| p.to_path_buf())
 }
@@ -57,19 +56,9 @@ pub fn test_env_file() -> PathBuf {
     ENV_FILE.path().to_path_buf()
 }
 
-#[cfg(test)]
-pub fn env_file() -> Option<PathBuf> {
-    Some(test_env_file())
-}
-
-/// Initialize the configuration. If env is not given, a new test environment is configured.  init()
-/// is a static once operation. Only the first call in a process runtime takes effect, so users must
+/// Initialize the configuration. Only the first call in a process runtime takes effect, so users must
 /// call this early with the required values, such as in main() in the ffx binary.
-pub fn init(
-    runtime: &[String],
-    runtime_overrides: Option<String>,
-    env: Option<PathBuf>,
-) -> Result<()> {
+pub fn init(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf) -> Result<()> {
     let mut ret = Ok(());
 
     // If it's already been initialize, just fail silently. This will allow a setup method to be
@@ -81,13 +70,13 @@ pub fn init(
     ret
 }
 
-fn init_impl(
-    runtime: &[String],
-    runtime_overrides: Option<String>,
-    env: Option<PathBuf>,
-) -> Result<()> {
-    let env = env.unwrap_or_else(|| test_env_file());
+/// When running tests we usually just want to initialize a blank slate configuration, so
+/// use this for tests
+pub fn test_init() -> Result<()> {
+    init(&[], None, test_env_file())
+}
 
+fn init_impl(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf) -> Result<()> {
     let mut populated_runtime = Value::Null;
     runtime.iter().chain(&runtime_overrides).try_for_each(|r| {
         if let Some(v) = populate_runtime_config(&Some(r.clone()))? {

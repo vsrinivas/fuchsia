@@ -55,7 +55,7 @@ mod tests {
         let _guard = TEST_LOCK.lock().unwrap();
 
         fuchsia_async::TestExecutor::new().unwrap().run_singlethreaded(async move {
-            ffx_config::init(&[], None, None).unwrap();
+            ffx_config::test_init().unwrap();
             fut.await
         })
     }
@@ -81,7 +81,7 @@ mod tests {
     #[test]
     fn test_stop_disables_server_on_error() {
         run_test(async {
-            ffx_config::init(&[], None, None).unwrap();
+            ffx_config::test_init().unwrap();
             pkg_config::set_repository_server_enabled(true).await.unwrap();
 
             let (sender, receiver) = channel();
@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn test_stop_disables_server_on_communication_error() {
         run_test(async {
-            ffx_config::init(&[], None, None).unwrap();
+            ffx_config::test_init().unwrap();
             pkg_config::set_repository_server_enabled(true).await.unwrap();
 
             let (repos, stream) =

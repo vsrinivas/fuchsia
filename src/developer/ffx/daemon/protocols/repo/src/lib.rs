@@ -1552,7 +1552,7 @@ mod tests {
         );
 
         fuchsia_async::TestExecutor::new().unwrap().run_singlethreaded(async move {
-            ffx_config::init(&[], None, None).unwrap();
+            ffx_config::test_init().unwrap();
 
             // Since ffx_config is global, it's possible to leave behind entries
             // across tests. Let's clean them up.

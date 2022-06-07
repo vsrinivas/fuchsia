@@ -132,7 +132,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_register_default_repository() {
-        ffx_config::init(&[], None, None).unwrap();
+        ffx_config::test_init().unwrap();
 
         let default_repo_name = "default-repo";
         ffx_config::set(("repository.default", ConfigLevel::User), default_repo_name.into())

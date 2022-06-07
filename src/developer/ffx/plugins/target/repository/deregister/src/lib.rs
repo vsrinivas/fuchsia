@@ -113,7 +113,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_deregister_default_repository() {
-        ffx_config::init(&[], None, None).unwrap();
+        ffx_config::init(&[], None, ffx_config::test_env_file()).unwrap();
 
         let default_repo_name = "default-repo";
         pkg::config::set_default_repository(default_repo_name).await.unwrap();

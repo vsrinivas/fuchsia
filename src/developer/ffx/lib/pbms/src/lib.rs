@@ -245,7 +245,7 @@ mod tests {
     #[ignore]
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_pbms() {
-        ffx_config::init(&[], None, None).expect("create test config");
+        ffx_config::test_init().expect("create test config");
         let temp_dir = TempDir::new().expect("temp dir");
         let temp_path = temp_dir.path();
 
