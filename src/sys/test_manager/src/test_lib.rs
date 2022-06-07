@@ -75,7 +75,7 @@ impl TestBuilder {
                                 events.push(TestRunEvent::debug_data(
                                     fidl_event.timestamp,
                                     data_file.name.expect("Name cannot be empty"),
-                                    io_util::read_file(&file_proxy)
+                                    fuchsia_fs::read_file(&file_proxy)
                                         .await
                                         .context("Read debugdata file")?,
                                 ));
@@ -562,13 +562,13 @@ impl FidlSuiteEventProcessor {
                             .await
                             .expect("read custom artifact directory");
                         for entry in entries.into_iter() {
-                            let file = io_util::open_file(
+                            let file = fuchsia_fs::open_file(
                                 &directory,
                                 entry.name.as_ref(),
                                 fio::OpenFlags::RIGHT_READABLE,
                             )
                             .unwrap();
-                            let contents = io_util::read_file(&file).await.unwrap();
+                            let contents = fuchsia_fs::read_file(&file).await.unwrap();
                             sender_clone
                                 .send(SuiteEvent::suite_custom(
                                     timestamp,

@@ -400,13 +400,13 @@ mod tests {
         let proxy = pkgfs_packages_variants.proxy(fio::OpenFlags::RIGHT_READABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(
+            fuchsia_fs::directory::open_directory(
                 &proxy,
                 "invalidname-!@#$%^&*()+=",
                 fio::OpenFlags::RIGHT_READABLE
             )
             .await,
-            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
@@ -417,9 +417,13 @@ mod tests {
         let proxy = pkgfs_packages_variants.proxy(fio::OpenFlags::RIGHT_READABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, "missing", fio::OpenFlags::RIGHT_READABLE)
-                .await,
-            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            fuchsia_fs::directory::open_directory(
+                &proxy,
+                "missing",
+                fio::OpenFlags::RIGHT_READABLE
+            )
+            .await,
+            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
@@ -483,9 +487,10 @@ mod tests {
 
         let proxy = pkgfs_packages_variants.proxy(fio::OpenFlags::RIGHT_READABLE);
 
-        let dir = io_util::directory::open_directory(&proxy, "0", fio::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
+        let dir =
+            fuchsia_fs::directory::open_directory(&proxy, "0", fio::OpenFlags::RIGHT_READABLE)
+                .await
+                .unwrap();
         let () = package.verify_contents(&dir).await.unwrap();
     }
 
@@ -509,11 +514,14 @@ mod tests {
 
         let proxy = pkgfs_packages_variants.proxy(fio::OpenFlags::RIGHT_READABLE);
 
-        let file =
-            io_util::directory::open_file(&proxy, "0/meta/message", fio::OpenFlags::RIGHT_READABLE)
-                .await
-                .unwrap();
-        let message = io_util::file::read_to_string(&file).await.unwrap();
+        let file = fuchsia_fs::directory::open_file(
+            &proxy,
+            "0/meta/message",
+            fio::OpenFlags::RIGHT_READABLE,
+        )
+        .await
+        .unwrap();
+        let message = fuchsia_fs::file::read_to_string(&file).await.unwrap();
         assert_eq!(message, "Hello World!");
     }
 }

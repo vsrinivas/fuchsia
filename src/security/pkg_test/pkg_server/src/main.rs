@@ -10,6 +10,7 @@ use {
     fidl_test_security_pkg::{PackageServer_Request, PackageServer_RequestStream},
     fuchsia_async::{net::TcpListener, Task},
     fuchsia_component::server::ServiceFs,
+    fuchsia_fs::{open_directory_in_namespace, open_file, open_file_in_namespace, read_file_bytes},
     fuchsia_hyper::{Executor, TcpStream},
     fuchsia_syslog::{fx_log_info, fx_log_warn, init},
     futures::{
@@ -22,7 +23,6 @@ use {
         service::{make_service_fn, service_fn},
         Body, Method, Request, Response, StatusCode,
     },
-    io_util::{open_directory_in_namespace, open_file, open_file_in_namespace, read_file_bytes},
     rustls::{Certificate, NoClientAuth, ServerConfig},
     std::{
         net::{IpAddr, Ipv4Addr, SocketAddr},

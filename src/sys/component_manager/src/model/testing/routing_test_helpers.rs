@@ -255,9 +255,9 @@ impl RoutingTest {
 
         // Create a directory for the components, starting with a single static file
         // "foo/hippo" in it.
-        let test_dir_proxy = io_util::open_directory_in_namespace(
+        let test_dir_proxy = fuchsia_fs::open_directory_in_namespace(
             test_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("failed to open temp directory");
         capability_util::create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hello")
@@ -430,10 +430,10 @@ impl RoutingTest {
             dir_path.push(relative_path);
         }
         if !dir_path.parent().is_none() {
-            let dir_proxy = io_util::open_directory(
+            let dir_proxy = fuchsia_fs::open_directory(
                 &self.test_dir_proxy,
                 &dir_path,
-                io_util::OpenFlags::RIGHT_READABLE,
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
             )
             .expect("failed to open directory");
             list_directory(&dir_proxy).await
@@ -444,10 +444,10 @@ impl RoutingTest {
 
     /// Lists the contents of a directory.
     pub async fn list_directory(&self, path: &str) -> Vec<String> {
-        let dir_proxy = io_util::open_directory(
+        let dir_proxy = fuchsia_fs::open_directory(
             &self.test_dir_proxy,
             Path::new(path),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .expect("failed to open directory");
         list_directory(&dir_proxy).await
@@ -729,9 +729,9 @@ impl RoutingTestModel for RoutingTest {
                 if let Some(relative_moniker) = storage_relation {
                     if from_cm_namespace {
                         // Check for the file in the /tmp in the test's namespace
-                        let tmp_proxy = io_util::open_directory_in_namespace(
+                        let tmp_proxy = fuchsia_fs::open_directory_in_namespace(
                             "/tmp",
-                            io_util::OpenFlags::RIGHT_READABLE,
+                            fuchsia_fs::OpenFlags::RIGHT_READABLE,
                         )
                         .expect("failed to open /tmp");
                         let res = capability_util::check_file_in_storage(
@@ -807,13 +807,13 @@ impl RoutingTestModel for RoutingTest {
                 .await;
                 if expected_res == ExpectedResult::Ok {
                     let storage_dir = if from_cm_namespace {
-                        io_util::open_directory_in_namespace(
+                        fuchsia_fs::open_directory_in_namespace(
                             "/tmp",
-                            io_util::OpenFlags::RIGHT_READABLE,
+                            fuchsia_fs::OpenFlags::RIGHT_READABLE,
                         )
                         .expect("failed to open /tmp")
                     } else {
-                        io_util::clone_directory(
+                        fuchsia_fs::clone_directory(
                             &self.test_dir_proxy,
                             fio::OpenFlags::CLONE_SAME_RIGHTS,
                         )
@@ -935,7 +935,7 @@ impl RoutingTestModel for RoutingTest {
 
     async fn check_namespace_subdir_contents(&self, path: &str, expected: Vec<String>) {
         let dir_proxy =
-            io_util::open_directory_in_namespace(path, io_util::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::open_directory_in_namespace(path, fuchsia_fs::OpenFlags::RIGHT_READABLE)
                 .expect("failed to open directory");
         assert_eq!(list_directory(&dir_proxy).await, expected)
     }
@@ -990,9 +990,9 @@ pub mod capability_util {
     ) {
         let path = path.to_string();
         let dir_proxy = take_dir_from_namespace(namespace, &path).await;
-        let file_proxy = io_util::open_file(&dir_proxy, file, fio::OpenFlags::RIGHT_READABLE)
+        let file_proxy = fuchsia_fs::open_file(&dir_proxy, file, fio::OpenFlags::RIGHT_READABLE)
             .expect("failed to open file");
-        let res = io_util::read_file(&file_proxy).await;
+        let res = fuchsia_fs::read_file(&file_proxy).await;
         match expected_res {
             ExpectedResult::Ok => assert_eq!(
                 "hello",
@@ -1077,19 +1077,23 @@ pub mod capability_util {
     ) -> Result<(), anyhow::Error> {
         // Open file, and create subdirectories if required.
         let file_proxy = if let Some(directory) = path.parent() {
-            let subdir = io_util::create_sub_directories(root, directory)
+            let subdir = fuchsia_fs::create_sub_directories(root, directory)
                 .map_err(|e| e.context(format!("failed to create subdirs for {:?}", path)))?;
-            io_util::open_file(
+            fuchsia_fs::open_file(
                 &subdir,
                 &PathBuf::from(path.file_name().unwrap()),
                 fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
             )?
         } else {
-            io_util::open_file(root, path, fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE)?
+            fuchsia_fs::open_file(
+                root,
+                path,
+                fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
+            )?
         };
 
         // Write contents.
-        io_util::write_file(&file_proxy, contents).await
+        fuchsia_fs::write_file(&file_proxy, contents).await
     }
 
     pub async fn check_file_in_storage(
@@ -1103,9 +1107,12 @@ pub mod capability_util {
             if persistent_storage { relation.with_zero_value_instance_ids() } else { relation };
         let mut dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
         dir_path.push("hippos");
-        let file_proxy =
-            io_util::open_file(&test_dir_proxy, &dir_path, io_util::OpenFlags::RIGHT_READABLE)?;
-        let res = io_util::read_file(&file_proxy).await;
+        let file_proxy = fuchsia_fs::open_file(
+            &test_dir_proxy,
+            &dir_path,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        )?;
+        let res = fuchsia_fs::read_file(&file_proxy).await;
 
         if let Ok(contents) = res {
             assert_eq!("hippos can be stored here".to_string(), contents);
@@ -1125,16 +1132,16 @@ pub mod capability_util {
         let relation =
             if persistent_storage { relation.with_zero_value_instance_ids() } else { relation };
         let dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
-        let res = io_util::directory::open_directory(
+        let res = fuchsia_fs::directory::open_directory(
             &test_dir_proxy,
             dir_path.to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .await
         .expect_err("open_directory shouldn't have succeeded");
         assert_eq!(
             format!("{:?}", res),
-            format!("{:?}", io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            format!("{:?}", fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
@@ -1143,7 +1150,7 @@ pub mod capability_util {
         path: &CapabilityPath,
     ) -> T::Proxy {
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1162,21 +1169,21 @@ pub mod capability_util {
         member: &str,
     ) -> T::Proxy {
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
-        let service_dir = io_util::directory::open_directory(
+        let service_dir = fuchsia_fs::directory::open_directory(
             &dir_proxy,
             &path.basename,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open service dir");
-        let instance_dir = io_util::directory::open_directory(
+        let instance_dir = fuchsia_fs::directory::open_directory(
             &service_dir,
             instance,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open instance dir");
-        let member_proxy = io_util::directory::open_node_no_describe(
+        let member_proxy = fuchsia_fs::directory::open_node_no_describe(
             &instance_dir,
             member,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1294,7 +1301,7 @@ pub mod capability_util {
     /// an OnOpen event when opened with OPEN_FLAG_DESCRIBE.
     pub async fn call_file_svc_from_namespace(namespace: &ManagedNamespace, path: CapabilityPath) {
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
@@ -1340,13 +1347,13 @@ pub mod capability_util {
         match expected_res {
             ExpectedResult::Ok => {
                 let file_proxy =
-                    io_util::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
+                    fuchsia_fs::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
                         .expect("failed to open file");
-                let res = io_util::read_file(&file_proxy).await;
+                let res = fuchsia_fs::read_file(&file_proxy).await;
                 assert_eq!("hello", res.expect("failed to read file"));
             }
             ExpectedResult::Err(s) => {
-                io_util::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
+                fuchsia_fs::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
                     .expect_err("opened file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
@@ -1357,7 +1364,7 @@ pub mod capability_util {
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
-                io_util::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
+                fuchsia_fs::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
                     .expect_err("opened file successfully when it should fail");
                 assert_matches!(dir_proxy.take_event_stream().next().await, None);
             }
@@ -1389,17 +1396,17 @@ pub mod capability_util {
         let (node_proxy, server_end) = endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         open_exposed_dir(&path, abs_moniker, model, fio::MODE_TYPE_SERVICE, server_end).await;
         let service_dir = fio::DirectoryProxy::from_channel(node_proxy.into_channel().unwrap());
-        let instance_dir = io_util::directory::open_directory(
+        let instance_dir = fuchsia_fs::directory::open_directory(
             &service_dir,
             &instance,
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         .expect("failed to open instance");
-        let member_node = io_util::directory::open_node_no_describe(
+        let member_node = fuchsia_fs::directory::open_node_no_describe(
             &instance_dir,
             &member,
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open member node");
@@ -1416,7 +1423,7 @@ pub mod capability_util {
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1445,7 +1452,7 @@ pub mod capability_util {
         let path: CapabilityPath =
             "/svc/fuchsia.component.Realm".try_into().expect("no realm service");
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1470,7 +1477,7 @@ pub mod capability_util {
         let path: CapabilityPath =
             "/svc/fuchsia.component.Realm".try_into().expect("no realm service");
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

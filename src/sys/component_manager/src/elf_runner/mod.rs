@@ -691,10 +691,10 @@ mod tests {
         fidl_fuchsia_process_lifecycle::LifecycleMarker,
         fidl_fuchsia_process_lifecycle::LifecycleProxy,
         fuchsia_async::{self as fasync, futures::join},
+        fuchsia_fs,
         fuchsia_zircon::{self as zx, Task},
         fuchsia_zircon::{AsHandleRef, Job, Process},
         futures::{StreamExt, TryStreamExt},
-        io_util,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         runner::component::Controllable,
         scoped_task,
@@ -730,7 +730,7 @@ mod tests {
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = io_util::open_directory_in_namespace(
+        let pkg_chan = fuchsia_fs::open_directory_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
@@ -783,7 +783,7 @@ mod tests {
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = io_util::open_directory_in_namespace(
+        let pkg_chan = fuchsia_fs::open_directory_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
@@ -880,10 +880,13 @@ mod tests {
     // TODO(fsamuel): A variation of this is used in a couple of places. We should consider
     // refactoring this into a test util file.
     async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
-        let file_proxy =
-            io_util::open_file(&root_proxy, &Path::new(path), io_util::OpenFlags::RIGHT_READABLE)
-                .expect("Failed to open file.");
-        let res = io_util::read_file(&file_proxy).await;
+        let file_proxy = fuchsia_fs::open_file(
+            &root_proxy,
+            &Path::new(path),
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        )
+        .expect("Failed to open file.");
+        let res = fuchsia_fs::read_file(&file_proxy).await;
         res.expect("Unable to read file.")
     }
 
@@ -1470,7 +1473,7 @@ mod tests {
         mut ns: Vec<fcrunner::ComponentNamespaceEntry>,
     ) -> fcrunner::ComponentStartInfo {
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = io_util::open_directory_in_namespace(
+        let pkg_chan = fuchsia_fs::open_directory_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )

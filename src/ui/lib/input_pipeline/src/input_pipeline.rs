@@ -9,13 +9,13 @@ use {
     },
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_input_injection, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_fs::open_directory_in_namespace,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
     futures::channel::mpsc::{self, Receiver, Sender, UnboundedReceiver, UnboundedSender},
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
-    io_util::open_directory_in_namespace,
     std::collections::HashMap,
     std::path::PathBuf,
     std::rc::Rc,
@@ -349,7 +349,7 @@ impl InputPipeline {
     async fn get_device_watcher() -> Result<Watcher, Error> {
         let input_report_dir_proxy = open_directory_in_namespace(
             input_device::INPUT_REPORT_PATH,
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
         Watcher::new(input_report_dir_proxy).await
     }

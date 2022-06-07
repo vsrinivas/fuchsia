@@ -430,8 +430,8 @@ mod tests {
         fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_component::client,
+        fuchsia_fs::OpenFlags,
         futures::{lock::Mutex, poll, task::Poll},
-        io_util::OpenFlags,
         moniker::AbsoluteMoniker,
         routing_test_helpers::component_decl_with_exposed_binder,
         std::collections::HashSet,
@@ -1303,7 +1303,7 @@ mod tests {
 
         // Now that it was asserted that "system:0" has yet to start,
         // assert that it starts after making connection below.
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
             &PathBuf::from("hippo"),
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
@@ -1388,7 +1388,7 @@ mod tests {
 
         // Now that it was asserted that "system:0" has yet to start,
         // assert that it starts after making connection below.
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
             &PathBuf::from("hippo"),
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
@@ -1462,7 +1462,7 @@ mod tests {
                 endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
             let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
             res.expect("fidl call failed").expect("open_exposed_dir() failed");
-            let node_proxy = io_util::open_node(
+            let node_proxy = fuchsia_fs::open_node(
                 &dir_proxy,
                 &PathBuf::from("hippo"),
                 OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,

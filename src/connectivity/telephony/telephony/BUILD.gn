@@ -11,7 +11,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
@@ -23,6 +22,7 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",

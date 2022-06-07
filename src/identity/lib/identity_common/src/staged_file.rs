@@ -19,7 +19,7 @@ pub enum StagedFileError {
 
     /// Failed to open a file or directory.
     #[error("Failed to open: {0}")]
-    OpenError(#[from] io_util::node::OpenError),
+    OpenError(#[from] fuchsia_fs::node::OpenError),
 
     /// Failed during a FIDL call.
     #[error("Failed during FIDL call: {0}")]
@@ -27,11 +27,11 @@ pub enum StagedFileError {
 
     /// Failed to write to the staged file.
     #[error("Failed to write to backing storage: {0}")]
-    WriteError(#[from] io_util::file::WriteError),
+    WriteError(#[from] fuchsia_fs::file::WriteError),
 
     /// Failed to rename the staged file.
     #[error("Failed to rename temp file to target: {0}")]
-    RenameError(#[from] io_util::node::RenameError),
+    RenameError(#[from] fuchsia_fs::node::RenameError),
 
     /// Failed to flush data.
     #[error("Failed to flush to disk: {0}")]
@@ -85,7 +85,7 @@ impl<'a> StagedFile<'a> {
             )));
         }
         let temp_filename = generate_tempfile_name(tempfile_prefix);
-        let file_proxy = io_util::directory::open_file(
+        let file_proxy = fuchsia_fs::directory::open_file(
             &dir_proxy,
             &temp_filename,
             fio::OpenFlags::RIGHT_READABLE
@@ -101,7 +101,7 @@ impl<'a> StagedFile<'a> {
     /// This file is not guaranteed to be persisted until commit is called,
     /// at which point it will be renamed to |target_filename|.
     pub async fn write(&mut self, data: &[u8]) -> Result<(), StagedFileError> {
-        let () = io_util::file::write(&self.file_proxy, data).await?;
+        let () = fuchsia_fs::file::write(&self.file_proxy, data).await?;
         Ok(())
     }
 
@@ -127,7 +127,7 @@ impl<'a> StagedFile<'a> {
             .map_err(zx::Status::from_raw)
             .map_err(StagedFileError::CloseError)?;
 
-        io_util::directory::rename(self.dir_proxy, &self.temp_filename, target_filename)
+        fuchsia_fs::directory::rename(self.dir_proxy, &self.temp_filename, target_filename)
             .await
             .map_err(|s| StagedFileError::RenameError(s))?;
         Ok(())
@@ -193,7 +193,7 @@ mod test {
     #[fuchsia::test]
     async fn test_normal_flow() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = io_util::open_directory_in_namespace(
+        let dir = fuchsia_fs::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -203,18 +203,21 @@ mod test {
         staged_file.commit("target_file_01").await.unwrap();
 
         // Check that target_file_01 has been created.
-        let open_res =
-            io_util::directory::open_file(&dir, "target_file_01", fio::OpenFlags::RIGHT_READABLE)
-                .await;
+        let open_res = fuchsia_fs::directory::open_file(
+            &dir,
+            "target_file_01",
+            fio::OpenFlags::RIGHT_READABLE,
+        )
+        .await;
         assert!(open_res.is_ok());
-        let file_bytes = io_util::file::read(&open_res.unwrap()).await.unwrap();
+        let file_bytes = fuchsia_fs::file::read(&open_res.unwrap()).await.unwrap();
         assert_eq!(file_bytes, b"this is some file content");
     }
 
     #[fuchsia::test]
     async fn test_empty_tempfile_prefix() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = io_util::open_directory_in_namespace(
+        let dir = fuchsia_fs::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -223,7 +226,7 @@ mod test {
     }
 
     async fn write_test_file_content(dir_proxy: &fio::DirectoryProxy, filename: &str, data: &[u8]) {
-        let file_proxy = io_util::directory::open_file(
+        let file_proxy = fuchsia_fs::directory::open_file(
             &dir_proxy,
             &filename,
             fio::OpenFlags::RIGHT_READABLE
@@ -232,7 +235,7 @@ mod test {
         )
         .await
         .expect("could not open test file");
-        io_util::file::write(&file_proxy, data).await.expect("could not write test file data")
+        fuchsia_fs::file::write(&file_proxy, data).await.expect("could not write test file data")
     }
 
     async fn file_exists_with_data(
@@ -241,17 +244,17 @@ mod test {
         expected_data: &[u8],
     ) -> bool {
         let file =
-            io_util::directory::open_file(&dir_proxy, &filename, fio::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_file(&dir_proxy, &filename, fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .expect("could not open file");
-        let bytes = io_util::file::read(&file).await.expect("could not read file data");
+        let bytes = fuchsia_fs::file::read(&file).await.expect("could not read file data");
         expected_data == bytes
     }
 
     #[fuchsia::test]
     async fn test_cleanup_stale_files() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = io_util::open_directory_in_namespace(
+        let dir = fuchsia_fs::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

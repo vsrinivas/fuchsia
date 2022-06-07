@@ -11,10 +11,10 @@ use {fidl_fuchsia_io as fio, fuchsia_zircon_status::Status, thiserror::Error};
 #[allow(missing_docs)]
 pub enum VerifyBoardError {
     #[error("while opening the file: {0}")]
-    OpenFile(#[from] io_util::node::OpenError),
+    OpenFile(#[from] fuchsia_fs::node::OpenError),
 
     #[error("while reading the file: {0}")]
-    ReadFile(#[from] io_util::file::ReadError),
+    ReadFile(#[from] fuchsia_fs::file::ReadError),
 
     #[error("expected board name {} found {}", expected, found)]
     VerifyContents { expected: String, found: String },
@@ -24,16 +24,21 @@ pub(crate) async fn verify_board(
     proxy: &fio::DirectoryProxy,
     expected_contents: &str,
 ) -> Result<(), VerifyBoardError> {
-    let file =
-        match io_util::directory::open_file(proxy, "board", fio::OpenFlags::RIGHT_READABLE).await {
-            Ok(file) => Ok(file),
-            Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(()),
-            Err(e) => Err(e),
-        }
-        .map_err(VerifyBoardError::OpenFile)?;
+    let file = match fuchsia_fs::directory::open_file(
+        proxy,
+        "board",
+        fio::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    {
+        Ok(file) => Ok(file),
+        Err(fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(()),
+        Err(e) => Err(e),
+    }
+    .map_err(VerifyBoardError::OpenFile)?;
 
     let contents =
-        io_util::file::read_to_string(&file).await.map_err(VerifyBoardError::ReadFile)?;
+        fuchsia_fs::file::read_to_string(&file).await.map_err(VerifyBoardError::ReadFile)?;
 
     if expected_contents != contents {
         return Err(VerifyBoardError::VerifyContents {

@@ -114,7 +114,7 @@ impl vfs::file::File for MetaAsFile {
             mode: fio::MODE_TYPE_FILE
                 | vfs::common::rights_to_posix_mode_bits(
                     true,  // read
-                    true, // write
+                    true,  // write
                     false, // execute
                 ),
             id: 1,
@@ -243,7 +243,7 @@ mod tests {
             server_end.into_channel().into(),
         );
 
-        assert_eq!(io_util::file::read(&proxy).await.unwrap(), hash.as_bytes());
+        assert_eq!(fuchsia_fs::file::read(&proxy).await.unwrap(), hash.as_bytes());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

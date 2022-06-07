@@ -28,7 +28,7 @@ use {
 #[derive(Error, Debug)]
 pub enum DiskError {
     #[error("Failed to open: {0}")]
-    OpenError(#[from] io_util::node::OpenError),
+    OpenError(#[from] fuchsia_fs::node::OpenError),
     #[error("Failed to readdir: {0}")]
     ReaddirError(#[from] files_async::Error),
     #[error("Failed during FIDL call: {0}")]
@@ -133,11 +133,11 @@ async fn all_partitions(
     dev_root_dir: &fio::DirectoryProxy,
 ) -> Result<Vec<DevBlockPartition>, DiskError> {
     let block_dir =
-        io_util::directory::open_directory(dev_root_dir, "class/block", OPEN_RW).await?;
+        fuchsia_fs::directory::open_directory(dev_root_dir, "class/block", OPEN_RW).await?;
     let dirents = files_async::readdir(&block_dir).await?;
     let mut partitions = Vec::new();
     for child in dirents {
-        match io_util::directory::open_node_no_describe(
+        match fuchsia_fs::directory::open_node_no_describe(
             &block_dir,
             &child.name,
             OPEN_RW,
@@ -312,8 +312,11 @@ impl DiskManager for DevDiskManager {
 
         // Open the block device at its topological path. We always open rw because services are
         // opened with rw.
-        let block_dir =
-            io_util::directory::open_directory_no_describe(&self.dev_root, &block_path, OPEN_RW)?;
+        let block_dir = fuchsia_fs::directory::open_directory_no_describe(
+            &self.dev_root,
+            &block_path,
+            OPEN_RW,
+        )?;
 
         // Wait for the zxcrypt subdirectory to appear, meaning the zxcrypt driver is loaded.
         wait_for_node(&block_dir, "zxcrypt").await?;
@@ -424,14 +427,15 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
         zx::Status::ok(device_manager_proxy.unseal(key, 0).await?)
             .map_err(DiskError::FailedToUnsealZxcrypt)?;
 
-        let zxcrypt_dir = io_util::directory::open_directory(&self.0, "zxcrypt", OPEN_RW).await?;
+        let zxcrypt_dir =
+            fuchsia_fs::directory::open_directory(&self.0, "zxcrypt", OPEN_RW).await?;
 
         wait_for_node(&zxcrypt_dir, "unsealed").await?;
         let unsealed_dir =
-            io_util::directory::open_directory(&zxcrypt_dir, "unsealed", OPEN_RW).await?;
+            fuchsia_fs::directory::open_directory(&zxcrypt_dir, "unsealed", OPEN_RW).await?;
 
         wait_for_node(&unsealed_dir, "block").await?;
-        let unsealed_block_node = io_util::directory::open_node_no_describe(
+        let unsealed_block_node = fuchsia_fs::directory::open_node_no_describe(
             &unsealed_dir,
             "block",
             OPEN_RW,

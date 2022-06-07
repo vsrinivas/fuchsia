@@ -100,21 +100,21 @@ pub struct NamespaceBuildInfo;
 
 impl NamespaceBuildInfo {
     async fn read_file(&self, name: &str) -> Result<Option<String>, Error> {
-        let build_info = io_util::directory::open_in_namespace(
+        let build_info = fuchsia_fs::directory::open_in_namespace(
             "/config/build-info",
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .context("while opening /config/build-info")?;
 
-        let file = match io_util::directory::open_file(
+        let file = match fuchsia_fs::directory::open_file(
             &build_info,
             name,
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .await
         {
             Ok(file) => file,
-            Err(io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
+            Err(fuchsia_fs::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
                 return Ok(None)
             }
             Err(e) => {
@@ -122,7 +122,7 @@ impl NamespaceBuildInfo {
             }
         };
 
-        let contents = io_util::file::read_to_string(&file)
+        let contents = fuchsia_fs::file::read_to_string(&file)
             .await
             .with_context(|| format!("while reading /config/build-info/{}", name))?;
         Ok(Some(contents))

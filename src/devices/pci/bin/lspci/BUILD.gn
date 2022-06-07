@@ -37,12 +37,12 @@ rustc_binary("lspci") {
   deps = [
     ":lib",
     "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]

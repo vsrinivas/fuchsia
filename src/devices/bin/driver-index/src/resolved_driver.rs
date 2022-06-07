@@ -219,7 +219,7 @@ pub async fn load_driver(
     component_url: url::Url,
     package_type: DriverPackageType,
 ) -> Result<Option<ResolvedDriver>, anyhow::Error> {
-    let component = io_util::open_file(
+    let component = fuchsia_fs::open_file(
         &dir,
         std::path::Path::new(
             component_url
@@ -228,7 +228,7 @@ pub async fn load_driver(
         ),
         fio::OpenFlags::RIGHT_READABLE,
     )?;
-    let component: fdecl::Component = io_util::read_file_fidl(&component)
+    let component: fdecl::Component = fuchsia_fs::read_file_fidl(&component)
         .await
         .with_context(|| format!("{}: Failed to read component", component_url.as_str()))?;
     let component: cm_rust::ComponentDecl = component.fidl_into_native();
@@ -243,10 +243,13 @@ pub async fn load_driver(
 
     let bind_path = get_rules_string_value(&component, "bind")
         .ok_or(anyhow::anyhow!("{}: Missing bind path", component_url.as_str()))?;
-    let bind =
-        io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OpenFlags::RIGHT_READABLE)
-            .with_context(|| format!("{}: Failed to open bind", component_url.as_str()))?;
-    let bind = io_util::read_file_bytes(&bind)
+    let bind = fuchsia_fs::open_file(
+        &dir,
+        std::path::Path::new(&bind_path),
+        fio::OpenFlags::RIGHT_READABLE,
+    )
+    .with_context(|| format!("{}: Failed to open bind", component_url.as_str()))?;
+    let bind = fuchsia_fs::read_file_bytes(&bind)
         .await
         .with_context(|| format!("{}: Failed to read bind", component_url.as_str()))?;
     let bind_rules = DecodedRules::new(bind.clone())

@@ -27,10 +27,10 @@ use fidl_fuchsia_hardware_display::{
 use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_scenic::ScenicProxy;
 use fuchsia_async::{self as fasync};
+use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Status};
 use futures::{channel::mpsc::UnboundedSender, StreamExt, TryFutureExt, TryStreamExt};
-use io_util::{open_directory_in_namespace, OpenFlags};
 use keymaps::Keymap;
 use std::{
     collections::{BTreeMap, HashMap},

@@ -457,8 +457,8 @@ mod test {
     use fidl::endpoints::Proxy;
     use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
+    use fuchsia_fs::directory;
     use fuchsia_zircon::{AsHandleRef, HandleBased};
-    use io_util::directory;
 
     fn open_pkg() -> fio::DirectorySynchronousProxy {
         let pkg_proxy = directory::open_in_namespace(

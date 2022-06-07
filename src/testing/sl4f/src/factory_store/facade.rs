@@ -16,8 +16,8 @@ use fidl_fuchsia_factory::{
 use fidl_fuchsia_io as fio;
 use files_async::{readdir_recursive, DirentKind};
 use fuchsia_component::client::connect_to_protocol;
+use fuchsia_fs;
 use futures::stream::TryStreamExt;
-use io_util;
 use serde_json::{from_value, to_value, Value};
 use std::path::Path;
 
@@ -75,12 +75,12 @@ impl FactoryStoreFacade {
         let req: ReadFileRequest = from_value(args)?;
         let dir_proxy = self.get_directory_for_provider(req.provider)?;
 
-        let file = io_util::open_file(
+        let file = fuchsia_fs::open_file(
             &dir_proxy,
             &Path::new(&req.filename),
             fio::OpenFlags::RIGHT_READABLE,
         )?;
-        let contents = io_util::read_file_bytes(&file).await?;
+        let contents = fuchsia_fs::read_file_bytes(&file).await?;
         Ok(to_value(base64::encode(&contents))?)
     }
 

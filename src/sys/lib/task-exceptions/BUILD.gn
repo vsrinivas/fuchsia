@@ -17,10 +17,10 @@ rustc_library("task-exceptions") {
     "//third_party/rust_crates:futures",
   ]
   test_deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/sys/lib/library_loader",
   ]

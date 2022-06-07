@@ -624,14 +624,14 @@ mod tests {
             let result =
                 resolve_package(&"fuchsia-pkg://fuchsia.com/test".parse().unwrap(), &proxy).await;
             let package = result.expect("package resolver failed unexpectedly");
-            let file = io_util::directory::open_file(
+            let file = fuchsia_fs::directory::open_file(
                 &package.dir,
                 "test_file",
                 fio::OpenFlags::RIGHT_READABLE,
             )
             .await
             .expect("failed to open 'test_file' from package resolver directory");
-            let contents = io_util::file::read(&file)
+            let contents = fuchsia_fs::file::read(&file)
                 .await
                 .expect("failed to read 'test_file' contents from package resolver directory");
             assert_eq!(&contents, b"foo");

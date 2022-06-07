@@ -32,7 +32,7 @@ impl ScopedLogger {
         dir: &fio::DirectoryProxy,
         path: String,
     ) -> Result<ScopedLogger, Error> {
-        let log_sink_node = io_util::open_node(
+        let log_sink_node = fuchsia_fs::open_node(
             &dir,
             &PathBuf::from(path.trim_start_matches("/")),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

@@ -10,13 +10,13 @@ use fidl::encoding::{decode_persistent, encode_persistent, Persistable};
 use fidl::Status;
 use fidl_fuchsia_io::FileProxy;
 use fuchsia_async::{Task, Timer, WakeupTime};
+use fuchsia_fs::file::ReadError;
+use fuchsia_fs::node::OpenError;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedSender;
 use futures::future::OptionFuture;
 use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
-use io_util::file::ReadError;
-use io_util::node::OpenError;
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -188,20 +188,19 @@ impl FidlStorage {
             match maybe_init {
                 Some(cached_value) => cached_value,
                 None => {
-                    bytes =
-                        io_util::file::read(&cached_storage.file_proxy).await.unwrap_or_else(|e| {
-                            match e {
-                                ReadError::Open(OpenError::OpenError(e))
-                                    if e == zx::Status::NOT_FOUND =>
-                                {
-                                    panic!("fidl file missing for {:?}", key)
-                                }
-                                _ => {
-                                    panic!(
-                                        "failed to get value from fidl storage for {:?}: {:?}",
-                                        key, e
-                                    )
-                                }
+                    bytes = fuchsia_fs::file::read(&cached_storage.file_proxy)
+                        .await
+                        .unwrap_or_else(|e| match e {
+                            ReadError::Open(OpenError::OpenError(e))
+                                if e == zx::Status::NOT_FOUND =>
+                            {
+                                panic!("fidl file missing for {:?}", key)
+                            }
+                            _ => {
+                                panic!(
+                                    "failed to get value from fidl storage for {:?}: {:?}",
+                                    key, e
+                                )
                             }
                         });
                     &bytes
@@ -210,7 +209,7 @@ impl FidlStorage {
         };
 
         Ok(if *cached_value != new_value {
-            io_util::file::write(&cached_storage.file_proxy, &new_value).await?;
+            fuchsia_fs::file::write(&cached_storage.file_proxy, &new_value).await?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just flush immediately.
                 cached_storage.sync().await;
@@ -248,7 +247,7 @@ impl FidlStorage {
             .unwrap_or_else(|| panic!("Invalid data keyed by {}", T::KEY));
         let mut cached_storage = typed_storage.cached_storage.lock().await;
         if cached_storage.current_data.is_none() || !self.caching_enabled {
-            let data = match io_util::file::read(&cached_storage.file_proxy).await {
+            let data = match fuchsia_fs::file::read(&cached_storage.file_proxy).await {
                 Ok(data) => Some(data),
                 Err(ReadError::ReadError(Status::NOT_FOUND)) => None,
                 Err(e) => panic!("failed to get fidl data from disk for {:?}: {:?}", T::KEY, e),

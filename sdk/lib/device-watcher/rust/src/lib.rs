@@ -19,7 +19,7 @@ pub async fn wait_for_device_topo_path(
     dev_dir: &fio::DirectoryProxy,
     topo_path: &str,
 ) -> Result<String, anyhow::Error> {
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
+    let mut watcher = fuchsia_vfs_watcher::Watcher::new(fuchsia_fs::clone_directory(
         dev_dir,
         fio::OpenFlags::RIGHT_READABLE,
     )?)
@@ -59,7 +59,7 @@ pub async fn wait_for_device_topo_path(
 pub async fn watch_for_files(
     dir: &fio::DirectoryProxy,
 ) -> Result<impl Stream<Item = Result<PathBuf>>> {
-    let watcher = Watcher::new(io_util::clone_directory(dir, fio::OpenFlags::RIGHT_READABLE)?)
+    let watcher = Watcher::new(fuchsia_fs::clone_directory(dir, fio::OpenFlags::RIGHT_READABLE)?)
         .await
         .context("Failed to create watcher")?;
     Ok(watcher
@@ -78,7 +78,7 @@ pub async fn watch_for_files(
 }
 
 async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<()> {
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
+    let mut watcher = fuchsia_vfs_watcher::Watcher::new(fuchsia_fs::clone_directory(
         dir,
         fio::OpenFlags::RIGHT_READABLE,
     )?)
@@ -105,7 +105,7 @@ pub async fn recursive_wait_and_open_node_with_flags(
     flags: fio::OpenFlags,
     mode: u32,
 ) -> Result<fio::NodeProxy> {
-    let mut dir = io_util::clone_directory(initial_dir, flags)?;
+    let mut dir = fuchsia_fs::clone_directory(initial_dir, flags)?;
     let path = std::path::Path::new(name);
     let components = path.components().collect::<Vec<_>>();
     for i in 0..(components.len() - 1) {
@@ -113,7 +113,7 @@ pub async fn recursive_wait_and_open_node_with_flags(
         match component {
             std::path::Component::Normal(file) => {
                 wait_for_file(&dir, file.to_str().unwrap()).await?;
-                dir = io_util::open_directory(&dir, std::path::Path::new(file), flags)?;
+                dir = fuchsia_fs::open_directory(&dir, std::path::Path::new(file), flags)?;
             }
             _ => panic!("Path must contain only normal components"),
         }
@@ -121,7 +121,7 @@ pub async fn recursive_wait_and_open_node_with_flags(
     match components[components.len() - 1] {
         std::path::Component::Normal(file) => {
             wait_for_file(&dir, file.to_str().unwrap()).await?;
-            io_util::open_node(&dir, std::path::Path::new(file), flags, mode)
+            fuchsia_fs::open_node(&dir, std::path::Path::new(file), flags, mode)
         }
         _ => panic!("Path must contain only normal components"),
     }
@@ -273,7 +273,7 @@ mod tests {
         recursive_wait_and_open_node_with_flags(
             &client,
             "test/dir",
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
             0,
         )
         .await

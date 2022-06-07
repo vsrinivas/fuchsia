@@ -4,15 +4,15 @@
 
 use {
     diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect},
-    fidl_fuchsia_io as fio, io_util,
+    fidl_fuchsia_io as fio, fuchsia_fs,
     std::path::Path,
 };
 
 async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
     let file_proxy =
-        io_util::open_file(&root_proxy, &Path::new(path), io_util::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::open_file(&root_proxy, &Path::new(path), fuchsia_fs::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open file.");
-    let res = io_util::read_file(&file_proxy).await;
+    let res = fuchsia_fs::read_file(&file_proxy).await;
     res.expect("Unable to read file.")
 }
 
@@ -25,7 +25,7 @@ async fn main() {
         .expect("got inspect data");
 
     let hub_proxy =
-        io_util::open_directory_in_namespace("/hub", io_util::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::open_directory_in_namespace("/hub", fuchsia_fs::OpenFlags::RIGHT_READABLE)
             .expect("Unable to open directory in namespace");
     let archivist_job_koid = read_file(&hub_proxy, "children/archivist/exec/runtime/elf/job_id")
         .await

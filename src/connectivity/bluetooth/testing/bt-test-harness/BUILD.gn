@@ -11,7 +11,6 @@ rustc_library("bt-test-harness") {
 
   # These are the library and code dependencies of the bt-test-harness library.
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
@@ -37,6 +36,7 @@ rustc_library("bt-test-harness") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

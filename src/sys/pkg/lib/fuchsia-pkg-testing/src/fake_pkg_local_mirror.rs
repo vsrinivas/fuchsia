@@ -21,7 +21,7 @@ impl FakePkgLocalMirror {
         let dir = tempfile::tempdir().unwrap();
         let () = repo
             .copy_local_repository_to_dir(
-                &io_util::directory::open_in_namespace(
+                &fuchsia_fs::directory::open_in_namespace(
                     dir.path().to_str().unwrap(),
                     fio::OpenFlags::RIGHT_WRITABLE,
                 )
@@ -30,7 +30,7 @@ impl FakePkgLocalMirror {
             )
             .await;
         let pkg_local_mirror = PkgLocalMirror::new(
-            &io_util::directory::open_in_namespace(
+            &fuchsia_fs::directory::open_in_namespace(
                 dir.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE,
             )
@@ -58,7 +58,7 @@ mod tests {
         fidl_fuchsia_pkg::LocalMirrorMarker,
         fidl_fuchsia_pkg_ext::{BlobId, RepositoryUrl},
         fuchsia_async as fasync,
-        io_util::file::read,
+        fuchsia_fs::file::read,
     };
 
     #[fasync::run_singlethreaded(test)]

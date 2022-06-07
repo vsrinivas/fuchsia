@@ -22,9 +22,8 @@ use {
         ExposeSource, ExposeTarget,
     },
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_fs, fuchsia_zircon as zx,
     futures::stream::StreamExt,
-    io_util,
     log::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
@@ -165,7 +164,7 @@ impl DirectoryReadyNotifier {
             let outgoing_node = outgoing_node_result?;
             self.wait_for_on_open(&outgoing_node, &target.instanced_moniker(), "/".to_string())
                 .await?;
-            io_util::node_to_directory(outgoing_node)
+            fuchsia_fs::node_to_directory(outgoing_node)
                 .map_err(|_| ModelError::open_directory_error(target.abs_moniker.clone(), "/"))
         }
         .await;
@@ -275,7 +274,7 @@ impl DirectoryReadyNotifier {
         source_path: &str,
         rights: &Rights,
     ) -> Result<fio::NodeProxy, TryOpenError> {
-        let canonicalized_path = io_util::canonicalize_path(&source_path);
+        let canonicalized_path = fuchsia_fs::canonicalize_path(&source_path);
         let (node, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();
         outgoing_dir
             .open(
@@ -368,7 +367,7 @@ async fn clone_outgoing_root(
     outgoing_dir: &fio::DirectoryProxy,
     target_moniker: &InstancedAbsoluteMoniker,
 ) -> Result<fio::NodeProxy, ModelError> {
-    let outgoing_dir = io_util::clone_directory(
+    let outgoing_dir = fuchsia_fs::clone_directory(
         &outgoing_dir,
         fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE,
     )

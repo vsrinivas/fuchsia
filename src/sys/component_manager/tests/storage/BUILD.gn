@@ -26,7 +26,6 @@ rustc_test("storage_admin_integration_test_bin") {
   source_root = "admin_integration_test.rs"
   deps = [
     "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/async-utils",
@@ -34,6 +33,7 @@ rustc_test("storage_admin_integration_test_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/cm_moniker",
     "//src/sys/lib/component-events",

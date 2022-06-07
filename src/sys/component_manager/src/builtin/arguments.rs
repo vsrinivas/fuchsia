@@ -8,10 +8,10 @@ use {
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio,
+    fuchsia_fs::{file, file::ReadError, node::OpenError, OpenFlags},
     fuchsia_zbi::{ZbiParser, ZbiResult, ZbiType},
     fuchsia_zircon_status::Status,
     futures::prelude::*,
-    io_util::{file, file::ReadError, node::OpenError, OpenFlags},
     lazy_static::lazy_static,
     routing::capability_source::InternalCapability,
     std::{
@@ -281,7 +281,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async as fasync,
-        io_util::{directory, file::close, file::write},
+        fuchsia_fs::{directory, file::close, file::write},
         std::collections::HashMap,
     };
 

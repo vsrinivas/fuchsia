@@ -10,7 +10,6 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
@@ -26,6 +25,7 @@ rustc_test("driver") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-url",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",

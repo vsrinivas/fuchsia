@@ -21,7 +21,7 @@ pub enum SystemImageFileOpenError {
     NotFound,
 
     #[error("while opening the file: {0}")]
-    Io(io_util::node::OpenError),
+    Io(fuchsia_fs::node::OpenError),
 
     #[error("unexpected error: {0}")]
     Other(anyhow::Error),
@@ -35,7 +35,7 @@ pub enum SystemImageFileHashError {
     Open(#[from] SystemImageFileOpenError),
 
     #[error("while reading the file: {0}")]
-    Read(#[from] io_util::file::ReadError),
+    Read(#[from] fuchsia_fs::file::ReadError),
 
     #[error("while parsing the hash: {0}")]
     Parse(#[from] ParseHashError),
@@ -49,9 +49,9 @@ pub struct Client {
 
 impl Client {
     /// Returns a `Client` connected to pkgfs from the current component's namespace.
-    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+    pub fn open_from_namespace() -> Result<Self, fuchsia_fs::node::OpenError> {
         Ok(Self {
-            proxy: io_util::directory::open_in_namespace(
+            proxy: fuchsia_fs::directory::open_in_namespace(
                 "/pkgfs/system",
                 fio::OpenFlags::RIGHT_READABLE,
             )?,
@@ -61,9 +61,9 @@ impl Client {
     /// Returns a `Client` connected to pkgfs from the given pkgfs root dir.
     pub fn open_from_pkgfs_root(
         pkgfs: &fio::DirectoryProxy,
-    ) -> Result<Self, io_util::node::OpenError> {
+    ) -> Result<Self, fuchsia_fs::node::OpenError> {
         Ok(Self {
-            proxy: io_util::directory::open_directory_no_describe(
+            proxy: fuchsia_fs::directory::open_directory_no_describe(
                 pkgfs,
                 "system",
                 fio::OpenFlags::RIGHT_READABLE,
@@ -89,7 +89,7 @@ impl Client {
     /// Returns the system image hash.
     pub async fn hash(&self) -> Result<Hash, SystemImageFileHashError> {
         let file_proxy = self.open_file_as_proxy("meta").await?;
-        let hashstr = io_util::file::read_to_string(&file_proxy).await?;
+        let hashstr = fuchsia_fs::file::read_to_string(&file_proxy).await?;
         let hash: Hash = hashstr.parse()?;
 
         Ok(hash)
@@ -99,10 +99,10 @@ impl Client {
         &self,
         path: &str,
     ) -> Result<fio::FileProxy, SystemImageFileOpenError> {
-        io_util::directory::open_file(&self.proxy, path, fio::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::directory::open_file(&self.proxy, path, fio::OpenFlags::RIGHT_READABLE)
             .await
             .map_err(|e| match e {
-                io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
+                fuchsia_fs::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
                     SystemImageFileOpenError::NotFound
                 }
                 other => SystemImageFileOpenError::Io(other),

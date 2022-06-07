@@ -13,11 +13,11 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{Cr50RequestStream, PinWeaverRequestStream};
 use fuchsia_component::server::ServiceFs;
+use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
-use io_util::OpenFlags;
 use std::{path::Path, sync::Arc};
 use tracing;
 
@@ -32,7 +32,7 @@ const CR50_VENDOR_ID: u16 = 0x1ae0;
 const CR50_DEVICE_ID: u16 = 0x0028;
 
 async fn is_cr50(dir: &fio::DirectoryProxy, name: &str) -> Result<Option<TpmDeviceProxy>, Error> {
-    let node = io_util::open_node(
+    let node = fuchsia_fs::open_node(
         dir,
         Path::new(name),
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
@@ -58,7 +58,7 @@ async fn is_cr50(dir: &fio::DirectoryProxy, name: &str) -> Result<Option<TpmDevi
 
 async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
     let tpm_path = "/dev/class/tpm";
-    let proxy = io_util::open_directory_in_namespace(
+    let proxy = fuchsia_fs::open_directory_in_namespace(
         tpm_path,
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )

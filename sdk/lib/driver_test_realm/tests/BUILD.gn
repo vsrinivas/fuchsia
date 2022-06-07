@@ -17,7 +17,6 @@ rustc_test("driver_test_realm_test") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -26,6 +25,7 @@ rustc_test("driver_test_realm_test") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]

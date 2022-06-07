@@ -14,8 +14,8 @@ use fuchsia_hash::{Hash, ParseHashError};
 use fuchsia_zircon_status as zx_status;
 use thiserror::Error;
 
-// re-export wrapped io_util errors.
-pub use io_util::{
+// re-export wrapped fuchsia_fs errors.
+pub use fuchsia_fs::{
     file::ReadError,
     node::{CloneError, CloseError, OpenError},
 };
@@ -87,18 +87,18 @@ impl PackageDirectory {
     /// Returns the current component's package directory.
     #[cfg(target_os = "fuchsia")]
     pub fn open_from_namespace() -> Result<Self, OpenError> {
-        let dir = io_util::directory::open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)?;
+        let dir = fuchsia_fs::directory::open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)?;
         Ok(Self::from_proxy(dir))
     }
 
     /// Cleanly close the package directory, consuming self.
     pub async fn close(self) -> Result<(), CloseError> {
-        io_util::directory::close(self.proxy).await
+        fuchsia_fs::directory::close(self.proxy).await
     }
 
     /// Send request to also serve this package directory on the given directory request.
     pub fn reopen(&self, dir_request: ServerEnd<fio::DirectoryMarker>) -> Result<(), CloneError> {
-        io_util::directory::clone_onto_no_describe(&self.proxy, None, dir_request)
+        fuchsia_fs::directory::clone_onto_no_describe(&self.proxy, None, dir_request)
     }
 
     /// Unwraps the inner DirectoryProxy, consuming self.
@@ -112,14 +112,14 @@ impl PackageDirectory {
         path: &str,
         rights: OpenRights,
     ) -> Result<fio::FileProxy, OpenError> {
-        io_util::directory::open_file(&self.proxy, path, rights.to_flags()).await
+        fuchsia_fs::directory::open_file(&self.proxy, path, rights.to_flags()).await
     }
 
     /// Read the file in the package given by `path`, and return its contents as
     /// a UTF-8 decoded string.
     async fn read_file_to_string(&self, path: &str) -> Result<String, ReadError> {
         let f = self.open_file(path, OpenRights::Read).await?;
-        Ok(io_util::file::read_to_string(&f).await?)
+        Ok(fuchsia_fs::file::read_to_string(&f).await?)
     }
 
     /// Reads the merkle root of the package.

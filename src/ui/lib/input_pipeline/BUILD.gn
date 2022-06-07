@@ -10,7 +10,6 @@ rustc_library("input_pipeline") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
@@ -40,6 +39,7 @@ rustc_library("input_pipeline") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/icu_data/rust/icu_data",
     "//src/lib/storage/fuchsia-vfs-watcher",

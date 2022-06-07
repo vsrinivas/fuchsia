@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_async::{Duration, Task, Time, Timer},
     fuchsia_component_test::ScopedInstance,
-    io_util::directory::open_file_no_describe,
+    fuchsia_fs::directory::open_file_no_describe,
     std::mem,
 };
 

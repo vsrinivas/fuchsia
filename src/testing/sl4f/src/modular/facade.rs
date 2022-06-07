@@ -398,10 +398,9 @@ mod tests {
         fidl::endpoints::spawn_stream_handler,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_modular_internal as fmodular_internal,
-        fidl_fuchsia_modular_session as fmodular_session,
+        fidl_fuchsia_modular_session as fmodular_session, fuchsia_fs,
         futures::channel::mpsc,
         futures::SinkExt,
-        io_util,
         lazy_static::lazy_static,
         serde_json::json,
         std::sync::{Arc, Mutex},
@@ -432,7 +431,7 @@ mod tests {
                     let dir_proxy =
                         ClientEnd::<fio::DirectoryMarker>::new(config_dir).into_proxy().unwrap();
 
-                    let file_proxy = io_util::directory::open_file(
+                    let file_proxy = fuchsia_fs::directory::open_file(
                         &dir_proxy,
                         "startup.config",
                         fio::OpenFlags::RIGHT_READABLE,
@@ -440,7 +439,7 @@ mod tests {
                     .await
                     .unwrap();
 
-                    let config_str = io_util::file::read_to_string(&file_proxy).await.unwrap();
+                    let config_str = fuchsia_fs::file::read_to_string(&file_proxy).await.unwrap();
 
                     let got_config: serde_json::Value = serde_json::from_str(&config_str).unwrap();
                     let expected_config: serde_json::Value = TEST_MODULAR_CONFIG.clone();

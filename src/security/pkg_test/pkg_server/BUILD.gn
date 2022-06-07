@@ -15,11 +15,11 @@ rustc_binary("pkg_server-binary") {
   sources = [ "src/main.rs" ]
   deps = [
     ":test.security.pkg-rustc",
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-hyper",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",

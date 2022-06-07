@@ -51,7 +51,7 @@ async fn main_inner() -> Result<(), Error> {
         .expect("started pkgfs");
 
     // Open the test package.
-    let pkgfs_backed_package = io_util::directory::open_directory(
+    let pkgfs_backed_package = fuchsia_fs::directory::open_directory(
         &pkgfs.root_dir_proxy().unwrap(),
         &format!("packages/{}/0", test_package.name()),
         fio::OpenFlags::DIRECTORY,

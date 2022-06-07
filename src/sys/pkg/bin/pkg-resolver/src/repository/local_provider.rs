@@ -6,9 +6,9 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::RepositoryUrl,
+    fuchsia_fs::file::AsyncReader,
     fuchsia_zircon::Status,
     futures::{future::BoxFuture, prelude::*},
-    io_util::file::AsyncReader,
     tuf::{
         interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},

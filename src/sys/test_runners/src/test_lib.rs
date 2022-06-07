@@ -303,7 +303,7 @@ fn create_ns_from_current_ns(
 ) -> Result<ComponentNamespace, ComponentNamespaceError> {
     let mut ns = vec![];
     for (path, permission) in dir_paths {
-        let chan = io_util::open_directory_in_namespace(path, permission)
+        let chan = fuchsia_fs::open_directory_in_namespace(path, permission)
             .unwrap()
             .into_channel()
             .unwrap()
@@ -328,7 +328,7 @@ pub async fn test_component(
 ) -> Result<Arc<Component>, Error> {
     let ns = create_ns_from_current_ns(vec![(
         "/pkg",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
     )])?;
     let component = Component::create_for_tests(BuilderArgs {
         url: url.to_string(),

@@ -11,11 +11,11 @@ use euclid::default::Transform2D;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, Time, TimeoutExt};
+use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Duration};
 use futures::{TryFutureExt, TryStreamExt};
-use io_util::{open_directory_in_namespace, OpenFlags};
 use keymaps::usages::input3_key_to_hid_usage;
 use std::{
     collections::HashSet,

@@ -15,10 +15,10 @@ use {
 #[allow(missing_docs)]
 pub enum VerifyNameError {
     #[error("while opening meta/package")]
-    OpenMetaPackage(#[source] io_util::node::OpenError),
+    OpenMetaPackage(#[source] fuchsia_fs::node::OpenError),
 
     #[error("while reading meta/package")]
-    ReadMetaPackage(#[source] io_util::file::ReadError),
+    ReadMetaPackage(#[source] fuchsia_fs::file::ReadError),
 
     #[error("while reading meta/package")]
     ParseMetaPackage(#[source] MetaPackageError),
@@ -28,10 +28,11 @@ pub enum VerifyNameError {
 }
 
 pub(crate) async fn verify(proxy: &fio::DirectoryProxy) -> Result<(), VerifyNameError> {
-    let file = io_util::directory::open_file(proxy, "meta/package", fio::OpenFlags::RIGHT_READABLE)
-        .await
-        .map_err(VerifyNameError::OpenMetaPackage)?;
-    let contents = io_util::file::read(&file).await.map_err(VerifyNameError::ReadMetaPackage)?;
+    let file =
+        fuchsia_fs::directory::open_file(proxy, "meta/package", fio::OpenFlags::RIGHT_READABLE)
+            .await
+            .map_err(VerifyNameError::OpenMetaPackage)?;
+    let contents = fuchsia_fs::file::read(&file).await.map_err(VerifyNameError::ReadMetaPackage)?;
 
     let expected = MetaPackage::from_name("update".parse().unwrap());
 

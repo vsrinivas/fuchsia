@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_developer_ffx_ext::{RepositorySpec, RepositoryStorageType},
     fidl_fuchsia_pkg as pkg,
     fuchsia_archive::AsyncReader,
+    fuchsia_fs::file::Adapter,
     fuchsia_pkg::MetaContents,
     fuchsia_url::RepositoryUrl,
     futures::{
@@ -19,7 +20,6 @@ use {
         stream::{self, BoxStream},
         AsyncReadExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
-    io_util::file::Adapter,
     serde::{Deserialize, Serialize},
     std::{
         fmt, io,

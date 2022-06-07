@@ -343,7 +343,7 @@ async fn run(
     let async_channel = fasync::Channel::from_channel(channel)?;
     let directory = fio::DirectoryProxy::from_channel(async_channel);
     let mut hci_device_events =
-        Watcher::new(io_util::clone_directory(&directory, fio::OpenFlags::CLONE_SAME_RIGHTS)?)
+        Watcher::new(fuchsia_fs::clone_directory(&directory, fio::OpenFlags::CLONE_SAME_RIGHTS)?)
             .await
             .context("Cannot create device watcher")?;
     let mut client_requests = ConcurrentClientRequestFutures::new();
@@ -379,7 +379,7 @@ async fn run(
                     Err(e) => {
                         // Attempt to recreate watcher in the event of an error.
                         warn!("VFS Watcher has died with error: {:?}", e);
-                        hci_device_events = Watcher::new(io_util::clone_directory(
+                        hci_device_events = Watcher::new(fuchsia_fs::clone_directory(
                             &directory,
                             fio::OpenFlags::CLONE_SAME_RIGHTS,
                         )?)

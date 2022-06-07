@@ -137,14 +137,14 @@ impl TestEnvBuilder {
         }
 
         let mut fs = ServiceFs::new();
-        let data = io_util::directory::open_in_namespace(
+        let data = fuchsia_fs::directory::open_in_namespace(
             data_path.to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
-        let build_info = io_util::directory::open_in_namespace(
+        let build_info = fuchsia_fs::directory::open_in_namespace(
             build_info_path.to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .unwrap();
 

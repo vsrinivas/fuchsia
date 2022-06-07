@@ -17,10 +17,10 @@ use {
         util::open_rdwr,
     },
     fuchsia_component_test::ScopedInstance,
+    fuchsia_fs,
     fuchsia_zircon::{self as zx, HandleBased},
     fuchsia_zircon_status as zx_status,
     futures::TryFutureExt,
-    io_util,
     log::error,
     std::{
         fs::File,
@@ -159,7 +159,7 @@ impl TestDevice {
     async fn create_from_realm(
         realm: &ScopedInstance,
     ) -> Result<(TestDevice, HciEmulatorProxy), Error> {
-        let dev_dir = io_util::directory::open_directory(
+        let dev_dir = fuchsia_fs::directory::open_directory(
             realm.get_exposed_dir(),
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -249,7 +249,7 @@ async fn dev_watcher_maybe_in_namespace(
 ) -> Result<DeviceWatcher, Error> {
     if let Some(dir) = dev_dir {
         let stripped_path = Path::new(path).strip_prefix("/dev")?.to_string_lossy();
-        let open_dir = io_util::directory::open_directory(
+        let open_dir = fuchsia_fs::directory::open_directory(
             dir,
             stripped_path.as_ref(),
             fio::OpenFlags::RIGHT_READABLE,
@@ -355,7 +355,7 @@ mod tests {
             ..fdt::RealmArgs::EMPTY
         };
         realm.driver_test_realm_start(args).await.unwrap();
-        let dev_dir = io_util::directory::open_directory(
+        let dev_dir = fuchsia_fs::directory::open_directory(
             realm.root.get_exposed_dir(),
             "dev",
             fio::OpenFlags::RIGHT_READABLE,

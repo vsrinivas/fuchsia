@@ -4,8 +4,8 @@
 
 use {
     fidl_fuchsia_io as fio,
+    fuchsia_fs::{directory::*, file::*, node::OpenError},
     fuchsia_zircon::{Event, Status},
-    io_util::{directory::*, file::*, node::OpenError},
     log::debug,
     std::path::Path,
 };
@@ -23,7 +23,7 @@ impl Directory {
         flags: fio::OpenFlags,
     ) -> Result<Directory, Status> {
         let path = path.as_ref().to_str().unwrap();
-        match io_util::directory::open_in_namespace(path, flags) {
+        match fuchsia_fs::directory::open_in_namespace(path, flags) {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
                 debug!("from_namespace {} failed: {}", path, s);
@@ -48,7 +48,7 @@ impl Directory {
         filename: &str,
         flags: fio::OpenFlags,
     ) -> Result<Directory, Status> {
-        match io_util::directory::open_directory(&self.proxy, filename, flags).await {
+        match fuchsia_fs::directory::open_directory(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
                 debug!("open_directory({},{:?}) failed: {}", filename, flags, s);
@@ -68,7 +68,7 @@ impl Directory {
 
     // Open a file in the parent dir with the given |filename|.
     pub async fn open_file(&self, filename: &str, flags: fio::OpenFlags) -> Result<File, Status> {
-        match io_util::directory::open_file(&self.proxy, filename, flags).await {
+        match fuchsia_fs::directory::open_file(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(File { proxy }),
             Err(OpenError::OpenError(s)) => {
                 debug!("open_file({},{:?}) failed: {}", filename, flags, s);
@@ -92,7 +92,7 @@ impl Directory {
         filename: &str,
         flags: fio::OpenFlags,
     ) -> Result<Directory, Status> {
-        match io_util::directory::create_directory(&self.proxy, filename, flags).await {
+        match fuchsia_fs::directory::create_directory(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
                 debug!("create_directory({},{:?}) failed: {}", filename, flags, s);

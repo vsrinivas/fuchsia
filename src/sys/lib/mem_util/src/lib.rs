@@ -82,7 +82,7 @@ pub async fn open_file_data(
             Err(e) => {
                 let _: zxs::Status = e;
                 // we still didn't get a VMO handle, fallback to reads over the channel
-                let bytes = io_util::file::read(&file).await?;
+                let bytes = fuchsia_fs::file::read(&file).await?;
                 Ok(fmem::Data::Bytes(bytes))
             }
         }
@@ -114,7 +114,7 @@ pub enum FileError {
     ReadError(
         #[source]
         #[from]
-        io_util::file::ReadError,
+        fuchsia_fs::file::ReadError,
     ),
 
     #[error("FIDL call to retrieve a file's buffer failed")]

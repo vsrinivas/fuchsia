@@ -997,7 +997,7 @@ mod tests {
                 let merkle_root_hash =
                     MerkleTree::from_reader(&content[..]).unwrap().root().to_string();
                 {
-                    let file = io_util::directory::open_file(
+                    let file = fuchsia_fs::directory::open_file(
                         serving.root(),
                         &merkle_root_hash,
                         fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1022,7 +1022,7 @@ mod tests {
 
                 let serving = blobfs.serve().await.expect("serve blobfs faield");
                 {
-                    let file = io_util::directory::open_file(
+                    let file = fuchsia_fs::directory::open_file(
                         serving.root(),
                         &merkle_root_hash,
                         fio::OpenFlags::RIGHT_READABLE,
@@ -1030,7 +1030,7 @@ mod tests {
                     .await
                     .expect("open file failed");
                     let read_content =
-                        io_util::file::read(&file).await.expect("read from file failed");
+                        fuchsia_fs::file::read(&file).await.expect("read from file failed");
                     assert_eq!(content, read_content);
                 }
 

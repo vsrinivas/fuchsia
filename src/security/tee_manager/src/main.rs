@@ -17,11 +17,11 @@ use {
     fidl_fuchsia_tee::{self as fuchsia_tee, DeviceInfoMarker},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_fs::{open_directory_in_namespace, OpenFlags},
     fuchsia_syslog as syslog,
     fuchsia_syslog::macros::*,
     fuchsia_vfs_watcher as vfs, fuchsia_zircon as zx,
     futures::{prelude::*, select, stream::FusedStream},
-    io_util::{open_directory_in_namespace, OpenFlags},
     std::path::PathBuf,
     uuid::Uuid,
 };

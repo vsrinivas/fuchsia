@@ -28,7 +28,6 @@ rustc_binary("bin") {
   configs += [ "//build/config/rust:bootfs" ]
 
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
@@ -39,6 +38,7 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-url",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/mem_util",

@@ -2729,10 +2729,10 @@ async fn use_service_from_sibling_collection() {
 
     let namespace = test.bind_and_get_namespace(vec!["b"].into()).await;
     let dir = capability_util::take_dir_from_namespace(&namespace, "/svc").await;
-    let service_dir = io_util::directory::open_directory(
+    let service_dir = fuchsia_fs::directory::open_directory(
         &dir,
         "my.service.Service",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )
     .await
     .expect("failed to open service");
@@ -2872,10 +2872,10 @@ async fn use_filtered_service_from_sibling() {
     // Check that instance c only has access to the filtered service instance.
     let namespace_c = test.bind_and_get_namespace(vec!["c"].into()).await;
     let dir_c = capability_util::take_dir_from_namespace(&namespace_c, "/svc").await;
-    let service_dir_c = io_util::directory::open_directory(
+    let service_dir_c = fuchsia_fs::directory::open_directory(
         &dir_c,
         "my.service.Service",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )
     .await
     .expect("failed to open service");
@@ -2892,10 +2892,10 @@ async fn use_filtered_service_from_sibling() {
     // Check that instance d connects to the renamed instances correctly
     let namespace_d = test.bind_and_get_namespace(vec!["d"].into()).await;
     let dir_d = capability_util::take_dir_from_namespace(&namespace_d, "/svc").await;
-    let service_dir_d = io_util::directory::open_directory(
+    let service_dir_d = fuchsia_fs::directory::open_directory(
         &dir_d,
         "my.service.Service",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )
     .await
     .expect("failed to open service");

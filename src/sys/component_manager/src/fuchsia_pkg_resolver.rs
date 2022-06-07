@@ -64,14 +64,15 @@ impl FuchsiaPkgResolver {
         let dir = ClientEnd::<fio::DirectoryMarker>::new(dir)
             .into_proxy()
             .expect("failed to create directory proxy");
-        let file = io_util::open_file(&dir, cm_path, fio::OpenFlags::RIGHT_READABLE)
+        let file = fuchsia_fs::open_file(&dir, cm_path, fio::OpenFlags::RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_found(e))?;
-        let component_decl = io_util::read_file_fidl(&file).await.map_err(|e| {
-            match e.downcast_ref::<io_util::file::ReadError>() {
+        let component_decl =
+            fuchsia_fs::read_file_fidl(&file).await.map_err(|e| match e
+                .downcast_ref::<fuchsia_fs::file::ReadError>()
+            {
                 Some(_) => ResolverError::manifest_not_found(e),
                 None => ResolverError::manifest_invalid(e),
-            }
-        })?;
+            })?;
         // Validate the component manifest
         cm_fidl_validator::validate(&component_decl)
             .map_err(|e| ResolverError::manifest_invalid(e))?;
@@ -92,10 +93,10 @@ impl FuchsiaPkgResolver {
                     )))
                 }
             };
-            let file = io_util::open_file(&dir, config_path, fio::OpenFlags::RIGHT_READABLE)
+            let file = fuchsia_fs::open_file(&dir, config_path, fio::OpenFlags::RIGHT_READABLE)
                 .map_err(|e| ResolverError::Io(e.into()))?;
             let values_data =
-                io_util::read_file_fidl(&file).await.map_err(|e| ResolverError::Io(e.into()))?;
+                fuchsia_fs::read_file_fidl(&file).await.map_err(|e| ResolverError::Io(e.into()))?;
             cm_fidl_validator::validate_values_data(&values_data)
                 .map_err(|e| ResolverError::config_values_invalid(e))?;
             Some(values_data.fidl_into_native())
@@ -249,7 +250,7 @@ mod tests {
             match parsed_url.name().as_ref() {
                 "hello-world" => {
                     let path = Path::new("/pkg");
-                    io_util::connect_in_namespace(
+                    fuchsia_fs::connect_in_namespace(
                         path.to_str().unwrap(),
                         dir_s,
                         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -363,10 +364,10 @@ mod tests {
 
         let dir_proxy = package_dir.into_proxy().unwrap();
         let path = Path::new("meta/hello-world-rust.cm");
-        let file_proxy = io_util::open_file(&dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
+        let file_proxy = fuchsia_fs::open_file(&dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
             .expect("could not open cm");
 
-        let decl = io_util::read_file_fidl::<fdecl::Component>(&file_proxy)
+        let decl = fuchsia_fs::read_file_fidl::<fdecl::Component>(&file_proxy)
             .await
             .expect("could not read cm");
         let decl = decl.fidl_into_native();

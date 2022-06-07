@@ -206,7 +206,7 @@ impl IncomingNamespace {
         package_dir: &fio::DirectoryProxy,
     ) -> Result<(), ModelError> {
         let clone_dir_proxy =
-            io_util::clone_directory(package_dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
+            fuchsia_fs::clone_directory(package_dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
                 .map_err(|e| ModelError::namespace_creation_failed(e))?;
         let cloned_dir = ClientEnd::new(
             clone_dir_proxy

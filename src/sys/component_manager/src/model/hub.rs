@@ -1091,7 +1091,7 @@ mod tests {
         )
         .await;
 
-        let config_dir = io_util::open_directory(
+        let config_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("resolved/config"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1129,7 +1129,7 @@ mod tests {
         )
         .await;
 
-        let resolved_dir = io_util::open_directory(
+        let resolved_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("resolved"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1168,7 +1168,7 @@ mod tests {
         )
         .await;
 
-        let resolved_dir = io_util::open_directory(
+        let resolved_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("resolved"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1189,7 +1189,7 @@ mod tests {
         assert_matches!(hub.on_unresolved_async(&moniker, new_url).await, Ok(()));
 
         // Confirm that the resolved directory was deleted.
-        let resolved_dir2 = io_util::open_directory(
+        let resolved_dir2 = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("resolved"),
             fio::OpenFlags::RIGHT_READABLE,
@@ -1226,7 +1226,7 @@ mod tests {
         )
         .await;
 
-        let use_dir = io_util::open_directory(
+        let use_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("resolved/use"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1297,7 +1297,7 @@ mod tests {
             .start_instance(&AbsoluteMoniker::parse_str("/a").unwrap(), &StartReason::Debug)
             .await
             .unwrap();
-        let resolved_dir = io_util::open_directory(
+        let resolved_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("children/a/resolved"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1350,7 +1350,7 @@ mod tests {
         )
         .await;
 
-        let expose_dir = io_util::open_directory(
+        let expose_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("resolved/expose"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1446,7 +1446,7 @@ mod tests {
         )
         .await;
 
-        let in_dir = io_util::open_directory(
+        let in_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("exec/in"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -1497,7 +1497,7 @@ mod tests {
         )
         .await;
 
-        let expose_dir = io_util::open_directory(
+        let expose_dir = fuchsia_fs::open_directory(
             &hub_proxy,
             &Path::new("exec/expose"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

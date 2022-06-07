@@ -17,8 +17,8 @@ use {
         error::Error as RealmBuilderError, Capability, ChildOptions, DirectoryContents,
         LocalComponentHandles, RealmBuilder, Ref, Route,
     },
+    fuchsia_fs,
     futures::{channel::mpsc, future::pending, FutureExt, SinkExt, StreamExt, TryStreamExt},
-    io_util,
     std::convert::TryInto,
 };
 
@@ -1327,7 +1327,7 @@ async fn route_storage() -> Result<(), Error> {
                 let mut send_storage_used = send_storage_used.clone();
                 async move {
                     let data_dir = handles.clone_from_namespace("data")?;
-                    let example_file = io_util::directory::open_file(
+                    let example_file = fuchsia_fs::directory::open_file(
                         &data_dir,
                         "example_file",
                         fio::OpenFlags::RIGHT_READABLE
@@ -1337,9 +1337,9 @@ async fn route_storage() -> Result<(), Error> {
                     .await
                     .expect("failed to open example_file");
                     let example_data = "example data";
-                    io_util::write_file(&example_file, example_data).await?;
+                    fuchsia_fs::write_file(&example_file, example_data).await?;
                     let _: Result<u64, i32> = example_file.seek(fio::SeekOrigin::Start, 0).await?;
-                    let file_contents = io_util::read_file(&example_file).await?;
+                    let file_contents = fuchsia_fs::read_file(&example_file).await?;
                     assert_eq!(example_data, file_contents.as_str());
                     send_storage_used.send(()).await.expect("failed to send results");
                     Ok(())
@@ -1520,15 +1520,15 @@ async fn read_only_directory() -> Result<(), Error> {
     let local_component_impl = |mut send_file_contents: mpsc::Sender<String>,
                                 handles: LocalComponentHandles| async move {
         let config_dir = handles.clone_from_namespace("config").expect("failed to open /config");
-        let config_file = io_util::directory::open_file(
+        let config_file = fuchsia_fs::directory::open_file(
             &config_dir,
             "config.txt",
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .await
         .expect("failed to open config.txt");
         let config_file_contents =
-            io_util::read_file(&config_file).await.expect("failed to read config.txt");
+            fuchsia_fs::read_file(&config_file).await.expect("failed to read config.txt");
         send_file_contents
             .send(config_file_contents)
             .await
@@ -1576,15 +1576,15 @@ async fn read_only_directory() -> Result<(), Error> {
     assert_eq!(receive_b_file_contents.next().await, Some("b".to_string()),);
 
     let exposed_dir = instance.root.get_exposed_dir();
-    let config_file = io_util::directory::open_file(
+    let config_file = fuchsia_fs::directory::open_file(
         &exposed_dir,
         "config/config.txt",
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .expect("failed to open config.txt");
     let config_file_contents =
-        io_util::read_file(&config_file).await.expect("failed to read config.txt");
+        fuchsia_fs::read_file(&config_file).await.expect("failed to read config.txt");
     assert_eq!("b".to_string(), config_file_contents);
 
     Ok(())
@@ -1594,36 +1594,36 @@ async fn read_only_directory() -> Result<(), Error> {
 async fn from_relative_url() -> Result<(), Error> {
     let builder = RealmBuilder::from_relative_url(ECHO_REALM_RELATIVE_URL).await?;
 
-    let echo_client_decl_file = io_util::open_file_in_namespace(
+    let echo_client_decl_file = fuchsia_fs::open_file_in_namespace(
         "/pkg/meta/echo_client.cm",
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
     let echo_client_decl: fcdecl::Component =
-        io_util::read_file_fidl(&echo_client_decl_file).await?;
+        fuchsia_fs::read_file_fidl(&echo_client_decl_file).await?;
 
     assert_eq!(
         builder.get_component_decl("echo_client").await?,
         echo_client_decl.fidl_into_native()
     );
 
-    let echo_server_decl_file = io_util::open_file_in_namespace(
+    let echo_server_decl_file = fuchsia_fs::open_file_in_namespace(
         "/pkg/meta/echo_server.cm",
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
     let echo_server_decl: fcdecl::Component =
-        io_util::read_file_fidl(&echo_server_decl_file).await?;
+        fuchsia_fs::read_file_fidl(&echo_server_decl_file).await?;
 
     assert_eq!(
         builder.get_component_decl("echo_server").await?,
         echo_server_decl.fidl_into_native()
     );
 
-    let echo_realm_decl_file = io_util::open_file_in_namespace(
+    let echo_realm_decl_file = fuchsia_fs::open_file_in_namespace(
         "/pkg/meta/echo_realm.cm",
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
     let mut echo_realm_decl: fcdecl::Component =
-        io_util::read_file_fidl(&echo_realm_decl_file).await?;
+        fuchsia_fs::read_file_fidl(&echo_realm_decl_file).await?;
 
     // The realm builder server removes these decls so it can manage them itself
     echo_realm_decl.children = Some(vec![]);
