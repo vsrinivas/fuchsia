@@ -85,6 +85,7 @@ fuchsia_test_package("use_h264_decoder_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
@@ -110,6 +111,7 @@ fuchsia_test_package("use_h264_decoder_frame_num_gaps_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
@@ -150,6 +152,7 @@ fuchsia_test_package("use_h264_multi_decoder_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
@@ -173,6 +176,7 @@ fuchsia_test_package("use_h264_multi_decoder_flake_repro_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
@@ -199,6 +203,7 @@ fuchsia_test_package("use_h264_decoder_stream_switching_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
 
       # emu_env,
     ]
@@ -226,6 +231,7 @@ fuchsia_test_package("use_h264_multi_decoder_stream_switching_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
@@ -253,6 +259,7 @@ fuchsia_test_package(
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
@@ -339,6 +346,7 @@ fuchsia_test_package("h264_decoder_fuzzer_tests") {
       astro_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }

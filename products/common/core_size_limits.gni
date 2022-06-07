@@ -168,6 +168,12 @@ size_checker_input = {
       creep_limit = 32768  # 32.0 KiB
     },
     {
+      component = "Media"
+      src = [ "build/images/fuchsia/fuchsia/legacy/packages/base/codec_runner_intel_gen" ]
+      limit = 10485760  # 10 MiB
+      creep_limit = 49152  # 48.0 KiB
+    },
+    {
       component = "SetUI"
       src =
           [ "build/images/fuchsia/fuchsia/legacy/packages/base/setui_service" ]
@@ -203,7 +209,7 @@ size_checker_input = {
     {
       component = "Unallocated"
       src = []
-      limit = 5129187825
+      limit = 5118702065
       creep_limit = 0
     },
   ]
