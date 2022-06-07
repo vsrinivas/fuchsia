@@ -71,7 +71,7 @@ resource("subdir_file_resource") {
 }
 
 fuchsia_unittest_package("io_util_tests") {
-  manifest = "meta/io_util_tests.cmx"
+  manifest = "meta/io_util_tests.cml"
   deps = [
     ":fidl_file_resource",
     ":file_resource",

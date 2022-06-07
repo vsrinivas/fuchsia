@@ -35,7 +35,7 @@ rustc_library("files_async") {
 }
 
 fuchsia_unittest_package("files_async_tests") {
-  manifest = "meta/files_async_lib_test.cmx"
+  manifest = "meta/files_async_tests.cml"
   deps = [ ":files_async_test" ]
 
   test_specs = {

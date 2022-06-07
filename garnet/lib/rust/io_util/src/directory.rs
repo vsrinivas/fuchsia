@@ -599,15 +599,6 @@ mod tests {
         assert_matches!(open_node(&pkg, "fake", fio::OpenFlags::RIGHT_READABLE, 0).await, Err(_));
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn open_node_opens_service_node() {
-        let svc = open_in_namespace("/svc", fio::OpenFlags::RIGHT_READABLE).unwrap();
-        let _node = open_node(&svc, "fuchsia.logger.LogSink", fio::OpenFlags::RIGHT_READABLE, 0)
-            .await
-            .unwrap();
-        // Closing the node will hang forever, so don't bother.
-    }
-
     // clone_no_describe
 
     #[fasync::run_singlethreaded(test)]
