@@ -8,7 +8,7 @@
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/io_util_lib_test",
+        binary: "bin/fuchsia_fs_lib_test",
     },
     use: [
         {

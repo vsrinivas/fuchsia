@@ -1,0 +1,137 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("fuchsia-fs") {
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:pin-project",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:static_assertions",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    ":fidl.test.schema-rustc",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:tempfile",
+  ]
+
+  sources = [
+    "src/directory.rs",
+    "src/file.rs",
+    "src/file/async_read_at.rs",
+    "src/file/async_read_at_ext.rs",
+    "src/file/async_reader.rs",
+    "src/file/buffered_async_read_at.rs",
+    "src/lib.rs",
+    "src/node.rs",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//src/lib/fdio/rust:fdio",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+    ]
+  }
+}
+
+# Identical compatibility library. The only difference is it's named io_util.
+#
+# TODO(sdemos): remove this target when all users are migrated over.
+rustc_library("fuchsia-fs-compat") {
+  with_unit_tests = true
+  edition = "2018"
+  name = "io_util"
+  visibility = [
+    "//garnet/lib/rust/io_util:*",
+    "//src/lib/fuchsia-fs:*",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:pin-project",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:static_assertions",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    ":fidl.test.schema-rustc",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:tempfile",
+  ]
+
+  sources = [
+    "src/directory.rs",
+    "src/file.rs",
+    "src/file/async_read_at.rs",
+    "src/file/async_read_at_ext.rs",
+    "src/file/async_reader.rs",
+    "src/file/buffered_async_read_at.rs",
+    "src/lib.rs",
+    "src/node.rs",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//src/lib/fdio/rust:fdio",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+    ]
+  }
+}
+
+fidl("fidl.test.schema") {
+  testonly = true
+  sources = [ "data/schema.test.fidl" ]
+}
+
+resource("file_resource") {
+  sources = [ "data/file" ]
+  outputs = [ "data/file" ]
+}
+
+resource("fidl_file_resource") {
+  sources = [ "data/fidl_file" ]
+  outputs = [ "data/fidl_file" ]
+}
+
+resource("subdir_file_resource") {
+  sources = [ "data/file" ]
+  outputs = [ "data/subdir/subdir-file" ]
+}
+
+fuchsia_unittest_package("fuchsia-fs-tests") {
+  manifest = "meta/fuchsia_fs_tests.cml"
+  deps = [
+    ":fidl_file_resource",
+    ":file_resource",
+    ":fuchsia-fs_test",
+    ":subdir_file_resource",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia-fs-tests" ]
+}

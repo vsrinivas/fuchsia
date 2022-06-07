@@ -104,6 +104,7 @@ group("tests") {
     "fuchsia-component:tests",
     "fuchsia-component-test:tests",
     "fuchsia-cxx:tests",
+    "fuchsia-fs:tests",
     "fuchsia-hyper:tests",
     "fuchsia-image-format:tests",
     "fuchsia-runtime:tests",
