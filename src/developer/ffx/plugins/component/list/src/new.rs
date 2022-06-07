@@ -16,8 +16,8 @@ use {
 
 #[derive(Deserialize, Serialize)]
 pub struct SerializableInstance {
-    // Name of the component. This is the full path in the component hierarchy.
-    pub name: String,
+    // Moniker of the component. This is the full path in the component hierarchy.
+    pub moniker: String,
 
     // URL of the component.
     pub url: String,
@@ -35,7 +35,7 @@ impl From<Instance> for SerializableInstance {
     fn from(i: Instance) -> Self {
         let is_running = i.state == InstanceState::Started;
         SerializableInstance {
-            name: i.moniker.to_string(),
+            moniker: i.moniker.to_string(),
             url: i.url.unwrap_or_default(),
             is_cmx: i.is_cmx,
             is_running,
