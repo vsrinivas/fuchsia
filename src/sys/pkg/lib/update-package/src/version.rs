@@ -20,10 +20,10 @@ use {
 #[allow(missing_docs)]
 pub enum ReadVersionError {
     #[error("while opening the file")]
-    OpenFile(#[source] fuchsia_fs::node::OpenError),
+    OpenFile(#[source] io_util::node::OpenError),
 
     #[error("while reading the file")]
-    ReadFile(#[source] fuchsia_fs::file::ReadError),
+    ReadFile(#[source] io_util::file::ReadError),
 }
 
 struct SystemVersionVisitor;
@@ -126,11 +126,11 @@ impl fmt::Display for SystemVersion {
 pub(crate) async fn read_version(
     proxy: &fio::DirectoryProxy,
 ) -> Result<SystemVersion, ReadVersionError> {
-    let file = fuchsia_fs::directory::open_file(proxy, "version", fio::OpenFlags::RIGHT_READABLE)
+    let file = io_util::directory::open_file(proxy, "version", fio::OpenFlags::RIGHT_READABLE)
         .await
         .map_err(ReadVersionError::OpenFile)?;
     let version_str =
-        fuchsia_fs::file::read_to_string(&file).await.map_err(ReadVersionError::ReadFile)?;
+        io_util::file::read_to_string(&file).await.map_err(ReadVersionError::ReadFile)?;
 
     Ok(SystemVersion::from_str(&version_str).unwrap())
 }

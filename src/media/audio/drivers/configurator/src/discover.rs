@@ -18,7 +18,7 @@ pub async fn find_codecs<T: Configurator>(
     break_count: u32,
     configurator: Arc<Mutex<T>>,
 ) -> Result<(), Error> {
-    let dev_proxy_local = fuchsia_fs::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
+    let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dev_proxy_local).await?;
 
     let mut codecs_found = 0;
@@ -27,8 +27,7 @@ pub async fn find_codecs<T: Configurator>(
         match msg.event {
             fuchsia_vfs_watcher::WatchEvent::EXISTING
             | fuchsia_vfs_watcher::WatchEvent::ADD_FILE => {
-                let dev_proxy_local =
-                    fuchsia_fs::clone_directory(&dev_proxy, fio::OpenFlags::empty());
+                let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty());
                 match dev_proxy_local {
                     Ok(local) => {
                         let path = Path::new(&msg.filename);
@@ -66,7 +65,7 @@ pub async fn find_dais<T: Configurator>(
     break_count: u32,
     configurator: Arc<Mutex<T>>,
 ) -> Result<(), Error> {
-    let dev_proxy_local = fuchsia_fs::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
+    let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty())?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dev_proxy_local).await?;
 
     let mut dais_found = 0;
@@ -76,8 +75,7 @@ pub async fn find_dais<T: Configurator>(
         match msg.event {
             fuchsia_vfs_watcher::WatchEvent::EXISTING
             | fuchsia_vfs_watcher::WatchEvent::ADD_FILE => {
-                let dev_proxy_local =
-                    fuchsia_fs::clone_directory(&dev_proxy, fio::OpenFlags::empty());
+                let dev_proxy_local = io_util::clone_directory(&dev_proxy, fio::OpenFlags::empty());
                 match dev_proxy_local {
                     Ok(local) => {
                         let path = Path::new(&msg.filename);

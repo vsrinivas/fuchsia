@@ -42,6 +42,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
@@ -50,7 +51,6 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",

@@ -15,7 +15,7 @@ use {
 #[derive(thiserror::Error, Debug)]
 pub enum AccountMetadataStoreError {
     #[error("Failed to open: {0}")]
-    OpenError(#[from] fuchsia_fs::node::OpenError),
+    OpenError(#[from] io_util::node::OpenError),
 
     #[error("Failed to readdir: {0}")]
     ReaddirError(#[from] files_async::Error),
@@ -30,13 +30,13 @@ pub enum AccountMetadataStoreError {
     SerdeReadError(#[source] serde_json::Error),
 
     #[error("Failed to write account metadata to backing storage: {0}")]
-    WriteError(#[from] fuchsia_fs::file::WriteError),
+    WriteError(#[from] io_util::file::WriteError),
 
     #[error("Failed to read account metadata from backing storage: {0}")]
-    ReadError(#[from] fuchsia_fs::file::ReadError),
+    ReadError(#[from] io_util::file::ReadError),
 
     #[error("Failed to rename account metadata temp file to target: {0}")]
-    RenameError(#[from] fuchsia_fs::node::RenameError),
+    RenameError(#[from] io_util::node::RenameError),
 
     #[error("Failed to flush account metadata to disk: {0}")]
     FlushError(#[source] zx::Status),
@@ -266,15 +266,15 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
         let flags = fio::OpenFlags::RIGHT_READABLE;
 
         let maybe_file =
-            fuchsia_fs::directory::open_file(&self.accounts_dir, &metadata_filename, flags).await;
+            io_util::directory::open_file(&self.accounts_dir, &metadata_filename, flags).await;
 
         let file = match maybe_file {
             Ok(inner) => inner,
-            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND)) => return Ok(None),
+            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND)) => return Ok(None),
             Err(err) => return Err(err.into()),
         };
 
-        let serialized = fuchsia_fs::file::read(&file).await?;
+        let serialized = io_util::file::read(&file).await?;
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized)
             .map_err(|err| AccountMetadataStoreError::SerdeReadError(err))?;
 
@@ -374,7 +374,7 @@ pub mod test {
         path: &std::path::Path,
         data: &[u8],
     ) {
-        let file = fuchsia_fs::open_file(
+        let file = io_util::open_file(
             &dir,
             path,
             fio::OpenFlags::RIGHT_READABLE
@@ -496,7 +496,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_save() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -546,7 +546,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_load() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -584,7 +584,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_remove() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -628,7 +628,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_account_ids() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -654,7 +654,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_cleanup_stale_files() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

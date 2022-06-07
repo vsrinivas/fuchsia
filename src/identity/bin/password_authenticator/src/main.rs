@@ -20,9 +20,9 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_process_lifecycle::LifecycleRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_fs::directory::open_in_namespace;
 use fuchsia_runtime::{self as fruntime, HandleInfo, HandleType};
 use futures::StreamExt;
+use io_util::directory::open_in_namespace;
 use log::{error, info};
 use std::sync::Arc;
 

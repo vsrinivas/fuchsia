@@ -22,7 +22,7 @@ pub async fn serve(stream: PackageResolverRequestStream) -> anyhow::Result<()> {
                 } => {
                     let package_url = UnpinnedAbsolutePackageUrl::parse(&package_url)?;
                     let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
-                    fuchsia_fs::node::connect_in_namespace(
+                    io_util::node::connect_in_namespace(
                         &format!(
                             "/pkgfs/packages/{}/{}",
                             package_url.name(),

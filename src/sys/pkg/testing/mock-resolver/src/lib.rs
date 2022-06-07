@@ -404,11 +404,11 @@ mod tests {
 
     async fn read_file(dir_proxy: &fio::DirectoryProxy, path: &str) -> String {
         let file_proxy =
-            fuchsia_fs::directory::open_file(dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
+            io_util::directory::open_file(dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .unwrap();
 
-        fuchsia_fs::file::read_to_string(&file_proxy).await.unwrap()
+        io_util::file::read_to_string(&file_proxy).await.unwrap()
     }
 
     fn do_resolve(

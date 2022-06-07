@@ -25,8 +25,8 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, fuchsia_fs::node::OpenError> {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        let proxy = io_util::directory::open_in_namespace(
             "/pkgfs/versions",
             fio::OpenFlags::RIGHT_READABLE,
         )?;
@@ -36,9 +36,9 @@ impl Client {
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
     pub fn open_from_pkgfs_root(
         pkgfs: &fio::DirectoryProxy,
-    ) -> Result<Self, fuchsia_fs::node::OpenError> {
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
-            proxy: fuchsia_fs::directory::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "versions",
                 fio::OpenFlags::RIGHT_READABLE,
@@ -80,12 +80,10 @@ impl Client {
         // TODO(fxbug.dev/37858) allow opening as executable too
         let flags = fio::OpenFlags::RIGHT_READABLE;
         let dir =
-            fuchsia_fs::directory::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
+            io_util::directory::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
                 .await
                 .map_err(|e| match e {
-                    fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND) => {
-                        OpenError::NotFound
-                    }
+                    io_util::node::OpenError::OpenError(Status::NOT_FOUND) => OpenError::NotFound,
                     other => OpenError::Io(other),
                 })?;
 

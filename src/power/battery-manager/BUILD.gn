@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power-rustc",
     "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery-rustc",
     "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery.test-rustc",
@@ -19,7 +20,6 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/syslog/rust:syslog",

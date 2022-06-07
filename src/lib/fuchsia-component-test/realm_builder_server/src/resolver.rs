@@ -229,13 +229,10 @@ impl Registry {
             .ok_or(fresolution::ResolverError::ManifestNotFound)?;
         let package_dir =
             component.package_dir.clone().ok_or(fresolution::ResolverError::PackageNotFound)?;
-        let manifest_file = fuchsia_fs::open_file(
-            &package_dir,
-            Path::new(&fragment),
-            fio::OpenFlags::RIGHT_READABLE,
-        )
-        .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
-        let component_decl: fcdecl::Component = fuchsia_fs::read_file_fidl(&manifest_file)
+        let manifest_file =
+            io_util::open_file(&package_dir, Path::new(&fragment), fio::OpenFlags::RIGHT_READABLE)
+                .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
+        let component_decl: fcdecl::Component = io_util::read_file_fidl(&manifest_file)
             .await
             .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
         cm_fidl_validator::validate(&component_decl)

@@ -107,10 +107,7 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
     let directories = prefixes
         .iter()
         .filter_map(|path| {
-            match fuchsia_fs::open_directory_in_namespace(
-                path,
-                fuchsia_fs::OpenFlags::RIGHT_READABLE,
-            ) {
+            match io_util::open_directory_in_namespace(path, io_util::OpenFlags::RIGHT_READABLE) {
                 Ok(d) => Some((*path, d)),
                 Err(e) => {
                     warn!("Failed to open {} profile directory: {:?}", path, e);
@@ -150,9 +147,8 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
             let prefix = PathBuf::from(prefix);
             let name = entry.name;
             let path = prefix.join(&name).to_string_lossy().to_string();
-            let file =
-                fuchsia_fs::open_file_in_namespace(&path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
-            let content = fuchsia_fs::read_file_bytes(&file).await;
+            let file = io_util::open_file_in_namespace(&path, io_util::OpenFlags::RIGHT_READABLE)?;
+            let content = io_util::read_file_bytes(&file).await;
 
             // Store the file in a directory prefixed with the last part of the file path (i.e.
             // "static" or "dynamic").
@@ -233,7 +229,7 @@ mod test {
         assert_eq!(1usize, values.len());
         let DebugData { name, file, .. } = values.pop().unwrap();
         assert_eq!(Some("file".to_string()), name);
-        let contents = fuchsia_fs::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
+        let contents = io_util::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
             .await
             .expect("read file");
         assert_eq!(b"test".to_vec(), contents);
@@ -269,7 +265,7 @@ mod test {
                 .map(|response| async move {
                     let DebugData { name, file, .. } = response;
                     let contents =
-                        fuchsia_fs::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
+                        io_util::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
                             .await
                             .expect("read file");
                     (name.expect("has name"), contents)
@@ -327,7 +323,7 @@ mod test {
                 .map(|response| async move {
                     let DebugData { name, file, .. } = response;
                     let contents =
-                        fuchsia_fs::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
+                        io_util::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
                             .await
                             .expect("read file");
                     (name.expect("has name"), contents)

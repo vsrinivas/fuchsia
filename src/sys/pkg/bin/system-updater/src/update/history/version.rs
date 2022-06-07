@@ -250,15 +250,15 @@ pub(super) async fn mock_pkgfs_system(
 ) -> (pkgfs::system::Client, tempfile::TempDir) {
     let pkgfs_dir = tempfile::tempdir().expect("/tmp to exist");
     std::fs::create_dir(pkgfs_dir.path().join("system")).expect("create dir");
-    fuchsia_fs::file::write_in_namespace(
+    io_util::file::write_in_namespace(
         pkgfs_dir.path().join("system/meta").to_str().unwrap(),
         system_image_hash,
     )
     .await
     .expect("write to temp dir");
-    let pkgfs_proxy = fuchsia_fs::directory::open_in_namespace(
+    let pkgfs_proxy = io_util::directory::open_in_namespace(
         pkgfs_dir.path().to_str().unwrap(),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )
     .expect("temp dir to open");
     (pkgfs::system::Client::open_from_pkgfs_root(&pkgfs_proxy).unwrap(), pkgfs_dir)

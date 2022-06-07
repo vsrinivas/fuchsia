@@ -30,12 +30,12 @@ async fn read_file_from_proxy<'a>(
     dir_proxy: &'a fio::DirectoryProxy,
     file_path: &'a str,
 ) -> Result<Vec<u8>, Error> {
-    let file = fuchsia_fs::open_file(
+    let file = io_util::open_file(
         &dir_proxy,
         &PathBuf::from(file_path),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )?;
-    fuchsia_fs::read_file_bytes(&file).await
+    io_util::read_file_bytes(&file).await
 }
 
 async fn assert_file<'a>(

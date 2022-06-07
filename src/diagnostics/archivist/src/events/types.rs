@@ -393,7 +393,7 @@ impl TryFrom<fsys::Event> for Event {
                             });
                         }
                         match directory_ready.node {
-                            Some(node) => fuchsia_fs::node_to_directory(node.into_proxy()?)
+                            Some(node) => io_util::node_to_directory(node.into_proxy()?)
                                 .map_err(EventError::NodeToDirectory)?,
                             None => return Err(EventError::MissingDiagnosticsDir),
                         }

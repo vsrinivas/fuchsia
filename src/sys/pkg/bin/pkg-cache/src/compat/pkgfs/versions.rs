@@ -378,13 +378,13 @@ mod tests {
             pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         assert_matches!(
-            fuchsia_fs::directory::open_directory(
+            io_util::directory::open_directory(
                 &proxy,
                 &hash(1).to_string(),
                 fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
-            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
+            Err(io_util::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
         );
     }
 
@@ -410,7 +410,7 @@ mod tests {
             pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         // Open a package directory with OPEN_FLAG_POSIX_EXECUTABLE set
-        let pkg_dir = fuchsia_fs::directory::open_directory(
+        let pkg_dir = io_util::directory::open_directory(
             &proxy,
             &pkg.meta_far_merkle_root().to_string(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_EXECUTABLE,
@@ -422,13 +422,13 @@ mod tests {
         // the upgrade to fio::OpenFlags::RIGHT_EXECUTABLE), so re-opening self with fio::OpenFlags::RIGHT_EXECUTABLE
         // should be rejected.
         assert_matches!(
-            fuchsia_fs::directory::open_directory(
+            io_util::directory::open_directory(
                 &pkg_dir,
                 ".",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
-            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
+            Err(io_util::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
         );
     }
 
@@ -467,13 +467,13 @@ mod tests {
             pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         assert_matches!(
-            fuchsia_fs::directory::open_directory(
+            io_util::directory::open_directory(
                 &proxy,
                 &hash(0).to_string(),
                 fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
-            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
@@ -490,23 +490,23 @@ mod tests {
             pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
 
         assert_matches!(
-            fuchsia_fs::directory::open_directory(
+            io_util::directory::open_directory(
                 &proxy,
                 &hash(0).to_string(),
                 fio::OpenFlags::RIGHT_EXECUTABLE
             )
             .await,
-            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
 
         assert_matches!(
-            fuchsia_fs::directory::open_directory(
+            io_util::directory::open_directory(
                 &proxy,
                 &hash(1).to_string(),
                 fio::OpenFlags::RIGHT_READABLE
             )
             .await,
-            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
@@ -560,7 +560,7 @@ mod tests {
         )
         .await;
 
-        let proxy = fuchsia_fs::directory::open_directory(
+        let proxy = io_util::directory::open_directory(
             &pkgfs_versions
                 .proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE),
             &pkg.meta_far_merkle_root().to_string(),
@@ -583,14 +583,14 @@ mod tests {
             ]
         );
 
-        let file = fuchsia_fs::directory::open_file(
+        let file = io_util::directory::open_file(
             &proxy,
             "message",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .await
         .unwrap();
-        let message = fuchsia_fs::file::read_to_string(&file).await.unwrap();
+        let message = io_util::file::read_to_string(&file).await.unwrap();
         assert_eq!(message, "test-content");
     }
 }

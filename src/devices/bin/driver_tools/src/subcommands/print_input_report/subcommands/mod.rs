@@ -42,7 +42,7 @@ async fn get_all_input_device_paths(
     dev: &fio::DirectoryProxy,
 ) -> Result<impl Stream<Item = Result<PathBuf>>> {
     const INPUT_DEVICE_DIR: &str = "class/input-report";
-    let input_device_dir = fuchsia_fs::open_directory(
+    let input_device_dir = io_util::open_directory(
         &dev,
         &Path::new(INPUT_DEVICE_DIR),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

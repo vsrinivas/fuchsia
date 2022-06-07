@@ -9,21 +9,20 @@ use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, thiserror::Error};
 #[allow(missing_docs)]
 pub enum HashError {
     #[error("opening the 'meta' file")]
-    Open(#[source] fuchsia_fs::node::OpenError),
+    Open(#[source] io_util::node::OpenError),
 
     #[error("reading the 'meta' file")]
-    Read(#[source] fuchsia_fs::file::ReadError),
+    Read(#[source] io_util::file::ReadError),
 
     #[error("parsing the 'meta' file")]
     Parse(#[source] fuchsia_hash::ParseHashError),
 }
 
 pub(crate) async fn hash(proxy: &fio::DirectoryProxy) -> Result<Hash, HashError> {
-    let meta =
-        fuchsia_fs::directory::open_file(proxy, "meta", fuchsia_fs::OpenFlags::RIGHT_READABLE)
-            .await
-            .map_err(HashError::Open)?;
-    let contents = fuchsia_fs::file::read_to_string(&meta).await.map_err(HashError::Read)?;
+    let meta = io_util::directory::open_file(proxy, "meta", io_util::OpenFlags::RIGHT_READABLE)
+        .await
+        .map_err(HashError::Open)?;
+    let contents = io_util::file::read_to_string(&meta).await.map_err(HashError::Read)?;
     contents.parse::<Hash>().map_err(HashError::Parse)
 }
 
@@ -33,7 +32,7 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         fuchsia_async as fasync,
-        fuchsia_fs::directory::open_in_namespace,
+        io_util::directory::open_in_namespace,
         std::{fs::File, io::Write as _},
         tempfile::tempdir,
     };
@@ -43,7 +42,7 @@ mod tests {
         let temp_dir = tempdir().expect("/tmp to exist");
         let proxy = open_in_namespace(
             temp_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .expect("temp dir to open");
 
@@ -56,7 +55,7 @@ mod tests {
         File::create(temp_dir.path().join("meta")).unwrap();
         let proxy = open_in_namespace(
             temp_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .expect("temp dir to open");
 
@@ -71,7 +70,7 @@ mod tests {
         meta.write_all(hex.as_bytes()).unwrap();
         let proxy = open_in_namespace(
             temp_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .expect("temp dir to open");
 

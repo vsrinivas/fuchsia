@@ -25,7 +25,7 @@ pub use package::register_dynamic_package;
 #[derive(thiserror::Error, Debug)]
 pub enum QueryPackageMetadataError {
     #[error("failed to open blob")]
-    OpenBlob(#[source] fuchsia_fs::node::OpenError),
+    OpenBlob(#[source] io_util::node::OpenError),
 
     #[error("failed to parse meta far")]
     ParseMetaFar(#[from] fuchsia_archive::Error),
@@ -45,15 +45,15 @@ async fn enumerate_package_blobs(
 ) -> Result<Option<(PackagePath, HashSet<Hash>)>, QueryPackageMetadataError> {
     let file = match blobfs.open_blob_for_read(&meta_hash).await {
         Ok(file) => file,
-        Err(fuchsia_fs::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
+        Err(io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
             return Ok(None)
         }
         Err(e) => return Err(QueryPackageMetadataError::OpenBlob(e)),
     };
 
-    let mut meta_far = fuchsia_archive::AsyncReader::new(
-        fuchsia_fs::file::BufferedAsyncReadAt::new(fuchsia_fs::file::AsyncFile::from_proxy(file)),
-    )
+    let mut meta_far = fuchsia_archive::AsyncReader::new(io_util::file::BufferedAsyncReadAt::new(
+        io_util::file::AsyncFile::from_proxy(file),
+    ))
     .await?;
     let meta_package = MetaPackage::deserialize(&meta_far.read_file("meta/package").await?[..])?;
     let meta_contents = MetaContents::deserialize(&meta_far.read_file("meta/contents").await?[..])?;

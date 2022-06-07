@@ -101,7 +101,7 @@ impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConn
 
 /// Clone the handle to the service directory in the application's root namespace.
 pub fn clone_namespace_svc() -> Result<fio::DirectoryProxy, Error> {
-    fuchsia_fs::directory::open_in_namespace(SVC_DIR, fio::OpenFlags::RIGHT_READABLE)
+    io_util::directory::open_in_namespace(SVC_DIR, fio::OpenFlags::RIGHT_READABLE)
         .context("error opening svc directory")
 }
 
@@ -119,7 +119,7 @@ pub fn new_protocol_connector<P: DiscoverableProtocolMarker>(
 pub fn new_protocol_connector_at<P: DiscoverableProtocolMarker>(
     service_directory_path: &str,
 ) -> Result<ProtocolConnector<fio::DirectoryProxy, P>, Error> {
-    let dir = fuchsia_fs::directory::open_in_namespace(
+    let dir = io_util::directory::open_in_namespace(
         service_directory_path,
         fio::OpenFlags::RIGHT_READABLE,
     )
@@ -197,7 +197,7 @@ pub fn connect_to_named_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
     directory: &fio::DirectoryProxy,
     filename: &str,
 ) -> Result<P::Proxy, Error> {
-    let proxy = fuchsia_fs::open_node(
+    let proxy = io_util::open_node(
         directory,
         &PathBuf::from(filename),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -212,7 +212,7 @@ pub fn connect_to_named_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
 pub fn connect_to_protocol_at_dir_svc<P: DiscoverableProtocolMarker>(
     directory: &fio::DirectoryProxy,
 ) -> Result<P::Proxy, Error> {
-    let proxy = fuchsia_fs::open_node(
+    let proxy = io_util::open_node(
         directory,
         &PathBuf::from(format!("svc/{}", P::PROTOCOL_NAME)),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -263,9 +263,9 @@ pub fn connect_to_service_instance_at<S: ServiceMarker>(
     service_path.push(path_prefix);
     service_path.push(S::SERVICE_NAME);
     service_path.push(instance);
-    let directory_proxy = fuchsia_fs::open_directory_in_namespace(
+    let directory_proxy = io_util::open_directory_in_namespace(
         service_path.to_str().unwrap(),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )?;
     Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
@@ -288,8 +288,8 @@ pub fn connect_to_service_instance_at_dir<S: ServiceMarker>(
     instance: &str,
 ) -> Result<S::Proxy, Error> {
     let service_path = Path::new(S::SERVICE_NAME).join(instance);
-    let flags = fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE;
-    let directory_proxy = fuchsia_fs::open_directory(directory, service_path.as_path(), flags)?;
+    let flags = io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE;
+    let directory_proxy = io_util::open_directory(directory, service_path.as_path(), flags)?;
     Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
@@ -320,9 +320,9 @@ pub fn connect_to_service_instance_at_channel<S: ServiceMarker>(
 /// Opens a FIDL service as a directory, which holds instances of the service.
 pub fn open_service<S: ServiceMarker>() -> Result<fio::DirectoryProxy, Error> {
     let service_path = Path::new(SVC_DIR).join(S::SERVICE_NAME);
-    fuchsia_fs::open_directory_in_namespace(
+    io_util::open_directory_in_namespace(
         service_path.to_str().unwrap(),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )
 }
 
@@ -331,10 +331,10 @@ pub fn open_service<S: ServiceMarker>() -> Result<fio::DirectoryProxy, Error> {
 pub fn open_service_at_dir<S: ServiceMarker>(
     directory: &fio::DirectoryProxy,
 ) -> Result<fio::DirectoryProxy, Error> {
-    fuchsia_fs::open_directory(
+    io_util::open_directory(
         directory,
         Path::new(S::SERVICE_NAME),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )
 }
 

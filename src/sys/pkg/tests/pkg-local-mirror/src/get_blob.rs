@@ -22,7 +22,7 @@ async fn verify_get_blob_with_read_success(env: &TestEnv, blob: &str, file_conte
         file_proxy.take_event_stream().next().await,
         Some(Ok(fio::FileEvent::OnOpen_{s, info: Some(_)})) if Status::ok(s) == Ok(())
     );
-    assert_eq!(fuchsia_fs::read_file(&file_proxy).await.unwrap(), file_contents.to_owned());
+    assert_eq!(io_util::read_file(&file_proxy).await.unwrap(), file_contents.to_owned());
 }
 
 #[fuchsia::test]
@@ -90,7 +90,7 @@ async fn missing_blob() {
         file_proxy.take_event_stream().next().await,
         Some(Ok(fio::FileEvent::OnOpen_{s, info: None})) if  Status::from_raw(s) == Status::NOT_FOUND
     );
-    assert_matches!(fuchsia_fs::read_file(&file_proxy).await, Err(_));
+    assert_matches!(io_util::read_file(&file_proxy).await, Err(_));
 }
 
 #[fuchsia::test]
@@ -125,5 +125,5 @@ async fn error_opening_blob() {
 
     assert_eq!(res.unwrap(), Err(GetBlobError::ErrorOpeningBlob));
     assert_matches!(file_proxy.take_event_stream().next().await, None);
-    assert_matches!(fuchsia_fs::read_file(&file_proxy).await, Err(_));
+    assert_matches!(io_util::read_file(&file_proxy).await, Err(_));
 }

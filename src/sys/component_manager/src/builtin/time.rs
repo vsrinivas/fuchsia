@@ -10,9 +10,9 @@ use {
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl_fuchsia_time as ftime,
-    fuchsia_fs::{file, OpenFlags},
     fuchsia_zircon::{Clock, ClockOpts, HandleBased, Rights, Time},
     futures::prelude::*,
+    io_util::{file, OpenFlags},
     lazy_static::lazy_static,
     std::sync::Arc,
 };

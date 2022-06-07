@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Context as _, Error},
-    fidl_fuchsia_io as fio,
-    fuchsia_fs::file::AsyncReader,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
+    io_util::file::AsyncReader,
     std::{convert::TryInto as _, marker::PhantomData, path::Path},
     tuf::{
         interchange::DataInterchange,
@@ -41,7 +40,7 @@ where
     #[cfg(test)]
     fn from_temp_dir(temp: &tempfile::TempDir) -> Self {
         Self::new(
-            fuchsia_fs::directory::open_in_namespace(
+            io_util::directory::open_in_namespace(
                 temp.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
@@ -53,16 +52,15 @@ where
         &'a self,
         path: String,
     ) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>> {
-        let file_proxy = fuchsia_fs::directory::open_file(
-            &self.repo_proxy,
-            &path,
-            fio::OpenFlags::RIGHT_READABLE,
-        )
-        .await
-        .map_err(|err| match err {
-            fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND) => tuf::Error::NotFound,
-            _ => make_opaque_error(anyhow!("opening '{}': {:?}", path, err)),
-        })?;
+        let file_proxy =
+            io_util::directory::open_file(&self.repo_proxy, &path, fio::OpenFlags::RIGHT_READABLE)
+                .await
+                .map_err(|err| match err {
+                    io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND) => {
+                        tuf::Error::NotFound
+                    }
+                    _ => make_opaque_error(anyhow!("opening '{}': {:?}", path, err)),
+                })?;
 
         let reader: Box<dyn AsyncRead + Send + Unpin + 'a> = Box::new(
             AsyncReader::from_proxy(file_proxy)
@@ -82,13 +80,13 @@ where
             // This is needed because if there's no "/" in `path`, .parent() will return Some("")
             // instead of None.
             if !parent.as_os_str().is_empty() {
-                let _sub_dir = fuchsia_fs::create_sub_directories(&self.repo_proxy, parent)
+                let _sub_dir = io_util::create_sub_directories(&self.repo_proxy, parent)
                     .context("creating sub directories")
                     .map_err(make_opaque_error)?;
             }
         }
 
-        let (temp_path, temp_proxy) = fuchsia_fs::directory::create_randomly_named_file(
+        let (temp_path, temp_proxy) = io_util::directory::create_randomly_named_file(
             &self.repo_proxy,
             &path,
             fio::OpenFlags::RIGHT_WRITABLE,
@@ -107,12 +105,12 @@ where
             .map_err(zx::Status::from_raw)
             .context("syncing file")
             .map_err(make_opaque_error)?;
-        fuchsia_fs::file::close(temp_proxy)
+        io_util::file::close(temp_proxy)
             .await
             .context("closing file")
             .map_err(make_opaque_error)?;
 
-        fuchsia_fs::directory::rename(&self.repo_proxy, &temp_path, &path)
+        io_util::directory::rename(&self.repo_proxy, &temp_path, &path)
             .await
             .context("renaming files")
             .map_err(make_opaque_error)
@@ -134,7 +132,7 @@ async fn write_all(
         if read_len == 0 {
             return Ok(());
         }
-        fuchsia_fs::file::write(file, &buf[..read_len]).await?;
+        io_util::file::write(file, &buf[..read_len]).await?;
     }
 }
 

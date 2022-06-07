@@ -22,6 +22,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
@@ -32,7 +33,6 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-url",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/mem_util",

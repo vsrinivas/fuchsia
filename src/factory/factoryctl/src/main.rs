@@ -15,8 +15,8 @@ use {
     files_async::{self, DirentKind},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_fs,
     futures::stream::TryStreamExt,
+    io_util,
     nom::HexDisplay,
     std::path::PathBuf,
     structopt::StructOpt,
@@ -88,12 +88,12 @@ where
     match cmd {
         FactoryStoreCmd::List => print_files(&dir_proxy).await?,
         FactoryStoreCmd::Dump { name } => {
-            let file = fuchsia_fs::open_file(
+            let file = io_util::open_file(
                 &dir_proxy,
                 &PathBuf::from(name),
                 fio::OpenFlags::RIGHT_READABLE,
             )?;
-            let contents = fuchsia_fs::read_file_bytes(&file).await?;
+            let contents = io_util::read_file_bytes(&file).await?;
 
             match std::str::from_utf8(&contents) {
                 Ok(value) => {

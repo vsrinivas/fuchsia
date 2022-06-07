@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_hardware_pci::HeaderType,
     files_async::{dir_contains, readdir, DirentKind},
     fuchsia_async,
-    fuchsia_fs::{directory::open_in_namespace, OpenFlags},
+    io_util::{directory::open_in_namespace, OpenFlags},
     lspci::{bridge::Bridge, db, device::Device, Args},
     std::fs::File,
     std::io::prelude::*,

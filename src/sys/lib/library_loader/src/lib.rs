@@ -7,8 +7,9 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
-    fuchsia_async as fasync, fuchsia_fs, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
+    io_util,
     log::*,
     std::path::Path,
     std::sync::Arc,
@@ -96,7 +97,7 @@ pub async fn load_vmo<'a>(
     // TODO(fxbug.dev/52468): This does not ask or wait for a Describe event, which means a failure to
     // open the file will appear as a PEER_CLOSED on the get_buffer call. It also means this could
     // be a Vmofile node and that we're relying on it still supporting the File protocol.
-    let file_proxy = fuchsia_fs::open_file(
+    let file_proxy = io_util::open_file(
         dir_proxy,
         &Path::new(object_name),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -123,14 +124,14 @@ pub fn parse_config_string(
         return Err(format_err!("'/' character found in loader service config string"));
     }
     if Some('!') == config.chars().last() {
-        let sub_dir_proxy = fuchsia_fs::open_directory(
+        let sub_dir_proxy = io_util::open_directory(
             dir_proxy,
             &Path::new(&config[..config.len() - 1]),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
         Ok(vec![sub_dir_proxy.into()])
     } else {
-        let sub_dir_proxy = fuchsia_fs::open_directory(
+        let sub_dir_proxy = io_util::open_directory(
             dir_proxy,
             &Path::new(config),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -144,7 +145,7 @@ mod tests {
     use {super::*, fidl_fuchsia_ldsvc::LoaderMarker};
 
     async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
-        let dir = fuchsia_fs::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+        let dir = io_util::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
             .expect("Failed to clone DirectoryProxy");
         let entries = files_async::readdir(&dir).await.expect("readdir failed");
         entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>()
@@ -158,20 +159,20 @@ mod tests {
         // package layout (like whether sanitizers are in use) once Rust vfs supports
         // OPEN_RIGHT_EXECUTABLE
         let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
-        let mut pkg_lib = fuchsia_fs::open_directory_in_namespace("/pkg/lib", rights)?;
+        let mut pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", rights)?;
         let entries = list_directory(&pkg_lib).await;
         if entries.iter().any(|f| &f as &str == "asan-ubsan") {
-            pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("asan-ubsan"), rights)?;
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan-ubsan"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "asan") {
-            pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("asan"), rights)?;
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "coverage") {
-            pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("coverage"), rights)?;
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "coverage-rust") {
-            pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("coverage-rust"), rights)?;
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage-rust"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "coverage-cts") {
-            pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("coverage-cts"), rights)?;
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage-cts"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "profile") {
-            pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("profile"), rights)?;
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("profile"), rights)?;
         }
 
         let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
@@ -215,7 +216,7 @@ mod tests {
         // contains 'rule'.
         // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
         // package layout once Rust vfs supports OPEN_RIGHT_EXECUTABLE
-        let pkg_lib = fuchsia_fs::open_directory_in_namespace(
+        let pkg_lib = io_util::open_directory_in_namespace(
             "/pkg/lib/config_test/",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;

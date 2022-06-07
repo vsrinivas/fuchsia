@@ -632,9 +632,9 @@ impl RealmBuilder {
         >(&exposed_dir_proxy)
         .map_err(Error::ConnectToServer)?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
             "/pkg",
-            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
         )
         .map_err(Error::FailedToOpenPkgDir)?;
 

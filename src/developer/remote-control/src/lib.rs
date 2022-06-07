@@ -31,7 +31,7 @@ pub struct RemoteControlService {
 
 impl RemoteControlService {
     pub async fn new() -> Self {
-        let f = match fuchsia_fs::open_file_in_namespace(
+        let f = match io_util::open_file_in_namespace(
             "/config/data/selector-maps.json",
             io::OpenFlags::RIGHT_READABLE,
         ) {
@@ -44,7 +44,7 @@ impl RemoteControlService {
                 );
             }
         };
-        let bytes = match fuchsia_fs::read_file_bytes(&f).await {
+        let bytes = match io_util::read_file_bytes(&f).await {
             Ok(b) => b,
             Err(e) => {
                 error!(?e, "failed to read bytes from selector maps json");
@@ -101,7 +101,7 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::OpenHub { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut io_util::connect_in_namespace(
                         HUB_ROOT,
                         server.into_channel(),
                         io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
@@ -112,7 +112,7 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::RootRealmExplorer { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut io_util::connect_in_namespace(
                         &format!(
                             "/svc/{}.root",
                             fidl_fuchsia_sys2::RealmExplorerMarker::PROTOCOL_NAME
@@ -126,7 +126,7 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::RootRealmQuery { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut io_util::connect_in_namespace(
                         &format!(
                             "/svc/{}.root",
                             fidl_fuchsia_sys2::RealmQueryMarker::PROTOCOL_NAME
@@ -140,7 +140,7 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::RootLifecycleController { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut io_util::connect_in_namespace(
                         &format!(
                             "/svc/{}.root",
                             fidl_fuchsia_sys2::LifecycleControllerMarker::PROTOCOL_NAME
@@ -314,7 +314,7 @@ impl RemoteControlService {
         let svc_match = paths.get(0).unwrap();
         let hub_path = svc_match.hub_path.to_str().unwrap();
         info!(hub_path, "attempting to connect");
-        fuchsia_fs::connect_in_namespace(
+        io_util::connect_in_namespace(
             hub_path,
             service_chan,
             io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,

@@ -58,10 +58,10 @@ async fn meta_far_file() {
     let d = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
 
     for size in &file_sizes {
-        let meta_far_file = fuchsia_fs::directory::open_file(
+        let meta_far_file = io_util::directory::open_file(
             &d,
             &format!("versions/{}/meta/{}", base_pkg_with_meta_files.meta_far_merkle_root(), size),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .await
         .unwrap();

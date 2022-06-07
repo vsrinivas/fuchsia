@@ -7,10 +7,10 @@ import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
 
 lib_deps = [
+  "//garnet/lib/rust/io_util",
   "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
   "//src/lib/assembly/util",
   "//src/lib/fidl/rust/fidl",
-  "//src/lib/fuchsia-fs",
   "//src/lib/fuchsia-url",
   "//src/lib/versioning/version-history/rust:version-history",
   "//src/lib/zircon/rust:fuchsia-zircon-status",

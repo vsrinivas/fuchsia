@@ -29,8 +29,8 @@ rustc_library("fs_management") {
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
+    "//garnet/lib/rust/io_util",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-fs",
   ]
   data_deps = [
     "//src/storage/bin/blobfs",

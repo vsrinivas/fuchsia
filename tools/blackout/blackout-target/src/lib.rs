@@ -14,8 +14,9 @@ use {
     files_async::readdir,
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_fs, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
+    io_util,
     rand::{distributions, rngs::StdRng, Rng, SeedableRng},
 };
 
@@ -110,9 +111,9 @@ pub fn generate_content(seed: u64) -> Vec<u8> {
 /// Find the device in /dev/class/block that represents a given topological path. Returns the full
 /// path of the device in /dev/class/block.
 pub async fn find_dev(dev: &str) -> Result<String> {
-    let dev_class_block = fuchsia_fs::open_directory_in_namespace(
+    let dev_class_block = io_util::open_directory_in_namespace(
         "/dev/class/block",
-        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     )?;
     for entry in readdir(&dev_class_block).await? {
         let path = format!("/dev/class/block/{}", entry.name);

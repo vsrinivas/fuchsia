@@ -34,8 +34,8 @@ ALLOWED_RUST_DEPS = [
   "//third_party/rust_crates:tracing",
 
   # Needed by collections_integration_test.
+  "//garnet/lib/rust/io_util:io_util",
   "//examples/components/routing/fidl:echo-rustc",
-  "//src/lib/fuchsia-fs:fuchsia-fs",
   "//src/lib/fuchsia-runtime:fuchsia-runtime",
   "//src/sys/component_manager/testing/echo_server:echo_server",
   "//src/sys/component_manager/tests/fidl:components-rustc",

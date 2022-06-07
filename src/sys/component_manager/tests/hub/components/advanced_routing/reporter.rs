@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
 use fuchsia_zircon as zx;
 use hub_report::*;
+use io_util::{open_directory_in_namespace, OpenFlags};
 
 #[fuchsia::main]
 async fn main() {

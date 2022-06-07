@@ -55,7 +55,7 @@ async fn serve(mut stream: ResolverRequestStream) -> anyhow::Result<()> {
     let base_package_index = BasePackageIndex::from_proxy(&pkg_cache)
         .await
         .context("failed to load base package index")?;
-    let packages_dir = fuchsia_fs::open_directory_in_namespace(
+    let packages_dir = io_util::open_directory_in_namespace(
         "/pkgfs/packages",
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
@@ -227,7 +227,7 @@ async fn resolve_package_async(
         }
     };
     // Package contents are available at `packages/$PACKAGE_NAME/0`.
-    let dir = fuchsia_fs::directory::open_directory(
+    let dir = io_util::directory::open_directory(
         packages_dir,
         &format!("{}/{}", package_name.as_ref(), some_variant.map(|v| v.as_ref()).unwrap_or("0")),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,

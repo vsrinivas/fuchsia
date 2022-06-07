@@ -21,7 +21,7 @@ use {
 #[allow(missing_docs)]
 pub enum ListNeedsError {
     #[error("while opening needs dir: {}", _0)]
-    OpenDir(fuchsia_fs::node::OpenError),
+    OpenDir(io_util::node::OpenError),
 
     #[error("while listing needs dir: {}", _0)]
     ReadDir(files_async::Error),
@@ -38,20 +38,18 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, fuchsia_fs::node::OpenError> {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
-            "/pkgfs/needs",
-            fio::OpenFlags::RIGHT_READABLE,
-        )?;
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        let proxy =
+            io_util::directory::open_in_namespace("/pkgfs/needs", fio::OpenFlags::RIGHT_READABLE)?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
     pub fn open_from_pkgfs_root(
         pkgfs: &fio::DirectoryProxy,
-    ) -> Result<Self, fuchsia_fs::node::OpenError> {
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
-            proxy: fuchsia_fs::directory::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "needs",
                 fio::OpenFlags::RIGHT_READABLE,
@@ -126,9 +124,9 @@ async fn enumerate_needs_dir(
     let path = format!("packages/{}", pkg_merkle);
     let flags = fio::OpenFlags::RIGHT_READABLE;
 
-    let needs_dir = match fuchsia_fs::directory::open_directory(pkgfs_needs, &path, flags).await {
+    let needs_dir = match io_util::directory::open_directory(pkgfs_needs, &path, flags).await {
         Ok(dir) => dir,
-        Err(fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(HashSet::new()),
+        Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(HashSet::new()),
         Err(e) => return Err(ListNeedsError::OpenDir(e)),
     };
 

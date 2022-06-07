@@ -137,9 +137,9 @@ impl vfs::directory::entry_container::Directory for MetaAsDir {
         Ok(fio::NodeAttributes {
             mode: fio::MODE_TYPE_DIRECTORY
                 | vfs::common::rights_to_posix_mode_bits(
-                    true, // read
+                    true,  // read
                     true, // write
-                    true, // execute
+                    true,  // execute
                 ),
             id: 1,
             content_size: usize_to_u64_safe(self.root_dir.meta_files.len()),
@@ -285,7 +285,7 @@ mod tests {
                 server_end.into_channel().into(),
             );
 
-            assert_eq!(fuchsia_fs::file::read(&proxy).await.unwrap(), b"contents".to_vec());
+            assert_eq!(io_util::file::read(&proxy).await.unwrap(), b"contents".to_vec());
         }
     }
 

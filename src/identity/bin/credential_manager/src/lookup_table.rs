@@ -32,11 +32,11 @@ pub struct ReadResult {
 #[derive(Error, Debug)]
 pub enum LookupTableError {
     #[error("Failed to open: {0}")]
-    OpenError(#[from] fuchsia_fs::node::OpenError),
+    OpenError(#[from] io_util::node::OpenError),
     #[error("Failed to readdir: {0}")]
     ReaddirError(#[from] files_async::Error),
     #[error("Failed to read: {0}")]
-    ReadError(#[from] fuchsia_fs::file::ReadError),
+    ReadError(#[from] io_util::file::ReadError),
     #[error("Failed during FIDL call: {0}")]
     FidlError(#[from] fidl::Error),
     #[error("Failed finding latest version")]
@@ -96,7 +96,7 @@ impl PersistentLookupTable {
     #[allow(dead_code)]
     async fn cleanup_stale_files(&mut self, label: &Label) -> Result<(), Vec<LookupTableError>> {
         // Try to open the label's subdirectory, if it exists.
-        match fuchsia_fs::directory::open_directory(
+        match io_util::directory::open_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -180,7 +180,7 @@ fn parse_version(val: &str) -> Option<Version> {
 impl LookupTable for PersistentLookupTable {
     async fn write(&mut self, label: &Label, data: Vec<u8>) -> Result<(), LookupTableError> {
         // Create the directory if it doesn't already exist.
-        let child_dir = fuchsia_fs::directory::create_directory(
+        let child_dir = io_util::directory::create_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
@@ -204,7 +204,7 @@ impl LookupTable for PersistentLookupTable {
 
     async fn read(&self, label: &Label) -> Result<ReadResult, LookupTableError> {
         // Try to open the label's subdirectory.
-        let child_dir = fuchsia_fs::directory::open_directory(
+        let child_dir = io_util::directory::open_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
             fio::OpenFlags::RIGHT_READABLE,
@@ -221,13 +221,13 @@ impl LookupTable for PersistentLookupTable {
             }
         };
 
-        let latest_file = fuchsia_fs::directory::open_file(
+        let latest_file = io_util::directory::open_file(
             &child_dir,
             &format_version(&latest_version),
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await?;
-        let file_bytes = fuchsia_fs::file::read(&latest_file).await?;
+        let file_bytes = io_util::file::read(&latest_file).await?;
         Ok(ReadResult { bytes: file_bytes, version: latest_version })
     }
 
@@ -235,7 +235,7 @@ impl LookupTable for PersistentLookupTable {
         // Since we don't want to rely on remove_dir_recursive returning a
         // Fidl error with a string identifier, we manually try to open the
         // directory to determine if it exists.
-        fuchsia_fs::directory::open_directory(
+        io_util::directory::open_directory(
             &self.dir_proxy,
             &label.into_dir_name(),
             fio::OpenFlags::RIGHT_READABLE,
@@ -287,7 +287,7 @@ mod test {
     #[fuchsia::test]
     async fn test_read_before_write() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -300,7 +300,7 @@ mod test {
     #[fuchsia::test]
     async fn test_read_fails_if_label_directory_is_empty() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -314,12 +314,12 @@ mod test {
         assert_eq!(read_res.version, 1);
 
         // Manually delete files in the label directory.
-        let dir_2 = fuchsia_fs::open_directory_in_namespace(
+        let dir_2 = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
-        let child_dir = fuchsia_fs::directory::create_directory(
+        let child_dir = io_util::directory::create_directory(
             &dir_2,
             &TEST_LABEL.into_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
@@ -339,7 +339,7 @@ mod test {
     #[fuchsia::test]
     async fn test_multi_versioned_writes() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -362,7 +362,7 @@ mod test {
     #[fuchsia::test]
     async fn test_write_delete() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -382,7 +382,7 @@ mod test {
     #[fuchsia::test]
     async fn test_delete_before_write() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -404,14 +404,14 @@ mod test {
     #[fuchsia::test]
     async fn test_ignores_bad_dir_entry() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
         // Write a bad entry to the expected directory.
-        let child_dir = fuchsia_fs::directory::create_directory(
+        let child_dir = io_util::directory::create_directory(
             &dir,
             &TEST_LABEL.into_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
@@ -420,7 +420,7 @@ mod test {
         )
         .await
         .unwrap();
-        let bad_file = fuchsia_fs::directory::open_file(
+        let bad_file = io_util::directory::open_file(
             &child_dir,
             &"bad file name",
             fio::OpenFlags::RIGHT_READABLE
@@ -470,14 +470,14 @@ mod test {
     #[fuchsia::test]
     async fn test_stale_files_cleaned_up() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open temp dir");
 
         // Write a staged file to the label's directory.
-        let child_dir = fuchsia_fs::directory::create_directory(
+        let child_dir = io_util::directory::create_directory(
             &dir,
             &TEST_LABEL.into_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
@@ -486,7 +486,7 @@ mod test {
         )
         .await
         .unwrap();
-        let stale_file = fuchsia_fs::directory::open_file(
+        let stale_file = io_util::directory::open_file(
             &child_dir,
             &format!("{}01234", STAGEDFILE_PREFIX),
             fio::OpenFlags::RIGHT_READABLE
@@ -521,7 +521,7 @@ mod test {
     #[fuchsia::test]
     async fn test_reset() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

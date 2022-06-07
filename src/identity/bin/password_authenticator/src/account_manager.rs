@@ -1833,7 +1833,7 @@ mod test {
             .expect("get_data_directory");
 
         let expected_content = b"some data";
-        let file = fuchsia_fs::directory::open_file(
+        let file = io_util::directory::open_file(
             &root_dir,
             "test",
             fio::OpenFlags::CREATE
@@ -1850,7 +1850,7 @@ mod test {
             .expect("file write failed");
         assert_eq!(bytes_written, expected_content.len() as u64);
 
-        let actual_content = fuchsia_fs::file::read(&file).await.expect("read file");
+        let actual_content = io_util::file::read(&file).await.expect("read file");
         assert_eq!(&actual_content, expected_content);
     }
 
@@ -1882,7 +1882,7 @@ mod test {
             .expect("get_data_directory");
 
         let expected_content = b"some data";
-        let file = fuchsia_fs::directory::open_file(
+        let file = io_util::directory::open_file(
             &root_dir,
             "test",
             fio::OpenFlags::CREATE
@@ -1899,7 +1899,7 @@ mod test {
             .expect("file write failed");
         assert_eq!(bytes_written, expected_content.len() as u64);
 
-        let actual_content = fuchsia_fs::file::read(&file).await.expect("read file");
+        let actual_content = io_util::file::read(&file).await.expect("read file");
         assert_eq!(&actual_content, expected_content);
     }
 

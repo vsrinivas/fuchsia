@@ -32,8 +32,8 @@ use {
         host,
         types::{Address, HostInfo, PeerId},
     },
-    fuchsia_fs::directory,
     hci_emulator_client::Emulator,
+    io_util::directory,
     std::{
         convert::TryInto,
         path::{Path, PathBuf},

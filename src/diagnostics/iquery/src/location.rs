@@ -7,11 +7,11 @@ use {
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
-    fidl_fuchsia_io as fio, files_async, fuchsia_fs,
+    fidl_fuchsia_io as fio, files_async,
     fuchsia_inspect::reader::{self, DiagnosticsHierarchy, PartialNodeHierarchy},
     fuchsia_zircon::DurationNum,
     futures::stream::StreamExt,
-    inspect_fidl_load as inspect_fidl,
+    inspect_fidl_load as inspect_fidl, io_util,
     lazy_static::lazy_static,
     std::{convert::TryFrom, path::PathBuf, str::FromStr},
 };
@@ -36,9 +36,9 @@ pub async fn all_locations(root: impl AsRef<str>) -> Result<Vec<InspectLocation>
     let mut path = std::env::current_dir()?;
     let root = root.as_ref();
     path.push(&root);
-    let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+    let dir_proxy = io_util::open_directory_in_namespace(
         &path.to_string_lossy().to_string(),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )?;
 
     let locations =
@@ -177,9 +177,9 @@ impl InspectObject {
     }
 
     async fn load_from_vmo(&mut self) -> Result<(), Error> {
-        let proxy = fuchsia_fs::open_file_in_namespace(
+        let proxy = io_util::open_file_in_namespace(
             &self.location.absolute_path()?,
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )?;
 
         // Obtain the vmo backing any VmoFiles.
@@ -190,7 +190,7 @@ impl InspectObject {
                 Ok(())
             }
             fio::NodeInfo::File(_) => {
-                let bytes = fuchsia_fs::read_file_bytes(&proxy).await?;
+                let bytes = io_util::read_file_bytes(&proxy).await?;
                 self.hierarchy = Some(PartialNodeHierarchy::try_from(bytes)?.into());
                 Ok(())
             }

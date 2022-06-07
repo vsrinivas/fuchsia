@@ -5,7 +5,7 @@
 use anyhow::Error;
 use fidl_fuchsia_io as fio;
 use files_async;
-use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
+use io_util::{open_directory_in_namespace, OpenFlags};
 use std::path::Path;
 
 use crate::DigitalAudioInterface;

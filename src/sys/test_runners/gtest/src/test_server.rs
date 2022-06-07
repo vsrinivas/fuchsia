@@ -142,8 +142,8 @@ struct TestOutput {
 /// Opens and reads file defined by `path` in `dir`.
 async fn read_file(dir: &fio::DirectoryProxy, path: &Path) -> Result<String, anyhow::Error> {
     // Open the file in read-only mode.
-    let result_file_proxy = fuchsia_fs::open_file(dir, path, fio::OpenFlags::RIGHT_READABLE)?;
-    return fuchsia_fs::read_file(&result_file_proxy).await;
+    let result_file_proxy = io_util::open_file(dir, path, fio::OpenFlags::RIGHT_READABLE)?;
+    return io_util::read_file(&result_file_proxy).await;
 }
 
 /// Implements `fuchsia.test.Suite` and runs provided test.
@@ -224,7 +224,7 @@ impl SuiteServer for TestServer {
 
             // Even if `serve_test_suite` failed, clean local data directory as these files are no
             // longer needed and they are consuming space.
-            let test_data_dir = fuchsia_fs::open_directory_in_namespace(
+            let test_data_dir = io_util::open_directory_in_namespace(
                 &test_data_parent,
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
@@ -350,7 +350,7 @@ impl TestServer {
 
     fn test_data_namespace(&self) -> Result<fproc::NameInfo, IoError> {
         let client_channnel =
-            fuchsia_fs::clone_directory(&self.output_dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+            io_util::clone_directory(&self.output_dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
                 .map_err(IoError::CloneProxy)?
                 .into_channel()
                 .map_err(|_| FidlError::ProxyToChannel)
@@ -758,7 +758,7 @@ mod tests {
         }
 
         fn proxy(&self) -> Result<fio::DirectoryProxy, Error> {
-            fuchsia_fs::open_directory_in_namespace(
+            io_util::open_directory_in_namespace(
                 &self.dir_name,
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )

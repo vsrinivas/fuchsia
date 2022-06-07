@@ -5,8 +5,8 @@
 use {
     anyhow::{Context, Error},
     fidl_fuchsia_io as fio,
-    fuchsia_fs::{directory, file, node, OpenFlags},
     futures::StreamExt,
+    io_util::{directory, file, node, OpenFlags},
     libc::{S_IRUSR, S_IXUSR},
 };
 

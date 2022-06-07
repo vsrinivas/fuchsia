@@ -21,15 +21,15 @@ use {
     files_async::readdir,
     fuchsia_async::{futures::TryStreamExt, Task},
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_fs::{
-        directory::{open_file, open_in_namespace},
-        read_file_bytes,
-    },
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{AsHandleRef, Rights, Status},
     futures::{channel::oneshot::channel, join, TryFutureExt as _},
+    io_util::{
+        directory::{open_file, open_in_namespace},
+        read_file_bytes,
+    },
     security_pkg_test_util::load_config,
     std::{convert::TryInto, fs::File},
 };

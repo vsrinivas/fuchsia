@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxr/66157): Migrate to the new library that substitutes fuchsia_fss and files_async.
+// TODO(fxr/66157): Migrate to the new library that substitutes io_utils and files_async.
 // Ask for host-side support on the new library (fxr/467217).
 
 use {
     anyhow::{format_err, Result},
     fidl_fuchsia_io as fio,
     files_async::readdir,
-    fuchsia_fs::{
+    fuchsia_zircon_status::Status,
+    futures::lock::Mutex,
+    io_util::{
         directory::{clone_no_describe, open_directory_no_describe, open_file_no_describe},
         file::{close, read, read_to_string, write},
     },
-    fuchsia_zircon_status::Status,
-    futures::lock::Mutex,
     std::path::{Path, PathBuf},
 };
 
@@ -39,7 +39,7 @@ impl Directory {
             .to_str()
             .ok_or_else(|| format_err!("Could not convert path to string"))?;
         let proxy =
-            fuchsia_fs::directory::open_in_namespace(path_str, fio::OpenFlags::RIGHT_READABLE)?;
+            io_util::directory::open_in_namespace(path_str, fio::OpenFlags::RIGHT_READABLE)?;
         let path = path.as_ref().to_path_buf();
         Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) })
     }

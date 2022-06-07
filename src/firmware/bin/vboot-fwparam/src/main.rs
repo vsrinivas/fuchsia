@@ -16,11 +16,11 @@ use fuchsia_component::{
     client::{connect_to_protocol, connect_to_protocol_at_path},
     server::ServiceFs,
 };
-use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::StreamExt;
+use io_util::OpenFlags;
 
 enum IncomingRequest {
     FirmwareParam(FirmwareParamRequestStream),
@@ -30,7 +30,7 @@ enum IncomingRequest {
 async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
     // The RTC houses the nvram where nvdata is stored.
     let nvram_path = "/dev/class/rtc";
-    let proxy = fuchsia_fs::open_directory_in_namespace(
+    let proxy = io_util::open_directory_in_namespace(
         nvram_path,
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )
@@ -53,7 +53,7 @@ async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
 async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
     // Look for the first flash device.
     let nand_path = "/dev/class/nand";
-    let proxy = fuchsia_fs::open_directory_in_namespace(
+    let proxy = io_util::open_directory_in_namespace(
         nand_path,
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )

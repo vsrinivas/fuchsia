@@ -76,13 +76,13 @@ struct Packages {
 #[allow(missing_docs)]
 pub enum ParsePackageError {
     #[error("could not open `packages.json`")]
-    FailedToOpen(#[source] fuchsia_fs::node::OpenError),
+    FailedToOpen(#[source] io_util::node::OpenError),
 
     #[error("could not parse url from line: {0:?}")]
     URLParseError(String, #[source] fuchsia_url::errors::ParseError),
 
     #[error("error reading file `packages.json`")]
-    ReadError(#[source] fuchsia_fs::file::ReadError),
+    ReadError(#[source] io_util::file::ReadError),
 
     #[error("json parsing error while reading `packages.json`")]
     JsonError(#[source] serde_json::error::Error),
@@ -123,12 +123,11 @@ pub(crate) async fn packages(
     proxy: &fio::DirectoryProxy,
 ) -> Result<Vec<AbsolutePackageUrl>, ParsePackageError> {
     let file =
-        fuchsia_fs::directory::open_file(&proxy, "packages.json", fio::OpenFlags::RIGHT_READABLE)
+        io_util::directory::open_file(&proxy, "packages.json", fio::OpenFlags::RIGHT_READABLE)
             .await
             .map_err(ParsePackageError::FailedToOpen)?;
 
-    let contents =
-        fuchsia_fs::file::read(&file).await.map_err(|e| ParsePackageError::ReadError(e))?;
+    let contents = io_util::file::read(&file).await.map_err(|e| ParsePackageError::ReadError(e))?;
     parse_packages_json(&contents)
 }
 

@@ -52,7 +52,7 @@ impl FuchsiaBootResolver {
             return Ok(None);
         }
 
-        let proxy = fuchsia_fs::open_directory_in_namespace(
+        let proxy = io_util::open_directory_in_namespace(
             bootfs_dir.to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
@@ -75,7 +75,7 @@ impl FuchsiaBootResolver {
 
         // Package path is 'canonicalized' to ensure that it is relative, since absolute paths will
         // be (inconsistently) rejected by fuchsia.io methods.
-        let package_path = fuchsia_fs::canonicalize_path(url.path());
+        let package_path = io_util::canonicalize_path(url.path());
         let res = url.resource().ok_or(fresolution::ResolverError::InvalidArgs)?;
         let cm_path = if package_path == "." {
             res.to_string()
@@ -117,7 +117,7 @@ impl FuchsiaBootResolver {
         };
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
-        let path_proxy = fuchsia_fs::directory::open_directory_no_describe(
+        let path_proxy = io_util::directory::open_directory_no_describe(
             &self.boot_proxy,
             package_path,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -225,7 +225,7 @@ mod tests {
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_data as fdata,
         fuchsia_async::Task,
-        fuchsia_fs::directory::open_in_namespace,
+        io_util::directory::open_in_namespace,
         std::sync::Weak,
         vfs::{
             self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -309,10 +309,10 @@ mod tests {
 
         let dir_proxy = package_dir.into_proxy().unwrap();
         let path = Path::new("meta/hello-world-rust.cm");
-        let file_proxy = fuchsia_fs::open_file(&dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
+        let file_proxy = io_util::open_file(&dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
             .expect("could not open cm");
 
-        let decl = fuchsia_fs::read_file_fidl::<fdecl::Component>(&file_proxy)
+        let decl = io_util::read_file_fidl::<fdecl::Component>(&file_proxy)
             .await
             .expect("could not read cm");
         let decl = decl.fidl_into_native();

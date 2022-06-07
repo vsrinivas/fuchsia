@@ -19,10 +19,10 @@ use {
     },
     fidl_fuchsia_io as fio, files_async,
     fuchsia_async::Duration,
-    fuchsia_fs,
     futures::future::join_all,
     futures::AsyncReadExt as _,
     futures::StreamExt,
+    io_util,
     iquery::{
         commands::DiagnosticsProvider,
         types::{Error, ToText},
@@ -174,10 +174,10 @@ async fn all_accessors(
     let dir_proxy = if root.as_ref().is_empty() {
         hub_root
     } else {
-        fuchsia_fs::open_directory(
+        io_util::open_directory(
             &hub_root,
             std::path::Path::new(root.as_ref()),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .map_err(|e| Error::IOError(format!("Open dir {}", root.as_ref()), e.into()))?
     };

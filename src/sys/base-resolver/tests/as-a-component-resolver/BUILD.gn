@@ -18,13 +18,13 @@ rustc_test("integration_test_bin") {
   source_root = "integration_test.rs"
   deps = [
     ":test.ping-rustc",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:futures",
   ]
   sources = [ "integration_test.rs" ]
@@ -46,12 +46,12 @@ rustc_binary("fake_dependencies_bin") {
   name = "base_resolver_fake_dependencies_bin"
   source_root = "fake_dependencies.rs"
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/fuchsia-url",
     "//src/lib/storage/vfs/rust:vfs",

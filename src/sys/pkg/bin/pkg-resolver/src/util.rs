@@ -15,7 +15,7 @@ pub async fn do_with_atomic_file<F>(
 where
     F: Future<Output = Result<(), anyhow::Error>>,
 {
-    let file = fuchsia_fs::directory::open_file(
+    let file = io_util::directory::open_file(
         &dir_proxy,
         &temp_filename,
         fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE | fio::OpenFlags::TRUNCATE,
@@ -31,8 +31,8 @@ where
         .context("sending sync request")?
         .map_err(zx::Status::from_raw)
         .with_context(|| format!("syncing file: {}", temp_filename))?;
-    fuchsia_fs::file::close(file).await.context("closing temp file")?;
-    fuchsia_fs::directory::rename(&dir_proxy, &temp_filename, &permanent_filename)
+    io_util::file::close(file).await.context("closing temp file")?;
+    io_util::directory::rename(&dir_proxy, &temp_filename, &permanent_filename)
         .await
         .context("renaming temp file to permanent file")?;
     let () = dir_proxy
@@ -51,7 +51,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_do_with_atomic_file() {
         let dir = tempfile::tempdir().unwrap();
-        let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let dir_proxy = io_util::open_directory_in_namespace(
             dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -60,7 +60,7 @@ mod tests {
         let permanent_path = dir.path().join("foo");
 
         do_with_atomic_file(&dir_proxy, "foo.new", "foo", |proxy| async move {
-            fuchsia_fs::write_file(&proxy, "bar").await
+            io_util::write_file(&proxy, "bar").await
         })
         .await
         .unwrap();
@@ -71,7 +71,7 @@ mod tests {
         std::fs::write(&temp_path, "garbage").unwrap();
         assert!(temp_path.exists());
         do_with_atomic_file(&dir_proxy, "foo.new", "foo", |proxy| async move {
-            fuchsia_fs::write_file(&proxy, "baz").await
+            io_util::write_file(&proxy, "baz").await
         })
         .await
         .unwrap();
@@ -79,7 +79,7 @@ mod tests {
         assert!(!temp_path.exists());
 
         do_with_atomic_file(&dir_proxy, "foo.new", "foo", |proxy| async move {
-            fuchsia_fs::write_file(&proxy, "qux").await
+            io_util::write_file(&proxy, "qux").await
         })
         .await
         .unwrap();

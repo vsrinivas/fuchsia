@@ -84,8 +84,9 @@ mod tests {
         anyhow::Context as _,
         fidl_fuchsia_io as fio, fidl_fuchsia_process as fprocess,
         fuchsia_component::client as fclient,
-        fuchsia_fs, fuchsia_runtime as fruntime,
+        fuchsia_runtime as fruntime,
         fuchsia_zircon::HandleBased,
+        io_util,
         std::{convert::TryInto, sync::Arc},
     };
 
@@ -106,7 +107,7 @@ mod tests {
         // Set up a new library loader and provide it to the loader service
         let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
         library_loader::start(
-            Arc::new(fuchsia_fs::open_directory_in_namespace(
+            Arc::new(io_util::open_directory_in_namespace(
                 "/pkg/lib",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )?),
@@ -121,7 +122,7 @@ mod tests {
             .context("failed to add loader service handle")?;
 
         // Load the executable into a vmo
-        let executable_file_proxy = fuchsia_fs::open_file_in_namespace(
+        let executable_file_proxy = io_util::open_file_in_namespace(
             "/pkg/bin/panic_on_start",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;

@@ -36,8 +36,8 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, fuchsia_fs::node::OpenError> {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        let proxy = io_util::directory::open_in_namespace(
             "/pkgfs/ctl",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )?;
@@ -47,9 +47,9 @@ impl Client {
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
     pub fn open_from_pkgfs_root(
         pkgfs: &fio::DirectoryProxy,
-    ) -> Result<Self, fuchsia_fs::node::OpenError> {
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
-            proxy: fuchsia_fs::directory::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "ctl",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

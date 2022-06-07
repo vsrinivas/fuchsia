@@ -18,6 +18,7 @@ rustc_binary("fshost-binary") {
   ]
   deps = [
     "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -25,7 +26,6 @@ rustc_binary("fshost-binary") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client",

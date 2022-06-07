@@ -11,11 +11,11 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     ":lib",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -32,10 +32,10 @@ rustc_library("lib") {
   name = "pkg_local_mirror"
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//third_party/rust_crates:anyhow",

@@ -36,6 +36,7 @@ rustc_library("carnelian") {
   version = "0.1.0"
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
@@ -64,7 +65,6 @@ rustc_library("carnelian") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/mapped-vmo",
     "//src/lib/storage/fuchsia-vfs-watcher",

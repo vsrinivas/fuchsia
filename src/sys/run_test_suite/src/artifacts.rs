@@ -77,7 +77,7 @@ pub(crate) async fn copy_custom_artifact_directory(
     let futs = FuturesUnordered::new();
     paths.iter().for_each(|path| {
         let path = std::path::PathBuf::from(path);
-        let file = fuchsia_fs::open_file(&directory, &path, fuchsia_fs::OpenFlags::RIGHT_READABLE);
+        let file = io_util::open_file(&directory, &path, io_util::OpenFlags::RIGHT_READABLE);
         let output_file = out_dir.new_file(&path);
         futs.push(async move {
             let file = file.with_context(|| format!("with path {:?}", path))?;
@@ -163,10 +163,10 @@ mod tests {
         }
         let mut served_files = vec![];
         paths.iter().for_each(|path| {
-            let file = fuchsia_fs::open_file(
+            let file = io_util::open_file(
                 &directory_client,
                 &std::path::PathBuf::from(&path),
-                fuchsia_fs::OpenFlags::RIGHT_READABLE,
+                io_util::OpenFlags::RIGHT_READABLE,
             )
             .expect("open file");
             served_files.push(ftest_manager::DebugData {

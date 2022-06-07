@@ -1007,7 +1007,7 @@ impl ComponentInstance {
             ModelError::from(RoutingError::source_instance_not_executable(&self.abs_moniker))
         })?;
         let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
-        let path = fuchsia_fs::canonicalize_path(path);
+        let path = io_util::canonicalize_path(path);
         let server_chan = channel::take_channel(server_chan);
         let server_end = ServerEnd::new(server_chan);
         out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
@@ -2047,8 +2047,7 @@ fn try_clone_dir_endpoint(
     dir: Option<&fio::DirectoryProxy>,
 ) -> Option<ClientEnd<fio::DirectoryMarker>> {
     if let Some(dir) = dir {
-        if let Ok(cloned_dir) = fuchsia_fs::clone_directory(&dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
-        {
+        if let Ok(cloned_dir) = io_util::clone_directory(&dir, fio::OpenFlags::CLONE_SAME_RIGHTS) {
             let cloned_dir_channel = cloned_dir.into_channel().unwrap().into_zx_channel();
             Some(ClientEnd::new(cloned_dir_channel))
         } else {

@@ -270,7 +270,7 @@ mod tests {
         );
 
         assert_eq!(
-            fuchsia_fs::file::read(&proxy).await.unwrap(),
+            io_util::file::read(&proxy).await.unwrap(),
             b"0000000000000000000000000000000000000000000000000000000000000000\n".to_vec()
         );
     }

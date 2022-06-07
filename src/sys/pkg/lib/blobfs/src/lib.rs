@@ -26,7 +26,7 @@ pub use mock::Mock;
 #[allow(missing_docs)]
 pub enum BlobfsError {
     #[error("while opening blobfs dir")]
-    OpenDir(#[from] fuchsia_fs::node::OpenError),
+    OpenDir(#[from] io_util::node::OpenError),
 
     #[error("while listing blobfs dir")]
     ReadDir(#[source] files_async::Error),
@@ -53,7 +53,7 @@ pub struct Client {
 impl Client {
     /// Returns an client connected to blobfs from the current component's namespace.
     pub fn open_from_namespace() -> Result<Self, BlobfsError> {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+        let proxy = io_util::directory::open_in_namespace(
             "/blob",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )?;
@@ -63,7 +63,7 @@ impl Client {
     /// Returns a client connected to blobfs from the current component's namespace with
     /// OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE.
     pub fn open_from_namespace_executable() -> Result<Self, BlobfsError> {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+        let proxy = io_util::directory::open_in_namespace(
             "/blob",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
@@ -73,7 +73,7 @@ impl Client {
     /// Returns a client connected to blobfs from the current component's namespace with
     /// OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, OPEN_RIGHT_EXECUTABLE.
     pub fn open_from_namespace_rwx() -> Result<Self, BlobfsError> {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+        let proxy = io_util::directory::open_in_namespace(
             "/blob",
             fidl_fuchsia_io::OpenFlags::RIGHT_READABLE
                 | fidl_fuchsia_io::OpenFlags::RIGHT_WRITABLE
@@ -136,7 +136,7 @@ impl Client {
     pub fn new_temp_dir_fake() -> (Self, TempDirFake) {
         let blobfs_dir = tempfile::TempDir::new().unwrap();
         let blobfs = Client::new(
-            fuchsia_fs::directory::open_in_namespace(
+            io_util::directory::open_in_namespace(
                 blobfs_dir.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE,
             )
@@ -179,8 +179,8 @@ impl Client {
     pub async fn open_blob_for_read(
         &self,
         blob: &Hash,
-    ) -> Result<fio::FileProxy, fuchsia_fs::node::OpenError> {
-        fuchsia_fs::directory::open_file(
+    ) -> Result<fio::FileProxy, io_util::node::OpenError> {
+        io_util::directory::open_file(
             &self.proxy,
             &blob.to_string(),
             fio::OpenFlags::RIGHT_READABLE,
@@ -193,8 +193,8 @@ impl Client {
     pub fn open_blob_for_read_no_describe(
         &self,
         blob: &Hash,
-    ) -> Result<fio::FileProxy, fuchsia_fs::node::OpenError> {
-        fuchsia_fs::directory::open_file_no_describe(
+    ) -> Result<fio::FileProxy, io_util::node::OpenError> {
+        io_util::directory::open_file_no_describe(
             &self.proxy,
             &blob.to_string(),
             fio::OpenFlags::RIGHT_READABLE,
@@ -211,7 +211,7 @@ impl Client {
 
     /// Returns whether blobfs has a blob with the given hash.
     pub async fn has_blob(&self, blob: &Hash) -> bool {
-        let file = match fuchsia_fs::directory::open_file_no_describe(
+        let file = match io_util::directory::open_file_no_describe(
             &self.proxy,
             &blob.to_string(),
             fio::OpenFlags::DESCRIBE | fio::OpenFlags::RIGHT_READABLE,

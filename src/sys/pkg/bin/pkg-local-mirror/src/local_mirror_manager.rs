@@ -19,11 +19,11 @@ pub struct LocalMirrorManager {
 impl LocalMirrorManager {
     pub async fn new(usb_dir: &fio::DirectoryProxy) -> Result<Self, Error> {
         let blobs_dir =
-            fuchsia_fs::directory::open_directory(usb_dir, "blobs", fio::OpenFlags::RIGHT_READABLE)
+            io_util::directory::open_directory(usb_dir, "blobs", fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .context("while opening blobs dir")?;
 
-        let metadata_dir = fuchsia_fs::directory::open_directory(
+        let metadata_dir = io_util::directory::open_directory(
             usb_dir,
             "repository_metadata",
             fio::OpenFlags::RIGHT_READABLE,

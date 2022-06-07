@@ -6,9 +6,9 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
-    fuchsia_fs,
     futures::lock::Mutex,
     futures::{future::BoxFuture, TryStreamExt},
+    io_util,
     std::{collections::HashMap, path::Path, sync::Arc},
     tracing::*,
 };
@@ -69,7 +69,7 @@ impl MockHandles {
             .namespace
             .get(&"/svc".to_string())
             .ok_or(format_err!("the mock's namespace doesn't have a /svc directory"))?;
-        let node_proxy = fuchsia_fs::open_node(
+        let node_proxy = io_util::open_node(
             svc_dir_proxy,
             Path::new(P::PROTOCOL_NAME),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -88,14 +88,14 @@ impl MockHandles {
     ///
     /// ```
     /// let data_dir = mock_handles.clone_from_namespace("data")?;
-    /// let assets_dir = fuchsia_fs::open_directory(&data_dir, Path::new("assets"), ...)?;
+    /// let assets_dir = io_util::open_directory(&data_dir, Path::new("assets"), ...)?;
     /// ```
     pub fn clone_from_namespace(&self, directory_name: &str) -> Result<fio::DirectoryProxy, Error> {
         let dir_proxy = self.namespace.get(&format!("/{}", directory_name)).ok_or(format_err!(
             "the mock's namespace doesn't have a /{} directory",
             directory_name
         ))?;
-        fuchsia_fs::clone_directory(dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+        io_util::clone_directory(dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
     }
 }
 
@@ -253,7 +253,7 @@ mod tests {
         let data_dir_clone =
             mock_handles.clone_from_namespace("data").expect("failed to clone from namespace");
 
-        let file_proxy = fuchsia_fs::open_file(
+        let file_proxy = io_util::open_file(
             &data_dir_clone,
             Path::new(file_name),
             fio::OpenFlags::RIGHT_READABLE,
@@ -261,7 +261,7 @@ mod tests {
         .expect("failed to open file");
         assert_eq!(
             file_contents,
-            &fuchsia_fs::read_file(&file_proxy).await.expect("failed to read file")
+            &io_util::read_file(&file_proxy).await.expect("failed to read file")
         );
     }
 

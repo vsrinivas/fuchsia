@@ -28,8 +28,9 @@ use {
     fuchsia_async::{self as fasync},
     fuchsia_bootfs::BootfsParser,
     fuchsia_component::server::ServiceFs,
-    fuchsia_fs, fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*, TryStreamExt},
+    io_util,
     std::{
         fs,
         io::{self, Read, Seek},
@@ -119,12 +120,12 @@ async fn read_file_from_proxy<'a>(
     dir_proxy: &'a fio::DirectoryProxy,
     file_path: &'a str,
 ) -> Result<Vec<u8>, Error> {
-    let file = fuchsia_fs::open_file(
+    let file = io_util::open_file(
         &dir_proxy,
         &PathBuf::from(file_path),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )?;
-    fuchsia_fs::read_file_bytes(&file).await
+    io_util::read_file_bytes(&file).await
 }
 
 fn load_config_file(path: &str) -> Result<FactoryConfig, Error> {

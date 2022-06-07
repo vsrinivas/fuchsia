@@ -42,10 +42,10 @@ pub enum ImagePackagesError {
     NotFound,
 
     #[error("while opening `images.json`")]
-    Open(#[source] fuchsia_fs::node::OpenError),
+    Open(#[source] io_util::node::OpenError),
 
     #[error("while reading `images.json`")]
-    Read(#[source] fuchsia_fs::file::ReadError),
+    Read(#[source] io_util::file::ReadError),
 
     #[error("while parsing `images.json`")]
     Parse(#[source] serde_json::error::Error),
@@ -337,17 +337,14 @@ pub fn parse_image_packages_json(
 pub(crate) async fn image_packages(
     proxy: &fio::DirectoryProxy,
 ) -> Result<ImagePackagesManifest, ImagePackagesError> {
-    let file =
-        fuchsia_fs::directory::open_file(&proxy, "images.json", fio::OpenFlags::RIGHT_READABLE)
-            .await
-            .map_err(|e| match e {
-                fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND) => {
-                    ImagePackagesError::NotFound
-                }
-                e => ImagePackagesError::Open(e),
-            })?;
+    let file = io_util::directory::open_file(&proxy, "images.json", fio::OpenFlags::RIGHT_READABLE)
+        .await
+        .map_err(|e| match e {
+            io_util::node::OpenError::OpenError(Status::NOT_FOUND) => ImagePackagesError::NotFound,
+            e => ImagePackagesError::Open(e),
+        })?;
 
-    let contents = fuchsia_fs::file::read(&file).await.map_err(|e| ImagePackagesError::Read(e))?;
+    let contents = io_util::file::read(&file).await.map_err(|e| ImagePackagesError::Read(e))?;
 
     parse_image_packages_json(&contents)
 }
@@ -453,7 +450,7 @@ mod legacy_tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
             0,
             vfs::path::Path::dot(),
             fidl::endpoints::ServerEnd::new(proxy_server_end.into_channel()),
@@ -817,7 +814,7 @@ mod tests {
         let scope = ExecutionScope::new();
         dir.open(
             scope,
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
             0,
             vfs::path::Path::dot(),
             fidl::endpoints::ServerEnd::new(proxy_server_end.into_channel()),

@@ -11,10 +11,9 @@ use {
     anyhow::{anyhow, Context as _, Error},
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
-    fidl_fuchsia_io as fio,
-    fuchsia_fs::directory::open_file,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::StreamExt,
+    io_util::directory::open_file,
     std::{
         cmp,
         convert::{TryFrom as _, TryInto},

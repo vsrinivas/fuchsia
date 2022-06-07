@@ -100,17 +100,16 @@ impl<T: Resolver> EagerPackageManager<T> {
         pkg_cache: cache::Client,
         data_proxy: &fio::DirectoryProxy,
     ) -> Result<(), Error> {
-        let file_proxy = fuchsia_fs::directory::open_file(
+        let file_proxy = io_util::directory::open_file(
             data_proxy,
             EAGER_PACKAGE_PERSISTENT_FIDL_NAME,
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .context("while opening eager_packages.pf")?;
-        let persistent_packages =
-            fuchsia_fs::read_file_fidl::<PersistentEagerPackages>(&file_proxy)
-                .await
-                .context("while reading eager_packages.pf")?;
+        let persistent_packages = io_util::read_file_fidl::<PersistentEagerPackages>(&file_proxy)
+            .await
+            .context("while reading eager_packages.pf")?;
         for PersistentEagerPackage { url, cup, .. } in persistent_packages
             .packages
             .ok_or_else(|| anyhow!("PersistentEagerPackages does not contain `packages` field"))?
@@ -239,7 +238,7 @@ impl<T: Resolver> EagerPackageManager<T> {
             temp_path,
             EAGER_PACKAGE_PERSISTENT_FIDL_NAME,
             |proxy| async move {
-                fuchsia_fs::write_file_fidl(&proxy, &mut packages)
+                io_util::write_file_fidl(&proxy, &mut packages)
                     .await
                     .with_context(|| format!("writing file: {}", temp_path))
             },
@@ -341,7 +340,7 @@ enum PersistError {
     #[error("directory proxy to /data is not available")]
     DataProxyNotAvailable,
     #[error("while opening temp file")]
-    Open(#[from] fuchsia_fs::node::OpenError),
+    Open(#[from] io_util::node::OpenError),
     #[error("while writing persistent fidl")]
     AtomicWrite(#[source] anyhow::Error),
 }
@@ -427,10 +426,10 @@ impl EagerPackageConfigs {
     /// Read eager config from namespace. Returns an empty instance of `EagerPackageConfigs` in
     /// case config was not found.
     async fn from_namespace() -> Result<Self, Error> {
-        match fuchsia_fs::file::read_in_namespace(EAGER_PACKAGE_CONFIG_PATH).await {
+        match io_util::file::read_in_namespace(EAGER_PACKAGE_CONFIG_PATH).await {
             Ok(json) => Ok(serde_json::from_slice(&json).context("parsing eager package config")?),
             Err(e) => match e.into_inner() {
-                fuchsia_fs::file::ReadError::Open(fuchsia_fs::node::OpenError::OpenError(e))
+                io_util::file::ReadError::Open(io_util::node::OpenError::OpenError(e))
                     if e == zx::Status::NOT_FOUND =>
                 {
                     // This error is only reachable if /config/data exists, but the file is missing.
@@ -559,9 +558,9 @@ mod tests {
     fn get_test_package_resolver_with_hash(hash: &str) -> (MockResolver, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("meta"), hash).unwrap();
-        let proxy = fuchsia_fs::open_directory_in_namespace(
+        let proxy = io_util::open_directory_in_namespace(
             dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )
         .unwrap();
         let pkg_dir = PackageDirectory::from_proxy(proxy);
@@ -634,7 +633,7 @@ mod tests {
         data_proxy: &fio::DirectoryProxy,
         packages: impl IntoIterator<Item = (impl std::fmt::Display, CupData)>,
     ) {
-        let file_proxy = fuchsia_fs::directory::open_file(
+        let file_proxy = io_util::directory::open_file(
             data_proxy,
             EAGER_PACKAGE_PERSISTENT_FIDL_NAME,
             fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
@@ -654,7 +653,7 @@ mod tests {
             ),
             ..PersistentEagerPackages::EMPTY
         };
-        fuchsia_fs::write_file_fidl(&file_proxy, &mut packages).await.unwrap();
+        io_util::write_file_fidl(&file_proxy, &mut packages).await.unwrap();
     }
 
     #[test]
@@ -784,7 +783,7 @@ mod tests {
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = io_util::open_directory_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -851,7 +850,7 @@ mod tests {
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = io_util::open_directory_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -885,7 +884,7 @@ mod tests {
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = io_util::open_directory_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

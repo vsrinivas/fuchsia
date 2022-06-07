@@ -23,11 +23,11 @@ use anyhow::{bail, Context, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_io::{DirectoryProxy, FileProxy, UnlinkOptions};
 use files_async::{readdir, DirEntry, DirentKind};
-use fuchsia_fs::file::WriteError;
-use fuchsia_fs::node::{OpenError, RenameError};
-use fuchsia_fs::OpenFlags;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
+use io_util::file::WriteError;
+use io_util::node::{OpenError, RenameError};
+use io_util::OpenFlags;
 use std::collections::BTreeMap;
 
 /// Errors that can occur during an individual migration.
@@ -100,7 +100,7 @@ impl MigrationManager {
     /// completed.
     pub(crate) async fn run_migrations(mut self) -> Result<(), MigrationError> {
         let last_migration = {
-            let migration_file = fuchsia_fs::directory::open_file(
+            let migration_file = io_util::directory::open_file(
                 &self.dir_proxy,
                 MIGRATION_FILE_NAME,
                 OpenFlags::NOT_DIRECTORY | OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
@@ -124,7 +124,7 @@ impl MigrationManager {
                     }
                 }
                 Ok(migration_file) => {
-                    let migration_data = fuchsia_fs::read_file(&migration_file)
+                    let migration_data = io_util::read_file(&migration_file)
                         .await
                         .context("failed to read migrations.txt")?;
                     LastMigration {
@@ -198,7 +198,7 @@ impl MigrationManager {
         migration.migrate(file_generator).await?;
 
         // Write to a temporary file before renaming so we can ensure the update is atomic.
-        let tmp_migration_file = fuchsia_fs::directory::open_file(
+        let tmp_migration_file = io_util::directory::open_file(
             dir_proxy,
             TMP_MIGRATION_FILE_NAME,
             OpenFlags::NOT_DIRECTORY
@@ -208,8 +208,7 @@ impl MigrationManager {
         )
         .await
         .context("unable to create migrations file")?;
-        if let Err(e) = fuchsia_fs::file::write(&tmp_migration_file, dbg!(new_id).to_string()).await
-        {
+        if let Err(e) = io_util::file::write(&tmp_migration_file, dbg!(new_id).to_string()).await {
             return Err(match e {
                 WriteError::WriteError(zx::Status::NO_SPACE) => MigrationError::DiskFull,
                 _ => Error::from(e).context("failed to write tmp migration").into(),
@@ -228,7 +227,7 @@ impl MigrationManager {
         drop(tmp_migration_file);
 
         if let Err(e) =
-            fuchsia_fs::directory::rename(dir_proxy, TMP_MIGRATION_FILE_NAME, MIGRATION_FILE_NAME)
+            io_util::directory::rename(dir_proxy, TMP_MIGRATION_FILE_NAME, MIGRATION_FILE_NAME)
                 .await
         {
             return Err(match e {
@@ -295,7 +294,7 @@ impl FileGenerator {
     ) -> Result<FileProxy, OpenError> {
         let file_name = file_name.as_ref();
         let id = self.new_id;
-        fuchsia_fs::directory::open_file(
+        io_util::directory::open_file(
             &self.dir_proxy,
             &format!("{file_name}_{id}.pfidl"),
             OpenFlags::NOT_DIRECTORY | OpenFlags::RIGHT_READABLE,
@@ -309,7 +308,7 @@ impl FileGenerator {
     ) -> Result<FileProxy, OpenError> {
         let file_name = file_name.as_ref();
         let id = self.new_id;
-        fuchsia_fs::directory::open_file(
+        io_util::directory::open_file(
             &self.dir_proxy,
             &format!("{file_name}_{id}.pfidl"),
             OpenFlags::NOT_DIRECTORY
@@ -340,10 +339,10 @@ mod tests {
     use fidl::Vmo;
     use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy};
     use fuchsia_async as fasync;
-    use fuchsia_fs::OpenFlags;
     use futures::future::BoxFuture;
     use futures::lock::Mutex;
     use futures::FutureExt;
+    use io_util::OpenFlags;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
@@ -453,7 +452,7 @@ mod tests {
 
         let result = migration_manager.run_migrations().await;
         assert_matches!(result, Ok(()));
-        let migration_file = fuchsia_fs::directory::open_file(
+        let migration_file = io_util::directory::open_file(
             &directory,
             MIGRATION_FILE_NAME,
             OpenFlags::RIGHT_READABLE,
@@ -461,7 +460,7 @@ mod tests {
         .await
         .expect("migration file should exist");
         let migration_number =
-            fuchsia_fs::read_file(&migration_file).await.expect("should be able to read file");
+            io_util::read_file(&migration_file).await.expect("should be able to read file");
         let migration_number: u64 = dbg!(migration_number).parse().expect("should be a number");
         assert_eq!(migration_number, 1);
     }
@@ -600,7 +599,7 @@ mod tests {
                         async move {
                             migration_ran.store(true, Ordering::SeqCst);
                             let file = file_generator.new_file("test").await.expect("can get file");
-                            fuchsia_fs::file::write(&file, b"test2").await.expect("can wite file");
+                            io_util::file::write(&file, b"test2").await.expect("can wite file");
                             Ok(())
                         }
                         .boxed()
@@ -613,14 +612,14 @@ mod tests {
 
         let result = migration_manager.run_migrations().await;
         assert_matches!(result, Ok(()));
-        let migration_file = fuchsia_fs::directory::open_file(
+        let migration_file = io_util::directory::open_file(
             &directory,
             MIGRATION_FILE_NAME,
             OpenFlags::RIGHT_READABLE,
         )
         .await
         .expect("migration file should exist");
-        let migration_number: u64 = fuchsia_fs::read_file(&migration_file)
+        let migration_number: u64 = io_util::read_file(&migration_file)
             .await
             .expect("should be able to read file")
             .parse()
@@ -628,10 +627,10 @@ mod tests {
         assert_eq!(migration_number, 2);
 
         let data_file =
-            fuchsia_fs::directory::open_file(&directory, "test_2.pfidl", OpenFlags::RIGHT_READABLE)
+            io_util::directory::open_file(&directory, "test_2.pfidl", OpenFlags::RIGHT_READABLE)
                 .await
                 .expect("migration file should exist");
-        let data = fuchsia_fs::file::read(&data_file).await.expect("should be able to read file");
+        let data = io_util::file::read(&data_file).await.expect("should be able to read file");
         assert_eq!(data, b"test2");
     }
 

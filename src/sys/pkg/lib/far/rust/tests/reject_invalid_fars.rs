@@ -44,12 +44,12 @@ macro_rules! tests {
                     let mut filename = stringify!($fn).replace("_", "-");
                     filename.push_str(".far");
                     let path = Path::new("/pkg/data/invalid-fars").join(filename);
-                    let file = fuchsia_fs::file::open_in_namespace(
+                    let file = io_util::file::open_in_namespace(
                         path.to_str().unwrap(),
                         fio::OpenFlags::RIGHT_READABLE,
                     )
                     .unwrap();
-                    let reader = fuchsia_fs::file::AsyncFile::from_proxy(file);
+                    let reader = io_util::file::AsyncFile::from_proxy(file);
                     assert_matches!(AsyncReader::new(reader).await, $err $(if $guard)?);
                 }
             )+

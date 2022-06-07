@@ -358,8 +358,9 @@ mod tests {
         super::*,
         anyhow::Context as _,
         fidl::endpoints::create_proxy,
-        fuchsia_async as fasync, fuchsia_fs,
+        fuchsia_async as fasync,
         futures::{channel::oneshot, stream::StreamExt},
+        io_util,
         proptest::prelude::*,
         std::path::Path,
         tempfile::TempDir,
@@ -544,7 +545,7 @@ mod tests {
         // run twice to check that seek offset is properly reset before reading the directory
         for _ in 0..2 {
             let (tx, rx) = oneshot::channel();
-            let clone_dir = fuchsia_fs::clone_directory(&dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
+            let clone_dir = io_util::clone_directory(&dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
                 .expect("clone dir");
             fasync::Task::spawn(async move {
                 let entries = readdir_recursive(&clone_dir, None)
@@ -654,7 +655,7 @@ mod tests {
         {
             let tempdir = TempDir::new().expect("failed to create tmp dir");
             let dir = create_nested_dir(&tempdir).await;
-            let subdir = fuchsia_fs::open_directory(
+            let subdir = io_util::open_directory(
                 &dir,
                 &Path::new("subdir"),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -680,7 +681,7 @@ mod tests {
         {
             let tempdir = TempDir::new().expect("failed to create tmp dir");
             let dir = create_nested_dir(&tempdir).await;
-            let subsubdir = fuchsia_fs::open_directory(
+            let subsubdir = io_util::open_directory(
                 &dir,
                 &Path::new("subdir/subsubdir"),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -730,14 +731,14 @@ mod tests {
     }
 
     async fn create_nested_dir(tempdir: &TempDir) -> fio::DirectoryProxy {
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = io_util::open_directory_in_namespace(
             tempdir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open tmp dir");
-        fuchsia_fs::create_sub_directories(&dir, Path::new("emptydir"))
+        io_util::create_sub_directories(&dir, Path::new("emptydir"))
             .expect("failed to create emptydir");
-        fuchsia_fs::create_sub_directories(&dir, Path::new("subdir/subsubdir/emptydir"))
+        io_util::create_sub_directories(&dir, Path::new("subdir/subsubdir/emptydir"))
             .expect("failed to create subdir/subsubdir/emptydir");
         create_file(&dir, "a").await;
         create_file(&dir, "b").await;
@@ -747,7 +748,7 @@ mod tests {
     }
 
     async fn create_file(dir: &fio::DirectoryProxy, path: &str) {
-        fuchsia_fs::open_file(
+        io_util::open_file(
             dir,
             Path::new(path),
             fio::OpenFlags::RIGHT_READABLE

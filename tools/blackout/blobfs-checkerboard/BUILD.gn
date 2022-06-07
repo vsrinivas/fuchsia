@@ -24,8 +24,8 @@ rustc_binary("blackout-blobfs-checkerboard-target-bin") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-fs",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",

@@ -14,6 +14,7 @@ template("component_manager") {
   _deps = [
     ":measure_tape_for_instance_info",
     "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
@@ -45,7 +46,6 @@ template("component_manager") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/fuchsia-url",
     "//src/lib/injectable-time",

@@ -11,11 +11,11 @@ rustc_test("realm_integration_test_bin") {
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
   ]
 }
 

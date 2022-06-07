@@ -10,9 +10,9 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_process as fprocess,
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_fs::{self, OpenFlags},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
+    io_util::{self, OpenFlags},
     std::ffi::CString,
     std::path::PathBuf,
 };
@@ -271,7 +271,7 @@ async fn list_children(realm: &fcomponent::RealmProxy) -> Result<String, Error> 
 }
 
 fn open_trigger_svc(dir: &fio::DirectoryProxy) -> Result<ftest::TriggerProxy, Error> {
-    let node_proxy = fuchsia_fs::open_node(
+    let node_proxy = io_util::open_node(
         dir,
         &PathBuf::from("fidl.test.components.Trigger"),
         OpenFlags::RIGHT_READABLE,

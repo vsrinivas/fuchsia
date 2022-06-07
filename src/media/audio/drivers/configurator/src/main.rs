@@ -4,9 +4,9 @@
 
 use {
     anyhow::anyhow,
-    fuchsia_fs::{open_directory_in_namespace, OpenFlags},
     fuchsia_inspect::{component, health::Reporter},
     futures::lock::Mutex,
+    io_util::{open_directory_in_namespace, OpenFlags},
     std::sync::Arc,
     tracing,
 };

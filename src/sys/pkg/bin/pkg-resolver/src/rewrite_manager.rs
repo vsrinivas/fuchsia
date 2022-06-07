@@ -86,7 +86,7 @@ impl RewriteManager {
         let result = async {
             // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
             // expects it, this should be removed once the test is fixed.
-            let data_proxy = fuchsia_fs::directory::open_directory(
+            let data_proxy = io_util::directory::open_directory(
                 &data_proxy,
                 ".",
                 fio::OpenFlags::RIGHT_WRITABLE,
@@ -103,7 +103,7 @@ impl RewriteManager {
                 temp_filename,
                 &dynamic_rules_path,
                 |proxy| async move {
-                    fuchsia_fs::file::write(&proxy, &data)
+                    io_util::file::write(&proxy, &data)
                         .await
                         .with_context(|| format!("writing file: {}", temp_filename))
                 },
@@ -308,7 +308,7 @@ pub enum LoadRulesError {
     #[error("directory open")]
     DirOpen(#[source] anyhow::Error),
     #[error("file open")]
-    FileOpen(#[from] fuchsia_fs::node::OpenError),
+    FileOpen(#[from] io_util::node::OpenError),
     #[error("read file")]
     ReadFile(#[source] anyhow::Error),
     #[error("parse")]
@@ -340,10 +340,9 @@ impl<N> RewriteManagerBuilder<N> {
             .as_ref()
             .ok_or_else(|| LoadRulesError::DirOpen(anyhow!("failed to open config directory")))?;
         let file_proxy =
-            fuchsia_fs::directory::open_file(&dir_proxy, &path, fio::OpenFlags::RIGHT_READABLE)
+            io_util::directory::open_file(&dir_proxy, &path, fio::OpenFlags::RIGHT_READABLE)
                 .await?;
-        let contents =
-            fuchsia_fs::read_file(&file_proxy).await.map_err(LoadRulesError::ReadFile)?;
+        let contents = io_util::read_file(&file_proxy).await.map_err(LoadRulesError::ReadFile)?;
         let RuleConfig::Version1(rules) = serde_json::from_str(&contents)?;
         Ok(rules)
     }
@@ -458,9 +457,9 @@ pub(crate) mod tests {
     ) -> (Option<fio::DirectoryProxy>, Option<String>) {
         let filename = Some(path.file_name().unwrap().to_str().unwrap().to_string());
         let dir = path.parent().unwrap().to_str().unwrap().to_string();
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+        let proxy = io_util::directory::open_in_namespace(
             &dir,
-            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
         )
         .ok();
         (proxy, filename)
@@ -954,7 +953,7 @@ pub(crate) mod tests {
             RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file).await,
             Err((
                 _,
-                LoadRulesError::FileOpen(fuchsia_fs::node::OpenError::OpenError(
+                LoadRulesError::FileOpen(io_util::node::OpenError::OpenError(
                     fuchsia_zircon::Status::NOT_FOUND
                 ))
             ))
@@ -973,7 +972,7 @@ pub(crate) mod tests {
             builder.static_rules_path(config_dir, &config_file.unwrap()).await,
             Err((
                 _,
-                LoadRulesError::FileOpen(fuchsia_fs::node::OpenError::OpenError(
+                LoadRulesError::FileOpen(io_util::node::OpenError::OpenError(
                     fuchsia_zircon::Status::NOT_FOUND
                 ))
             ))

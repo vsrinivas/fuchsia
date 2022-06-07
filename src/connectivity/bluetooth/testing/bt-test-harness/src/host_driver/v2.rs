@@ -141,7 +141,7 @@ impl TestHarness for HostDriverHarness {
         let (path, mut emulator, realm) = env;
         async move {
             let stripped_path = Path::new(HOST_DEVICE_DIR).strip_prefix("/")?.to_string_lossy();
-            let dir_to_watch = fuchsia_fs::directory::open_directory(
+            let dir_to_watch = io_util::directory::open_directory(
                 realm.instance().get_exposed_dir(),
                 stripped_path.as_ref(),
                 fio::OpenFlags::RIGHT_READABLE,

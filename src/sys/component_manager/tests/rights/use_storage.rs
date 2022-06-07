@@ -6,8 +6,8 @@ use {
     anyhow::Error,
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_fs::{self, OpenFlags},
     futures::{StreamExt, TryStreamExt},
+    io_util::{self, OpenFlags},
     std::path::PathBuf,
 };
 
@@ -27,16 +27,16 @@ async fn main() {
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         let ftest::TriggerRequest::Run { responder } = event;
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = io_util::open_directory_in_namespace(
             "/data",
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
         )?;
-        let file = fuchsia_fs::open_file(
+        let file = io_util::open_file(
             &data_proxy,
             &PathBuf::from("test"),
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
         )?;
-        let msg = if let Err(_) = fuchsia_fs::write_file_bytes(&file, b"test_data").await {
+        let msg = if let Err(_) = io_util::write_file_bytes(&file, b"test_data").await {
             "Failed to write to file"
         } else {
             "All tests passed"

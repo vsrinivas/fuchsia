@@ -160,9 +160,9 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             .serve(ConnectionType::project_id(metrics::PROJECT_ID));
     futures.push(cobalt_fut.boxed_local());
 
-    let data_proxy = match fuchsia_fs::directory::open_in_namespace(
+    let data_proxy = match io_util::directory::open_in_namespace(
         "/data",
-        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
@@ -176,9 +176,9 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         namespace.unbind("/data").context("failed to unbind /data from default namespace")?;
     }
 
-    let config_proxy = match fuchsia_fs::directory::open_in_namespace(
+    let config_proxy = match io_util::directory::open_in_namespace(
         "/config/data",
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
@@ -447,7 +447,7 @@ async fn load_rewrite_manager(
         .unwrap_or_else(|(builder, err)| {
             match err {
                 // Given a fresh /data, it's expected the file doesn't exist.
-                LoadRulesError::FileOpen(fuchsia_fs::node::OpenError::OpenError(
+                LoadRulesError::FileOpen(io_util::node::OpenError::OpenError(
                     fuchsia_zircon::Status::NOT_FOUND,
                 )) => {}
                 // Unable to open /data dir proxy.
@@ -465,7 +465,7 @@ async fn load_rewrite_manager(
         .unwrap_or_else(|(builder, err)| {
             match err {
                 // No static rules are configured for this system version.
-                LoadRulesError::FileOpen(fuchsia_fs::node::OpenError::OpenError(
+                LoadRulesError::FileOpen(io_util::node::OpenError::OpenError(
                     fuchsia_zircon::Status::NOT_FOUND,
                 )) => {}
                 // Unable to open /config/data dir proxy.

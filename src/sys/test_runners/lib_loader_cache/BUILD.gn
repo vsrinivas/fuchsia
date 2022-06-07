@@ -30,7 +30,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//src/lib/fuchsia-fs",
+    "//garnet/lib/rust/io_util",
     "//third_party/rust_crates:assert_matches",
   ]
 

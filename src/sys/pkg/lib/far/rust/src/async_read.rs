@@ -9,7 +9,7 @@ use {
         DIR_NAMES_CHUNK_TYPE, INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
     },
     bincode::deserialize,
-    fuchsia_fs::file::{AsyncGetSize, AsyncGetSizeExt, AsyncReadAt, AsyncReadAtExt},
+    io_util::file::{AsyncGetSize, AsyncGetSizeExt, AsyncReadAt, AsyncReadAtExt},
     std::{collections::BTreeMap, convert::TryInto as _, str},
 };
 
@@ -231,8 +231,8 @@ mod tests {
         crate::{tests::example_archive, INDEX_LEN},
         bincode::serialize_into,
         fuchsia_async as fasync,
-        fuchsia_fs::file::Adapter,
         futures::io::Cursor,
+        io_util::file::Adapter,
         itertools::assert_equal,
         std::{
             io::{Seek, SeekFrom},

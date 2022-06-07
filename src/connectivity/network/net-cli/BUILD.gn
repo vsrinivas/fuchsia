@@ -12,6 +12,7 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
@@ -30,7 +31,6 @@ rustc_library("lib") {
     "//src/connectivity/network/lib/netfilter",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
     "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",

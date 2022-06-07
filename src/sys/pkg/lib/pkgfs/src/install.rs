@@ -40,7 +40,7 @@ pub enum BlobCreateError {
     ConcurrentWrite,
 
     #[error("while creating the blob: {}", _0)]
-    Io(fuchsia_fs::node::OpenError),
+    Io(io_util::node::OpenError),
 }
 
 /// An open handle to /pkgfs/install
@@ -51,8 +51,8 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, fuchsia_fs::node::OpenError> {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+    pub fn open_from_namespace() -> Result<Self, io_util::node::OpenError> {
+        let proxy = io_util::directory::open_in_namespace(
             "/pkgfs/install",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )?;
@@ -62,9 +62,9 @@ impl Client {
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
     pub fn open_from_pkgfs_root(
         pkgfs: &fio::DirectoryProxy,
-    ) -> Result<Self, fuchsia_fs::node::OpenError> {
+    ) -> Result<Self, io_util::node::OpenError> {
         Ok(Client {
-            proxy: fuchsia_fs::directory::open_directory_no_describe(
+            proxy: io_util::directory::open_directory_no_describe(
                 pkgfs,
                 "install",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -106,18 +106,18 @@ impl Client {
     ) -> Result<(Blob<NeedsTruncate>, BlobCloser), BlobCreateError> {
         let flags = fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE;
 
-        let blob = fuchsia_fs::directory::open_file(
+        let blob = io_util::directory::open_file(
             &self.proxy,
             &blob_kind.make_install_path(&merkle),
             flags,
         )
         .await
         .map_err(|e| match e {
-            fuchsia_fs::node::OpenError::OpenError(Status::ALREADY_EXISTS) => {
+            io_util::node::OpenError::OpenError(Status::ALREADY_EXISTS) => {
                 // Lost a race writing to blobfs, and the blob already exists.
                 BlobCreateError::AlreadyExists
             }
-            fuchsia_fs::node::OpenError::OpenError(Status::ACCESS_DENIED) => {
+            io_util::node::OpenError::OpenError(Status::ACCESS_DENIED) => {
                 // Lost a race with another process writing to blobfs, and the blob is in the
                 // process of being written.
                 BlobCreateError::ConcurrentWrite

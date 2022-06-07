@@ -801,7 +801,7 @@ mod tests {
         assert_eq!(instance_names.len(), 2);
 
         // Open one of the entries.
-        let collection_dir = fuchsia_fs::directory::open_directory(
+        let collection_dir = io_util::directory::open_directory(
             &service_proxy,
             instance_names.iter().next().expect("failed to get instance name"),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

@@ -67,10 +67,9 @@ async fn get_attr_per_package_source(source: PackageSource) {
     }
 
     async fn verify_get_attrs(root_dir: &fio::DirectoryProxy, path: &str, args: Args) {
-        let node =
-            fuchsia_fs::directory::open_node(root_dir, path, args.open_flags, args.open_mode)
-                .await
-                .unwrap();
+        let node = io_util::directory::open_node(root_dir, path, args.open_flags, args.open_mode)
+            .await
+            .unwrap();
         let (status, attrs) = node.get_attr().await.unwrap();
         zx::Status::ok(status).unwrap();
         assert_eq!(Mode(attrs.mode), Mode(args.expected_mode));
@@ -246,7 +245,7 @@ async fn close_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
     async fn verify_close(root_dir: &fio::DirectoryProxy, path: &str, mode: u32) {
         let node =
-            fuchsia_fs::directory::open_node(root_dir, path, fio::OpenFlags::RIGHT_READABLE, mode)
+            io_util::directory::open_node(root_dir, path, fio::OpenFlags::RIGHT_READABLE, mode)
                 .await
                 .unwrap();
 
@@ -292,7 +291,7 @@ async fn describe_per_package_source(source: PackageSource) {
 async fn assert_describe_directory(package_root: &fio::DirectoryProxy, path: &str) {
     for flag in [fio::OpenFlags::empty(), fio::OpenFlags::NODE_REFERENCE] {
         let node =
-            fuchsia_fs::directory::open_node(package_root, path, flag, fio::MODE_TYPE_DIRECTORY)
+            io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_DIRECTORY)
                 .await
                 .unwrap();
 
@@ -315,7 +314,7 @@ async fn verify_describe_directory_success(node: fio::NodeProxy) -> Result<(), E
 
 async fn assert_describe_file(package_root: &fio::DirectoryProxy, path: &str) {
     for flag in [fio::OpenFlags::RIGHT_READABLE, fio::OpenFlags::NODE_REFERENCE] {
-        let node = fuchsia_fs::directory::open_node(package_root, path, flag, 0).await.unwrap();
+        let node = io_util::directory::open_node(package_root, path, flag, 0).await.unwrap();
         if let Err(e) = verify_describe_content_file(node, flag).await {
             panic!(
                 "failed to verify describe. path: {:?}, flag: {:#x}, \
@@ -352,7 +351,7 @@ async fn verify_describe_content_file(
 
 async fn assert_describe_meta_file(package_root: &fio::DirectoryProxy, path: &str) {
     for flag in [fio::OpenFlags::empty(), fio::OpenFlags::NODE_REFERENCE] {
-        let node = fuchsia_fs::directory::open_node(package_root, path, flag, fio::MODE_TYPE_FILE)
+        let node = io_util::directory::open_node(package_root, path, flag, fio::MODE_TYPE_FILE)
             .await
             .unwrap();
         if let Err(e) = verify_describe_meta_file_success(node).await {
@@ -454,7 +453,7 @@ async fn do_set_flags<'a>(
     argument: fio::OpenFlags,
 ) -> SetFlagsOutcome<'a> {
     let node =
-        fuchsia_fs::directory::open_node(package_root, path, fio::OpenFlags::RIGHT_READABLE, mode)
+        io_util::directory::open_node(package_root, path, fio::OpenFlags::RIGHT_READABLE, mode)
             .await
             .unwrap();
 
@@ -520,7 +519,7 @@ async fn set_attr_per_package_source(source: PackageSource) {
 }
 
 async fn assert_set_attr(package_root: &fio::DirectoryProxy, path: &str, mode: u32) {
-    let node = fuchsia_fs::directory::open_node(package_root, path, fio::OpenFlags::empty(), mode)
+    let node = io_util::directory::open_node(package_root, path, fio::OpenFlags::empty(), mode)
         .await
         .unwrap();
 
@@ -572,7 +571,7 @@ async fn sync_per_package_source(source: PackageSource) {
 }
 
 async fn assert_sync(package_root: &fio::DirectoryProxy, path: &str, mode: u32) {
-    let node = fuchsia_fs::directory::open_node(package_root, path, fio::OpenFlags::empty(), mode)
+    let node = io_util::directory::open_node(package_root, path, fio::OpenFlags::empty(), mode)
         .await
         .unwrap();
 

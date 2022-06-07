@@ -241,7 +241,7 @@ impl RepositoryManager {
 
             // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
             // expects it, this should be removed once the test is fixed.
-            let data_proxy = fuchsia_fs::directory::open_directory(
+            let data_proxy = io_util::directory::open_directory(
                 &data_proxy,
                 ".",
                 fio::OpenFlags::RIGHT_WRITABLE,
@@ -255,7 +255,7 @@ impl RepositoryManager {
                 temp_path,
                 &dynamic_configs_path,
                 |proxy| async move {
-                    fuchsia_fs::file::write(&proxy, &data)
+                    io_util::file::write(&proxy, &data)
                         .await
                         .with_context(|| format!("writing file: {}", temp_path))
                 },
@@ -512,9 +512,9 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
     where
         P: Into<String>,
     {
-        let proxy = fuchsia_fs::directory::open_in_namespace(
+        let proxy = io_util::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
         )
         .unwrap();
         Self::new(Some(proxy), dynamic_configs_path, Experiments::none()).await
@@ -749,15 +749,14 @@ async fn load_configs_file_from_proxy(
     proxy: &fio::DirectoryProxy,
     path: &str,
 ) -> Result<Vec<RepositoryConfig>, LoadError> {
-    let file =
-        match fuchsia_fs::directory::open_file(proxy, path, fuchsia_fs::OpenFlags::RIGHT_READABLE)
-            .await
-        {
-            Ok(file) => file,
-            Err(fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(vec![]),
-            Err(error) => return Err(LoadError::Open { path: path.into(), error }),
-        };
-    let buf = fuchsia_fs::file::read(&file)
+    let file = match io_util::directory::open_file(proxy, path, io_util::OpenFlags::RIGHT_READABLE)
+        .await
+    {
+        Ok(file) => file,
+        Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(vec![]),
+        Err(error) => return Err(LoadError::Open { path: path.into(), error }),
+    };
+    let buf = io_util::file::read(&file)
         .await
         .map_err(|error| LoadError::Read { path: path.into(), error })?;
 
@@ -784,7 +783,7 @@ pub enum LoadError {
     Open {
         path: String,
         #[source]
-        error: fuchsia_fs::node::OpenError,
+        error: io_util::node::OpenError,
     },
 
     /// This [io_util::node::ReadError] error occurred while reading the file.
@@ -792,7 +791,7 @@ pub enum LoadError {
     Read {
         path: String,
         #[source]
-        error: fuchsia_fs::file::ReadError,
+        error: io_util::file::ReadError,
     },
 
     /// This file failed to parse into a valid [RepositoryConfigs].

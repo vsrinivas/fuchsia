@@ -55,7 +55,7 @@ async fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
 }
 
 async fn read_entries(path: &Path) -> Result<Vec<String>, Error> {
-    let directory = fuchsia_fs::open_directory_in_namespace(
+    let directory = io_util::open_directory_in_namespace(
         path.to_str().unwrap(),
         fio::OpenFlags::RIGHT_READABLE,
     )?;

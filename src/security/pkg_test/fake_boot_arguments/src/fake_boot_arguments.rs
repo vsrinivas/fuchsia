@@ -28,8 +28,8 @@ async fn main() {
     let args @ Args { system_image_path } = &argh::from_env();
     fx_log_info!("Initalizing fake_boot_arguments with {:?}", args);
 
-    let system_image = fuchsia_fs::file::read(
-        &fuchsia_fs::file::open_in_namespace(
+    let system_image = io_util::file::read(
+        &io_util::file::open_in_namespace(
             system_image_path.as_str(),
             fio::OpenFlags::RIGHT_READABLE,
         )

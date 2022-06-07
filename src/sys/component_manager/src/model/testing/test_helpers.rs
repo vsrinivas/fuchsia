@@ -200,7 +200,7 @@ pub async fn dir_contains<'a>(
     entry_name: &'a str,
 ) -> bool {
     let dir =
-        fuchsia_fs::open_directory(&root_proxy, &Path::new(path), fio::OpenFlags::RIGHT_READABLE)
+        io_util::open_directory(&root_proxy, &Path::new(path), fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open directory");
     let entries = files_async::readdir(&dir).await.expect("readdir failed");
     let listing = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
@@ -215,7 +215,7 @@ pub async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<Stri
 }
 
 pub async fn list_sub_directory(parent: &fio::DirectoryProxy, path: &str) -> Vec<String> {
-    let sub_dir = fuchsia_fs::open_directory(
+    let sub_dir = io_util::open_directory(
         &parent,
         &Path::new(path),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -225,7 +225,7 @@ pub async fn list_sub_directory(parent: &fio::DirectoryProxy, path: &str) -> Vec
 }
 
 pub async fn list_directory_recursive<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
-    let dir = fuchsia_fs::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+    let dir = io_util::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
         .expect("Failed to clone DirectoryProxy");
     let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None);
     let mut items = entries
@@ -239,14 +239,14 @@ pub async fn list_directory_recursive<'a>(root_proxy: &'a fio::DirectoryProxy) -
 
 pub async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
     let file_proxy =
-        fuchsia_fs::open_file(&root_proxy, &Path::new(path), fio::OpenFlags::RIGHT_READABLE)
+        io_util::open_file(&root_proxy, &Path::new(path), fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open file.");
-    let res = fuchsia_fs::read_file(&file_proxy).await;
+    let res = io_util::read_file(&file_proxy).await;
     res.expect("Unable to read file.")
 }
 
 pub async fn write_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str, contents: &'a str) {
-    let file_proxy = fuchsia_fs::open_file(
+    let file_proxy = io_util::open_file(
         &root_proxy,
         &Path::new(path),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
@@ -261,7 +261,7 @@ pub async fn write_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str, 
 }
 
 pub async fn call_echo<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
-    let node_proxy = fuchsia_fs::open_node(
+    let node_proxy = io_util::open_node(
         &root_proxy,
         &Path::new(path),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

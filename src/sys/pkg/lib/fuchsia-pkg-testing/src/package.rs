@@ -865,14 +865,14 @@ mod tests {
         assert_eq!(pkg.meta_far_merkle, fs::read_to_string("/pkg/meta")?.parse()?);
 
         let this_pkg_dir =
-            fuchsia_fs::open_directory_in_namespace("/pkg", fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
+            io_util::open_directory_in_namespace("/pkg", io_util::OpenFlags::RIGHT_READABLE)?;
         pkg.verify_contents(&this_pkg_dir).await.expect("contents to be equivalent");
 
         let pkg_dir = make_this_package_dir()?;
 
-        let this_pkg_dir = fuchsia_fs::open_directory_in_namespace(
+        let this_pkg_dir = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )?;
 
         assert_matches!(pkg.verify_contents(&this_pkg_dir).await, Ok(()));
@@ -887,9 +887,9 @@ mod tests {
 
         fs::write(pkg_dir.path().join("unexpected"), "unexpected file".as_bytes())?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )?;
 
         assert_matches!(
@@ -906,9 +906,9 @@ mod tests {
 
         fs::write(pkg_dir.path().join("meta/unexpected"), "unexpected file".as_bytes())?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )?;
 
         assert_matches!(
@@ -925,9 +925,9 @@ mod tests {
 
         fs::remove_file(pkg_dir.path().join("bin/pkgsvr"))?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )?;
 
         assert_matches!(
@@ -944,9 +944,9 @@ mod tests {
 
         fs::write(pkg_dir.path().join("bin/pkgsvr"), "broken".as_bytes())?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            io_util::OpenFlags::RIGHT_READABLE,
         )?;
 
         assert_matches!(

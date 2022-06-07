@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_io as fio, fuchsia_fs::clone_directory};
+use {fidl_fuchsia_io as fio, io_util::clone_directory};
 
 // TODO(https://fxbug.dev/94654): We should probably preserve the original error messages
 // instead of dropping them.

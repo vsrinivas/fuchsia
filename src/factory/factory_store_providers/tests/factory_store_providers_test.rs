@@ -10,9 +10,8 @@ use {
         MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
         WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
     },
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_fs,
-    fuchsia_fs::file::{AsyncFile, AsyncGetSizeExt},
-    fuchsia_syslog as syslog,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_syslog as syslog, io_util,
+    io_util::file::{AsyncFile, AsyncGetSizeExt},
     std::fs,
     std::path::{Path, PathBuf},
     std::vec::Vec,
@@ -37,12 +36,12 @@ async fn read_file_from_proxy<'a>(
     dir_proxy: &'a fio::DirectoryProxy,
     file_path: &'a str,
 ) -> Result<Vec<u8>, Error> {
-    let file = fuchsia_fs::open_file(
+    let file = io_util::open_file(
         &dir_proxy,
         &PathBuf::from(file_path),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )?;
-    fuchsia_fs::read_file_bytes(&file).await
+    io_util::read_file_bytes(&file).await
 }
 
 async fn wait_for_ramdisk() -> Result<(), Error> {
@@ -50,7 +49,7 @@ async fn wait_for_ramdisk() -> Result<(), Error> {
         syslog::fx_log_info!("{} doesn't exist. Assuming none ext4 test", FACTORY_DEVICE_CONFIG);
         return Ok(());
     }
-    let dev = fuchsia_fs::directory::open_in_namespace("/dev", fio::OpenFlags::RIGHT_READABLE)?;
+    let dev = io_util::directory::open_in_namespace("/dev", fio::OpenFlags::RIGHT_READABLE)?;
     device_watcher::recursive_wait_and_open_node(&dev, RAMDISK_DEV_BLOCK_PATH).await?;
     Ok(())
 }
@@ -249,10 +248,10 @@ async fn read_factory_files_from_alpha_store_reports_correct_size() -> Result<()
     let expected_contents =
         fs::read(&path).expect(&format!("Unable to read expected file: {}", &path));
 
-    let file = fuchsia_fs::open_file(
+    let file = io_util::open_file(
         &dir_proxy,
         &PathBuf::from("alpha"),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        io_util::OpenFlags::RIGHT_READABLE,
     )?;
     let mut async_file = AsyncFile::from_proxy(file);
     let reported_size = async_file.get_size().await?;
