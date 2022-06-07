@@ -1,0 +1,3 @@
+per-file generate_flash_script.sh = file: /src/firmware/OWNERS
+
+# COMPONENT: Build

@@ -21,8 +21,6 @@ recovery_is_zedboot =
     get_label_info(recovery_label, "label_with_toolchain") ==
     get_label_info("//build/images/zedboot", "label_with_toolchain")
 
-generate_flash_script_path = "//build/images/generate_flash_script.sh"
-
 flash_manifest_version = 3
 
 image_suffix = "zbi"

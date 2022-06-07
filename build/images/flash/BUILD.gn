@@ -256,7 +256,7 @@ if (supports_fastboot_fvm) {
 action("flash_script") {
   # Required for dependency on testonly firmware image targets.
   testonly = true
-  script = generate_flash_script_path
+  script = "generate_flash_script.sh"
   outputs = flash_script_outputs
   args = flash_script_args
   deps = flash_script_deps
@@ -455,7 +455,7 @@ if (supports_fastboot_fvm) {
 
 action("flash_script_archive") {
   testonly = true
-  script = generate_flash_script_path
+  script = "generate_flash_script.sh"
   outputs = archive_outputs
   args = archive_args
   deps = archive_deps
