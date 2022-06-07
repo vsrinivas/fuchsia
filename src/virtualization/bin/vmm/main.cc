@@ -44,6 +44,7 @@
 #include "src/virtualization/bin/vmm/controller/virtio_net.h"
 #include "src/virtualization/bin/vmm/controller/virtio_rng.h"
 #include "src/virtualization/bin/vmm/controller/virtio_sound.h"
+#include "src/virtualization/bin/vmm/controller/virtio_vsock.h"
 #include "src/virtualization/bin/vmm/controller/virtio_wl.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/guest_impl.h"
@@ -66,6 +67,12 @@ static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #else
 #error Unknown architecture.
+#endif
+
+#ifdef USE_LEGACY_IN_PROCESS_VSOCK
+#define IN_PROCESS_VSOCK 1
+#else
+#define IN_PROCESS_VSOCK 0
 #endif
 
 static zx_gpaddr_t AllocDeviceAddr(size_t device_size) {
@@ -314,22 +321,46 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Setup vsock device. Vsock uses its own dispatcher as a temporary measure
-  // until it is moved out of process.
-  async::Loop vsock_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  VirtioVsock vsock(context.get(), guest.phys_mem(), vsock_loop.dispatcher());
-  if (cfg.virtio_vsock()) {
-    status = bus.Connect(vsock.pci_device(), vsock_loop.dispatcher(), false);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to connect Vsock device";
-      return status;
+  // Only one of these will be initialized. See fxb/97355 for information.
+  std::unique_ptr<VirtioVsock> legacy_vsock;
+  std::unique_ptr<controller::VirtioVsock> experimental_vsock;
+
+  // In process vsock requires its own dispatcher. Will only be initialized if the legacy in
+  // process vsock is used.
+  std::unique_ptr<async::Loop> vsock_loop;
+
+  if constexpr (IN_PROCESS_VSOCK) {
+    vsock_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    legacy_vsock =
+        std::make_unique<VirtioVsock>(context.get(), guest.phys_mem(), vsock_loop->dispatcher());
+    if (cfg.virtio_vsock()) {
+      status = bus.Connect(legacy_vsock->pci_device(), vsock_loop->dispatcher(), false);
+      if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Failed to connect Vsock device";
+        return status;
+      }
+      status = vsock_loop->StartThread("vsock-handler");
+      if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Failed to create vsock async worker";
+        return status;
+      }
     }
-    status = vsock_loop.StartThread("vsock-handler");
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to create vsock async worker";
-      return status;
+  } else {
+    experimental_vsock = std::make_unique<controller::VirtioVsock>(guest.phys_mem());
+    if (cfg.virtio_vsock()) {
+      status = bus.Connect(experimental_vsock->pci_device(), device_loop.dispatcher(), true);
+      if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
+        return status;
+      }
+      status = experimental_vsock->Start(guest.object(), realm, device_loop.dispatcher());
+      if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Failed to start vsock device";
+        return status;
+      }
     }
   }
+  FX_CHECK(!experimental_vsock != (!legacy_vsock && !vsock_loop));
 
   // Setup wayland device.
   VirtioWl wl(guest.phys_mem());

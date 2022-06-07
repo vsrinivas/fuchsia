@@ -5,6 +5,10 @@
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 
+declare_args() {
+  virtio_vsock_inprocess = true
+}
+
 group("vmm") {
   deps = [
     ":vmm_package",
@@ -52,6 +56,8 @@ source_set("lib") {
     "controller/virtio_rng.h",
     "controller/virtio_sound.cc",
     "controller/virtio_sound.h",
+    "controller/virtio_vsock.cc",
+    "controller/virtio_vsock.h",
     "controller/virtio_wl.cc",
     "controller/virtio_wl.h",
     "dev_mem.h",
@@ -155,6 +161,10 @@ source_set("lib") {
   }
 }
 
+config("in_process_vsock") {
+  defines = [ "USE_LEGACY_IN_PROCESS_VSOCK" ]
+}
+
 executable("bin") {
   output_name = "vmm"
 
@@ -171,6 +181,10 @@ executable("bin") {
   ]
 
   configs += [ "//build/config:all_source" ]
+
+  if (virtio_vsock_inprocess) {
+    configs += [ ":in_process_vsock" ]
+  }
 }
 
 resource("vmm-resources") {

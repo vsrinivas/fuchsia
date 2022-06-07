@@ -45,6 +45,10 @@
             durability: "single_run",
         },
         {
+            name: "virtio_vsock_devices",
+            durability: "single_run",
+        },
+        {
             name: "virtio_wl_devices",
             durability: "single_run",
         },
@@ -95,6 +99,7 @@
                 "#virtio_net_devices",
                 "#virtio_rng_devices",
                 "#virtio_sound_devices",
+                "#virtio_vsock_devices",
                 "#virtio_wl_devices",
             ],
         },
