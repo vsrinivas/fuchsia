@@ -16,7 +16,6 @@ import (
 )
 
 func TestShutdown(t *testing.T) {
-	t.Skip("Skipping test. Test is disabled.  See fxbug.dev/98149")
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -35,7 +34,7 @@ func TestShutdown(t *testing.T) {
 
 	if arch == emulator.X64 {
 		// Ensure the ACPI driver comes up before we attempt a shutdown.
-		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/platform-passthrough/acpi; echo ACPI_READY")
+		i.RunCommand("waitfor verbose class=acpi topo=/dev/sys/platform/platform-passthrough/acpi/acpi-_SB_; echo ACPI_READY")
 		i.WaitForLogMessage("ACPI_READY")
 	}
 
