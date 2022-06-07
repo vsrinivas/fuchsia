@@ -40,16 +40,20 @@ do
     fi
 done
 
-# Detect presence of C++ symbols
-if grep -q "Name: _Z" $REFERENCE; then
-  echo
-  echo "Error: Prebuilt libraries exported to the SDK should not have C++ symbols"
-  echo "In library $LIBRARY_NAME"
-  echo "NOTE: the following functions are exported with C++ linkage:"
-  grep "Name: _Z" $REFERENCE
+# TODO(fxbug.dev/101666): This is no longer needed, this whole file can be replaced
+# with `golden_file` or similar.
+if [[ $LIBRARY_NAME != "libc" ]]; then
+  # Detect presence of C++ symbols
+  if grep -q "Name: _Z" $REFERENCE; then
+    echo
+    echo "Error: Prebuilt libraries exported to the SDK should not have C++ symbols"
+    echo "In library $LIBRARY_NAME"
+    echo "NOTE: the following functions are exported with C++ linkage:"
+    grep "Name: _Z" $REFERENCE
 
-  if [[ "$WARN_ON_CHANGES" -eq 0 ]]; then
-    exit 1
+    if [[ "$WARN_ON_CHANGES" -eq 0 ]]; then
+      exit 1
+    fi
   fi
 fi
 

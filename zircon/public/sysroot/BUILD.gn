@@ -219,7 +219,7 @@ template("_create_sysroot") {
          "sysroot_dir must be defined when calling this template")
   _sysroot_dir = invoker.sysroot_dir
 
-  _libc_target = sysroot_libc_target
+  _libc_target = sysroot_libc_stub_target
   _libc_file = rebase_path(sysroot_libc_stub, root_build_dir)
 
   _vdso_target = "//src/zircon/lib/zircon:zircon.stub($default_toolchain)"
@@ -358,6 +358,10 @@ template("_create_sysroot") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
+
+    if (defined(invoker.data_deps)) {
+      data_deps = invoker.data_deps
+    }
   }
 }
 
@@ -373,6 +377,7 @@ template("_create_sysroot") {
 _create_sysroot("cpp_binary_deps") {
   sysroot_dir = cpp_sysroot_dir
   deps = [ "//zircon/system/ulib/c" ]
+  data_deps = [ sysroot_libc_target ]
 }
 
 # Rust compilation can now use the C++ sysroot directly, so just
@@ -393,6 +398,7 @@ _create_sysroot("go_binary_deps") {
   add_crt1 = true
   absolute_stub_paths = true
   deps = [ "//zircon/system/ulib/c" ]
+  data_deps = [ sysroot_libc_target ]
 }
 
 # Depend on this to only require the Zircon headers, but not link to the

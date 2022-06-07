@@ -44,6 +44,7 @@ template("verify_public_symbols") {
       "--strip-undefined",
       "--strip-ifs-target",
       "--strip-needed",
+      "--strip-size",
       rebase_path(invoker.current, root_build_dir),
       "--output-ifs",
       rebase_path(abi_file, root_build_dir),
@@ -58,6 +59,10 @@ template("verify_public_symbols") {
         "--exclude=_end",
       ]
     }
+    args += [
+      "--exclude=__asan*",
+      "--exclude=__ubsan*",
+    ]
 
     # TODO(fxbug.dev/101255): lprofDirMode should be hidden from profile
     args += [ "--exclude=lprofDirMode" ]

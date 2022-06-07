@@ -1,0 +1,1425 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libc.so
+Symbols:
+  - { Name: _Exit, Type: Func }
+  - { Name: _IO_feof_unlocked, Type: Func, Weak: true }
+  - { Name: _IO_ferror_unlocked, Type: Func, Weak: true }
+  - { Name: _IO_getc, Type: Func, Weak: true }
+  - { Name: _IO_getc_unlocked, Type: Func, Weak: true }
+  - { Name: _IO_putc, Type: Func, Weak: true }
+  - { Name: _IO_putc_unlocked, Type: Func, Weak: true }
+  - { Name: _Z27native_thread_get_zx_handlem, Type: Func }
+  - { Name: ___environ, Type: Object, Weak: true }
+  - { Name: __assert_fail, Type: Func }
+  - { Name: __c_dot_utf8, Type: Object }
+  - { Name: __c_dot_utf8_locale, Type: Object }
+  - { Name: __c_locale, Type: Object }
+  - { Name: __clock_settime, Type: Func }
+  - { Name: __cos, Type: Func }
+  - { Name: __cosdf, Type: Func }
+  - { Name: __cosl, Type: Func }
+  - { Name: __ctype_get_mb_cur_max, Type: Func }
+  - { Name: __cxa_atexit, Type: Func }
+  - { Name: __cxa_finalize, Type: Func }
+  - { Name: __cxa_thread_atexit_impl, Type: Func }
+  - { Name: __dn_comp, Type: Func }
+  - { Name: __dn_expand, Type: Func }
+  - { Name: __dns_parse, Type: Func }
+  - { Name: __duplocale, Type: Func }
+  - { Name: __environ, Type: Object }
+  - { Name: __errno_location, Type: Func }
+  - { Name: __execvpe, Type: Func }
+  - { Name: __expo2, Type: Func }
+  - { Name: __expo2f, Type: Func }
+  - { Name: __fgetwc_unlocked, Type: Func }
+  - { Name: __flock, Type: Func }
+  - { Name: __flt_rounds, Type: Func }
+  - { Name: __fpclassify, Type: Func }
+  - { Name: __fpclassifyf, Type: Func }
+  - { Name: __fpclassifyl, Type: Func }
+  - { Name: __fputwc_unlocked, Type: Func }
+  - { Name: __freelocale, Type: Func, Weak: true }
+  - { Name: __futimesat, Type: Func }
+  - { Name: __get_resolv_conf, Type: Func }
+  - { Name: __get_unsafe_stack_ptr, Type: Func }
+  - { Name: __get_unsafe_stack_start, Type: Func }
+  - { Name: __get_unsafe_stack_top, Type: Func }
+  - { Name: __getdelim, Type: Func, Weak: true }
+  - { Name: __getgr_a, Type: Func }
+  - { Name: __getgrent_a, Type: Func }
+  - { Name: __getopt_msg, Type: Func }
+  - { Name: __getpw_a, Type: Func }
+  - { Name: __getpwent_a, Type: Func }
+  - { Name: __gmtime_r, Type: Func }
+  - { Name: __h_errno_location, Type: Func }
+  - { Name: __inet_aton, Type: Func }
+  - { Name: __inotify_add_watch, Type: Func }
+  - { Name: __inotify_init, Type: Func }
+  - { Name: __inotify_init1, Type: Func }
+  - { Name: __inotify_rm_watch, Type: Func }
+  - { Name: __invtrigl_R, Type: Func }
+  - { Name: __ldexp_cexp, Type: Func }
+  - { Name: __ldexp_cexpf, Type: Func }
+  - { Name: __lgamma_r, Type: Func }
+  - { Name: __lgammaf_r, Type: Func }
+  - { Name: __lgammal_r, Type: Func }
+  - { Name: __libc_current_sigrtmax, Type: Func }
+  - { Name: __libc_current_sigrtmin, Type: Func }
+  - { Name: __libc_start_main, Type: Func }
+  - { Name: __localtime_r, Type: Func }
+  - { Name: __lookup_ipliteral, Type: Func }
+  - { Name: __lookup_name, Type: Func }
+  - { Name: __lookup_serv, Type: Func }
+  - { Name: __madvise, Type: Func }
+  - { Name: __map_file, Type: Func }
+  - { Name: __memfd_create, Type: Func }
+  - { Name: __memrchr, Type: Func }
+  - { Name: __mkostemps, Type: Func }
+  - { Name: __mmap, Type: Func }
+  - { Name: __mprotect, Type: Func }
+  - { Name: __munmap, Type: Func }
+  - { Name: __newlocale, Type: Func }
+  - { Name: __nl_langinfo, Type: Func }
+  - { Name: __nl_langinfo_l, Type: Func }
+  - { Name: __optpos, Type: Object }
+  - { Name: __optreset, Type: Object }
+  - { Name: __overflow, Type: Func }
+  - { Name: __p1evll, Type: Func }
+  - { Name: __pleval, Type: Func }
+  - { Name: __polevll, Type: Func }
+  - { Name: __posix_getopt, Type: Func, Weak: true }
+  - { Name: __posix_spawnx, Type: Func }
+  - { Name: __pthread_mutex_trylock_owner, Type: Func }
+  - { Name: __ptsname_r, Type: Func }
+  - { Name: __randname, Type: Func }
+  - { Name: __rem_pio2, Type: Func }
+  - { Name: __rem_pio2_large, Type: Func }
+  - { Name: __rem_pio2f, Type: Func }
+  - { Name: __rem_pio2l, Type: Func }
+  - { Name: __res_mkquery, Type: Func }
+  - { Name: __res_msend, Type: Func }
+  - { Name: __res_msend_rc, Type: Func }
+  - { Name: __res_query, Type: Func }
+  - { Name: __res_send, Type: Func }
+  - { Name: __res_state, Type: Func }
+  - { Name: __rtnetlink_enumerate, Type: Func }
+  - { Name: __sanitizer_before_thread_create_hook, Type: Func, Weak: true }
+  - { Name: __sanitizer_change_code_protection, Type: Func }
+  - { Name: __sanitizer_fast_backtrace, Type: Func }
+  - { Name: __sanitizer_fill_shadow, Type: Func }
+  - { Name: __sanitizer_log_write, Type: Func }
+  - { Name: __sanitizer_memory_snapshot, Type: Func }
+  - { Name: __sanitizer_process_exit_hook, Type: Func, Weak: true }
+  - { Name: __sanitizer_publish_data, Type: Func }
+  - { Name: __sanitizer_shadow_bounds, Type: Func }
+  - { Name: __sanitizer_startup_hook, Type: Func, Weak: true }
+  - { Name: __sanitizer_thread_create_hook, Type: Func, Weak: true }
+  - { Name: __sanitizer_thread_exit_hook, Type: Func, Weak: true }
+  - { Name: __sanitizer_thread_start_hook, Type: Func, Weak: true }
+  - { Name: __sched_cpucount, Type: Func }
+  - { Name: __scudo_print_stats, Type: Func }
+  - { Name: __shgetc, Type: Func }
+  - { Name: __shlim, Type: Func }
+  - { Name: __shm_mapname, Type: Func }
+  - { Name: __signbit, Type: Func }
+  - { Name: __signbitf, Type: Func }
+  - { Name: __signbitl, Type: Func }
+  - { Name: __signgam, Type: Object }
+  - { Name: __sin, Type: Func }
+  - { Name: __sindf, Type: Func }
+  - { Name: __sinl, Type: Func }
+  - { Name: __stack_chk_fail, Type: Func }
+  - { Name: __stack_chk_guard, Type: Object }
+  - { Name: __stpcpy, Type: Func }
+  - { Name: __stpncpy, Type: Func }
+  - { Name: __strchrnul, Type: Func }
+  - { Name: __strdup, Type: Func }
+  - { Name: __strftime_fmt_1, Type: Func }
+  - { Name: __sysv_signal, Type: Func, Weak: true }
+  - { Name: __tan, Type: Func }
+  - { Name: __tandf, Type: Func }
+  - { Name: __tanl, Type: Func }
+  - { Name: __tls_get_addr, Type: Func }
+  - { Name: __tm_to_tzname, Type: Func }
+  - { Name: __tre_mem_alloc_impl, Type: Func }
+  - { Name: __tre_mem_destroy, Type: Func }
+  - { Name: __tre_mem_new_impl, Type: Func }
+  - { Name: __tzset, Type: Func }
+  - { Name: __uflow, Type: Func }
+  - { Name: __unsanitized_memcpy, Type: Func }
+  - { Name: __unsanitized_memmove, Type: Func }
+  - { Name: __unsanitized_memset, Type: Func }
+  - { Name: __uselocale, Type: Func }
+  - { Name: __vsyslog, Type: Func }
+  - { Name: __wait, Type: Func }
+  - { Name: __wcsftime_l, Type: Func }
+  - { Name: __xpg_basename, Type: Func, Weak: true }
+  - { Name: __xpg_strerror_r, Type: Func, Weak: true }
+  - { Name: __zx_panic, Type: Func }
+  - { Name: _dl_debug_addr, Type: Object }
+  - { Name: _environ, Type: Object, Weak: true }
+  - { Name: _exit, Type: Func }
+  - { Name: _fd_open_max, Type: Func, Weak: true }
+  - { Name: _getaddrinfo_from_dns, Type: Func, Weak: true }
+  - { Name: _longjmp, Type: Func }
+  - { Name: _mmap_get_vmo_from_fd, Type: Func, Weak: true }
+  - { Name: _ns_flagdata, Type: Object }
+  - { Name: _setjmp, Type: Func }
+  - { Name: _zx_job_default, Type: Func }
+  - { Name: _zx_process_self, Type: Func }
+  - { Name: _zx_thread_self, Type: Func }
+  - { Name: _zx_utc_reference_get, Type: Func }
+  - { Name: _zx_utc_reference_swap, Type: Func }
+  - { Name: _zx_vmar_root_self, Type: Func }
+  - { Name: a64l, Type: Func }
+  - { Name: abort, Type: Func }
+  - { Name: abs, Type: Func }
+  - { Name: accept, Type: Func }
+  - { Name: accept4, Type: Func, Weak: true }
+  - { Name: access, Type: Func, Weak: true }
+  - { Name: acct, Type: Func }
+  - { Name: acos, Type: Func }
+  - { Name: acosf, Type: Func }
+  - { Name: acosh, Type: Func }
+  - { Name: acoshf, Type: Func }
+  - { Name: acoshl, Type: Func }
+  - { Name: acosl, Type: Func }
+  - { Name: adjtime, Type: Func }
+  - { Name: alarm, Type: Func }
+  - { Name: aligned_alloc, Type: Func, Weak: true }
+  - { Name: alphasort, Type: Func }
+  - { Name: asctime, Type: Func }
+  - { Name: asctime_r, Type: Func }
+  - { Name: asin, Type: Func }
+  - { Name: asinf, Type: Func }
+  - { Name: asinh, Type: Func }
+  - { Name: asinhf, Type: Func }
+  - { Name: asinhl, Type: Func }
+  - { Name: asinl, Type: Func }
+  - { Name: asprintf, Type: Func }
+  - { Name: at_quick_exit, Type: Func }
+  - { Name: atan, Type: Func }
+  - { Name: atan2, Type: Func }
+  - { Name: atan2f, Type: Func }
+  - { Name: atan2l, Type: Func }
+  - { Name: atanf, Type: Func }
+  - { Name: atanh, Type: Func }
+  - { Name: atanhf, Type: Func }
+  - { Name: atanhl, Type: Func }
+  - { Name: atanl, Type: Func }
+  - { Name: atexit, Type: Func }
+  - { Name: atof, Type: Func }
+  - { Name: atoi, Type: Func }
+  - { Name: atol, Type: Func }
+  - { Name: atoll, Type: Func }
+  - { Name: basename, Type: Func }
+  - { Name: bcmp, Type: Func }
+  - { Name: bcopy, Type: Func }
+  - { Name: bind, Type: Func, Weak: true }
+  - { Name: bsd_signal, Type: Func, Weak: true }
+  - { Name: bsearch, Type: Func }
+  - { Name: btowc, Type: Func }
+  - { Name: bzero, Type: Func }
+  - { Name: c16rtomb, Type: Func }
+  - { Name: c32rtomb, Type: Func }
+  - { Name: cabs, Type: Func }
+  - { Name: cabsf, Type: Func }
+  - { Name: cabsl, Type: Func }
+  - { Name: cacos, Type: Func }
+  - { Name: cacosf, Type: Func }
+  - { Name: cacosh, Type: Func }
+  - { Name: cacoshf, Type: Func }
+  - { Name: cacoshl, Type: Func }
+  - { Name: cacosl, Type: Func }
+  - { Name: call_once, Type: Func }
+  - { Name: calloc, Type: Func, Weak: true }
+  - { Name: carg, Type: Func }
+  - { Name: cargf, Type: Func }
+  - { Name: cargl, Type: Func }
+  - { Name: casin, Type: Func }
+  - { Name: casinf, Type: Func }
+  - { Name: casinh, Type: Func }
+  - { Name: casinhf, Type: Func }
+  - { Name: casinhl, Type: Func }
+  - { Name: casinl, Type: Func }
+  - { Name: catan, Type: Func }
+  - { Name: catanf, Type: Func }
+  - { Name: catanh, Type: Func }
+  - { Name: catanhf, Type: Func }
+  - { Name: catanhl, Type: Func }
+  - { Name: catanl, Type: Func }
+  - { Name: catclose, Type: Func }
+  - { Name: catgets, Type: Func }
+  - { Name: catopen, Type: Func }
+  - { Name: cbrt, Type: Func }
+  - { Name: cbrtf, Type: Func }
+  - { Name: cbrtl, Type: Func }
+  - { Name: ccos, Type: Func }
+  - { Name: ccosf, Type: Func }
+  - { Name: ccosh, Type: Func }
+  - { Name: ccoshf, Type: Func }
+  - { Name: ccoshl, Type: Func }
+  - { Name: ccosl, Type: Func }
+  - { Name: ceil, Type: Func }
+  - { Name: ceilf, Type: Func }
+  - { Name: ceill, Type: Func }
+  - { Name: cexp, Type: Func }
+  - { Name: cexpf, Type: Func }
+  - { Name: cexpl, Type: Func }
+  - { Name: cfgetispeed, Type: Func }
+  - { Name: cfgetospeed, Type: Func }
+  - { Name: cfmakeraw, Type: Func }
+  - { Name: cfsetispeed, Type: Func }
+  - { Name: cfsetospeed, Type: Func }
+  - { Name: cfsetspeed, Type: Func, Weak: true }
+  - { Name: chdir, Type: Func, Weak: true }
+  - { Name: chmod, Type: Func, Weak: true }
+  - { Name: chown, Type: Func, Weak: true }
+  - { Name: chroot, Type: Func, Weak: true }
+  - { Name: cimag, Type: Func }
+  - { Name: cimagf, Type: Func }
+  - { Name: cimagl, Type: Func }
+  - { Name: clearenv, Type: Func }
+  - { Name: clearerr, Type: Func }
+  - { Name: clearerr_unlocked, Type: Func, Weak: true }
+  - { Name: clock, Type: Func }
+  - { Name: clock_getcpuclockid, Type: Func }
+  - { Name: clock_getres, Type: Func }
+  - { Name: clock_gettime, Type: Func, Weak: true }
+  - { Name: clock_nanosleep, Type: Func }
+  - { Name: clock_settime, Type: Func, Weak: true }
+  - { Name: clog, Type: Func }
+  - { Name: clogf, Type: Func }
+  - { Name: clogl, Type: Func }
+  - { Name: close, Type: Func, Weak: true }
+  - { Name: closedir, Type: Func, Weak: true }
+  - { Name: closelog, Type: Func }
+  - { Name: cnd_broadcast, Type: Func }
+  - { Name: cnd_destroy, Type: Func }
+  - { Name: cnd_init, Type: Func }
+  - { Name: cnd_signal, Type: Func }
+  - { Name: cnd_timedwait, Type: Func }
+  - { Name: cnd_wait, Type: Func }
+  - { Name: confstr, Type: Func }
+  - { Name: conj, Type: Func }
+  - { Name: conjf, Type: Func }
+  - { Name: conjl, Type: Func }
+  - { Name: connect, Type: Func, Weak: true }
+  - { Name: copysign, Type: Func }
+  - { Name: copysignf, Type: Func }
+  - { Name: copysignl, Type: Func }
+  - { Name: cos, Type: Func }
+  - { Name: cosf, Type: Func }
+  - { Name: cosh, Type: Func }
+  - { Name: coshf, Type: Func }
+  - { Name: coshl, Type: Func }
+  - { Name: cosl, Type: Func }
+  - { Name: cpow, Type: Func }
+  - { Name: cpowf, Type: Func }
+  - { Name: cpowl, Type: Func }
+  - { Name: cproj, Type: Func }
+  - { Name: cprojf, Type: Func }
+  - { Name: cprojl, Type: Func }
+  - { Name: creal, Type: Func }
+  - { Name: crealf, Type: Func }
+  - { Name: creall, Type: Func }
+  - { Name: creat, Type: Func }
+  - { Name: csin, Type: Func }
+  - { Name: csinf, Type: Func }
+  - { Name: csinh, Type: Func }
+  - { Name: csinhf, Type: Func }
+  - { Name: csinhl, Type: Func }
+  - { Name: csinl, Type: Func }
+  - { Name: csqrt, Type: Func }
+  - { Name: csqrtf, Type: Func }
+  - { Name: csqrtl, Type: Func }
+  - { Name: ctan, Type: Func }
+  - { Name: ctanf, Type: Func }
+  - { Name: ctanh, Type: Func }
+  - { Name: ctanhf, Type: Func }
+  - { Name: ctanhl, Type: Func }
+  - { Name: ctanl, Type: Func }
+  - { Name: ctermid, Type: Func }
+  - { Name: ctime, Type: Func }
+  - { Name: ctime_r, Type: Func }
+  - { Name: daylight, Type: Object, Weak: true }
+  - { Name: debug_break, Type: NoType }
+  - { Name: difftime, Type: Func }
+  - { Name: dirname, Type: Func }
+  - { Name: div, Type: Func }
+  - { Name: dl_clone_loader_service, Type: Func }
+  - { Name: dl_iterate_phdr, Type: Func }
+  - { Name: dl_set_loader_service, Type: Func }
+  - { Name: dladdr, Type: Func }
+  - { Name: dlclose, Type: Func }
+  - { Name: dlerror, Type: Func }
+  - { Name: dlinfo, Type: Func }
+  - { Name: dlopen, Type: Func }
+  - { Name: dlopen_vmo, Type: Func }
+  - { Name: dlsym, Type: Func }
+  - { Name: dn_comp, Type: Func, Weak: true }
+  - { Name: dn_expand, Type: Func, Weak: true }
+  - { Name: dn_skipname, Type: Func }
+  - { Name: dprintf, Type: Func }
+  - { Name: drand48, Type: Func }
+  - { Name: drem, Type: Func, Weak: true }
+  - { Name: dremf, Type: Func, Weak: true }
+  - { Name: dup, Type: Func, Weak: true }
+  - { Name: dup2, Type: Func, Weak: true }
+  - { Name: dup3, Type: Func, Weak: true }
+  - { Name: duplocale, Type: Func, Weak: true }
+  - { Name: eaccess, Type: Func, Weak: true }
+  - { Name: ecvt, Type: Func }
+  - { Name: endgrent, Type: Func, Weak: true }
+  - { Name: endhostent, Type: Func }
+  - { Name: endnetent, Type: Func, Weak: true }
+  - { Name: endprotoent, Type: Func }
+  - { Name: endpwent, Type: Func, Weak: true }
+  - { Name: endservent, Type: Func }
+  - { Name: environ, Type: Object, Weak: true }
+  - { Name: erand48, Type: Func }
+  - { Name: erf, Type: Func }
+  - { Name: erfc, Type: Func }
+  - { Name: erfcf, Type: Func }
+  - { Name: erfcl, Type: Func }
+  - { Name: erff, Type: Func }
+  - { Name: erfl, Type: Func }
+  - { Name: err, Type: Func }
+  - { Name: errx, Type: Func }
+  - { Name: ether_aton, Type: Func }
+  - { Name: ether_aton_r, Type: Func }
+  - { Name: ether_hostton, Type: Func }
+  - { Name: ether_line, Type: Func }
+  - { Name: ether_ntoa, Type: Func }
+  - { Name: ether_ntoa_r, Type: Func }
+  - { Name: ether_ntohost, Type: Func }
+  - { Name: euidaccess, Type: Func }
+  - { Name: eventfd, Type: Func, Weak: true }
+  - { Name: eventfd_read, Type: Func, Weak: true }
+  - { Name: eventfd_write, Type: Func, Weak: true }
+  - { Name: execl, Type: Func }
+  - { Name: execle, Type: Func }
+  - { Name: execlp, Type: Func }
+  - { Name: execv, Type: Func }
+  - { Name: execve, Type: Func }
+  - { Name: execvp, Type: Func }
+  - { Name: execvpe, Type: Func, Weak: true }
+  - { Name: exit, Type: Func }
+  - { Name: exp, Type: Func }
+  - { Name: exp10, Type: Func }
+  - { Name: exp10f, Type: Func }
+  - { Name: exp10l, Type: Func }
+  - { Name: exp2, Type: Func }
+  - { Name: exp2f, Type: Func }
+  - { Name: exp2l, Type: Func }
+  - { Name: expf, Type: Func }
+  - { Name: expl, Type: Func }
+  - { Name: expm1, Type: Func }
+  - { Name: expm1f, Type: Func }
+  - { Name: expm1l, Type: Func }
+  - { Name: fabs, Type: Func }
+  - { Name: fabsf, Type: Func }
+  - { Name: fabsl, Type: Func }
+  - { Name: faccessat, Type: Func, Weak: true }
+  - { Name: fchmod, Type: Func, Weak: true }
+  - { Name: fchmodat, Type: Func, Weak: true }
+  - { Name: fchown, Type: Func, Weak: true }
+  - { Name: fchownat, Type: Func, Weak: true }
+  - { Name: fclose, Type: Func }
+  - { Name: fcntl, Type: Func, Weak: true }
+  - { Name: fcvt, Type: Func }
+  - { Name: fdatasync, Type: Func, Weak: true }
+  - { Name: fdim, Type: Func }
+  - { Name: fdimf, Type: Func }
+  - { Name: fdiml, Type: Func }
+  - { Name: fdopen, Type: Func, Weak: true }
+  - { Name: fdopendir, Type: Func, Weak: true }
+  - { Name: feclearexcept, Type: Func }
+  - { Name: fegetenv, Type: Func }
+  - { Name: fegetexceptflag, Type: Func }
+  - { Name: fegetround, Type: Func }
+  - { Name: feholdexcept, Type: Func }
+  - { Name: feof, Type: Func }
+  - { Name: feof_unlocked, Type: Func, Weak: true }
+  - { Name: feraiseexcept, Type: Func }
+  - { Name: ferror, Type: Func }
+  - { Name: ferror_unlocked, Type: Func, Weak: true }
+  - { Name: fesetenv, Type: Func }
+  - { Name: fesetexceptflag, Type: Func }
+  - { Name: fesetround, Type: Func }
+  - { Name: fetestexcept, Type: Func }
+  - { Name: feupdateenv, Type: Func }
+  - { Name: fexecve, Type: Func }
+  - { Name: fflush, Type: Func }
+  - { Name: fflush_unlocked, Type: Func, Weak: true }
+  - { Name: ffs, Type: Func }
+  - { Name: ffsl, Type: Func }
+  - { Name: ffsll, Type: Func }
+  - { Name: fgetc, Type: Func }
+  - { Name: fgetc_unlocked, Type: Func, Weak: true }
+  - { Name: fgetgrent, Type: Func }
+  - { Name: fgetln, Type: Func }
+  - { Name: fgetpos, Type: Func }
+  - { Name: fgetpwent, Type: Func }
+  - { Name: fgets, Type: Func }
+  - { Name: fgets_unlocked, Type: Func, Weak: true }
+  - { Name: fgetwc, Type: Func }
+  - { Name: fgetwc_unlocked, Type: Func, Weak: true }
+  - { Name: fgetws, Type: Func }
+  - { Name: fgetws_unlocked, Type: Func, Weak: true }
+  - { Name: fileno, Type: Func }
+  - { Name: fileno_unlocked, Type: Func, Weak: true }
+  - { Name: finite, Type: Func }
+  - { Name: finitef, Type: Func }
+  - { Name: flock, Type: Func, Weak: true }
+  - { Name: flockfile, Type: Func }
+  - { Name: floor, Type: Func }
+  - { Name: floorf, Type: Func }
+  - { Name: floorl, Type: Func }
+  - { Name: fma, Type: Func }
+  - { Name: fmaf, Type: Func }
+  - { Name: fmal, Type: Func }
+  - { Name: fmax, Type: Func }
+  - { Name: fmaxf, Type: Func }
+  - { Name: fmaxl, Type: Func }
+  - { Name: fmemopen, Type: Func }
+  - { Name: fmin, Type: Func }
+  - { Name: fminf, Type: Func }
+  - { Name: fminl, Type: Func }
+  - { Name: fmod, Type: Func }
+  - { Name: fmodf, Type: Func }
+  - { Name: fmodl, Type: Func }
+  - { Name: fnmatch, Type: Func }
+  - { Name: fopen, Type: Func }
+  - { Name: fork, Type: Func }
+  - { Name: fpathconf, Type: Func }
+  - { Name: fprintf, Type: Func }
+  - { Name: fputc, Type: Func }
+  - { Name: fputc_unlocked, Type: Func, Weak: true }
+  - { Name: fputs, Type: Func }
+  - { Name: fputs_unlocked, Type: Func, Weak: true }
+  - { Name: fputwc, Type: Func }
+  - { Name: fputwc_unlocked, Type: Func, Weak: true }
+  - { Name: fputws, Type: Func }
+  - { Name: fputws_unlocked, Type: Func, Weak: true }
+  - { Name: fread, Type: Func }
+  - { Name: fread_unlocked, Type: Func, Weak: true }
+  - { Name: free, Type: Func, Weak: true }
+  - { Name: freeaddrinfo, Type: Func }
+  - { Name: freeifaddrs, Type: Func, Weak: true }
+  - { Name: freelocale, Type: Func }
+  - { Name: freopen, Type: Func }
+  - { Name: frexp, Type: Func }
+  - { Name: frexpf, Type: Func }
+  - { Name: frexpl, Type: Func }
+  - { Name: fscanf, Type: Func }
+  - { Name: fseek, Type: Func }
+  - { Name: fseeko, Type: Func, Weak: true }
+  - { Name: fsetpos, Type: Func }
+  - { Name: fstat, Type: Func, Weak: true }
+  - { Name: fstatat, Type: Func, Weak: true }
+  - { Name: fstatfs, Type: Func, Weak: true }
+  - { Name: fstatvfs, Type: Func, Weak: true }
+  - { Name: fsync, Type: Func, Weak: true }
+  - { Name: ftell, Type: Func }
+  - { Name: ftello, Type: Func, Weak: true }
+  - { Name: ftime, Type: Func }
+  - { Name: ftok, Type: Func }
+  - { Name: ftruncate, Type: Func, Weak: true }
+  - { Name: ftrylockfile, Type: Func }
+  - { Name: funlockfile, Type: Func }
+  - { Name: futimens, Type: Func, Weak: true }
+  - { Name: futimes, Type: Func }
+  - { Name: futimesat, Type: Func, Weak: true }
+  - { Name: fwide, Type: Func }
+  - { Name: fwprintf, Type: Func }
+  - { Name: fwrite, Type: Func }
+  - { Name: fwrite_unlocked, Type: Func, Weak: true }
+  - { Name: fwscanf, Type: Func }
+  - { Name: gai_strerror, Type: Func }
+  - { Name: gcvt, Type: Func }
+  - { Name: get_current_dir_name, Type: Func }
+  - { Name: getaddrinfo, Type: Func }
+  - { Name: getauxval, Type: Func }
+  - { Name: getc, Type: Func }
+  - { Name: getc_unlocked, Type: Func }
+  - { Name: getchar, Type: Func }
+  - { Name: getchar_unlocked, Type: Func }
+  - { Name: getcwd, Type: Func, Weak: true }
+  - { Name: getdate, Type: Func }
+  - { Name: getdate_err, Type: Object }
+  - { Name: getdelim, Type: Func }
+  - { Name: getdomainname, Type: Func }
+  - { Name: getdtablesize, Type: Func }
+  - { Name: getegid, Type: Func, Weak: true }
+  - { Name: getentropy, Type: Func }
+  - { Name: getenv, Type: Func }
+  - { Name: geteuid, Type: Func, Weak: true }
+  - { Name: getgid, Type: Func, Weak: true }
+  - { Name: getgrent, Type: Func }
+  - { Name: getgrgid, Type: Func }
+  - { Name: getgrgid_r, Type: Func }
+  - { Name: getgrnam, Type: Func }
+  - { Name: getgrnam_r, Type: Func }
+  - { Name: getgrouplist, Type: Func }
+  - { Name: getgroups, Type: Func, Weak: true }
+  - { Name: gethostbyaddr, Type: Func }
+  - { Name: gethostbyaddr_r, Type: Func }
+  - { Name: gethostbyname, Type: Func }
+  - { Name: gethostbyname2, Type: Func }
+  - { Name: gethostbyname2_r, Type: Func }
+  - { Name: gethostbyname_r, Type: Func }
+  - { Name: gethostent, Type: Func }
+  - { Name: gethostid, Type: Func }
+  - { Name: gethostname, Type: Func }
+  - { Name: getifaddrs, Type: Func, Weak: true }
+  - { Name: getitimer, Type: Func }
+  - { Name: getline, Type: Func }
+  - { Name: getlogin, Type: Func }
+  - { Name: getlogin_r, Type: Func }
+  - { Name: getnameinfo, Type: Func }
+  - { Name: getnetbyaddr, Type: Func }
+  - { Name: getnetbyname, Type: Func }
+  - { Name: getnetent, Type: Func, Weak: true }
+  - { Name: getopt, Type: Func }
+  - { Name: getopt_long, Type: Func }
+  - { Name: getopt_long_only, Type: Func }
+  - { Name: getpagesize, Type: Func }
+  - { Name: getpass, Type: Func }
+  - { Name: getpeername, Type: Func, Weak: true }
+  - { Name: getpgid, Type: Func, Weak: true }
+  - { Name: getpgrp, Type: Func, Weak: true }
+  - { Name: getpid, Type: Func, Weak: true }
+  - { Name: getppid, Type: Func, Weak: true }
+  - { Name: getprotobyname, Type: Func }
+  - { Name: getprotobynumber, Type: Func }
+  - { Name: getprotoent, Type: Func }
+  - { Name: getpwent, Type: Func }
+  - { Name: getpwnam, Type: Func }
+  - { Name: getpwnam_r, Type: Func }
+  - { Name: getpwuid, Type: Func }
+  - { Name: getpwuid_r, Type: Func }
+  - { Name: getresgid, Type: Func, Weak: true }
+  - { Name: getresuid, Type: Func, Weak: true }
+  - { Name: gets, Type: Func }
+  - { Name: getservbyname, Type: Func }
+  - { Name: getservbyname_r, Type: Func }
+  - { Name: getservbyport, Type: Func }
+  - { Name: getservbyport_r, Type: Func }
+  - { Name: getservent, Type: Func }
+  - { Name: getsid, Type: Func, Weak: true }
+  - { Name: getsockname, Type: Func, Weak: true }
+  - { Name: getsockopt, Type: Func, Weak: true }
+  - { Name: getsubopt, Type: Func }
+  - { Name: gettimeofday, Type: Func }
+  - { Name: getuid, Type: Func, Weak: true }
+  - { Name: getw, Type: Func }
+  - { Name: getwc, Type: Func }
+  - { Name: getwc_unlocked, Type: Func, Weak: true }
+  - { Name: getwchar, Type: Func }
+  - { Name: getwchar_unlocked, Type: Func, Weak: true }
+  - { Name: glob, Type: Func }
+  - { Name: globfree, Type: Func }
+  - { Name: gmtime, Type: Func }
+  - { Name: gmtime_r, Type: Func, Weak: true }
+  - { Name: grantpt, Type: Func }
+  - { Name: herror, Type: Func }
+  - { Name: hstrerror, Type: Func }
+  - { Name: htonl, Type: Func }
+  - { Name: htons, Type: Func }
+  - { Name: hypot, Type: Func }
+  - { Name: hypotf, Type: Func }
+  - { Name: hypotl, Type: Func }
+  - { Name: iconv, Type: Func }
+  - { Name: iconv_close, Type: Func }
+  - { Name: iconv_open, Type: Func }
+  - { Name: if_freenameindex, Type: Func }
+  - { Name: if_indextoname, Type: Func }
+  - { Name: if_nameindex, Type: Func }
+  - { Name: if_nametoindex, Type: Func }
+  - { Name: ilogb, Type: Func }
+  - { Name: ilogbf, Type: Func }
+  - { Name: ilogbl, Type: Func }
+  - { Name: imaxabs, Type: Func }
+  - { Name: imaxdiv, Type: Func }
+  - { Name: in6addr_any, Type: Object }
+  - { Name: in6addr_loopback, Type: Object }
+  - { Name: index, Type: Func }
+  - { Name: inet_addr, Type: Func }
+  - { Name: inet_aton, Type: Func, Weak: true }
+  - { Name: inet_lnaof, Type: Func }
+  - { Name: inet_makeaddr, Type: Func }
+  - { Name: inet_netof, Type: Func }
+  - { Name: inet_network, Type: Func }
+  - { Name: inet_ntoa, Type: Func }
+  - { Name: inet_ntop, Type: Func }
+  - { Name: inet_pton, Type: Func }
+  - { Name: initgroups, Type: Func }
+  - { Name: initstate, Type: Func }
+  - { Name: inotify_add_watch, Type: Func, Weak: true }
+  - { Name: inotify_init, Type: Func, Weak: true }
+  - { Name: inotify_init1, Type: Func, Weak: true }
+  - { Name: inotify_rm_watch, Type: Func, Weak: true }
+  - { Name: ioctl, Type: Func, Weak: true }
+  - { Name: isalnum, Type: Func }
+  - { Name: isalpha, Type: Func }
+  - { Name: isascii, Type: Func }
+  - { Name: isastream, Type: Func }
+  - { Name: isatty, Type: Func, Weak: true }
+  - { Name: isblank, Type: Func }
+  - { Name: iscntrl, Type: Func }
+  - { Name: isdigit, Type: Func }
+  - { Name: isgraph, Type: Func }
+  - { Name: islower, Type: Func }
+  - { Name: isprint, Type: Func }
+  - { Name: ispunct, Type: Func }
+  - { Name: issetugid, Type: Func }
+  - { Name: isspace, Type: Func }
+  - { Name: isupper, Type: Func }
+  - { Name: iswalnum, Type: Func }
+  - { Name: iswalpha, Type: Func }
+  - { Name: iswblank, Type: Func }
+  - { Name: iswcntrl, Type: Func }
+  - { Name: iswctype, Type: Func }
+  - { Name: iswdigit, Type: Func }
+  - { Name: iswgraph, Type: Func }
+  - { Name: iswlower, Type: Func }
+  - { Name: iswprint, Type: Func }
+  - { Name: iswpunct, Type: Func }
+  - { Name: iswspace, Type: Func }
+  - { Name: iswupper, Type: Func }
+  - { Name: iswxdigit, Type: Func }
+  - { Name: isxdigit, Type: Func }
+  - { Name: j0, Type: Func }
+  - { Name: j0f, Type: Func }
+  - { Name: j1, Type: Func }
+  - { Name: j1f, Type: Func }
+  - { Name: jn, Type: Func }
+  - { Name: jnf, Type: Func }
+  - { Name: jrand48, Type: Func }
+  - { Name: kill, Type: Func }
+  - { Name: killpg, Type: Func }
+  - { Name: labs, Type: Func }
+  - { Name: lchmod, Type: Func }
+  - { Name: lchown, Type: Func, Weak: true }
+  - { Name: lcong48, Type: Func }
+  - { Name: ldexp, Type: Func }
+  - { Name: ldexpf, Type: Func }
+  - { Name: ldexpl, Type: Func }
+  - { Name: ldiv, Type: Func }
+  - { Name: lgamma, Type: Func }
+  - { Name: lgamma_r, Type: Func, Weak: true }
+  - { Name: lgammaf, Type: Func }
+  - { Name: lgammaf_r, Type: Func, Weak: true }
+  - { Name: lgammal, Type: Func }
+  - { Name: lgammal_r, Type: Func, Weak: true }
+  - { Name: link, Type: Func, Weak: true }
+  - { Name: linkat, Type: Func, Weak: true }
+  - { Name: listen, Type: Func, Weak: true }
+  - { Name: llabs, Type: Func }
+  - { Name: lldiv, Type: Func }
+  - { Name: llrint, Type: Func }
+  - { Name: llrintf, Type: Func }
+  - { Name: llrintl, Type: Func }
+  - { Name: llround, Type: Func }
+  - { Name: llroundf, Type: Func }
+  - { Name: llroundl, Type: Func }
+  - { Name: localeconv, Type: Func }
+  - { Name: localtime, Type: Func }
+  - { Name: localtime_r, Type: Func, Weak: true }
+  - { Name: lockf, Type: Func }
+  - { Name: log, Type: Func }
+  - { Name: log10, Type: Func }
+  - { Name: log10f, Type: Func }
+  - { Name: log10l, Type: Func }
+  - { Name: log1p, Type: Func }
+  - { Name: log1pf, Type: Func }
+  - { Name: log1pl, Type: Func }
+  - { Name: log2, Type: Func }
+  - { Name: log2f, Type: Func }
+  - { Name: log2l, Type: Func }
+  - { Name: logb, Type: Func }
+  - { Name: logbf, Type: Func }
+  - { Name: logbl, Type: Func }
+  - { Name: logf, Type: Func }
+  - { Name: logl, Type: Func }
+  - { Name: longjmp, Type: Func }
+  - { Name: lrand48, Type: Func }
+  - { Name: lrint, Type: Func }
+  - { Name: lrintf, Type: Func }
+  - { Name: lrintl, Type: Func }
+  - { Name: lround, Type: Func }
+  - { Name: lroundf, Type: Func }
+  - { Name: lroundl, Type: Func }
+  - { Name: lseek, Type: Func, Weak: true }
+  - { Name: lstat, Type: Func, Weak: true }
+  - { Name: lutimes, Type: Func }
+  - { Name: madvise, Type: Func, Weak: true }
+  - { Name: mallinfo, Type: Func, Weak: true }
+  - { Name: mallinfo2, Type: Func, Weak: true }
+  - { Name: malloc, Type: Func, Weak: true }
+  - { Name: malloc_disable, Type: Func, Weak: true }
+  - { Name: malloc_disable_memory_tagging, Type: Func, Weak: true }
+  - { Name: malloc_enable, Type: Func, Weak: true }
+  - { Name: malloc_info, Type: Func, Weak: true }
+  - { Name: malloc_iterate, Type: Func, Weak: true }
+  - { Name: malloc_set_add_large_allocation_slack, Type: Func, Weak: true }
+  - { Name: malloc_set_pattern_fill_contents, Type: Func, Weak: true }
+  - { Name: malloc_set_track_allocation_stacks, Type: Func, Weak: true }
+  - { Name: malloc_set_zero_contents, Type: Func, Weak: true }
+  - { Name: malloc_usable_size, Type: Func, Weak: true }
+  - { Name: mallopt, Type: Func, Weak: true }
+  - { Name: mblen, Type: Func }
+  - { Name: mbrlen, Type: Func }
+  - { Name: mbrtoc16, Type: Func }
+  - { Name: mbrtoc32, Type: Func }
+  - { Name: mbrtowc, Type: Func }
+  - { Name: mbsinit, Type: Func }
+  - { Name: mbsnrtowcs, Type: Func }
+  - { Name: mbsrtowcs, Type: Func }
+  - { Name: mbstowcs, Type: Func }
+  - { Name: mbtowc, Type: Func }
+  - { Name: memalign, Type: Func, Weak: true }
+  - { Name: memccpy, Type: Func }
+  - { Name: memchr, Type: Func }
+  - { Name: memcmp, Type: Func }
+  - { Name: memcpy, Type: Func }
+  - { Name: memfd_create, Type: Func, Weak: true }
+  - { Name: memmem, Type: Func }
+  - { Name: memmove, Type: Func }
+  - { Name: mempcpy, Type: Func }
+  - { Name: memrchr, Type: Func, Weak: true }
+  - { Name: memset, Type: Func }
+  - { Name: mkdir, Type: Func, Weak: true }
+  - { Name: mkdirat, Type: Func, Weak: true }
+  - { Name: mkdtemp, Type: Func }
+  - { Name: mkfifo, Type: Func, Weak: true }
+  - { Name: mkfifoat, Type: Func }
+  - { Name: mknod, Type: Func, Weak: true }
+  - { Name: mknodat, Type: Func }
+  - { Name: mkostemp, Type: Func }
+  - { Name: mkostemps, Type: Func, Weak: true }
+  - { Name: mkostemps64, Type: Func, Weak: true }
+  - { Name: mkstemp, Type: Func }
+  - { Name: mkstemps, Type: Func }
+  - { Name: mktemp, Type: Func }
+  - { Name: mktime, Type: Func }
+  - { Name: mlock, Type: Func }
+  - { Name: mlockall, Type: Func }
+  - { Name: mmap, Type: Func, Weak: true }
+  - { Name: modf, Type: Func }
+  - { Name: modff, Type: Func }
+  - { Name: modfl, Type: Func }
+  - { Name: mprotect, Type: Func, Weak: true }
+  - { Name: mrand48, Type: Func }
+  - { Name: msgctl, Type: Func }
+  - { Name: msgget, Type: Func }
+  - { Name: msgrcv, Type: Func }
+  - { Name: msgsnd, Type: Func }
+  - { Name: msync, Type: Func }
+  - { Name: mtx_destroy, Type: Func }
+  - { Name: mtx_init, Type: Func }
+  - { Name: mtx_lock, Type: Func }
+  - { Name: mtx_timedlock, Type: Func }
+  - { Name: mtx_trylock, Type: Func }
+  - { Name: mtx_unlock, Type: Func }
+  - { Name: munlock, Type: Func }
+  - { Name: munlockall, Type: Func }
+  - { Name: munmap, Type: Func, Weak: true }
+  - { Name: nan, Type: Func }
+  - { Name: nanf, Type: Func }
+  - { Name: nanl, Type: Func }
+  - { Name: nanosleep, Type: Func }
+  - { Name: nearbyint, Type: Func }
+  - { Name: nearbyintf, Type: Func }
+  - { Name: nearbyintl, Type: Func }
+  - { Name: newlocale, Type: Func, Weak: true }
+  - { Name: nextafter, Type: Func }
+  - { Name: nextafterf, Type: Func }
+  - { Name: nextafterl, Type: Func }
+  - { Name: nexttoward, Type: Func }
+  - { Name: nexttowardf, Type: Func }
+  - { Name: nexttowardl, Type: Func }
+  - { Name: nl_langinfo, Type: Func, Weak: true }
+  - { Name: nl_langinfo_l, Type: Func, Weak: true }
+  - { Name: nrand48, Type: Func }
+  - { Name: ns_get16, Type: Func }
+  - { Name: ns_get32, Type: Func }
+  - { Name: ns_initparse, Type: Func }
+  - { Name: ns_name_uncompress, Type: Func }
+  - { Name: ns_parserr, Type: Func }
+  - { Name: ns_put16, Type: Func }
+  - { Name: ns_put32, Type: Func }
+  - { Name: ns_skiprr, Type: Func }
+  - { Name: ntohl, Type: Func }
+  - { Name: ntohs, Type: Func }
+  - { Name: open, Type: Func, Weak: true }
+  - { Name: open_memstream, Type: Func }
+  - { Name: open_wmemstream, Type: Func }
+  - { Name: openat, Type: Func, Weak: true }
+  - { Name: opendir, Type: Func, Weak: true }
+  - { Name: openlog, Type: Func }
+  - { Name: openpty, Type: Func }
+  - { Name: optarg, Type: Object }
+  - { Name: opterr, Type: Object }
+  - { Name: optind, Type: Object }
+  - { Name: optopt, Type: Object }
+  - { Name: optreset, Type: Object, Weak: true }
+  - { Name: pathconf, Type: Func }
+  - { Name: pause, Type: Func }
+  - { Name: pclose, Type: Func }
+  - { Name: perror, Type: Func }
+  - { Name: pipe, Type: Func, Weak: true }
+  - { Name: pipe2, Type: Func, Weak: true }
+  - { Name: poll, Type: Func, Weak: true }
+  - { Name: popen, Type: Func }
+  - { Name: posix_close, Type: Func }
+  - { Name: posix_fadvise, Type: Func, Weak: true }
+  - { Name: posix_fallocate, Type: Func, Weak: true }
+  - { Name: posix_madvise, Type: Func }
+  - { Name: posix_memalign, Type: Func, Weak: true }
+  - { Name: posix_openpt, Type: Func }
+  - { Name: posix_spawn, Type: Func }
+  - { Name: posix_spawn_file_actions_addclose, Type: Func }
+  - { Name: posix_spawn_file_actions_adddup2, Type: Func }
+  - { Name: posix_spawn_file_actions_addopen, Type: Func }
+  - { Name: posix_spawn_file_actions_destroy, Type: Func }
+  - { Name: posix_spawn_file_actions_init, Type: Func }
+  - { Name: posix_spawnattr_destroy, Type: Func }
+  - { Name: posix_spawnattr_getflags, Type: Func }
+  - { Name: posix_spawnattr_getpgroup, Type: Func }
+  - { Name: posix_spawnattr_getschedparam, Type: Func }
+  - { Name: posix_spawnattr_getschedpolicy, Type: Func }
+  - { Name: posix_spawnattr_getsigdefault, Type: Func }
+  - { Name: posix_spawnattr_getsigmask, Type: Func }
+  - { Name: posix_spawnattr_init, Type: Func }
+  - { Name: posix_spawnattr_setflags, Type: Func }
+  - { Name: posix_spawnattr_setpgroup, Type: Func }
+  - { Name: posix_spawnattr_setschedparam, Type: Func }
+  - { Name: posix_spawnattr_setschedpolicy, Type: Func }
+  - { Name: posix_spawnattr_setsigdefault, Type: Func }
+  - { Name: posix_spawnattr_setsigmask, Type: Func }
+  - { Name: posix_spawnp, Type: Func }
+  - { Name: pow, Type: Func }
+  - { Name: pow10, Type: Func, Weak: true }
+  - { Name: pow10f, Type: Func, Weak: true }
+  - { Name: pow10l, Type: Func, Weak: true }
+  - { Name: powf, Type: Func }
+  - { Name: powl, Type: Func }
+  - { Name: ppoll, Type: Func, Weak: true }
+  - { Name: pread, Type: Func, Weak: true }
+  - { Name: preadv, Type: Func, Weak: true }
+  - { Name: printf, Type: Func }
+  - { Name: program_invocation_name, Type: Object, Weak: true }
+  - { Name: program_invocation_short_name, Type: Object, Weak: true }
+  - { Name: pselect, Type: Func, Weak: true }
+  - { Name: psiginfo, Type: Func }
+  - { Name: psignal, Type: Func }
+  - { Name: pthread_atfork, Type: Func }
+  - { Name: pthread_attr_destroy, Type: Func }
+  - { Name: pthread_attr_getdetachstate, Type: Func }
+  - { Name: pthread_attr_getguardsize, Type: Func }
+  - { Name: pthread_attr_getschedparam, Type: Func }
+  - { Name: pthread_attr_getstack, Type: Func }
+  - { Name: pthread_attr_getstacksize, Type: Func }
+  - { Name: pthread_attr_init, Type: Func }
+  - { Name: pthread_attr_setdetachstate, Type: Func }
+  - { Name: pthread_attr_setguardsize, Type: Func }
+  - { Name: pthread_attr_setschedparam, Type: Func }
+  - { Name: pthread_attr_setstacksize, Type: Func }
+  - { Name: pthread_barrier_destroy, Type: Func }
+  - { Name: pthread_barrier_init, Type: Func }
+  - { Name: pthread_barrier_wait, Type: Func }
+  - { Name: pthread_barrierattr_destroy, Type: Func }
+  - { Name: pthread_barrierattr_init, Type: Func }
+  - { Name: pthread_cancel, Type: Func }
+  - { Name: pthread_cond_broadcast, Type: Func }
+  - { Name: pthread_cond_destroy, Type: Func }
+  - { Name: pthread_cond_init, Type: Func }
+  - { Name: pthread_cond_signal, Type: Func }
+  - { Name: pthread_cond_timedwait, Type: Func }
+  - { Name: pthread_cond_wait, Type: Func }
+  - { Name: pthread_condattr_destroy, Type: Func }
+  - { Name: pthread_condattr_getclock, Type: Func }
+  - { Name: pthread_condattr_init, Type: Func }
+  - { Name: pthread_condattr_setclock, Type: Func }
+  - { Name: pthread_create, Type: Func, Weak: true }
+  - { Name: pthread_detach, Type: Func, Weak: true }
+  - { Name: pthread_equal, Type: Func, Weak: true }
+  - { Name: pthread_exit, Type: Func, Weak: true }
+  - { Name: pthread_getaffinity_np, Type: Func }
+  - { Name: pthread_getattr_np, Type: Func }
+  - { Name: pthread_getconcurrency, Type: Func }
+  - { Name: pthread_getcpuclockid, Type: Func }
+  - { Name: pthread_getspecific, Type: Func, Weak: true }
+  - { Name: pthread_join, Type: Func, Weak: true }
+  - { Name: pthread_key_create, Type: Func }
+  - { Name: pthread_key_delete, Type: Func }
+  - { Name: pthread_kill, Type: Func }
+  - { Name: pthread_mutex_consistent, Type: Func }
+  - { Name: pthread_mutex_destroy, Type: Func }
+  - { Name: pthread_mutex_getprioceiling, Type: Func }
+  - { Name: pthread_mutex_init, Type: Func }
+  - { Name: pthread_mutex_lock, Type: Func }
+  - { Name: pthread_mutex_setprioceiling, Type: Func }
+  - { Name: pthread_mutex_timedlock, Type: Func }
+  - { Name: pthread_mutex_trylock, Type: Func }
+  - { Name: pthread_mutex_unlock, Type: Func }
+  - { Name: pthread_mutexattr_destroy, Type: Func }
+  - { Name: pthread_mutexattr_getprotocol, Type: Func }
+  - { Name: pthread_mutexattr_getrobust, Type: Func }
+  - { Name: pthread_mutexattr_gettype, Type: Func }
+  - { Name: pthread_mutexattr_init, Type: Func }
+  - { Name: pthread_mutexattr_setprotocol, Type: Func }
+  - { Name: pthread_mutexattr_setrobust, Type: Func }
+  - { Name: pthread_mutexattr_settype, Type: Func }
+  - { Name: pthread_once, Type: Func }
+  - { Name: pthread_rwlock_destroy, Type: Func }
+  - { Name: pthread_rwlock_init, Type: Func }
+  - { Name: pthread_rwlock_rdlock, Type: Func }
+  - { Name: pthread_rwlock_timedrdlock, Type: Func }
+  - { Name: pthread_rwlock_timedwrlock, Type: Func }
+  - { Name: pthread_rwlock_tryrdlock, Type: Func }
+  - { Name: pthread_rwlock_trywrlock, Type: Func }
+  - { Name: pthread_rwlock_unlock, Type: Func }
+  - { Name: pthread_rwlock_wrlock, Type: Func }
+  - { Name: pthread_rwlockattr_destroy, Type: Func }
+  - { Name: pthread_rwlockattr_init, Type: Func }
+  - { Name: pthread_self, Type: Func, Weak: true }
+  - { Name: pthread_setaffinity_np, Type: Func }
+  - { Name: pthread_setcancelstate, Type: Func }
+  - { Name: pthread_setcanceltype, Type: Func }
+  - { Name: pthread_setconcurrency, Type: Func }
+  - { Name: pthread_setspecific, Type: Func }
+  - { Name: pthread_sigmask, Type: Func }
+  - { Name: pthread_spin_destroy, Type: Func }
+  - { Name: pthread_spin_init, Type: Func }
+  - { Name: pthread_spin_lock, Type: Func }
+  - { Name: pthread_spin_trylock, Type: Func }
+  - { Name: pthread_spin_unlock, Type: Func }
+  - { Name: pthread_testcancel, Type: Func }
+  - { Name: ptsname, Type: Func }
+  - { Name: ptsname_r, Type: Func, Weak: true }
+  - { Name: putc, Type: Func }
+  - { Name: putc_unlocked, Type: Func }
+  - { Name: putchar, Type: Func }
+  - { Name: putchar_unlocked, Type: Func }
+  - { Name: putenv, Type: Func }
+  - { Name: putgrent, Type: Func }
+  - { Name: putpwent, Type: Func }
+  - { Name: puts, Type: Func }
+  - { Name: putw, Type: Func }
+  - { Name: putwc, Type: Func }
+  - { Name: putwc_unlocked, Type: Func, Weak: true }
+  - { Name: putwchar, Type: Func }
+  - { Name: putwchar_unlocked, Type: Func, Weak: true }
+  - { Name: pvalloc, Type: Func, Weak: true }
+  - { Name: pwrite, Type: Func, Weak: true }
+  - { Name: pwritev, Type: Func, Weak: true }
+  - { Name: qsort, Type: Func }
+  - { Name: quick_exit, Type: Func }
+  - { Name: raise, Type: Func }
+  - { Name: rand, Type: Func }
+  - { Name: rand_r, Type: Func }
+  - { Name: random, Type: Func }
+  - { Name: read, Type: Func, Weak: true }
+  - { Name: readdir, Type: Func, Weak: true }
+  - { Name: readdir_r, Type: Func, Weak: true }
+  - { Name: readlink, Type: Func, Weak: true }
+  - { Name: readlinkat, Type: Func, Weak: true }
+  - { Name: readv, Type: Func, Weak: true }
+  - { Name: realloc, Type: Func, Weak: true }
+  - { Name: realpath, Type: Func, Weak: true }
+  - { Name: recv, Type: Func }
+  - { Name: recvfrom, Type: Func, Weak: true }
+  - { Name: recvmmsg, Type: Func, Weak: true }
+  - { Name: recvmsg, Type: Func, Weak: true }
+  - { Name: regcomp, Type: Func }
+  - { Name: regerror, Type: Func }
+  - { Name: regexec, Type: Func }
+  - { Name: regfree, Type: Func }
+  - { Name: remainder, Type: Func }
+  - { Name: remainderf, Type: Func }
+  - { Name: remainderl, Type: Func }
+  - { Name: remove, Type: Func }
+  - { Name: remquo, Type: Func }
+  - { Name: remquof, Type: Func }
+  - { Name: remquol, Type: Func }
+  - { Name: rename, Type: Func, Weak: true }
+  - { Name: renameat, Type: Func, Weak: true }
+  - { Name: res_init, Type: Func }
+  - { Name: res_mkquery, Type: Func, Weak: true }
+  - { Name: res_query, Type: Func, Weak: true }
+  - { Name: res_querydomain, Type: Func }
+  - { Name: res_search, Type: Func, Weak: true }
+  - { Name: res_send, Type: Func, Weak: true }
+  - { Name: rewind, Type: Func }
+  - { Name: rewinddir, Type: Func, Weak: true }
+  - { Name: rindex, Type: Func }
+  - { Name: rint, Type: Func }
+  - { Name: rintf, Type: Func }
+  - { Name: rintl, Type: Func }
+  - { Name: rmdir, Type: Func, Weak: true }
+  - { Name: round, Type: Func }
+  - { Name: roundf, Type: Func }
+  - { Name: roundl, Type: Func }
+  - { Name: scalb, Type: Func }
+  - { Name: scalbf, Type: Func }
+  - { Name: scalbln, Type: Func }
+  - { Name: scalblnf, Type: Func }
+  - { Name: scalblnl, Type: Func }
+  - { Name: scalbn, Type: Func }
+  - { Name: scalbnf, Type: Func }
+  - { Name: scalbnl, Type: Func }
+  - { Name: scandir, Type: Func }
+  - { Name: scanf, Type: Func }
+  - { Name: sched_get_priority_max, Type: Func }
+  - { Name: sched_get_priority_min, Type: Func }
+  - { Name: sched_getaffinity, Type: Func }
+  - { Name: sched_getcpu, Type: Func }
+  - { Name: sched_getparam, Type: Func }
+  - { Name: sched_getscheduler, Type: Func }
+  - { Name: sched_rr_get_interval, Type: Func }
+  - { Name: sched_setaffinity, Type: Func }
+  - { Name: sched_setparam, Type: Func }
+  - { Name: sched_setscheduler, Type: Func }
+  - { Name: sched_yield, Type: Func }
+  - { Name: seed48, Type: Func }
+  - { Name: seekdir, Type: Func, Weak: true }
+  - { Name: select, Type: Func, Weak: true }
+  - { Name: sem_destroy, Type: Func }
+  - { Name: sem_getvalue, Type: Func }
+  - { Name: sem_init, Type: Func }
+  - { Name: sem_post, Type: Func }
+  - { Name: sem_timedwait, Type: Func }
+  - { Name: sem_trywait, Type: Func }
+  - { Name: sem_unlink, Type: Func }
+  - { Name: sem_wait, Type: Func }
+  - { Name: semctl, Type: Func }
+  - { Name: semget, Type: Func }
+  - { Name: semop, Type: Func }
+  - { Name: semtimedop, Type: Func }
+  - { Name: send, Type: Func }
+  - { Name: sendmmsg, Type: Func, Weak: true }
+  - { Name: sendmsg, Type: Func, Weak: true }
+  - { Name: sendto, Type: Func, Weak: true }
+  - { Name: setbuf, Type: Func }
+  - { Name: setbuffer, Type: Func }
+  - { Name: setdomainname, Type: Func }
+  - { Name: setegid, Type: Func, Weak: true }
+  - { Name: setenv, Type: Func }
+  - { Name: seteuid, Type: Func, Weak: true }
+  - { Name: setgid, Type: Func, Weak: true }
+  - { Name: setgrent, Type: Func }
+  - { Name: setgroups, Type: Func, Weak: true }
+  - { Name: sethostent, Type: Func }
+  - { Name: sethostname, Type: Func }
+  - { Name: setitimer, Type: Func }
+  - { Name: setjmp, Type: Func }
+  - { Name: setlinebuf, Type: Func }
+  - { Name: setlocale, Type: Func }
+  - { Name: setlogmask, Type: Func }
+  - { Name: setnetent, Type: Func, Weak: true }
+  - { Name: setpgid, Type: Func, Weak: true }
+  - { Name: setpgrp, Type: Func }
+  - { Name: setprotoent, Type: Func }
+  - { Name: setpwent, Type: Func }
+  - { Name: setregid, Type: Func, Weak: true }
+  - { Name: setresgid, Type: Func, Weak: true }
+  - { Name: setresuid, Type: Func, Weak: true }
+  - { Name: setreuid, Type: Func, Weak: true }
+  - { Name: setservent, Type: Func }
+  - { Name: setsid, Type: Func, Weak: true }
+  - { Name: setsockopt, Type: Func, Weak: true }
+  - { Name: setstate, Type: Func }
+  - { Name: settimeofday, Type: Func }
+  - { Name: setuid, Type: Func, Weak: true }
+  - { Name: setvbuf, Type: Func }
+  - { Name: shm_open, Type: Func }
+  - { Name: shm_unlink, Type: Func }
+  - { Name: shmat, Type: Func }
+  - { Name: shmctl, Type: Func }
+  - { Name: shmdt, Type: Func }
+  - { Name: shmget, Type: Func }
+  - { Name: shutdown, Type: Func, Weak: true }
+  - { Name: sigaction, Type: Func }
+  - { Name: sigaddset, Type: Func }
+  - { Name: sigaltstack, Type: Func }
+  - { Name: sigandset, Type: Func }
+  - { Name: sigdelset, Type: Func }
+  - { Name: sigemptyset, Type: Func }
+  - { Name: sigfillset, Type: Func }
+  - { Name: siginterrupt, Type: Func }
+  - { Name: sigisemptyset, Type: Func }
+  - { Name: sigismember, Type: Func }
+  - { Name: siglongjmp, Type: Func, Weak: true }
+  - { Name: signal, Type: Func }
+  - { Name: signgam, Type: Object, Weak: true }
+  - { Name: significand, Type: Func }
+  - { Name: significandf, Type: Func }
+  - { Name: sigorset, Type: Func }
+  - { Name: sigpause, Type: Func }
+  - { Name: sigpending, Type: Func }
+  - { Name: sigprocmask, Type: Func }
+  - { Name: sigqueue, Type: Func }
+  - { Name: sigsetjmp, Type: Func, Weak: true }
+  - { Name: sigsuspend, Type: Func }
+  - { Name: sigtimedwait, Type: Func }
+  - { Name: sigwait, Type: Func }
+  - { Name: sigwaitinfo, Type: Func }
+  - { Name: sin, Type: Func }
+  - { Name: sincos, Type: Func }
+  - { Name: sincosf, Type: Func }
+  - { Name: sincosl, Type: Func }
+  - { Name: sinf, Type: Func }
+  - { Name: sinh, Type: Func }
+  - { Name: sinhf, Type: Func }
+  - { Name: sinhl, Type: Func }
+  - { Name: sinl, Type: Func }
+  - { Name: sleep, Type: Func }
+  - { Name: snprintf, Type: Func }
+  - { Name: sockatmark, Type: Func, Weak: true }
+  - { Name: socket, Type: Func, Weak: true }
+  - { Name: socketpair, Type: Func, Weak: true }
+  - { Name: sprintf, Type: Func }
+  - { Name: sqrt, Type: Func }
+  - { Name: sqrtf, Type: Func }
+  - { Name: sqrtl, Type: Func }
+  - { Name: srand, Type: Func }
+  - { Name: srand48, Type: Func }
+  - { Name: srandom, Type: Func }
+  - { Name: sscanf, Type: Func }
+  - { Name: stat, Type: Func, Weak: true }
+  - { Name: statfs, Type: Func, Weak: true }
+  - { Name: statvfs, Type: Func, Weak: true }
+  - { Name: stderr, Type: Object }
+  - { Name: stdin, Type: Object }
+  - { Name: stdout, Type: Object }
+  - { Name: stime, Type: Func }
+  - { Name: stpcpy, Type: Func, Weak: true }
+  - { Name: stpncpy, Type: Func, Weak: true }
+  - { Name: strcasecmp, Type: Func }
+  - { Name: strcasestr, Type: Func }
+  - { Name: strcat, Type: Func }
+  - { Name: strchr, Type: Func }
+  - { Name: strchrnul, Type: Func, Weak: true }
+  - { Name: strcmp, Type: Func }
+  - { Name: strcoll, Type: Func }
+  - { Name: strcpy, Type: Func }
+  - { Name: strcspn, Type: Func }
+  - { Name: strdup, Type: Func, Weak: true }
+  - { Name: strerror, Type: Func }
+  - { Name: strerror_r, Type: Func }
+  - { Name: strfmon, Type: Func }
+  - { Name: strfmon_l, Type: Func }
+  - { Name: strftime, Type: Func }
+  - { Name: strlcat, Type: Func }
+  - { Name: strlcpy, Type: Func }
+  - { Name: strlen, Type: Func }
+  - { Name: strncasecmp, Type: Func }
+  - { Name: strncat, Type: Func }
+  - { Name: strncmp, Type: Func }
+  - { Name: strncpy, Type: Func }
+  - { Name: strndup, Type: Func }
+  - { Name: strnlen, Type: Func }
+  - { Name: strpbrk, Type: Func }
+  - { Name: strptime, Type: Func }
+  - { Name: strrchr, Type: Func }
+  - { Name: strsep, Type: Func }
+  - { Name: strsignal, Type: Func }
+  - { Name: strspn, Type: Func }
+  - { Name: strstr, Type: Func }
+  - { Name: strtod, Type: Func }
+  - { Name: strtof, Type: Func }
+  - { Name: strtoimax, Type: Func }
+  - { Name: strtok, Type: Func }
+  - { Name: strtok_r, Type: Func }
+  - { Name: strtol, Type: Func }
+  - { Name: strtold, Type: Func }
+  - { Name: strtoll, Type: Func }
+  - { Name: strtoul, Type: Func }
+  - { Name: strtoull, Type: Func }
+  - { Name: strtoumax, Type: Func }
+  - { Name: strverscmp, Type: Func }
+  - { Name: strxfrm, Type: Func }
+  - { Name: stub_pselect, Type: Func }
+  - { Name: stub_select, Type: Func }
+  - { Name: swab, Type: Func }
+  - { Name: swprintf, Type: Func }
+  - { Name: swscanf, Type: Func }
+  - { Name: symlink, Type: Func, Weak: true }
+  - { Name: symlinkat, Type: Func, Weak: true }
+  - { Name: sync, Type: Func, Weak: true }
+  - { Name: syncfs, Type: Func, Weak: true }
+  - { Name: sysconf, Type: Func }
+  - { Name: syslog, Type: Func }
+  - { Name: system, Type: Func }
+  - { Name: tan, Type: Func }
+  - { Name: tanf, Type: Func }
+  - { Name: tanh, Type: Func }
+  - { Name: tanhf, Type: Func }
+  - { Name: tanhl, Type: Func }
+  - { Name: tanl, Type: Func }
+  - { Name: tcdrain, Type: Func }
+  - { Name: tcflow, Type: Func }
+  - { Name: tcflush, Type: Func }
+  - { Name: tcgetattr, Type: Func }
+  - { Name: tcgetpgrp, Type: Func }
+  - { Name: tcgetsid, Type: Func }
+  - { Name: tcsendbreak, Type: Func }
+  - { Name: tcsetattr, Type: Func }
+  - { Name: tcsetpgrp, Type: Func }
+  - { Name: telldir, Type: Func, Weak: true }
+  - { Name: tempnam, Type: Func }
+  - { Name: tgamma, Type: Func }
+  - { Name: tgammaf, Type: Func }
+  - { Name: tgammal, Type: Func }
+  - { Name: thrd_create, Type: Func }
+  - { Name: thrd_create_with_name, Type: Func }
+  - { Name: thrd_current, Type: Func, Weak: true }
+  - { Name: thrd_detach, Type: Func }
+  - { Name: thrd_equal, Type: Func, Weak: true }
+  - { Name: thrd_exit, Type: Func }
+  - { Name: thrd_get_zx_handle, Type: Func }
+  - { Name: thrd_join, Type: Func }
+  - { Name: thrd_sleep, Type: Func }
+  - { Name: thrd_yield, Type: Func }
+  - { Name: time, Type: Func }
+  - { Name: timegm, Type: Func }
+  - { Name: timerfd_create, Type: Func, Weak: true }
+  - { Name: timerfd_gettime, Type: Func, Weak: true }
+  - { Name: timerfd_settime, Type: Func, Weak: true }
+  - { Name: times, Type: Func }
+  - { Name: timespec_get, Type: Func }
+  - { Name: timezone, Type: Object, Weak: true }
+  - { Name: tmpfile, Type: Func }
+  - { Name: tmpnam, Type: Func }
+  - { Name: toascii, Type: Func }
+  - { Name: tolower, Type: Func }
+  - { Name: toupper, Type: Func }
+  - { Name: towctrans, Type: Func }
+  - { Name: towlower, Type: Func }
+  - { Name: towupper, Type: Func }
+  - { Name: trunc, Type: Func }
+  - { Name: truncate, Type: Func, Weak: true }
+  - { Name: truncf, Type: Func }
+  - { Name: truncl, Type: Func }
+  - { Name: tss_create, Type: Func }
+  - { Name: tss_delete, Type: Func }
+  - { Name: tss_get, Type: Func, Weak: true }
+  - { Name: tss_set, Type: Func }
+  - { Name: ttyname, Type: Func }
+  - { Name: ttyname_r, Type: Func, Weak: true }
+  - { Name: tzname, Type: Object, Weak: true }
+  - { Name: tzset, Type: Func, Weak: true }
+  - { Name: ualarm, Type: Func }
+  - { Name: umask, Type: Func, Weak: true }
+  - { Name: uname, Type: Func, Weak: true }
+  - { Name: ungetc, Type: Func }
+  - { Name: ungetwc, Type: Func }
+  - { Name: unlink, Type: Func, Weak: true }
+  - { Name: unlinkat, Type: Func, Weak: true }
+  - { Name: unlockpt, Type: Func }
+  - { Name: unsetenv, Type: Func }
+  - { Name: uselocale, Type: Func, Weak: true }
+  - { Name: usleep, Type: Func }
+  - { Name: utime, Type: Func }
+  - { Name: utimensat, Type: Func, Weak: true }
+  - { Name: utimes, Type: Func }
+  - { Name: valloc, Type: Func, Weak: true }
+  - { Name: vasprintf, Type: Func }
+  - { Name: vdprintf, Type: Func }
+  - { Name: verr, Type: Func }
+  - { Name: verrx, Type: Func }
+  - { Name: versionsort, Type: Func }
+  - { Name: vfprintf, Type: Func }
+  - { Name: vfscanf, Type: Func }
+  - { Name: vfwprintf, Type: Func }
+  - { Name: vfwscanf, Type: Func }
+  - { Name: vprintf, Type: Func }
+  - { Name: vscanf, Type: Func }
+  - { Name: vsnprintf, Type: Func }
+  - { Name: vsprintf, Type: Func }
+  - { Name: vsscanf, Type: Func }
+  - { Name: vswprintf, Type: Func }
+  - { Name: vswscanf, Type: Func }
+  - { Name: vsyslog, Type: Func, Weak: true }
+  - { Name: vwarn, Type: Func }
+  - { Name: vwarnx, Type: Func }
+  - { Name: vwprintf, Type: Func }
+  - { Name: vwscanf, Type: Func }
+  - { Name: wait, Type: Func }
+  - { Name: waitid, Type: Func }
+  - { Name: waitpid, Type: Func }
+  - { Name: warn, Type: Func }
+  - { Name: warnx, Type: Func }
+  - { Name: wcpcpy, Type: Func }
+  - { Name: wcpncpy, Type: Func }
+  - { Name: wcrtomb, Type: Func }
+  - { Name: wcscasecmp, Type: Func }
+  - { Name: wcscat, Type: Func }
+  - { Name: wcschr, Type: Func }
+  - { Name: wcscmp, Type: Func }
+  - { Name: wcscoll, Type: Func }
+  - { Name: wcscpy, Type: Func }
+  - { Name: wcscspn, Type: Func }
+  - { Name: wcsdup, Type: Func }
+  - { Name: wcsftime, Type: Func }
+  - { Name: wcsftime_l, Type: Func, Weak: true }
+  - { Name: wcslen, Type: Func }
+  - { Name: wcsncasecmp, Type: Func }
+  - { Name: wcsncat, Type: Func }
+  - { Name: wcsncmp, Type: Func }
+  - { Name: wcsncpy, Type: Func }
+  - { Name: wcsnlen, Type: Func }
+  - { Name: wcsnrtombs, Type: Func }
+  - { Name: wcspbrk, Type: Func }
+  - { Name: wcsrchr, Type: Func }
+  - { Name: wcsrtombs, Type: Func }
+  - { Name: wcsspn, Type: Func }
+  - { Name: wcsstr, Type: Func }
+  - { Name: wcstod, Type: Func }
+  - { Name: wcstof, Type: Func }
+  - { Name: wcstoimax, Type: Func }
+  - { Name: wcstok, Type: Func }
+  - { Name: wcstol, Type: Func }
+  - { Name: wcstold, Type: Func }
+  - { Name: wcstoll, Type: Func }
+  - { Name: wcstombs, Type: Func }
+  - { Name: wcstoul, Type: Func }
+  - { Name: wcstoull, Type: Func }
+  - { Name: wcstoumax, Type: Func }
+  - { Name: wcswcs, Type: Func }
+  - { Name: wcswidth, Type: Func }
+  - { Name: wcsxfrm, Type: Func }
+  - { Name: wctob, Type: Func }
+  - { Name: wctomb, Type: Func }
+  - { Name: wctrans, Type: Func }
+  - { Name: wctype, Type: Func }
+  - { Name: wcwidth, Type: Func }
+  - { Name: wmemchr, Type: Func }
+  - { Name: wmemcmp, Type: Func }
+  - { Name: wmemcpy, Type: Func }
+  - { Name: wmemmove, Type: Func }
+  - { Name: wmemset, Type: Func }
+  - { Name: wordexp, Type: Func }
+  - { Name: wordfree, Type: Func }
+  - { Name: wprintf, Type: Func }
+  - { Name: write, Type: Func, Weak: true }
+  - { Name: writev, Type: Func, Weak: true }
+  - { Name: wscanf, Type: Func }
+  - { Name: y0, Type: Func }
+  - { Name: y0f, Type: Func }
+  - { Name: y1, Type: Func }
+  - { Name: y1f, Type: Func }
+  - { Name: yn, Type: Func }
+  - { Name: ynf, Type: Func }
+  - { Name: zx_job_default, Type: Func, Weak: true }
+  - { Name: zx_process_self, Type: Func, Weak: true }
+  - { Name: zx_take_startup_handle, Type: Func }
+  - { Name: zx_thread_self, Type: Func, Weak: true }
+  - { Name: zx_utc_reference_get, Type: Func, Weak: true }
+  - { Name: zx_utc_reference_swap, Type: Func, Weak: true }
+  - { Name: zx_vmar_root_self, Type: Func, Weak: true }
+...

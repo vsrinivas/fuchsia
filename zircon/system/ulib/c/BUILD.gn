@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config/zircon/standard.gni")
 import("//build/test.gni")
+import("//build/toolchain/ifs_shared_library.gni")
 import("//build/zircon/migrated_targets.gni")
 
 import("libc.gni")
@@ -98,6 +99,18 @@ if (current_toolchain == default_toolchain) {
   }
 }
 
+import("libc_toolchain.gni")
+
+# When in a toolchain variant of the Fuchsia base toolchain, find the
+# corresponding toolchain variant of user.libc_$target_cpu to build
+# the C library with it.
+libc_toolchain = sysroot_libc_base_toolchain
+if (toolchain_variant.suffix != "") {
+  libc_toolchain += string_replace(toolchain_variant.suffix, "-fuzzer", "")
+} else {
+  libc_toolchain = system_libc_toolchain
+}
+
 # When built with the default/user Fuchsia toolchain, zx_library()
 # will not create a :headers sub-target for zx_library("c") below,
 # so add one manually as a special case.
@@ -113,20 +126,9 @@ if (zircon_toolchain == false) {
     include_dirs = [ "include" ]
   }
 
-  import("libc_toolchain.gni")
-
-  # When in a toolchain variant of the Fuchsia base toolchain, find the
-  # corresponding toolchain variant of user.libc_$target_cpu to build
-  # the C library with it.
-  _libc_toolchain = sysroot_libc_base_toolchain
-  if (toolchain_variant.suffix != "") {
-    _libc_toolchain += string_replace(toolchain_variant.suffix, "-fuzzer", "")
-  } else {
-    _libc_toolchain = system_libc_toolchain
-  }
-
-  group("c") {
-    public_deps = [ ":c($_libc_toolchain)" ]
+  group("libc.so") {
+    public_deps = [ ":libc.so($libc_toolchain)" ]
+    visibility = [ ":*" ]
   }
 } else {
   config("headers.config") {
@@ -142,7 +144,11 @@ if (zircon_toolchain == false) {
     ]
   }
 
-  shared_library("c") {
+  shared_library("libc.so") {
+    output_name = "c"
+
+    visibility = [ ":*" ]
+
     # As a special case, the C library must not be compiled with the default
     # configs for shared_library() targets, but those or regular source_set()
     # or static_library() targets. In practice, for the base toolchain, this
@@ -204,7 +210,7 @@ if (zircon_toolchain == false) {
   # trace-engine and whatnot that are completely un-needed and also
   # interfere with sysroot generation. Use the C library toolchain instead.
   group("crt1") {
-    public_deps = [ ":crt1($_libc_toolchain)" ]
+    public_deps = [ ":crt1($libc_toolchain)" ]
   }
 } else {
   source_set("crt1") {
@@ -218,6 +224,30 @@ if (zircon_toolchain == false) {
     # they are always used eagerly anyway.
     cflags = [ "-fno-plt" ]
   }
+}
+
+libc_label = ":libc.so($libc_toolchain)"
+
+verify_public_symbols("verify_abi") {
+  deps = [ libc_label ]
+
+  current = get_label_info(libc_label, "root_out_dir") + "/libc.ifs"
+  reference = "libc.ifs"
+  library_name = "libc"
+}
+
+group("libc") {
+  public_deps = [ libc_label ]
+  deps = [ ":verify_abi" ]
+  visibility = [
+    ":*",
+    "//zircon/public/sysroot:*",
+    "//zircon/public/sysroot/sdk:*",
+  ]
+}
+
+ifs_shared_library("c") {
+  abi = "libc.ifs"
 }
 
 group("tests") {

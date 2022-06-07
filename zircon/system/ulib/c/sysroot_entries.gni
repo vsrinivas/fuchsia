@@ -378,11 +378,12 @@ foreach(variant,
   } else {
     _libprefix = string_replace(variant, "-fuzzer", "") + "/"
     _libc_toolchain = "//zircon/system/ulib/c:user.libc_${current_cpu}-$variant"
-    _libc_target = "$sysroot_libc_label($_libc_toolchain)"
+    _libc_target = "$sysroot_libc_label:libc($_libc_toolchain)"
     _libc_stripped = get_label_info(_libc_target, "root_out_dir") + "/libc.so"
     _libc_unstripped = _libc_stripped + ".debug"
   }
 
+  # TODO(fxbug.dev/101860): Correctly set link, debug, dist and deps here.
   sysroot_instrumented_libc_entries += [
     {
       sdk = {
