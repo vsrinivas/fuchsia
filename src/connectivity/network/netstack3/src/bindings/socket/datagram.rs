@@ -39,7 +39,7 @@ use netstack3_core::{
     set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BlanketCoreContext,
     BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
     IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError,
-    LocalAddressError, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
+    LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
     UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
     UdpSocketId, UdpStateContext, UdpUnboundId,
 };
@@ -1194,7 +1194,7 @@ where
                 let id = {
                     let mut guard = ctx.lock().await;
                     let unbound_id = T::create_unbound(&mut *guard);
-                    let Ctx { sync_ctx: SyncCtx { state: _, dispatcher }, ctx: _ } = &mut *guard;
+                    let Ctx { state: _, dispatcher, ctx: _ } = &mut *guard;
                     let SocketCollection { binding_data, conns: _, listeners: _ } =
                         I::get_collection_mut(dispatcher);
                     binding_data.push(BindingData::new(
@@ -1912,11 +1912,11 @@ where
     }
 
     fn get_state(&self) -> &BindingData<I, T> {
-        I::get_collection(&self.ctx.sync_ctx.dispatcher).binding_data.get(self.binding_id).unwrap()
+        I::get_collection(&self.ctx.dispatcher).binding_data.get(self.binding_id).unwrap()
     }
 
     fn get_state_mut(&mut self) -> &mut BindingData<I, T> {
-        I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
+        I::get_collection_mut(&mut self.ctx.dispatcher)
             .binding_data
             .get_mut(self.binding_id)
             .unwrap()
@@ -1965,9 +1965,7 @@ where
                     T::remove_listener(self.ctx.deref_mut(), &mut (), listener_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
-                    I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
-                        .listeners
-                        .remove(&listener_id),
+                    I::get_collection_mut(&mut self.ctx.dispatcher).listeners.remove(&listener_id),
                     None
                 );
 
@@ -1984,7 +1982,7 @@ where
                 ) = T::remove_conn(self.ctx.deref_mut(), &mut (), conn_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
-                    I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher).conns.remove(&conn_id),
+                    I::get_collection_mut(&mut self.ctx.dispatcher).conns.remove(&conn_id),
                     None
                 );
                 (Some(local_ip), Some(local_port), T::create_unbound(self.ctx.deref_mut()))
@@ -2005,9 +2003,7 @@ where
         self.get_state_mut().info.state =
             SocketState::BoundConnect { conn_id, shutdown_read: false, shutdown_write: false };
         assert_eq!(
-            I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
-                .conns
-                .insert(&conn_id, self.binding_id),
+            I::get_collection_mut(&mut self.ctx.dispatcher).conns.insert(&conn_id, self.binding_id),
             None
         );
         Ok(())
@@ -2055,7 +2051,7 @@ where
                 .map_err(IntoErrno::into_errno)?;
         self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
         assert_eq!(
-            I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
+            I::get_collection_mut(&mut self.ctx.dispatcher)
                 .listeners
                 .insert(&listener_id, self.binding_id),
             None
@@ -2143,9 +2139,7 @@ where
             SocketState::BoundListen { listener_id } => {
                 // remove from bindings:
                 assert_ne!(
-                    I::get_collection_mut(&mut ctx.sync_ctx.dispatcher)
-                        .listeners
-                        .remove(&listener_id),
+                    I::get_collection_mut(&mut ctx.dispatcher).listeners.remove(&listener_id),
                     None
                 );
                 // remove from core:
@@ -2154,10 +2148,7 @@ where
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 // remove from bindings:
-                assert_ne!(
-                    I::get_collection_mut(&mut ctx.sync_ctx.dispatcher).conns.remove(&conn_id),
-                    None
-                );
+                assert_ne!(I::get_collection_mut(&mut ctx.dispatcher).conns.remove(&conn_id), None);
                 // remove from core:
                 let _: (
                     SpecifiedAddr<I::Addr>,
@@ -2173,7 +2164,7 @@ where
         let inner = self.get_state_mut();
         if inner.ref_count == 1 {
             let info = assert_matches::assert_matches!(
-                I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
+                I::get_collection_mut(&mut self.ctx.dispatcher)
                     .binding_data
                     .remove(self.binding_id),
                 Some(BindingData {
@@ -2391,7 +2382,7 @@ where
     fn bind_to_device(mut self, index: Option<u64>) -> Result<(), fposix::Errno> {
         let device = index
             .map(|index| {
-                TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.sync_ctx.dispatcher, index)
+                TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.dispatcher, index)
                     .map_err(|DeviceNotFoundError {}| fposix::Errno::Enodev)
             })
             .transpose()?;
@@ -2410,10 +2401,9 @@ where
             None => return Ok(None),
             Some(d) => d,
         };
-        let index = device
-            .try_into_fidl_with_ctx(&self.ctx.sync_ctx.dispatcher)
-            .map_err(IntoErrno::into_errno)?;
-        Ok(self.ctx.sync_ctx.dispatcher.as_ref().get_device(index).map(|device_info| {
+        let index =
+            device.try_into_fidl_with_ctx(&self.ctx.dispatcher).map_err(IntoErrno::into_errno)?;
+        Ok(self.ctx.dispatcher.as_ref().get_device(index).map(|device_info| {
             let CommonInfo { name, mtu: _, admin_enabled: _, events: _ } =
                 device_info.info().common_info();
             name.to_string()
@@ -3203,9 +3193,7 @@ mod tests {
             t.get(i)
                 .with_ctx(|ctx| {
                     let SocketCollection { binding_data, conns, listeners } =
-                        <A::AddrType as IpAddress>::Version::get_collection(
-                            &ctx.sync_ctx.dispatcher,
-                        );
+                        <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                     assert_matches::assert_matches!(
                         binding_data.iter().collect::<Vec<_>>()[..],
                         [_]
@@ -3234,9 +3222,7 @@ mod tests {
             t.get(i)
                 .with_ctx(|ctx| {
                     let SocketCollection { binding_data, conns, listeners } =
-                        <A::AddrType as IpAddress>::Version::get_collection(
-                            &ctx.sync_ctx.dispatcher,
-                        );
+                        <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                     assert_matches::assert_matches!(
                         binding_data.iter().collect::<Vec<_>>()[..],
                         []
@@ -3283,7 +3269,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
@@ -3299,7 +3285,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
@@ -3335,7 +3321,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
@@ -3398,7 +3384,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);

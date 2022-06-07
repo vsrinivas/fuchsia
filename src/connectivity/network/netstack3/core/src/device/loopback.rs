@@ -53,7 +53,7 @@ pub(super) fn send_ip_frame<
 
 /// Gets the MTU associated with this device.
 pub(super) fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>) -> u32 {
-    ctx.sync_ctx.state.device.loopback.as_ref().unwrap().link.mtu
+    ctx.state.device.loopback.as_ref().unwrap().link.mtu
 }
 
 #[cfg(test)]

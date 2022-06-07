@@ -61,8 +61,8 @@ use netstack3_core::{
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
     BlanketCoreContext, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher,
     EventDispatcher, IpDeviceConfiguration, IpExt, Ipv4DeviceConfiguration,
-    Ipv6DeviceConfiguration, SlaacConfiguration, SyncCtx, TimerId, UdpBoundId, UdpConnId,
-    UdpContext, UdpListenerId,
+    Ipv6DeviceConfiguration, SlaacConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext,
+    UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -501,9 +501,9 @@ where
     C: BlanketCoreContext,
 {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
-        if let Some(device_info) = self.sync_ctx.dispatcher.as_mut().get_device_mut(id) {
+        if let Some(device_info) = self.dispatcher.as_mut().get_device_mut(id) {
             f(device_info);
-            self.sync_ctx.dispatcher.device_status_changed(id)
+            self.dispatcher.device_status_changed(id)
         }
     }
 }
@@ -529,12 +529,8 @@ fn set_interface_enabled<
     id: u64,
     should_enable: bool,
 ) -> Result<(), fidl_net_stack::Error> {
-    let device = ctx
-        .sync_ctx
-        .dispatcher
-        .as_mut()
-        .get_device_mut(id)
-        .ok_or(fidl_net_stack::Error::NotFound)?;
+    let device =
+        ctx.dispatcher.as_mut().get_device_mut(id).ok_or(fidl_net_stack::Error::NotFound)?;
     let core_id = device.core_id();
 
     let (dev_enabled, events) = match device.info_mut() {
@@ -695,7 +691,7 @@ impl NetstackSeed {
             // loopback addresses and on-link routes to the loopback subnets.
             let loopback = netstack3_core::add_loopback_device(ctx, DEFAULT_LOOPBACK_MTU)
                 .expect("error adding loopback device");
-            let devices: &mut Devices = ctx.sync_ctx.dispatcher.as_mut();
+            let devices: &mut Devices = ctx.dispatcher.as_mut();
             let _binding_id: u64 = devices
                 .add_device(loopback, |id| {
                     const LOOPBACK_NAME: &'static str = "lo";
@@ -777,12 +773,8 @@ impl NetstackSeed {
 
             // Start servicing timers.
             let Ctx {
-                sync_ctx:
-                    SyncCtx {
-                        state: _,
-                        dispatcher:
-                            BindingsDispatcher { devices: _, icmp_echo_sockets: _, udp_sockets: _ },
-                    },
+                state: _,
+                dispatcher: BindingsDispatcher { devices: _, icmp_echo_sockets: _, udp_sockets: _ },
                 ctx: BindingsContextImpl { rng: _, timers },
             } = ctx;
             timers.spawn(netstack.clone());

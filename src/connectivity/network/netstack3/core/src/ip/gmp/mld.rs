@@ -1150,7 +1150,7 @@ mod tests {
             Default::default(),
         );
         let device_id =
-            ctx.sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 
         let now = ctx.now();
         let ll_addr = local_mac.to_ipv6_link_local().addr();
@@ -1181,7 +1181,7 @@ mod tests {
         };
         let check_sent_report = |ctx: &mut crate::testutil::DummyCtx, specified_source: bool| {
             assert_matches::assert_matches!(
-                &ctx.sync_ctx.dispatcher.take_frames()[..],
+                &ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
@@ -1211,7 +1211,7 @@ mod tests {
         };
         let check_sent_done = |ctx: &mut crate::testutil::DummyCtx, specified_source: bool| {
             assert_matches::assert_matches!(
-                &ctx.sync_ctx.dispatcher.take_frames()[..],
+                &ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
@@ -1258,14 +1258,14 @@ mod tests {
         // Should do nothing.
         set_config(&mut ctx, TestConfig { ip_enabled: false, gmp_enabled: true });
         ctx.ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&ctx.sync_ctx.dispatcher.take_frames()[..], []);
+        assert_matches::assert_matches!(&ctx.dispatcher.take_frames()[..], []);
 
         // Disable MLD but enable IPv6.
         //
         // Should do nothing.
         set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: false });
         ctx.ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&ctx.sync_ctx.dispatcher.take_frames()[..], []);
+        assert_matches::assert_matches!(&ctx.dispatcher.take_frames()[..], []);
 
         // Enable MLD.
         set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: true });

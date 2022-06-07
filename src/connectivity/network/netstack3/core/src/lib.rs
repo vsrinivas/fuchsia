@@ -222,22 +222,16 @@ impl<I: Instant> Default for StackState<I> {
     }
 }
 
-/// The synchronized context.
-pub struct SyncCtx<D: EventDispatcher, I: Instant> {
-    /// Contains the state of the stack.
-    pub state: StackState<I>,
-    /// The dispatcher, take a look at [`EventDispatcher`] for more details.
-    pub dispatcher: D,
-}
-
 /// Context available during the execution of the netstack.
 ///
 /// `Ctx` provides access to the state of the netstack and to an event
 /// dispatcher which can be used to emit events and schedule timers. A mutable
 /// reference to a `Ctx` is passed to every function in the netstack.
 pub struct Ctx<D: EventDispatcher, C: BlanketCoreContext> {
-    /// The synchronized context.
-    pub sync_ctx: SyncCtx<D, C::Instant>,
+    /// Contains the state of the stack.
+    pub state: StackState<C::Instant>,
+    /// The dispatcher, take a look at [`EventDispatcher`] for more details.
+    pub dispatcher: D,
     /// The execution context.
     pub ctx: C,
 }
@@ -247,29 +241,26 @@ where
     StackState<C::Instant>: Default,
 {
     fn default() -> Ctx<D, C> {
-        Ctx {
-            sync_ctx: SyncCtx { state: StackState::default(), dispatcher: D::default() },
-            ctx: C::default(),
-        }
+        Ctx { state: StackState::default(), dispatcher: D::default(), ctx: C::default() }
     }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> Ctx<D, C> {
     /// Constructs a new `Ctx`.
     pub fn new(state: StackState<C::Instant>, dispatcher: D, ctx: C) -> Ctx<D, C> {
-        Ctx { sync_ctx: SyncCtx { state, dispatcher }, ctx }
+        Ctx { state, dispatcher, ctx }
     }
 
     /// Constructs a new `Ctx` using the default `StackState`.
     pub fn with_default_state(dispatcher: D, ctx: C) -> Ctx<D, C> {
-        Ctx { sync_ctx: SyncCtx { state: StackState::default(), dispatcher }, ctx }
+        Ctx { state: StackState::default(), dispatcher, ctx }
     }
 }
 
 impl<D: EventDispatcher + Default, C: BlanketCoreContext> Ctx<D, C> {
     /// Construct a new `Ctx` using the default dispatcher.
     pub fn with_default_dispatcher(state: StackState<C::Instant>, ctx: C) -> Ctx<D, C> {
-        Ctx { sync_ctx: SyncCtx { state, dispatcher: D::default() }, ctx }
+        Ctx { state, dispatcher: D::default(), ctx }
     }
 }
 

@@ -225,8 +225,7 @@ impl DeviceHandler {
         };
 
         Ok((
-            ctx.sync_ctx
-                .dispatcher
+            ctx.dispatcher
                 .devices
                 .add_device(core_id, make_info)
                 .expect("duplicate core id in set"),
