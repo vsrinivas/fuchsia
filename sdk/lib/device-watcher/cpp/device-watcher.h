@@ -6,7 +6,6 @@
 #define LIB_DEVICE_WATCHER_CPP_DEVICE_WATCHER_H_
 
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
 
 #include <memory>
 #include <string_view>
@@ -15,14 +14,8 @@
 
 namespace device_watcher {
 
-// Waits for |file| to appear in |dir|, and opens it when it does.
+// Wait for |file| to appear in |dir|, and open it when it does.
 zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique_fd* out);
-
-// Waits for a device with topological path |topo_path| to appear in |dir| then opens it.
-// This works by opening each files in |dir| as fuchsia.device.Controller and calling
-// GetTopologicalPath.
-zx::status<zx::channel> WaitForDeviceTopologicalPath(const fbl::unique_fd& dir,
-                                                     std::string_view topo_path);
 
 // Waits for the relative |path| starting in |dir| to appear, and opens it.
 zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fbl::unique_fd* out);

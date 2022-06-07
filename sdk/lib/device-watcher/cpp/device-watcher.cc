@@ -5,9 +5,7 @@
 #include "device-watcher.h"
 
 #include <fcntl.h>
-#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/clock.h>
@@ -109,65 +107,6 @@ zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique
     return ZX_ERR_IO;
   }
   return ZX_OK;
-}
-
-__EXPORT
-zx::status<zx::channel> WaitForDeviceTopologicalPath(const fbl::unique_fd& dir,
-                                                     std::string_view topo_path) {
-  struct TopoPathWatchState {
-    std::string_view expected_topological_path;
-    zx::channel out_device_channel;
-  };
-
-  auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
-    if (event != WATCH_EVENT_ADD_FILE) {
-      return ZX_OK;
-    }
-
-    auto dev_ends = fidl::CreateEndpoints<fuchsia_device::Controller>();
-    if (dev_ends.is_error()) {
-      return ZX_OK;
-    }
-    auto [dev_client_end, dev_server_end] = std::move(dev_ends.value());
-
-    // Add new scope to limit use of unsafe variables.
-    {
-      fdio_t* io = fdio_unsafe_fd_to_io(dirfd);
-      zx::unowned_channel channel{fdio_unsafe_borrow_channel(io)};
-
-      zx_status_t status =
-          fdio_service_connect_at(channel->get(), fn, dev_server_end.TakeChannel().release());
-      fdio_unsafe_release(io);
-
-      if (status != ZX_OK) {
-        return ZX_OK;
-      }
-    }
-
-    fidl::WireResult result = fidl::WireCall(dev_client_end)->GetTopologicalPath();
-    if (!result.ok()) {
-      return ZX_OK;
-    }
-    if (result->is_error()) {
-      return ZX_OK;
-    }
-
-    auto state = static_cast<TopoPathWatchState*>(cookie);
-    if (result->value()->path.get() == state->expected_topological_path) {
-      state->out_device_channel = dev_client_end.TakeChannel();
-      return ZX_ERR_STOP;
-    }
-    return ZX_OK;
-  };
-
-  TopoPathWatchState state = {.expected_topological_path = topo_path};
-
-  zx_status_t status = fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE, &state);
-  if (status != ZX_ERR_STOP) {
-    return zx::error(status);
-  }
-
-  return zx::ok(std::move(state.out_device_channel));
 }
 
 namespace {
