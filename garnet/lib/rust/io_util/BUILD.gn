@@ -1,0 +1,11 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Forward dependencies on io_util to the newly renamed and moved fuchsia-fs library, which is
+# otherwise identical.
+#
+# TODO(sdemos): delete this when everyone is updated.
+group("io_util") {
+  public_deps = [ "//src/lib/fuchsia-fs:fuchsia-fs-compat" ]
+}
