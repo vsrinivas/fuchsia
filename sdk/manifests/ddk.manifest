@@ -17,6 +17,8 @@ sdk://fidl/fuchsia.hardware.acpi
 sdk://fidl/fuchsia.hardware.ftdi
 sdk://fidl/fuchsia.hardware.i2c
 sdk://fidl/fuchsia.hardware.pci
+sdk://fidl/fuchsia.input
+sdk://fidl/fuchsia.input.report
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.logger
@@ -28,6 +30,7 @@ sdk://fidl/fuchsia.wlan.ieee80211
 sdk://fidl/fuchsia.wlan.internal
 sdk://fidl/zx
 sdk://pkg/async
+sdk://pkg/async-cpp
 sdk://pkg/async-default
 sdk://pkg/driver2-llcpp
 sdk://pkg/driver2-record
@@ -41,6 +44,7 @@ sdk://pkg/fit
 sdk://pkg/fit-promise
 sdk://pkg/fitx
 sdk://pkg/hwreg
+sdk://pkg/input_report_reader
 sdk://pkg/mmio
 sdk://pkg/mmio-ptr
 sdk://pkg/stdcompat
@@ -48,6 +52,7 @@ sdk://pkg/svc
 sdk://pkg/sync
 sdk://pkg/sys_component_llcpp
 sdk://pkg/syslog_structured_backend
+sdk://pkg/trace
 sdk://pkg/trace-engine
 sdk://pkg/zx
 sdk://pkg/zx-status
