@@ -13,7 +13,7 @@ group("all") {
     "//garnet/packages/prod:all",
     "//garnet/packages/testing:all",
     "//garnet/packages/tests:all",
-    "//garnet/packages/tools:all",
+    "//src/ui/tools:scenic",
   ]
 }
 

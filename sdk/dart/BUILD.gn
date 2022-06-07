@@ -121,11 +121,11 @@ group("tests") {
                   "//garnet/packages:garnet",
                   "//garnet/packages/testing:run_test_component",
                   "//garnet/packages/tests:scenic",
-                  "//garnet/packages/tools:scenic",
                   "//src/modular/bundles:framework",
                   "//src/modular/bundles:tools",
                   "//src/modular/bundles:integration_testing",
                   "//src/fonts",
+                  "//src/ui/tools:scenic",
 
                   "//sdk/dart/fuchsia_component_test:tests",
                   "//sdk/dart/fuchsia_inspect:tests",
