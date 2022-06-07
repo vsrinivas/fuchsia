@@ -905,7 +905,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
 zx_status_t Blobfs::InitializeVnodes() {
   GetCache().Reset();
-  CompressionStats compression_stats;
+  CompressionMetrics compression_metrics;
   uint32_t total_allocated = 0;
 
   for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
@@ -946,7 +946,7 @@ zx_status_t Blobfs::InitializeVnodes() {
       return status;
     }
 
-    compression_stats.Update(*inode);
+    compression_metrics.Update(*inode);
   }
 
   if (total_allocated != info_.alloc_inode_count) {
@@ -956,14 +956,14 @@ zx_status_t Blobfs::InitializeVnodes() {
   }
 
   // Only update compression stats if the filesystem is in a valid state.
-  inspect_tree_.UpdateCompressionMetrics(compression_stats);
+  inspect_tree_.UpdateCompressionMetrics(compression_metrics);
 
   return ZX_OK;
 }
 
 void Blobfs::ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
                                       FragmentationMetrics& fragmentation_metrics,
-                                      Blobfs::FragmentationStats* out_stats) {
+                                      FragmentationStats* out_stats) {
   if (inode.extent_count == 0) {
     return;
   }
@@ -1000,7 +1000,7 @@ void Blobfs::ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
 }
 
 void Blobfs::CalculateFragmentationMetrics(FragmentationMetrics& fragmentation_metrics,
-                                           Blobfs::FragmentationStats* out_stats) {
+                                           FragmentationStats* out_stats) {
   TRACE_DURATION("blobfs", "Blobfs::CalculateFragmentationMetrics");
   if (out_stats) {
     *out_stats = {};

@@ -50,7 +50,6 @@
 #include "src/storage/blobfs/iterator/extent_iterator.h"
 #include "src/storage/blobfs/iterator/node_populator.h"
 #include "src/storage/blobfs/iterator/vector_extent_iterator.h"
-#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 

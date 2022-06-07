@@ -98,44 +98,9 @@ void BlobfsInspectTree::CalculateFragmentationMetrics(Blobfs& blobfs) {
   });
 }
 
-void BlobfsInspectTree::UpdateCompressionMetrics(const CompressionStats& stats) {
-  compression_metrics_node_.AtomicUpdate([this, &stats](inspect::Node& node) {
-    compression_metrics_ = CompressionStats::Metrics(node, stats);
-  });
+void BlobfsInspectTree::UpdateCompressionMetrics(const CompressionMetrics& metrics) {
+  compression_metrics_node_.AtomicUpdate(
+      [this, &metrics](inspect::Node& node) { compression_metrics_ = metrics.Attach(node); });
 }
-
-namespace {
-inspect::ExponentialUintHistogram CreateFragmentationMetricsHistogram(std::string_view name,
-                                                                      inspect::Node& root) {
-  // These values must match the metric definitions in Cobalt.
-  static constexpr uint64_t kFloor = 0;
-  static constexpr uint64_t kInitialStep = 10;
-  static constexpr uint64_t kStepMultiplier = 2;
-  static constexpr size_t kBuckets = 10;
-  return root.CreateExponentialUintHistogram(name, kFloor, kInitialStep, kStepMultiplier, kBuckets);
-}
-}  // namespace
-
-FragmentationMetrics::FragmentationMetrics(inspect::Node& root)
-    : total_nodes(root.CreateUint("total_nodes", 0u)),
-      files_in_use(root.CreateUint("files_in_use", 0u)),
-      extent_containers_in_use(root.CreateUint("extent_containers_in_use", 0u)),
-      extents_per_file(CreateFragmentationMetricsHistogram("extents_per_file", root)),
-      in_use_fragments(CreateFragmentationMetricsHistogram("in_use_fragments", root)),
-      free_fragments(CreateFragmentationMetricsHistogram("free_fragments", root)) {}
-
-void CompressionStats::Update(const InodePtr& inode) {
-  static_assert(kBlobFlagMaskAnyCompression == kBlobFlagChunkCompressed,
-                "Need to update compression stats to handle multiple formats.");
-  if (inode->header.IsCompressedZstdChunked()) {
-    zstd_chunked_bytes += inode->blob_size;
-  } else {
-    uncompressed_bytes += inode->blob_size;
-  }
-}
-
-CompressionStats::Metrics::Metrics(inspect::Node& root, const CompressionStats& stats)
-    : uncompressed_bytes(root.CreateUint("uncompressed_bytes", stats.uncompressed_bytes)),
-      zstd_chunked_bytes(root.CreateUint("zstd_chunked_bytes", stats.zstd_chunked_bytes)) {}
 
 }  // namespace blobfs

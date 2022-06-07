@@ -40,7 +40,6 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/format_assertions.h"
 #include "src/storage/blobfs/loader_info.h"
-#include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/transaction.h"
 
 namespace blobfs {

@@ -66,8 +66,6 @@ class MockTransactionManager : public TransactionManager, public block_client::B
 
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
 
-  std::shared_ptr<BlobfsMetrics>& GetMetrics() final { return metrics_; }
-
   fs::Journal* GetJournal() final {
     ZX_ASSERT(false);
     return nullptr;

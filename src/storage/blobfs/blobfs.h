@@ -46,6 +46,7 @@
 #include "src/storage/blobfs/blob_cache.h"
 #include "src/storage/blobfs/blob_loader.h"
 #include "src/storage/blobfs/blobfs_inspect_tree.h"
+#include "src/storage/blobfs/blobfs_metrics.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
 #include "src/storage/blobfs/compression_settings.h"
@@ -55,7 +56,6 @@
 #include "src/storage/blobfs/iterator/block_iterator.h"
 #include "src/storage/blobfs/iterator/block_iterator_provider.h"
 #include "src/storage/blobfs/iterator/extent_iterator.h"
-#include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/page_loader.h"
 #include "src/storage/blobfs/transaction.h"
@@ -113,11 +113,15 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   fs_inspect::NodeOperations& node_operations() { return inspect_tree_.node_operations(); }
 
+  // TODO(fxbug.dev/80285): Move ownership of metrics_ to inspect_tree_, and remove use of shared
+  // ownership (all uses of this function take mutable pointers to this object already, or bypass
+  // the use of shared ownership entirely by calling |get()| on the shared_ptr.
+  const std::shared_ptr<BlobfsMetrics>& GetMetrics() const { return metrics_; }
+
   // TransactionManager interface.
   //
   // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
   // underlying storage (optionally through the journal).
-  std::shared_ptr<BlobfsMetrics>& GetMetrics() final { return metrics_; }
   fs::Journal* GetJournal() final { return journal_.get(); }
 
   // BlockIteratorProvider interface.
@@ -204,17 +208,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   }
 
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
-
-  // Statistics calculated by CalculateFragmentationMetrics, mainly for testing/validation purposes.
-  // Can consume a lot of memory if filled in by |CalculateFragmentationStatistics|.
-  struct FragmentationStats {
-    uint64_t total_nodes;
-    uint64_t files_in_use;
-    uint64_t extent_containers_in_use;
-    std::map<size_t, uint64_t> extents_per_file;
-    std::map<size_t, uint64_t> free_fragments;
-    std::map<size_t, uint64_t> in_use_fragments;
-  };
 
   // Updates fragmentation metric properties in |out_metrics|. The calculated statistics can also be
   // obtained directly providing |out_stats|.

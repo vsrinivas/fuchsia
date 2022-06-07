@@ -4,7 +4,7 @@
 
 // This file contains information for gathering Blobfs metrics.
 
-#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/blobfs_metrics.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fzl/time.h>

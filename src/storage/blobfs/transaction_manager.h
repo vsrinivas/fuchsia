@@ -13,7 +13,7 @@
 #include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
-#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/blobfs_metrics.h"
 
 namespace blobfs {
 
@@ -29,8 +29,6 @@ enum class EnqueueType {
 class TransactionManager : public fs::DeviceTransactionHandler, public SpaceManager {
  public:
   virtual ~TransactionManager() = default;
-
-  virtual std::shared_ptr<BlobfsMetrics>& GetMetrics() = 0;
 
   // May return null if the journal isn't set up.
   virtual fs::Journal* GetJournal() = 0;

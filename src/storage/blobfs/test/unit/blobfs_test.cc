@@ -340,8 +340,6 @@ std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t 
 // metrics at each stage.
 // This test has an understanding about block allocation policy.
 
-using FragmentationStats = blobfs::Blobfs::FragmentationStats;
-
 void FragmentationStatsEqual(const FragmentationStats& lhs, const FragmentationStats& rhs) {
   ASSERT_EQ(lhs.total_nodes, rhs.total_nodes);
   ASSERT_EQ(lhs.files_in_use, rhs.files_in_use);

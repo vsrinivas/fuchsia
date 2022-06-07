@@ -16,7 +16,7 @@
 #include "src/lib/digest/merkle-tree.h"
 #include "src/storage/blobfs/blob_corruption_notifier.h"
 #include "src/storage/blobfs/blob_layout.h"
-#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/blobfs_metrics.h"
 
 namespace blobfs {
 

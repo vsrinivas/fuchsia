@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/blobfs/metrics.h"
-
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -23,9 +21,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/blobfs_metrics.h"
 #include "src/storage/blobfs/format.h"
-#include "src/storage/blobfs/read_metrics.h"
-#include "src/storage/blobfs/verification_metrics.h"
 
 namespace blobfs {
 namespace {

@@ -22,7 +22,6 @@
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/blobfs.h"
-#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 

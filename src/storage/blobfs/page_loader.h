@@ -19,9 +19,9 @@
 #include <memory>
 
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
+#include "src/storage/blobfs/blobfs_metrics.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
 #include "src/storage/blobfs/loader_info.h"
-#include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/transaction_manager.h"
 #include "src/storage/blobfs/transfer_buffer.h"
 #include "src/storage/lib/watchdog/include/lib/watchdog/watchdog.h"

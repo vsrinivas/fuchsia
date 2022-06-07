@@ -4,8 +4,8 @@
 
 // This file contains information for gathering Blobfs metrics.
 
-#ifndef SRC_STORAGE_BLOBFS_METRICS_H_
-#define SRC_STORAGE_BLOBFS_METRICS_H_
+#ifndef SRC_STORAGE_BLOBFS_BLOBFS_METRICS_H_
+#define SRC_STORAGE_BLOBFS_BLOBFS_METRICS_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -23,9 +23,9 @@
 #include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/metrics/read_metrics.h"
+#include "src/storage/blobfs/metrics/verification_metrics.h"
 #include "src/storage/blobfs/mount.h"
-#include "src/storage/blobfs/read_metrics.h"
-#include "src/storage/blobfs/verification_metrics.h"
 
 namespace blobfs {
 
@@ -43,7 +43,8 @@ struct BlobPageInFrequencies {
 // serving thread which is currently single-threaded.
 //
 // TODO(fxbug.dev/80285): Make this properly thread-safe.
-// TODO(fxbug.dev/80285): Merge this with BlobfsInspectTree.
+// TODO(fxbug.dev/80285): Make this class encapsulate all Blobfs-specific metrics, and have
+// BlobfsInspectTree take ownership of it.
 class BlobfsMetrics final {
  public:
   explicit BlobfsMetrics(
@@ -199,4 +200,4 @@ class BlobfsMetrics final {
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_METRICS_H_
+#endif  // SRC_STORAGE_BLOBFS_BLOBFS_METRICS_H_

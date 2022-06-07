@@ -19,12 +19,12 @@
 #include "src/storage/blobfs/blob_corruption_notifier.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blob_verifier.h"
+#include "src/storage/blobfs/blobfs_metrics.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
 #include "src/storage/blobfs/compression/seekable_decompressor.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/block_iterator_provider.h"
 #include "src/storage/blobfs/loader_info.h"
-#include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/node_finder.h"
 #include "src/storage/blobfs/transaction_manager.h"
 

@@ -20,7 +20,6 @@
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/cache_node.h"
 #include "src/storage/blobfs/cache_policy.h"
-#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 
