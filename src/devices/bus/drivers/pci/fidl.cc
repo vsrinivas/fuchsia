@@ -186,20 +186,20 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
 
   fbl::AutoLock dev_lock(device_->dev_lock());
   auto& bar = device_->bars()[request->bar_id];
-  size_t bar_size = bar.size;
-  if (bar_size == 0) {
+  if (!bar) {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
     RETURN_DEBUG(ZX_ERR_NOT_FOUND, "%u", request->bar_id);
   }
 
+  size_t bar_size = bar->size;
 #ifdef ENABLE_MSIX
   // If this device shares BAR data with either of the MSI-X tables then we need
   // to determine what portions of the BAR the driver can be permitted to
   // access. If the MSI-X bar exists in the only page present in the BAR then we
   // need to deny all access to the BAR.
   if (device_->capabilities().msix) {
-    zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(bar);
-    if (!result.is_ok()) {
+    zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(*bar);
+    if (result.is_error()) {
       completer.ReplyError(result.status_value());
       RETURN_DEBUG(result.status_value(), "%u", request->bar_id);
     }
@@ -208,8 +208,8 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
 #endif
 
   zx_status_t status = ZX_OK;
-  if (bar.is_mmio) {
-    zx::status<zx::vmo> result = bar.allocation->CreateVmo();
+  if (bar->is_mmio) {
+    zx::status<zx::vmo> result = bar->allocation->CreateVmo();
     if (result.is_ok()) {
       completer.ReplySuccess({.bar_id = request->bar_id,
                               .size = bar_size,
@@ -218,14 +218,14 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
     }
     status = result.status_value();
   } else {
-    zx::status<zx::resource> result = bar.allocation->CreateResource();
+    zx::status<zx::resource> result = bar->allocation->CreateResource();
     if (status == ZX_OK) {
       fidl::Arena arena;
       completer.ReplySuccess(
           {.bar_id = request->bar_id,
            .size = bar_size,
            .result = fpci::wire::BarResult::WithIo(
-               arena, fuchsia_hardware_pci::wire::IoBar{.address = bar.address,
+               arena, fuchsia_hardware_pci::wire::IoBar{.address = bar->address,
                                                         .resource = std::move(result.value())})});
       RETURN_DEBUG(ZX_OK, "%u", request->bar_id);
     }
@@ -268,7 +268,7 @@ void FidlDevice::AckInterrupt(AckInterruptRequestView request,
 void FidlDevice::MapInterrupt(MapInterruptRequestView request,
                               MapInterruptCompleter::Sync& completer) {
   zx::status<zx::interrupt> result = device_->MapInterrupt(request->which_irq);
-  if (!result.is_ok()) {
+  if (result.is_error()) {
     completer.ReplyError(result.status_value());
     RETURN_DEBUG(result.status_value(), "%#x", request->which_irq);
   }
@@ -303,7 +303,7 @@ void FidlDevice::GetInterruptModes(GetInterruptModesRequestView request,
 void FidlDevice::ReadConfig8(ReadConfig8RequestView request,
                              ReadConfig8Completer::Sync& completer) {
   auto result = device_->ReadConfig<uint8_t, PciReg8>(request->offset);
-  if (!result.is_ok()) {
+  if (result.is_error()) {
     completer.ReplyError(result.status_value());
     RETURN_DEBUG(result.status_value(), "%#x", request->offset);
   }
@@ -315,7 +315,7 @@ void FidlDevice::ReadConfig8(ReadConfig8RequestView request,
 void FidlDevice::ReadConfig16(ReadConfig16RequestView request,
                               ReadConfig16Completer::Sync& completer) {
   auto result = device_->ReadConfig<uint16_t, PciReg16>(request->offset);
-  if (!result.is_ok()) {
+  if (result.is_error()) {
     completer.ReplyError(result.status_value());
     RETURN_DEBUG(result.status_value(), "%#x", request->offset);
   }
@@ -327,7 +327,7 @@ void FidlDevice::ReadConfig16(ReadConfig16RequestView request,
 void FidlDevice::ReadConfig32(ReadConfig32RequestView request,
                               ReadConfig32Completer::Sync& completer) {
   auto result = device_->ReadConfig<uint32_t, PciReg32>(request->offset);
-  if (!result.is_ok()) {
+  if (result.is_error()) {
     completer.ReplyError(result.status_value());
     RETURN_DEBUG(result.status_value(), "%#x", request->offset);
   }

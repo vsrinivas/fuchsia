@@ -29,6 +29,7 @@ void Bus::GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& c
   size_t dev_idx = 0;
   fidl::VectorView<PciFidl::wire::PciDevice> devices(allocator, dev_cnt);
   for (auto& device : devices_) {
+    fbl::AutoLock device_lock(device.dev_lock());
     auto& cfg = device.config();
     if (dev_idx >= PciFidl::wire::kMaxDevices) {
       zxlogf(DEBUG, "device %s exceeds fuchsia.hardware.pci Device limit of %u Devices.",
@@ -47,13 +48,15 @@ void Bus::GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& c
     size_t bar_cnt = device.bar_count();
     fidl::VectorView<PciFidl::wire::BaseAddress> bars(allocator, bar_cnt);
     for (size_t i = 0; i < bar_cnt; i++) {
-      auto info = device.GetBar(i);
-      bars[i].is_memory = info.is_mmio;
-      bars[i].is_prefetchable = info.is_prefetchable;
-      bars[i].is_64bit = info.is_64bit;
-      bars[i].size = info.size;
-      bars[i].address = info.address;
-      bars[i].id = info.bar_id;
+      auto& bar = device.bars()[i];
+      if (bar) {
+        bars[i].is_memory = bar->is_mmio;
+        bars[i].is_prefetchable = bar->is_prefetchable;
+        bars[i].is_64bit = bar->is_64bit;
+        bars[i].size = bar->size;
+        bars[i].address = bar->address;
+        bars[i].id = bar->bar_id;
+      }
     }
 
     size_t cap_cnt = device.capabilities().list.size_slow();

@@ -213,6 +213,8 @@ zx_status_t Device::InitLocked() {
     return st;
   }
 
+  ProbeBars();
+
   // Now that we know what our capabilities are, initialize our internal IRQ
   // bookkeeping and disable all interrupts until a driver requests them.
   st = InitInterrupts();
@@ -287,7 +289,7 @@ void Device::DisableLocked() {
 
   // Release all BAR allocations back into the pool they came from.
   for (auto& bar : bars_) {
-    bar.allocation = nullptr;
+    bar.reset();
   }
 }
 
@@ -321,28 +323,28 @@ zx_status_t Device::WriteBarInformation(const Bar& bar) {
   return ZX_OK;
 }
 
-zx_status_t Device::ProbeBar(uint8_t bar_id) {
+zx::status<> Device::ProbeBar(uint8_t bar_id) {
   if (bar_id >= bar_count_) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  Bar& bar = bars_[bar_id];
+  Bar bar{};
   uint32_t bar_val = cfg_->Read(Config::kBar(bar_id));
   bar.bar_id = bar_id;
   bar.is_mmio = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
   bar.is_64bit = bar.is_mmio && ((bar_val & PCI_BAR_MMIO_TYPE_MASK) == PCI_BAR_MMIO_TYPE_64BIT);
   bar.is_prefetchable = bar.is_mmio && (bar_val & PCI_BAR_MMIO_PREFETCH_MASK);
-  bar.size = 0;  // Default to an unused BAR until probing is properly completed.
 
-  // Sanity check the read-only configuration of the BAR
+  // Check the read-only configuration of the BAR. If it's invalid then don't add it to our BAR
+  // list.
   if (bar.is_64bit && (bar.bar_id == bar_count_ - 1)) {
     zxlogf(ERROR, "[%s] has a 64bit bar in invalid position %u!", cfg_->addr(), bar.bar_id);
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   if (bar.is_64bit && !bar.is_mmio) {
     zxlogf(ERROR, "[%s] bar %u is 64bit but not mmio!", cfg_->addr(), bar.bar_id);
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   // Disable MMIO & PIO access while we perform the probe. We don't want the
@@ -373,17 +375,11 @@ zx_status_t Device::ProbeBar(uint8_t bar_id) {
   bar_val = cfg_->Read(Config::kBar(bar_id));
   // BARs that are not wired up return all zeroes on read after probing.
   if (bar_val == 0) {
-    return ZX_OK;
+    return zx::ok();
   }
 
   uint64_t size_mask = ~(bar_val & addr_mask);
   if (bar.is_mmio && bar.is_64bit) {
-    // This next BAR should not be probed/allocated on its own, so set
-    // its size to zero and make it clear it's owned by the previous
-    // BAR. We already verified the bar_id is valid above.
-    bars_[bar_id + 1].size = 0;
-    bars_[bar_id + 1].bar_id = bar_id;
-
     // Retain the high 32bits of the 64bit address address if the device was
     // enabled already.
     if (enabled) {
@@ -413,7 +409,24 @@ zx_status_t Device::ProbeBar(uint8_t bar_id) {
          (bar.is_mmio) ? "Memory" : "I/O ports", (bar.is_64bit) ? "64-bit, " : "",
          (bar.is_prefetchable) ? "" : "non-",
          format_size(pretty_size.data(), pretty_size.max_size(), bar.size));
-  return ZX_OK;
+  bars_[bar_id] = std::move(bar);
+  return zx::ok();
+}
+
+void Device::ProbeBars() {
+  for (uint32_t bar_id = 0; bar_id < bar_count_; bar_id++) {
+    auto result = ProbeBar(bar_id);
+    if (result.is_error()) {
+      zxlogf(ERROR, "[%s] Skipping bar %u due to probing error: %s", cfg_->addr(), bar_id,
+             result.status_string());
+      continue;
+    }
+
+    // If the bar was probed as 64 bit then mark then we can just skip the next bar.
+    if (bars_[bar_id] && bars_[bar_id]->is_64bit) {
+      bar_id++;
+    }
+  }
 }
 
 // Allocates appropriate address space for BAR |bar| out of any suitable
@@ -453,12 +466,12 @@ zx::status<std::unique_ptr<PciAllocation>> Device::AllocateFromUpstream(
 
 // Higher level method to allocate address space a previously probed BAR id
 // |bar_id| and handle configuration space setup.
-zx_status_t Device::AllocateBar(uint8_t bar_id) {
+zx::status<> Device::AllocateBar(uint8_t bar_id) {
   ZX_DEBUG_ASSERT(upstream_);
   ZX_DEBUG_ASSERT(bar_id < bar_count_);
-  Bar& bar = bars_[bar_id];
-  ZX_DEBUG_ASSERT(bar.size);
+  ZX_DEBUG_ASSERT(bars_[bar_id].has_value());
 
+  Bar& bar = *bars_[bar_id];
   // The goal is to try to allocate the same window configured by the
   // bootloader/bios, but if unavailable then allocate an appropriately sized
   // window from anywhere in the upstream allocator.
@@ -468,7 +481,7 @@ zx_status_t Device::AllocateBar(uint8_t bar_id) {
   } else if (auto result = AllocateFromUpstream(bar, std::nullopt); result.is_ok()) {
     bar.allocation = std::move(result.value());
   } else {
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   bar.address = bar.allocation->base();
@@ -476,42 +489,26 @@ zx_status_t Device::AllocateBar(uint8_t bar_id) {
   zxlogf(TRACE, "[%s] allocated [%#lx, %#lx) to BAR%u", cfg_->addr(), bar.allocation->base(),
          bar.allocation->base() + bar.allocation->size(), bar.bar_id);
 
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Device::ConfigureBars() {
+zx::status<> Device::AllocateBars() {
   fbl::AutoLock dev_lock(&dev_lock_);
   ZX_DEBUG_ASSERT(plugged_in_);
   ZX_DEBUG_ASSERT(bar_count_ <= bars_.max_size());
 
   // Allocate BARs for the device
-  zx_status_t status;
-  // First pass, probe BARs to populate the table and grab backing allocations
-  // for any BARs that have been allocated by system firmware.
   for (uint32_t bar_id = 0; bar_id < bar_count_; bar_id++) {
-    status = ProbeBar(bar_id);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "[%s] error probing bar %u: %d. Skipping it.", cfg_->addr(), bar_id, status);
-      continue;
-    }
-
-    // Allocate the BAR if it was successfully probed.
-    if (bars_[bar_id].size) {
-      status = AllocateBar(bar_id);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "[%s] failed to allocate bar %u: %d", cfg_->addr(), bar_id, status);
-        return status;
+    if (bars_[bar_id]) {
+      if (auto result = AllocateBar(bar_id); result.is_error()) {
+        zxlogf(ERROR, "[%s] failed to allocate bar %u: %s", cfg_->addr(), bar_id,
+               result.status_string());
+        return result.take_error();
       }
-    }
-
-    // If the BAR was 64bit then we need to skip the next bar holding its
-    // high address bits.
-    if (bars_[bar_id].is_64bit) {
-      bar_id++;
     }
   }
 
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx::status<PowerManagementCapability::PowerState> Device::GetPowerState() {

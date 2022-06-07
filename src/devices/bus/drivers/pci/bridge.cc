@@ -157,26 +157,23 @@ void Bridge::Unplug() {
   zxlogf(DEBUG, "bridge [%s] unplugged", cfg_->addr());
 }
 
-zx_status_t Bridge::ConfigureBars() {
-  zx_status_t status = ZX_OK;
+zx::status<> Bridge::AllocateBars() {
   {
     fbl::AutoLock dev_lock(&dev_lock_);
-    status = AllocateBridgeWindowsLocked();
-    if (status != ZX_OK) {
-      return status;
+    if (auto result = AllocateBridgeWindowsLocked(); result.is_error()) {
+      return result.take_error();
     }
   }
 
-  status = pci::Device::ConfigureBars();
-  if (status != ZX_OK) {
-    return status;
+  if (auto result = pci::Device::AllocateBars(); result.is_error()) {
+    return result.take_error();
   }
 
   ConfigureDownstreamDevices();
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Bridge::AllocateBridgeWindowsLocked() {
+zx::status<> Bridge::AllocateBridgeWindowsLocked() {
   ZX_DEBUG_ASSERT(upstream_);
 
   // We are configuring a bridge.  We need to be able to allocate the MMIO and
@@ -192,52 +189,53 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   // TODO(cja) : support dynamic configuration of bridge windows.  It's going
   // to be important when we need to support hot-plugging.  See fxbug.dev/30281
 
-  zx_status_t status;
-
   // Every window is configured the same but with different allocators and registers.
   auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, uint64_t base, size_t limit,
-                              auto label) {
+                              auto label) -> zx::status<> {
     std::unique_ptr<PciAllocation> alloc;
     if (base <= limit) {
       uint64_t size = static_cast<uint64_t>(limit) - base + 1;
       auto result = upstream_alloc.Allocate(base, size);
-      if (!result.is_ok()) {
+      if (result.is_error()) {
         zxlogf(ERROR, "[%s] Failed to allocate bridge %s window [%#lx,%#lx)", cfg_->addr(), label,
                static_cast<uint64_t>(base), static_cast<uint64_t>(base + limit));
-        return status;
+        return result.take_error();
       }
 
       zxlogf(DEBUG, "[%s] Allocating [%#lx, %#lx) to %s (%p)", cfg_->addr(), base, base + size,
              label, &dest_alloc);
-      return dest_alloc.SetParentAllocation(std::move(result.value()));
+      zx_status_t status = dest_alloc.SetParentAllocation(std::move(result.value()));
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
     }
-    return ZX_OK;
+    return zx::ok();
   };
 
   // Configure the three windows
-  status = configure_window(upstream_->pio_regions(), pio_regions_, io_base_, io_limit_, "io");
-  if (status != ZX_OK) {
+  auto result = configure_window(upstream_->pio_regions(), pio_regions_, io_base_, io_limit_, "io");
+  if (result.is_error()) {
     zxlogf(TRACE,
-           "%s Error configuring I/O window (%d), I/O bars downstream will be unavailable!\n",
-           cfg_->addr(), status);
+           "[%s] Error configuring I/O window (%s), I/O bars downstream will be unavailable!\n",
+           cfg_->addr(), result.status_string());
   }
-  status =
+  result =
       configure_window(upstream_->mmio_regions(), mmio_regions_, mem_base_, mem_limit_, "mmio");
-  if (status != ZX_OK) {
+  if (result.is_error()) {
     zxlogf(TRACE,
-           "%s Error configuring MMIO window (%d), MMIO bars downstream will be unavailable!\n",
-           cfg_->addr(), status);
+           "[%s] Error configuring MMIO window (%s), MMIO bars downstream will be unavailable!\n",
+           cfg_->addr(), result.status_string());
   }
-  status = configure_window(upstream_->pf_mmio_regions(), pf_mmio_regions_, pf_mem_base_,
+  result = configure_window(upstream_->pf_mmio_regions(), pf_mmio_regions_, pf_mem_base_,
                             pf_mem_limit_, "pf_mmio");
-  if (status != ZX_OK) {
-    zxlogf(
-        TRACE,
-        "%s Error configuring PF-MMIO window (%d), PF-MMIO bars downstream will be unavailable!\n",
-        cfg_->addr(), status);
+  if (result.is_error()) {
+    zxlogf(TRACE,
+           "[%s] Error configuring PF-MMIO window (%s), PF-MMIO bars downstream will be "
+           "unavailable!\n",
+           cfg_->addr(), result.status_string());
   }
 
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx_status_t Bridge::SetBusMasteringUpstream(bool enabled) {

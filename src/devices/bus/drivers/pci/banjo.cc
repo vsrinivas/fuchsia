@@ -208,20 +208,20 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
     return LOG_STATUS(DEBUG, ZX_ERR_INVALID_ARGS, "%u", bar_id);
   }
 
-  // Both unused BARs and BARs that are the second half of a 64 bit
-  // BAR have a size of zero.
+  // Don't return bars corresponding to unused bars or the upper half
+  // of a 64 bit bar.
   auto& bar = device_->bars()[bar_id];
-  if (bar.size == 0) {
+  if (!bar) {
     return LOG_STATUS(DEBUG, ZX_ERR_NOT_FOUND, "%u", bar_id);
   }
 
-  size_t bar_size = bar.size;
+  size_t bar_size = bar->size;
 #ifdef ENABLE_MSIX
   // If this device shares BAR data with either of the MSI-X tables then we need
   // to determine what portions of the BAR the driver can be permitted to
   // access.
   if (device_->capabilities().msix) {
-    zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(bar);
+    zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(*bar);
     if (result.is_error()) {
       return LOG_STATUS(DEBUG, result.status_value(), "%u", bar_id);
     }
@@ -231,29 +231,29 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
 
   out_bar->bar_id = bar_id;
   out_bar->size = bar_size;
-  out_bar->type = (bar.is_mmio) ? PCI_BAR_TYPE_MMIO : PCI_BAR_TYPE_IO;
+  out_bar->type = (bar->is_mmio) ? PCI_BAR_TYPE_MMIO : PCI_BAR_TYPE_IO;
 
   // MMIO Bars have an associated VMO for the driver to map, whereas IO bars
   // have a Resource corresponding to an IO range for the driver to access.
   // These are mutually exclusive, so only one handle is ever needed.
   zx::status<zx::handle> result;
-  if (bar.is_mmio) {
-    result = bar.allocation->CreateVmo();
+  if (bar->is_mmio) {
+    result = bar->allocation->CreateVmo();
     if (result.is_ok()) {
       out_bar->result.vmo = result.value().release();
     }
   } else {  // Bar using IOports
-    result = bar.allocation->CreateResource();
+    result = bar->allocation->CreateResource();
     if (result.is_ok()) {
       out_bar->result.io.resource = result.value().release();
-      out_bar->result.io.address = bar.address;
+      out_bar->result.io.address = bar->address;
     }
   }
 
   if (result.is_error()) {
     zxlogf(ERROR, "[%s] Failed to create %s for BAR %u (type = %s, range = [%#lx, %#lx)): %s",
-           device_->config()->addr(), (bar.is_mmio) ? "VMO" : "resource", bar_id,
-           (bar.is_mmio) ? "MMIO" : "IO", bar.address, bar.address + bar.size,
+           device_->config()->addr(), (bar->is_mmio) ? "VMO" : "resource", bar_id,
+           (bar->is_mmio) ? "MMIO" : "IO", bar->address, bar->address + bar->size,
            zx_status_get_string(status));
   }
   return LOG_STATUS(DEBUG, result.status_value(), "%u", bar_id);
