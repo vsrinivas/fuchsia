@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CATAPULT_CONVERTER_CONVERTER_H_
-#define GARNET_BIN_CATAPULT_CONVERTER_CONVERTER_H_
+#ifndef SRC_TESTING_CATAPULT_CONVERTER_CONVERTER_H_
+#define SRC_TESTING_CATAPULT_CONVERTER_CONVERTER_H_
 
 #include "rapidjson/document.h"
 
@@ -32,4 +32,4 @@ struct ConverterArgs {
 void Convert(rapidjson::Document* input, rapidjson::Document* output, const ConverterArgs* args);
 int ConverterMain(int argc, char** argv);
 
-#endif  // GARNET_BIN_CATAPULT_CONVERTER_CONVERTER_H_
+#endif  // SRC_TESTING_CATAPULT_CONVERTER_CONVERTER_H_

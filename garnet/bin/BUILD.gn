@@ -5,7 +5,6 @@
 group("bin") {
   testonly = true
   deps = [
-    "catapult_converter:converter_bin",
     "cpuperf",
     "cpuperf_provider",
 

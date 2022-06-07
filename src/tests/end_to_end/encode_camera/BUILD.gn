@@ -28,8 +28,8 @@ if (is_host) {
     ]
     outputs = [ "$_data_dir/{{source_file_part}}" ]
     deps = [
-      "//garnet/bin/catapult_converter:converter_bin",
       "//garnet/bin/trace2json:bin",
+      "//src/testing/catapult_converter:converter_bin",
     ]
   }
 }

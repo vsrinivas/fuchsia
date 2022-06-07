@@ -1,0 +1,10 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(fxbug.dev/36063): Delete this file once all clients have migrated to
+# using //src/testing/catapult_converter.
+
+group("converter_bin") {
+  public_deps = [ "//src/testing/catapult_converter:converter_bin" ]
+}
