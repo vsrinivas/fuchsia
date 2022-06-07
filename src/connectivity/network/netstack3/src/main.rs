@@ -11,10 +11,8 @@ mod bindings;
 
 use bindings::NetstackSeed;
 
+#[fuchsia::main(logging_minimum_severity = "debug")]
 fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init()?;
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
-
     let mut executor = fuchsia_async::LocalExecutor::new()?;
 
     let seed = NetstackSeed::default();
