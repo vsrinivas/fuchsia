@@ -15,8 +15,8 @@ zx_library("driver-unit-test") {
     "utils.cc",
   ]
   public_deps = [
-    # <lib/driver-unit-test/logger.h> has #include <fuchsia/driver/test/logger/c/fidl.h>
-    "//sdk/fidl/fuchsia.driver.test.logger:fuchsia.driver.test.logger_c",
+    # <lib/driver-unit-test/logger.h> has #include <fidl/fuchsia.driver.test.logger/cpp/fidl.h>
+    "//sdk/fidl/fuchsia.driver.test.logger:fuchsia.driver.test.logger_cpp",
   ]
   deps = [
     "//sdk/lib/fidl/cpp:cpp_base",
@@ -26,10 +26,6 @@ zx_library("driver-unit-test") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 group("tests") {

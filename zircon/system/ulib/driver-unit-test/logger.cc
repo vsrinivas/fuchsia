@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/driver/test/logger/c/fidl.h>
+#include <fidl/fuchsia.driver.test.logger/cpp/fidl.h>
 #include <lib/driver-unit-test/logger.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/cpp/message_builder.h>
 #include <lib/fidl/cpp/transaction_header.h>
 
 #include <algorithm>
@@ -37,87 +36,49 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
     return ZX_ERR_BAD_STATE;
   }
   size_t log_msg_size =
-      std::min(strlen(log_msg), static_cast<size_t>(fuchsia_driver_test_logger_LOG_MESSAGE_MAX));
-
-  uint32_t len = static_cast<uint32_t>(
-      sizeof(fuchsia_driver_test_logger_LoggerLogMessageRequestMessage) + FIDL_ALIGN(log_msg_size));
-
-  FIDL_ALIGNDECL char buf[len];
-  fidl::Builder builder(buf, len);
-
-  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogMessageRequestMessage>();
-  fidl::InitTxnHeader(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                      fuchsia_driver_test_logger_LoggerLogMessageOrdinal,
-                      fidl::MessageDynamicFlags::kStrictMethod);
-
-  auto* data = builder.NewArray<char>(static_cast<uint32_t>(log_msg_size));
-  req->msg.data = data;
-  req->msg.size = log_msg_size;
-  memcpy(data, log_msg, log_msg_size);
-
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  const char* err = nullptr;
-  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogMessageRequestMessageTable, &err);
-  if (status != ZX_OK) {
-    return status;
+      std::min(strlen(log_msg), static_cast<size_t>(fuchsia_driver_test_logger::kLogMessageMax));
+  fuchsia_driver_test_logger::LoggerLogMessageRequest req;
+  req.msg() = std::string(std::string_view(log_msg, log_msg_size));
+  fidl::UnownedClientEnd<fuchsia_driver_test_logger::Logger> client_end(logger->channel_.get());
+  auto result = fidl::Call(client_end)->LogMessage(req);
+  if (result.is_error()) {
+    return result.error_value().status();
   }
-  return msg.Write(logger->channel_.get(), 0);
+  return ZX_OK;
 }
 
 zx_status_t Logger::SendLogTestCase() {
   size_t test_name_size =
       std::min(strlen(test_case_name_.c_str()),
-               static_cast<size_t>(fuchsia_driver_test_logger_TEST_CASE_NAME_MAX));
-
-  uint32_t len =
-      static_cast<uint32_t>(sizeof(fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage) +
-                            FIDL_ALIGN(test_name_size));
-
-  FIDL_ALIGNDECL char buf[len];
-  fidl::Builder builder(buf, len);
-
-  auto* req = builder.New<fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage>();
-  fidl::InitTxnHeader(&req->hdr, FIDL_TXID_NO_RESPONSE,
-                      fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal,
-                      fidl::MessageDynamicFlags::kStrictMethod);
-
-  auto* data = builder.NewArray<char>(static_cast<uint32_t>(test_name_size));
-  req->name.data = data;
-  req->name.size = test_name_size;
-  memcpy(data, test_case_name_.c_str(), test_name_size);
-
-  req->result.passed = test_case_result_.passed;
-  req->result.failed = test_case_result_.failed;
-  req->result.skipped = test_case_result_.skipped;
-
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  const char* err = nullptr;
-  auto status = msg.Encode(&fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessageTable, &err);
-  if (status != ZX_OK) {
-    return status;
+               static_cast<size_t>(fuchsia_driver_test_logger::kTestCaseNameMax));
+  fuchsia_driver_test_logger::LoggerLogTestCaseRequest req;
+  req.name() = std::string(std::string_view(test_case_name_.c_str(), test_name_size));
+  req.result() = test_case_result_;
+  fidl::UnownedClientEnd<fuchsia_driver_test_logger::Logger> client_end(channel_.get());
+  auto result = fidl::Call(client_end)->LogTestCase(req);
+  if (result.is_error()) {
+    return result.error_value().status();
   }
-  return msg.Write(channel_.get(), 0);
+  return ZX_OK;
 }
 
 void Logger::OnTestCaseStart(const zxtest::TestCase& test_case) {
   test_case_name_ = test_case.name();
-  test_case_result_.passed = 0;
-  test_case_result_.failed = 0;
-  test_case_result_.skipped = 0;
+  test_case_result_ = {};
 }
 
 void Logger::OnTestCaseEnd(const zxtest::TestCase& test_case) { SendLogTestCase(); }
 
 void Logger::OnTestSuccess(const zxtest::TestCase& test_case, const zxtest::TestInfo& test) {
-  test_case_result_.passed++;
+  test_case_result_.passed()++;
 }
 
 void Logger::OnTestFailure(const zxtest::TestCase& test_case, const zxtest::TestInfo& test) {
-  test_case_result_.failed++;
+  test_case_result_.failed()++;
 }
 
 void Logger::OnTestSkip(const zxtest::TestCase& test_case, const zxtest::TestInfo& test) {
-  test_case_result_.skipped++;
+  test_case_result_.skipped()++;
 }
 
 }  // namespace driver_unit_test

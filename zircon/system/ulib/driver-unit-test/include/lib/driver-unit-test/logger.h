@@ -5,7 +5,7 @@
 #ifndef LIB_DRIVER_UNIT_TEST_LOGGER_H_
 #define LIB_DRIVER_UNIT_TEST_LOGGER_H_
 
-#include <fuchsia/driver/test/logger/c/fidl.h>
+#include <fidl/fuchsia.driver.test.logger/cpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
@@ -50,7 +50,7 @@ class Logger : public zxtest::LifecycleObserver {
 
   // Current test case information.
   fbl::String test_case_name_;
-  fuchsia_driver_test_logger_TestCaseResult test_case_result_;
+  fuchsia_driver_test_logger::TestCaseResult test_case_result_;
 };
 
 }  // namespace driver_unit_test

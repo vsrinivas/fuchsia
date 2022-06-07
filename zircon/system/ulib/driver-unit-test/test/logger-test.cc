@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.driver.test.logger/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/driver-unit-test/logger.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/channel.h>
@@ -13,7 +16,6 @@
 
 namespace {
 
-constexpr size_t kMaxFidlMsgSize = 8096;
 constexpr char kLogMessage[] = "test log message";
 
 const char* kFakeTestCaseName = "test_case";
@@ -50,87 +52,60 @@ TEST_F(LoggerTest, CreateWithInvalidChannel) {
   ASSERT_NE(ZX_OK, driver_unit_test::Logger::SendLogMessage(kLogMessage));
 }
 
-// Waits for a FIDL message on the channel and populates |out_data| with a pointer to the
-// decoded data.
-void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl_type_t* want_type,
-                   std::unique_ptr<uint8_t[]>* out_data, uint32_t* out_data_size) {
-  // Verify we receive the expected signal on the channel.
-  zx_signals_t pending;
-  const zx_signals_t wait = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  auto deadline = zx::deadline_after(zx::sec(5));
-  ASSERT_OK(channel.wait_one(wait, deadline, &pending));
-  ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
+struct LoggerTestServer : public fidl::Server<fuchsia_driver_test_logger::Logger> {
+  void LogMessage(LogMessageRequest& request, LogMessageCompleter::Sync& completer) override {
+    logged_message_ = request.msg();
+  }
+  void LogTestCase(LogTestCaseRequest& request, LogTestCaseCompleter::Sync& completer) override {
+    logged_test_case_name_ = request.name();
+    logged_test_case_result_ = request.result();
+  }
 
-  // Create the data buffer and copy the data into it.
-  const uint32_t buf_size = kMaxFidlMsgSize;
-  std::unique_ptr<uint8_t[]> buf(new uint8_t[buf_size]);
-  fidl_incoming_msg_t fidl_msg = {
-      .bytes = buf.get(),
-      .handles = nullptr,
-      .num_bytes = buf_size,
-      .num_handles = 0,
-  };
+  std::string logged_message_;
 
-  ASSERT_OK(channel.read(0, buf.get(), nullptr /* handles */, buf_size, 0 /* num_handles */,
-                         &fidl_msg.num_bytes, nullptr));
-  ASSERT_GE(fidl_msg.num_bytes, sizeof(fidl_message_header_t));
-
-  // Decode the message in-place.
-  auto* hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-  ASSERT_EQ(want_ordinal, hdr->ordinal);
-  ASSERT_OK(fidl_decode_msg(want_type, &fidl_msg, nullptr));
-
-  *out_data = std::move(buf);
-  *out_data_size = fidl_msg.num_bytes;
-}
+  std::string logged_test_case_name_;
+  fuchsia_driver_test_logger::TestCaseResult logged_test_case_result_;
+};
 
 TEST_F(LoggerTest, LogMessage) {
   ASSERT_OK(driver_unit_test::Logger::SendLogMessage(kLogMessage));
 
-  std::unique_ptr<uint8_t[]> data_buf;
-  uint32_t data_size;
-  ASSERT_NO_FATAL_FAILURE(
-      DecodeMessage(local_, fuchsia_driver_test_logger_LoggerLogMessageOrdinal,
-                    &fuchsia_driver_test_logger_LoggerLogMessageRequestMessageTable, &data_buf,
-                    &data_size),
-      "could not decode message");
-  ASSERT_GE(data_size, sizeof(fuchsia_driver_test_logger_LoggerLogMessageRequestMessage));
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  LoggerTestServer server;
+  fidl::ServerEnd<fuchsia_driver_test_logger::Logger> server_end(std::move(local_));
+  fidl::BindServer(loop.dispatcher(), std::move(server_end), &server);
 
-  auto request =
-      reinterpret_cast<fuchsia_driver_test_logger_LoggerLogMessageRequestMessage*>(data_buf.get());
-  ASSERT_EQ(strlen(kLogMessage), request->msg.size);
-  ASSERT_EQ(0, strncmp(kLogMessage, request->msg.data, request->msg.size));
+  loop.RunUntilIdle();
+
+  ASSERT_EQ(strlen(kLogMessage), server.logged_message_.size());
+  ASSERT_EQ(0, strncmp(kLogMessage, server.logged_message_.data(), server.logged_message_.size()));
 }
 
 // Read and decode the FIDL message from the channel and check that it equals the wanted result.
-void ValidateReceivedTestCase(const zx::channel& log_ch,
-                              const fuchsia_driver_test_logger_TestCaseResult& want) {
-  std::unique_ptr<uint8_t[]> data_buf;
-  uint32_t data_size;
-  ASSERT_NO_FATAL_FAILURE(
-      DecodeMessage(log_ch, fuchsia_driver_test_logger_LoggerLogTestCaseOrdinal,
-                    &fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessageTable, &data_buf,
-                    &data_size),
-      "could not decode message");
-  ASSERT_GE(data_size, sizeof(fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage));
+void ValidateReceivedTestCase(zx::channel log_ch,
+                              const fuchsia_driver_test_logger::TestCaseResult& want) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  LoggerTestServer server;
+  fidl::ServerEnd<fuchsia_driver_test_logger::Logger> server_end(std::move(log_ch));
+  fidl::BindServer(loop.dispatcher(), std::move(server_end), &server);
 
-  auto request =
-      reinterpret_cast<fuchsia_driver_test_logger_LoggerLogTestCaseRequestMessage*>(data_buf.get());
-  ASSERT_EQ(strlen(kFakeTestCaseName), request->name.size);
-  ASSERT_EQ(0, strncmp(kFakeTestCaseName, request->name.data, request->name.size));
+  loop.RunUntilIdle();
 
-  auto got = request->result;
-  ASSERT_EQ(want.passed, got.passed);
-  ASSERT_EQ(want.failed, got.failed);
-  ASSERT_EQ(want.skipped, got.skipped);
+  ASSERT_EQ(strlen(kFakeTestCaseName), server.logged_test_case_name_.size());
+  ASSERT_EQ(0, strncmp(kFakeTestCaseName, server.logged_test_case_name_.data(),
+                       server.logged_test_case_name_.size()));
+
+  ASSERT_EQ(want.passed(), server.logged_test_case_result_.passed());
+  ASSERT_EQ(want.failed(), server.logged_test_case_result_.failed());
+  ASSERT_EQ(want.skipped(), server.logged_test_case_result_.skipped());
 }
 
 TEST_F(LoggerTest, LogEmptyTestCase) {
   logger_->OnTestCaseStart(kFakeTestCase);
   logger_->OnTestCaseEnd(kFakeTestCase);
 
-  auto want_result = fuchsia_driver_test_logger_TestCaseResult{};
-  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(local_, want_result));
+  auto want_result = fuchsia_driver_test_logger::TestCaseResult{};
+  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(std::move(local_), want_result));
 }
 
 TEST_F(LoggerTest, LogSingleTest) {
@@ -138,9 +113,9 @@ TEST_F(LoggerTest, LogSingleTest) {
   logger_->OnTestSuccess(kFakeTestCase, kFakeTestInfo);
   logger_->OnTestCaseEnd(kFakeTestCase);
 
-  auto want_result = fuchsia_driver_test_logger_TestCaseResult{};
-  want_result.passed = 1;
-  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(local_, want_result));
+  auto want_result = fuchsia_driver_test_logger::TestCaseResult{};
+  want_result.passed() = 1;
+  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(std::move(local_), want_result));
 }
 
 TEST_F(LoggerTest, LogMultipleTest) {
@@ -153,11 +128,11 @@ TEST_F(LoggerTest, LogMultipleTest) {
   logger_->OnTestSuccess(kFakeTestCase, kFakeTestInfo);
   logger_->OnTestCaseEnd(kFakeTestCase);
 
-  auto want_result = fuchsia_driver_test_logger_TestCaseResult{};
-  want_result.passed = 3;
-  want_result.failed = 2;
-  want_result.skipped = 1;
-  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(local_, want_result));
+  auto want_result = fuchsia_driver_test_logger::TestCaseResult{};
+  want_result.passed() = 3;
+  want_result.failed() = 2;
+  want_result.skipped() = 1;
+  ASSERT_NO_FATAL_FAILURE(ValidateReceivedTestCase(std::move(local_), want_result));
 }
 
 }  // anonymous namespace

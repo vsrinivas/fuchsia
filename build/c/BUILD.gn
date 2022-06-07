@@ -323,8 +323,6 @@ config("fidl-deprecated-c-bindings") {
     "//zircon/system/ulib/c/sanitizers",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-integration-test/test:devmgr-integration",
-    "//zircon/system/ulib/driver-unit-test",
-    "//zircon/system/ulib/driver-unit-test/test:logger-unit",
     "//zircon/system/ulib/fidl-async-2/test:fidl-struct-test",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/image-format",
