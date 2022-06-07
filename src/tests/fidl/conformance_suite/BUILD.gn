@@ -8,7 +8,6 @@ fidl("conformance_fidl") {
   name = "test.conformance"
 
   testonly = true
-  host_llcpp = true
 
   sources = [
     "//src/tests/fidl/conformance_suite/alignment.test.fidl",

@@ -27,7 +27,6 @@ fidl("fidl.llcpp.empty.test") {
 fidl("fidl.llcpp.buffersize.test") {
   sources = [ "buffersize.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
-  host_llcpp = true
 }
 
 test("fidl_llcpp_message_container_tests_bin") {

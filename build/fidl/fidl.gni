@@ -64,9 +64,6 @@ import("//build/go/toolchain.gni")
 #     publishable in an SDK.
 #     Defaults to //sdk/history.
 #
-#   host_llcpp (optional)
-#     A flag to enable or disable llcpp host generation.
-#
 #   non_fidl_deps (optional)
 #     A list of non-FIDL dependency targets, i.e. targets that don't contribute
 #     FIDL artifacts, but should be built before this target regardless.
@@ -109,9 +106,6 @@ template("fidl") {
   }
   if (defined(invoker.experimental_flags)) {
     not_needed(invoker, [ "experimental_flags" ])
-  }
-  if (defined(invoker.host_llcpp)) {
-    not_needed(invoker, [ "host_llcpp" ])
   }
   if (defined(invoker.goldens_dir)) {
     not_needed(invoker, [ "goldens_dir" ])

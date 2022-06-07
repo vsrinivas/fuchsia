@@ -5,6 +5,5 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.spi.businfo") {
-  host_llcpp = true
   sources = [ "businfo.fidl" ]
 }

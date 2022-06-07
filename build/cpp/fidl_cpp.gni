@@ -350,11 +350,7 @@ template("fidl_cpp_family") {
   not_needed(invoker, [ "sources" ])
 
   # Determine the C++ bindings dependencies based on Fuchsia/host.
-  # Additionally, an empty llcpp_public_deps indicates that the LLCPP
-  # bindings for this library is not needed.
-  llcpp_public_deps = []
   if (is_fuchsia) {
-    not_needed(invoker, [ "host_llcpp" ])
     hlcpp_public_deps = [ "//sdk/lib/fidl/cpp" ]
     llcpp_public_deps = [
       "//sdk/lib/fit",
@@ -364,15 +360,10 @@ template("fidl_cpp_family") {
   } else {
     # On host.
     hlcpp_public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
-    if (defined(invoker.host_llcpp) && invoker.host_llcpp) {
-      llcpp_public_deps = [
-        "//sdk/lib/fit",
-        "//zircon/system/ulib/fidl:fidl-llcpp",
-      ]
-    } else {
-      # Do not generate LLCPP if not requested.
-      llcpp_public_deps = []
-    }
+    llcpp_public_deps = [
+      "//sdk/lib/fit",
+      "//zircon/system/ulib/fidl:fidl-llcpp",
+    ]
   }
 
   common_options = {
@@ -563,68 +554,65 @@ template("fidl_cpp_family") {
   not_needed([ "llcpp_layers" ])
 
   # Define LLCPP targets, if requested.
-  if (llcpp_public_deps != []) {
-    layer_target_prefix = target_name + "_"
-    foreach(layer, llcpp_layers) {
-      layer_target_name = layer_target_prefix + layer.layer
-      fidl_cpp_library(layer_target_name) {
-        forward_variables_from(invoker,
-                               [
-                                 "public_configs",
-                                 "public_deps",
-                                 "visibility",
-                               ])
-        forward_variables_from(common_options, "*")
-        bindings_flavor = "llcpp"
-        bindings_layer = layer.layer
-        if (defined(layer.headers)) {
-          generated_headers = layer.headers
-        }
-        if (defined(layer.sources)) {
-          generated_sources = layer.sources
-        }
-        if (defined(layer.testonly)) {
-          testonly = layer.testonly
-        }
-        additional_public_deps = []
-        if (defined(layer.public_deps)) {
-          additional_public_deps += layer.public_deps
-        }
-        if (defined(layer.layer_deps)) {
-          foreach(layer_dep, layer.layer_deps) {
-            additional_public_deps += [ ":${layer_target_prefix}${layer_dep}" ]
-          }
-        }
+  layer_target_prefix = target_name + "_"
+  foreach(layer, llcpp_layers) {
+    layer_target_name = layer_target_prefix + layer.layer
+    fidl_cpp_library(layer_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "public_configs",
+                               "public_deps",
+                               "visibility",
+                             ])
+      forward_variables_from(common_options, "*")
+      bindings_flavor = "llcpp"
+      bindings_layer = layer.layer
+      if (defined(layer.headers)) {
+        generated_headers = layer.headers
       }
-
-      if (current_toolchain != fidl_toolchain) {
-        # Set up an LLCPP SDK item for this library
-        if (defined(invoker.sdk_category) &&
-            invoker.sdk_category != "excluded") {
-          # Instead of depending on the generated bindings, set up a dependency on
-          # the original library.
-          sdk_atom_alias("${layer_target_name}_sdk") {
-            atom = ":$sdk_target_name($fidl_toolchain)"
-          }
+      if (defined(layer.sources)) {
+        generated_sources = layer.sources
+      }
+      if (defined(layer.testonly)) {
+        testonly = layer.testonly
+      }
+      additional_public_deps = []
+      if (defined(layer.public_deps)) {
+        additional_public_deps += layer.public_deps
+      }
+      if (defined(layer.layer_deps)) {
+        foreach(layer_dep, layer.layer_deps) {
+          additional_public_deps += [ ":${layer_target_prefix}${layer_dep}" ]
         }
       }
     }
 
-    fidl_cpp_codegen("${target_name}_llcpp") {
-      forward_variables_from(common_options, "*")
-      bindings_flavor = "llcpp"
-      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
-      generated_headers = []
-      generated_sources = []
-      additional_visibility = []
-      foreach(layer, llcpp_layers) {
-        additional_visibility += [ ":${layer_target_prefix}${layer.layer}" ]
-        if (defined(layer.headers)) {
-          generated_headers += layer.headers
+    if (current_toolchain != fidl_toolchain) {
+      # Set up an LLCPP SDK item for this library
+      if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+        # Instead of depending on the generated bindings, set up a dependency on
+        # the original library.
+        sdk_atom_alias("${layer_target_name}_sdk") {
+          atom = ":$sdk_target_name($fidl_toolchain)"
         }
-        if (defined(layer.sources)) {
-          generated_sources += layer.sources
-        }
+      }
+    }
+  }
+
+  fidl_cpp_codegen("${target_name}_llcpp") {
+    forward_variables_from(common_options, "*")
+    bindings_flavor = "llcpp"
+    fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+    generated_headers = []
+    generated_sources = []
+    additional_visibility = []
+    foreach(layer, llcpp_layers) {
+      additional_visibility += [ ":${layer_target_prefix}${layer.layer}" ]
+      if (defined(layer.headers)) {
+        generated_headers += layer.headers
+      }
+      if (defined(layer.sources)) {
+        generated_sources += layer.sources
       }
     }
   }

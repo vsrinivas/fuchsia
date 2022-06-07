@@ -13,5 +13,4 @@ cts_fidl("test.types") {
 
   sources = [ "types.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
-  host_llcpp = true
 }

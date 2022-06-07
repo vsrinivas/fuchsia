@@ -7,7 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("test.protocollayouts.imported") {
   testonly = true
   sources = [ "imported.test.fidl" ]
-  host_llcpp = true
   golden_fuzzer = true
 }
 
@@ -15,6 +14,5 @@ fidl("test.protocollayouts") {
   testonly = true
   sources = [ "example.test.fidl" ]
   public_deps = [ ":test.protocollayouts.imported" ]
-  host_llcpp = true
   golden_fuzzer = true
 }

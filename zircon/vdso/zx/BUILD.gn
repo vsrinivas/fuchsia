@@ -10,7 +10,6 @@ fidl("zx") {
     "../rights.fidl",
     "../zx_common.fidl",
   ]
-  host_llcpp = true
 
   sdk_category = "partner"
 

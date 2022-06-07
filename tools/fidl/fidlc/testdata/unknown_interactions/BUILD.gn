@@ -8,6 +8,5 @@ fidl("test.unknowninteractions") {
   testonly = true
   sources = [ "example.test.fidl" ]
   experimental_flags = [ "unknown_interactions" ]
-  host_llcpp = true
   golden_fuzzer = true
 }

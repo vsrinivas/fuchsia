@@ -167,7 +167,6 @@ if (!is_fuchsia) {
 fidl("fidl.test.coding") {
   visibility = [ ":*" ]
   sources = [ "extra_messages.test.fidl" ]
-  host_llcpp = true
 }
 
 fidl("fidl.test.coding.fuchsia") {

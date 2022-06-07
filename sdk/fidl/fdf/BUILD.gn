@@ -8,5 +8,4 @@ fidl("fdf") {
   sdk_category = "experimental"
 
   sources = [ "handle.fidl" ]
-  host_llcpp = true
 }

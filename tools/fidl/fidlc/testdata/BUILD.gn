@@ -54,7 +54,6 @@ foreach(filename, standalone_libraries) {
     if (filename == "handles.test.fidl") {
       public_deps += [ "//sdk/fidl/fdf" ]
     }
-    host_llcpp = true
 
     # To ensure quality of generated Dart bindings.
     dart_analysis = true

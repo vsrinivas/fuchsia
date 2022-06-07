@@ -8,13 +8,11 @@ fidl("test.typealiases") {
   testonly = true
   sources = [ "example.test.fidl" ]
   public_deps = [ ":test.someotherlibrary" ]
-  host_llcpp = true
   golden_fuzzer = true
 }
 
 fidl("test.someotherlibrary") {
   testonly = true
   sources = [ "someotherlibrary.test.fidl" ]
-  host_llcpp = true
   golden_fuzzer = true
 }

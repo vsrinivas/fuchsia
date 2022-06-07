@@ -12,5 +12,4 @@ cts_fidl("test.unknown.interactions") {
 
   sources = [ "unknown_interactions.test.fidl" ]
   experimental_flags = [ "unknown_interactions" ]
-  host_llcpp = true
 }

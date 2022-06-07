@@ -8,13 +8,11 @@ fidl("test.structdefaultvalueenumlibraryreference") {
   testonly = true
   sources = [ "example.test.fidl" ]
   public_deps = [ ":test.dependent" ]
-  host_llcpp = true
   golden_fuzzer = true
 }
 
 fidl("test.dependent") {
   testonly = true
   sources = [ "dependent.test.fidl" ]
-  host_llcpp = true
   golden_fuzzer = true
 }

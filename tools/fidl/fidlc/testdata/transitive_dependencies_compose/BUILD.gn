@@ -11,7 +11,6 @@ fidl("test.transitivedependenciescompose") {
     ":test.bottom",
     ":test.middle",
   ]
-  host_llcpp = true
   golden_fuzzer = true
 }
 
@@ -19,13 +18,11 @@ fidl("test.middle") {
   testonly = true
   sources = [ "middle.test.fidl" ]
   public_deps = [ ":test.bottom" ]
-  host_llcpp = true
   golden_fuzzer = true
 }
 
 fidl("test.bottom") {
   testonly = true
   sources = [ "bottom.test.fidl" ]
-  host_llcpp = true
   golden_fuzzer = true
 }
