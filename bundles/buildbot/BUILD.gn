@@ -108,7 +108,6 @@ group("core_base_packages") {
     "//examples/tests:example-tests",
     "//garnet/bin/cpuperf_provider:cpuperf_provider",
     "//garnet/bin/ktrace_provider:ktrace_provider",
-    "//garnet/bin/setui_client:setui_client",
     "//garnet/bin/trace:trace",
     "//garnet/bin/trace_manager",
     "//sdk/dart/fuchsia_inspect/test/integration:dart-inspect-vmo-test-writer",
@@ -218,8 +217,6 @@ group("terminal") {
 group("workstation") {
   testonly = true
   deps = [
-    "//garnet/bin/setui_client:setui_client",
-
     # Only for products in which Flutter is supported.
     "//src/tests/intl/timezone:tests-for-flutter",
 

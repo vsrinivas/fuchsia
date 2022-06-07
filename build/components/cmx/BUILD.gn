@@ -70,7 +70,6 @@ group("cmx_allowlist") {
     "//garnet/bin/ktrace_provider:*",
     "//garnet/bin/run_test_component:*",
     "//garnet/bin/run_test_component/test:*",
-    "//garnet/bin/setui_client:*",
     "//garnet/bin/trace:*",
     "//garnet/bin/trace/tests:*",
     "//garnet/bin/trace_manager:*",

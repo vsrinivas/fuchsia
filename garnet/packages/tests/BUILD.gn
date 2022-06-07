@@ -22,7 +22,6 @@ group("all") {
     "//garnet/bin/insntrace/tests",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/run_test_component:tests",
-    "//garnet/bin/setui_client:tests",
     "//garnet/bin/sysmgr",
     "//garnet/bin/sysmgr/integration_tests",
     "//garnet/bin/sysmgr/test:sysmgr_tests",

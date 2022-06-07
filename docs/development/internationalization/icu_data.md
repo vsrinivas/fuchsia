@@ -118,7 +118,7 @@ initialize the loader with the path to the data directory and revision file:
 
 ### Modifying the system time zone information
 
-During development, use the `setui_client` program to check or set the current
+During development, use the `ffx setui` plugin to check or set the current
 time zone ID on a Fuchsia target. For more information about the available
 options, run the following commands:
 

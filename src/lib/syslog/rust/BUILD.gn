@@ -37,7 +37,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   # fx gn refs $(fx get-build-dir) //src/lib/syslog/rust:syslog //src/lib/syslog/rust:rust | grep -v "//src/lib/syslog/rust" | sed 's|\(.*:\).*|"\1*",|' | sort | uniq
   "//examples/diagnostics/logs/rust:*",
   "//garnet/bin/run_test_component/test:*",
-  "//garnet/bin/setui_client:*",
   "//src/bringup/bin/pwrbtn-monitor/test:*",
   "//src/cobalt/bin/testing/mock_cobalt:*",
   "//src/connectivity/bluetooth/core/bt-init:*",
