@@ -1615,6 +1615,21 @@ type Foo = struct {
   EXPECT_ERR(library.errors()[2], fidl::ErrDuplicateStructMemberNameCanonical);
 }
 
+// TODO(fxbug.dev/101849): Generalize this with more comprehensive tests in
+// availability_interleaving_tests.cc.
+TEST(VersioningTests, GoodRegularDeprecatedReferencesVersionedDeprecated) {
+  TestLibrary library(R"FIDL(
+@available(added=1)
+library example;
+
+@deprecated
+const FOO uint32 = BAR;
+@available(deprecated=1)
+const BAR uint32 = 1;
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
 // Previously this errored due to incorrect logic in deprecation checks.
 TEST(VersioningTests, GoodDeprecationLogicRegression1) {
   TestLibrary library(R"FIDL(

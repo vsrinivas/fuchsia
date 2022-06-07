@@ -614,6 +614,22 @@ void ResolveStep::ValidateReference(const Reference& ref, Context context) {
   auto& target_platform = ref.resolved().library()->platform.value();
   auto target_deprecated = target->availability.deprecated_range();
 
+  // TODO(fxbug.dev/101849): The check below is a stopgap solution to allow
+  // @deprecated elements to reference @available(deprecated=...) elements. We
+  // should solve this in a more principled way by layering the latter on the
+  // former. For example, that would also ensure that the following works:
+  //
+  //     @deprecated
+  //     type Foo = struct { member DeprecatedType; };
+  //     @available(deprecated=1)
+  //     alias DeprecatedType = bool;
+  //
+  // Whereas with the current stopgap you'd have to also add @deprecated on the
+  // member itself.
+  if (source->attributes->Get("deprecated")) {
+    return;
+  }
+
   if (!target_deprecated) {
     return;
   }
