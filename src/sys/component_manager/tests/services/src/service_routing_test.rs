@@ -5,12 +5,13 @@
 use {
     anyhow::{format_err, Context, Error},
     component_events::{
-        events::{Discovered, Event, EventSource, EventSubscription, Started},
+        events::{Destroyed, Discovered, Event, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
         sequence::*,
     },
     fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_examples_services as fexamples, fidl_fuchsia_sys2 as fsys2,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_examples_services as fexamples,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys2,
     fuchsia_component::client,
     fuchsia_component_test::ScopedInstance,
     tracing::*,
@@ -46,13 +47,15 @@ async fn list_instances_test() {
     .await
     .expect("failed to open service dir");
 
-    let instances = files_async::readdir(&service_dir)
+    let mut instances: Vec<String> = files_async::readdir(&service_dir)
         .await
         .expect("failed to read entries from service dir")
         .into_iter()
-        .map(|dirent| dirent.name);
+        .map(|dirent| dirent.name)
+        .collect();
+    instances.sort();
 
-    assert_eq!(2, instances.len());
+    assert_eq!(vec!["a,default", "b,default"], instances);
 }
 
 #[fuchsia::test]
@@ -94,6 +97,46 @@ async fn connect_to_instances_test() {
             initial_balance
         );
     }
+}
+
+#[fuchsia::test]
+async fn create_destroy_instance_test() {
+    let branch = start_branch().await.expect("failed to start branch component");
+    start_provider(&branch, PROVIDER_A_NAME).await.expect("failed to start provider a");
+    start_provider(&branch, PROVIDER_B_NAME).await.expect("failed to start provider b");
+
+    // List the instances in the BankAccount service.
+    let service_dir = io_util::directory::open_directory(
+        branch.get_exposed_dir(),
+        fexamples::BankAccountMarker::SERVICE_NAME,
+        fio::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .expect("failed to open service dir");
+
+    let mut instances: Vec<String> = files_async::readdir(&service_dir)
+        .await
+        .expect("failed to read entries from service dir")
+        .into_iter()
+        .map(|dirent| dirent.name)
+        .collect();
+    instances.sort();
+
+    // The aggregated service directory should contain instances from the provider.
+    assert_eq!(vec!["a,default", "b,default"], instances);
+
+    // Destroy provider a.
+    destroy_provider(&branch, PROVIDER_A_NAME).await.expect("failed to destroy provider a");
+
+    let instances: Vec<String> = files_async::readdir(&service_dir)
+        .await
+        .expect("failed to read entries from service dir")
+        .into_iter()
+        .map(|dirent| dirent.name)
+        .collect();
+
+    // The provider's instances should be removed from the aggregated service directory.
+    assert_eq!(vec!["b,default"], instances);
 }
 
 /// Starts a branch child component.
@@ -169,6 +212,54 @@ async fn start_provider(branch: &ScopedInstance, child_name: &str) -> Result<(),
     EventSequence::new()
         .has_subset(
             vec![EventMatcher::ok().r#type(Started::TYPE).moniker(provider_moniker)],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .context("event sequence did not match expected")?;
+
+    Ok(())
+}
+
+/// Destroys a BankAccount provider component with the name `child_name`.
+async fn destroy_provider(branch: &ScopedInstance, child_name: &str) -> Result<(), Error> {
+    info!("destroying BankAccount provider \"{}\"", child_name);
+
+    let lifecycle_controller_proxy =
+        client::connect_to_protocol::<fsys2::LifecycleControllerMarker>()
+            .context("failed to connect to LifecycleController")?;
+
+    let event_source = EventSource::new()?;
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Destroyed::NAME])])
+        .await
+        .context("failed to subscribe to EventSource")?;
+
+    let provider_moniker = format!(
+        "./{}:{}/{}:{}",
+        BRANCHES_COLLECTION,
+        branch.child_name(),
+        ACCOUNT_PROVIDERS_COLLECTION,
+        child_name
+    );
+    let parent_moniker = format!("./{}:{}", BRANCHES_COLLECTION, branch.child_name());
+
+    // Destroy the provider child.
+    lifecycle_controller_proxy
+        .destroy_child(
+            &parent_moniker,
+            &mut fdecl::ChildRef {
+                name: child_name.to_string(),
+                collection: Some(ACCOUNT_PROVIDERS_COLLECTION.to_string()),
+            },
+        )
+        .await?
+        .map_err(|err| format_err!("failed to destroy provider component: {:?}", err))?;
+
+    // Wait for the provider to be destroyed.
+    EventSequence::new()
+        .has_subset(
+            vec![EventMatcher::ok().r#type(Destroyed::TYPE).moniker_regex(provider_moniker)],
             Ordering::Unordered,
         )
         .expect(event_stream)
