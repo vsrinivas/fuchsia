@@ -11,8 +11,8 @@ use {
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_url::PinnedAbsolutePackageUrl,
     lib::{
-        get_cup_response_with_name, make_pkg_with_extra_blobs, pkgfs_with_system_image_and_pkg,
-        MountsBuilder, TestEnvBuilder, EMPTY_REPO_PATH,
+        get_cup_response_with_name, make_pkg_with_extra_blobs, MountsBuilder, TestEnvBuilder,
+        EMPTY_REPO_PATH,
     },
     omaha_client::{
         cup_ecdsa::{
@@ -120,13 +120,12 @@ async fn test_eager_resolve_package() {
     });
 
     let system_image_package = SystemImageBuilder::new().build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
 
     let cup_response = get_cup_response_with_name(&pkg_url);
     let cup_data: CupData = make_cup_data(&cup_response);
 
     let env = TestEnvBuilder::new()
-        .pkgfs(pkgfs)
+        .system_image_and_extra_packages(&system_image_package, &[&pkg])
         .mounts(
             MountsBuilder::new()
                 .eager_packages(vec![(pkg_url.clone(), cup_data.clone())])
@@ -171,13 +170,12 @@ async fn test_eager_get_hash() {
     });
 
     let system_image_package = SystemImageBuilder::new().build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
 
     let cup_response = get_cup_response_with_name(&pkg_url);
     let cup_data: CupData = make_cup_data(&cup_response);
 
     let env = TestEnvBuilder::new()
-        .pkgfs(pkgfs)
+        .system_image_and_extra_packages(&system_image_package, &[&pkg])
         .mounts(
             MountsBuilder::new()
                 .eager_packages(vec![(pkg_url.clone(), cup_data.clone())])
@@ -288,13 +286,12 @@ async fn test_cup_get_info_persisted() {
     });
 
     let system_image_package = SystemImageBuilder::new().build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
 
     let cup_response = get_cup_response_with_name(&pkg_url);
     let cup_data: CupData = make_cup_data(&cup_response);
 
     let env = TestEnvBuilder::new()
-        .pkgfs(pkgfs)
+        .system_image_and_extra_packages(&system_image_package, &[&pkg])
         .mounts(
             MountsBuilder::new()
                 .eager_packages(vec![(pkg_url.clone(), cup_data.clone())])

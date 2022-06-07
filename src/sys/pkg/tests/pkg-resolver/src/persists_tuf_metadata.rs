@@ -4,13 +4,11 @@
 
 #![cfg(test)]
 use {
-    blobfs_ramdisk::BlobfsRamdisk,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     lib::{
         EnableDynamicConfig, MountsBuilder, PersistedReposConfig, TestEnvBuilder, EMPTY_REPO_PATH,
     },
-    pkgfs_ramdisk::PkgfsRamdisk,
     std::{convert::TryInto, sync::Arc},
 };
 
@@ -20,20 +18,6 @@ async fn test_package(name: &str, contents: &str) -> Package {
         .build()
         .await
         .expect("build package")
-}
-
-async fn pkgfs_with_system_image_and_pkg(
-    system_image_package: &Package,
-    pkg: &Package,
-) -> PkgfsRamdisk {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap()
 }
 
 // When a persisted repository configuration is present, and a dynamic repo is configured to
@@ -46,7 +30,6 @@ async fn test_resolve_persisted_package_succeeds() {
     let cache_pkg = test_package(pkg_name, "cache").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
     let mut env = TestEnvBuilder::new()
         .mounts(
@@ -57,7 +40,7 @@ async fn test_resolve_persisted_package_succeeds() {
                 })
                 .build(),
         )
-        .pkgfs(pkgfs)
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
         .build()
         .await;
 
@@ -110,7 +93,6 @@ async fn test_resolve_empty_config_fails() {
     let cache_pkg = test_package(pkg_name, "cache").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
     let mut env = TestEnvBuilder::new()
         .mounts(
@@ -121,7 +103,7 @@ async fn test_resolve_empty_config_fails() {
                 })
                 .build(),
         )
-        .pkgfs(pkgfs)
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
         .build()
         .await;
 
@@ -175,8 +157,6 @@ async fn test_resolve_dynamic_disabled_fails() {
     let cache_pkg = test_package(pkg_name, "cache").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-
     let mut env = TestEnvBuilder::new()
         .mounts(
             MountsBuilder::new()
@@ -186,7 +166,7 @@ async fn test_resolve_dynamic_disabled_fails() {
                 })
                 .build(),
         )
-        .pkgfs(pkgfs)
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
         .build()
         .await;
 
@@ -246,7 +226,6 @@ async fn test_resolve_no_config_fails() {
     let cache_pkg = test_package(pkg_name, "cache").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
 
     let mut env = TestEnvBuilder::new()
         .mounts(
@@ -254,7 +233,7 @@ async fn test_resolve_no_config_fails() {
                 .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
                 .build(),
         )
-        .pkgfs(pkgfs)
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
         .build()
         .await;
 

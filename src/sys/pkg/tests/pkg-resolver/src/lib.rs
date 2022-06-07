@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     cobalt_client::traits::AsEventCodes,
@@ -34,20 +33,18 @@ use {
         ScopedInstanceFactory,
     },
     fuchsia_merkle::{Hash, MerkleTree},
-    fuchsia_pkg_testing::SystemImageBuilder,
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, Repository},
     fuchsia_url::{PinnedAbsolutePackageUrl, RepositoryUrl},
     fuchsia_zircon::{self as zx, Status},
-    futures::{future::BoxFuture, prelude::*},
+    futures::prelude::*,
     mock_boot_arguments::MockBootArgumentsService,
     parking_lot::Mutex,
-    pkgfs_ramdisk::PkgfsRamdisk,
     serde::Serialize,
     std::{
         collections::HashMap,
         convert::TryInto,
         fs::File,
-        io::{self, BufWriter, Read, Write},
+        io::{self, BufWriter, Write},
         path::{Path, PathBuf},
         sync::Arc,
         time::Duration,
@@ -67,25 +64,13 @@ pub const FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING: usize = 600_000;
 
 pub mod mock_filesystem;
 
-pub trait PkgFs {
-    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error>;
-
-    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error>;
-
-    fn system_image_hash(&self) -> Option<Hash>;
+pub trait Blobfs {
+    fn root_dir_handle(&self) -> ClientEnd<fio::DirectoryMarker>;
 }
 
-impl PkgFs for PkgfsRamdisk {
-    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
-        PkgfsRamdisk::root_dir_handle(self)
-    }
-
-    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
-        self.blobfs().root_dir_handle()
-    }
-
-    fn system_image_hash(&self) -> Option<Hash> {
-        self.system_image_merkle()
+impl Blobfs for BlobfsRamdisk {
+    fn root_dir_handle(&self) -> ClientEnd<fio::DirectoryMarker> {
+        self.root_dir_handle().unwrap()
     }
 }
 
@@ -328,28 +313,6 @@ pub fn clone_directory_proxy(
     ClientEnd::<fio::DirectoryMarker>::new(client.into_channel()).into_proxy().unwrap()
 }
 
-async fn pkgfs_with_system_image() -> PkgfsRamdisk {
-    let system_image_package = SystemImageBuilder::new();
-    let system_image_package = system_image_package.build().await;
-    pkgfs_with_system_image_and_pkg(&system_image_package, None).await
-}
-
-pub async fn pkgfs_with_system_image_and_pkg(
-    system_image_package: &Package,
-    pkg: Option<&Package>,
-) -> PkgfsRamdisk {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    if let Some(pkg) = pkg {
-        pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    }
-    PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap()
-}
-
 pub enum ResolverVariant {
     DefaultArgs,
     AllowLocalMirror,
@@ -360,31 +323,30 @@ pub enum ResolverVariant {
     ZeroBlobDownloadResumptionAttemptsLimit,
 }
 
-pub struct TestEnvBuilder<PkgFsFn, PkgFsFut, MountsFn>
-where
-    PkgFsFn: FnOnce() -> PkgFsFut,
-    PkgFsFut: Future,
-{
-    pkgfs: PkgFsFn,
+pub struct TestEnvBuilder<BlobfsAndSystemImageFut, MountsFn> {
+    blobfs_and_system_image: BlobfsAndSystemImageFut,
     mounts: MountsFn,
     tuf_repo_config_boot_arg: Option<String>,
     local_mirror_repo: Option<(Arc<Repository>, RepositoryUrl)>,
     resolver_variant: ResolverVariant,
 }
 
-impl
-    TestEnvBuilder<
-        fn() -> BoxFuture<'static, PkgfsRamdisk>,
-        BoxFuture<'static, PkgfsRamdisk>,
-        fn() -> Mounts,
-    >
-{
+impl TestEnvBuilder<future::BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>, fn() -> Mounts> {
     pub fn new() -> Self {
         Self {
-            pkgfs: || pkgfs_with_system_image().boxed(),
-            // If it's not overriden, the default state of the mounts allows for dynamic configuration.
-            // We do this because in the majority of tests, we'll want to use dynamic repos and rewrite rules.
-            // Note: this means that we'll produce different envs from TestEnvBuilder::new().build().await
+            blobfs_and_system_image: async {
+                let system_image_package =
+                    fuchsia_pkg_testing::SystemImageBuilder::new().build().await;
+                let blobfs = BlobfsRamdisk::start().unwrap();
+                let () = system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+                (blobfs, Some(*system_image_package.meta_far_merkle_root()))
+            }
+            .boxed(),
+            // If it's not overridden, the default state of the mounts allows for dynamic
+            // configuration. We do this because in the majority of tests, we'll want to use
+            // dynamic repos and rewrite rules.
+            // Note: this means that we'll produce different envs from
+            // TestEnvBuilder::new().build().await
             // vs TestEnvBuilder::new().mounts(MountsBuilder::new().build()).build()
             mounts: || {
                 MountsBuilder::new()
@@ -400,34 +362,62 @@ impl
     }
 }
 
-impl<PkgFsFn, PkgFsFut, MountsFn> TestEnvBuilder<PkgFsFn, PkgFsFut, MountsFn>
+impl<BlobfsAndSystemImageFut, ConcreteBlobfs, MountsFn>
+    TestEnvBuilder<BlobfsAndSystemImageFut, MountsFn>
 where
-    PkgFsFn: FnOnce() -> PkgFsFut,
-    PkgFsFut: Future,
-    PkgFsFut::Output: PkgFs,
+    BlobfsAndSystemImageFut: Future<Output = (ConcreteBlobfs, Option<Hash>)>,
+    ConcreteBlobfs: Blobfs,
     MountsFn: FnOnce() -> Mounts,
 {
-    pub fn pkgfs<Pother>(
+    pub fn blobfs_and_system_image_hash<OtherBlobfs>(
         self,
-        pkgfs: Pother,
-    ) -> TestEnvBuilder<impl FnOnce() -> future::Ready<Pother>, future::Ready<Pother>, MountsFn>
+        blobfs: OtherBlobfs,
+        system_image: Option<Hash>,
+    ) -> TestEnvBuilder<future::Ready<(OtherBlobfs, Option<Hash>)>, MountsFn>
     where
-        Pother: PkgFs + 'static,
+        OtherBlobfs: Blobfs,
     {
-        TestEnvBuilder::<_, _, MountsFn> {
-            pkgfs: || future::ready(pkgfs),
+        TestEnvBuilder::<_, MountsFn> {
+            blobfs_and_system_image: future::ready((blobfs, system_image)),
             mounts: self.mounts,
             tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
             local_mirror_repo: self.local_mirror_repo,
             resolver_variant: self.resolver_variant,
         }
     }
+
+    /// Creates a BlobfsRamdisk loaded with the supplied packages and configures the system to use
+    /// the supplied `system_image` package.
+    pub fn system_image_and_extra_packages(
+        self,
+        system_image: &Package,
+        extra_packages: &[&Package],
+    ) -> TestEnvBuilder<future::Ready<(BlobfsRamdisk, Option<Hash>)>, MountsFn> {
+        let blobfs = BlobfsRamdisk::start().unwrap();
+        let root_dir = blobfs.root_dir().unwrap();
+        let () = system_image.write_to_blobfs_dir(&root_dir);
+        for pkg in extra_packages {
+            let () = pkg.write_to_blobfs_dir(&root_dir);
+        }
+
+        TestEnvBuilder::<_, MountsFn> {
+            blobfs_and_system_image: future::ready((
+                blobfs,
+                Some(*system_image.meta_far_merkle_root()),
+            )),
+            mounts: self.mounts,
+            tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
+            local_mirror_repo: self.local_mirror_repo,
+            resolver_variant: self.resolver_variant,
+        }
+    }
+
     pub fn mounts(
         self,
         mounts: Mounts,
-    ) -> TestEnvBuilder<PkgFsFn, PkgFsFut, impl FnOnce() -> Mounts> {
-        TestEnvBuilder::<PkgFsFn, _, _> {
-            pkgfs: self.pkgfs,
+    ) -> TestEnvBuilder<BlobfsAndSystemImageFut, impl FnOnce() -> Mounts> {
+        TestEnvBuilder::<_, _> {
+            blobfs_and_system_image: self.blobfs_and_system_image,
             mounts: || mounts,
             tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
             local_mirror_repo: self.local_mirror_repo,
@@ -450,8 +440,8 @@ where
         self
     }
 
-    pub async fn build(self) -> TestEnv<PkgFsFut::Output> {
-        let pkgfs = (self.pkgfs)().await;
+    pub async fn build(self) -> TestEnv<ConcreteBlobfs> {
+        let (blobfs, system_image) = self.blobfs_and_system_image.await;
         let mounts = (self.mounts)();
 
         let local_child_svc_dir = vfs::pseudo_directory! {};
@@ -459,7 +449,7 @@ where
         let mut args = HashMap::new();
         args.insert("tuf_repo_config".to_string(), self.tuf_repo_config_boot_arg);
         let mut boot_arguments_service = MockBootArgumentsService::new(args);
-        pkgfs.system_image_hash().map(|hash| boot_arguments_service.insert_pkgfs_boot_arg(hash));
+        system_image.map(|hash| boot_arguments_service.insert_pkgfs_boot_arg(hash));
         let boot_arguments_service = Arc::new(boot_arguments_service);
         local_child_svc_dir
             .add_entry(
@@ -482,11 +472,8 @@ where
             .unwrap();
 
         let local_child_out_dir = vfs::pseudo_directory! {
-            "pkgfs" => vfs::remote::remote_dir(
-                pkgfs.root_dir_handle().unwrap().into_proxy().unwrap()
-            ),
             "blob" => vfs::remote::remote_dir(
-                pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into_proxy().unwrap()
+                blobfs.root_dir_handle().into_proxy().unwrap()
             ),
             "data" => vfs::remote::remote_dir(
                 mounts.pkg_resolver_data.to_proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)
@@ -647,9 +634,6 @@ where
             .add_route(
                 Route::new()
                     .capability(
-                        Capability::directory("pkgfs").path("/pkgfs").rights(fio::RW_STAR_DIR),
-                    )
-                    .capability(
                         Capability::directory("blob-exec")
                             .path("/blob")
                             .rights(fio::RW_STAR_DIR | fio::Operations::EXECUTE),
@@ -712,7 +696,7 @@ where
         let pkg_resolver = start_pkg_resolver(realm, &self.resolver_variant).await;
 
         TestEnv {
-            pkgfs,
+            blobfs,
             proxies: Proxies::from_instance(&pkg_resolver),
             apps: Apps { realm_instance, pkg_resolver: Some(pkg_resolver) },
             _mounts: mounts,
@@ -785,8 +769,8 @@ pub struct Mocks {
     pub logger_factory: Arc<MockLoggerFactory>,
 }
 
-pub struct TestEnv<P = PkgfsRamdisk> {
-    pub pkgfs: P,
+pub struct TestEnv<B = BlobfsRamdisk> {
+    pub blobfs: B,
     pub apps: Apps,
     pub proxies: Proxies,
     pub _mounts: Mounts,
@@ -795,12 +779,11 @@ pub struct TestEnv<P = PkgfsRamdisk> {
     resolver_variant: ResolverVariant,
 }
 
-impl TestEnv<PkgfsRamdisk> {
+impl TestEnv<BlobfsRamdisk> {
     pub fn add_slice_to_blobfs(&self, slice: &[u8]) {
         let merkle = MerkleTree::from_reader(slice).expect("merkle slice").root().to_string();
         let mut blob = self
-            .pkgfs
-            .blobfs()
+            .blobfs
             .root_dir()
             .expect("blobfs has root dir")
             .write_file(merkle, 0)
@@ -809,62 +792,22 @@ impl TestEnv<PkgfsRamdisk> {
         io::copy(&mut &slice[..], &mut blob).expect("copy from slice to blob");
     }
 
-    pub fn add_file_with_merkle_to_blobfs(&self, mut file: File, merkle: &Hash) {
+    pub fn add_file_with_hash_to_blobfs(&self, mut file: File, hash: &Hash) {
         let mut blob = self
-            .pkgfs
-            .blobfs()
+            .blobfs
             .root_dir()
             .expect("blobfs has root dir")
-            .write_file(merkle.to_string(), 0)
+            .write_file(hash.to_string(), 0)
             .expect("create file in blobfs");
         blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
         io::copy(&mut file, &mut blob).expect("copy file to blobfs");
-    }
-
-    pub fn add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
-        let mut blob = self
-            .pkgfs
-            .root_dir()
-            .expect("pkgfs root_dir")
-            .new_file(path, 0)
-            .expect("create file in pkgfs");
-        blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
-        io::copy(&mut file, &mut blob).expect("copy file to pkgfs");
-    }
-
-    pub fn partially_add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
-        let full_len = file.metadata().expect("file has metadata").len();
-        assert!(full_len > 1, "can't partially write 1 byte");
-        let mut partial_bytes = vec![0; full_len as usize / 2];
-        file.read_exact(partial_bytes.as_mut_slice()).expect("partial read of file");
-        let mut blob = self
-            .pkgfs
-            .root_dir()
-            .expect("pkgfs root_dir")
-            .new_file(path, 0)
-            .expect("create file in pkgfs");
-        blob.set_len(full_len).expect("set_len");
-        io::copy(&mut partial_bytes.as_slice(), &mut blob).expect("copy file to pkgfs");
-    }
-
-    pub fn partially_add_slice_to_pkgfs_at_path(&self, slice: &[u8], path: impl openat::AsPath) {
-        assert!(slice.len() > 1, "can't partially write 1 byte");
-        let partial_slice = &slice[0..slice.len() / 2];
-        let mut blob = self
-            .pkgfs
-            .root_dir()
-            .expect("pkgfs root_dir")
-            .new_file(path, 0)
-            .expect("create file in pkgfs");
-        blob.set_len(slice.len() as u64).expect("set_len");
-        io::copy(&mut &partial_slice[..], &mut blob).expect("copy file to pkgfs");
     }
 
     pub async fn stop(self) {
         // Tear down the environment in reverse order, ending with the storage.
         drop(self.proxies);
         drop(self.apps);
-        self.pkgfs.stop().await.expect("pkgfs to stop gracefully");
+        self.blobfs.stop().await.expect("blobfs to stop gracefully");
     }
 }
 
@@ -947,7 +890,7 @@ impl MockLoggerFactory {
     }
 }
 
-impl<P: PkgFs> TestEnv<P> {
+impl<B: Blobfs> TestEnv<B> {
     pub async fn set_experiment_state(&self, experiment: Experiment, state: bool) {
         self.proxies
             .resolver_admin

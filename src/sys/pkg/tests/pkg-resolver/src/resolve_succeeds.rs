@@ -4,14 +4,12 @@
 
 /// This module tests the property that pkg_resolver successfully
 /// services fuchsia.pkg.PackageResolver.Resolve FIDL requests for
-/// different types of packages and when blobfs and pkgfs are in
-/// various intermediate states.
+/// different types of packages when blobfs is in various intermediate states.
 use {
     assert_matches::assert_matches,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_inspect::assert_data_tree,
-    fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{
         serve::{responder, Domain},
         Package, PackageBuilder, RepositoryBuilder,
@@ -36,7 +34,7 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn package_resolution() {
     let env = TestEnvBuilder::new().build().await;
-    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
+    let mut startup_blobs = env.blobfs.list_blobs().unwrap();
 
     let s = "package_resolution";
     let pkg = PackageBuilder::new(s)
@@ -74,7 +72,7 @@ async fn package_resolution() {
     repo_blobs.append(&mut startup_blobs);
 
     // All blobs in the repository should now be present in blobfs.
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
+    assert_eq!(env.blobfs.list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }
@@ -83,7 +81,7 @@ async fn package_resolution() {
 async fn separate_blobs_url() {
     let env = TestEnvBuilder::new().build().await;
 
-    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
+    let mut startup_blobs = env.blobfs.list_blobs().unwrap();
 
     let pkg_name = "separate_blobs_url";
     let pkg = make_pkg_with_extra_blobs(pkg_name, 3).await;
@@ -128,7 +126,7 @@ async fn separate_blobs_url() {
     let mut repo_blobs = repo.list_blobs().unwrap();
     repo_blobs.append(&mut startup_blobs);
 
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
+    assert_eq!(env.blobfs.list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }
@@ -139,7 +137,7 @@ async fn verify_resolve_with_altered_env(
 ) -> () {
     let env = TestEnvBuilder::new().build().await;
 
-    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
+    let mut startup_blobs = env.blobfs.list_blobs().unwrap();
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -165,7 +163,7 @@ async fn verify_resolve_with_altered_env(
     let mut repo_blobs = repo.list_blobs().unwrap();
     repo_blobs.append(&mut startup_blobs);
 
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
+    assert_eq!(env.blobfs.list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }
@@ -522,39 +520,11 @@ async fn use_cached_package() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn meta_far_installed_blobs_not_installed() {
-    verify_resolve_with_altered_env(
-        make_pkg_with_extra_blobs("meta_far_installed_blobs_not_installed", 3).await,
-        |env, pkg| {
-            env.add_file_to_pkgfs_at_path(
-                pkg.meta_far().unwrap(),
-                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-            )
-        },
-    )
-    .await
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn meta_far_partially_installed() {
-    verify_resolve_with_altered_env(
-        make_pkg_with_extra_blobs("meta_far_partially_installed", 3).await,
-        |env, pkg| {
-            env.partially_add_file_to_pkgfs_at_path(
-                pkg.meta_far().unwrap(),
-                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-            )
-        },
-    )
-    .await
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn meta_far_already_in_blobfs() {
     verify_resolve_with_altered_env(
         make_pkg_with_extra_blobs("meta_far_already_in_blobfs", 3).await,
         |env, pkg| {
-            env.add_file_with_merkle_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root())
+            env.add_file_with_hash_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root())
         },
     )
     .await
@@ -564,7 +534,7 @@ async fn meta_far_already_in_blobfs() {
 async fn all_blobs_already_in_blobfs() {
     let s = "all_blobs_already_in_blobfs";
     verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
-        env.add_file_with_merkle_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root());
+        env.add_file_with_hash_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root());
         env.add_slice_to_blobfs(&test_package_bin(s)[..]);
         for i in 0..3 {
             env.add_slice_to_blobfs(extra_blob_contents(s, i).as_slice());
@@ -574,36 +544,11 @@ async fn all_blobs_already_in_blobfs() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn meta_far_installed_one_blob_in_blobfs() {
-    let s = "meta_far_installed_one_blob_in_blobfs";
+async fn meta_far_and_one_content_blob_already_in_blobfs() {
+    let s = "meta_far_and_one_content_blob_in_blobfs";
     verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
-        env.add_file_to_pkgfs_at_path(
-            pkg.meta_far().unwrap(),
-            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-        );
+        env.add_file_with_hash_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root());
         env.add_slice_to_blobfs(&test_package_bin(s)[..]);
-    })
-    .await
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn meta_far_installed_one_blob_partially_installed() {
-    let s = "meta_far_installed_one_blob_partially_installed";
-    verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
-        env.add_file_to_pkgfs_at_path(
-            pkg.meta_far().unwrap(),
-            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-        );
-        env.partially_add_slice_to_pkgfs_at_path(
-            &test_package_bin(s)[..],
-            format!(
-                "install/blob/{}",
-                MerkleTree::from_reader(&test_package_bin(s)[..])
-                    .expect("merkle slice")
-                    .root()
-                    .to_string()
-            ),
-        );
     })
     .await
 }
@@ -663,15 +608,14 @@ async fn test_concurrent_blob_writes() {
 
     // Wait for duplicate blob to be truncated -- we know it is truncated when we get a
     // permission denied error when trying to update the blob in blobfs.
-    let blobfs_dir = env.pkgfs.blobfs().root_dir().expect("blobfs has root dir");
+    let blobfs_dir = env.blobfs.root_dir().expect("blobfs has root dir");
     while blobfs_dir.update_file(Path::new(&duplicate_blob_merkle), 0).is_ok() {
         fasync::Timer::new(Duration::from_millis(10)).await;
     }
 
     // At this point, we are confident that the duplicate blob is truncated. So, if we enqueue
-    // another package resolve for a package that contains the duplicate blob, pkgfs should expose
-    // that blob as a need, and the package resolver should block resolving the package on that
-    // blob fetch finishing.
+    // another package resolve for a package that contains the duplicate blob the package resolver
+    // should block resolving the package on that blob fetch finishing.
     let package2_resolution_fut =
         resolve_package(&resolver_proxy_2, &"fuchsia-pkg://test/package2");
 
@@ -766,9 +710,7 @@ async fn dedup_concurrent_content_blob_fetches() {
         resolve_package(&proxy, "fuchsia-pkg://test/package2")
     };
 
-    // Wait for all content blob requests to come in so that this test can be sure that pkgfs has
-    // imported both packages and that the package resolver has not truncated any content blobs
-    // yet (which would trigger 39488, the pkgfs blob presence bug).
+    // Wait for all content blob requests to come in to make sure they are maximally de-duped.
     let mut expected_requests = content_blob_paths.clone();
     let mut blocked_requests = vec![];
     while !expected_requests.is_empty() {
@@ -950,7 +892,7 @@ async fn resolve_local_mirror() {
         .local_mirror_repo(&repo, "fuchsia-pkg://test".parse().unwrap())
         .build()
         .await;
-    let mut startup_blobs = env.pkgfs.blobfs().list_blobs().unwrap();
+    let mut startup_blobs = env.blobfs.list_blobs().unwrap();
     let repo_config = repo.make_repo_config("fuchsia-pkg://test".parse().unwrap(), None, true);
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
@@ -960,7 +902,7 @@ async fn resolve_local_mirror() {
     pkg.verify_contents(&package_dir).await.unwrap();
     let mut repo_blobs = repo.list_blobs().unwrap();
     repo_blobs.append(&mut startup_blobs);
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo_blobs);
+    assert_eq!(env.blobfs.list_blobs().unwrap(), repo_blobs);
 
     env.stop().await;
 }

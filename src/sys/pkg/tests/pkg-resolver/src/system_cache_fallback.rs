@@ -5,7 +5,7 @@
 #![cfg(test)]
 use {
     assert_matches::assert_matches,
-    blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
+    blobfs_ramdisk::Ramdisk,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
     fuchsia_hash::Hash,
@@ -15,7 +15,6 @@ use {
     },
     fuchsia_zircon::Status,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
-    pkgfs_ramdisk::PkgfsRamdisk,
     rand::prelude::*,
     std::io::Read,
     std::sync::Arc,
@@ -29,20 +28,6 @@ async fn test_package(name: &str, contents: &str) -> Package {
         .expect("build package")
 }
 
-async fn pkgfs_with_system_image_and_pkg(
-    system_image_package: &Package,
-    pkg: &Package,
-) -> PkgfsRamdisk {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap()
-}
-
 // The package is in the cache. Networking is totally down. Fallback succeeds.
 #[fasync::run_singlethreaded(test)]
 async fn test_cache_fallback_succeeds_no_network() {
@@ -53,9 +38,10 @@ async fn test_cache_fallback_succeeds_no_network() {
     let repo_pkg = test_package(pkg_name, "repo").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -92,9 +78,10 @@ async fn test_cache_fallback_succeeds_if_url_merkle_matches() {
     let pkg_name = "test_cache_fallback_succeeds_if_url_merkle_matches";
     let pkg = test_package(pkg_name, "some-contents").await;
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
-
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&pkg])
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -136,9 +123,10 @@ async fn test_cache_fallback_fails_if_url_merkle_differs() {
     let pkg_name = "test_cache_fallback_fails_if_url_merkle_differs";
     let pkg = test_package(pkg_name, "some-contents").await;
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
-
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&pkg])
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -178,9 +166,10 @@ async fn test_cache_fallback_succeeds_no_targets() {
     let repo_pkg = test_package(pkg_name, "repo").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -225,9 +214,10 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     let repo_pkg = test_package(pkg_name, "repo").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -264,13 +254,13 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     env.stop().await;
 }
 
-// If pkgfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
+// If blobfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
 // asked to resolve a new version of a package in that list, if that package has a very large meta/
 // directory
 #[fasync::run_singlethreaded(test)]
-async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far() {
+async fn test_blobfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far() {
     let pkg_name =
-        "test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far";
+        "test_blobfs_out_of_space_does_not_fall_back_to_cache_packages_with_large_meta_far";
 
     // A very small package to cache.
     let cache_pkg = test_package(pkg_name, "cache").await;
@@ -292,11 +282,6 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large
         .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote system image to blobfs"));
     cache_pkg
         .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote cache package to blobfs"));
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(very_small_blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .expect("started pkgfs");
 
     // A very large version of the same package, to put in the repo.
     // Critically, this package contains an incompressible 4MB asset in the meta.far,
@@ -324,7 +309,13 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large
         LARGE_ASSET_FILE_SIZE + 4096 + 4096 + 4096
     );
 
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .blobfs_and_system_image_hash(
+            very_small_blobfs,
+            Some(*system_image_package.meta_far_merkle_root()),
+        )
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -346,11 +337,11 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large
     env.stop().await;
 }
 
-// If pkgfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
+// If blobfs is out of space, pkg-resolver currently should not fall back to cache_packages if it's
 // asked to resolve a new version of a package in that list.
 #[fasync::run_singlethreaded(test)]
-async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages() {
-    let pkg_name = "test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages";
+async fn test_blobfs_out_of_space_does_not_fall_back_to_cache_packages() {
+    let pkg_name = "test_blobfs_out_of_space_does_not_fall_back_to_cache_packages";
 
     // A very small package to cache.
     let cache_pkg = test_package(pkg_name, "cache").await;
@@ -368,11 +359,6 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages() {
         .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote system image to blobfs"));
     cache_pkg
         .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote cache package to blobfs"));
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(very_small_blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .expect("started pkgfs");
 
     // A very large version of the same package, to put in the repo.
     let mut rng = StdRng::from_seed([0u8; 32]);
@@ -382,7 +368,13 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages() {
         .build()
         .await
         .expect("build large package");
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .blobfs_and_system_image_hash(
+            very_small_blobfs,
+            Some(*system_image_package.meta_far_merkle_root()),
+        )
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -404,11 +396,11 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages() {
     env.stop().await;
 }
 
-// If pkgfs is out of space, we shouldn't fall back to a previously-resolved version of an ephemeral
-// package.
+// If blobfs is out of space, we shouldn't fall back to a previously-resolved version of an
+// ephemeral package.
 #[fasync::run_singlethreaded(test)]
-async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_package() {
-    let pkg_name = "test_pkgfs_out_of_space_fallback_to_previous_version";
+async fn test_blobfs_out_of_space_does_not_fall_back_to_previous_ephemeral_package() {
+    let pkg_name = "test_blobfs_out_of_space_fallback_to_previous_version";
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
 
     let very_small_blobfs = Ramdisk::builder()
@@ -421,13 +413,13 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
     let system_image_package = system_image_package.build().await;
     system_image_package.write_to_blobfs_dir(&very_small_blobfs.root_dir().unwrap());
 
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(very_small_blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .expect("started pkgfs");
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
-    eprintln!("TestEnv realm name {:?}", env.apps.realm_instance.root.child_name());
+    let env = TestEnvBuilder::new()
+        .blobfs_and_system_image_hash(
+            very_small_blobfs,
+            Some(*system_image_package.meta_far_merkle_root()),
+        )
+        .build()
+        .await;
 
     let small_pkg = test_package(pkg_name, "cache").await;
     let repo_with_small_package = Arc::new(
@@ -441,19 +433,14 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     // Resolving and caching a small package should work fine.
-    // TODO(fxbug.dev/76421): clean up verbose debug logging after flake is identified
-    eprintln!("resolving small package");
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
-    eprintln!("verifying contents");
     small_pkg.verify_contents(&package_dir).await.unwrap();
 
     // Stop the running repository, fire up a new one with a very large package in it,
     // which won't fit in blobfs.
-    eprintln!("stopping served repository with small package");
     let () = served_repository.stop().await;
 
     // A very large version of the same package, to put in the repo.
-    eprintln!("building large package");
     let mut rng = StdRng::from_seed([0u8; 32]);
     let rng = &mut rng as &mut dyn RngCore;
     let large_pkg = PackageBuilder::new(pkg_name)
@@ -462,7 +449,6 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
         .await
         .expect("build large package");
 
-    eprintln!("building repository with large package");
     let repo_with_large_package = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&large_pkg)
@@ -471,20 +457,16 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
             .unwrap(),
     );
 
-    eprintln!("serving repository with large package");
     let served_repository = repo_with_large_package.server().start().unwrap();
-    eprintln!("registering repository with large package");
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     // pkg-resolver should refuse to fall back to a previous version of the package, and fail
     // with NO_SPACE
-    eprintln!("resolving large package");
     assert_matches!(
         env.resolve_package(&pkg_url).await,
         Err(fidl_fuchsia_pkg::ResolveError::NoSpace)
     );
 
-    eprintln!("stopping TestEnv");
     env.stop().await;
 }
 
@@ -495,8 +477,10 @@ async fn test_resolve_fails_not_in_repo() {
     let pkg_name = "test_resolve_fails_not_in_repo";
     let pkg = test_package(pkg_name, "stuff").await;
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&pkg])
+        .build()
+        .await;
 
     // Repo doesn't need any fault injection, it just doesn't know about the package.
     let repo = Arc::new(
@@ -530,8 +514,10 @@ async fn test_resolve_falls_back_not_in_repo() {
     let cache_pkg = test_package(pkg_name, "cache").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
+        .build()
+        .await;
 
     // Repo doesn't need any fault injection, it just doesn't know about the package.
     let repo =
@@ -594,8 +580,10 @@ async fn test_resolve_prefers_repo() {
     let repo_pkg = test_package(pkg_name, "repo_package").await;
     let system_image_package =
         SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    let env = TestEnvBuilder::new()
+        .system_image_and_extra_packages(&system_image_package, &[&cache_pkg])
+        .build()
+        .await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)

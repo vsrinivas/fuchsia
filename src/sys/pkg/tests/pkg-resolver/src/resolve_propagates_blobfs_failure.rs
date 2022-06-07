@@ -8,18 +8,16 @@
 /// Long term, these tests should be moved/adapted to the pkg-cache integration tests, and similar
 /// resolve_propagates_pkgcache_failure.rs tests should be added for pkg-resolver.
 use {
-    anyhow::Error,
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
     fidl_fuchsia_io as fio,
     fuchsia_async::{self as fasync, Task},
-    fuchsia_merkle::MerkleTree,
+    fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{Package, RepositoryBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     futures::{future::BoxFuture, prelude::*},
-    lib::{extra_blob_contents, make_pkg_with_extra_blobs, PkgFs, TestEnvBuilder, EMPTY_REPO_PATH},
-    pkgfs_ramdisk::PkgfsRamdisk,
+    lib::{extra_blob_contents, make_pkg_with_extra_blobs, TestEnvBuilder, EMPTY_REPO_PATH},
     std::sync::{atomic::AtomicU64, Arc},
 };
 
@@ -49,30 +47,21 @@ where
 }
 
 struct BlobFsWithFileCreateOverride {
-    // The underlying pkgfs ramdisk.  Note, pkgfs itself has direct access to blobfs, so its use of
-    // blobfs won't go through any overrides used here.
-    pkgfs: PkgfsRamdisk,
+    // The underlying blobfs ramdisk.
+    wrapped: BlobfsRamdisk,
 
     target: (String, FakeFile),
+
+    system_image: Hash,
 }
 
-impl PkgFs for BlobFsWithFileCreateOverride {
-    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
-        self.pkgfs.root_dir_handle()
-    }
-
-    fn blobfs_root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
-        let inner = self.pkgfs.blobfs().root_dir_handle()?.into_proxy()?;
-
-        let (client, server) = fidl::endpoints::create_request_stream::<fio::DirectoryMarker>()?;
-
+impl lib::Blobfs for BlobFsWithFileCreateOverride {
+    fn root_dir_handle(&self) -> ClientEnd<fio::DirectoryMarker> {
+        let inner = self.wrapped.root_dir_handle().unwrap().into_proxy().unwrap();
+        let (client, server) =
+            fidl::endpoints::create_request_stream::<fio::DirectoryMarker>().unwrap();
         DirectoryWithFileCreateOverride { inner, target: self.target.clone() }.spawn(server);
-
-        Ok(client)
-    }
-
-    fn system_image_hash(&self) -> Option<fuchsia_merkle::Hash> {
-        self.pkgfs.system_image_hash()
+        client
     }
 }
 
@@ -216,151 +205,161 @@ async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: fio::FileRe
     }
 }
 
-async fn make_pkgfs_with_minimal_system_image() -> PkgfsRamdisk {
+async fn make_blobfs_with_minimal_system_image() -> (BlobfsRamdisk, Hash) {
     let blobfs = BlobfsRamdisk::start().unwrap();
-
     let system_image = SystemImageBuilder::new().build().await;
     system_image.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    pkgfs
+    (blobfs, *system_image.meta_far_merkle_root())
 }
 
-async fn make_pkg_for_mock_blobfs_tests(
-    package_name: &str,
-) -> Result<(Package, String, String), Error> {
+async fn make_pkg_for_mock_blobfs_tests(package_name: &str) -> (Package, String, String) {
     let pkg = make_pkg_with_extra_blobs(package_name, 1).await;
     let pkg_merkle = pkg.meta_far_merkle_root().to_string();
     let blob_merkle = MerkleTree::from_reader(extra_blob_contents(package_name, 0).as_slice())
         .expect("merkle slice")
         .root()
         .to_string();
-    Ok((pkg, pkg_merkle, blob_merkle))
+    (pkg, pkg_merkle, blob_merkle)
 }
 
 async fn make_mock_blobfs_with_failing_install_pkg<StreamHandler>(
     package_name: &str,
     file_request_stream_handler: StreamHandler,
-) -> Result<(BlobFsWithFileCreateOverride, Package, Arc<AtomicU64>), Error>
+) -> (BlobFsWithFileCreateOverride, Package, Arc<AtomicU64>)
 where
     StreamHandler: FileStreamHandler,
 {
-    let pkgfs = make_pkgfs_with_minimal_system_image().await;
+    let (blobfs, system_image) = make_blobfs_with_minimal_system_image().await;
     let (failing_file, call_count) = FakeFile::new_and_call_count(file_request_stream_handler);
-    let (pkg, pkg_merkle, _) = make_pkg_for_mock_blobfs_tests(package_name).await?;
+    let (pkg, pkg_merkle, _) = make_pkg_for_mock_blobfs_tests(package_name).await;
 
-    Ok((
-        BlobFsWithFileCreateOverride { pkgfs, target: (pkg_merkle.into(), failing_file) },
+    (
+        BlobFsWithFileCreateOverride {
+            wrapped: blobfs,
+            target: (pkg_merkle.into(), failing_file),
+            system_image,
+        },
         pkg,
         call_count,
-    ))
+    )
 }
 
 async fn make_mock_blobfs_with_failing_install_blob<StreamHandler>(
     package_name: &str,
     file_request_stream_handler: StreamHandler,
-) -> Result<(BlobFsWithFileCreateOverride, Package, Arc<AtomicU64>), Error>
+) -> (BlobFsWithFileCreateOverride, Package, Arc<AtomicU64>)
 where
     StreamHandler: FileStreamHandler,
 {
-    let pkgfs = make_pkgfs_with_minimal_system_image().await;
+    let (blobfs, system_image) = make_blobfs_with_minimal_system_image().await;
     let (failing_file, call_count) = FakeFile::new_and_call_count(file_request_stream_handler);
-    let (pkg, _pkg_merkle, blob_merkle) = make_pkg_for_mock_blobfs_tests(package_name).await?;
+    let (pkg, _pkg_merkle, blob_merkle) = make_pkg_for_mock_blobfs_tests(package_name).await;
 
-    Ok((
-        BlobFsWithFileCreateOverride { pkgfs, target: (blob_merkle.into(), failing_file) },
+    (
+        BlobFsWithFileCreateOverride {
+            wrapped: blobfs,
+            target: (blob_merkle.into(), failing_file),
+            system_image,
+        },
         pkg,
         call_count,
-    ))
+    )
 }
 
 async fn assert_resolve_package_with_failing_blobfs_fails(
     blobfs: BlobFsWithFileCreateOverride,
     pkg: Package,
     failing_file_call_count: Arc<AtomicU64>,
-) -> Result<(), Error> {
-    let env = TestEnvBuilder::new().pkgfs(blobfs).build().await;
-    let repo =
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
-    let served_repository = Arc::new(repo).server().start()?;
+) {
+    let system_image = blobfs.system_image;
+    let env = TestEnvBuilder::new()
+        .blobfs_and_system_image_hash(blobfs, Some(system_image))
+        .build()
+        .await;
+    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+        .add_package(&pkg)
+        .build()
+        .await
+        .unwrap();
+    let served_repository = Arc::new(repo).server().start().unwrap();
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
-    let () = env.proxies.repo_manager.add(repo_config.into()).await?.map_err(Status::from_raw)?;
+    let () = env
+        .proxies
+        .repo_manager
+        .add(repo_config.into())
+        .await
+        .unwrap()
+        .map_err(Status::from_raw)
+        .unwrap();
     let res = env.resolve_package(format!("fuchsia-pkg://test/{}", pkg.name()).as_str()).await;
 
     assert_matches!(res, Err(fidl_fuchsia_pkg::ResolveError::Io));
     assert_eq!(failing_file_call_count.load(std::sync::atomic::Ordering::SeqCst), 1);
-
-    Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn fails_on_open_far_in_install_pkg() -> Result<(), Error> {
+async fn fails_on_open_far_in_install_pkg() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_pkg(
         "fails_on_open_far_in_install_pkg",
         handle_file_stream_fail_on_open,
     )
-    .await?;
+    .await;
 
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn fails_truncate_far_in_install_pkg() -> Result<(), Error> {
+async fn fails_truncate_far_in_install_pkg() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_pkg(
         "fails_truncate_far_in_install_pkg",
         handle_file_stream_fail_truncate,
     )
-    .await?;
+    .await;
 
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn fails_write_far_in_install_pkg() -> Result<(), Error> {
+async fn fails_write_far_in_install_pkg() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_pkg(
         "fails_write_far_in_install_pkg",
         handle_file_stream_fail_write,
     )
-    .await?;
+    .await;
 
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn fails_on_open_blob_in_install_blob() -> Result<(), Error> {
+async fn fails_on_open_blob_in_install_blob() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_blob(
         "fails_on_open_blob_in_install_blob",
         handle_file_stream_fail_on_open,
     )
-    .await?;
+    .await;
 
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn fails_truncate_blob_in_install_blob() -> Result<(), Error> {
+async fn fails_truncate_blob_in_install_blob() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_blob(
         "fails_truncate_blob_in_install_blob",
         handle_file_stream_fail_truncate,
     )
-    .await?;
+    .await;
 
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn fails_write_blob_in_install_blob() -> Result<(), Error> {
+async fn fails_write_blob_in_install_blob() {
     let (blobfs, pkg, failing_file_call_count) = make_mock_blobfs_with_failing_install_blob(
         "fails_write_blob_in_install_blob",
         handle_file_stream_fail_write,
     )
-    .await?;
+    .await;
 
     assert_resolve_package_with_failing_blobfs_fails(blobfs, pkg, failing_file_call_count).await
 }
