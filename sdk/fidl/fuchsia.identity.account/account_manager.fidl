@@ -93,16 +93,6 @@ protocol AccountManager {
         id AccountId;
     }) -> (struct {}) error Error;
 
-    /// Removes a provisioned system account from the current device.
-    /// This is a temporary method to implement a soft transistion to the
-    /// arguments of `RemoveAccount`
-    ///
-    /// `id` The account's identifier as returned by GetAccountIds()
-    @deprecated
-    RemoveAccount2(struct {
-        id AccountId;
-    }) -> (struct {}) error Error;
-
     /// Adds a new system account to the current device. If a storage
     /// unlock-capable authentication mechanism is provided, a single
     /// enrollment will be created of that mechanism.

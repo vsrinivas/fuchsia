@@ -119,10 +119,6 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 let mut response = self.remove_account(id.into()).await;
                 responder.send(&mut response)?;
             }
-            AccountManagerRequest::RemoveAccount2 { id, responder } => {
-                let mut response = self.remove_account(id.into()).await;
-                responder.send(&mut response)?;
-            }
             AccountManagerRequest::ProvisionNewAccount {
                 lifetime,
                 auth_mechanism_id,
