@@ -242,6 +242,8 @@ int socket(int domain, int type, int protocol) {
       return ERRNO(EPROTONOSUPPORT);
   }
 
+  // TODO(https://fxbug.dev/101887): Remove superfluous Describe (since we know the socket type
+  // here).
   zx::status result = create_node(type, std::move(client_end));
   if (result.is_error()) {
     return ERROR(result.error_value());
