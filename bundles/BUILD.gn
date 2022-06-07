@@ -111,8 +111,6 @@ group("kitchen_sink") {
     "//bundles:tools",
     "//examples",
     "//garnet/packages:all",
-    "//garnet/packages/config:amber",
-    "//garnet/packages/config:openssh_keys",
     "//src/connectivity/telephony",
     "//src/graphics/examples",
     "//src/lib/ui/carnelian:examples",
@@ -121,6 +119,7 @@ group("kitchen_sink") {
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
     "//src/sys/sysmgr:services_config",
+    "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
   ]
 }
 
