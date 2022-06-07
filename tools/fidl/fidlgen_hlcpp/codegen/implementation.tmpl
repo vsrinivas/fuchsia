@@ -22,7 +22,7 @@ do not support them in the bindings. */}}
 
 #include "lib/fidl/cpp/internal/implementation.h"
 
-{{ template "Implementation/NaturalTypes" . }}
+{{ template "Implementation/DomainObjects" . }}
 {{ template "Implementation/ProxiesAndStubs" . }}
 
 {{- end }}{{/* if not SingleComponentLibraryName */}}
@@ -31,9 +31,9 @@ do not support them in the bindings. */}}
 
 {{ end }}
 
-{{- define "Implementation/NaturalTypes" }}
+{{- define "Implementation/DomainObjects" }}
 //
-// Domain objects definitions (i.e. "natural types" in unified bindings)
+// Domain objects definitions
 //
 
 {{- range .Decls }}

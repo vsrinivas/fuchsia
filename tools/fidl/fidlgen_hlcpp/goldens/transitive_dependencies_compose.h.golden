@@ -10,7 +10,7 @@ namespace test {
 namespace transitivedependenciescompose {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 #ifdef __Fuchsia__

@@ -5,7 +5,7 @@
 #include "lib/fidl/cpp/internal/implementation.h"
 
 //
-// Domain objects definitions (i.e. "natural types" in unified bindings)
+// Domain objects definitions
 //
 namespace test {
 namespace importedconstvalues {

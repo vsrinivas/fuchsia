@@ -8,7 +8,7 @@ namespace test {
 namespace consts {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 enum class EnumType : int32_t {

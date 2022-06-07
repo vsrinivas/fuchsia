@@ -8,7 +8,7 @@ namespace test {
 namespace anonymous {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 class UnionMember;

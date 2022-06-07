@@ -8,7 +8,7 @@ namespace test {
 namespace bits {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 enum class StrictBits : uint64_t {

@@ -9,7 +9,7 @@ namespace test {
 namespace structdefaultvalueenumlibraryreference {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 class Foo;

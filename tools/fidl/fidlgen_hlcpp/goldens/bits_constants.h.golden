@@ -8,7 +8,7 @@ namespace test {
 namespace bitsconstants {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 enum class BitsType : uint32_t {

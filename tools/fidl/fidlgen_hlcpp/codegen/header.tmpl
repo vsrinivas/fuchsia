@@ -22,21 +22,21 @@
 {{ end -}}
 
 {{ EnsureNamespace . }}
-{{ template "Header/NaturalTypes" . }}
+{{ template "Header/DomainObjects" . }}
 {{ template "Header/ProxiesAndStubs" . }}
 {{ EndOfFile }}
 
 {{ end }}
 
-{{- define "Header/NaturalTypes" }}
+{{- define "Header/DomainObjects" }}
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration/NaturalTypes" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration/DomainObjects" . }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{- template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
@@ -45,7 +45,7 @@
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration/NaturalTypes" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration/DomainObjects" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
@@ -90,18 +90,18 @@
 
 {{- end }}
 
-{{- define "DispatchProtocolForwardDeclaration/NaturalTypes" -}}
+{{- define "DispatchProtocolForwardDeclaration/DomainObjects" -}}
 {{- range $transport, $_ := .Transports }}
 {{- if eq $transport "Channel" }}
-{{- template "ProtocolForwardDeclaration/NaturalTypes" $.WithHlMessaging }}
+{{- template "ProtocolForwardDeclaration/DomainObjects" $.WithHlMessaging }}
 {{- end }}
 {{- end }}
 {{- end }}
 
-{{- define "DispatchProtocolDeclaration/NaturalTypes" -}}
+{{- define "DispatchProtocolDeclaration/DomainObjects" -}}
 {{- range $transport, $_ := .Transports }}
 {{- if eq $transport "Channel" }}
-{{- template "ProtocolDeclaration/NaturalTypes" $.WithHlMessaging }}
+{{- template "ProtocolDeclaration/DomainObjects" $.WithHlMessaging }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -9,7 +9,7 @@ namespace test {
 namespace typealiases {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 enum class obj_type : uint32_t {

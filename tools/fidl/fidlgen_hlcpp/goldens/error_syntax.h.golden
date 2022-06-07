@@ -9,7 +9,7 @@ namespace test {
 namespace errorsyntax {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Response;

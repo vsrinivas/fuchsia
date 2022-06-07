@@ -8,7 +8,7 @@ namespace test {
 namespace unionsandwich {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 class UnionSize8Alignment4;

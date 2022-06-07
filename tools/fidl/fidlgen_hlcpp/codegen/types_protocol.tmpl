@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "ProtocolForwardDeclaration/NaturalTypes" }}
+{{- define "ProtocolForwardDeclaration/DomainObjects" }}
 {{ EnsureNamespace . }}
 {{- IfdefFuchsia -}}
 {{- .Docs }}
@@ -19,7 +19,7 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
   {{- end -}}
 {{ end }}
 
-{{- define "ProtocolDeclaration/NaturalTypes" }}
+{{- define "ProtocolDeclaration/DomainObjects" }}
 {{ EnsureNamespace . }}
 {{- IfdefFuchsia -}}
 

@@ -8,7 +8,7 @@ namespace test {
 namespace error {
 
 //
-// Domain objects declarations (i.e. "natural types" in unified bindings).
+// Domain objects declarations
 //
 
 class Example_foo_Response;
