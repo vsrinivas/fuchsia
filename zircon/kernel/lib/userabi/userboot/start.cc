@@ -281,6 +281,29 @@ void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const z
   }
 }
 
+// Set of resources created in userboot.
+struct Resources {
+  // Needed for properly implementing the epilogue.
+  zx::resource power;
+
+  // Needed for vending executable memory from bootfs.
+  zx::resource vmex;
+};
+
+Resources CreateResources(const zx::debuglog& log,
+                          cpp20::span<const zx_handle_t, kChildHandleCount> handles) {
+  Resources resources = {};
+  zx::unowned_resource system(handles[kSystemResource]);
+  auto status = zx::resource::create(*system, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_POWER_BASE, 1,
+                                     nullptr, 0, &resources.power);
+  check(log, status, "Failed to created power resource.");
+
+  status = zx::resource::create(*system, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE, 1, nullptr,
+                                0, &resources.vmex);
+  check(log, status, "Failed to created vmex resource.");
+  return resources;
+}
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -309,6 +332,8 @@ void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const z
   zx::process proc_self{handles[kProcSelf]};
   handles[kProcSelf] = ZX_HANDLE_INVALID;
 
+  auto [power, vmex] = CreateResources(log, handles);
+
   // Locate the ZBI_TYPE_STORAGE_BOOTFS item and decompress it. This will be used to load
   // the binary referenced by userboot.next, as well as libc. Bootfs will be fully parsed
   // and hosted under '/boot' either by bootsvc or component manager.
@@ -317,13 +342,6 @@ void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const z
 
   // Parse CMDLINE items to determine the set of runtime options.
   Options opts = GetOptionsFromZbi(log, vmar_self, *zbi);
-
-  // Get the power resource handle in case we call powerctl below.
-  zx::resource power_resource;
-  zx::unowned_resource system_resource(handles[kSystemResource]);
-  status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_POWER_BASE, 1,
-                                nullptr, 0, &power_resource);
-  check(log, status, "zx_resource_create");
 
   // Strips any arguments passed along with the filename to userboot.next.
   std::string_view filename = GetUserbootNextFilename(opts);
@@ -338,13 +356,7 @@ void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const z
 
   {
     // Map in the bootfs so we can look for files in it.
-    zx::resource vmex_resource;
-    zx::unowned_resource system_resource(handles[kSystemResource]);
-    status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE,
-                                  1, nullptr, 0, &vmex_resource);
-    check(log, status, "zx_resource_create failed");
-    Bootfs bootfs{vmar_self.borrow(), std::move(bootfs_vmo), std::move(vmex_resource),
-                  DuplicateOrDie(log)};
+    Bootfs bootfs{vmar_self.borrow(), std::move(bootfs_vmo), std::move(vmex), DuplicateOrDie(log)};
 
     // Map in the code.
     zx_vaddr_t entry, vdso_base;
@@ -425,10 +437,10 @@ void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const z
       zx_process_exit(0);
     case Epilogue::kRebootAfterChildExit:
       wait_till_child_exits();
-      DoPowerctl(log, power_resource, ZX_SYSTEM_POWERCTL_REBOOT);
+      DoPowerctl(log, power, ZX_SYSTEM_POWERCTL_REBOOT);
     case Epilogue::kPowerOffAfterChildExit:
       wait_till_child_exits();
-      DoPowerctl(log, power_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
+      DoPowerctl(log, power, ZX_SYSTEM_POWERCTL_SHUTDOWN);
   }
 
   __UNREACHABLE;
