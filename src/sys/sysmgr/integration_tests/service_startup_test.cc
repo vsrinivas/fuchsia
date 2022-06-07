@@ -9,7 +9,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/string.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <stdio.h>
@@ -20,6 +19,7 @@
 #include <test/sysmgr/cpp/fidl.h>
 
 #include "lib/sys/cpp/termination_reason.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace sysmgr {
 namespace test {

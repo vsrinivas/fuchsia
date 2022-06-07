@@ -5,7 +5,8 @@
 #include "src/camera/lib/fake_stream/fake_stream.h"
 
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 static fuchsia::camera3::StreamProperties DefaultStreamProperties() {
   return {.image_format{.pixel_format{

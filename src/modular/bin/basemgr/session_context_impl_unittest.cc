@@ -6,10 +6,10 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/modular/bin/basemgr/sessions.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"

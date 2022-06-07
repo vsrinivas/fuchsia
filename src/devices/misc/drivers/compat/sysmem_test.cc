@@ -4,7 +4,6 @@
 
 #include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
 #include <lib/driver2/logger.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <fbl/ref_ptr.h>
@@ -13,6 +12,7 @@
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/device.h"
 #include "src/devices/misc/drivers/compat/driver.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 

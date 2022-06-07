@@ -7,7 +7,7 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"

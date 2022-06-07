@@ -75,7 +75,6 @@ source_set("test_common") {
   visibility = [ ":*" ]
   sources = [ "test/common.cc" ]
   public_deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.tee",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

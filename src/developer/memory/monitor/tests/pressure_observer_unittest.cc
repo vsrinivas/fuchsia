@@ -4,12 +4,13 @@
 
 #include "src/developer/memory/monitor/pressure_observer.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/types.h>
 
 #include <array>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace monitor {
 namespace test {

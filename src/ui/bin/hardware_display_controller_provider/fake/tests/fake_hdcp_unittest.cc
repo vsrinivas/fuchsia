@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/types.h>
 
 #include <chrono>
@@ -10,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/bin/hardware_display_controller_provider/fake/service.h"
 
 namespace {

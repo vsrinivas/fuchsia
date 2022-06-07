@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/lib/escher/test/flib/util.h"

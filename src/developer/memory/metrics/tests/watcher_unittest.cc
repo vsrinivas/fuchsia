@@ -4,13 +4,13 @@
 
 #include "src/developer/memory/metrics/watcher.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/types.h>
 
 #include <gtest/gtest.h>
 
-#include "lib/gtest/real_loop_fixture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace memory {
 namespace test {

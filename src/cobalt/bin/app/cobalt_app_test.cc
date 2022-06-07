@@ -5,7 +5,6 @@
 #include "src/cobalt/bin/app/cobalt_app.h"
 
 #include <fuchsia/metrics/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -23,6 +22,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/testing/fake_cobalt_service.h"
 

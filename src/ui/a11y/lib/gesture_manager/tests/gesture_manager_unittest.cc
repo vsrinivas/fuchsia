@@ -5,12 +5,12 @@
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <cstdint>
 #include <memory>
 #include <vector>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_drag_recognizer.h"

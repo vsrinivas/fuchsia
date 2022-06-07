@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_manager.h"
 

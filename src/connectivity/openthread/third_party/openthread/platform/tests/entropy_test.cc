@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/time.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 
 #include <gtest/gtest.h>
 #include <openthread/platform/entropy.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 TEST(Entropy, BasicEntropyCheck) {
   constexpr auto kNumPossibleValues = UINT8_MAX + 1;

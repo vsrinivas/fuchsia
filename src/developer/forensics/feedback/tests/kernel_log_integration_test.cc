@@ -7,7 +7,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
@@ -23,6 +22,7 @@
 #include "src/developer/forensics/feedback/attachments/kernel_log.h"
 #include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace forensics::feedback {
 namespace {

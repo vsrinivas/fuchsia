@@ -10,7 +10,7 @@
 #include <memory>
 #include <optional>
 
-#include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/sys/activity/activity_state_machine.h"
 
 namespace {

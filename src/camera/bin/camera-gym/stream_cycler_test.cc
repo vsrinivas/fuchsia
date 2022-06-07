@@ -10,7 +10,6 @@
 #include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 

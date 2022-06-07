@@ -9,7 +9,6 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
 #include <fidl/test.placeholders/cpp/wire.h>
 #include <lib/ddk/metadata.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
 
@@ -22,6 +21,7 @@
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/driver.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

@@ -10,7 +10,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sync/completion.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
@@ -21,6 +20,7 @@
 
 #include <unordered_map>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/storage/memfs/scoped_memfs.h"
 #include "src/virtualization/bin/linux_runner/ports.h"
 

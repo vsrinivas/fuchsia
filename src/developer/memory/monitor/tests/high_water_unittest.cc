@@ -8,7 +8,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
@@ -17,6 +16,7 @@
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/storage/memfs/scoped_memfs.h"
 
 using namespace memory;

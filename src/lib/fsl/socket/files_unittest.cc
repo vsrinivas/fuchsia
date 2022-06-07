@@ -9,10 +9,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/socket/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fsl {
 namespace {

@@ -5,12 +5,12 @@
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include "src/camera/drivers/controller/controller_device.h"
 #include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/test/constants.h"
 #include "src/camera/drivers/controller/test/fake_sysmem.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace camera {
 namespace {

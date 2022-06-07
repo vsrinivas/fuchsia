@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
 #include <unistd.h>
@@ -17,6 +16,8 @@
 #include <fbl/string.h>
 #include <gtest/gtest.h>
 #include <src/lib/isolated_devmgr/usb-virtual-bus.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 constexpr uint32_t kQmiBufSize = 2048LU;
 

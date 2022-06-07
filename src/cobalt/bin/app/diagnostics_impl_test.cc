@@ -4,7 +4,6 @@
 
 #include "src/cobalt/bin/app/diagnostics_impl.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>

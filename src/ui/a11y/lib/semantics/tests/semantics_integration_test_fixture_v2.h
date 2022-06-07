@@ -8,7 +8,6 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
@@ -18,6 +17,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/a11y_semantics_event_manager.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"

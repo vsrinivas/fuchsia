@@ -6,11 +6,11 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {

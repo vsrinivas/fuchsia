@@ -9,7 +9,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
@@ -28,6 +27,7 @@
 
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 using fuchsia::sys::ServiceList;
 using fuchsia::sys::ServiceListPtr;

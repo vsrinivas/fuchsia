@@ -7,8 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include <lib/gtest/real_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 

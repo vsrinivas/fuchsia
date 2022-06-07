@@ -5,7 +5,6 @@
 #include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
 #include <lib/fdio/directory.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 
@@ -13,6 +12,8 @@
 #include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace modular {
 namespace {

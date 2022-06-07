@@ -10,7 +10,6 @@
 #include "src/connectivity/weave/adaptation/ble_manager_impl.h"
 // clang-format on
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -19,6 +18,7 @@
 #include "connectivity_manager_delegate_impl.h"
 #include "fake_ble_peripheral.h"
 #include "fake_gatt_server.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "test_configuration_manager.h"
 #include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"

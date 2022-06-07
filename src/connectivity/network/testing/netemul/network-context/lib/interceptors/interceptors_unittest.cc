@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/clock.h>
 
 #include <unordered_set>
@@ -10,6 +9,7 @@
 #include "latency.h"
 #include "packet_loss.h"
 #include "reorder.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace netemul {
 namespace testing {

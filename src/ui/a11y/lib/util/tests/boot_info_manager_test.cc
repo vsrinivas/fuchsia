@@ -7,12 +7,13 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <future>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace accessibility_test {
 

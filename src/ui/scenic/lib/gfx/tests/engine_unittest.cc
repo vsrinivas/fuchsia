@@ -9,8 +9,8 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/testing/loop_fixture/test_loop.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/test/common/test_with_vk_validation_layer.h"

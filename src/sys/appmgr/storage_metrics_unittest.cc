@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fpromise/single_threaded_executor.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/reader.h>
@@ -22,6 +21,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/storage/memfs/scoped_memfs.h"
 
 class StorageMetricsTest : public ::testing::Test {

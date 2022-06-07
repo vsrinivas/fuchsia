@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/assert.h>
 
@@ -18,6 +17,8 @@
 #include <thread>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 // An Observation value is exposed to the test DSL and represents specific
 // observations made by instrumenting the target bindings under test.

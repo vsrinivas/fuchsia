@@ -4,12 +4,11 @@
 
 #include "src/virtualization/bin/vmm/virtio_vsock.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <iterator>
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
 #include "src/virtualization/bin/vmm/virtio_device_fake.h"
 #include "src/virtualization/bin/vmm/virtio_queue_fake.h"

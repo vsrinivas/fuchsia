@@ -8,11 +8,12 @@
 #include <fuchsia/buildinfo/test/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 using component_testing::RealmBuilder;

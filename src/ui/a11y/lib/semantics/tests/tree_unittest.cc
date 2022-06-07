@@ -8,7 +8,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/fd.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -24,6 +23,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"

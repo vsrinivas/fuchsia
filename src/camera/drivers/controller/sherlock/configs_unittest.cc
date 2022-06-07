@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include "src/camera/drivers/controller/sherlock/common_util.h"
 #include "src/camera/drivers/controller/sherlock/monitoring_config.h"
 #include "src/camera/drivers/controller/sherlock/sherlock_product_config.h"
 #include "src/camera/drivers/controller/test/constants.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace camera {
 

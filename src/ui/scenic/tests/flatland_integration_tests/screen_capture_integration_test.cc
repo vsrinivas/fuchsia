@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_creation_tokens.h>
@@ -18,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"

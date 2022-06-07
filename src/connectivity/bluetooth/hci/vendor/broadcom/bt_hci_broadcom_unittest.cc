@@ -12,8 +12,8 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace bt_hci_broadcom {
 

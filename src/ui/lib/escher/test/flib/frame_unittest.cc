@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/flib/util.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"

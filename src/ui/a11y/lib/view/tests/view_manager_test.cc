@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -20,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"

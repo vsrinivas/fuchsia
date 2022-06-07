@@ -6,10 +6,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/vnext/lib/threads/thread.h"
 
 namespace fmlib::test {

@@ -4,13 +4,13 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
 
 #include "fuchsia/accessibility/gesture/cpp/fidl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"

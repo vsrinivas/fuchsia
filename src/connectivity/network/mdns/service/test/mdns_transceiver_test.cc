@@ -8,9 +8,9 @@
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include "src/connectivity/network/mdns/service/common/mdns_addresses.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace mdns::test {

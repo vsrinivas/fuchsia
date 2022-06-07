@@ -4,10 +4,10 @@
 
 #include <iostream>
 
-#include "lib/gtest/real_loop_fixture.h"
 #include "src/connectivity/network/mdns/service/common/formatters.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_formatting.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace mdns {
 namespace test {

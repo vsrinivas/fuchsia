@@ -8,13 +8,13 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/string.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include <map>
 #include <memory>
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {

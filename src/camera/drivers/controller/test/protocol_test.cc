@@ -6,7 +6,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fpromise/result.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -29,6 +28,7 @@
 #include "src/camera/drivers/controller/test/fake_gdc.h"
 #include "src/camera/drivers/controller/test/fake_ge2d.h"
 #include "src/camera/drivers/controller/test/fake_isp.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 // NOTE: In this test, we are actually just unit testing the ControllerImpl class.
 namespace camera {

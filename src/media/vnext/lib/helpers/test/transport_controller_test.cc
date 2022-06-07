@@ -4,9 +4,9 @@
 
 #include "src/media/vnext/lib/helpers/transport_controller.h"
 
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/clock.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/vnext/lib/threads/thread.h"
 
 namespace fmlib {

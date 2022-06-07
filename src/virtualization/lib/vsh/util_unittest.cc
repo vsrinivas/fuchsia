@@ -4,8 +4,7 @@
 
 #include "src/virtualization/lib/vsh/util.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/virtualization/third_party/vm_tools/vsh.pb.h"
 
 namespace {

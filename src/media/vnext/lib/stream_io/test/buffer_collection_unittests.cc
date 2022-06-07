@@ -6,8 +6,8 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
-#include <lib/gtest/real_loop_fixture.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/vnext/lib/stream_io/buffer_collection.h"
 #include "src/media/vnext/lib/stream_io/test/fake_buffer_provider.h"
 #include "src/media/vnext/lib/threads/thread.h"

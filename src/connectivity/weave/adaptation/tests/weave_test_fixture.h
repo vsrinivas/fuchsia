@@ -7,12 +7,13 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include <memory>
 #include <thread>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
 namespace testing {
@@ -20,7 +21,7 @@ namespace internal {
 // An empty resource to satisfy template requirements of WeaveTestFixture in the
 // event that no resource is used.
 class EmptyResource {};
-}
+}  // namespace internal
 
 // A RealLoopFixture that runs the loop in a separate thread, allowing blocking
 // synchronous calls to be made in the test code.
@@ -63,9 +64,7 @@ class WeaveTestFixture : public ::gtest::RealLoopFixture {
   }
 
  protected:
-  Resource& resource() {
-    return *resource_;
-  }
+  Resource& resource() { return *resource_; }
 
  private:
   std::thread thread_;

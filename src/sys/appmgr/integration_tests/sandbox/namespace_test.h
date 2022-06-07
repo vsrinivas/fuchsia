@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
@@ -16,6 +15,8 @@
 #include <string>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class NamespaceTest : public gtest::TestWithEnvironmentFixture {
  protected:

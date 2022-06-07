@@ -5,10 +5,11 @@
 #include "thermal_test_control.h"
 
 #include <fuchsia/thermal/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <test/thermal/cpp/fidl.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 class ThermalTestControlTest : public gtest::TestLoopFixture {
  protected:

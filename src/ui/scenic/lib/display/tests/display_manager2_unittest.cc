@@ -7,13 +7,13 @@
 #include <fuchsia/ui/display/cpp/fidl.h>
 #include <fuchsia/ui/display/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/pixelformat.h>
 
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 

@@ -6,7 +6,6 @@
 
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -17,6 +16,7 @@
 
 #include "garnet/bin/trace/tests/component_context.h"
 #include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace intl {
 namespace testing {

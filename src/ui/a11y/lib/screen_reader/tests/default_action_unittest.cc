@@ -5,12 +5,12 @@
 #include "src/ui/a11y/lib/screen_reader/default_action.h"
 
 #include <fuchsia/accessibility/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/types.h>
 
 #include <memory>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"

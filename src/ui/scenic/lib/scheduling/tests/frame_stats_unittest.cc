@@ -9,8 +9,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/bridge.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <thread>
 
@@ -22,6 +20,8 @@
 #include "lib/inspect/service/cpp/reader.h"
 #include "lib/inspect/service/cpp/service.h"
 #include "lib/inspect/testing/cpp/inspect.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 
 namespace scheduling {

@@ -14,11 +14,11 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/cobalt/bin/testing/fake_http_loader.h"
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace cobalt {
 namespace utils {

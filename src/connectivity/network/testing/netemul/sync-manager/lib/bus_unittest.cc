@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
-#include <lib/gtest/real_loop_fixture.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
 #include "sync_manager.h"
 

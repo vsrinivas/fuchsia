@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/default.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include "../codec_factory_app.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 using CodecFactoryHwDetectTest = ::gtest::RealLoopFixture;
 

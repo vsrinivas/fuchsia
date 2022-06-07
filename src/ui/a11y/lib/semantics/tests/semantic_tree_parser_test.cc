@@ -4,10 +4,11 @@
 
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <vector>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace accessibility_test {
 namespace {

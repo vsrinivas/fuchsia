@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/core/player_core.h"
 
-#include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 #include "src/media/playback/mediaplayer/core/test/fake_audio_renderer.h"

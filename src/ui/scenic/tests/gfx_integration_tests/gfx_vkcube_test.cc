@@ -6,7 +6,6 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -16,6 +15,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/tests/gfx_integration_tests/pixel_test.h"
 #include "src/ui/scenic/tests/utils/scenic_realm_builder.h"

@@ -4,7 +4,6 @@
 
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 
-#include <lib/gtest/real_loop_fixture.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -14,6 +13,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/fidl/array_to_string.h"

@@ -8,7 +8,6 @@
 #include <fuchsia/cobalt/cpp/fidl_test_base.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
@@ -24,6 +23,7 @@
 #include "src/cobalt/bin/testing/fake_clock.h"
 #include "src/cobalt/bin/testing/fake_logger.h"
 #include "src/cobalt/bin/utils/clock.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 using cobalt::FakeCpuStatsFetcher;
 using cobalt::FakeLogger_Sync;

@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <variant>
 
 #include <gtest/gtest.h>
 
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scenic/session.h"
@@ -19,7 +18,7 @@ namespace scenic_impl::test {
 
 class MockGfxSession : public gfx::Session {
  public:
-  MockGfxSession(scheduling::SessionId session_id = 1) : Session(session_id, {}){}
+  MockGfxSession(scheduling::SessionId session_id = 1) : Session(session_id, {}) {}
 
   void DispatchCommand(fuchsia::ui::scenic::Command command, scheduling::PresentId) override {
     ++num_commands_dispatched_;

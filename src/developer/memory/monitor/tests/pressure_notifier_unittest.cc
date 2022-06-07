@@ -7,12 +7,13 @@
 #include <fuchsia/feedback/cpp/fidl_test_base.h>
 #include <fuchsia/memory/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace monitor {
 namespace test {

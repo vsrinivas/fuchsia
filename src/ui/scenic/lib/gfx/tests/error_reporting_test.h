@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 
@@ -37,7 +37,7 @@ class TestErrorReporter : public ErrorReporter {
 
 class TestEventReporter : public EventReporter {
  public:
-  TestEventReporter() : weak_factory_(this){}
+  TestEventReporter() : weak_factory_(this) {}
 
   const std::vector<fuchsia::ui::scenic::Event>& events() const { return events_; }
 

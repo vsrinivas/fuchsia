@@ -10,13 +10,13 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "isolated_devmgr.h"
 #include "src/lib/files/glob.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace isolated_devmgr {
 namespace testing {

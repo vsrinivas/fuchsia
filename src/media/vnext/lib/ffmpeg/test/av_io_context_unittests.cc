@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/clock.h>
 
 #include <condition_variable>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/vnext/lib/ffmpeg/av_io_context.h"
 
 namespace fmlib {

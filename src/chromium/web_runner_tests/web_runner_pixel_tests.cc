@@ -9,7 +9,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -30,6 +29,7 @@
 #include "src/chromium/web_runner_tests/web_context.h"
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/testing/views/embedder_view.h"
 

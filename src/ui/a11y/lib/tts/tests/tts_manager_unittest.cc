@@ -4,11 +4,12 @@
 
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <vector>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace a11y {
 namespace {

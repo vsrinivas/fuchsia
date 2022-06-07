@@ -8,11 +8,11 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace accessibility_test {
 using fuchsia::accessibility::semantics::Action;

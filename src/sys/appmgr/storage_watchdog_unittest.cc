@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/namespace.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sync/completion.h>
 
@@ -19,6 +18,7 @@
 #include <src/lib/files/path.h>
 
 #include "gtest/gtest.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/storage/memfs/scoped_memfs.h"
 
 namespace {

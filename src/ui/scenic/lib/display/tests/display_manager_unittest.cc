@@ -6,12 +6,12 @@
 
 #include <lib/async/default.h>
 #include <lib/async/time.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <unordered_set>
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
 
 namespace scenic_impl {

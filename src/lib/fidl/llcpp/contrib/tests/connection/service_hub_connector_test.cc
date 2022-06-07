@@ -5,7 +5,6 @@
 #include "src/lib/fidl/llcpp/contrib/connection/service_hub_connector.h"
 
 #include <fidl/test.protocol/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/service/llcpp/service.h>
 
 #include <functional>
@@ -21,6 +20,7 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 

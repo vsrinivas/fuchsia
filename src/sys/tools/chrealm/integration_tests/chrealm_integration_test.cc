@@ -7,7 +7,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
@@ -29,6 +28,7 @@
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/sys/appmgr/util.h"
 
 namespace chrealm {

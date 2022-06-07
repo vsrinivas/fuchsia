@@ -6,11 +6,11 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class VirtualCameraTest : public gtest::RealLoopFixture {
  public:

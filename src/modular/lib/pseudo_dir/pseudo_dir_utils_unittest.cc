@@ -4,12 +4,12 @@
 
 #include "src/modular/lib/pseudo_dir/pseudo_dir_utils.h"
 
-#include <lib/gtest/real_loop_fixture.h>
-
 #include <gtest/gtest.h>
 #include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
 #include <src/modular/lib/pseudo_dir/pseudo_dir_server.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace modular {
 namespace {

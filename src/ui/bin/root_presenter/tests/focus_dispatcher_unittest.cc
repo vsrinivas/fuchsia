@@ -7,7 +7,6 @@
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
@@ -21,6 +20,7 @@
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/bin/root_presenter/focus_listener.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
 

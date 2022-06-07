@@ -4,8 +4,7 @@
 
 #include "src/ui/scenic/lib/scheduling/tests/frame_scheduler_test.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
 

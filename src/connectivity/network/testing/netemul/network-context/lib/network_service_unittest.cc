@@ -5,7 +5,6 @@
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/clock.h>
 
@@ -18,6 +17,7 @@
 #include "src/connectivity/network/testing/netemul/network-context/lib/netdump_parser.h"
 #include "src/connectivity/network/testing/netemul/network-context/lib/network_context.h"
 #include "src/connectivity/network/testing/netemul/network-context/lib/realm_setup.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace {

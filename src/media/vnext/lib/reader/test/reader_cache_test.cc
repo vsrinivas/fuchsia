@@ -5,10 +5,11 @@
 #include "src/media/vnext/lib/reader/reader_cache.h"
 
 #include <lib/async/cpp/executor.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include <cmath>
 #include <cstdlib>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace fmlib {
 namespace {

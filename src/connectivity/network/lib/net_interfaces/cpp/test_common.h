@@ -14,8 +14,8 @@
 
 #include <vector>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "reachability.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace net::interfaces::test {
 

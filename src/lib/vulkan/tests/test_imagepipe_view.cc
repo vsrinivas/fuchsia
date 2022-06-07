@@ -4,7 +4,6 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/fake_component.h>
 
@@ -12,6 +11,7 @@
 #include <src/lib/vulkan/imagepipe_view/imagepipe_view.h>
 
 #include "sdk/lib/ui/scenic/cpp/view_ref_pair.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 

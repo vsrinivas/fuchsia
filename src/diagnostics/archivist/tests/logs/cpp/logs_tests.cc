@@ -4,7 +4,6 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/log_settings.h>
@@ -20,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

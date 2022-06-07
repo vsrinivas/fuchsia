@@ -4,10 +4,10 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <gmock/gmock.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
 #include "src/ui/scenic/lib/scheduling/tests/frame_scheduler_test.h"

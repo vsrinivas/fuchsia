@@ -5,11 +5,12 @@
 #include "src/modular/lib/fidl/app_client.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 
 #include <gtest/gtest.h>
 #include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace modular_testing {
 namespace {

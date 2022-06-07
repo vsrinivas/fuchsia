@@ -5,10 +5,10 @@
 #include <gtest/gtest.h>
 #include <test/placeholders/cpp/fidl.h>
 
-#include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/sys/appmgr/service_provider_dir_impl.h"
 #include "src/sys/appmgr/util.h"
 

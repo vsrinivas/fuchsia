@@ -7,13 +7,13 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/syscalls.h>
 
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"

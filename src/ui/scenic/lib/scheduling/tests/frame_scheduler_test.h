@@ -5,8 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_SCHEDULING_TESTS_FRAME_SCHEDULER_TEST_H_
 #define SRC_UI_SCENIC_LIB_SCHEDULING_TESTS_FRAME_SCHEDULER_TEST_H_
 
-#include <lib/gtest/test_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 

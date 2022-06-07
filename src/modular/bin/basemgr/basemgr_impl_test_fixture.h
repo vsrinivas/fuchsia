@@ -6,11 +6,11 @@
 #define SRC_MODULAR_BIN_BASEMGR_BASEMGR_IMPL_TEST_FIXTURE_H_
 
 #include <fuchsia/modular/internal/cpp/fidl_test_base.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/fake_component.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"

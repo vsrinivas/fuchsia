@@ -5,7 +5,6 @@
 #include "src/cobalt/bin/app/activity_listener_impl.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <cstdio>
 

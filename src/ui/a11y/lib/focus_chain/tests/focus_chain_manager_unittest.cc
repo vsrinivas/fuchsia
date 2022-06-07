@@ -5,11 +5,11 @@
 #include "src/ui/a11y/lib/focus_chain/focus_chain_manager.h"
 
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <memory>
 #include <vector>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_focuser.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"

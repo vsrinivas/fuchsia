@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/executor.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/virtualization/testing/fake_manager.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/lib/grpc/test_server.grpc.pb.h"

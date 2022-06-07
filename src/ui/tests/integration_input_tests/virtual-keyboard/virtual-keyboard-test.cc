@@ -28,7 +28,6 @@
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
@@ -49,6 +48,8 @@
 #include <gtest/gtest.h>
 #include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <test/virtualkeyboard/cpp/fidl.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 // This test exercises the virtual keyboard visibility interactions between Chromium and Root
 // Presenter. It is a multi-component test, and carefully avoids sleeping or polling for component

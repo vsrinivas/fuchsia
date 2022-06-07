@@ -8,7 +8,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/assert.h>
 
@@ -19,6 +18,8 @@
 #include <thread>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 std::ostream& operator<<(std::ostream& os, const Observation::Kind& kind) {
   switch (kind) {

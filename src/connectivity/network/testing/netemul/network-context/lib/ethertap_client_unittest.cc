@@ -7,12 +7,12 @@
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include "src/connectivity/network/testing/netemul/network-context/lib/ethernet_client.h"
 #include "src/connectivity/network/testing/netemul/network-context/lib/realm_setup.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace netemul {

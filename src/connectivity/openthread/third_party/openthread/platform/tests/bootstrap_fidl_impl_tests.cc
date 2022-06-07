@@ -2,7 +2,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/server.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/svc/dir.h>
 #include <lib/svc/outgoing.h>
@@ -14,6 +13,7 @@
 #include <src/lib/fsl/vmo/strings.h>
 
 #include "bootstrap_fidl_impl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 // Contents of thread settings file on Fuchsia
 // Keys are decimal representation of uint16_t in double quotes.

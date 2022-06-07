@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/time.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 #include <openthread/platform/settings.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 static constexpr size_t kTestDataSize = 60;
 

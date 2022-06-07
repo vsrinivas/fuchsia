@@ -17,9 +17,9 @@
 #include <gtest/gtest.h>
 #include <usb/request-cpp.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/devices/usb/testing/descriptor-builder/descriptor-builder.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 

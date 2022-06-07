@@ -7,7 +7,6 @@
 
 #include <fuchsia/ui/annotation/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -17,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/ui/base_view/base_view.h"
 #include "src/ui/testing/views/color.h"
 #include "src/ui/testing/views/test_view.h"

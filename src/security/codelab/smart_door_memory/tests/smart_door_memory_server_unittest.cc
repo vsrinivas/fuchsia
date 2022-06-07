@@ -1,9 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/security/codelab/smart_door_memory/src/smart_door_memory_server_app.h"
 
 namespace smart_door_memory {

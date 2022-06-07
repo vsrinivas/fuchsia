@@ -6,7 +6,8 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
-#include <lib/gtest/test_loop_fixture.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 void SignalAll(const std::vector<zx::event>& events) {

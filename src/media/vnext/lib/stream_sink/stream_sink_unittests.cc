@@ -5,8 +5,8 @@
 #include <fuchsia/media2/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
-#include <lib/gtest/test_loop_fixture.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/vnext/lib/stream_sink/clear_request.h"
 #include "src/media/vnext/lib/stream_sink/release_fence.h"
 #include "src/media/vnext/lib/stream_sink/stream_sink_client.h"

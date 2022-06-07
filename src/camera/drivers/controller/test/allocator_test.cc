@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/camera/drivers/controller/memory_allocation.h"
@@ -15,6 +14,7 @@
 #include "src/camera/drivers/controller/test/fake_isp.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 // Relaxes memory placement constraints to be more permissive. This improves the reliability of
 // allocation as it is no longer competing with other components in the system for fixed

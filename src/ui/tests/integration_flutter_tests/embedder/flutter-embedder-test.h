@@ -10,7 +10,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -24,6 +23,7 @@
 #include <vector>
 
 #include "embedder_view.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 // TODO(fxb/97309): Break color.h dependency.
 #include "src/ui/testing/views/color.h"
 

@@ -6,9 +6,10 @@
 
 #include <fidl/fuchsia.ldsvc/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fldsvc = fuchsia_ldsvc;
 

@@ -10,7 +10,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
@@ -20,6 +19,7 @@
 #include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "src/lib/fostr/fidl/fuchsia/settings/formatting.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace intl {

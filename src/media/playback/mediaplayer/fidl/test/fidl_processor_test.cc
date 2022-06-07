@@ -5,7 +5,7 @@
 #include "src/media/playback/mediaplayer/fidl/fidl_processor.h"
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/gtest/real_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 
 namespace media_player {

@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/fidl/buffer_set.h"
 
-#include "lib/gtest/real_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/playback/mediaplayer/graph/payloads/vmo_payload_allocator.h"
 
 namespace media_player {

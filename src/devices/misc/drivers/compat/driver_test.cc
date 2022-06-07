@@ -15,7 +15,6 @@
 #include <lib/fdf/internal.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sync/cpp/completion.h>
 
 #include <fbl/unique_fd.h>
@@ -23,6 +22,7 @@
 
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/v1_test.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fboot = fuchsia_boot;
 namespace fdata = fuchsia_data;

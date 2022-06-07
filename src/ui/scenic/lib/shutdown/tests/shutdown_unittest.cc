@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/fpromise/bridge.h>
-#include <lib/gtest/test_loop_fixture.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 // TODO(fxbug.dev/40804): delete once log output is properly interleaved.e
 #include <lib/syslog/cpp/macros.h>

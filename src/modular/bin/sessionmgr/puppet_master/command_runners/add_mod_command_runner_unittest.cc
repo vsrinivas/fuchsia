@@ -5,13 +5,13 @@
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/add_mod_command_runner.h"
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {

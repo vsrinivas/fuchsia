@@ -4,9 +4,10 @@
 #include "src/connectivity/weave/weavestack/fidl/stack_impl.h"
 
 #include <fuchsia/weave/cpp/fidl_test_base.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 // clang-format off
 #pragma GCC diagnostic push

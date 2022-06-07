@@ -5,7 +5,6 @@
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -19,6 +18,7 @@
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/a11y/lib/view/gfx_accessibility_view.h"
 #include "src/ui/bin/root_presenter/app.h"
 #include "src/ui/bin/root_presenter/presentation.h"

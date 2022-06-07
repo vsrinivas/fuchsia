@@ -9,9 +9,8 @@
 #pragma GCC diagnostic pop
 // clang-format on
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include "src/connectivity/weave/adaptation/platform_manager_impl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace weave::adaptation::testing {
 namespace {

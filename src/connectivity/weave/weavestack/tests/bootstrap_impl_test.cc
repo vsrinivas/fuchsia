@@ -4,7 +4,6 @@
 #include "src/connectivity/weave/weavestack/fidl/bootstrap_impl.h"
 
 #include <fuchsia/weave/cpp/fidl_test_base.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -13,6 +12,8 @@
 #include <gtest/gtest.h>
 #include <src/lib/files/file.h>
 #include <src/lib/fsl/vmo/strings.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace weavestack {
 namespace {
@@ -25,6 +26,7 @@ class TestableBootstrapImpl : public BootstrapImpl {
   void SetShouldServe(bool value) { should_serve_ = value; }
 
   void SetConfigPath(std::string config_path) { config_path_ = std::move(config_path); }
+
  private:
   std::string GetConfigPath() override { return config_path_; }
   bool ShouldServe() override { return should_serve_; }

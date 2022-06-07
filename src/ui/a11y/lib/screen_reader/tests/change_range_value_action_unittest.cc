@@ -4,12 +4,11 @@
 
 #include "src/ui/a11y/lib/screen_reader/change_range_value_action.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <cstdint>
 #include <utility>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
 #include "src/ui/a11y/lib/screen_reader/tests/screen_reader_action_test_fixture.h"

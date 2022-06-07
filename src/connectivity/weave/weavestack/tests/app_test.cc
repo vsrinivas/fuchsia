@@ -5,8 +5,9 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/fit/defer.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 // clang-format off
 #pragma GCC diagnostic push

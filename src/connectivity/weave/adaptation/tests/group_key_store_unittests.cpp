@@ -9,12 +9,11 @@
 #include "group_key_store_impl.h"
 // clang-format on
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <gtest/gtest.h>
 
 #include "environment_config.h"
 #include "src/lib/files/file.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace weave::adaptation::testing {
 namespace {

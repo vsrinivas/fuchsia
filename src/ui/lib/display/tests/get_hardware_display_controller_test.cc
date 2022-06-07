@@ -6,11 +6,11 @@
 
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <gtest/gtest.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/lib/display/hardware_display_controller_provider_impl.h"
 
 namespace ui_display {

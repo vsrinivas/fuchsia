@@ -9,12 +9,13 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/status.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 const char kFuchsiaBuildInfoDirectoryPath[] = "/config/build-info";

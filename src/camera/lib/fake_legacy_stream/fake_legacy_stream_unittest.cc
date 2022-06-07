@@ -9,8 +9,9 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/errors.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 class FakeLegacyStreamTest : public gtest::TestLoopFixture {
  protected:

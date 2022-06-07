@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include "src/connectivity/weave/lib/core/trait_updater.h"
 #include "src/connectivity/weave/lib/core/trait_updater_delegate_impl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal::testing {
 namespace {

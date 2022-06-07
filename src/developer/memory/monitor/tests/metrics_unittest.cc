@@ -5,7 +5,6 @@
 #include "src/developer/memory/monitor/metrics.h"
 
 #include <lib/async/cpp/executor.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/time.h>
@@ -15,6 +14,7 @@
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 using namespace memory;
 

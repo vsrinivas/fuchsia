@@ -14,8 +14,8 @@
 #include <gtest/gtest.h>
 
 #include "fuchsia/ui/composition/cpp/fidl.h"
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
 #include "src/ui/scenic/lib/allocation/mock_buffer_collection_importer.h"

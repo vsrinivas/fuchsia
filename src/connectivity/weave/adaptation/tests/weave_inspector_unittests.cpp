@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "weave_inspector.h"
 
 namespace nl::Weave::testing {

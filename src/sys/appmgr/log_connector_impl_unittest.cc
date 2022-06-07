@@ -5,10 +5,11 @@
 #include "src/sys/appmgr/log_connector_impl.h"
 
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace component {
 namespace {

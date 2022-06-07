@@ -4,7 +4,6 @@
 
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -12,6 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/lib/async/cpp/future.h"
 
 using fuchsia::modular::ModuleData;

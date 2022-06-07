@@ -11,7 +11,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -23,6 +22,7 @@
 #include <vector>
 
 #include "embedder_view.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
 #include "src/ui/testing/views/color.h"

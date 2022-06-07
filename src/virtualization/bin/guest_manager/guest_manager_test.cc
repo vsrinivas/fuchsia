@@ -4,12 +4,12 @@
 
 #include "src/virtualization/bin/guest_manager/guest_manager.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <test/placeholders/cpp/fidl.h>
 
 #include "fuchsia/virtualization/cpp/fidl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 

@@ -4,7 +4,6 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
@@ -14,6 +13,7 @@
 #include "src/chromium/web_runner_tests/test_server.h"
 #include "src/chromium/web_runner_tests/web_context.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 // This file contains a subset of adapted Chromium Fuchsia tests to make sure
 // nothing broke on the import boundary.

@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/scheduling/duration_predictor.h"
 
-#include <lib/gtest/test_loop_fixture.h>
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace scheduling {
 namespace test {

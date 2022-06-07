@@ -8,7 +8,6 @@
 #include <fuchsia/sysinfo/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/vfs/cpp/remote_dir.h>
 
@@ -17,6 +16,7 @@
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 // NOLINTNEXTLINE
 using namespace component_testing;

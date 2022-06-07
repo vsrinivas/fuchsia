@@ -5,13 +5,13 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_TESTS_SCREEN_READER_ACTION_TEST_FIXTURE_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_TESTS_SCREEN_READER_ACTION_TEST_FIXTURE_H_
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/types.h>
 
 #include <memory>
 
 #include <gmock/gmock.h>
 
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/input_injection/tests/mocks/mock_injector_manager.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"

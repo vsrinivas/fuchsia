@@ -4,8 +4,7 @@
 
 #include "src/virtualization/bin/vmm/virtio_queue_waiter.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/virtualization/bin/vmm/virtio_device_fake.h"
 
 namespace {

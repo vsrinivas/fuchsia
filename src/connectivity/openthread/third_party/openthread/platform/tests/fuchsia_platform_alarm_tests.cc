@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/time.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
 #include "src/connectivity/openthread/third_party/openthread/platform/fuchsia_platform_alarm.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 static constexpr uint64_t kNanoSecondsPerMicroSecond = 1000;
 
@@ -150,8 +150,7 @@ TEST(Alarm, BothAlarms) {
   // In some cases, the actual sleep time may be much longer than
   // requested. Check Ms delay has already passed
   uint64_t end_time_us = GetCurTimeMicroSec();
-  if (end_time_us - start_time_us >
-        alarm.MilliToMicroSec( kMsAlarmDelay)) {
+  if (end_time_us - start_time_us > alarm.MilliToMicroSec(kMsAlarmDelay)) {
     EXPECT_EQ(alarm.MilliSecAlarmFired(), true);
     return;
   }

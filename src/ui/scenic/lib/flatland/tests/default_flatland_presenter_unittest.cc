@@ -19,7 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "lib/gtest/real_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 

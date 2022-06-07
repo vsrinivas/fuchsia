@@ -12,7 +12,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/defer.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -20,6 +19,7 @@
 #include <list>
 
 #include "src/devices/bin/driver_manager/fake_driver_index.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fdata = fuchsia_data;
 namespace fdf = fuchsia::driver::framework;

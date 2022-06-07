@@ -9,7 +9,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <zircon/errors.h>
@@ -30,6 +29,7 @@
 #include "lib/media/codec_impl/codec_impl.h"
 #include "lib/media/codec_impl/decryptor_adapter.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

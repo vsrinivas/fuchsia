@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/real_loop_fixture.h>
-
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "sync_manager.h"
 
 #define WAIT_FOR_OK(ok) ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)))

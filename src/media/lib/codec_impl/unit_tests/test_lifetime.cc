@@ -8,12 +8,12 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/time.h>
 
 #include <gtest/gtest.h>
 
 #include "lib/media/codec_impl/codec_impl.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

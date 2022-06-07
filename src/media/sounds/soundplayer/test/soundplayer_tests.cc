@@ -4,8 +4,8 @@
 
 #include <fcntl.h>
 
-#include "lib/gtest/real_loop_fixture.h"
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/sounds/soundplayer/sound_player_impl.h"
 #include "src/media/sounds/soundplayer/test/fake_audio_renderer.h"
 

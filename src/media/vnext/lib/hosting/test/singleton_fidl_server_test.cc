@@ -5,9 +5,10 @@
 #include "src/media/vnext/lib/hosting/singleton_fidl_server.h"
 
 #include <fuchsia/examples/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace fmlib {
 namespace {

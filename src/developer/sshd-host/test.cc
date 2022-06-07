@@ -19,8 +19,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "lib/gtest/real_loop_fixture.h"
 #include "src/developer/sshd-host/service.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace sshd_host {
 

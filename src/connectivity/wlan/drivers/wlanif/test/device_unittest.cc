@@ -10,7 +10,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/errors.h>
 
@@ -28,6 +27,7 @@
 #include "fuchsia/wlan/common/c/banjo.h"
 #include "fuchsia/wlan/common/cpp/fidl.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "test_bss.h"
 
 namespace {

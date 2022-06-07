@@ -6,11 +6,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <unordered_map>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/virtualization/bin/host_vsock/guest_vsock_endpoint.h"
 
 namespace {

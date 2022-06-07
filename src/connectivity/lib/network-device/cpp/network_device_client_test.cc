@@ -6,7 +6,6 @@
 
 #include <fidl/fuchsia.net.tun/cpp/wire.h>
 #include <lib/fpromise/bridge.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -16,6 +15,7 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace {

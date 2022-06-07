@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <queue>
 
 #include "src/connectivity/network/mdns/service/services/mdns_deprecated_service_impl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace mdns {
 namespace test {
