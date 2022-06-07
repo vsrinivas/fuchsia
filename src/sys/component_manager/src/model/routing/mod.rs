@@ -4,6 +4,7 @@
 
 pub mod error;
 pub mod open;
+pub mod providers;
 pub mod service;
 pub use ::routing::error::RoutingError;
 pub use error::OpenResourceError;
@@ -13,27 +14,28 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            component::{ComponentInstance, ExtendedInstance, StartReason, WeakComponentInstance},
+            component::{ComponentInstance, ExtendedInstance, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload},
-            routing::service::FilteredServiceProvider,
+            routing::{
+                providers::{DefaultComponentCapabilityProvider, NamespaceCapabilityProvider},
+                service::FilteredServiceProvider,
+            },
             storage,
         },
     },
     ::routing::{
         capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
-        path::PathBufExt, route_capability, route_storage_and_backing_directory,
+        route_capability, route_storage_and_backing_directory,
     },
-    async_trait::async_trait,
     cm_moniker::{InstancedExtendedMoniker, InstancedRelativeMoniker},
-    cm_rust::{self, CapabilityName, CapabilityPath, ExposeDecl, UseDecl, UseStorageDecl},
-    cm_task_scope::TaskScope,
+    cm_rust::{ExposeDecl, UseDecl, UseStorageDecl},
     cm_util::channel,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::*,
-    std::{path::PathBuf, sync::Arc},
+    std::sync::Arc,
 };
 
 pub type RouteRequest = ::routing::RouteRequest;
@@ -145,93 +147,6 @@ fn request_for_namespace_capability_expose(
         ExposeDecl::Protocol(decl) => Ok(RouteRequest::ExposeProtocol(decl)),
         ExposeDecl::Service(decl) => Ok(RouteRequest::ExposeService(decl)),
         _ => Err(ModelError::unsupported("capability cannot be installed in a namespace")),
-    }
-}
-
-/// The default provider for a ComponentCapability.
-/// This provider will start the source component instance and open the capability `name` at
-/// `path` under the source component's outgoing namespace.
-struct DefaultComponentCapabilityProvider {
-    target: WeakComponentInstance,
-    source: WeakComponentInstance,
-    name: CapabilityName,
-    path: CapabilityPath,
-}
-
-#[async_trait]
-impl CapabilityProvider for DefaultComponentCapabilityProvider {
-    async fn open(
-        self: Box<Self>,
-        _task_scope: TaskScope,
-        flags: fio::OpenFlags,
-        open_mode: u32,
-        relative_path: PathBuf,
-        server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
-        let capability = Arc::new(Mutex::new(Some(channel::take_channel(server_end))));
-        let res = async {
-            // Start the source component, if necessary
-            let source = self.source.upgrade()?;
-            source
-                .start(&StartReason::AccessCapability {
-                    target: self.target.abs_moniker.clone(),
-                    name: self.name.clone(),
-                })
-                .await?;
-
-            let event = Event::new(
-                &self.target.upgrade()?,
-                Ok(EventPayload::CapabilityRequested {
-                    source_moniker: source.instanced_moniker().clone(),
-                    name: self.name.to_string(),
-                    capability: capability.clone(),
-                }),
-            );
-            source.hooks.dispatch(&event).await?;
-            Result::<Arc<ComponentInstance>, ModelError>::Ok(source)
-        }
-        .await;
-
-        // If the capability transported through the event above wasn't transferred
-        // out, then we can open the capability through the component's outgoing directory.
-        // If some hook consumes the capability, then we don't bother looking in the outgoing
-        // directory.
-        let capability = capability.lock().await.take();
-        if let Some(mut server_end_in) = capability {
-            // Pass back the channel so the caller can set the epitaph, if necessary.
-            *server_end = channel::take_channel(&mut server_end_in);
-            let path = self.path.to_path_buf().attach(relative_path);
-            res?.open_outgoing(flags, open_mode, path, server_end).await?;
-        } else {
-            res?;
-        }
-        Ok(())
-    }
-}
-
-/// The default provider for a Namespace Capability.
-struct NamespaceCapabilityProvider {
-    path: CapabilityPath,
-}
-
-#[async_trait]
-impl CapabilityProvider for NamespaceCapabilityProvider {
-    async fn open(
-        self: Box<Self>,
-        _task_scope: TaskScope,
-        flags: fio::OpenFlags,
-        _open_mode: u32,
-        relative_path: PathBuf,
-        server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
-        let namespace_path = self.path.to_path_buf().attach(relative_path);
-        let namespace_path = namespace_path
-            .to_str()
-            .ok_or_else(|| ModelError::path_is_not_utf8(namespace_path.clone()))?;
-        let server_end = channel::take_channel(server_end);
-        io_util::connect_in_namespace(namespace_path, server_end, flags).map_err(|e| {
-            OpenResourceError::open_component_manager_namespace_failed(namespace_path, e).into()
-        })
     }
 }
 

@@ -608,7 +608,11 @@ mod tests {
     use {
         super::*,
         crate::{
-            capability::CapabilitySource, model::testing::routing_test_helpers::RoutingTestBuilder,
+            capability::CapabilitySource,
+            model::{
+                routing::providers::DirectoryEntryCapabilityProvider,
+                testing::routing_test_helpers::RoutingTestBuilder,
+            },
         },
         ::routing::{
             capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
@@ -657,42 +661,6 @@ mod tests {
 
         fn clone_boxed(&self) -> Box<dyn AggregateCapabilityProvider<ComponentInstance>> {
             Box::new(self.clone())
-        }
-    }
-
-    struct DirectoryEntryCapabilityProvider {
-        execution_scope: ExecutionScope,
-        // directory holding the service instances
-        dir_entry: Arc<dyn DirectoryEntry>,
-    }
-
-    #[async_trait]
-    impl CapabilityProvider for DirectoryEntryCapabilityProvider {
-        async fn open(
-            self: Box<Self>,
-            _task_scope: TaskScope,
-            flags: fio::OpenFlags,
-            open_mode: u32,
-            relative_path: PathBuf,
-            server_end: &mut zx::Channel,
-        ) -> Result<(), ModelError> {
-            let relative_path_utf8 = relative_path
-                .to_str()
-                .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?;
-            let relative_path = if relative_path_utf8.is_empty() {
-                vfs::path::Path::dot()
-            } else {
-                vfs::path::Path::validate_and_split(relative_path_utf8)
-                    .map_err(|_| ModelError::path_invalid(relative_path_utf8))?
-            };
-            self.dir_entry.open(
-                self.execution_scope.clone(),
-                flags,
-                open_mode,
-                relative_path,
-                ServerEnd::new(channel::take_channel(server_end)),
-            );
-            Ok(())
         }
     }
 
@@ -990,10 +958,8 @@ mod tests {
             .expect("failed to get execution scope")
             .execution_scope()
             .clone();
-        let source_provider = DirectoryEntryCapabilityProvider {
-            execution_scope,
-            dir_entry: mock_instance_foo.clone(),
-        };
+        let source_provider =
+            DirectoryEntryCapabilityProvider { execution_scope, entry: mock_instance_foo.clone() };
 
         let (service_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
@@ -1075,10 +1041,8 @@ mod tests {
             .expect("failed to get execution scope")
             .execution_scope()
             .clone();
-        let source_provider = DirectoryEntryCapabilityProvider {
-            execution_scope,
-            dir_entry: mock_instance_foo.clone(),
-        };
+        let source_provider =
+            DirectoryEntryCapabilityProvider { execution_scope, entry: mock_instance_foo.clone() };
 
         let (service_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
@@ -1164,10 +1128,8 @@ mod tests {
             .expect("failed to get execution scope")
             .execution_scope()
             .clone();
-        let source_provider = DirectoryEntryCapabilityProvider {
-            execution_scope,
-            dir_entry: mock_instance_foo.clone(),
-        };
+        let source_provider =
+            DirectoryEntryCapabilityProvider { execution_scope, entry: mock_instance_foo.clone() };
 
         let (service_proxy, server_end) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
