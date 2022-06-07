@@ -256,7 +256,7 @@ pub(crate) fn set_logger_for_test() {
 
 /// Get the counter value for a `key`.
 pub(crate) fn get_counter_val(ctx: &DummyCtx, key: &str) -> usize {
-    *ctx.state.test_counters.borrow().get(key)
+    *ctx.sync_ctx.state.test_counters.borrow().get(key)
 }
 
 /// An extension trait for `Ip` providing test-related functionality.
@@ -603,7 +603,7 @@ pub(crate) struct DummyEventDispatcher {
 
 impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
-        &mut self.dispatcher.events
+        &mut self.sync_ctx.dispatcher.events
     }
 }
 
@@ -621,7 +621,7 @@ impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
 
 impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
-        &mut self.dispatcher.frames
+        &mut self.sync_ctx.dispatcher.frames
     }
 }
 
@@ -1099,22 +1099,22 @@ mod tests {
         );
 
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.context("alice").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").sync_ctx.dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
 
         // Bob and Calvin should get any packet sent by Alice.
 
         send_packet(net.context("alice"), ip_a, ip_b, device);
-        assert_eq!(net.context("alice").dispatcher.frames_sent().len(), 1);
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_eq!(net.context("alice").sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_empty(net.context("bob").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").sync_ctx.dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.context("alice").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").sync_ctx.dispatcher.frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 2);
         assert!(net
             .iter_pending_frames()
@@ -1127,14 +1127,14 @@ mod tests {
 
         net.drop_pending_frames();
         send_packet(net.context("bob"), ip_b, ip_a, device);
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_eq!(net.context("bob").dispatcher.frames_sent().len(), 1);
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.context("alice").sync_ctx.dispatcher.frames_sent().iter());
+        assert_eq!(net.context("bob").sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_empty(net.context("calvin").sync_ctx.dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.context("alice").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").sync_ctx.dispatcher.frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 1);
         assert!(net
             .iter_pending_frames()
@@ -1144,14 +1144,14 @@ mod tests {
 
         net.drop_pending_frames();
         send_packet(net.context("calvin"), ip_c, ip_a, device);
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_eq!(net.context("calvin").dispatcher.frames_sent().len(), 1);
+        assert_empty(net.context("alice").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").sync_ctx.dispatcher.frames_sent().iter());
+        assert_eq!(net.context("calvin").sync_ctx.dispatcher.frames_sent().len(), 1);
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.context("alice").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").sync_ctx.dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").sync_ctx.dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
     }
 }

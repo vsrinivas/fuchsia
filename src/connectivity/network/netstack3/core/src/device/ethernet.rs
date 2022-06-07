@@ -1328,7 +1328,7 @@ mod tests {
         // Receiving a packet not destined for the node should only result in a
         // dest unreachable message if routing is enabled.
         receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_empty(ctx.dispatcher.frames_sent().iter());
+        assert_empty(ctx.sync_ctx.dispatcher.frames_sent().iter());
 
         // Set routing and expect packets to be forwarded.
         set_routing_enabled::<_, _, I>(&mut ctx, &mut (), device, true)
@@ -1340,9 +1340,10 @@ mod tests {
         // Should route the packet since routing fully enabled (netstack &
         // device).
         receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 1);
         let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto, ttl) =
-            parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher.frames_sent()[0].1[..]).unwrap();
+            parse_ip_packet_in_ethernet_frame::<I>(&ctx.sync_ctx.dispatcher.frames_sent()[0].1[..])
+                .unwrap();
         assert_eq!(src_ip.get(), packet_src_ip);
         assert_eq!(config.remote_ip.get(), packet_dst_ip);
         assert_eq!(proto, IpProto::Tcp.into());
@@ -1364,8 +1365,8 @@ mod tests {
             .unwrap()
             .unwrap_b();
         receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf_unknown_dest);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
-        check_icmp::<I>(&ctx.dispatcher.frames_sent()[1].1);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 2);
+        check_icmp::<I>(&ctx.sync_ctx.dispatcher.frames_sent()[1].1);
 
         // Attempt to unset router
         set_routing_enabled::<_, _, I>(&mut ctx, &mut (), device, false)
@@ -1375,7 +1376,7 @@ mod tests {
 
         // Should not route packets anymore
         receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 2);
     }
 
     #[ip_test]
@@ -1785,7 +1786,8 @@ mod tests {
         crate::device::testutil::enable_device(&mut ctx, device.into());
         // Verify that there is a single assigned address.
         assert_eq!(
-            ctx.state
+            ctx.sync_ctx
+                .state
                 .device
                 .ethernet
                 .get(0)
@@ -1806,6 +1808,7 @@ mod tests {
         .unwrap();
         // Assert that the new address got added.
         let addr_subs: Vec<_> = ctx
+            .sync_ctx
             .state
             .device
             .ethernet

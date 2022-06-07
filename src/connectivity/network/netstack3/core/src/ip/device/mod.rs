@@ -1103,7 +1103,7 @@ mod tests {
         ctx.ctx.timer_ctx().assert_no_timers_installed();
         let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
         let device_id =
-            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+            ctx.sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
             config.ip_config.gmp_enabled = true;
 

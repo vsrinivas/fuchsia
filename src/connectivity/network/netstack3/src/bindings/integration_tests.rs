@@ -326,14 +326,15 @@ impl TestStack {
             let signal = {
                 let mut ctx = self.ctx.lock().await;
                 if check_status(
-                    ctx.dispatcher
+                    ctx.sync_ctx
+                        .dispatcher
                         .get_device_info(if_id)
                         .expect("Wait for interface status on unknown device"),
                 ) {
                     return;
                 }
                 let (sender, receiver) = futures::channel::oneshot::channel();
-                ctx.dispatcher.status_changed_signal = Some(sender);
+                ctx.sync_ctx.dispatcher.status_changed_signal = Some(sender);
                 receiver
             };
             let () = signal.await.expect("Stream ended before it was signalled");
@@ -380,7 +381,7 @@ impl TestStack {
 
     async fn get_interface_info(&self, id: u64) -> InterfaceInfo {
         let ctx = self.ctx().await;
-        let device = ctx.dispatcher.get_device_info(id).expect("device");
+        let device = ctx.sync_ctx.dispatcher.get_device_info(id).expect("device");
         let addresses = get_all_ip_addr_subnets(&ctx, device.core_id())
             .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
             .collect();
@@ -708,7 +709,7 @@ async fn test_add_remove_interface() {
     // remove the interface:
     let () = stack.del_ethernet_interface(if_id).await.squash_result().expect("Remove interface");
     // ensure the interface disappeared from records:
-    assert_matches!(test_stack.ctx.lock().await.dispatcher.get_device_info(if_id), None);
+    assert_matches!(test_stack.ctx.lock().await.sync_ctx.dispatcher.get_device_info(if_id), None);
 
     // if we try to remove it again, NotFound should be returned:
     let res =
@@ -738,7 +739,7 @@ async fn test_ethernet_link_up_down() {
     // Ensure that the device has been enabled in the core.
     let core_id = {
         let mut ctx = test_stack.ctx().await;
-        let core_id = ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+        let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
         check_ip_enabled(ctx.deref_mut(), core_id, true);
         core_id
     };
@@ -798,7 +799,7 @@ async fn test_ethernet_link_up_down() {
     let core_id = t
         .get(0)
         .with_ctx(|ctx| {
-            let core_id = ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+            let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
             check_ip_enabled(ctx, core_id, true);
             core_id
         })
@@ -854,7 +855,7 @@ async fn test_disable_enable_interface() {
     // Ensure that the device has been disabled in the core.
     let core_id = {
         let mut ctx = test_stack.ctx().await;
-        let core_id = ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+        let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
         check_ip_enabled(ctx.deref_mut(), core_id, false);
         core_id
     };
@@ -922,7 +923,7 @@ async fn test_phy_admin_interface_state_interaction() {
     // Ensure that the device has been disabled in the core.
     let core_id = {
         let mut ctx = test_stack.ctx().await;
-        let core_id = ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+        let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
         check_ip_enabled(ctx.deref_mut(), core_id, false);
         core_id
     };
@@ -1160,7 +1161,7 @@ async fn test_list_del_routes() {
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
-    let device = test_stack.ctx().await.dispatcher.get_core_id(if_id);
+    let device = test_stack.ctx().await.sync_ctx.dispatcher.get_core_id(if_id);
     let route1_subnet_bytes = [192, 168, 0, 0];
     let route1_subnet_prefix = 24;
     let route1 = AddableEntryEither::new(
@@ -1196,7 +1197,8 @@ async fn test_list_del_routes() {
                 routes
                     .into_iter()
                     .map(|e| {
-                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.dispatcher, e).unwrap()
+                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.sync_ctx.dispatcher, e)
+                            .unwrap()
                     })
                     .collect::<HashSet<_>>()
             })
@@ -1233,7 +1235,8 @@ async fn test_list_del_routes() {
                 routes
                     .into_iter()
                     .map(|e| {
-                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.dispatcher, e).unwrap()
+                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.sync_ctx.dispatcher, e)
+                            .unwrap()
                     })
                     .collect::<HashSet<_>>()
             })

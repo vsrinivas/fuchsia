@@ -1500,7 +1500,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 0);
 
         #[ipv4]
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
@@ -1595,7 +1595,7 @@ mod tests {
             assert_eq!(ttl, 1);
         };
         let mut packet_count = 0;
-        assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), packet_count);
 
         // Send a packet on the socket and make sure that the right contents
         // are sent.
@@ -1609,8 +1609,8 @@ mod tests {
         .unwrap();
         let mut check_sent_frame = |ctx: &Ctx<DummyEventDispatcher, _>| {
             packet_count += 1;
-            assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
-            let (dev, frame) = &ctx.dispatcher.frames_sent()[packet_count - 1];
+            assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), packet_count);
+            let (dev, frame) = &ctx.sync_ctx.dispatcher.frames_sent()[packet_count - 1];
             assert_eq!(dev, &DeviceId::new_ethernet(0));
             check_frame(&frame, packet_count);
         };
@@ -1641,7 +1641,7 @@ mod tests {
         );
         assert_matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
 
-        assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), packet_count);
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
         let res = BufferIpSocketHandler::<I, _, _>::send_ip_packet(

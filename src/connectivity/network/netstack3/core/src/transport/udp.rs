@@ -870,13 +870,13 @@ pub trait UdpContext<I: IcmpIpExt> {
 
 impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv4> for Ctx<D, C> {
     fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv4>, err: Icmpv4ErrorCode) {
-        UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
+        UdpContext::receive_icmp_error(&mut self.sync_ctx.dispatcher, id, err);
     }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv6> for Ctx<D, C> {
     fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv6>, err: Icmpv6ErrorCode) {
-        UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
+        UdpContext::receive_icmp_error(&mut self.sync_ctx.dispatcher, id, err);
     }
 }
 
@@ -943,7 +943,13 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         src_port: NonZeroU16,
         body: &B,
     ) {
-        BufferUdpContext::receive_udp_from_conn(&mut self.dispatcher, conn, src_ip, src_port, body)
+        BufferUdpContext::receive_udp_from_conn(
+            &mut self.sync_ctx.dispatcher,
+            conn,
+            src_ip,
+            src_port,
+            body,
+        )
     }
 
     fn receive_udp_from_listen(
@@ -955,7 +961,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         body: &B,
     ) {
         BufferUdpContext::receive_udp_from_listen(
-            &mut self.dispatcher,
+            &mut self.sync_ctx.dispatcher,
             listener,
             src_ip,
             dst_ip,
@@ -975,7 +981,13 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         src_port: NonZeroU16,
         body: &B,
     ) {
-        BufferUdpContext::receive_udp_from_conn(&mut self.dispatcher, conn, src_ip, src_port, body)
+        BufferUdpContext::receive_udp_from_conn(
+            &mut self.sync_ctx.dispatcher,
+            conn,
+            src_ip,
+            src_port,
+            body,
+        )
     }
 
     fn receive_udp_from_listen(
@@ -987,7 +999,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
         body: &B,
     ) {
         BufferUdpContext::receive_udp_from_listen(
-            &mut self.dispatcher,
+            &mut self.sync_ctx.dispatcher,
             listener,
             src_ip,
             dst_ip,
@@ -1027,9 +1039,9 @@ impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext>
             ctx: &Ctx<D, C>,
         ) -> (&UdpState<I, DeviceId>, &C::Rng) {
             #[ipv4]
-            return (&ctx.state.transport.udpv4, ctx.ctx.rng());
+            return (&ctx.sync_ctx.state.transport.udpv4, ctx.ctx.rng());
             #[ipv6]
-            return (&ctx.state.transport.udpv6, ctx.ctx.rng());
+            return (&ctx.sync_ctx.state.transport.udpv6, ctx.ctx.rng());
         }
 
         get(self)
@@ -1049,11 +1061,10 @@ impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext>
         fn get<I: Ip, D: EventDispatcher, C: BlanketCoreContext>(
             ctx: &mut Ctx<D, C>,
         ) -> (&mut UdpState<I, DeviceId>, &mut C::Rng) {
-            let Ctx { state, dispatcher: _, ctx } = ctx;
             #[ipv4]
-            return (&mut state.transport.udpv4, ctx.rng_mut());
+            return (&mut ctx.sync_ctx.state.transport.udpv4, ctx.ctx.rng_mut());
             #[ipv6]
-            return (&mut state.transport.udpv6, ctx.rng_mut());
+            return (&mut ctx.sync_ctx.state.transport.udpv6, ctx.ctx.rng_mut());
         }
 
         get(self)

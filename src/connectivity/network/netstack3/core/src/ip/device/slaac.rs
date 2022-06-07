@@ -2513,7 +2513,7 @@ mod tests {
 
         let mut ctx = crate::testutil::DummyCtx::default();
         let device_id =
-            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+            ctx.sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
             config.slaac_config = SlaacConfiguration {
                 enable_stable_addresses: true,

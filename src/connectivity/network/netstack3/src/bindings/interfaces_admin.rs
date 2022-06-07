@@ -259,6 +259,7 @@ async fn run_interface_control<
                 log::debug!("observed interface {} online = {}", id, online);
                 let mut ctx = ctx.lock().await;
                 match ctx
+                    .sync_ctx
                     .dispatcher
                     .devices
                     .get_device_mut(id)
@@ -356,6 +357,7 @@ async fn run_interface_control<
     {
         let mut ctx = ctx.lock().await;
         let info = ctx
+            .sync_ctx
             .dispatcher
             .devices
             .remove_device(id)
@@ -370,28 +372,34 @@ async fn run_interface_control<
 /// this call.
 async fn set_interface_enabled(ctx: &NetstackContext, enabled: bool, id: BindingId) -> bool {
     let mut ctx = ctx.lock().await;
-    let (common_info, port_handler) =
-        match ctx.dispatcher.devices.get_device_mut(id).expect("device not present").info_mut() {
-            devices::DeviceSpecificInfo::Ethernet(devices::EthernetInfo {
-                common_info,
-                // NB: In theory we should also start and stop the ethernet
-                // device when we enable and disable, we'll skip that because
-                // it's work and Ethernet is going to be deleted soon.
-                client: _,
-                mac: _,
-                features: _,
-                phy_up: _,
-            })
-            | devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo { common_info }) => {
-                (common_info, None)
-            }
-            devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {
-                common_info,
-                handler,
-                mac: _,
-                phy_up: _,
-            }) => (common_info, Some(handler)),
-        };
+    let (common_info, port_handler) = match ctx
+        .sync_ctx
+        .dispatcher
+        .devices
+        .get_device_mut(id)
+        .expect("device not present")
+        .info_mut()
+    {
+        devices::DeviceSpecificInfo::Ethernet(devices::EthernetInfo {
+            common_info,
+            // NB: In theory we should also start and stop the ethernet
+            // device when we enable and disable, we'll skip that because
+            // it's work and Ethernet is going to be deleted soon.
+            client: _,
+            mac: _,
+            features: _,
+            phy_up: _,
+        })
+        | devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo { common_info }) => {
+            (common_info, None)
+        }
+        devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {
+            common_info,
+            handler,
+            mac: _,
+            phy_up: _,
+        }) => (common_info, Some(handler)),
+    };
     // Already set to expected value.
     if common_info.admin_enabled == enabled {
         return false;

@@ -597,7 +597,7 @@ impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>, C: BlanketCoreContext> I
     for Ctx<D, C>
 {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
-        IcmpContext::receive_icmp_error(&mut self.dispatcher, conn, seq_num, err);
+        IcmpContext::receive_icmp_error(&mut self.sync_ctx.dispatcher, conn, seq_num, err);
     }
 }
 
@@ -617,7 +617,7 @@ impl<
         seq_num: u16,
         data: B,
     ) {
-        self.dispatcher.receive_icmp_echo_reply(conn, src_ip, dst_ip, id, seq_num, data);
+        self.sync_ctx.dispatcher.receive_icmp_echo_reply(conn, src_ip, dst_ip, id, seq_num, data);
     }
 }
 
@@ -2987,10 +2987,10 @@ mod tests {
         }
 
         if let Some((expect_message, expect_code)) = expect_message_code {
-            assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+            assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 1);
             let (src_mac, dst_mac, src_ip, dst_ip, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<I, _, M, _>(
-                    &ctx.dispatcher.frames_sent()[0].1,
+                    &ctx.sync_ctx.dispatcher.frames_sent()[0].1,
                     f,
                 )
                 .unwrap();
@@ -3002,7 +3002,7 @@ mod tests {
             assert_eq!(message, expect_message);
             assert_eq!(code, expect_code);
         } else {
-            assert_empty(ctx.dispatcher.frames_sent().iter());
+            assert_empty(ctx.sync_ctx.dispatcher.frames_sent().iter());
         }
     }
 
@@ -3606,7 +3606,7 @@ mod tests {
             ),
             1
         );
-        let replies = net.context(LOCAL_CTX_NAME).dispatcher.take_icmp_replies(conn);
+        let replies = net.context(LOCAL_CTX_NAME).sync_ctx.dispatcher.take_icmp_replies(conn);
         assert_matches::assert_matches!(&replies[..], [(7, body)] if *body == echo_body);
     }
 

@@ -600,21 +600,21 @@ impl<C, SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>> IpSocket
 
 impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4> for Ctx<D, C> {
     fn get_ip_layer_state(&self) -> &Ipv4State<C::Instant, DeviceId> {
-        &self.state.ipv4
+        &self.sync_ctx.state.ipv4
     }
 
     fn get_ip_layer_state_mut(&mut self) -> &mut Ipv4State<C::Instant, DeviceId> {
-        &mut self.state.ipv4
+        &mut self.sync_ctx.state.ipv4
     }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6> for Ctx<D, C> {
     fn get_ip_layer_state(&self) -> &Ipv6State<C::Instant, DeviceId> {
-        &self.state.ipv6
+        &self.sync_ctx.state.ipv6
     }
 
     fn get_ip_layer_state_mut(&mut self) -> &mut Ipv6State<C::Instant, DeviceId> {
-        &mut self.state.ipv6
+        &mut self.sync_ctx.state.ipv6
     }
 }
 
@@ -2116,7 +2116,7 @@ pub(crate) fn del_device_routes<
 pub(crate) fn iter_all_routes<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
     ctx: &Ctx<D, C>,
 ) -> Iter<'_, Entry<A, DeviceId>> {
-    get_state_inner::<A::Version, _>(&ctx.state).table.iter_table()
+    get_state_inner::<A::Version, _>(&ctx.sync_ctx.state).table.iter_table()
 }
 
 /// The metadata associated with an outgoing IP packet.
@@ -2477,7 +2477,7 @@ mod tests {
         offset: usize,
     ) {
         // Check the ICMP that bob attempted to send to alice
-        let device_frames = ctx.dispatcher.frames_sent();
+        let device_frames = ctx.sync_ctx.dispatcher.frames_sent();
         assert!(!device_frames.is_empty());
         let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
         let _frame =
@@ -2708,7 +2708,7 @@ mod tests {
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let buf = Buf::new(bytes, ..);
         receive_ipv6_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buf);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 1);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::ErroneousHeaderField,
@@ -2738,7 +2738,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // Test with unrecognized option type set with
         // action = discard.
@@ -2750,7 +2750,7 @@ mod tests {
         );
         receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // Test with unrecognized option type set with
         // action = discard & send icmp
@@ -2764,7 +2764,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
@@ -2784,7 +2784,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
@@ -2804,7 +2804,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
@@ -2824,7 +2824,7 @@ mod tests {
         // Do not expect an ICMP response for this packet
         receive_ipv6_packet(&mut ctx, &mut (), device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // None of our tests should have sent an icmpv4 packet, or dispatched an
         // IP packet after the first.
@@ -3087,10 +3087,10 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_packet_too_big"), 1);
 
         // Should have sent out one frame though.
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 1);
 
         // Received packet should be a Packet Too Big ICMP error message.
-        let buf = &ctx.dispatcher.frames_sent()[0].1[..];
+        let buf = &ctx.sync_ctx.dispatcher.frames_sent()[0].1[..];
         // The original packet's TTL gets decremented so we decrement here
         // to validate the rest of the icmp message body.
         let ipv6_packet_buf_mut: &mut [u8] = ipv6_packet_buf.as_mut();
@@ -3186,7 +3186,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_state_inner::<I, _>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3214,7 +3214,7 @@ mod tests {
 
         // The PMTU should not have updated to `new_mtu2`
         assert_eq!(
-            get_state_inner::<I, _>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3242,7 +3242,7 @@ mod tests {
 
         // The PMTU should have updated to 1900.
         assert_eq!(
-            get_state_inner::<I, _>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3280,7 +3280,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_state_inner::<I, _>(&ctx.state)
+            get_state_inner::<I, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
@@ -3329,7 +3329,7 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3356,7 +3356,7 @@ mod tests {
         // Should not have updated PMTU as there is no other valid
         // lower PMTU value.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3383,7 +3383,7 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3412,7 +3412,7 @@ mod tests {
 
         // Should not have updated the PMTU as the current PMTU is lower.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&ctx.state)
+            get_state_inner::<Ipv4, _>(&ctx.sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3459,7 +3459,7 @@ mod tests {
         // unrecognized so an ICMP parameter problem response SHOULD be sent,
         // but the netstack chooses to just drop the packet since we are not
         // required to send the ICMP response.
-        assert_empty(ctx.dispatcher.frames_sent().iter());
+        assert_empty(ctx.sync_ctx.dispatcher.frames_sent().iter());
     }
 
     #[test]
@@ -3496,8 +3496,8 @@ mod tests {
         // Should have dispatched the packet but resulted in an ICMP error.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_dest_unreachable"), 1);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        let buf = &ctx.dispatcher.frames_sent()[0].1[..];
+        assert_eq!(ctx.sync_ctx.dispatcher.frames_sent().len(), 1);
+        let buf = &ctx.sync_ctx.dispatcher.frames_sent()[0].1[..];
         let (_, _, _, _, _, _, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpDestUnreachable, _>(
                 buf,
@@ -3833,8 +3833,8 @@ mod tests {
 
         // Receive packet destined to a host with no route when forwarding is
         // enabled both globally and on the inbound device.
-        ctx.state.ipv4.inner.table = Default::default();
-        ctx.state.ipv6.inner.table = Default::default();
+        ctx.sync_ctx.state.ipv4.inner.table = Default::default();
+        ctx.sync_ctx.state.ipv6.inner.table = Default::default();
         assert_eq!(
             receive_ipv4_packet_action(&mut ctx, &mut (), v4_dev, v4_config.remote_ip),
             ReceivePacketAction::SendNoRouteToDest

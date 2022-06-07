@@ -178,7 +178,7 @@ where
         let id = {
             let eth_id = netstack3_core::add_ethernet_device(&mut *ctx, mac_addr, mtu);
 
-            let devices: &mut Devices = ctx.dispatcher.as_mut();
+            let devices: &mut Devices = ctx.sync_ctx.dispatcher.as_mut();
             devices
                 .add_device(eth_id, |id| {
                     let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK)
@@ -235,7 +235,7 @@ where
     C::Dispatcher: AsMut<Devices>,
 {
     fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.ctx.dispatcher.as_mut().remove_device(id) {
+        match self.ctx.sync_ctx.dispatcher.as_mut().remove_device(id) {
             Some(_info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
                 Ok(())
@@ -258,8 +258,13 @@ where
         id: u64,
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
-        let device_info =
-            self.ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+        let device_info = self
+            .ctx
+            .sync_ctx
+            .dispatcher
+            .as_ref()
+            .get_device(id)
+            .ok_or(fidl_net_stack::Error::NotFound)?;
         let device_id = device_info.core_id();
 
         add_ip_addr_subnet(
@@ -275,8 +280,13 @@ where
         id: u64,
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
-        let device_info =
-            self.ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+        let device_info = self
+            .ctx
+            .sync_ctx
+            .dispatcher
+            .as_ref()
+            .get_device(id)
+            .ok_or(fidl_net_stack::Error::NotFound)?;
         let device_id = device_info.core_id();
         let addr: SpecifiedAddr<_> = addr.addr.try_into_core().map_err(IntoFidl::into_fidl)?;
 
@@ -285,7 +295,7 @@ where
 
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
         get_all_routes(&self.ctx)
-            .filter_map(|entry| match entry.try_into_fidl_with_ctx(&self.ctx.dispatcher) {
+            .filter_map(|entry| match entry.try_into_fidl_with_ctx(&self.ctx.sync_ctx.dispatcher) {
                 Ok(entry) => Some(entry),
                 Err(e) => {
                     error!("Failed to map forwarding entry into FIDL: {:?}", e);
@@ -299,7 +309,10 @@ where
         mut self,
         entry: ForwardingEntry,
     ) -> Result<(), fidl_net_stack::Error> {
-        let entry = match AddableEntryEither::try_from_fidl_with_ctx(&self.ctx.dispatcher, entry) {
+        let entry = match AddableEntryEither::try_from_fidl_with_ctx(
+            &self.ctx.sync_ctx.dispatcher,
+            entry,
+        ) {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
         };
