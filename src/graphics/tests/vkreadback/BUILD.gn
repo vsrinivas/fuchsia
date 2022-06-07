@@ -44,7 +44,7 @@ fuchsia_component("vkreadback_cmp") {
     "//src/lib/vulkan/validation_layers",
   ]
 
-  manifest = "meta/vkreadback.cmx"
+  manifest = "meta/vkreadback.cml"
 }
 
 fuchsia_test_package("vkreadback-pkg") {
