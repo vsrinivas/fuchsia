@@ -9,44 +9,12 @@
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
-    children: [
-        {
-            name: "zircon_guest",
-            url: "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cm",
-        },
-        {
-            name: "termina_guest",
-            url: "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cm",
-        },
-        {
-            name: "debian_guest",
-            url: "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cm",
-        },
-    ],
     use: [
         {
             directory: "hub",
             from: "framework",
             rights: [ "r*" ],
             path: "/hub",
-        },
-        {
-            directory: "pkg",
-            from: "#zircon_guest",
-            rights: [ "r*" ],
-            path: "/zircon_guest_pkg",
-        },
-        {
-            directory: "pkg",
-            from: "#debian_guest",
-            rights: [ "r*" ],
-            path: "/debian_guest_pkg",
-        },
-        {
-            directory: "pkg",
-            from: "#termina_guest",
-            rights: [ "r*" ],
-            path: "/termina_guest_pkg",
         },
         {
             directory: "dev-gpu",
@@ -63,8 +31,6 @@
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
@@ -76,15 +42,6 @@
             directory: "dev-gpu",
             from: "parent",
             to: "#realm_builder",
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: [
-                "#debian_guest",
-                "#termina_guest",
-                "#zircon_guest",
-            ],
         },
     ],
 }
