@@ -879,7 +879,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:85
+From //build/toolchain/rbe.gni:96
 
 ### check_rustc_determinism
 Check of determinism of rustc targets by running locally twice
@@ -904,7 +904,7 @@ Ignores:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:77
+From //build/toolchain/rbe.gni:88
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1029,19 +1029,19 @@ TODO: redo comments
 
 **Current value (from the default):** `"core-generic"`
 
-From //build/product.gni:22
+From //build/product.gni:26
 
 ### core_realm_restrict_persistent_storage
 
 **Current value (from the default):** `true`
 
-From //build/product.gni:24
+From //build/product.gni:28
 
 ### core_realm_shards
 
 **Current value (from the default):** `[]`
 
-From //build/product.gni:23
+From //build/product.gni:27
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -1378,14 +1378,14 @@ From //build/config/compiler.gni:66
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:48
+From //build/product.gni:52
 
 ### emu_window_size_width
 Configuration to override the default window size for the virtual device in pixels.
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:47
+From //build/product.gni:51
 
 ### enable_api_diff
 Detect dart API changes
@@ -1466,7 +1466,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:34
+From //build/toolchain/rbe.gni:45
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1474,7 +1474,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:34
+From //build/toolchain/rbe.gni:45
 
 ### enable_virtual_heap
 Enables the use of a virtually managed kernel heap instead of one managed
@@ -1836,7 +1836,7 @@ TODO(fxbug.dev/80742) move this to a toolchain to allow multiple products to bui
 
 **Current value (from the default):** `true`
 
-From //build/product.gni:29
+From //build/product.gni:33
 
 ### fuchsia_product_assembly_config_file
 Used to provide assembly with a complete product assembly config.  This can
@@ -1845,7 +1845,7 @@ GN using generated_file().
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:34
+From //build/product.gni:38
 
 ### fuchsia_product_assembly_config_label
 If the above file is created by a target in GN, then the label that creates
@@ -1853,7 +1853,7 @@ it needs to be specified as well.
 
 **Current value (from the default):** `false`
 
-From //build/product.gni:38
+From //build/product.gni:42
 
 ### fuchsia_route_sources_config
 An optional file path to the route_sources verifier configuration to be used
@@ -3716,6 +3716,14 @@ From //products/bringup.gni:42
 
 From //build/product.gni:7
 
+### product_bootfs_packages
+A list of packages to be included in the bootfs as
+meta.fars and content-id'd blobs.
+
+**Current value (from the default):** `[]`
+
+From //build/product.gni:17
+
 ### product_build
 This is a product build (vs. sdk).  If a product is set (fx set <product>.)
 this is true (should be set in bringup.gni)
@@ -3741,7 +3749,7 @@ A human readable product description.
 
 **Current value (from the default):** `""`
 
-From //build/product.gni:16
+From //build/product.gni:20
 
 ### product_host_labels
 A list of binary host tool labels to also build.
@@ -3786,9 +3794,45 @@ One of {local,remote}:
         not uploaded to the remote cache.
   (There are other rewrapper options that are not exposed.)
 
-**Current value (from the default):** `"remote"`
+**Current value (from the default):** `""`
 
-From //build/toolchain/rbe.gni:52
+From //build/toolchain/rbe.gni:63
+
+### rbe_rust
+See //build/toolchain/rbe_defaults.gni for the documentation on these
+global structured variables.
+We cannot provide defaults here because they would be overridden
+by the same definitions imported in //products/bringup.gni.
+
+**Current value for `target_cpu = "arm64"`:**
+```
+{
+  check = ""
+  enable = false
+  exec_strategy = "remote"
+}
+```
+
+From //build/toolchain/rbe_defaults.gni:8
+
+**Overridden from the default:** `{ }`
+
+From //build/toolchain/rbe.gni:36
+
+**Current value for `target_cpu = "x64"`:**
+```
+{
+  check = ""
+  enable = false
+  exec_strategy = "remote"
+}
+```
+
+From //build/toolchain/rbe_defaults.gni:8
+
+**Overridden from the default:** `{ }`
+
+From //build/toolchain/rbe.gni:36
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
@@ -4714,7 +4758,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:43
+From //build/toolchain/rbe.gni:54
 
 ### use_spinel_for_carnelian_examples
 Include a config in the example packages to attempt to use Spinel
@@ -4903,7 +4947,7 @@ between similar virtual device's using different configuration's such as
 
 **Current value (from the default):** `""`
 
-From //build/product.gni:44
+From //build/product.gni:48
 
 ### vm_tracing_level
 The level of detail for traces emitted by the VM system. Values greater than
