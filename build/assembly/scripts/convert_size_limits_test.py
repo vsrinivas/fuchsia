@@ -30,12 +30,19 @@ class ConvertTest(unittest.TestCase):
                             component="b1_2_comp",
                             creep_limit=12,
                             limit=20,
-                            src=["a/b1", "a/b2"]),
+                            src=[
+                                "a/b1/c1/package_manifest.json",
+                                "a/b1/c2/package_manifest.json",
+                                "a/b2/c1/package_manifest.json"
+                            ]),
                         dict(
                             component="b_comp",
                             creep_limit=16,
                             limit=22,
-                            src=["a/b"]),
+                            src=[
+                                "a/b/c2/package_manifest.json",
+                                "a/b/c1/package_manifest.json"
+                            ]),
                         dict(
                             component="/system (drivers and early boot)",
                             creep_limit=52,
@@ -142,12 +149,12 @@ class ConvertTest(unittest.TestCase):
                             component="comp1",
                             creep_limit=12,
                             limit=20,
-                            src=["a"]),
+                            src=["a/b/c2/package_manifest.json"]),
                         dict(
                             component="comp2",
                             creep_limit=16,
                             limit=22,
-                            src=["a/b"]),
+                            src=["a/b/c2/package_manifest.json"]),
                     ],
                     non_blobfs_components=[
                         dict(
@@ -189,12 +196,7 @@ class ConvertTest(unittest.TestCase):
                             component="comp1",
                             creep_limit=12,
                             limit=20,
-                            src=["a"]),
-                        dict(
-                            component="comp2",
-                            creep_limit=16,
-                            limit=22,
-                            src=["a/b"]),
+                            src=["a/b/c2/package_manifest.json"]),
                     ],
                     non_blobfs_components=[]),
                 image_assembly_config=dict(

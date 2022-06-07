@@ -108,6 +108,7 @@ group("tests") {
   deps = [
     ":check_size_hermetic_inputs_test",
     ":compare_json_list_test",
+    ":convert_size_limits_test",
     ":test_make_legacy_config",
   ]
 }
