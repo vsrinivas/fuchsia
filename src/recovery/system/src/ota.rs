@@ -10,7 +10,7 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     hyper::Uri,
-    isolated_ota::download_and_apply_update,
+    isolated_ota::{download_and_apply_update, OmahaConfig},
     serde_json::{json, Value},
     std::{fs::File, str::FromStr},
 };
@@ -51,6 +51,7 @@ enum StorageType {
 /// Helper for constructing OTAs.
 pub struct OtaEnvBuilder {
     board_name: BoardName,
+    omaha_config: Option<OmahaConfig>,
     ota_type: OtaType,
     paver: PaverType,
     ssl_certificates: String,
@@ -61,6 +62,7 @@ impl OtaEnvBuilder {
     pub fn new() -> Self {
         OtaEnvBuilder {
             board_name: BoardName::BuildInfo,
+            omaha_config: None,
             ota_type: OtaType::WellKnown,
             paver: PaverType::Real,
             ssl_certificates: "/config/ssl".to_owned(),
@@ -89,6 +91,13 @@ impl OtaEnvBuilder {
     /// Use the given |DevhostConfig| to run an OTA.
     pub fn devhost(mut self, cfg: DevhostConfig) -> Self {
         self.ota_type = OtaType::Devhost { cfg };
+        self
+    }
+
+    #[allow(dead_code)]
+    /// Use the given |OmahaConfig| to run an OTA.
+    pub fn omaha_config(mut self, omaha_config: OmahaConfig) -> Self {
+        self.omaha_config = Some(omaha_config);
         self
     }
 
@@ -213,6 +222,7 @@ impl OtaEnvBuilder {
             blobfs_root,
             board_name,
             minfs_root_path,
+            omaha_config: self.omaha_config,
             paver_connector,
             repo_dir,
             ssl_certificates,
@@ -226,6 +236,7 @@ pub struct OtaEnv {
     blobfs_root: ClientEnd<fio::DirectoryMarker>,
     board_name: String,
     minfs_root_path: String,
+    omaha_config: Option<OmahaConfig>,
     paver_connector: ClientEnd<fio::DirectoryMarker>,
     repo_dir: File,
     ssl_certificates: File,
@@ -244,7 +255,7 @@ impl OtaEnv {
             channel,
             &self.board_name,
             version,
-            None,
+            self.omaha_config,
         )
         .await
         .context("Installing OTA")?;
