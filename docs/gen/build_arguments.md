@@ -508,7 +508,7 @@ From //boards/arm64.gni:34
 
 From //build/board.gni:21
 
-**Current value for `target_cpu = "x64"`:** `["//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader", "//src/power/thermd", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config"]`
+**Current value for `target_cpu = "x64"`:** `["//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader", "//src/power/thermd", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config", "//src/media/codec/codecs/vaapi:codec_runner_intel_gen_prebuilt"]`
 
 From //boards/common/x64-common.gni:61
 
@@ -2336,7 +2336,7 @@ From //src/fonts/build/font_args.gni:7
 
 ### include_shell_commands_package
 Include the shell commands package.  Used as a parameter to
-assemble_system().  See documentation there.
+assembled_system().  See documentation there.
 
 **Current value (from the default):** `false`
 
@@ -2754,7 +2754,7 @@ From //BUILD.gn:73
 
 ### legacy_universe_package_labels
 
-**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
+**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images/tools:fastboot"]`
 
 From //products/bringup.gni:57
 
@@ -2762,7 +2762,7 @@ From //products/bringup.gni:57
 
 From //BUILD.gn:65
 
-**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
+**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images/tools:fastboot"]`
 
 From //products/bringup.gni:57
 
@@ -4677,6 +4677,14 @@ Controls whether to use -Oz when `optimize` is set to `"size"`.
 
 From //build/config/compiler.gni:41
 
+### use_prebuilt_codec_runner_intel_gen
+True if a prebuilt codec_runner_intel_gen package is used. If false, the codec_runner will be
+built from scratch (requires a checkout of the intel media-driver repo).
+
+**Current value (from the default):** `true`
+
+From //src/media/codec/codecs/vaapi/BUILD.gn:11
+
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
 //src/media/lib/ffmpeg/README.md for details.  This is ignored when
@@ -4864,6 +4872,12 @@ Path to file to use for italic font
 **Current value (from the default):** `""`
 
 From //src/bringup/bin/virtcon/virtcon_args.gni:14
+
+### virtio_vsock_inprocess
+
+**Current value (from the default):** `true`
+
+From //src/virtualization/bin/vmm/BUILD.gn:9
 
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
