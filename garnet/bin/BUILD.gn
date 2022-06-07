@@ -14,7 +14,6 @@ group("bin") {
     "insntrace",
     "ktrace_provider",
     "run_test_component",
-    "sched",
     "setui",
     "setui_client",
     "sshd-host",
@@ -24,6 +23,7 @@ group("bin") {
     "trace_manager",
     "trace_stress",
     "traceutil",
+    "//src/developer/sched",
     "//src/ui/benchmarks",
   ]
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SCHED_SCHED_H_
-#define GARNET_BIN_SCHED_SCHED_H_
+#ifndef SRC_DEVELOPER_SCHED_SCHED_H_
+#define SRC_DEVELOPER_SCHED_SCHED_H_
 
 #include <lib/zx/process.h>
 #include <lib/zx/profile.h>
@@ -32,4 +32,4 @@ int Run(int argc, const char** argv);
 
 }  // namespace sched
 
-#endif  // GARNET_BIN_SCHED_SCHED_H_
+#endif  // SRC_DEVELOPER_SCHED_SCHED_H_

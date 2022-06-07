@@ -210,7 +210,7 @@ group("run") {
 
 group("sched") {
   testonly = true
-  public_deps = [ "//garnet/bin/sched" ]
+  public_deps = [ "//src/developer/sched" ]
 }
 
 group("setui_client") {
