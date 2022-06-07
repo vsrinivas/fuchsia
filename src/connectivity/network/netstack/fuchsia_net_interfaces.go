@@ -393,6 +393,7 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					// TODO(https://fxbug.dev/96130): Change this to panic once DHCPv4 client
 					// is guaranteed to not send this event if the address is missing.
 					_ = syslog.ErrorTf(watcherProtocolName, "validUntil changed event for non-existent address: %#v", event)
+					break
 				}
 
 				if time.Monotonic(addresses[i].GetValidUntil()) != event.validUntil {
