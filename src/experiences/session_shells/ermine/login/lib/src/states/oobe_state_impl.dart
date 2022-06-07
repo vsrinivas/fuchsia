@@ -96,16 +96,6 @@ class OobeStateImpl with Disposable implements OobeState {
         }())
         ..load();
     }
-
-    // TODO(http://fxb/85576): Remove once login and OOBE are mandatory.
-    // If we are skipping OOBE, authenticate using empty password.
-    reactions.add(reaction((_) => ready, (ready) {
-      if (!launchOobe) {
-        _performNullLogin().then((_) {
-          runInAction(() => _loginDone.value = true);
-        });
-      }
-    }));
   }
 
   @override
@@ -406,16 +396,7 @@ class OobeStateImpl with Disposable implements OobeState {
 
     // Define a local method to run after logout below.
     void postLogout() {
-      // If OOBE is disabled, perform empty password re-login.
-      if (!launchOobe) {
-        _performNullLogin().then((_) {
-          runInAction(() {
-            shellService.disposeErmineShell();
-            _ermineViewConnection.value = null;
-            _loginDone.value = true;
-          });
-        });
-      } else {
+      if (launchOobe) {
         // Display login screen again.
         runInAction(() {
           shellService.disposeErmineShell();
@@ -429,21 +410,6 @@ class OobeStateImpl with Disposable implements OobeState {
       log.shout('Caught exception during logout: $e');
       postLogout();
     });
-  }
-
-  // TODO(http://fxb/85576): Remove once login and OOBE are mandatory.
-  // If we are skipping OOBE, authenticate using empty password.
-  Future<void> _performNullLogin() async {
-    log.info('Skipped OOBE, authenticating with empty password.');
-    try {
-      authService.hasAccount
-          ? await authService.loginWithPassword('')
-          : await authService.createAccountWithPassword('');
-      // ignore: avoid_catches_without_on_clauses
-    } catch (e) {
-      log.shout('Account found: ${authService.hasAccount}.'
-          ' Caught exception during authentication: $e');
-    }
   }
 
   void _onInspect(Node node) {
