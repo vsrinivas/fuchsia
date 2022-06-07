@@ -15,6 +15,7 @@ use crate::{
     ip::{
         self,
         icmp::{Icmpv4State, Icmpv6State},
+        path_mtu::{PmtuCache, PmtuStateContext},
         reassembly::FragmentStateContext,
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
         socket::{BufferIpSocketContext, IpSock, IpSocketContext},
@@ -40,6 +41,21 @@ impl<SC: IpStateContext<Ipv4>> FragmentStateContext<Ipv4> for SC {
 impl<SC: IpStateContext<Ipv6>> FragmentStateContext<Ipv6> for SC {
     fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<Ipv6> {
         &mut self.get_ip_layer_state_mut().as_mut().fragment_cache
+    }
+}
+
+// We can't provide a single impl for `PmtuStateContext` which is generic over
+// `Ip` for the same reason as `FragmentStateContext` above.
+
+impl<SC: IpStateContext<Ipv4>> PmtuStateContext<Ipv4> for SC {
+    fn get_state_mut(&mut self) -> &mut PmtuCache<Ipv4, SC::Instant> {
+        &mut self.get_ip_layer_state_mut().as_mut().pmtu_cache
+    }
+}
+
+impl<SC: IpStateContext<Ipv6>> PmtuStateContext<Ipv6> for SC {
+    fn get_state_mut(&mut self) -> &mut PmtuCache<Ipv6, SC::Instant> {
+        &mut self.get_ip_layer_state_mut().as_mut().pmtu_cache
     }
 }
 

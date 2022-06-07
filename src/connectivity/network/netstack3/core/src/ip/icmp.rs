@@ -939,7 +939,7 @@ where
     }
 }
 
-impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B> + PmtuHandler<Ipv4>>
+impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B> + PmtuHandler<Ipv4, C>>
     BufferIpTransportContext<Ipv4, C, SC, B> for IcmpIpTransportContext
 {
     fn receive_ip_packet(
@@ -1064,6 +1064,7 @@ impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B> + PmtuHandler<Ipv4>>
                         // minimum MTU (which as per IPv4 RFC 791, must not
                         // happen).
                         sync_ctx.update_pmtu_if_less(
+                            ctx,
                             dst_ip.get(),
                             src_ip,
                             u32::from(next_hop_mtu.get()),
@@ -1099,7 +1100,7 @@ impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B> + PmtuHandler<Ipv4>>
 
                             trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Next-Hop MTU is 0 so using the next best PMTU value from {}", total_len);
 
-                            sync_ctx.update_pmtu_next_lower(dst_ip.get(), src_ip, u32::from(total_len));
+                            sync_ctx.update_pmtu_next_lower(ctx, dst_ip.get(), src_ip, u32::from(total_len));
                         } else {
                             // Ok to silently ignore as RFC 792 requires nodes
                             // to send the original IP packet header + 64 bytes
@@ -1489,7 +1490,7 @@ impl<
         SC: InnerIcmpv6Context<C>
             + InnerBufferIcmpContext<Ipv6, C, B>
             + Ipv6DeviceHandler<C>
-            + PmtuHandler<Ipv6>
+            + PmtuHandler<Ipv6, C>
             + MldPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
             + NdpPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
             + RouteDiscoveryHandler<C>
@@ -1576,6 +1577,7 @@ impl<
                     // a value that was less than the IPv6 minimum MTU (which as
                     // per IPv6 RFC 8200, must not happen).
                     sync_ctx.update_pmtu_if_less(
+                        ctx,
                         dst_ip.get(),
                         src_ip.get(),
                         packet_too_big.message().mtu(),
@@ -3754,7 +3756,7 @@ mod tests {
                 }
             }
 
-            impl_pmtu_handler!($outer, $ip);
+            impl_pmtu_handler!($outer, (), $ip);
 
             impl AsMut<DummyPmtuState<<$ip as Ip>::Addr>> for $outer {
                 fn as_mut(&mut self) -> &mut DummyPmtuState<<$ip as Ip>::Addr> {

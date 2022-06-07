@@ -63,7 +63,7 @@ use crate::{
             InnerIcmpContext,
         },
         ipv6::Ipv6PacketAction,
-        path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
+        path_mtu::{PmtuCache, PmtuTimerId},
         reassembly::{
             FragmentCacheKey, FragmentHandler, FragmentProcessingState, IpPacketFragmentCache,
         },
@@ -1011,12 +1011,8 @@ pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
         IpLayerTimerId::ReassemblyTimeoutv6(key) => {
             TimerHandler::handle_timer(sync_ctx, &mut (), key)
         }
-        IpLayerTimerId::PmtuTimeoutv4(id) => {
-            sync_ctx.state.ipv4.inner.pmtu_cache.handle_timer(&mut sync_ctx.ctx, &mut (), id);
-        }
-        IpLayerTimerId::PmtuTimeoutv6(id) => {
-            sync_ctx.state.ipv6.inner.pmtu_cache.handle_timer(&mut sync_ctx.ctx, &mut (), id);
-        }
+        IpLayerTimerId::PmtuTimeoutv4(id) => TimerHandler::handle_timer(sync_ctx, &mut (), id),
+        IpLayerTimerId::PmtuTimeoutv6(id) => TimerHandler::handle_timer(sync_ctx, &mut (), id),
     }
 }
 
@@ -2275,56 +2271,6 @@ pub(crate) fn send_ipv6_packet_from_device<
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
         sync_ctx.send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
-    }
-}
-
-impl<D: EventDispatcher, C: BlanketCoreContext> PmtuHandler<Ipv4> for Ctx<D, C> {
-    fn update_pmtu_if_less(&mut self, src_ip: Ipv4Addr, dst_ip: Ipv4Addr, new_mtu: u32) {
-        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
-        // change `update_pmtu_if_less` to not return one?
-        let _: Result<_, _> = self.state.ipv4.inner.pmtu_cache.update_pmtu_if_less(
-            &mut self.ctx,
-            &mut (),
-            src_ip,
-            dst_ip,
-            new_mtu,
-        );
-    }
-    fn update_pmtu_next_lower(&mut self, src_ip: Ipv4Addr, dst_ip: Ipv4Addr, from: u32) {
-        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
-        // change `update_pmtu_next_lower` to not return one?
-        let _: Result<_, _> = self.state.ipv4.inner.pmtu_cache.update_pmtu_next_lower(
-            &mut self.ctx,
-            &mut (),
-            src_ip,
-            dst_ip,
-            from,
-        );
-    }
-}
-
-impl<D: EventDispatcher, C: BlanketCoreContext> PmtuHandler<Ipv6> for Ctx<D, C> {
-    fn update_pmtu_if_less(&mut self, src_ip: Ipv6Addr, dst_ip: Ipv6Addr, new_mtu: u32) {
-        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
-        // change `update_pmtu_if_less` to not return one?
-        let _: Result<_, _> = self.state.ipv6.inner.pmtu_cache.update_pmtu_if_less(
-            &mut self.ctx,
-            &mut (),
-            src_ip,
-            dst_ip,
-            new_mtu,
-        );
-    }
-    fn update_pmtu_next_lower(&mut self, src_ip: Ipv6Addr, dst_ip: Ipv6Addr, from: u32) {
-        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
-        // change `update_pmtu_next_lower` to not return one?
-        let _: Result<_, _> = self.state.ipv6.inner.pmtu_cache.update_pmtu_next_lower(
-            &mut self.ctx,
-            &mut (),
-            src_ip,
-            dst_ip,
-            from,
-        );
     }
 }
 
