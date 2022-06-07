@@ -790,6 +790,38 @@ def is_known_wrapper(command: ToolCommand) -> bool:
     return False
 
 
+def all_parent_dirs(abspath: str) -> AbstractSet[str]:
+    """Identifies all parent dirs of a given path.
+
+    Args:
+      abspath: absolute path to a file or dir, which need not exist.
+
+    Returns:
+      Set of all ancestor directories of `abspath`.
+    """
+    dirs = set()
+    temp_path = os.path.dirname(abspath)
+    while temp_path and temp_path != os.path.sep:
+        dirs.add(temp_path)
+        temp_path = os.path.dirname(temp_path)
+    return dirs
+
+
+def detect_all_dirs(paths: Iterable[str]) -> AbstractSet[str]:
+    """Evaluates the set of directories seen from a collection of paths.
+
+    Args:
+      paths: sequence of file or directory paths.
+
+    Returns:
+      Set union of all ancestor directories of paths.
+    """
+    dirs = set()
+    for path in paths:
+        dirs.update(all_parent_dirs(path))
+    return dirs
+
+
 def main():
     parser = main_arg_parser()
     args = parser.parse_args()
@@ -949,11 +981,16 @@ def main():
     # Parse trace file.
     all_accesses = parse_fsatrace_output(raw_trace.splitlines())
 
-    # Ignore directory accesses, including symlinked dirs.
+    # Record all directories ever seen, so we know to ignore them.
+    all_dirs = detect_all_dirs(access.path for access in all_accesses)
+
     # Files' contents are what matters for reproducibilty.
+    # Ignore directory accesses, including symlinked dirs.
+    # Also filter out temporary directories that no longer exist.
     file_accesses = [
-        access for access in all_accesses
-        if not os.path.isdir(os.path.realpath(access.path))
+        access for access in all_accesses if not (
+            os.path.isdir(os.path.realpath(access.path)) or
+            access.path in all_dirs)
     ]
 
     # Filter out accesses we don't want to track.

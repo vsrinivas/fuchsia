@@ -234,12 +234,11 @@ class ParseDepFileTests(unittest.TestCase):
             ])
 
     def test_blank_line(self):
-        depfile = action_tracer.parse_depfile(
-            [
-                "a:b",
-                " ",
-                "b:",
-            ])
+        depfile = action_tracer.parse_depfile([
+            "a:b",
+            " ",
+            "b:",
+        ])
         self.assertEqual(
             depfile.deps, [
                 action_tracer.DepEdges(ins={"b"}, outs={"a"}),
@@ -249,11 +248,10 @@ class ParseDepFileTests(unittest.TestCase):
         self.assertEqual(depfile.all_outs, {"a", "b"})
 
     def test_comment(self):
-        depfile = action_tracer.parse_depfile(
-            [
-                " # a:b",
-                "b:",
-            ])
+        depfile = action_tracer.parse_depfile([
+            " # a:b",
+            "b:",
+        ])
         self.assertEqual(
             depfile.deps, [
                 action_tracer.DepEdges(ins=set(), outs={"b"}),
@@ -271,11 +269,12 @@ class ParseDepFileTests(unittest.TestCase):
 
     def test_continuation_comment(self):
         with self.assertRaises(ValueError):
-            depfile = action_tracer.parse_depfile([
-                "a: \\\n",
-                "# comment",
-                "b",
-            ])
+            depfile = action_tracer.parse_depfile(
+                [
+                    "a: \\\n",
+                    "# comment",
+                    "b",
+                ])
 
 
 class ParseFsatraceOutputTests(unittest.TestCase):
@@ -1122,6 +1121,64 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
                 stale_outputs=set(),
             ),
         )
+
+
+class AllParentDirsTests(unittest.TestCase):
+
+    def test_empty_path(self):
+        dirs = action_tracer.all_parent_dirs("")
+        self.assertEqual(dirs, set())
+
+    def test_empty_path_slash(self):
+        dirs = action_tracer.all_parent_dirs("/")
+        self.assertEqual(dirs, set())
+
+    def test_one_path(self):
+        dirs = action_tracer.all_parent_dirs("foo")
+        self.assertEqual(dirs, set())
+
+    def test_one_path_absolute(self):
+        dirs = action_tracer.all_parent_dirs("/foo")
+        self.assertEqual(dirs, set())
+
+    def test_subdir(self):
+        dirs = action_tracer.all_parent_dirs("parent/child")
+        self.assertEqual(dirs, {"parent"})
+
+    def test_subdir_absolute(self):
+        dirs = action_tracer.all_parent_dirs("/parent/child")
+        self.assertEqual(dirs, {"/parent"})
+
+    def test_subsubdir(self):
+        dirs = action_tracer.all_parent_dirs("matron/parent/child")
+        self.assertEqual(dirs, {"matron", "matron/parent"})
+
+    def test_subsubdir_absolute(self):
+        dirs = action_tracer.all_parent_dirs("/boss/parent/child")
+        self.assertEqual(dirs, {"/boss", "/boss/parent"})
+
+
+class DetectAllDirs(unittest.TestCase):
+
+    def test_empty(self):
+        dirs = action_tracer.detect_all_dirs([])
+        self.assertEqual(dirs, set())
+
+    def test_one(self):
+        dirs = action_tracer.detect_all_dirs(["/x/y/z"])
+        self.assertEqual(dirs, {"/x", "/x/y"})
+
+    def test_different_parents(self):
+        dirs = action_tracer.detect_all_dirs(["/x/y/z", "/a/b/c"])
+        self.assertEqual(dirs, {"/x", "/x/y", "/a", "/a/b"})
+
+    def test_common_parent(self):
+        dirs = action_tracer.detect_all_dirs(["/x/w/z", "/x/w/c"])
+        self.assertEqual(dirs, {"/x", "/x/w"})
+
+    def test_common_grandparent(self):
+        dirs = action_tracer.detect_all_dirs(["/x/y/z", "/x/w/c"])
+        self.assertEqual(dirs, {"/x", "/x/y", "/x/w"})
 
 
 class MainArgParserTests(unittest.TestCase):
