@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/drivers.gni")
+import("//src/devices/bus/drivers/pci/pci.gni")
 
 driver_bind_rules("acpi-arm64-bind") {
   rules = "acpi-arm64.bind"
@@ -19,11 +20,20 @@ fuchsia_driver("acpi-arm64-driver") {
   sources = [ "acpi-arm64.cc" ]
   deps = [
     ":acpi-arm64-bind",
+    "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//src/devices/board/lib/acpi",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//third_party/acpica",
     "//zircon/system/ulib/zx",
   ]
+
+  if (platform_enable_user_pci) {
+    defines = [ "ENABLE_USER_PCI" ]
+  }
 }
 
 fuchsia_driver_component("acpi-arm64") {
