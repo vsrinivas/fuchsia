@@ -277,7 +277,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		var imgs []*bootserver.Image
 		for _, img := range images {
 			img := img
-			if img.IsFlashable {
+			if img.IsFlashable || img.Name == "script_flash-script" {
 				imgs = append(imgs, &img)
 			}
 		}
