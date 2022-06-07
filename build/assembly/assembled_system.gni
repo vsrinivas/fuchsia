@@ -438,7 +438,8 @@ template("assembled_system") {
                              "visibility",
                            ])
     package_name = "config-data"
-    deps = _base_packages + _cache_packages + component_id_index_config_data_dep
+    deps = _base_packages + _universe_packages + _cache_packages +
+           component_id_index_config_data_dep
     if (defined(invoker.sysmgr_golden)) {
       sysmgr_golden = invoker.sysmgr_golden
     }
