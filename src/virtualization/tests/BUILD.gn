@@ -548,28 +548,28 @@ fuchsia_test_package("virtualization_vsock_tests_pkg") {
 fuchsia_component("virtio_block_test_util_cmp") {
   component_name = "virtio_block_test_util"
   deps = [ "virtio_block_test_util" ]
-  manifest = "virtio_block_test_util/meta/virtio_block_test_util.cmx"
+  manifest = "virtio_block_test_util/meta/virtio_block_test_util.cml"
 }
 
 fuchsia_component("virtio_rng_test_util_cmp") {
   component_name = "virtio_rng_test_util"
   deps = [ "virtio_rng_test_util" ]
-  manifest = "virtio_rng_test_util/meta/virtio_rng_test_util.cmx"
+  manifest = "virtio_rng_test_util/meta/virtio_rng_test_util.cml"
 }
 
 fuchsia_component("virtio_net_test_util_cmp") {
   component_name = "virtio_net_test_util"
   deps = [ "virtio_net_test_util" ]
-  manifest = "virtio_net_test_util/meta/virtio_net_test_util.cmx"
+  manifest = "virtio_net_test_util/meta/virtio_net_test_util.cml"
 }
 
 fuchsia_component("virtio_vsock_test_util_cmp") {
   component_name = "virtio_vsock_test_util"
   deps = [ "virtio_vsock_test_util" ]
-  manifest = "virtio_vsock_test_util/meta/virtio_vsock_test_util.cmx"
+  manifest = "virtio_vsock_test_util/meta/virtio_vsock_test_util.cml"
 }
 
-fuchsia_package("virtualization_test_utils_pkg") {
+fuchsia_shell_package("virtualization_test_utils_pkg") {
   package_name = "virtualization-test-utils"
   deps = [
     ":virtio_block_test_util_cmp",

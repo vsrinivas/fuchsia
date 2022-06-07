@@ -52,7 +52,6 @@ constexpr char kTerminaGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/termina_guest_manager#meta/termina_guest_manager.cm";
 
 // TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
-constexpr char kFuchsiaTestUtilsUrl[] = "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
 constexpr char kDebianTestUtilDir[] = "/test_utils";
 constexpr zx::duration kLoopConditionStep = zx::msec(10);
 constexpr zx::duration kRetryStep = zx::msec(200);
@@ -360,8 +359,7 @@ zx_status_t ZirconEnclosedGuest::ShutdownAndWait(zx::time deadline) {
 
 std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
     const std::string& util, const std::vector<std::string>& argv) {
-  std::string fuchsia_url = fxl::StringPrintf("%s#meta/%s.cmx", kFuchsiaTestUtilsUrl, util.c_str());
-  std::vector<std::string> exec_argv = {"/bin/run", fuchsia_url};
+  std::vector<std::string> exec_argv = { util };
   exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());
   return exec_argv;
 }
