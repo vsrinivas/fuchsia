@@ -1189,8 +1189,19 @@ const BINDER_IOCTL_SET_MAX_THREADS: u32 = encode_ioctl_write::<u32>(BINDER_IOCTL
 /// The ioctl for requests to become context manager.
 const BINDER_IOCTL_SET_CONTEXT_MGR: u32 = encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 7);
 
+/// The ioctl for informing the driver that a binder thread is exiting the thread pool.
+const BINDER_IOCTL_THREAD_EXIT: u32 = encode_ioctl_write::<i32>(BINDER_IOCTL_CHAR, 8);
+
 /// The ioctl for retrieving the kernel binder version.
 const BINDER_IOCTL_VERSION: u32 = encode_ioctl_write_read::<binder_version>(BINDER_IOCTL_CHAR, 9);
+
+/// The ioctl for reading all userspace binder objects with references held by the kernel.
+const BINDER_IOCTL_GET_NODE_DEBUG_INFO: u32 =
+    encode_ioctl_write_read::<binder_node_debug_info>(BINDER_IOCTL_CHAR, 11);
+
+/// The ioctl for requesting debug info (strong/weak ref counts) for a binder object.
+const BINDER_IOCTL_GET_NODE_INFO_FOR_REF: u32 =
+    encode_ioctl_write_read::<binder_node_info_for_ref>(BINDER_IOCTL_CHAR, 12);
 
 /// The ioctl for requests to become context manager, v2.
 const BINDER_IOCTL_SET_CONTEXT_MGR_EXT: u32 =
@@ -1344,6 +1355,18 @@ impl BinderDriver {
             BINDER_IOCTL_ENABLE_ONEWAY_SPAM_DETECTION => {
                 not_implemented!("binder ignoring ENABLE_ONEWAY_SPAM_DETECTION ioctl");
                 Ok(SUCCESS)
+            }
+            BINDER_IOCTL_THREAD_EXIT => {
+                not_implemented!("binder ignoring THREAD_EXIT ioctl");
+                Ok(SUCCESS)
+            }
+            BINDER_IOCTL_GET_NODE_DEBUG_INFO => {
+                not_implemented!("binder GET_NODE_DEBUG_INFO ioctl not supported");
+                error!(EOPNOTSUPP)
+            }
+            BINDER_IOCTL_GET_NODE_INFO_FOR_REF => {
+                not_implemented!("binder GET_NODE_INFO_FOR_REF ioctl not supported");
+                error!(EOPNOTSUPP)
             }
             _ => {
                 tracing::error!("binder received unknown ioctl request 0x{:08x}", request);
