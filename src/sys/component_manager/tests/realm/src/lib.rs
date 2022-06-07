@@ -92,6 +92,35 @@ pub async fn query_echo_server_child() {
         ]
     );
 
+    let ns_dir = resolved.ns_dir.into_proxy().unwrap();
+    let entries = files_async::readdir(&ns_dir).await.unwrap();
+    assert_eq!(
+        entries,
+        vec![
+            files_async::DirEntry {
+                name: "pkg".to_string(),
+                kind: files_async::DirentKind::Directory,
+            },
+            files_async::DirEntry {
+                name: "svc".to_string(),
+                kind: files_async::DirentKind::Directory,
+            }
+        ]
+    );
+
+    let svc_dir =
+        io_util::directory::open_directory(&ns_dir, "svc", io_util::OpenFlags::RIGHT_READABLE)
+            .await
+            .unwrap();
+    let entries = files_async::readdir(&svc_dir).await.unwrap();
+    assert_eq!(
+        entries,
+        vec![files_async::DirEntry {
+            name: "fuchsia.logger.LogSink".to_string(),
+            kind: files_async::DirentKind::Unknown,
+        }]
+    );
+
     let started = resolved.started.unwrap();
 
     let out_dir = started.out_dir.unwrap();

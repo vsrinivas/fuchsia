@@ -550,6 +550,10 @@ mod tests {
         let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
         let (appmgr_exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
 
+        // The namespace dir is not used by this library.
+        let (ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (appmgr_ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
         let query = serve_realm_query(HashMap::from([
             (
                 "./my_foo".to_string(),
@@ -589,6 +593,7 @@ mod tests {
                             start_reason: "Debugging Workflow".to_string(),
                         })),
                         exposed_dir,
+                        ns_dir,
                     })),
                 ),
             ),
@@ -612,6 +617,7 @@ mod tests {
                             start_reason: "Debugging Workflow".to_string(),
                         })),
                         exposed_dir: appmgr_exposed_dir,
+                        ns_dir: appmgr_ns_dir,
                     })),
                 ),
             ),

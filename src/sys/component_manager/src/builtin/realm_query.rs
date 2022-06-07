@@ -368,6 +368,35 @@ mod tests {
             }]
         );
 
+        // Component Manager serves the namespace dir with the `foo` protocol.
+        let ns_dir = resolved.ns_dir.into_proxy().unwrap();
+        let entries = files_async::readdir(&ns_dir).await.unwrap();
+        assert_eq!(
+            entries,
+            vec![
+                files_async::DirEntry {
+                    name: "pkg".to_string(),
+                    kind: files_async::DirentKind::Directory
+                },
+                files_async::DirEntry {
+                    name: "svc".to_string(),
+                    kind: files_async::DirentKind::Directory
+                },
+            ]
+        );
+        let svc_dir =
+            io_util::directory::open_directory(&ns_dir, "svc", fio::OpenFlags::RIGHT_READABLE)
+                .await
+                .unwrap();
+        let entries = files_async::readdir(&svc_dir).await.unwrap();
+        assert_eq!(
+            entries,
+            vec![files_async::DirEntry {
+                name: "foo".to_string(),
+                kind: files_async::DirentKind::Unknown
+            }]
+        );
+
         // Test runners don't provide an out dir or a runtime dir
         assert!(started.out_dir.is_none());
         assert!(started.runtime_dir.is_none());

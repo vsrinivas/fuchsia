@@ -14,6 +14,7 @@ use {
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
         namespace::IncomingNamespace,
+        ns_dir::NamespaceDir,
         routing::{
             self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
             RouteRequest, RoutingError,
@@ -534,6 +535,18 @@ impl ComponentInstance {
                 let exposed_dir =
                     fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::new(exposed_dir);
 
+                let (ns_dir, ns_server) = fidl::endpoints::create_endpoints().unwrap();
+                r.get_ns_dir().open(
+                    fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE
+                        | fio::OpenFlags::RIGHT_EXECUTABLE,
+                    fio::MODE_TYPE_DIRECTORY,
+                    vfs::path::Path::dot(),
+                    ns_server,
+                );
+                let ns_dir = ns_dir.into_channel();
+                let ns_dir = fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::new(ns_dir);
+
                 Some(Box::new(fsys::ResolvedState {
                     uses,
                     exposes,
@@ -541,6 +554,7 @@ impl ComponentInstance {
                     pkg_dir,
                     started,
                     exposed_dir,
+                    ns_dir,
                 }))
             }
             _ => None,
@@ -1405,6 +1419,8 @@ pub struct ResolvedInstanceState {
     environments: HashMap<String, Arc<Environment>>,
     /// Hosts a directory mapping the component's exposed capabilities.
     exposed_dir: ExposedDir,
+    /// Hosts a directory mapping the component's namespace.
+    ns_dir: NamespaceDir,
     /// Contains information about the package, if one exists
     package: Option<Package>,
     /// Contains the resolved configuration fields for this component, if they exist
@@ -1438,6 +1454,12 @@ impl ResolvedInstanceState {
             WeakComponentInstance::new(&component),
             decl.clone(),
         )?;
+        let ns_dir = NamespaceDir::new(
+            ExecutionScope::new(),
+            WeakComponentInstance::new(&component),
+            decl.clone(),
+            package.clone().map(|p| p.package_dir),
+        )?;
         let mut state = Self {
             execution_scope: ExecutionScope::new(),
             decl: decl.clone(),
@@ -1446,6 +1468,7 @@ impl ResolvedInstanceState {
             next_dynamic_instance_id: 1,
             environments: Self::instantiate_environments(component, &decl),
             exposed_dir,
+            ns_dir,
             package,
             config,
             dynamic_offers: vec![],
@@ -1538,6 +1561,11 @@ impl ResolvedInstanceState {
     /// Returns the exposed directory bound to this instance.
     pub fn get_exposed_dir(&self) -> &ExposedDir {
         &self.exposed_dir
+    }
+
+    /// Returns the namespace directory of this instance.
+    pub fn get_ns_dir(&self) -> &NamespaceDir {
+        &self.ns_dir
     }
 
     /// Returns the resolved structured configuration of this instance, if any.
