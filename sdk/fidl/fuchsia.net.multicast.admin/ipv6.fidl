@@ -93,10 +93,10 @@ protocol Ipv6RoutingTableController {
     /// - response `dropped_events` the number of events that were dropped
     ///   _immediately before_ the returned event was queued.
     ///   returned event.
-    /// - response `addresses` the addresses in the multicast packet triggerring
+    /// - response `addresses` the addresses in the multicast packet triggering
     ///   the event.
     /// - response `input_interface` the interface the multicast packet
-    ///   triggerring the event arrived at.
+    ///   triggering the event arrived at.
     /// - response `event` the event.
     WatchRoutingEvents() -> (struct {
         dropped_events uint64;
