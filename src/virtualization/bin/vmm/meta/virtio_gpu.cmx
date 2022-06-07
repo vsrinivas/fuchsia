@@ -9,7 +9,6 @@
         "services": [
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"
         ]
     }
