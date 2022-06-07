@@ -669,7 +669,7 @@ async fn daemon_restart<W: Write>(
         }
         Ok(Err(e)) => {
             let node = ledger
-                .add_node(&format!("Error connecting to daemon: {}", e), LedgerMode::Automatic)?;
+                .add_node(&format!("Error connecting to daemon: {}. Run `ffx doctor --restart-daemon`", e), LedgerMode::Automatic)?;
             ledger.set_outcome(node, LedgerOutcome::Failure)?;
             ledger.close(main_node)?;
             return Ok(());
@@ -810,7 +810,7 @@ async fn doctor_summary<W: Write>(
         }
         Ok(Err(e)) => {
             let node = ledger
-                .add_node(&format!("Error connecting to daemon: {}", e), LedgerMode::Automatic)?;
+                .add_node(&format!("Error connecting to daemon: {}. Run `ffx doctor --restart-daemon`", e), LedgerMode::Automatic)?;
             ledger.set_outcome(node, LedgerOutcome::Failure)?;
             ledger.close(main_node)?;
             return Ok(());
@@ -1242,16 +1242,20 @@ mod test {
 
     struct FakeLedgerView {
         tree: LedgerViewNode,
+        omit_error_reason: bool,
     }
 
     impl FakeLedgerView {
         pub fn new() -> Self {
-            FakeLedgerView { tree: LedgerViewNode::default() }
+            FakeLedgerView { tree: LedgerViewNode::default(), omit_error_reason: true }
+        }
+        pub fn new_with_error_reason() -> Self {
+            FakeLedgerView { tree: LedgerViewNode::default(), omit_error_reason: false }
         }
         fn gen_output(&self, parent_node: &LedgerViewNode, indent_level: usize) -> String {
             let mut data = parent_node.data.clone();
             // Remove error details to make the tests more stable
-            if data.starts_with("Error") {
+            if self.omit_error_reason && data.starts_with("Error") {
                 let v: Vec<_> = data.split(":").collect();
                 if v.len() > 1 {
                     data = format!("{}: <reason omitted>", v.first().unwrap().to_string());
@@ -1986,6 +1990,58 @@ mod test {
                 ffx_path(),
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL
+            )
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_single_try_daemon_running_connection_error() {
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Err(anyhow!("Some error message"))],
+            vec![Ok(vec![1])],
+        );
+        let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new_with_error_reason());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
+        doctor(
+            &mut handler,
+            &mut ledger,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            frontend_version_info(true),
+            Ok(Some("".to_string())),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+                   \n[✓] FFX doctor\
+                   \n    [✓] Frontend version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
+                   \n    [i] Path to ffx: {}\
+                   \n[✗] Checking daemon\
+                   \n    [✓] Daemon found: [1]\
+                   \n    [✗] Error connecting to daemon: Some error message. Run `ffx doctor --restart-daemon`\n",
+                FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
+                ffx_path(),
             )
         );
     }
