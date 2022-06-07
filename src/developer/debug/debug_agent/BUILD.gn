@@ -111,7 +111,6 @@ static_library("lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/process",
     "//sdk/fidl/fuchsia.exception",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/lib/fit",
@@ -121,6 +120,7 @@ static_library("lib") {
     "//src/developer/debug/shared",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
+    "//src/lib/process",
     "//third_party/googletest:gtest_prod",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

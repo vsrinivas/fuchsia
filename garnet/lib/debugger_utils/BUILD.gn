@@ -48,9 +48,9 @@ static_library("debugger_utils") {
   if (is_fuchsia) {
     deps += [ "//zircon/system/ulib/inspector" ]
     public_deps += [
-      "//garnet/lib/process",
       "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
       "//sdk/lib/fdio",
+      "//src/lib/process",
       "//zircon/system/ulib/zx",
     ]
   } else {

@@ -8,9 +8,9 @@
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 
-#include "garnet/lib/process/process_builder.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/binary_launcher.h"
+#include "src/lib/process/process_builder.h"
 
 namespace debug_agent {
 

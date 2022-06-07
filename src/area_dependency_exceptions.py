@@ -15,8 +15,9 @@ exceptions = {
         ],
     '//src/connectivity/network/netstack3':
         ['//src/connectivity/network/testing/netemul/lib/',],
-    '//src/connectivity/network/testing/netemul':
-        ['//garnet/lib/process:process',],
+    '//src/connectivity/network/testing/netemul': [
+        '//src/lib/process:process',
+    ],
     '//src/connectivity/wlan':
         [
             '//garnet/lib/wlan/',
@@ -30,7 +31,7 @@ exceptions = {
             '//garnet/lib/wlan/',
             '//src/connectivity/wlan/testing/wlantap-client',
         ],
-    '//src/developer/debug': ['//garnet/lib/process:process',],
+    '//src/developer/debug': ['//src/lib/process:process',],
     '//src/developer/feedback_agent': ['//src/ui/lib/escher/test',],
     '//src/modular':
         [

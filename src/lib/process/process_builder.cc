@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/process/process_builder.h"
+#include "src/lib/process/process_builder.h"
 
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
