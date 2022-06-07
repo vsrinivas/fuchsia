@@ -252,9 +252,9 @@ pub fn get_benchmark() -> criterion::Benchmark {
     // functions to the `Criterion::Benchmark`, ideally as part of `bench!`.
     let mut b = criterion::Benchmark::new("ForwardIpv4/64", bench_forward_minimum_64);
     b = b.with_function("ForwardIpv4/128", bench_forward_minimum_128);
-    b = b.with_function("ForwardIPv4/256", bench_forward_minimum_256);
-    b = b.with_function("ForwardIPv4/512", bench_forward_minimum_512);
-    b = b.with_function("ForwardIPv4/1024", bench_forward_minimum_1024);
+    b = b.with_function("ForwardIpv4/256", bench_forward_minimum_256);
+    b = b.with_function("ForwardIpv4/512", bench_forward_minimum_512);
+    b = b.with_function("ForwardIpv4/1024", bench_forward_minimum_1024);
 
     // Add additional microbenchmarks defined elsewhere.
     crate::data_structures::token_bucket::tests::add_benches(b)
