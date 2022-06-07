@@ -6,10 +6,11 @@
 #define EXAMPLES_DIAGNOSTICS_INSPECT_CODELAB_CPP_TESTING_INTEGRATION_TEST_H_
 
 #include <fuchsia/examples/inspect/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <memory>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace codelab::testing {
 

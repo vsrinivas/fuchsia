@@ -7,8 +7,9 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/vfs.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/vfs/cpp/internal/directory.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace vfs_tests {
 

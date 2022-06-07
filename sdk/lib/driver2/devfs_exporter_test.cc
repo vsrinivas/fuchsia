@@ -10,8 +10,9 @@
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/test_base.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fdfs = fuchsia::device::fs;
 namespace fio = fuchsia::io;

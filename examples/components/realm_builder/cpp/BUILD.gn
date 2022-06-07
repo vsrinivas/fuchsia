@@ -13,9 +13,9 @@ test("bin") {
 
     # [START_EXCLUDE]
     "//examples/components/routing/fidl:echo",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

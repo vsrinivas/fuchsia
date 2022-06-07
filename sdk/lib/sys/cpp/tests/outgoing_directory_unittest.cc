@@ -4,13 +4,13 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/message_buffer.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 
 #include <gtest/gtest.h>
 
 #include "echo_server.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

@@ -276,7 +276,7 @@ C++ class.
 Create a new file in `examples/diagnostics/workshop/profile_store_unittest.cc` with these contents:
 
 ```c++
-#include <lib/gtest/test_loop_fixture.h>
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 #include <gtest/gtest.h>
 

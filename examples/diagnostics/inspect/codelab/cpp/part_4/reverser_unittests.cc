@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 // [START include_testing]
 #include <lib/inspect/testing/cpp/inspect.h>
 // [END include_testing]

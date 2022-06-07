@@ -4,13 +4,14 @@
 
 #include <lib/driver2/runtime.h>
 #include <lib/driver2/runtime_connector_impl.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <set>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

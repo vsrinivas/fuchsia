@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include "reverser.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class ReverserTest : public gtest::RealLoopFixture {
  protected:

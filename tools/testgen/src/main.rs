@@ -86,9 +86,9 @@ fn write_cpp(
 
     // Add imports that all tests will need. For importing fidl libraries that we mock,
     // imports will be added when we call 'update_code_for_use_declaration'.
-    code.add_import("<lib/sys/component/cpp/testing/realm_builder.h>");
-    code.add_import("<lib/gtest/real_loop_fixture.h>");
     code.add_import("<gtest/gtest.h>");
+    code.add_import("<lib/sys/component/cpp/testing/realm_builder.h>");
+    code.add_import("<src/lib/testing/loop_fixture/real_loop_fixture.h>");
 
     update_code_for_use_declaration(
         &cm_decl.uses.as_ref().unwrap_or(&Vec::new()),

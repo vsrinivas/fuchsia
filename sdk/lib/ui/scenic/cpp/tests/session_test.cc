@@ -4,13 +4,13 @@
 
 #include "sdk/lib/ui/scenic/cpp/session.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
 #include <gtest/gtest.h>
 
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 #include <fidl/examples/routing/echo/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
 constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server_test#meta/echo_server.cm";
 

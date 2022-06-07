@@ -6,8 +6,9 @@
 #include <fuchsia/examples/cpp/fidl.h>
 #include <fuchsia/examples/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 // [END includes]
 
 // [START impl]

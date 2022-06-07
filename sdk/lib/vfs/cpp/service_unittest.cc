@@ -10,8 +10,8 @@
 #include <test/placeholders/cpp/fidl.h>
 
 #include "fuchsia/io/cpp/fidl.h"
-#include "lib/gtest/real_loop_fixture.h"
 #include "lib/vfs/cpp/pseudo_dir.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Echo {
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/real_loop_fixture.h>
-
 #include <memory>
 
 #include <gtest/gtest.h>
@@ -15,6 +13,7 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "profile.h"
 #include "src/lib/files/path.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class ProfileTests : public gtest::RealLoopFixture {
  public:

@@ -4,10 +4,11 @@
 
 #include <fuchsia/modular/test/harness/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/modular/testing/cpp/test_harness_launcher.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <zircon/assert.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 constexpr char kTestHarnessUrl[] =

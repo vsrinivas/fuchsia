@@ -4,7 +4,6 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/vfs/cpp/lazy_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
@@ -12,6 +11,8 @@
 #include <zircon/status.h>
 
 #include <memory>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

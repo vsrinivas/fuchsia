@@ -17,7 +17,6 @@
 #include <lib/fidl/cpp/comparison.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
@@ -37,6 +36,8 @@
 #include <src/lib/fostr/fidl/fuchsia/component/decl/formatting.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 #include <test/placeholders/cpp/fidl.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

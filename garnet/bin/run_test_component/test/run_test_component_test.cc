@@ -10,7 +10,6 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -26,6 +25,7 @@
 #include "lib/fit/defer.h"
 #include "lib/zx/eventpair.h"
 #include "src/lib/files/file.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 TEST(Run, TestHermeticEnv) {
   std::string hub_name;

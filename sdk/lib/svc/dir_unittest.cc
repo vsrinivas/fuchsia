@@ -9,7 +9,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/channel.h>
@@ -20,6 +19,8 @@
 #include <thread>
 
 #include <fbl/unique_fd.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace svc {
 namespace {

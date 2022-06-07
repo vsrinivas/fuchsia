@@ -5,13 +5,14 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/single_threaded_executor.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 
 #include <gmock/gmock.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 using inspect::Hierarchy;
 using inspect::Inspector;

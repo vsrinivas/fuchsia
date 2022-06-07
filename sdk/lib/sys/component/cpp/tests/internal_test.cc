@@ -19,7 +19,6 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/internal/convert.h>
 #include <lib/sys/component/cpp/testing/internal/local_component_runner.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
@@ -33,6 +32,8 @@
 #include <gtest/gtest.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 #include <test/placeholders/cpp/fidl.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

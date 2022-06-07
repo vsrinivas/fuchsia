@@ -17,7 +17,7 @@
 #include <vector>
 
 #include "fuchsia/io/cpp/fidl.h"
-#include "lib/gtest/real_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

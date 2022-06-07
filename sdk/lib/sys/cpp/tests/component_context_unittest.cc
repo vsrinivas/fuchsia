@@ -4,7 +4,6 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 #include <zircon/processargs.h>
@@ -12,6 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "echo_server.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class ComponentContextTest : public gtest::RealLoopFixture {
  public:

@@ -5,7 +5,6 @@
 #include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
@@ -29,6 +28,7 @@
 #include <test/accessibility/cpp/fidl.h>
 #include <test/touch/cpp/fidl.h>
 
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"

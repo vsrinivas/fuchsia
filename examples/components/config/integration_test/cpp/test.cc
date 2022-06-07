@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -14,6 +13,8 @@
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
 #include <src/lib/fsl/vmo/strings.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 using ContentVector = std::vector<fuchsia::diagnostics::FormattedContent>;
 using inspect::contrib::DiagnosticsData;

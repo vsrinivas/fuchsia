@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/vfs.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

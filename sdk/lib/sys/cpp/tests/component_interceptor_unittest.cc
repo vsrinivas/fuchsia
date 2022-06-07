@@ -6,7 +6,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
@@ -14,6 +13,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

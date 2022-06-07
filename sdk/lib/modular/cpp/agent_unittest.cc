@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/modular/cpp/agent.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <test/modular/agent/cpp/fidl.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class AgentTest : public gtest::RealLoopFixture, public test::modular::agent::Pinger {
  protected:

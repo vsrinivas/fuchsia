@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/directory.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zircon/types.h>
 
@@ -15,6 +14,7 @@
 #include "lib/async/dispatcher.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/vfs/cpp/service.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 

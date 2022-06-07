@@ -7,10 +7,11 @@
 #include <fuchsia/wayland/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/fake_component.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
+
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace guest {
 

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include "echo_connection.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 // [START test_imports]
 #include <lib/inspect/cpp/inspect.h>

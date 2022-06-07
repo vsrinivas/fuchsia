@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <gtest/gtest.h>
 
 #include "fuchsia/examples/diagnostics/cpp/fidl.h"
@@ -12,6 +10,7 @@
 #include "lib/async/dispatcher.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "profile_store.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 class ProfileStoreTests : public gtest::TestLoopFixture {
  public:

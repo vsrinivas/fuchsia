@@ -6,7 +6,6 @@
 #define GARNET_BIN_TRACE_MANAGER_TESTS_TRACE_MANAGER_TEST_H_
 
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/zx/socket.h>
 
@@ -19,6 +18,7 @@
 
 #include "garnet/bin/trace_manager/app.h"
 #include "garnet/bin/trace_manager/tests/fake_provider.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace tracing {
 namespace test {

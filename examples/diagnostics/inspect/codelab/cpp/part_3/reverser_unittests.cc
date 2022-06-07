@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 // CODELAB: Include the inspect test library.
 
 #include "reverser.h"
