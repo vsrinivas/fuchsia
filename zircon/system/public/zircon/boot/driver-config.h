@@ -23,6 +23,7 @@
 #define KDRV_I8250_PIO_UART 0x30353238          // '8250'
 #define KDRV_I8250_MMIO_UART 0x4d353238         // '825M'
 #define KDRV_MOTMOT_UART 0x4d4d5455             // 'MMTU'
+#define KDRV_AS370_POWER 0x50303733             // '370P'
 
 // Kernel driver struct that can be used for simple drivers.
 // Used by KDRV_PL011_UART, KDRV_AMLOGIC_UART, and KDRV_I8250_MMIO_UART.

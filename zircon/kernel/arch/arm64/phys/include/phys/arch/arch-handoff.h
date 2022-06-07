@@ -32,6 +32,9 @@ struct ArchPhysHandoff {
 
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_GENERIC_32BIT_WATCHDOG) payload.
   ktl::optional<dcfg_generic_32bit_watchdog_t> generic_32bit_watchdog_driver;
+
+  // (ZBI_TYPE_KERNEL_DRIVER, KDRV_AS370_POWER) payload.
+  bool as370_power_driver = false;
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_PHYS_INCLUDE_PHYS_ARCH_ARCH_HANDOFF_H_

@@ -13,6 +13,7 @@
 #include <dev/init.h>
 #include <dev/interrupt/arm_gicv2_init.h>
 #include <dev/interrupt/arm_gicv3_init.h>
+#include <dev/power/as370/init.h>
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <dev/uart/amlogic_s905/init.h>
@@ -87,6 +88,10 @@ void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
 
   if (arch_handoff.psci_driver) {
     PsciInit(arch_handoff.psci_driver.value());
+  }
+
+  if (arch_handoff.as370_power_driver) {
+    as370_power_init_early();
   }
 }
 

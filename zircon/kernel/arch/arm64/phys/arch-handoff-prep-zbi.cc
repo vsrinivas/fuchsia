@@ -72,6 +72,10 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
               *reinterpret_cast<const dcfg_generic_32bit_watchdog_t*>(payload.data());
           SaveForMexec(header, payload);
           break;
+        case KDRV_AS370_POWER:
+          ZX_ASSERT(payload.size() == 0);
+          arch_handoff.as370_power_driver = true;
+          break;
       }
       break;
     }
