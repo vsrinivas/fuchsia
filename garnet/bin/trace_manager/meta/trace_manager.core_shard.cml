@@ -1,0 +1,80 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "trace_manager",
+            url: "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+
+    // TODO(fxbug.dev/90444): Remove capabilities and expose sections after
+    // updating core shards outside of fuchsia.git that defined an offer
+    // from "self".
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    use: [
+        // This use makes the protocols available to v1 components.
+        {
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#trace_manager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#trace_manager",
+        },
+
+        // TODO(fxbug.dev/101097): Remove the need to use this to launch v1
+        // components.
+        {
+            protocol: [ "fuchsia.sys.Launcher" ],
+            from: "self",
+            to: "#trace_manager",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: [
+                "#appmgr",
+                "#test_manager",
+            ],
+        },
+
+        // Weak offers to resolve dependency cycles that would be caused by
+        // using #full-resolver-env.
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: [
+                "#cobalt",
+                "#network",
+                "#pkg-resolver",
+            ],
+            dependency: "weak",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#trace_manager",
+        },
+    ],
+}

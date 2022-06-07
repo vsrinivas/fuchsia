@@ -67,7 +67,12 @@
                 // TODO(fxbug.dev/93338): delete this when tee_manager migrated to CFv2
                 "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385",
                 "fuchsia.tee.DeviceInfo",
-                "fuchsia.tracing.controller.Controller",
+
+                // TODO(fxbug.dev/90444): Remove this after external components
+                // that route the tracing capability from /core are updated to
+                // route from trace manager directly. This capability is listed
+                // here as some of the components that need updating are present
+                // in builds where trace_manager's core shard is not included.
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.annotation.Registry",
                 "fuchsia.ui.composition.Allocator",
@@ -415,8 +420,6 @@
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
-                "fuchsia.tracing.controller.Controller",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.virtualization.DebianGuestManager",
                 "fuchsia.virtualization.LinuxManager",
                 "fuchsia.virtualization.Manager",

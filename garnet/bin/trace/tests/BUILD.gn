@@ -461,7 +461,19 @@ fuchsia_component("two_providers_two_engines_test_app_component") {
   deps = [ ":two_providers_two_engines_test_app" ]
 }
 
-fuchsia_test_package("trace_tests") {
+# TODO(fxbug.dev/90444): This group target is to ensure that the v1
+# trace_manager component is included with these tests. These tests should be
+# updated to use the v2 component instead.
+group("trace_tests") {
+  testonly = true
+  deps = [
+    ":trace_tests_package",
+    "//garnet/bin/trace_manager",
+  ]
+}
+
+fuchsia_test_package("trace_tests_package") {
+  package_name = "trace_tests"
   test_components = [
     ":detach_tests_component",
     ":ktrace_integration_tests_component",

@@ -20,8 +20,9 @@
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "self",
+            from: "#trace_manager",
             to: "#thermd",
+            source_availability: "unknown",
         },
         {
             directory: "dev",

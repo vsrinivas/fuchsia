@@ -26,10 +26,10 @@
             to: "#mem",
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "self",
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
             to: "#mem",
-            dependency: "weak_for_migration",
+            source_availability: "unknown",
         },
         {
             directory: "config-data",

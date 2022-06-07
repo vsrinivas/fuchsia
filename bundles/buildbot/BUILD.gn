@@ -111,7 +111,6 @@ group("core_base_packages") {
     "//garnet/bin/setui_client:setui_client",
     "//garnet/bin/trace:trace",
     "//garnet/bin/trace_manager",
-    "//garnet/bin/trace_manager:trace_manager",
     "//sdk/dart/fuchsia_inspect/test/integration:dart-inspect-vmo-test-writer",
     "//sdk/dart/fuchsia_inspect/test/validator_puppet:dart-inspect-validator-puppet",
     "//sdk/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",

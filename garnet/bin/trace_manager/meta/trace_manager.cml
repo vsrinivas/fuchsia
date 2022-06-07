@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/trace_manager",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    use: [
+        {
+            // TODO(fxbug.dev/101097): Remove the need to use this to launch v1
+            // components.
+            protocol: [ "fuchsia.sys.Launcher" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.tracing.controller.Controller",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "self",
+        },
+    ],
+}

@@ -36,10 +36,7 @@
             to: "#codec_factory",
         },
         {
-            protocol: [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.sysmem.Allocator" ],
             from: "self",
             to: "#codec_factory",
             dependency: "weak_for_migration",
@@ -51,6 +48,12 @@
             ],
             from: "parent",
             to: "#codec_factory",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#codec_factory",
+            source_availability: "unknown",
         },
         {
             protocol: [ "fuchsia.mediacodec.CodecFactory" ],

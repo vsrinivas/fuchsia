@@ -26,10 +26,7 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.feedback.CrashReporter",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.feedback.CrashReporter" ],
             from: "self",
             to: "#memory_monitor",
             dependency: "weak_for_migration",
@@ -38,6 +35,12 @@
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: "#memory_monitor",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#memory_monitor",
+            source_availability: "unknown",
         },
         {
             protocol: [

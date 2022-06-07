@@ -264,15 +264,6 @@
             subdir: "class/sysmem",
         },
         {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "self",
-            to: [
-                "#cobalt_system_metrics",
-                "#sysmem_connector",
-            ],
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: [ "fuchsia.pkg.FontResolver" ],
             from: "#pkg-resolver",
             to: "#font_provider",
@@ -285,12 +276,6 @@
                 "#mdns",
                 "#network",
             ],
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "self",
-            to: [ "#network" ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.scheduler.ProfileProvider" ],
@@ -388,12 +373,6 @@
             ],
             from: "parent",
             to: "#pkg-resolver",
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "self",
-            to: "#pkg-resolver",
-            dependency: "weak_for_migration",
         },
         {
             storage: "data",
@@ -518,7 +497,6 @@
         },
         {
             protocol: [
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.scenic.Scenic",
@@ -660,12 +638,6 @@
             protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: "#session-manager",
-        },
-        {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "self",
-            to: "#system-metrics-logger",
-            dependency: "weak_for_migration",
         },
         {
             storage: "data",
@@ -816,18 +788,6 @@
             to: "#metrics-logger",
         },
         {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "self",
-            to: "#temperature-logger",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "self",
-            to: "#metrics-logger",
-            dependency: "weak_for_migration",
-        },
-        {
             directory: "minfs",
             from: "parent",
             as: "ssh",
@@ -881,7 +841,6 @@
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.sys.Launcher",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
@@ -954,12 +913,6 @@
                 "#termina-guest-manager",
                 "#zircon-guest-manager",
             ],
-        },
-        {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "self",
-            to: "#agis",
-            dependency: "weak_for_migration",
         },
         {
             directory: "dev",
@@ -1045,10 +998,7 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.settings.Privacy",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.settings.Privacy" ],
             from: "self",
             to: "#cobalt",
             dependency: "weak_for_migration",
@@ -1095,7 +1045,6 @@
                 "fuchsia.feedback.DeviceIdProvider",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.settings.Privacy",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.update.channelcontrol.ChannelControl",
             ],
@@ -1154,7 +1103,6 @@
         },
         {
             protocol: [
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
@@ -1175,6 +1123,29 @@
                 "#termina-guest-manager",
                 "#zircon-guest-manager",
             ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: [
+                "#agis",
+                "#cobalt_system_metrics",
+                "#debian-guest-manager",
+                "#feedback",
+                "#metrics-logger",
+                "#session-manager",
+                "#starnix_manager",
+                "#sysmem_connector",
+                "#system-metrics-logger",
+                "#temperature-logger",
+                "#termina-guest-manager",
+                "#zircon-guest-manager",
+            ],
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as in the bringup
+            // product and non-eng builds of any product.
+            source_availability: "unknown",
         },
     ],
     expose: [
