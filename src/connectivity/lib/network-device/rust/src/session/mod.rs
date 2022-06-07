@@ -10,7 +10,7 @@ use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
-use std::{convert::TryFrom as _, task::Waker};
+use std::{convert::TryFrom, task::Waker};
 
 use fidl_fuchsia_hardware_network as netdev;
 use fidl_table_validation::ValidFidlTable;
@@ -482,13 +482,18 @@ impl DeviceInfo {
 /// A port of the device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Port {
-    base: u8,
-    salt: u8,
+    pub(crate) base: u8,
+    pub(crate) salt: u8,
 }
 
-impl From<netdev::PortId> for Port {
-    fn from(netdev::PortId { base, salt }: netdev::PortId) -> Self {
-        Self { base, salt }
+impl TryFrom<netdev::PortId> for Port {
+    type Error = Error;
+    fn try_from(netdev::PortId { base, salt }: netdev::PortId) -> Result<Self> {
+        if base <= netdev::MAX_PORTS {
+            Ok(Self { base, salt })
+        } else {
+            Err(Error::InvalidPortId(base))
+        }
     }
 }
 

@@ -169,6 +169,7 @@ async fn create_interface(
                     | netdevice_client::Error::Map(_, _)
                     | netdevice_client::Error::DeviceInfo(_)
                     | netdevice_client::Error::PortStatus(_)
+                    | netdevice_client::Error::InvalidPortId(_)
                     | netdevice_client::Error::Attach(_, _)
                     | netdevice_client::Error::Detach(_, _) => None,
                 },

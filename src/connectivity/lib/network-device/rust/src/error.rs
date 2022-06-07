@@ -48,6 +48,8 @@ pub enum Error {
     Attach(crate::Port, zx::Status),
     #[error("failed to detach port {0:?}: {1}")]
     Detach(crate::Port, zx::Status),
+    #[error("invalid base port identifier {0}")]
+    InvalidPortId(u8),
 }
 
 /// Common result type for methods in this crate.

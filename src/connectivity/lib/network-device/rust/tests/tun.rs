@@ -324,7 +324,7 @@ async fn create_tun_device_and_port() -> (tun::DeviceProxy, tun::PortProxy, Port
 
     let id = device_port.get_info().await.expect("getting port info").id.expect("missing port id");
 
-    (device, port, id.into())
+    (device, port, id.try_into().expect("bad port id"))
 }
 
 fn create_tun_device_pair() -> tun::DevicePairProxy {
@@ -367,7 +367,13 @@ async fn create_netdev_client_pair(pair: &tun::DevicePairProxy) -> (Client, Port
         let (port, server) =
             fidl::endpoints::create_proxy::<netdev::PortMarker>().expect("create endpoints");
         f(server);
-        port.get_info().await.expect("getting info").id.expect("missing id").into()
+        port.get_info()
+            .await
+            .expect("getting info")
+            .id
+            .expect("missing id")
+            .try_into()
+            .expect("bad port id")
     }
 
     let port_left =

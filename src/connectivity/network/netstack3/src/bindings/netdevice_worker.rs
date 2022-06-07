@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use std::{
-    collections::{hash_map::Entry, HashMap},
-    convert::TryInto as _,
+    convert::{TryFrom as _, TryInto as _},
     sync::Arc,
 };
 
@@ -22,9 +21,7 @@ use crate::bindings::{
 struct Inner {
     device: netdevice_client::Client,
     session: netdevice_client::Session,
-    // TODO(https://fxbug.dev/101297): Replace hash map with a salted slab.
-    // `state` must be locked before any `NetstackContext` locks.
-    state: Arc<Mutex<HashMap<netdevice_client::Port, DeviceId>>>,
+    state: Arc<Mutex<netdevice_client::PortSlab<DeviceId>>>,
 }
 
 /// The worker that receives messages from the ethernet device, and passes them
@@ -141,7 +138,7 @@ impl DeviceHandler {
         ),
         Error,
     > {
-        let port = netdevice_client::Port::from(port);
+        let port = netdevice_client::Port::try_from(port)?;
 
         let DeviceHandler { inner: Inner { state, device, session: _ } } = self;
         let port_proxy = device.connect_port(port)?;
@@ -195,14 +192,26 @@ impl DeviceHandler {
         let mut state = state.lock().await;
         let ctx = &mut ns.ctx.lock().await;
         let state_entry = match state.entry(port) {
-            Entry::Occupied(occupied) => {
-                log::warn!("attempted to install port {:?} which is already installed", port);
-                return Err(Error::AlreadyInstalled(*occupied.key()));
+            netdevice_client::port_slab::Entry::Occupied(occupied) => {
+                log::warn!(
+                    "attempted to install port {:?} which is already installed for {:?}",
+                    port,
+                    occupied.get()
+                );
+                return Err(Error::AlreadyInstalled(port));
             }
-            Entry::Vacant(e) => e,
+            netdevice_client::port_slab::Entry::SaltMismatch(stale) => {
+                log::warn!(
+                    "attempted to install port {:?} which is already has a stale entry: {:?}",
+                    port,
+                    stale
+                );
+                return Err(Error::AlreadyInstalled(port));
+            }
+            netdevice_client::port_slab::Entry::Vacant(e) => e,
         };
         let core_id = netstack3_core::add_ethernet_device(&mut *ctx, mac_addr, mtu);
-        let _: &mut DeviceId = state_entry.insert(core_id);
+        state_entry.insert(core_id);
         let make_info = |id| {
             let name = name.unwrap_or_else(|| format!("eth{}", id));
             devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {

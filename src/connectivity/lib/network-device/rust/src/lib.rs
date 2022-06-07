@@ -7,8 +7,10 @@
 #![deny(missing_docs)]
 pub mod client;
 pub mod error;
+pub mod port_slab;
 pub mod session;
 
 pub use client::{Client, DevicePortEvent, PortStatus};
 pub use error::{Error, Result};
+pub use port_slab::PortSlab;
 pub use session::{Buffer, Config, DeviceInfo, Port, Session, Task};

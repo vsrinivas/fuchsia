@@ -7,6 +7,7 @@ use fidl_fuchsia_hardware_ethernet_ext::MacAddress;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
+use std::convert::TryInto as _;
 use std::fs::{self, File};
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -96,7 +97,7 @@ async fn find_network_device(
         port.get_mac(mac_addressing_server).expect("failed to get mac addressing");
         let addr = mac_addressing.get_unicast_address().await.expect("failed to get address");
 
-        (addr.octets == mac.octets).then(move || (client, port_id.into()))
+        (addr.octets == mac.octets).then(move || (client, port_id.try_into().expect("bad port id")))
     });
     futures::pin_mut!(results);
     results.next().await.unwrap_or_else(|| panic!("netdevice with mac {} not found", mac))
