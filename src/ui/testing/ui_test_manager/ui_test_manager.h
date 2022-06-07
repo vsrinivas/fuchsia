@@ -263,6 +263,7 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   std::optional<zx_koid_t> ClientViewRefKoid();
 
   // Convenience method to inform the client if its view is rendering.
+  // Syntactic sugar for `ViewIsRendering(ClientViewRefKoid())`.
   //
   // Returns true if the client's view ref koid is present in the most recent
   // view tree snapshot received from scenic.
@@ -276,6 +277,13 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // Returns the scale factor applied to the client view, as reported in the
   // Layout information received from the geometry observer.
   float ClientViewScaleFactor();
+
+  // Convenience method to inform the client if the view specified by
+  // `view_ref_koid` is rendering content.
+  //
+  // Returns true if `view_ref_koid` is present in the most recent view tree
+  // snapshot received from scenic.
+  bool ViewIsRendering(zx_koid_t view_ref_koid);
 
  private:
   // Helper methods to configure the test realm.
