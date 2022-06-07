@@ -26,9 +26,31 @@ if (is_host) {
         [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/clippy" ]
     deps = [ ":clippy" ]
   }
+
+  go_library("codelinks") {
+    source_dir = "codelinks"
+    sources = [
+      "codelinks.go",
+      "codelinks_test.go",
+    ]
+
+    deps = [
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//tools/staticanalysis",
+    ]
+  }
+
+  go_test("codelinks_tests") {
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/codelinks" ]
+    deps = [ ":codelinks" ]
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":clippy_tests($host_toolchain)" ]
+  deps = [
+    ":clippy_tests($host_toolchain)",
+    ":codelinks_tests($host_toolchain)",
+  ]
 }

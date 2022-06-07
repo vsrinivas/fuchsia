@@ -21,6 +21,7 @@ if (is_host) {
       "//tools/lib/streams",
       "//tools/staticanalysis",
       "//tools/staticanalysis/analyzers:clippy",
+      "//tools/staticanalysis/analyzers:codelinks",
     ]
   }
 

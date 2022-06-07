@@ -23,7 +23,6 @@ import (
 type analyzer struct {
 	buildDir      string
 	checkoutDir   string
-	pythonPath    string
 	clippyTargets []build.ClippyTarget
 }
 
