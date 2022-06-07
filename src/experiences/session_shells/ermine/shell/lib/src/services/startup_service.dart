@@ -227,10 +227,11 @@ class StartupService extends activity.Listener {
   String get buildVersion => _buildVersion;
 
   /// Reboot the device.
-  void restartDevice() => _hardwareAdmin.reboot(RebootReason.userRequest);
+  void restartDevice() =>
+      _hardwareAdmin.reboot(RebootReason.userRequest).catchError((_) {});
 
   /// Shutdown the device.
-  void shutdownDevice() => _hardwareAdmin.poweroff();
+  void shutdownDevice() => _hardwareAdmin.poweroff().catchError((_) {});
 
   /// Logout of the user shell.
   void logout() {
