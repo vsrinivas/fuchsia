@@ -586,6 +586,17 @@ TEST_F(FastbootFlashTest, GetVarSlotCountAbrNotSupported) {
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 }
 
+TEST_F(FastbootFlashTest, GetVarIsUserspace) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "getvar:is-userspace";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAYyes"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
 class FastbootRebootTest : public zxtest::Test,
                            public fidl::WireServer<fuchsia_hardware_power_statecontrol::Admin> {
  public:

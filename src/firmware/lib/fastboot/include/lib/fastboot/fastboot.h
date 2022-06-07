@@ -87,6 +87,7 @@ class __EXPORT Fastboot {
   zx::status<> GetVar(const std::string &command, Transport *transport);
   zx::status<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
   zx::status<std::string> GetVarSlotCount(const std::vector<std::string_view> &, Transport *);
+  zx::status<std::string> GetVarIsUserspace(const std::vector<std::string_view> &, Transport *);
   zx::status<> Download(const std::string &command, Transport *transport);
   zx::status<> Flash(const std::string &command, Transport *transport);
   zx::status<> SetActive(const std::string &command, Transport *transport);

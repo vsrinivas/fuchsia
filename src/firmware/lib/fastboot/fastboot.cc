@@ -155,6 +155,7 @@ const Fastboot::VariableHashTable& Fastboot::GetVariableTable() {
   static const VariableHashTable* kVariableTable = new VariableHashTable({
       {"max-download-size", &Fastboot::GetVarMaxDownloadSize},
       {"slot-count", &Fastboot::GetVarSlotCount},
+      {"is-userspace", &Fastboot::GetVarIsUserspace},
   });
   return *kVariableTable;
 }
@@ -281,6 +282,11 @@ zx::status<std::string> Fastboot::GetVarSlotCount(const std::vector<std::string_
   // `fastboot set_active` only cares whether the device has >1 slots. Doesn't care how many
   // exactly.
   return boot_manager_res.value()->QueryCurrentConfiguration().ok() ? zx::ok("2") : zx::ok("1");
+}
+
+zx::status<std::string> Fastboot::GetVarIsUserspace(const std::vector<std::string_view>&,
+                                                    Transport*) {
+  return zx::ok("yes");
 }
 
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>*> Fastboot::GetSvcRoot() {
