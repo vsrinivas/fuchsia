@@ -5,7 +5,7 @@
 #include "internal_buffer.h"
 
 #include <lib/fpromise/result.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/macros.h>
 #include <threads.h>
 
 #include <limits>
@@ -13,11 +13,6 @@
 #include <fbl/algorithm.h>
 
 #include "src/media/lib/memory_barriers/memory_barriers.h"
-
-#define LOG(severity, fmt, ...)                                                       \
-  do {                                                                                \
-    FX_LOGF(severity, nullptr, "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__); \
-  } while (0)
 
 fpromise::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
     const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
@@ -37,7 +32,7 @@ fpromise::result<InternalBuffer, zx_status_t> InternalBuffer::CreateAligned(
   InternalBuffer local_result(size, is_secure, is_writable, is_mapping_needed);
   zx_status_t status = local_result.Init(name, sysmem, alignment, bti);
   if (status != ZX_OK) {
-    LOG(ERROR, "Init() failed - status: %d", status);
+    FX_SLOG(ERROR, "Init() failed", KV("status", status));
     return fpromise::error(status);
   }
   return fpromise::ok(std::move(local_result));
@@ -230,12 +225,12 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   zx_status_t status =
       buffer_collection->WaitForBuffersAllocated(&server_status, &out_buffer_collection_info);
   if (status != ZX_OK) {
-    LOG(ERROR, "WaitForBuffersAllocated() failed - status: %d", status);
+    FX_SLOG(ERROR, "WaitForBuffersAllocated() failed", KV("status", status));
     return status;
   }
 
   if (!!is_secure_ != !!out_buffer_collection_info.settings.buffer_settings.is_secure) {
-    LOG(ERROR, "sysmem bug?");
+    FX_LOGS(ERROR) << "sysmem bug?";
     return ZX_ERR_INTERNAL;
   }
 
@@ -252,7 +247,7 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
     status = zx::vmar::root_self()->map(map_options, /*vmar_offset=*/0, vmo, /*vmo_offset=*/0,
                                         real_size_, &virt_base);
     if (status != ZX_OK) {
-      LOG(ERROR, "zx::vmar::root_self()->map() failed - status: %d", status);
+      FX_SLOG(ERROR, "zx::vmar::root_self()->map() failed", KV("status", status));
       return status;
     }
   }
@@ -267,7 +262,7 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
   status = bti->pin(pin_options, vmo, out_buffer_collection_info.buffers[0].vmo_usable_start,
                     real_size_, &phys_base, 1, &pin);
   if (status != ZX_OK) {
-    LOG(ERROR, "BTI pin() failed - status: %d", status);
+    FX_SLOG(ERROR, "BTI pin() failed", KV("status", status));
     return status;
   }
 

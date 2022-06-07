@@ -66,7 +66,6 @@ syslog_visibility_allowlist = [
   "//src/lib/vulkan/imagepipe_view:*",
   "//src/media/drivers/amlogic_decoder:*",
   "//src/media/lib/codec_impl:*",
-  "//src/media/lib/internal_buffer:*",
   "//src/storage/extractor/cpp:*",
   "//src/storage/fuchsia-fatfs:*",
   "//src/storage/lib/watchdog:*",
