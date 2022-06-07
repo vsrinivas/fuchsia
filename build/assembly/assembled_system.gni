@@ -936,10 +936,3 @@ template("assembled_system") {
     }
   }
 }
-
-# TODO: Remove once all clients have moved to assembled_system().
-template("assemble_system") {
-  assembled_system(target_name) {
-    forward_variables_from(invoker, "*")
-  }
-}
