@@ -177,6 +177,26 @@
             "metric_type": "IntHistogram",
             "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/fragmentation_metrics:free_fragments",
             "upload_once": true
+        },
+        {
+            "event_codes": [
+                1,
+                1
+            ],
+            "metric_id": 49,
+            "metric_type": "Integer",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/compression_metrics:uncompressed_bytes",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
+                1,
+                5
+            ],
+            "metric_id": 49,
+            "metric_type": "Integer",
+            "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.detail/compression_metrics:zstd_chunked_bytes",
+            "upload_once": true
         }
     ],
     "poll_rate_sec": 600,

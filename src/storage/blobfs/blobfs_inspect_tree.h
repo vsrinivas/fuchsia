@@ -14,6 +14,7 @@
 #include "src/lib/storage/vfs/cpp/inspect/inspect_tree.h"
 #include "src/lib/storage/vfs/cpp/inspect/node_operations.h"
 #include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/node_finder.h"
 
 namespace blobfs {
 
@@ -41,6 +42,22 @@ struct FragmentationMetrics {
   inspect::ExponentialUintHistogram free_fragments;
 };
 
+// Stores total size of all blobs with various compression formats.
+struct CompressionStats {
+  void Update(const InodePtr& inode);
+
+  uint64_t uncompressed_bytes = 0;
+  uint64_t zstd_chunked_bytes = 0;
+
+  // Inspect metrics that map to the above compression stats.
+  struct Metrics {
+    Metrics() = default;
+    Metrics(inspect::Node& root, const CompressionStats& stats);
+    inspect::UintProperty uncompressed_bytes;
+    inspect::UintProperty zstd_chunked_bytes;
+  };
+};
+
 // Encapsulates the state required to make a filesystem inspect tree for Blobfs.
 class BlobfsInspectTree final {
  public:
@@ -65,6 +82,9 @@ class BlobfsInspectTree final {
 
   // Calls |CalculateFragmentationMetrics| on |blobfs| and atomically updates the Inspect tree.
   void CalculateFragmentationMetrics(Blobfs& blobfs);
+
+  // Record updated compression statistics under the compression_metrics node.
+  void UpdateCompressionMetrics(const CompressionStats& stats);
 
  private:
   // Helper function to create and return all required callbacks to create an fs_inspect tree.
@@ -103,6 +123,9 @@ class BlobfsInspectTree final {
 
   inspect::Node fragmentation_metrics_node_;
   FragmentationMetrics fragmentation_metrics_;
+
+  inspect::Node compression_metrics_node_;
+  CompressionStats::Metrics compression_metrics_;
 
   // Filesystem inspect tree nodes.
   // **MUST be declared last**, as the callbacks passed to this object use the above properties.

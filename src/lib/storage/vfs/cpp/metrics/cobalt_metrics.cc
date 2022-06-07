@@ -78,63 +78,12 @@ FsCommonMetrics::FsCommonMetrics(cobalt_client::Collector* collector, Source sou
       MakeHistogramOptions(micro_base, Event::kJournalWriterWriteInfoBlock), collector);
 }
 
-CompressionFormatMetrics::CompressionFormatMetrics(
-    cobalt_client::Collector* collector, fs_metrics::CompressionSource compression_source) {
-  source = compression_source;
-  if (compression_source == fs_metrics::CompressionSource::kUnknown) {
-    return;
-  }
-  std::vector<fs_metrics::CompressionFormat> formats = {
-      fs_metrics::CompressionFormat::kUnknown,
-      fs_metrics::CompressionFormat::kUncompressed,
-      fs_metrics::CompressionFormat::kCompressedLZ4,
-      fs_metrics::CompressionFormat::kCompressedZSTD,
-      fs_metrics::CompressionFormat::kCompressedZSTDSeekable,
-      fs_metrics::CompressionFormat::kCompressedZSTDChunked,
-  };
-  for (auto format : formats) {
-    counters.emplace(format, std::make_unique<cobalt_client::Counter>(
-                                 MakeCompressionMetricOptions(source, format), collector));
-  }
-}
-
-cobalt_client::MetricOptions CompressionFormatMetrics::MakeCompressionMetricOptions(
-    fs_metrics::CompressionSource source, fs_metrics::CompressionFormat format) {
-  cobalt_client::MetricOptions options = {};
-  options.metric_id =
-      static_cast<std::underlying_type<fs_metrics::Event>::type>(fs_metrics::Event::kCompression);
-  options.event_codes = {0};
-  options.metric_dimensions = 2;
-  options.event_codes[0] = static_cast<uint32_t>(source);
-  options.event_codes[1] = static_cast<uint32_t>(format);
-  return options;
-}
-
-void CompressionFormatMetrics::IncrementCounter(fs_metrics::CompressionFormat format,
-                                                uint64_t size) {
-  if (counters.find(format) == counters.end()) {
-    return;
-  }
-  counters[format]->Increment(size);
-}
-
-Metrics::Metrics(std::unique_ptr<cobalt_client::Collector> collector, Source source,
-                 CompressionSource compression_source)
-    : collector_(std::move(collector)),
-      fs_common_metrics_(collector_.get(), source),
-      compression_format_metrics_(collector_.get(), compression_source) {}
+Metrics::Metrics(std::unique_ptr<cobalt_client::Collector> collector, Source source)
+    : collector_(std::move(collector)), fs_common_metrics_(collector_.get(), source) {}
 
 const FsCommonMetrics& Metrics::fs_common_metrics() const { return fs_common_metrics_; }
 
 FsCommonMetrics* Metrics::mutable_fs_common_metrics() { return &fs_common_metrics_; }
-
-const CompressionFormatMetrics& Metrics::compression_format_metrics() const {
-  return compression_format_metrics_;
-}
-
-CompressionFormatMetrics* Metrics::mutable_compression_format_metrics() {
-  return &compression_format_metrics_;
-}
 
 void Metrics::EnableMetrics(bool should_enable) {
   is_enabled_ = should_enable;

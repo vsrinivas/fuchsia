@@ -26,9 +26,6 @@ namespace fs_metrics {
 // local_storage project ID as defined in cobalt-analytics projects.yaml.
 static constexpr uint32_t kCobaltProjectId = 3676913920;
 
-using CompressionFormatCounter =
-    std::unordered_map<fs_metrics::CompressionFormat, std::unique_ptr<cobalt_client::Counter>>;
-
 // Fs related histograms.
 struct FsCommonMetrics {
   // Number of buckets used for the these metrics.
@@ -70,29 +67,6 @@ struct FsCommonMetrics {
   bool metrics_enabled = false;
 };
 
-// Tracks distribution across the various compression formats supported by a filesystem. Keeps a
-// counter of total file sizes (in bytes) for each format type.
-//
-// Currently used by blobfs. The sizes tracked are uncompressed sizes (the inode's blob_size) for a
-// fair comparison between the different compressed and uncompressed formats.
-struct CompressionFormatMetrics {
-  CompressionFormatMetrics(cobalt_client::Collector* collector,
-                           fs_metrics::CompressionSource compression_source);
-
-  // Increments the counter for |format| by |size|.
-  void IncrementCounter(fs_metrics::CompressionFormat format, uint64_t size);
-
-  // For testing.
-  static cobalt_client::MetricOptions MakeCompressionMetricOptions(
-      fs_metrics::CompressionSource source, fs_metrics::CompressionFormat format);
-
-  // Maps compression format to |cobalt_client::Counter|.
-  CompressionFormatCounter counters;
-
-  // Filesystem source the metrics are associated with.
-  fs_metrics::CompressionSource source = fs_metrics::CompressionSource::kUnknown;
-};
-
 // Provides a base class for collecting metrics in FS implementations. This is optional, but
 // provides a source of truth of how data is collected for filesystems. Specific filesystem
 // implementations with custom APIs can extend and collect more data, but for basic operations, this
@@ -102,8 +76,7 @@ struct CompressionFormatMetrics {
 class Metrics {
  public:
   Metrics() = delete;
-  Metrics(std::unique_ptr<cobalt_client::Collector> collector, Source source,
-          CompressionSource compression_source = CompressionSource::kUnknown);
+  Metrics(std::unique_ptr<cobalt_client::Collector> collector, Source source);
   Metrics(const Metrics&) = delete;
   Metrics(Metrics&&) = delete;
   Metrics& operator=(const Metrics&) = delete;
@@ -121,9 +94,6 @@ class Metrics {
 
   const FsCommonMetrics& fs_common_metrics() const;
   FsCommonMetrics* mutable_fs_common_metrics();
-
-  const CompressionFormatMetrics& compression_format_metrics() const;
-  CompressionFormatMetrics* mutable_compression_format_metrics();
 
  private:
   struct CompareCounters {
@@ -149,8 +119,6 @@ class Metrics {
   std::unique_ptr<cobalt_client::Collector> collector_ FXL_GUARDED_BY(mutex_);
 
   FsCommonMetrics fs_common_metrics_;
-
-  CompressionFormatMetrics compression_format_metrics_;
 
   // Low frequency counters created on the fly with dynamic metric options.  Currently used
   // just for recording the oldest versions and discarded after flushing.

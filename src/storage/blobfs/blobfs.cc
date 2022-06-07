@@ -274,26 +274,26 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   }
   std::unique_ptr<IdAllocator> nodes_bitmap = {};
   if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to allocate bitmap for inodes";
+    FX_LOGS(ERROR) << "Failed to allocate bitmap for inodes: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
   fs->allocator_ = std::make_unique<Allocator>(fs.get(), std::move(block_map), std::move(node_map),
                                                std::move(nodes_bitmap));
   if ((status = fs->allocator_->ResetFromStorage(*fs)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to load bitmaps: " << status;
+    FX_LOGS(ERROR) << "Failed to load bitmaps: " << zx_status_get_string(status);
     return zx::error(status);
   }
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create info vmo: " << status;
+    FX_LOGS(ERROR) << "Failed to create info vmo: " << zx_status_get_string(status);
     return zx::error(status);
   }
   if ((status = fs->BlockAttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to attach info vmo: " << status;
+    FX_LOGS(ERROR) << "Failed to attach info vmo: " << zx_status_get_string(status);
     return zx::error(status);
   }
   if ((status = fs->InitializeVnodes()) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize Vnodes";
+    FX_LOGS(ERROR) << "Failed to initialize Vnodes: " << zx_status_get_string(status);
     return zx::error(status);
   }
   zx::status<BlobLoader> loader_or = BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(),
@@ -905,6 +905,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
 zx_status_t Blobfs::InitializeVnodes() {
   GetCache().Reset();
+  CompressionStats compression_stats;
   uint32_t total_allocated = 0;
 
   for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
@@ -944,7 +945,8 @@ zx_status_t Blobfs::InitializeVnodes() {
                      << node_index - 1;
       return status;
     }
-    metrics_->IncrementCompressionFormatMetric(*inode.value());
+
+    compression_stats.Update(*inode);
   }
 
   if (total_allocated != info_.alloc_inode_count) {
@@ -952,6 +954,9 @@ zx_status_t Blobfs::InitializeVnodes() {
                    << info_.alloc_inode_count << ". Found: " << total_allocated;
     return ZX_ERR_IO_OVERRUN;
   }
+
+  // Only update compression stats if the filesystem is in a valid state.
+  inspect_tree_.UpdateCompressionMetrics(compression_stats);
 
   return ZX_OK;
 }

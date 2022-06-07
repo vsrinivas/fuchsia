@@ -35,6 +35,7 @@ BlobfsInspectTree::BlobfsInspectTree()
       node_operations_(opstats_node_),
       detail_node_(tree_root_.CreateChild(fs_inspect::kDetailNodeName)),
       fragmentation_metrics_node_(detail_node_.CreateChild("fragmentation_metrics")),
+      compression_metrics_node_(detail_node_.CreateChild("compression_metrics")),
       fs_inspect_nodes_(fs_inspect::CreateTree(tree_root_, CreateCallbacks())) {}
 
 // Set general filesystem information.
@@ -97,6 +98,12 @@ void BlobfsInspectTree::CalculateFragmentationMetrics(Blobfs& blobfs) {
   });
 }
 
+void BlobfsInspectTree::UpdateCompressionMetrics(const CompressionStats& stats) {
+  compression_metrics_node_.AtomicUpdate([this, &stats](inspect::Node& node) {
+    compression_metrics_ = CompressionStats::Metrics(node, stats);
+  });
+}
+
 namespace {
 inspect::ExponentialUintHistogram CreateFragmentationMetricsHistogram(std::string_view name,
                                                                       inspect::Node& root) {
@@ -116,5 +123,19 @@ FragmentationMetrics::FragmentationMetrics(inspect::Node& root)
       extents_per_file(CreateFragmentationMetricsHistogram("extents_per_file", root)),
       in_use_fragments(CreateFragmentationMetricsHistogram("in_use_fragments", root)),
       free_fragments(CreateFragmentationMetricsHistogram("free_fragments", root)) {}
+
+void CompressionStats::Update(const InodePtr& inode) {
+  static_assert(kBlobFlagMaskAnyCompression == kBlobFlagChunkCompressed,
+                "Need to update compression stats to handle multiple formats.");
+  if (inode->header.IsCompressedZstdChunked()) {
+    zstd_chunked_bytes += inode->blob_size;
+  } else {
+    uncompressed_bytes += inode->blob_size;
+  }
+}
+
+CompressionStats::Metrics::Metrics(inspect::Node& root, const CompressionStats& stats)
+    : uncompressed_bytes(root.CreateUint("uncompressed_bytes", stats.uncompressed_bytes)),
+      zstd_chunked_bytes(root.CreateUint("zstd_chunked_bytes", stats.zstd_chunked_bytes)) {}
 
 }  // namespace blobfs

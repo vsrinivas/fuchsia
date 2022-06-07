@@ -358,6 +358,8 @@ struct __PACKED NodePrelude {
   bool IsExtentContainer() const { return flags & kBlobFlagExtentContainer; }
 
   bool IsInode() const { return !IsExtentContainer(); }
+
+  bool IsCompressedZstdChunked() const { return flags & kBlobFlagChunkCompressed; }
 };
 
 // This is inlined because format.cc only compiles on Fuchsia builds (not host).

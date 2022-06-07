@@ -30,20 +30,6 @@ namespace {
 
 size_t TicksToMs(const zx::ticks& ticks) { return fzl::TicksToNs(ticks) / zx::msec(1); }
 
-fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
-  if (inode.IsCompressed()) {
-    auto compression = inode.header.flags & kBlobFlagMaskAnyCompression;
-    switch (compression) {
-      case kBlobFlagChunkCompressed:
-        return fs_metrics::CompressionFormat::kCompressedZSTDChunked;
-      default:
-        return fs_metrics::CompressionFormat::kUnknown;
-    }
-  } else {
-    return fs_metrics::CompressionFormat::kUncompressed;
-  }
-}
-
 }  // namespace
 
 BlobfsMetrics::BlobfsMetrics(
@@ -55,7 +41,7 @@ BlobfsMetrics::BlobfsMetrics(
       cobalt_metrics_(collector_factory ? collector_factory()
                                         : std::make_unique<cobalt_client::Collector>(
                                               fs_metrics::kCobaltProjectId),
-                      fs_metrics::Source::kBlobfs, fs_metrics::CompressionSource::kBlobfs),
+                      fs_metrics::Source::kBlobfs),
       cobalt_flush_time_(cobalt_flush_time) {
   // Add a node that allows querying the size of the Inspect VMO at runtime.
   // TODO(fxbug.dev/85419): Replace the following lazy node with the one now part of the Inspector
@@ -182,14 +168,6 @@ void BlobfsMetrics::UpdateClientWrite(uint64_t data_size, uint64_t merkle_size,
   merkle_bytes_written_property_.Add(merkle_size);
   total_write_enqueue_time_ticks_property_.Add(enqueue_duration.get());
   total_merkle_generation_time_ticks_property_.Add(generate_duration.get());
-}
-
-void BlobfsMetrics::IncrementCompressionFormatMetric(const Inode& inode) {
-  if (!Collecting()) {
-    return;
-  }
-  fs_metrics::CompressionFormat format = FormatForInode(inode);
-  cobalt_metrics_.mutable_compression_format_metrics()->IncrementCounter(format, inode.blob_size);
 }
 
 void BlobfsMetrics::IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration) {

@@ -81,10 +81,6 @@ class BlobfsMetrics final {
     return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_fs_common_metrics());
   }
 
-  // Increments Cobalt metrics tracking compression formats. Extracts the compression format from
-  // the |inode| header, and increments the counter for that format with the inode's |blob_size|.
-  void IncrementCompressionFormatMetric(const Inode& inode);
-
   // Increments a read of Merkle Tree data from disk.
   // This method must only be called from the blobfs main thread.
   void IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration);
