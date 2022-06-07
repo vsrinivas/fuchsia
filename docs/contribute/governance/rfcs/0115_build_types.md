@@ -564,7 +564,7 @@ The Android operating system:
 [doc-iquery]: /docs/reference/diagnostics/consumers/iquery.md
 [doc-otas]: /docs/concepts/packages/ota.md
 [doc-package-flavor]: /docs/gen/build_arguments.md#package_flavor_selections
-[doc-paving]: /docs/development/hardware/paving.md
+[doc-paving]: /docs/development/build/fx.md#what-is-paving
 [doc-products]: /docs/development/build/build_system/boards_and_products.md
 [doc-zircon]: /docs/concepts/kernel/README.md
 [doc-zx-assert]: /docs/gen/build_arguments.md#zx_assert_level

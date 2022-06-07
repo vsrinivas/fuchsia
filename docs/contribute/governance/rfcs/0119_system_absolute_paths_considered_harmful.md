@@ -421,7 +421,7 @@ A great Jedi once said: "Only a Sith deals in absolutes."
 [llvm-d87928]: https://reviews.llvm.org/D87928
 [ninja-depfile]: https://ninja-build.org/manual.html#_depfile
 [path-wikipedia]: https://en.wikipedia.org/wiki/Path_(computing)
-[paving]: /docs/development/hardware/paving.md
+[paving]: /docs/development/build/fx.md#what-is-paving
 [reproducible-builds]: https://reproducible-builds.org
 [sandboxfs-performance]: https://blog.bazel.build/2017/08/25/introducing-sandboxfs.html
 [test-coverage]: /docs/contribute/testing/coverage.md

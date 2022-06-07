@@ -43,7 +43,7 @@ If you're interested in working on Zircon, see
 
 <!-- Reference links -->
 
-[install-fuchsia-on-a-device]: /docs/development/hardware/paving.md
+[install-fuchsia-on-a-device]: /docs/development/hardware/README.md
 [download-fuchsia]: /docs/get-started/get_fuchsia_source.md
 [build-fuchsia]: /docs/get-started/build_fuchsia.md
 [start-the-fuchsia-emulator]: /docs/get-started/set_up_femu.md

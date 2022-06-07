@@ -1,4 +1,4 @@
-# Create a bootable Fuchsia image
+# Use the Fuchsia installer (Legacy)
 
 ## Overview
 

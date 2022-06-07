@@ -292,7 +292,7 @@ The slice allocation table is made up of tightly packed slice entries
 
 FVM library can be found
 [here](/src/storage/fvm/). During
-[paving](/docs/development/hardware/paving.md),
+[paving](/docs/development/build/fx.md#what-is-paving),
 some partitions are copied from host to target. So the partitions and FVM
 file itself may be created on host. To do this there is host side utility
 [here](/src/storage/bin/fvm).

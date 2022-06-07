@@ -24,7 +24,7 @@ In this example, `qemu-x64` is the board name for FEMU. To build the same
 `x64` board.
 
 Note: To determine the Fuchsia board name for your supported hardware, see the
-[device documentation](/docs/development/hardware/paving.md).
+[device documentation](/docs/development/hardware/README.md).
 
 ```posix-terminal
 fx set workstation.x64
@@ -39,7 +39,7 @@ Fuchsia-compatible bootloader installed. This process is known as
 **bootstrapping** the device. Many devices have a compatible bootloader
 installed from the factory, others may require manufacturer-specific tools to
 update the bootloader to a compatible version.
-See the [device documentation](/docs/development/hardware/paving.md) for more
+See the [device documentation](/docs/development/hardware/README.md) for more
 details regarding your specific device.
 
 <aside class="key-point">

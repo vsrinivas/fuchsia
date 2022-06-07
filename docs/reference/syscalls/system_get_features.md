@@ -42,8 +42,8 @@ TODO(fxbug.dev/32253)
 platform.
 
 ## NOTES
-Refer to [Architecture Support](/docs/development/hardware/architecture_support.md) for supported
-processor architectures.
+Refer to [Install Fuchsia on a device](/docs/development/hardware/README.md)
+for supported processor architectures.
 
 Refer to [zircon/features.h](/zircon/system/public/zircon/features.h) for kinds
 of features and individual feature bits.
