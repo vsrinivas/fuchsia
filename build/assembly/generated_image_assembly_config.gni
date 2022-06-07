@@ -28,6 +28,10 @@ import("//build/zbi/kernel_cmdline.gni")
 #     [list of labels] The objects installed on the bootfs partition of the
 #     generated ZBI.
 #
+#   bootfs_package_labels (optional)
+#     [list of labels] The packages installed on the bootfs partition of the
+#     generated ZBI as meta.fars and content-id'd blobs.
+#
 #   extra_base_deps (optional)
 #     [list of labels] The packages whose files should be added to the Base
 #     Package.
@@ -60,6 +64,11 @@ template("generated_image_assembly_config") {
   bootfs_labels = []
   if (defined(invoker.bootfs_labels)) {
     bootfs_labels += invoker.bootfs_labels
+  }
+
+  bootfs_package_labels = []
+  if (defined(invoker.bootfs_package_labels)) {
+    bootfs_package_labels += invoker.bootfs_package_labels
   }
 
   extra_base_deps = []
@@ -229,8 +238,7 @@ template("generated_image_assembly_config") {
                              "visibility",
                            ])
     filename = files.bootfs_package_list
-    additional_walk_keys = [ "driver_package_manifest_barrier" ]
-    deps = bootfs_labels
+    deps = bootfs_package_labels
   }
 
   action(target_name) {

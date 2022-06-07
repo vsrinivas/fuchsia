@@ -78,6 +78,10 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     [list of labels] The objects installed on the bootfs partition of the
 #     generated ZBI.
 #
+#   bootfs_package_labels (optional)
+#     [list of labels] The packages installed on the bootfs partition of the
+#     generated ZBI as meta.fars and content-id'd blobs.
+#
 #   system_image_deps (optional)
 #     [list of labels] The objects installed in the system image.
 #
@@ -499,6 +503,12 @@ template("assembled_system") {
     }
 
     boot_args = devmgr_config
+
+    # Search for BootFS packages in these targets.
+    bootfs_package_labels = []
+    if (defined(invoker.bootfs_package_labels)) {
+      bootfs_package_labels += invoker.bootfs_package_labels
+    }
 
     # Search for BootFS files in these targets.
     bootfs_labels = invoker.bootfs_labels

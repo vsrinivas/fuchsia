@@ -153,6 +153,7 @@ if (is_fuchsia) {
       "//:legacy_universe_packages",
     ]
     bootfs_labels = [ "//build/input:bootfs" ]
+    bootfs_package_labels = product_bootfs_packages
 
     if (!bootfs_only) {
       # minfs arguments

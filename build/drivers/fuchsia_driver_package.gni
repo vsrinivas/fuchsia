@@ -63,8 +63,7 @@ template("fuchsia_driver_package") {
       install_as_config_resource = false
     }
 
-    _driver_package_name = "${target_name}.pkg"
-    fuchsia_package(_driver_package_name) {
+    fuchsia_package(target_name) {
       forward_variables_from(invoker, "*")
       if (!defined(deps)) {
         deps = []
@@ -72,20 +71,6 @@ template("fuchsia_driver_package") {
       deps += [ ":${driver_manifest_target}" ]
       deps += invoker.driver_components
       is_driver_package = true
-    }
-
-    group(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      deps = [ ":$_driver_package_name" ]
-      metadata = {
-        # When collecting package manifests for packages in bootfs,
-        # we need a barrier to specifically avoid collecting the driver.
-        driver_package_manifest_barrier = []
-      }
     }
   } else {
     group(target_name) {

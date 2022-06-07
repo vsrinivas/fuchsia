@@ -12,6 +12,10 @@ declare_args() {
   # A list of binary host tool labels to also build.
   product_host_labels = []
 
+  # A list of packages to be included in the bootfs as
+  # meta.fars and content-id'd blobs.
+  product_bootfs_packages = []
+
   # A human readable product description.
   product_description = ""
 
