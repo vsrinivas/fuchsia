@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::GlobalTargetCfgs,
     crate::{
         cfg::{cfg_to_gn_conditional, target_to_gn_conditional},
         target::GnTarget,
         types::*,
-        CombinedTargetCfg,
+        CombinedTargetCfg, GlobalTargetCfgs, GroupVisibility,
     },
     anyhow::{Context, Error},
     cargo_metadata::Package,
@@ -40,11 +39,18 @@ pub fn write_header<W: io::Write>(output: &mut W, _cargo_file: &Path) -> Result<
     .map_err(Into::into)
 }
 
+/// Write an import stament for the output GN file
+pub fn write_import<W: io::Write>(output: &mut W, file_name: &str) -> Result<(), Error> {
+    writeln!(output, include_str!("../templates/gn_import.template"), file_name = file_name)
+        .map_err(Into::into)
+}
+
 /// Writes rules at the top of the GN file that don't have the version appended
 pub fn write_top_level_rule<'a, W: io::Write>(
     output: &mut W,
     platform: Option<String>,
     pkg: &Package,
+    group_visibility: Option<&GroupVisibility>,
 ) -> Result<(), Error> {
     let target_name = if pkg.is_proc_macro() {
         format!("{}($host_toolchain)", pkg.gn_name())
@@ -58,11 +64,14 @@ pub fn write_top_level_rule<'a, W: io::Write>(
             conditional = target_to_gn_conditional(&platform)?
         )?;
     }
+    let optional_visibility =
+        group_visibility.map(|v| format!("visibility = {}", v.variable)).unwrap_or_default();
     writeln!(
         output,
         include_str!("../templates/top_level_gn_rule.template"),
         group_name = pkg.name,
         dep_name = target_name,
+        optional_visibility = optional_visibility,
     )?;
     if platform.is_some() {
         writeln!(output, "}}\n")?;

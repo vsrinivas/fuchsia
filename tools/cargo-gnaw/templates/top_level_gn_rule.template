@@ -1,3 +1,4 @@
 group("{group_name}") {{
   public_deps = [":{dep_name}"]
+  {optional_visibility}
 }}

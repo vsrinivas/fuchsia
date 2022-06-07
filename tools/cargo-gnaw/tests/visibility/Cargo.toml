@@ -1,0 +1,11 @@
+[package]
+name = "visibility_test"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+example_lib = { version = "1.0", path = "example_lib" }
+
+# gn config
+[gn.package.example_lib."1.0.0"]
+group_visibility = { import = "//example.gni", variable = "example_visibility_var" }

@@ -7,7 +7,7 @@ use {
     anyhow::{Context, Error},
     argh::FromArgs,
     camino::Utf8PathBuf,
-    cargo_metadata::{CargoOpt, DependencyKind},
+    cargo_metadata::{CargoOpt, DependencyKind, Package},
     serde_derive::{Deserialize, Serialize},
     std::collections::{BTreeMap, HashMap, HashSet},
     std::{
@@ -113,6 +113,15 @@ pub struct BinaryCfg {
     platform_cfg: HashMap<Platform, TargetCfg>,
 }
 
+/// Visibility list to use for a forwarding group
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct GroupVisibility {
+    /// .gni file to import which defines the variable
+    import: String,
+    /// Name of variable defined by the gni file containing the visibility list to use
+    variable: String,
+}
+
 // Configuration for a Cargo package. Contains configuration for its (single) library target at the
 // top level and optionally zero or more binaries to generate.
 #[derive(Default, Clone, Serialize, Deserialize, Debug)]
@@ -131,6 +140,9 @@ pub struct PackageCfg {
     ///
     /// Must be set if require_feature_reviews mentions this package.
     reviewed_features: Option<Vec<String>>,
+    /// Visibility list to use for the forwarding group, for use with fixits which seek to remove
+    /// the use of a specific crate from the tree.
+    group_visibility: Option<GroupVisibility>,
 }
 
 /// Configs added to all GN targets in the BUILD.gn
@@ -151,6 +163,12 @@ struct GnBuildMetadata {
     require_feature_reviews: HashSet<PackageName>,
     /// map of per-Cargo package configuration
     package: HashMap<PackageName, HashMap<Version, PackageCfg>>,
+}
+
+impl GnBuildMetadata {
+    fn find_package<'a>(&'a self, pkg: &Package) -> Option<&'a PackageCfg> {
+        self.package.get(&pkg.name).and_then(|p| p.get(&pkg.version.to_string()))
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -205,18 +223,17 @@ macro_rules! define_combined_cfg {
 define_combined_cfg!(PackageCfg);
 define_combined_cfg!(BinaryCfg);
 
-pub fn generate_from_manifest<W: io::Write>(
-    mut output: &mut W,
-    opt: &Opt,
-) -> Result<(), Error> {
+pub fn generate_from_manifest<W: io::Write>(mut output: &mut W, opt: &Opt) -> Result<(), Error> {
     let manifest_path = &opt.manifest_path;
-    let path_from_root_to_generated = opt.output
+    let path_from_root_to_generated = opt
+        .output
         .parent()
         .unwrap()
         .strip_prefix(&opt.project_root)
         .expect("--project-root must be a parent of --output");
     let mut emitted_metadata: Vec<CrateOutputMetadata> = Vec::new();
     let mut top_level_metadata: HashSet<String> = HashSet::new();
+    let mut imported_files: HashSet<String> = HashSet::new();
 
     // generate cargo metadata
     let mut cmd = cargo_metadata::MetadataCommand::new();
@@ -274,7 +291,20 @@ pub fn generate_from_manifest<W: io::Write>(
                             let platform = kinds.target.as_ref().map(|t| format!("{}", t));
                             let package = &metadata[&dep.pkg];
                             top_level_metadata.insert(package.name.to_owned());
-                            gn::write_top_level_rule(&mut output, platform, package)
+                            let cfg = metadata_configs
+                                .gn
+                                .as_ref()
+                                .and_then(|cfg| cfg.find_package(package));
+
+                            let visibility = cfg.and_then(|cfg| cfg.group_visibility.as_ref());
+                            if let Some(visibility) = visibility {
+                                if !imported_files.contains(&visibility.import) {
+                                    gn::write_import(&mut output, &visibility.import)
+                                        .with_context(|| "writing import")?;
+                                    imported_files.insert(visibility.import.clone());
+                                }
+                            }
+                            gn::write_top_level_rule(&mut output, platform, package, visibility)
                                 .with_context(|| {
                                     format!(
                                         "while writing top level rule for package: {}",
@@ -291,7 +321,17 @@ pub fn generate_from_manifest<W: io::Write>(
                     .with_context(|| "could not add cargo package")?;
                 let package = &metadata[&top_level_id];
                 top_level_metadata.insert(package.name.to_owned());
-                gn::write_top_level_rule(&mut output, None, package)
+                let cfg = metadata_configs.gn.as_ref().and_then(|cfg| cfg.find_package(package));
+                let visibility = cfg.and_then(|cfg| cfg.group_visibility.as_ref());
+                if let Some(visibility) = visibility {
+                    if !imported_files.contains(&visibility.import) {
+                        gn::write_import(&mut output, &visibility.import)
+                            .with_context(|| "writing import")?;
+                        imported_files.insert(visibility.import.clone());
+                    }
+                }
+
+                gn::write_top_level_rule(&mut output, None, package, visibility)
                     .with_context(|| "writing top level rule")?;
             }
         }
@@ -570,11 +610,7 @@ pub fn run(args: &[impl AsRef<str>]) -> Result<(), Error> {
     // redirect to stdout if no GN output file specified
     // Stores data in a buffer in-case to prevent creating bad BUILD.gn
     let mut gn_output_buffer = vec![];
-    generate_from_manifest(
-        &mut gn_output_buffer,
-        &opt
-    )
-    .context("generating manifest")?;
+    generate_from_manifest(&mut gn_output_buffer, &opt).context("generating manifest")?;
 
     // Write the file buffer to an actual file
     File::create(&opt.output)
@@ -589,7 +625,7 @@ pub fn run(args: &[impl AsRef<str>]) -> Result<(), Error> {
             .arg(opt.output)
             .output()
             .with_context(|| format!("could not spawn GN: {}", gn_bin.display()))?;
-        if !output.status.success()  {
+        if !output.status.success() {
             anyhow::bail!("GN format command failed:\n{:?}", output);
         }
     }

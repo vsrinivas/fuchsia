@@ -177,6 +177,12 @@ if (is_host) {
       "simple_deps/vendor/anyhow/tests/test_source.rs",
       "simple_deps/vendor/anyhow/tests/ui/no-impl.rs",
       "simple_deps/vendor/anyhow/tests/ui/no-impl.stderr",
+      "visibility/BUILD.gn",
+      "visibility/Cargo.lock",
+      "visibility/Cargo.toml",
+      "visibility/example_lib/Cargo.toml",
+      "visibility/example_lib/src/lib.rs",
+      "visibility/src/lib.rs",
     ]
   }
 
