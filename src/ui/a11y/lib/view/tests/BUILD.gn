@@ -15,7 +15,6 @@ group("integration-tests") {
     ":flatland-a11y-view-test",
     ":flatland-scene-integration-test",
     ":gfx-a11y-view-test",
-    ":gfx-scene-integration-test",
   ]
 }
 
@@ -87,56 +86,6 @@ fuchsia_test_component("gfx-a11y-view-test-component") {
 
 fuchsia_test_package("gfx-a11y-view-test") {
   test_components = [ ":gfx-a11y-view-test-component" ]
-  test_specs = {
-    log_settings = {
-      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
-      max_severity = "ERROR"
-    }
-    environments = [
-      {
-        dimensions = {
-          # Ensure the device has Vulkan.
-          device_type = "AEMU"
-        }
-      },
-    ]
-  }
-}
-
-executable("gfx-scene-integration-test-bin") {
-  testonly = true
-  sources = [ "gfx_scene_integration_test.cc" ]
-  output_name = "gfx-scene-integration-test"
-  deps = [
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/ui/testing/ui_test_manager",
-    "//src/ui/testing/util",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_test_component("gfx-scene-integration-test-component") {
-  testonly = true
-  manifest = "meta/gfx-scene-integration-test.cml"
-  deps = [ ":gfx-scene-integration-test-bin" ]
-}
-
-fuchsia_test_package("gfx-scene-integration-test") {
-  test_components = [ ":gfx-scene-integration-test-component" ]
   test_specs = {
     log_settings = {
       # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.

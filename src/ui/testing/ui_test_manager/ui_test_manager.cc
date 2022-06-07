@@ -469,21 +469,18 @@ void UITestManager::OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
   callback();
 }
 
-bool UITestManager::ViewIsRendering(zx_koid_t view_ref_koid) {
+bool UITestManager::ClientViewIsRendering() {
   if (!last_view_tree_snapshot_) {
     return false;
   }
 
-  return ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, view_ref_koid) != std::nullopt;
-}
-
-bool UITestManager::ClientViewIsRendering() {
   auto client_view_ref_koid = ClientViewRefKoid();
   if (!client_view_ref_koid) {
     return false;
   }
 
-  return ViewIsRendering(*client_view_ref_koid);
+  return ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, *client_view_ref_koid) !=
+         std::nullopt;
 }
 
 bool UITestManager::ClientViewIsFocused() {
