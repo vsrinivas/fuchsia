@@ -7,7 +7,7 @@ use {
         capability_source::{
             AggregateCapability, CapabilitySourceInterface, ComponentCapability, InternalCapability,
         },
-        collection::CollectionServiceProvider,
+        collection::CollectionCapabilityProvider,
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
             TopInstanceInterface,
@@ -453,18 +453,18 @@ where
             }
             OfferResult::OfferFromCollection(offer_decl, collection_component, collection_name) => {
                 Ok(CapabilitySourceInterface::<C>::Collection {
-                    collection_name: collection_name.clone(),
                     capability: AggregateCapability::Service(offer_decl.source_name().clone()),
-                    capability_provider: Box::new(CollectionServiceProvider {
+                    component: collection_component.as_weak(),
+                    capability_provider: Box::new(CollectionCapabilityProvider {
                         router: self,
-                        collection_name,
+                        collection_name: collection_name.clone(),
                         collection_component: collection_component.as_weak(),
-                        target_decl: offer_decl,
+                        capability_name: offer_decl.source_name().clone(),
                         sources: sources.clone(),
                         visitor: visitor.clone(),
                         mapper: mapper.clone(),
                     }),
-                    component: collection_component.as_weak(),
+                    collection_name,
                 })
             }
             OfferResult::OfferFromAggregate(offer_decls, aggregation_component) => {
@@ -527,18 +527,18 @@ where
                 collection_component,
                 collection_name,
             ) => Ok(CapabilitySourceInterface::<C>::Collection {
-                collection_name: collection_name.clone(),
                 capability: AggregateCapability::Service(expose_decl.source_name().clone()),
-                capability_provider: Box::new(CollectionServiceProvider {
+                component: collection_component.as_weak(),
+                capability_provider: Box::new(CollectionCapabilityProvider {
                     router: self,
-                    collection_name,
+                    collection_name: collection_name.clone(),
                     collection_component: collection_component.as_weak(),
-                    target_decl: expose_decl,
+                    capability_name: expose_decl.source_name().clone(),
                     sources: sources.clone(),
                     visitor: visitor.clone(),
                     mapper: mapper.clone(),
                 }),
-                component: collection_component.as_weak(),
+                collection_name: collection_name.clone(),
             }),
         }
     }
