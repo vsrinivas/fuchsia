@@ -5,7 +5,7 @@ use {
     crate::capability::Capability,
     crate::config::{CommandRegister, StatusRegister, Type00Config},
     crate::db::PciDb,
-    crate::util::format_bytes,
+    crate::util::{format_bytes, Hexdumper},
     crate::Args,
     fidl_fuchsia_hardware_pci::PciDevice as FidlDevice,
     std::fmt,
@@ -97,20 +97,11 @@ impl<'a> Device<'a> {
         }
 
         if self.args.print_config {
-            const SLICE_SIZE: usize = 16;
-            // Weep for those who do not use monospace terminal fonts.
-            write!(f, "\t    ")?;
-            for col in 0..SLICE_SIZE {
-                write!(f, " {:1x} ", col)?;
-            }
-            writeln!(f)?;
-            for (addr, slice) in self.device.config.chunks(SLICE_SIZE).enumerate() {
-                write!(f, "\t{:02x}: ", addr * SLICE_SIZE)?;
-                for byte in slice {
-                    write!(f, "{:02x} ", byte)?;
-                }
-                writeln!(f)?;
-            }
+            write!(
+                f,
+                "{}",
+                Hexdumper { bytes: &self.device.config, show_ascii: false, offset: None }
+            )?;
         }
 
         if self.args.verbose || self.args.print_config {

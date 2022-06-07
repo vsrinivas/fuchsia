@@ -32,3 +32,47 @@ pub fn format_bytes(size: u64) -> String {
         }
     )
 }
+
+const SLICE_SIZE: usize = 16;
+pub struct Hexdumper<'a> {
+    pub bytes: &'a [u8],
+    pub show_ascii: bool,
+    pub offset: Option<u64>,
+}
+
+impl std::fmt::Display for Hexdumper<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Weep for those who do not use monospace terminal fonts.
+        write!(f, "        ")?;
+        for col in 0..SLICE_SIZE {
+            write!(f, " {:1x} ", col)?;
+            if col == 7 {
+                write!(f, " ")?;
+            }
+        }
+        writeln!(f)?;
+
+        let start_addr = self.offset.unwrap_or(0) as usize;
+        for (addr, slice) in self.bytes.chunks(SLICE_SIZE).enumerate() {
+            write!(f, "  {:04x}: ", start_addr + (addr * SLICE_SIZE))?;
+            for (i, byte) in slice.iter().enumerate() {
+                write!(f, "{:02x} ", byte)?;
+                if i == 7 {
+                    write!(f, " ")?;
+                }
+            }
+            if self.show_ascii {
+                write!(f, " ")?;
+                for byte in slice {
+                    if byte.is_ascii_graphic() {
+                        write!(f, "{}", *byte as char)?;
+                    } else {
+                        write!(f, ".")?;
+                    }
+                }
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
