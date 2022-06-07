@@ -124,16 +124,17 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
   //       logging.
   // |connect| A lambda that is called each time ServiceReconnector tries to connect or re-connect
   //           to the service.
-  // |max_buffer_size| (default: 20) How many |DoCallback|s should be stored while waiting for a
-  //                   connection before further |DoCallback|s will be ignored.
+  // |max_queued_callbacks| (default: 20) How many |DoCallback|s should be stored while waiting for
+  //                        a connection before further |DoCallback|s will be ignored.
   // |disconnect| Called whenever the ServiceReconnector detects that the underlying service has
   //              been disconnected. Useful in the case of a nested ServiceReconnector, so that the
   //              sub-service reconnect can be triggered if the parent service disconnects.
   static std::shared_ptr<ServiceReconnector> Create(
       async_dispatcher_t* dispatcher, std::string tag, ConnectLambda&& connect,
-      size_t max_buffer_size = 20, DisconnectLambda&& disconnect = []() {}) {
-    auto reconnector = std::shared_ptr<ServiceReconnector>(new ServiceReconnector(
-        dispatcher, std::move(tag), std::move(connect), max_buffer_size, std::move(disconnect)));
+      size_t max_queued_callbacks = 20, DisconnectLambda&& disconnect = []() {}) {
+    auto reconnector = std::shared_ptr<ServiceReconnector>(
+        new ServiceReconnector(dispatcher, std::move(tag), std::move(connect), max_queued_callbacks,
+                               std::move(disconnect)));
     async::PostTask(reconnector->dispatcher_, [weak_this = reconnector->get_this()] {
       if (auto shared_this = weak_this.lock()) {
         shared_this->Connect();
@@ -148,14 +149,14 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
   //     // |service| is guaranteed to be connected, use it as such.
   //   })
   //
-  // Note: if more than |max_buffer_size_| callbacks have been queued, future calls to Do will be a
-  // noop.
+  // Note: if more than |max_queued_callbacks_| callbacks have been queued, future calls to Do will
+  // be a noop.
   using DoCallback = fit::function<void(fidl::Client<Service>&)>;
   void Do(DoCallback&& callback) FXL_LOCKS_EXCLUDED(mutex_) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
 
-      if (callbacks_to_run_.size() >= max_buffer_size_) {
+      if (callbacks_to_run_.size() >= max_queued_callbacks_) {
         FX_LOGS_FIRST_N(WARNING, 20) << tag_ << ": Buffer full; dropping callback.";
         return;
       }
@@ -185,13 +186,13 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
   ServiceReconnector() = delete;
 
   explicit ServiceReconnector(async_dispatcher_t* dispatcher, std::string tag,
-                              ConnectLambda&& connect, size_t max_buffer_size,
+                              ConnectLambda&& connect, size_t max_queued_callbacks,
                               DisconnectLambda&& disconnect)
       : dispatcher_(dispatcher),
         tag_(std::move(tag)),
         connect_(std::move(connect)),
         disconnect_(std::move(disconnect)),
-        max_buffer_size_(max_buffer_size) {}
+        max_queued_callbacks_(max_queued_callbacks) {}
 
   class ServiceEventHandler : public fidl::AsyncEventHandler<Service> {
    public:
@@ -312,7 +313,7 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
   std::string tag_;
   ConnectLambda connect_;
   DisconnectLambda disconnect_;
-  size_t max_buffer_size_;
+  size_t max_queued_callbacks_;
 
   fidl::Client<Service> service_client_;  // Should only be modified by the dispatcher_ thread.
 

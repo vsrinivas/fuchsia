@@ -120,10 +120,11 @@ class ServiceHubConnector {
    private:
     // |dispatcher| is the dispatcher that will be used for the service connections. This class must
     //              be destroyed from the same thread as the dispatcher.
-    // |max_buffer_size| The number of lambdas to queue before rejecting new ones. This is to avoid
-    //                   a situation where the remote service is not accepting calls for a long
-    //                   period of time causing this class to consume too much memory.
-    explicit ServiceHubConnectorInner(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+    // |max_queued_callbacks| The number of lambdas to queue before rejecting new ones. This is to
+    //                        avoid a situation where the remote service is not accepting calls for
+    //                        a long period of time causing this class to consume too much memory.
+    explicit ServiceHubConnectorInner(async_dispatcher_t* dispatcher, size_t max_queued_callbacks)
+        : dispatcher_(dispatcher), max_queued_callbacks_(max_queued_callbacks) {}
     friend class ServiceHubConnector;
 
     std::weak_ptr<ServiceHubConnectorInner> get_this() {
@@ -133,7 +134,7 @@ class ServiceHubConnector {
     }
 
     void Setup(ConnectToServiceHubLambda&& connect_to_service_hub,
-               ConnectToServiceLambda&& connect_to_service, size_t max_buffer_size)
+               ConnectToServiceLambda&& connect_to_service, size_t max_queued_callbacks)
         FXL_LOCKS_EXCLUDED(mutex_) {
       auto connect_to_service_ptr =
           std::make_shared<ConnectToServiceLambda>(std::move(connect_to_service));
@@ -148,10 +149,10 @@ class ServiceHubConnector {
                   });
             }
           },
-          max_buffer_size);
+          max_queued_callbacks);
 
       service_hub_reconnector_ = ServiceReconnector<ServiceHub>::Create(
-          dispatcher_, "ServiceHub", std::move(connect_to_service_hub), max_buffer_size,
+          dispatcher_, "ServiceHub", std::move(connect_to_service_hub), max_queued_callbacks,
           [service_reconnector = service_reconnector_]() {
             // When service hub disconnects, trigger reconnect in service_reconnector_.
             service_reconnector->Reconnect();
@@ -179,9 +180,28 @@ class ServiceHubConnector {
 
    private:
     void InnerDo(std::shared_ptr<DoCallback> callback) FXL_LOCKS_EXCLUDED(mutex_) {
-      service_reconnector_->Do([callback, weak_this = get_this()](fidl::Client<Service>& service) {
-        (*callback)(service, DoResolver(weak_this, callback));
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (callbacks_in_flight_ >= max_queued_callbacks_) {
+          FX_LOGS_FIRST_N(WARNING, 10)
+              << "Callback dropped because there are too many callbacks currently in flight";
+          return;
+        }
+        callbacks_in_flight_ += 1;
+      }
+      service_reconnector_->Do([callback, resolver = DoResolver(get_this(), callback)](
+                                   fidl::Client<Service>& service) mutable {
+        (*callback)(service, std::move(resolver));
       });
+    }
+
+    void DoComplete() FXL_LOCKS_EXCLUDED(mutex_) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (callbacks_in_flight_ == 0) {
+        FX_LOGS(ERROR) << "More callbacks have been completed than were queued.";
+        return;
+      }
+      callbacks_in_flight_ -= 1;
     }
 
     void RetryDo(std::shared_ptr<DoCallback> callback) FXL_LOCKS_EXCLUDED(mutex_) {
@@ -201,6 +221,7 @@ class ServiceHubConnector {
     }
 
     async_dispatcher_t* const dispatcher_;
+    const size_t max_queued_callbacks_;
 
     std::shared_ptr<ServiceReconnector<ServiceHub>> service_hub_reconnector_;
     std::shared_ptr<ServiceReconnector<Service>> service_reconnector_;
@@ -208,6 +229,7 @@ class ServiceHubConnector {
     std::mutex mutex_;
     bool shutdown_ FXL_GUARDED_BY(mutex_) = false;
     backoff::ExponentialBackoff backoff_ FXL_GUARDED_BY(mutex_);
+    size_t callbacks_in_flight_ FXL_GUARDED_BY(mutex_) = 0;
   };
 
  protected:
@@ -256,6 +278,10 @@ class ServiceHubConnector {
           if (auto connector = connector_.lock()) {
             connector->RetryDo(cb_);
           }
+        } else {
+          if (auto connector = connector_.lock()) {
+            connector->DoComplete();
+          }
         }
         resolved_ = true;
       }
@@ -299,16 +325,16 @@ class ServiceHubConnector {
   void Do(DoCallback&& cb) { inner_->Do(std::move(cb)); }
 
   // |dispatcher| the dispatcher thread where the fidl services should be connected from.
-  // |max_buffer_size| (default: 20) How many callbacks should each ServiceReconnector cache before
-  //                   rejecting new ones.
-  explicit ServiceHubConnector(async_dispatcher_t* dispatcher, size_t max_buffer_size = 20)
-      : inner_(new ServiceHubConnectorInner(dispatcher)) {
+  // |max_queued_callbacks| (default: 20) How many callbacks should each ServiceReconnector cache
+  //                        before rejecting new ones.
+  explicit ServiceHubConnector(async_dispatcher_t* dispatcher, size_t max_queued_callbacks = 20)
+      : inner_(new ServiceHubConnectorInner(dispatcher, max_queued_callbacks)) {
     inner_->Setup(
         [this](ServiceHubConnectResolver resolver) { ConnectToServiceHub(std::move(resolver)); },
         [this](fidl::Client<ServiceHub>& service_hub, ServiceConnectResolver resolver) {
           ConnectToService(service_hub, std::move(resolver));
         },
-        max_buffer_size);
+        max_queued_callbacks);
   }
 
   virtual ~ServiceHubConnector() {

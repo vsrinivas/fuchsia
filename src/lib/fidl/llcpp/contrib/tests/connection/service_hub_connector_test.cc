@@ -34,7 +34,7 @@ class ProtocolConnector : public fidl::contrib::ServiceHubConnector<ProtocolFact
  public:
   explicit ProtocolConnector(async_dispatcher_t* dispatcher,
                              fidl::UnownedClientEnd<fuchsia_io::Directory> directory)
-      : ServiceHubConnector(dispatcher), directory_(directory) {}
+      : ServiceHubConnector(dispatcher, kMaxBufferSize), directory_(directory) {}
 
   void DoAction() {
     Do([](fidl::Client<Protocol>& protocol, DoResolver resolver) {
@@ -363,4 +363,25 @@ TEST_F(ServiceHubConnectorTest, SupportsCallsFromMultipleThreads) {
   RunLoopUntilIdle();
   ASSERT_EQ(protocol()->ActionsAttempted(), 2U);
   ASSERT_EQ(protocol()->ActionsSuccessful(), 2U);
+}
+
+TEST_F(ServiceHubConnectorTest, LimitsInFlightCallbacks) {
+  // Store the DoResolvers in a vector to hold the do callback as 'in flight'.
+  std::vector<ProtocolConnector::DoResolver> held_resolvers;
+
+  for (size_t i = 0; i < kMaxBufferSize * 2; i++) {
+    protocol_connector().Do(
+        [&](fidl::Client<Protocol>& protocol, ProtocolConnector::DoResolver resolver) mutable {
+          held_resolvers.push_back(std::move(resolver));
+        });
+    RunLoopUntilIdle();
+
+    // We should see a DoResolver stored for each call until we reach kMaxBufferSize
+    if (i < kMaxBufferSize) {
+      EXPECT_EQ(held_resolvers.size(), i + 1);
+    } else {
+      EXPECT_EQ(held_resolvers.size(), kMaxBufferSize);
+    }
+  }
+  ASSERT_EQ(held_resolvers.size(), kMaxBufferSize);
 }
