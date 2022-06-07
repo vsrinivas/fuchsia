@@ -95,7 +95,7 @@ struct fidl_wire_format_metadata_t {
 };
 ```
 
-[RFC-NNNN: Open and closed interactions for FIDL][open-and-closed-rfc] proposes
+[RFC-0138: Handling unknown interactions][unknown-interactions-rfc] proposes
 subdividing the flags in the transactional header into `dynamic_flags` - ones
 that concern the request/response interaction model of a protocol, and
 `at_rest_flags` - ones that concern the wire format. This RFC assumes that
@@ -557,7 +557,7 @@ of APIs in this alternative together.
 [go-phickle]: http://go/phickle
 [llcpp-bindings-reference]: /docs/reference/fidl/bindings/llcpp-bindings.md#encoding-decoding
 [llcpp-encoding-decoding]: /docs/reference/fidl/bindings/llcpp-bindings.md#encoding-decoding
-[open-and-closed-rfc]: https://fuchsia-review.googlesource.com/c/fuchsia/+/534921
+[unknown-interactions-rfc]: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
 [rust-encoding-decoding]: /docs/reference/fidl/bindings/rust-bindings.md#encoding-decoding
 [rust-persistence-impl]: https://cs.opensource.google/fuchsia/fuchsia/+/b9b8d7aae9cff4398182a0e125055950556178e1:src/lib/fidl/rust/fidl/src/encoding.rs;l=3662
 [supported-magic-number]: /docs/contribute/governance/rfcs/0037_transactional_message_header_v3.md#when_should_a_new_magic_number_be_assigned
