@@ -8,7 +8,7 @@
         "sys/component/realm_builder.shard.cml",
     ],
     program: {
-        binary: "bin/pointerinjector_config_test",
+        binary: "bin/pointerinjector-config-test",
     },
     offer: [
         {
@@ -16,9 +16,13 @@
             // Keep it minimal, describe only what's actually needed.
             // TODO(fxbug.dev/81446): Remove this list.
             protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.ImeService",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",

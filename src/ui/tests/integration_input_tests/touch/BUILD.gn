@@ -187,9 +187,63 @@ fuchsia_test_package("touch-input-test-ip") {
   }
 }
 
+executable("pointerinjector-config-test-bin") {
+  testonly = true
+  sources = [ "pointerinjector-config-test.cc" ]
+  output_name = "pointerinjector-config-test"
+  deps = [
+    ":test.touch",
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.input.injection",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/input/testing/fake_input_report_device",
+    "//src/ui/testing/ui_test_manager",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_test_component("pointerinjector-config-test-component") {
+  testonly = true
+  manifest = "meta/pointerinjector-config-test.cml"
+  deps = [ ":pointerinjector-config-test-bin" ]
+}
+
+fuchsia_test_package("pointerinjector-config-test") {
+  test_components = [ ":pointerinjector-config-test-component" ]
+  deps = [
+    "//src/ui/tests/integration_input_tests/touch/touch-gfx-client:component",
+  ]
+  test_specs = {
+    log_settings = {
+      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":pointerinjector-config-test",
     ":touch-input-test",
     ":touch-input-test-ip",
 

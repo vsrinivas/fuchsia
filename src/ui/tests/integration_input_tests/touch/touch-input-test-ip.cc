@@ -71,10 +71,9 @@
 // - Test program's injection -> Input Pipeline -> Scenic -> Child view
 //
 // Setup sequence
-// - The test sets up a view hierarchy with three views:
+// - The test sets up this view hierarchy:
 //   - Top level scene, owned by Root Presenter.
-//   - Middle view, owned by this test (via ui test manager).
-//   - Bottom view, owned by the ui client.
+//   - Child view, owned by the ui client.
 // - The test waits for a Scenic event that verifies the child has UI content in the scene graph.
 // - The test injects input into Input Pipeline, emulating a display's touch report.
 // - Input Pipeline dispatches the touch event to Scenic, which in turn dispatches it to the child.
@@ -136,6 +135,9 @@ constexpr zx::duration kTimeout = zx::min(5);
 
 // Maximum distance between two physical pixel coordinates so that they are considered equal.
 constexpr float kEpsilon = 0.5f;
+
+// Maximum distance between two view coordinates so that they are considered equal.
+constexpr auto kViewCoordinateEpsilon = 0.01;
 
 constexpr auto kTouchScreenMaxDim = 1000;
 constexpr auto kTouchScreenMinDim = -1000;
@@ -339,8 +341,8 @@ class TouchInputBase
       FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
 
       // Allow for minor rounding differences in coordinates.
-      EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
-      EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
+      EXPECT_NEAR(pointer_data.local_x(), expected_x, kViewCoordinateEpsilon);
+      EXPECT_NEAR(pointer_data.local_y(), expected_y, kViewCoordinateEpsilon);
       EXPECT_EQ(pointer_data.component_name(), component_name);
 
       injection_complete = true;

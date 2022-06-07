@@ -68,7 +68,7 @@
 // - Test program's injection -> Root Presenter -> Scenic -> Child view
 //
 // Setup sequence
-// - The test sets up a view hierarchy with two views:
+// - The test sets up this view hierarchy:
 //   - Top level scene, owned by Root Presenter.
 //   - Bottom view, owned by the child view.
 // - The test waits for geometry observer to return a view tree with one more view in it.

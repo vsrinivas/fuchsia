@@ -539,7 +539,7 @@ impl Camera {
         self.resource.id
     }
 
-    pub fn set_camera_clip_space_transform(&self, x: f32, y: f32, scale: f32) {
+    pub fn set_camera_clip_space_transform(&mut self, x: f32, y: f32, scale: f32) {
         self.resource.enqueue(cmd::set_camera_clip_space_transform(self.id(), x, y, scale))
     }
 }

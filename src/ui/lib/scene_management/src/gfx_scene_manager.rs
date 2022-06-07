@@ -6,7 +6,8 @@ use {
     crate::display_metrics::{DisplayMetrics, ViewingDistance},
     crate::graphics_utils::{ImageResource, ScreenCoordinates, ScreenSize},
     crate::pointerinjector_config::{
-        InjectorViewportHangingGet, InjectorViewportSpec, InjectorViewportSubscriber,
+        InjectorViewportHangingGet, InjectorViewportPublisher, InjectorViewportSpec,
+        InjectorViewportSubscriber,
     },
     crate::scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
     anyhow::Error,
@@ -60,6 +61,11 @@ pub struct GfxSceneManager {
 
     /// The camera of the scene.
     camera: scenic::Camera,
+
+    // State of the camera clip space transform.
+    clip_scale: f32,
+    clip_offset_x: f32,
+    clip_offset_y: f32,
 
     /// Scene topology:
     ///
@@ -135,6 +141,10 @@ pub struct GfxSceneManager {
     /// Supports callers of fuchsia.ui.pointerinjector.configuration.setup.WatchViewport(), allowing
     /// each invocation to subscribe to changes in the viewport region.
     viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>>,
+
+    // Used to publish viewport changes to subscribers of |viewport_hanging_get|.
+    // TODO(fxbug.dev/87517): use this to publish changes to screen resolution.
+    viewport_publisher: Arc<Mutex<InjectorViewportPublisher>>,
 
     /// These are the ViewRefs returned by get_pointerinjection_view_refs().  They are used to
     /// configure input-pipeline handlers for pointer events.
@@ -298,11 +308,16 @@ impl SceneManager for GfxSceneManager {
 
     async fn set_camera_clip_space_transform(&mut self, x: f32, y: f32, scale: f32) {
         self.camera.set_camera_clip_space_transform(x, y, scale);
+        self.clip_offset_x = x;
+        self.clip_offset_y = y;
+        self.clip_scale = scale;
+
         GfxSceneManager::request_present_and_await_next_frame(&self.presentation_sender).await;
+        self.update_viewport().await;
     }
 
-    fn reset_camera_clip_space_transform(&mut self) {
-        _ = self.set_camera_clip_space_transform(0.0, 0.0, 1.0);
+    async fn reset_camera_clip_space_transform(&mut self) {
+        self.set_camera_clip_space_transform(0.0, 0.0, 1.0).await;
     }
 
     fn get_pointerinjection_view_refs(&self) -> (ui_views::ViewRef, ui_views::ViewRef) {
@@ -472,7 +487,12 @@ impl GfxSceneManager {
             scene_manager::create_viewport_hanging_get(InjectorViewportSpec {
                 width: size_in_pixels.width,
                 height: size_in_pixels.height,
+                scale: 1.,
+                x_offset: 0.,
+                y_offset: 0.,
             });
+
+        let viewport_publisher = Arc::new(Mutex::new(viewport_hanging_get.lock().new_publisher()));
 
         let compositor_id = compositor.id();
 
@@ -514,6 +534,9 @@ impl GfxSceneManager {
             root_node,
             display_size: ScreenSize::from_size(&size_in_pixels, display_metrics),
             camera,
+            clip_scale: 1.,
+            clip_offset_x: 0.,
+            clip_offset_y: 0.,
             _root_view_holder: root_view_holder,
             _root_view: root_view,
             _pointerinjector_view_holder: pointerinjector_view_holder,
@@ -527,6 +550,7 @@ impl GfxSceneManager {
             views: vec![],
             client_root_view_ref: None,
             viewport_hanging_get,
+            viewport_publisher: viewport_publisher,
             context_view_ref,
             target_view_ref,
             display_metrics,
@@ -563,9 +587,7 @@ impl GfxSceneManager {
                         return;
                     }
                     Err(e) => {
-                        {
-                            scene_manager.lock().await.reset_camera_clip_space_transform()
-                        }
+                        { scene_manager.lock().await.reset_camera_clip_space_transform() }.await;
                         fx_log_err!("Error obtaining MagnificationHandlerRequest: {}", e);
                         return;
                     }
@@ -792,8 +814,7 @@ impl GfxSceneManager {
         presentation_sender
             .unbounded_send(PresentationMessage::RequestPresentWithPingback(sender))
             .expect("failed to send RequestPresentWithPingback message");
-
-        _ = receiver.await
+        _ = receiver.await;
     }
 
     /// Sets the image to use for the scene's cursor.
@@ -868,5 +889,45 @@ impl GfxSceneManager {
 
     fn session(&self) -> scenic::SessionPtr {
         return self.session.clone();
+    }
+
+    async fn update_viewport(&self) {
+        let (width_pixels, height_pixels) = self.display_size.pixels();
+
+        // Viewport should match the visible part of the display 1:1. To do this
+        // we need to match the ClipSpaceTransform.
+        //
+        // Since the ClipSpaceTransform is defined in Vulkan NDC with scaling,
+        // and the Viewport is defined in pixel coordinates, we need to be able
+        // to transform offsets to pixel coordinates. This is done by
+        // multiplying by half the display length and inverting the scale.
+        //
+        // Because the ClipSpaceTransform is defined with its origin in the
+        // center, and the Viewport with its origin in the top left corner, we
+        // need to add a center offset to compensate.  This turns out to be as
+        // simple as half the scaled display length minus half the ClipSpace
+        // length, which equals scale - 1 in NDC.
+        //
+        // Finally, because the ClipSpaceTransform and the Viewport transform
+        // are defined in opposite directions (camera to scene vs context to
+        // viewport), all the transforms should be inverted for the Viewport
+        // transform. This means an inverted scale and negative clip offsets.
+        //
+        // (See the same logic in root presenter: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/bin/root_presenter/presentation.cc;drc=44c08193dbb4ed5d82804d0faf7bce76d95d4dab;l=423)
+        self.viewport_publisher.lock().set({
+            let inverted_scale = 1. / self.clip_scale;
+            let center_offset_ndc = self.clip_scale - 1.;
+            let ndc_to_pixel_x = inverted_scale * width_pixels * 0.5;
+            let ndc_to_pixel_y = inverted_scale * height_pixels * 0.5;
+            let x_offset = ndc_to_pixel_x * (center_offset_ndc - self.clip_offset_x);
+            let y_offset = ndc_to_pixel_y * (center_offset_ndc - self.clip_offset_y);
+            InjectorViewportSpec {
+                width: width_pixels,
+                height: height_pixels,
+                scale: inverted_scale,
+                x_offset,
+                y_offset,
+            }
+        })
     }
 }

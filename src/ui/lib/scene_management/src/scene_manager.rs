@@ -132,7 +132,7 @@ pub trait SceneManager: Send {
     async fn set_camera_clip_space_transform(&mut self, x: f32, y: f32, scale: f32);
 
     /// Resets the transform for screen magnification to the default.
-    fn reset_camera_clip_space_transform(&mut self);
+    async fn reset_camera_clip_space_transform(&mut self);
 
     /// Sets the position of the cursor in the current scene. If no cursor has been created it will
     /// create one using default settings.

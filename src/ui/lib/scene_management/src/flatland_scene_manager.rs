@@ -11,6 +11,7 @@ use {
         scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
         DisplayMetrics,
     },
+    anyhow::anyhow,
     anyhow::Error,
     async_trait::async_trait,
     fidl,
@@ -24,7 +25,7 @@ use {
     futures::channel::mpsc::unbounded,
     input_pipeline::Size,
     parking_lot::Mutex,
-    std::{convert::TryFrom, sync::Arc},
+    std::sync::Arc,
 };
 
 // TODO(fxbug.dev/91061): Make this larger when we have a protocol to
@@ -324,7 +325,7 @@ impl SceneManager for FlatlandSceneManager {
         panic!("unimplemented")
     }
 
-    fn reset_camera_clip_space_transform(&mut self) {
+    async fn reset_camera_clip_space_transform(&mut self) {
         panic!("unimplemented")
     }
 
@@ -592,9 +593,20 @@ impl FlatlandSceneManager {
         }
 
         let viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>> =
-            scene_manager::create_viewport_hanging_get(InjectorViewportSpec::try_from(
-                layout_info.clone(),
-            )?);
+            scene_manager::create_viewport_hanging_get({
+                let pixel_scale =
+                    layout_info.pixel_scale.ok_or(anyhow!("LayoutInfo must have pixel_scale"))?;
+                let logical_size =
+                    layout_info.logical_size.ok_or(anyhow!("LayoutInfo must have logical_size"))?;
+
+                InjectorViewportSpec {
+                    width: (logical_size.width * pixel_scale.width) as f32,
+                    height: (logical_size.height * pixel_scale.height) as f32,
+                    scale: 1.,
+                    x_offset: 0.,
+                    y_offset: 0.,
+                }
+            });
         let viewport_publisher = Arc::new(Mutex::new(viewport_hanging_get.lock().new_publisher()));
 
         let context_view_ref = scenic::duplicate_view_ref(&root_flatland.view_ref)?;
