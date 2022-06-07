@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        binary: "driver/driver-runtime-leaf.so",
+        bind: "meta/bind/leaf.bindbc",
+        colocate: "true",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.driver.framework.RuntimeConnector",
+                "fuchsia.runtime.test.Waiter",
+            ],
+        },
+    ],
+}

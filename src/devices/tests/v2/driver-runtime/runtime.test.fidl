@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.runtime.test;
+
+/// Data transferred from parent to child driver over the runtime channel.
+const PARENT_DEVICE_TEST_DATA uint32 = 42;
+
+@discoverable
+@transport("Driver")
+protocol DriverTransportProtocol {};
+
+@discoverable
+protocol Waiter {
+    Ack();
+};

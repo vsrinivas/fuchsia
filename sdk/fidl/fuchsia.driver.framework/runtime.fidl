@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.driver.framework;
+
+using zx;
+
+/// The maximum number of protocols that can be returned per iterator batch.
+const MAX_PROTOCOLS_PER_BATCH uint32 = 16;
+
+alias ProtocolName = string:MAX;
+
+type RuntimeProtocolServerEnd = resource struct {
+    // TODO(fxbug.dev/96063) replace with fdf.handle once available
+    handle uint32;
+};
+
+/// Iterator for listing available runtime protocols to connect to.
+protocol RuntimeProtocolIterator {
+    /// Returns the next batch of protocols.
+    GetNext() -> (struct {
+        protocols vector<ProtocolName>:MAX_PROTOCOLS_PER_BATCH;
+    });
+};
+
+/// Protocol through which a driver can connect to runtime protocols.
+@discoverable
+protocol RuntimeConnector {
+    /// Enumerate the protocols available to connect to.
+    ListProtocols(resource struct {
+        iterator server_end:RuntimeProtocolIterator;
+    });
+
+    /// Connects to the protocol matching `protocol_name`.
+    /// Provides ownership of `runtime_protocol`, which is the server end
+    /// of the runtime channel.
+    Connect(resource struct {
+        protocol_name ProtocolName;
+        runtime_protocol RuntimeProtocolServerEnd;
+    }) -> (struct {}) error zx.status;
+};

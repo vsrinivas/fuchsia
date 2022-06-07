@@ -61,4 +61,12 @@ struct fuchsia.driver.framework/Node_AddChild_Response
 union/member fuchsia.driver.framework/Node_AddChild_Result.err fuchsia.driver.framework/NodeError
 union/member fuchsia.driver.framework/Node_AddChild_Result.response fuchsia.driver.framework/Node_AddChild_Response
 strict union fuchsia.driver.framework/Node_AddChild_Result
+protocol/member fuchsia.driver.framework/RuntimeConnector.Connect(string protocol_name,fuchsia.driver.framework/RuntimeProtocolServerEnd runtime_protocol) -> (fuchsia.driver.framework/RuntimeConnector_Connect_Result result)
+protocol fuchsia.driver.framework/RuntimeConnector
+struct fuchsia.driver.framework/RuntimeConnector_Connect_Response
+union/member fuchsia.driver.framework/RuntimeConnector_Connect_Result.err int32
+union/member fuchsia.driver.framework/RuntimeConnector_Connect_Result.response fuchsia.driver.framework/RuntimeConnector_Connect_Response
+strict union fuchsia.driver.framework/RuntimeConnector_Connect_Result
+struct/member fuchsia.driver.framework/RuntimeProtocolServerEnd.handle uint32
+resource struct fuchsia.driver.framework/RuntimeProtocolServerEnd
 library fuchsia.driver.framework

@@ -12,6 +12,7 @@ fidl("fuchsia.driver.framework") {
     "device_group.fidl",
     "driver_start_args.fidl",
     "overview.fidl",
+    "runtime.fidl",
     "topology.fidl",
   ]
 
