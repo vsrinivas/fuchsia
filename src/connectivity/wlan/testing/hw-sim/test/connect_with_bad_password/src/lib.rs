@@ -23,6 +23,7 @@ async fn connect_future(
     client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     security_type: fidl_policy::SecurityType,
     password: &str,
+    expected_failure: fidl_policy::DisconnectStatus,
 ) {
     save_network(
         client_controller,
@@ -33,12 +34,7 @@ async fn connect_future(
     .await;
     let network_identifier =
         fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type };
-    await_failed(
-        client_state_update_stream,
-        network_identifier.clone(),
-        fidl_policy::DisconnectStatus::CredentialsFailed,
-    )
-    .await;
+    await_failed(client_state_update_stream, network_identifier.clone(), expected_failure).await;
     remove_network(
         client_controller,
         &AP_SSID,
@@ -59,6 +55,41 @@ async fn connect_with_bad_password() {
 
     let (client_controller, mut client_state_update_stream) = init_client_controller().await;
 
+    // Test a client fails to connect to a network protected by WPA3-Personal if the wrong
+    // password is provided. The DisconnectStatus::CredentialsFailed status should be
+    // returned by policy.
+    {
+        let mut authenticator = Some(create_authenticator(
+            BSSID,
+            &AP_SSID,
+            AUTHENTICATOR_PASSWORD,
+            CIPHER_CCMP_128,
+            Protection::Wpa3Personal,
+            Protection::Wpa3Personal,
+        ));
+        let main_future = connect_future(
+            &client_controller,
+            &mut client_state_update_stream,
+            fidl_policy::SecurityType::Wpa3,
+            SUPPLICANT_PASSWORD,
+            // TODO(fxbug.dev/60912): We can't yet detect incorrect WPA3 passwords
+            fidl_policy::DisconnectStatus::ConnectionFailed,
+        );
+        pin_mut!(main_future);
+        info!("Attempting to connect to a WPA3 Personal network with wrong password.");
+        connect_to_ap(
+            main_future,
+            &mut helper,
+            &AP_SSID,
+            BSSID,
+            &Protection::Wpa3Personal,
+            &mut authenticator,
+            &mut Some(wlan_rsn::rsna::UpdateSink::default()),
+        )
+        .await;
+        info!("As expected, the connection failed.");
+    }
+
     // Test a client fails to connect to a network protected by WPA2-PSK if the wrong
     // password is provided. The DisconnectStatus::CredentialsFailed status should be
     // returned by policy.
@@ -76,6 +107,7 @@ async fn connect_with_bad_password() {
             &mut client_state_update_stream,
             fidl_policy::SecurityType::Wpa2,
             SUPPLICANT_PASSWORD,
+            fidl_policy::DisconnectStatus::CredentialsFailed,
         );
         pin_mut!(main_future);
         info!("Attempting to connect to a WPA2 Personal network with wrong password.");
@@ -109,6 +141,7 @@ async fn connect_with_bad_password() {
             &mut client_state_update_stream,
             fidl_policy::SecurityType::Wpa,
             SUPPLICANT_PASSWORD,
+            fidl_policy::DisconnectStatus::CredentialsFailed,
         );
         pin_mut!(main_future);
         info!("Attempting to connect to a WPA1 Personal network with wrong password.");
