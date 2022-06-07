@@ -16,7 +16,6 @@ group("bin") {
     "run_test_component",
     "setui",
     "setui_client",
-    "sshd-host",
     "sysmgr",
     "trace",
     "trace2json",

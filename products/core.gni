@@ -29,8 +29,8 @@ core_realm_shards += [
 core_realm_restrict_persistent_storage = false
 
 legacy_base_package_labels += [
-  "//garnet/bin/sshd-host",
-  "//garnet/bin/sshd-host:config",
+  "//src/developer/sshd-host",
+  "//src/developer/sshd-host:config",
 
   # TODO(https://fxbug.dev/85742): Remove this target once out-of-tree
   # integration tests inject components from network-legacy-deprecated.
