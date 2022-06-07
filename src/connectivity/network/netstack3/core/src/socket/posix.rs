@@ -8,6 +8,7 @@
 
 use alloc::{vec, vec::Vec};
 use core::{fmt::Debug, hash::Hash};
+use todo_unused::todo_unused;
 
 use derivative::Derivative;
 use net_types::{ip::IpAddress, SpecifiedAddr};
@@ -15,8 +16,8 @@ use net_types::{ip::IpAddress, SpecifiedAddr};
 use crate::{
     data_structures::socketmap::{IterShadows, SocketMap, Tagged},
     socket::{
-        AddrVec, Bound, IncompatibleError, InsertError, RemoveResult, SocketMapAddrStateSpec,
-        SocketMapSpec,
+        AddrVec, Bound, BoundSocketMap, IncompatibleError, InsertError, RemoveResult,
+        SocketMapAddrStateSpec, SocketMapSpec,
     },
 };
 
@@ -40,9 +41,9 @@ pub(crate) trait PosixSocketMapSpec: Sized {
     type ConnId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
 
     /// The state for a listening socket.
-    type ListenerState: ToPosixSharingOptions;
+    type ListenerState;
     /// The state for a connected socket.
-    type ConnState: ToPosixSharingOptions;
+    type ConnState;
 
     /// Checks whether a new socket with the provided sharing options can be
     /// inserted at the given address in the existing socket map, returning an
@@ -401,13 +402,22 @@ impl<P: PosixSocketMapSpec> SocketMapSpec for P {
 
     type ConnId = P::ConnId;
 
-    type ListenerState = P::ListenerState;
+    // TODO(https://fxbug.dev/101914): Be generic about which part of the state
+    // is not related to computing tags.
+    type ListenerState = (P::ListenerState, PosixSharingOptions);
 
-    type ConnState = P::ConnState;
+    type ConnState = (P::ConnState, PosixSharingOptions);
 
     type ListenerAddrState = PosixAddrState<P::ListenerId>;
 
     type ConnAddrState = PosixAddrState<P::ConnId>;
+}
+
+impl<T> ToPosixSharingOptions for (T, PosixSharingOptions) {
+    fn to_sharing_options(&self) -> PosixSharingOptions {
+        let (_state, sharing) = self;
+        *sharing
+    }
 }
 
 impl<A, St, I, P> SocketMapAddrStateSpec<A, St, I, P> for PosixAddrState<I>
@@ -458,6 +468,48 @@ where
                 }
             }
         }
+    }
+}
+
+impl<P: PosixSocketMapSpec> BoundSocketMap<P> {
+    pub(crate) fn try_insert_listener_with_sharing(
+        &mut self,
+        listener_addr: ListenerAddr<P>,
+        state: P::ListenerState,
+        sharing: PosixSharingOptions,
+    ) -> Result<P::ListenerId, InsertError> {
+        self.try_insert_listener(listener_addr, (state, sharing))
+    }
+
+    pub(crate) fn try_insert_conn_with_sharing(
+        &mut self,
+        conn_addr: ConnAddr<P>,
+        state: P::ConnState,
+        sharing: PosixSharingOptions,
+    ) -> Result<P::ConnId, InsertError> {
+        self.try_insert_conn(conn_addr, (state, sharing))
+    }
+
+    #[todo_unused("https://fxbug.dev/95688")]
+    pub(crate) fn get_listener_by_id_mut(
+        &mut self,
+        id: P::ListenerId,
+    ) -> Option<(&mut P::ListenerState, PosixSharingOptions, &ListenerAddr<P>)> {
+        let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state: _ } = self;
+        listener_id_to_sock
+            .get_mut(id.clone().into())
+            .map(|((state, sharing), addr)| (state, *sharing, &*addr))
+    }
+
+    #[todo_unused("https://fxbug.dev/95688")]
+    pub(crate) fn get_conn_by_id_mut(
+        &mut self,
+        id: P::ConnId,
+    ) -> Option<(&mut P::ConnState, PosixSharingOptions, &ConnAddr<P>)> {
+        let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state: _ } = self;
+        conn_id_to_sock
+            .get_mut(id.clone().into())
+            .map(|((state, sharing), addr)| (state, *sharing, &*addr))
     }
 }
 
@@ -522,8 +574,8 @@ mod tests {
         type DeviceId = DummyDeviceId;
         type ListenerId = ListenerId;
         type ConnId = ConnId;
-        type ListenerState = PosixSharingOptions;
-        type ConnState = PosixSharingOptions;
+        type ListenerState = ();
+        type ConnState = ();
 
         fn check_posix_sharing(
             new_sharing: PosixSharingOptions,
@@ -641,8 +693,8 @@ mod tests {
         let mut map = BoundSocketMap::<TransportSocketPosixSpec<Ipv4>>::default();
         let mut spec = spec.into_iter().peekable();
         let mut try_insert = |(addr, options)| match addr {
-            AddrVec::Conn(c) => map.try_insert_conn(c, options).map(|_| ()),
-            AddrVec::Listen(l) => map.try_insert_listener(l, options).map(|_| ()),
+            AddrVec::Conn(c) => map.try_insert_conn_with_sharing(c, (), options).map(|_| ()),
+            AddrVec::Listen(l) => map.try_insert_listener_with_sharing(l, (), options).map(|_| ()),
         };
         let last = loop {
             let one_spec = spec.next().expect("empty list of test cases");
@@ -686,11 +738,11 @@ mod tests {
                 .into_iter()
                 .map(|(addr, options)| {
                     match addr {
-                        AddrVec::Conn(c) => {
-                            map.try_insert_conn(c.clone(), options).map(|id| Socket::Conn(id, c))
-                        }
+                        AddrVec::Conn(c) => map
+                            .try_insert_conn_with_sharing(c.clone(), (), options)
+                            .map(|id| Socket::Conn(id, c)),
                         AddrVec::Listen(l) => map
-                            .try_insert_listener(l.clone(), options)
+                            .try_insert_listener_with_sharing(l.clone(), (), options)
                             .map(|id| Socket::Listener(id, l)),
                     }
                     .expect("insert_failed")
@@ -710,5 +762,40 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn socketmap_mut_ref() {
+        let mut map = BoundSocketMap::<TransportSocketPosixSpec<Ipv4>>::default();
+        let port = NonZeroU16::new(42).unwrap();
+        let listener_addr = ListenerAddr {
+            ip: ListenerIpAddr { addr: SpecifiedAddr::new(ip_v4!("1.1.1.1")), identifier: port },
+            device: None,
+        };
+        let listener_id = map
+            .try_insert_listener_with_sharing(
+                listener_addr.clone(),
+                (),
+                PosixSharingOptions::Exclusive,
+            )
+            .expect("failed to insert");
+        let (&mut (), sharing, addr) =
+            map.get_listener_by_id_mut(listener_id).expect("failed to get listener");
+        assert_eq!(sharing, PosixSharingOptions::Exclusive);
+        assert_eq!(addr, &listener_addr);
+        let conn_addr = ConnAddr {
+            ip: ConnIpAddr {
+                local_ip: SpecifiedAddr::new(ip_v4!("2.2.2.2")).unwrap(),
+                local_identifier: port,
+                remote: (SpecifiedAddr::new(ip_v4!("3.3.3.3")).unwrap(), port),
+            },
+            device: None,
+        };
+        let conn_id = map
+            .try_insert_conn_with_sharing(conn_addr.clone(), (), PosixSharingOptions::Exclusive)
+            .expect("failed to insert");
+        let (&mut (), sharing, addr) = map.get_conn_by_id_mut(conn_id).expect("failed to get conn");
+        assert_eq!(sharing, PosixSharingOptions::Exclusive);
+        assert_eq!(addr, &conn_addr);
     }
 }

@@ -158,28 +158,11 @@ fn iter_receiving_addrs<I: Ip, D: IpDeviceId, S>(
 }
 
 #[derive(Debug, Eq, PartialEq)]
-struct ListenerState {
-    sharing: PosixSharingOptions,
-}
+struct ListenerState;
 
 #[derive(Debug, Eq, PartialEq)]
 struct ConnState<S> {
     socket: S,
-    sharing: PosixSharingOptions,
-}
-
-impl ToPosixSharingOptions for ListenerState {
-    fn to_sharing_options(&self) -> PosixSharingOptions {
-        let Self { sharing } = self;
-        *sharing
-    }
-}
-
-impl<S> ToPosixSharingOptions for ConnState<S> {
-    fn to_sharing_options(&self) -> PosixSharingOptions {
-        let Self { socket: _, sharing } = self;
-        *sharing
-    }
 }
 
 pub(crate) fn check_posix_sharing<P: PosixSocketMapSpec>(
@@ -1278,7 +1261,7 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, 
 ) -> Result<(), (B, IpSockSendError)> {
     let state = sync_ctx.get_first_state();
     let UdpConnectionState { ref bound } = state.conn_state;
-    let (ConnState { socket, sharing: _ }, addr) =
+    let ((ConnState { socket }, _sharing), addr) =
         bound.get_conn_by_id(&conn).expect("no such connection");
     let sock = socket.clone();
     let ConnAddr {
@@ -1342,7 +1325,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I,
     // probably fail and `send_udp` must be used instead.
     let state = sync_ctx.get_first_state();
     let UdpConnectionState { ref bound } = state.conn_state;
-    let (_, addr): &(ListenerState, _) =
+    let (_, addr): &((ListenerState, PosixSharingOptions), _) =
         bound.get_listener_by_id(&listener).expect("specified listener not found");
     let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
         *addr;
@@ -1478,7 +1461,7 @@ fn create_udp_conn<I: IpExt, C, SC: UdpStateContext<I, C>>(
         device,
     };
     bound
-        .try_insert_conn(c, ConnState { socket: ip_sock, sharing })
+        .try_insert_conn_with_sharing(c, ConnState { socket: ip_sock }, sharing)
         .map_err(|_: InsertError| UdpSockCreationError::SockAddrConflict)
 }
 
@@ -1555,13 +1538,13 @@ pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C>(
             let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
             match id {
                 UdpBoundId::Listening(id) => {
-                    let (_, addr): &(ListenerState, _) =
+                    let (_, addr): &((ListenerState, PosixSharingOptions), _) =
                         bound.get_listener_by_id(&id).expect("UDP listener not found");
                     let ListenerAddr { device, ip: _ } = addr;
                     *device
                 }
                 UdpBoundId::Connected(id) => {
-                    let (_, addr): &(ConnState<_>, _) =
+                    let (_, addr): &((ConnState<_>, PosixSharingOptions), _) =
                         bound.get_conn_by_id(&id).expect("UDP connected socket not found");
                     let ConnAddr { device, ip: _ } = addr;
                     *device
@@ -1612,13 +1595,12 @@ pub fn get_udp_posix_reuse_port<I: IpExt, SC: UdpStateContext<I, C>, C>(
                 UdpBoundId::Listening(id) => {
                     let (state, _): &(_, ListenerAddr<_>) =
                         bound.get_listener_by_id(&id).expect("listener UDP socket not found");
-                    let ListenerState { sharing } = state;
+                    let (ListenerState, sharing) = state;
                     sharing
                 }
                 UdpBoundId::Connected(id) => {
-                    let (state, _): &(_, ConnAddr<_>) =
+                    let ((_, sharing), _): &((ConnState<_>, _), ConnAddr<_>) =
                         bound.get_conn_by_id(&id).expect("conneted UDP socket not found");
-                    let ConnState { socket: _, sharing } = state;
                     sharing
                 }
             }
@@ -1712,9 +1694,10 @@ pub fn listen_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
     let UnboundSocketState { device, sharing } = unbound_entry.get();
     let UdpConnectionState { ref mut bound } = conn_state;
     let listener = bound
-        .try_insert_listener(
+        .try_insert_listener_with_sharing(
             ListenerAddr { ip: ListenerIpAddr { addr, identifier: port }, device: *device },
-            ListenerState { sharing: *sharing },
+            ListenerState,
+            *sharing,
         )
         .map_err(|_: InsertError| LocalAddressError::AddressInUse)?;
 
@@ -1753,7 +1736,7 @@ pub fn get_udp_listener_info<I: IpExt, C, SC: UdpStateContext<I, C>>(
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
     let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
-    let (_, addr): &(ListenerState, _) =
+    let (_, addr): &((ListenerState, PosixSharingOptions), _) =
         bound.get_listener_by_id(&id).expect("UDP listener not found");
     addr.clone().into()
 }
@@ -3596,12 +3579,12 @@ mod tests {
             &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
         let wildcard_port = assert_matches!(conn_state.bound.get_listener_by_id(&wildcard_list),
             Some((
-                ListenerState {..},
+                (ListenerState, _),
                 ListenerAddr{ ip: ListenerIpAddr {identifier, addr: None}, device: None}
             )) => identifier);
         let specified_port = assert_matches!(conn_state.bound.get_listener_by_id(&specified_list),
             Some((
-                ListenerState {..},
+                (ListenerState, _),
                 ListenerAddr{ ip: ListenerIpAddr {identifier, addr: _}, device: None}
             )) => identifier);
         assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
@@ -3634,7 +3617,7 @@ mod tests {
             &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
         for listener in listeners {
             assert_matches!(conn_state.bound.get_listener_by_id(&listener),
-                Some(( ListenerState {..}, addr)) => assert_eq!(addr, &expected_addr));
+                Some(((ListenerState, _), addr)) => assert_eq!(addr, &expected_addr));
         }
     }
 
