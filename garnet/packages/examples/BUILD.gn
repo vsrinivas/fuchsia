@@ -24,19 +24,9 @@ group("all") {
     "//garnet/packages/examples:bluetooth",
     "//garnet/packages/examples:escher",
     "//garnet/packages/examples:fidl",
-    "//garnet/packages/examples:http",
     "//garnet/packages/examples:rust",
     "//src/ui:runtime_with_root_presenter",
     "//src/ui/examples",
-  ]
-}
-
-group("http") {
-  testonly = true
-  public_deps = [
-    "//garnet/examples/http/httpget_cpp",
-    "//garnet/examples/http/httpget_rust",
-    "//garnet/examples/http/postfile",
   ]
 }
 
