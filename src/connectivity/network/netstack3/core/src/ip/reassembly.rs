@@ -813,6 +813,7 @@ impl Ord for PacketBodyFragment {
 mod tests {
     use alloc::vec;
 
+    use assert_matches::assert_matches;
     use net_types::{
         ip::{IpAddress, Ipv4, Ipv6},
         Witness,
@@ -848,36 +849,6 @@ mod tests {
         fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I> {
             &mut self.get_mut().cache
         }
-    }
-
-    macro_rules! assert_frag_proc_state_need_more {
-        ($lhs:expr) => {{
-            let lhs_val = $lhs;
-            match lhs_val {
-                FragmentProcessingState::NeedMoreFragments => (),
-                _ => panic!("{:?} is not `NeedMoreFragments`", lhs_val),
-            }
-        }};
-    }
-
-    macro_rules! assert_frag_proc_state_invalid {
-        ($lhs:expr) => {{
-            let lhs_val = $lhs;
-            match lhs_val {
-                FragmentProcessingState::InvalidFragment => (),
-                _ => panic!("{:?} is not `InvalidFragment`", lhs_val),
-            }
-        }};
-    }
-
-    macro_rules! assert_frag_proc_state_oom {
-        ($lhs:expr) => {{
-            let lhs_val = $lhs;
-            match lhs_val {
-                FragmentProcessingState::OutOfMemory => (),
-                _ => panic!("{:?} is not `OutOfMemory`", lhs_val),
-            }
-        }};
     }
 
     macro_rules! assert_frag_proc_state_ready {
@@ -1002,19 +973,22 @@ mod tests {
                 );
             }
             ExpectedResult::NeedMore => {
-                assert_frag_proc_state_need_more!(FragmentHandler::process_fragment::<&[u8]>(
-                    sync_ctx, ctx, packet
-                ));
+                assert_matches!(
+                    FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
+                    FragmentProcessingState::NeedMoreFragments
+                );
             }
             ExpectedResult::Invalid => {
-                assert_frag_proc_state_invalid!(FragmentHandler::process_fragment::<&[u8]>(
-                    sync_ctx, ctx, packet
-                ));
+                assert_matches!(
+                    FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
+                    FragmentProcessingState::InvalidFragment
+                );
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(FragmentHandler::process_fragment::<&[u8]>(
-                    sync_ctx, ctx, packet
-                ));
+                assert_matches!(
+                    FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
+                    FragmentProcessingState::OutOfMemory
+                );
             }
         }
     }
@@ -1060,19 +1034,22 @@ mod tests {
                 );
             }
             ExpectedResult::NeedMore => {
-                assert_frag_proc_state_need_more!(FragmentHandler::process_fragment::<&[u8]>(
-                    sync_ctx, ctx, packet
-                ));
+                assert_matches!(
+                    FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
+                    FragmentProcessingState::NeedMoreFragments
+                );
             }
             ExpectedResult::Invalid => {
-                assert_frag_proc_state_invalid!(FragmentHandler::process_fragment::<&[u8]>(
-                    sync_ctx, ctx, packet
-                ));
+                assert_matches!(
+                    FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
+                    FragmentProcessingState::InvalidFragment
+                );
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(FragmentHandler::process_fragment::<&[u8]>(
-                    sync_ctx, ctx, packet
-                ));
+                assert_matches!(
+                    FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
+                    FragmentProcessingState::OutOfMemory
+                );
             }
         }
     }
@@ -1354,11 +1331,10 @@ mod tests {
         body.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
         let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
-        assert_frag_proc_state_invalid!(FragmentHandler::process_fragment::<&[u8]>(
-            &mut ctx,
-            &mut (),
-            packet
-        ));
+        assert_matches!(
+            FragmentHandler::process_fragment::<&[u8]>(&mut ctx, &mut (), packet),
+            FragmentProcessingState::InvalidFragment
+        );
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` but more flag is `false`). The last fragment is
@@ -1420,11 +1396,10 @@ mod tests {
         bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
-        assert_frag_proc_state_invalid!(FragmentHandler::process_fragment::<&[u8]>(
-            &mut ctx,
-            &mut (),
-            packet
-        ));
+        assert_matches!(
+            FragmentHandler::process_fragment::<&[u8]>(&mut ctx, &mut (), packet),
+            FragmentProcessingState::InvalidFragment
+        );
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` but more flag is `false`). The last fragment is
