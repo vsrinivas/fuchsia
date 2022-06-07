@@ -708,29 +708,28 @@ async fn debug_data_test() {
     );
 }
 
-#[fuchsia::test]
-async fn debug_data_stress_test() {
-    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_spam_test.cm";
-    let debug_data_contents = "a".repeat(4096);
-    const NUM_EXPECTED_VMOS: usize = 3250;
+async fn debug_data_stress_test(case_name: &str, vmo_count: usize, vmo_size: usize) {
+    const TEST_URL: &str =
+        "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_spam_test.cm";
+    let expected_debug_data_contents = "a".repeat(vmo_size);
 
     let builder = TestBuilder::new(
         connect_test_manager().await.expect("cannot connect to run builder proxy"),
     );
-    let suite_instance = builder
-        .add_suite(test_url, default_run_option())
-        .await
-        .expect("Cannot create suite instance");
+    let mut options = default_run_option();
+    options.case_filters_to_run = Some(vec![case_name.into()]);
+    let suite_instance =
+        builder.add_suite(TEST_URL, options).await.expect("Cannot create suite instance");
     let (run_events_result, suite_events_result) =
         futures::future::join(builder.run(), collect_suite_events(suite_instance)).await;
 
     let suite_events = suite_events_result.unwrap().0;
     let expected_events = vec![
         RunEvent::suite_started(),
-        RunEvent::case_found("publish_debug_data"),
-        RunEvent::case_started("publish_debug_data"),
-        RunEvent::case_stopped("publish_debug_data", CaseStatus::Passed),
-        RunEvent::case_finished("publish_debug_data"),
+        RunEvent::case_found(case_name),
+        RunEvent::case_started(case_name),
+        RunEvent::case_stopped(case_name, CaseStatus::Passed),
+        RunEvent::case_finished(case_name),
         RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
 
@@ -748,10 +747,26 @@ async fn debug_data_stress_test() {
         .into_iter()
         .filter(|run_event| {
             let TestRunEventPayload::DebugData { contents, .. } = &run_event.payload;
-            contents == &debug_data_contents
+            contents == &expected_debug_data_contents
         })
         .collect();
-    assert_eq!(debug_data_events.len(), NUM_EXPECTED_VMOS);
+    assert_eq!(debug_data_events.len(), vmo_count);
+}
+
+#[fuchsia::test]
+async fn debug_data_stress_test_many_vmos() {
+    const NUM_EXPECTED_VMOS: usize = 3250;
+    const VMO_SIZE: usize = 4096;
+    const CASE_NAME: &'static str = "many_small_vmos";
+    debug_data_stress_test(CASE_NAME, NUM_EXPECTED_VMOS, VMO_SIZE).await;
+}
+
+#[fuchsia::test]
+async fn debug_data_stress_test_few_large_vmos() {
+    const NUM_EXPECTED_VMOS: usize = 2;
+    const VMO_SIZE: usize = 1024 * 1024 * 400;
+    const CASE_NAME: &'static str = "few_large_vmos";
+    debug_data_stress_test(CASE_NAME, NUM_EXPECTED_VMOS, VMO_SIZE).await;
 }
 
 #[fuchsia::test]
