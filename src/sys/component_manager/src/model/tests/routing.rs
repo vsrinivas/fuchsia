@@ -2417,6 +2417,12 @@ async fn resolver_component_decl_is_validated() {
     );
 }
 
+///   a
+///  / \
+/// b   coll: [service_child_a, non_service_child, service_child_b]
+///
+/// root: offer service `foo` from coll to b
+/// b: use service
 #[fuchsia::test]
 async fn route_service_from_parent_collection() {
     let use_decl = UseServiceDecl {
@@ -2467,6 +2473,12 @@ async fn route_service_from_parent_collection() {
     };
 }
 
+///      root
+///      /  \
+/// client   coll: [service_child_a, non_service_child, service_child_b]
+///
+/// root: offer service `foo` from collection `coll` to `client`
+/// client: use service
 #[fuchsia::test]
 async fn list_service_instances_from_collection() {
     let use_decl = UseServiceDecl {
@@ -2598,10 +2610,14 @@ async fn list_service_instances_from_collection() {
 ///   a
 ///  / \
 /// b   c
+///      \
+///       coll: [foo, bar, baz]
 ///
 /// a: offer service from c to b
 /// b: use service
-/// c: expose service from collection
+/// c: expose service from collection `coll`
+/// foo, bar: expose service to parent
+/// baz: does not expose service
 #[fuchsia::test]
 async fn use_service_from_sibling_collection() {
     let components = vec![
@@ -2658,7 +2674,6 @@ async fn use_service_from_sibling_collection() {
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
                     source: ExposeSource::Self_,
                     source_name: "my.service.Service".into(),
-
                     target_name: "my.service.Service".into(),
                     target: ExposeTarget::Parent,
                 }))
@@ -2674,7 +2689,6 @@ async fn use_service_from_sibling_collection() {
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
                     source: ExposeSource::Self_,
                     source_name: "my.service.Service".into(),
-
                     target_name: "my.service.Service".into(),
                     target: ExposeTarget::Parent,
                 }))

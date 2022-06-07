@@ -711,7 +711,6 @@ mod tests {
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
                         source: ExposeSource::Collection("coll".to_string()),
                         source_name: "my.service.Service".into(),
-
                         target_name: "my.service.Service".into(),
                         target: ExposeTarget::Parent,
                     }))
@@ -724,7 +723,6 @@ mod tests {
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
                         source: ExposeSource::Self_,
                         source_name: "my.service.Service".into(),
-
                         target_name: "my.service.Service".into(),
                         target: ExposeTarget::Parent,
                     }))
@@ -740,7 +738,6 @@ mod tests {
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
                         source: ExposeSource::Self_,
                         source_name: "my.service.Service".into(),
-
                         target_name: "my.service.Service".into(),
                         target: ExposeTarget::Parent,
                     }))
