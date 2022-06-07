@@ -5,14 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("scenic") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:scenic",
-    "//src/ui/examples",
-  ]
-}
-
 group("escher") {
   testonly = true
 
@@ -34,7 +26,8 @@ group("all") {
     "//garnet/packages/examples:fidl",
     "//garnet/packages/examples:http",
     "//garnet/packages/examples:rust",
-    "//garnet/packages/examples:scenic",
+    "//src/ui:runtime_with_root_presenter",
+    "//src/ui/examples",
   ]
 }
 

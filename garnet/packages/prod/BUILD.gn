@@ -35,7 +35,6 @@ group("all") {
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:run",
-    "//garnet/packages/prod:scenic",
     "//garnet/packages/prod:sched",
     "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:telephony",
@@ -52,6 +51,7 @@ group("all") {
     "//src/developer/memory/mem",
     "//src/fonts",
     "//src/power:battery",
+    "//src/ui:runtime_with_root_presenter",
     "//src/ui/a11y:a11y",
     "//src/zircon/bin/hwstress",
     "//third_party/sbase",
@@ -206,11 +206,6 @@ group("insntrace") {
 group("run") {
   testonly = true
   public_deps = [ "//src/sys/tools/run" ]
-}
-
-# WARNING: Known to vendor.
-group("scenic") {
-  public_deps = [ "//src/ui:runtime_with_root_presenter" ]
 }
 
 group("sched") {

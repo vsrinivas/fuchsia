@@ -114,10 +114,10 @@ group("all") {
 group("scenic") {
   testonly = true
   public_deps = [
-    "//garnet/packages/examples:scenic",
-    "//garnet/packages/prod:scenic",
+    "//src/ui:runtime_with_root_presenter",
     "//src/ui/benchmarks/image_grid_cpp",
     "//src/ui/benchmarks/transparency_benchmark",
+    "//src/ui/examples",
     "//src/ui/scenic:tests",
   ]
 }
