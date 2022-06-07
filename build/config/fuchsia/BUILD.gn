@@ -47,7 +47,7 @@ config("compiler") {
     ":compiler_fuchsia_api_level",
   ]
 
-  if (!is_debug || enable_rbe) {
+  if (!is_debug || (enable_rbe || rbe_rust.enable)) {
     # fxbug.dev/85921#c15: forcing one codegen unit produces
     # smaller binaries but makes builds slower.
     # Enforce one codegen unit only when we really care about

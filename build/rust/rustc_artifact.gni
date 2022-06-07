@@ -74,8 +74,9 @@ import("//build/toolchain/rbe.gni")
 #     list.
 #
 #   disable_rbe (optional)
-#     Set to true to force this target to build locally, overriding the global `enable_rbe`.
-
+#     Set to true to force this target to build locally, overriding the global
+#     `rbe_rust.enable`.
+#
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
 #
@@ -89,6 +90,7 @@ import("//build/toolchain/rbe.gni")
 #
 #   visibility (optional)
 #     Standard GN meaning. The visibility option for the generated targets.
+
 template("rustc_artifact") {
   # rustc does not support dashes in crate names
   _crate_name = string_replace(invoker.crate_name, "-", "_")
@@ -150,11 +152,12 @@ template("rustc_artifact") {
     not_needed([ "_clippy_name" ])
   }
 
-  _use_rbe = enable_rbe
+  _enable_rust_rbe = enable_rbe || rbe_rust.enable
+  _use_rbe = _enable_rust_rbe
   if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
     _use_rbe = false
   }
-  if (enable_rbe && !_use_rbe) {
+  if (_enable_rust_rbe && !_use_rbe) {
     # Disable RBE for this target through a fake rustflag,
     # that is intercepted by rustc-remote-wrapper.sh.
     _rustflags += [ "--remote-disable" ]
@@ -201,7 +204,7 @@ template("rustc_artifact") {
     crate_name = _crate_name
 
     rustflags = []
-    if (enable_rbe) {
+    if (_enable_rust_rbe) {
       rustflags +=
           [ "--remote-flag=--label='" +
             get_label_info(":$_target_name", "label_with_toolchain") + "'" ]

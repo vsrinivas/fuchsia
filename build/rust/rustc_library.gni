@@ -93,7 +93,7 @@ import("//build/rust/rustc_test.gni")
 #     See: `gn help output_dir`
 #
 #   disable_rbe (optional)
-#     Set to true to force this target to build locally, overriding the global `enable_rbe`.
+#     Set to true to force this target to build locally, overriding the global `rbe_rust.enable`.
 #     If with_unit_tests is also true, this setting applies to the unit test as well.
 #     There is currently no way to separately disable RBE for the library and test.
 #

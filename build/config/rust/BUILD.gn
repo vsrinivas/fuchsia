@@ -252,7 +252,7 @@ config("coverage") {
 # normalizing the output dir, which improves caching.
 # As a goal, we should aim to minimize the need for this config.
 config("output_dir_sensitive") {
-  if (enable_rbe) {  # for Rust
+  if (enable_rbe || rbe_rust.enable) {
     # --remote-flag=* is a pseudo flag that is intercepted by
     # build/rbe/rustc-remote-wrapper.sh and forwarded to rewrapper (reclient).
     rustflags = [ "--remote-flag=--canonicalize_working_dir=false" ]

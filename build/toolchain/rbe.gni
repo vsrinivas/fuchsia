@@ -29,6 +29,17 @@ cxx_remote_wrapper = "//build/rbe/cxx-remote-wrapper.sh"
 cxx_rbe_deps = rbe_common_tools + rbe_common_scripts + [ cxx_remote_wrapper ]
 
 declare_args() {
+  # See //build/toolchain/rbe_defaults.gni for the documentation on these
+  # global structured variables.
+  # We cannot provide defaults here because they would be overridden
+  # by the same definitions imported in //products/bringup.gni.
+  rbe_rust = {
+  }
+
+  #########################################
+  ### DEPRECATED LEGACY variables below ###
+  #########################################
+
   # Set to true to enable distributed compilation using RBE.
   # This may affect Rust and C++ compiles.
   enable_rbe = false
@@ -49,7 +60,7 @@ declare_args() {
   #         locally on cache miss.  The locally produced result is
   #         not uploaded to the remote cache.
   #   (There are other rewrapper options that are not exposed.)
-  rbe_exec_strategy = "remote"
+  rbe_exec_strategy = ""
 
   ################################################################
   ### Special test modes: enable at most one of the following: ###

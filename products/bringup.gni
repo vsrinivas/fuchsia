@@ -69,3 +69,5 @@ host_labels = [
 package_flavor_selections = []
 
 sdk_archive_labels = []
+
+import("//build/toolchain/rbe_defaults.gni")

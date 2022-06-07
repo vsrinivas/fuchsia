@@ -1,0 +1,44 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines default RBE configuration.
+
+# All Rust-specific RBE configurations in here.
+rbe_rust = {
+  # Set to true to enable distributed compilation using RBE.
+  enable = false
+
+  # One of:
+  #   * "remote": Execute action remotely on cache miss.
+  #         The remote cache is always updated with this result.
+  #   * "local": Lookup action in the remote cache, but execute action
+  #         locally on cache miss.  The locally produced result is
+  #         not uploaded to the remote cache.
+  #   (There are other rewrapper options that are not exposed.)
+  exec_strategy = "remote"
+
+  # Run one of the more expensive checks, intended for CI.
+  # All of these require rbe_rust.enable=true.
+  #
+  # One of:
+  #   * "": No additional check.
+  #   * "determinism":
+  #       Check of determinism of rustc targets by running locally twice
+  #       and comparing outputs, failing if any differences are found.
+  #       Even though this check doesn't involve RBE, it uses the same
+  #       wrapper script, which knows what output files to expect and
+  #       compare.
+  #
+  #       Build outputs that depend on time are discouraged because they
+  #       impact caching.
+  #       If your result depends on the current time, this check will
+  #       definitely fail.  If it depends on only the date, there is still
+  #       a nonzero chance of failure, if the rerun falls on the next day.
+  #
+  #   * "consistency":
+  #       Check consistency between local and remote rust compiles,
+  #       by running both and comparing results.
+  #
+  check = ""
+}
