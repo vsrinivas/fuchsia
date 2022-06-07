@@ -11,11 +11,11 @@ executable("bin") {
   deps = [
     "//examples/components/routing/fidl:echo",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/syslog",
   ]
 }
 

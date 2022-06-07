@@ -7,13 +7,15 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <cstdlib>
 #include <iostream>
 #include <string>
 
 int main(int argc, const char* argv[], char* envp[]) {
+  syslog::SetTags({"echo_client"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // Connect to the fidl.examples.routing.Echo protocol
@@ -24,7 +26,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   // Sets an error handler that will be called if an error causes the underlying
   // channel to be closed.
   echo_proxy.set_error_handler([&loop](zx_status_t status) {
-    FX_LOGF(WARNING, "echo_client", "Echo protocol failed with status: %d\n", status);
+    FX_SLOG(WARNING, "Echo protocol failed", KV("status", status));
     ZX_ASSERT(status == ZX_ERR_UNAVAILABLE);
     loop.Quit();
   });
@@ -35,7 +37,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   // The epitaph itself is just a zx_status_t. To get detailed information about why the routing
   // failed, you'll need to check the kernel debuglog.
   echo_proxy->EchoString("Hippos rule!", [&](fidl::StringPtr response) {
-    FX_LOGF(INFO, "echo_client", "Server response: %s", response->c_str());
+    FX_SLOG(INFO, "Server response", KV("response", response->c_str()));
     loop.Quit();
   });
 
@@ -50,7 +52,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   // Sets an error handler that will be called if an error causes the underlying
   // channel to be closed.
   echo2_proxy.set_error_handler([&loop](zx_status_t status) {
-    FX_LOGF(WARNING, "echo_client", "Echo2 protocol failed with status: %d\n", status);
+    FX_SLOG(WARNING, "Echo2 protocol failed", KV("status", status));
     ZX_ASSERT(status == ZX_ERR_PEER_CLOSED);
     loop.Quit();
   });
@@ -60,7 +62,7 @@ int main(int argc, const char* argv[], char* envp[]) {
   // component's outgoing directory request handle and that causes the channel for the service
   // connection to be closed as well.
   echo2_proxy->EchoString("Hippos rule!", [&](fidl::StringPtr response) {
-    FX_LOGF(INFO, "echo_client", "Server response: %s", response->c_str());
+    FX_SLOG(INFO, "Server response", KV("response", response->c_str()));
     loop.Quit();
   });
 
