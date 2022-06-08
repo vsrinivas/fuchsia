@@ -25,8 +25,8 @@ executable("insntrace_print") {
 
   deps = [
     "third_party/simple-pt:printer",
-    "//garnet/lib/debugger_utils",
     "//garnet/lib/intel_pt_decode",
+    "//src/lib/debugger_utils",
     "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]

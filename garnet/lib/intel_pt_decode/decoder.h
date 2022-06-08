@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_INTEL_PT_DECODE_DECODER_H_
+#define GARNET_LIB_INTEL_PT_DECODE_DECODER_H_
 
 #include <string>
 #include <unordered_set>
 #include <vector>
 
-#include "garnet/lib/debugger_utils/build_ids.h"
-#include "garnet/lib/debugger_utils/elf_reader.h"
-#include "garnet/lib/debugger_utils/elf_symtab.h"
-#include "garnet/lib/debugger_utils/ktrace_reader.h"
-#include "garnet/lib/debugger_utils/load_maps.h"
-
+#include "src/lib/debugger_utils/build_ids.h"
+#include "src/lib/debugger_utils/elf_reader.h"
+#include "src/lib/debugger_utils/elf_symtab.h"
+#include "src/lib/debugger_utils/ktrace_reader.h"
+#include "src/lib/debugger_utils/load_maps.h"
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
-
 #include "third_party/simple-pt/symtab.h"
 
 namespace intel_processor_trace {
@@ -165,3 +164,5 @@ class DecoderState {
 };
 
 }  // namespace intel_processor_trace
+
+#endif  // GARNET_LIB_INTEL_PT_DECODE_DECODER_H_

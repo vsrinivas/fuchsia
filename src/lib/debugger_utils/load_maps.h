@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_DEBUGGER_UTILS_LOAD_MAPS_H_
+#define SRC_LIB_DEBUGGER_UTILS_LOAD_MAPS_H_
+
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <string>
 #include <vector>
-
-#include <zircon/types.h>
 
 #include "src/lib/fxl/macros.h"
 
@@ -42,3 +43,5 @@ class LoadMapTable {
 };
 
 }  // namespace debugger_utils
+
+#endif  // SRC_LIB_DEBUGGER_UTILS_LOAD_MAPS_H_

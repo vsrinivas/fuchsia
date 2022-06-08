@@ -37,9 +37,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "garnet/lib/debugger_utils/byte_block_file.h"
-#include "garnet/lib/debugger_utils/elf_reader.h"
-#include "garnet/lib/debugger_utils/util.h"
+#include "src/lib/debugger_utils/byte_block_file.h"
+#include "src/lib/debugger_utils/elf_reader.h"
+#include "src/lib/debugger_utils/util.h"
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
 namespace simple_pt {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
-#define GARNET_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
+#ifndef SRC_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
+#define SRC_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
 
 #include <stdint.h>
 
@@ -17,4 +17,4 @@ constexpr uint64_t kUint64MagicPacketValue = 0x0123456789abcdeful;
 
 }  // namespace debugger_utils
 
-#endif  // GARNET_LIB_DEBUGGER_UTILS_TEST_HELPER_H_
+#endif  // SRC_LIB_DEBUGGER_UTILS_TEST_HELPER_H_

@@ -11,8 +11,8 @@ source_set("intel_pt_decode") {
 
   deps = [
     "third_party/simple-pt:reader",
-    "//garnet/lib/debugger_utils",
     "//sdk/lib/fit",
+    "//src/lib/debugger_utils",
     "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]

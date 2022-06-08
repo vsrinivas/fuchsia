@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_DEBUGGER_UTILS_UTIL_H_
-#define GARNET_LIB_DEBUGGER_UTILS_UTIL_H_
+#ifndef SRC_LIB_DEBUGGER_UTILS_UTIL_H_
+#define SRC_LIB_DEBUGGER_UTILS_UTIL_H_
 
 #include <string>
 
@@ -24,4 +24,4 @@ std::string ZxErrorString(zx_status_t status);
 
 }  // namespace debugger_utils
 
-#endif  // GARNET_LIB_DEBUGGER_UTILS_UTIL_H_
+#endif  // SRC_LIB_DEBUGGER_UTILS_UTIL_H_

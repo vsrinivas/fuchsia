@@ -18,9 +18,9 @@ source_set("printer") {
   ]
 
   deps = [
-    "//garnet/lib/debugger_utils",
     "//garnet/lib/intel_pt_decode",
     "//sdk/lib/fit",
+    "//src/lib/debugger_utils",
     "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]

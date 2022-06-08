@@ -31,11 +31,11 @@
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/debugger_utils/util.h"
-#include "garnet/lib/debugger_utils/x86_cpuid.h"
-#include "garnet/lib/debugger_utils/x86_pt.h"
 #include "src/developer/insntrace/config.h"
 #include "src/developer/insntrace/control.h"
+#include "src/lib/debugger_utils/util.h"
+#include "src/lib/debugger_utils/x86_cpuid.h"
+#include "src/lib/debugger_utils/x86_pt.h"
 
 // The lower 5 bits of CR3_MATCH MSR are reserved.
 static constexpr uint32_t kCr3MatchReservedMask = 0x1f;

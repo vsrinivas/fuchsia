@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_DEBUGGER_UTILS_ELF_READER_H_
+#define SRC_LIB_DEBUGGER_UTILS_ELF_READER_H_
 
 #include <climits>
 #include <cstddef>
 #include <cstdint>
 #ifdef __APPLE__
 // TODO(dje): Private copy until available on osx.
-#include <garnet/lib/debugger_utils/third_party/musl/include/elf.h>
+#include <src/lib/debugger_utils/third_party/musl/include/elf.h>
 #else
 #include <elf.h>
 #endif
@@ -183,3 +184,5 @@ class ElfReader {
 };
 
 }  // namespace debugger_utils
+
+#endif  // SRC_LIB_DEBUGGER_UTILS_ELF_READER_H_

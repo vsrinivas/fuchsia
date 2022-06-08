@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_DEBUGGER_UTILS_BYTE_BLOCK_FILE_H_
+#define SRC_LIB_DEBUGGER_UTILS_BYTE_BLOCK_FILE_H_
 
 #include "byte_block.h"
 
@@ -27,3 +28,5 @@ class FileByteBlock final : public ByteBlock {
 };
 
 }  // namespace debugger_utils
+
+#endif  // SRC_LIB_DEBUGGER_UTILS_BYTE_BLOCK_FILE_H_

@@ -14,8 +14,8 @@
 #include <fbl/unique_fd.h>
 
 #include "decoder.h"
-#include "garnet/lib/debugger_utils/ktrace_reader.h"
-#include "garnet/lib/debugger_utils/util.h"
+#include "src/lib/debugger_utils/ktrace_reader.h"
+#include "src/lib/debugger_utils/util.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/simple-pt/elf.h"

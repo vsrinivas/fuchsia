@@ -5,17 +5,16 @@
 // Simple reader for ktrace files.
 // TODO: IWBN if there was a libktrace to replace this.
 
+#include "ktrace_reader.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <lib/zircon-internal/ktrace.h>
-
-#include "ktrace_reader.h"
 
 namespace debugger_utils {
 

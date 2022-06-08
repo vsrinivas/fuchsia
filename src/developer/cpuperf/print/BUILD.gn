@@ -25,9 +25,9 @@ executable("cpuperf_print") {
   ]
 
   deps = [
-    "//garnet/lib/debugger_utils",
     "//garnet/lib/perfmon",
     "//src/developer/cpuperf:session_result_spec",
+    "//src/lib/debugger_utils",
     "//src/lib/fxl",
   ]
 }

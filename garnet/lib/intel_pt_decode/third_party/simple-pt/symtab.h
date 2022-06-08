@@ -27,13 +27,14 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifndef GARNET_LIB_INTEL_PT_DECODE_THIRD_PARTY_SIMPLE_PT_SYMTAB_H_
+#define GARNET_LIB_INTEL_PT_DECODE_THIRD_PARTY_SIMPLE_PT_SYMTAB_H_
 
 #include <cstdint>
 #include <memory>
 #include <vector>
 
-#include "garnet/lib/debugger_utils/elf_symtab.h"
+#include "src/lib/debugger_utils/elf_symtab.h"
 
 namespace simple_pt {
 
@@ -75,3 +76,5 @@ const char* FindPcFileName(const SymbolTableTable& symtabs, uint64_t cr3, uint64
 bool SeenCr3(const SymbolTableTable& symtabs, uint64_t cr3);
 
 }  // namespace simple_pt
+
+#endif  // GARNET_LIB_INTEL_PT_DECODE_THIRD_PARTY_SIMPLE_PT_SYMTAB_H_

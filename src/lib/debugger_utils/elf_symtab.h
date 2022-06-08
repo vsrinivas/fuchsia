@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_DEBUGGER_UTILS_ELF_SYMTAB_H_
+#define SRC_LIB_DEBUGGER_UTILS_ELF_SYMTAB_H_
 
 #include <cstdint>
 #include <cstdio>
 #include <memory>
 #include <string>
 
-#include "src/lib/fxl/macros.h"
-
 #include "elf_reader.h"
+#include "src/lib/fxl/macros.h"
 
 namespace debugger_utils {
 
@@ -66,3 +66,5 @@ class ElfSymbolTable {
 };
 
 }  // namespace debugger_utils
+
+#endif  // SRC_LIB_DEBUGGER_UTILS_ELF_SYMTAB_H_

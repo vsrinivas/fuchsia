@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "garnet/lib/debugger_utils/util.h"
+#include "src/lib/debugger_utils/util.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"

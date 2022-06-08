@@ -7,6 +7,7 @@
 #include "x86_pt.h"
 
 #include <cpuid.h>
+
 #include <atomic>
 #include <mutex>
 

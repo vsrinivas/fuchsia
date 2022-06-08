@@ -46,8 +46,8 @@ executable("bin") {
   deps = [
     ":session_result_spec",
     ":session_spec",
-    "//garnet/lib/debugger_utils",
     "//garnet/lib/perfmon",
+    "//src/lib/debugger_utils",
     "//src/lib/fxl",
     "//src/zircon/lib/zircon",
   ]

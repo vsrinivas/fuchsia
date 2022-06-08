@@ -6,8 +6,8 @@
 // TODO(dje): As with generic elf, dwarf, et.al, move to application
 // independent library.
 
-#ifndef GARNET_LIB_DEBUGGER_UTILS_X86_CPUID_H_
-#define GARNET_LIB_DEBUGGER_UTILS_X86_CPUID_H_
+#ifndef SRC_LIB_DEBUGGER_UTILS_X86_CPUID_H_
+#define SRC_LIB_DEBUGGER_UTILS_X86_CPUID_H_
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -132,4 +132,4 @@ bool x86_topology_enumerate(uint8_t level, x86_topology_level* info);
 
 }  // namespace debugger_utils
 
-#endif  // GARNET_LIB_DEBUGGER_UTILS_X86_CPUID_H_
+#endif  // SRC_LIB_DEBUGGER_UTILS_X86_CPUID_H_

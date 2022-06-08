@@ -27,7 +27,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ----------------------------------------------------------------------
 */
 
-#pragma once
+#ifndef SRC_LIB_DEBUGGER_UTILS_THIRD_PARTY_MUSL_INCLUDE_ELF_H_
+#define SRC_LIB_DEBUGGER_UTILS_THIRD_PARTY_MUSL_INCLUDE_ELF_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -2606,3 +2607,5 @@ typedef Elf32_Addr Elf32_Conflict;
 #ifdef __cplusplus
 }
 #endif
+
+#endif  // SRC_LIB_DEBUGGER_UTILS_THIRD_PARTY_MUSL_INCLUDE_ELF_H_

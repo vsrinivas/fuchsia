@@ -11,7 +11,7 @@ source_set("reader") {
   ]
 
   deps = [
-    "//garnet/lib/debugger_utils",
+    "//src/lib/debugger_utils",
     "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
   ]

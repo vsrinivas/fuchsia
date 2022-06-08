@@ -6,11 +6,11 @@
 // TODO: IWBN if there was a libktrace to replace this, but that can
 // probably wait until ktrace is combined into ftrace
 
-#pragma once
-
-#include <stdint.h>
+#ifndef SRC_LIB_DEBUGGER_UTILS_KTRACE_READER_H_
+#define SRC_LIB_DEBUGGER_UTILS_KTRACE_READER_H_
 
 #include <lib/zircon-internal/ktrace.h>
+#include <stdint.h>
 
 namespace debugger_utils {
 
@@ -36,3 +36,5 @@ int KtraceReadFile(int fd, KtraceRecordReader* reader, void* arg);
 const char* KtraceRecName(uint32_t tag);
 
 }  // namespace debugger_utils
+
+#endif  // SRC_LIB_DEBUGGER_UTILS_KTRACE_READER_H_

@@ -15,8 +15,8 @@
 
 #include <fbl/unique_fd.h>
 
-#include "garnet/lib/debugger_utils/util.h"
 #include "src/developer/insntrace/utils.h"
+#include "src/lib/debugger_utils/util.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {
