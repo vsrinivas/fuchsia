@@ -2,8 +2,8 @@
     "emu": {
         "instance_dir": "$DATA/emu/instances",
         "kvm_path": "/dev/kvm",
-        "startup": {
-            "timeout": 60.0
+        "start": {
+            "timeout": 60
         },
         "upscript": ""
     }
