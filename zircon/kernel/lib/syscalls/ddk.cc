@@ -55,6 +55,9 @@
 // TODO(fxbug.dev/91213): Remove this when zx_pc_firmware_tables() goes away.
 zx_paddr_t gAcpiRsdp = 0;
 
+// TODO(fxbug.dev/91213): Remove this when zx_pc_firmware_tables() goes away.
+zx_paddr_t gSmbiosPhys = 0;
+
 // zx_status_t zx_vmo_create_contiguous
 zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t alignment_log2,
                                       user_out_handle* out) {
@@ -363,11 +366,7 @@ zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> a
     return status;
   }
 
-  zx_paddr_t smbios_entrypoint = 0;
-#if ARCH_X86
-  smbios_entrypoint = pc_get_smbios_entrypoint();
-#endif
-  if ((status = smbios.copy_to_user(smbios_entrypoint)) != ZX_OK) {
+  if ((status = smbios.copy_to_user(gSmbiosPhys)) != ZX_OK) {
     return status;
   }
 

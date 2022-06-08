@@ -32,10 +32,5 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
       arch_handoff.framebuffer = *reinterpret_cast<const zbi_swfb_t*>(payload.data());
       SaveForMexec(header, payload);
       break;
-    case ZBI_TYPE_SMBIOS:
-      ZX_ASSERT(payload.size() >= sizeof(uint64_t));
-      arch_handoff.smbios = *reinterpret_cast<const uint64_t*>(payload.data());
-      SaveForMexec(header, payload);
-      break;
   }
 }

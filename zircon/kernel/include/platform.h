@@ -109,6 +109,9 @@ zbi_hw_reboot_reason_t platform_hw_reboot_reason(void);
 // TODO(fxbug.dev/91213): Remove this when zx_pc_firmware_tables() goes away.
 extern zx_paddr_t gAcpiRsdp;
 
+// TODO(fxbug.dev/91213): Remove this when zx_pc_firmware_tables() goes away.
+extern zx_paddr_t gSmbiosPhys;
+
 __END_CDECLS
 
 #ifdef __cplusplus

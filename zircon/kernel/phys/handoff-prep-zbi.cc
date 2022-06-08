@@ -164,6 +164,11 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
         handoff()->acpi_rsdp = *reinterpret_cast<const uint64_t*>(payload.data());
         SaveForMexec(*header, payload);
         break;
+      case ZBI_TYPE_SMBIOS:
+        ZX_ASSERT(payload.size() >= sizeof(uint64_t));
+        handoff()->smbios_phys = *reinterpret_cast<const uint64_t*>(payload.data());
+        SaveForMexec(*header, payload);
+        break;
 
       // Default assumption is that the type is architecture-specific.
       default:

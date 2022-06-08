@@ -106,6 +106,7 @@ void HandoffFromPhys(paddr_t handoff_paddr) {
     platform_set_hw_reboot_reason(gPhysHandoff->reboot_reason.value());
   }
   gAcpiRsdp = gPhysHandoff->acpi_rsdp.value_or(0);
+  gSmbiosPhys = gPhysHandoff->smbios_phys.value_or(0);
 }
 
 ktl::span<ktl::byte> ZbiInPhysmap(bool own) {

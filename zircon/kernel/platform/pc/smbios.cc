@@ -25,7 +25,6 @@
 namespace {
 
 smbios::EntryPointVersion kEpVersion = smbios::EntryPointVersion::Unknown;
-zx_paddr_t kEntryPointPhys;
 union {
   const uint8_t* raw;
   const smbios::EntryPoint2_1* ep2_1;
@@ -34,18 +33,18 @@ uintptr_t kStructBase = 0;  // Address of first SMBIOS struct
 
 zx_status_t FindEntryPoint(const uint8_t** base, smbios::EntryPointVersion* version) {
   // See if the ZBI told us where the table is.
-  if (gPhysHandoff->arch_handoff.smbios) {
-    uint64_t smbios = gPhysHandoff->arch_handoff.smbios.value();
+  if (gPhysHandoff->smbios_phys) {
+    uint64_t smbios = gPhysHandoff->smbios_phys.value();
     const uint8_t* p = reinterpret_cast<const uint8_t*>(paddr_to_physmap(smbios));
     if (!memcmp(p, SMBIOS2_ANCHOR, strlen(SMBIOS2_ANCHOR))) {
       *base = p;
       *version = smbios::EntryPointVersion::V2_1;
-      kEntryPointPhys = smbios;
+      gSmbiosPhys = smbios;
       return ZX_OK;
     } else if (!memcmp(p, SMBIOS3_ANCHOR, strlen(SMBIOS3_ANCHOR))) {
       *base = p;
       *version = smbios::EntryPointVersion::V3_0;
-      kEntryPointPhys = smbios;
+      gSmbiosPhys = smbios;
       return ZX_OK;
     }
   }
@@ -56,13 +55,13 @@ zx_status_t FindEntryPoint(const uint8_t** base, smbios::EntryPointVersion* vers
     if (!memcmp(p, SMBIOS2_ANCHOR, strlen(SMBIOS2_ANCHOR))) {
       *base = p;
       *version = smbios::EntryPointVersion::V2_1;
-      kEntryPointPhys = target;
+      gSmbiosPhys = target;
       return ZX_OK;
     }
     if (!memcmp(p, SMBIOS3_ANCHOR, strlen(SMBIOS3_ANCHOR))) {
       *base = p;
       *version = smbios::EntryPointVersion::V3_0;
-      kEntryPointPhys = target;
+      gSmbiosPhys = target;
       return ZX_OK;
     }
   }
@@ -163,7 +162,7 @@ void pc_init_smbios() {
   cleanup_mapping.cancel();
 }
 
-zx_paddr_t pc_get_smbios_entrypoint() { return kEntryPointPhys; }
+zx_paddr_t pc_get_smbios_entrypoint() { return gSmbiosPhys; }
 
 static zx_status_t DebugStructWalk(smbios::SpecVersion ver, const smbios::Header* hdr,
                                    const smbios::StringTable& st) {
