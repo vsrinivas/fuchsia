@@ -1,8 +1,0 @@
-# Copyright 2022 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# Do not use this target directly, instead depend on //src/developer/trace2json:bin.
-group("bin") {
-  public_deps = [ "//src/developer/trace2json:bin" ]
-}
