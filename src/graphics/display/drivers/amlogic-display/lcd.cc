@@ -95,6 +95,7 @@ zx_status_t Lcd::Disable() {
   if (!enabled_) {
     return ZX_OK;
   }
+  DISP_INFO("Powering off the LCD");
   // First send shutdown command to LCD
   enabled_ = false;
   return LoadInitTable(lcd_shutdown_sequence, sizeof(lcd_shutdown_sequence));
