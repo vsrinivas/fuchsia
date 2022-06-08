@@ -12,7 +12,7 @@ use derivative::Derivative;
 use log::trace;
 use net_types::ip::{Ip, IpAddress, IpVersionMarker};
 
-use crate::context::{InstantContext, TimerContext, TimerHandler};
+use crate::context::{TimerContext, TimerHandler};
 
 /// Time between PMTU maintenance operations.
 ///
@@ -54,15 +54,18 @@ const PMTU_PLATEAUS: [u32; 12] =
 pub(crate) struct PmtuTimerId<I: Ip>(IpVersionMarker<I>);
 
 /// The state context for the path MTU cache.
-pub(super) trait PmtuStateContext<I: Ip>: InstantContext {
+pub(super) trait PmtuStateContext<I: Ip, Instant> {
     /// Returns a mutable reference to the PMTU cache.
-    fn get_state_mut(&mut self) -> &mut PmtuCache<I, Self::Instant>;
+    fn get_state_mut(&mut self) -> &mut PmtuCache<I, Instant>;
 }
 
 /// The execution context for the path MTU cache.
-trait PmtuContext<I: Ip, C>: PmtuStateContext<I> + TimerContext<PmtuTimerId<I>> {}
+trait PmtuContext<I: Ip, C>: PmtuStateContext<I, Self::Instant> + TimerContext<PmtuTimerId<I>> {}
 
-impl<I: Ip, C, SC: PmtuStateContext<I> + TimerContext<PmtuTimerId<I>>> PmtuContext<I, C> for SC {}
+impl<I: Ip, C, SC: PmtuStateContext<I, SC::Instant> + TimerContext<PmtuTimerId<I>>>
+    PmtuContext<I, C> for SC
+{
+}
 
 /// A handler for incoming PMTU events.
 ///
@@ -412,7 +415,7 @@ mod tests {
     type DummyCtx<I> =
         crate::context::testutil::DummyCtx<DummyPmtuContext<I>, PmtuTimerId<I>, (), (), ()>;
 
-    impl<I: Ip> PmtuStateContext<I> for DummyCtx<I> {
+    impl<I: Ip> PmtuStateContext<I, DummyInstant> for DummyCtx<I> {
         fn get_state_mut(&mut self) -> &mut PmtuCache<I, DummyInstant> {
             &mut self.get_mut().cache
         }

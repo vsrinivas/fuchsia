@@ -87,6 +87,17 @@ use rand::{CryptoRng, RngCore};
 
 use crate::{BlanketCoreContext, Ctx, EventDispatcher, Instant, TimerId};
 
+/// A marker trait indicating that the implementor is not the [`DummyCtx`]
+/// type found in test environments.
+///
+/// See [this issue] for details on why this is needed.
+///
+/// [`DummyCtx`]: testutil::DummyCtx
+/// [this issue]: https://github.com/rust-lang/rust/issues/97811
+pub(crate) trait NonTestCtxMarker {}
+
+impl<D: EventDispatcher, C: BlanketCoreContext> NonTestCtxMarker for Ctx<D, C> {}
+
 /// A context that provides access to a monotonic clock.
 pub trait InstantContext {
     /// The type of an instant in time.

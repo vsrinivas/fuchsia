@@ -37,7 +37,7 @@ use alloc::{
     },
     vec::Vec,
 };
-use core::{cmp::Ordering, convert::TryFrom, time::Duration};
+use core::{cmp::Ordering, convert::TryFrom, marker::PhantomData, time::Duration};
 
 use assert_matches::assert_matches;
 use net_types::ip::{Ip, IpAddress};
@@ -84,19 +84,22 @@ const MAX_FRAGMENT_BLOCKS: u16 = 8191;
 const MAX_FRAGMENT_CACHE_SIZE: usize = 4 * 1024 * 1024;
 
 /// The state context for the fragment cache.
-pub(super) trait FragmentStateContext<I: Ip> {
+pub(super) trait FragmentStateContext<I: Ip, Instant> {
     /// Returns a mutable reference to the fragment cache.
-    fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I>;
+    fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I, Instant>;
 }
 
 /// The execution context for the fragment cache.
 trait FragmentContext<I: Ip, C>:
-    FragmentStateContext<I> + TimerContext<FragmentCacheKey<I::Addr>>
+    FragmentStateContext<I, Self::Instant> + TimerContext<FragmentCacheKey<I::Addr>>
 {
 }
 
-impl<I: Ip, C, SC: FragmentStateContext<I> + TimerContext<FragmentCacheKey<I::Addr>>>
-    FragmentContext<I, C> for SC
+impl<
+        I: Ip,
+        C,
+        SC: FragmentStateContext<I, SC::Instant> + TimerContext<FragmentCacheKey<I::Addr>>,
+    > FragmentContext<I, C> for SC
 {
 }
 
@@ -419,15 +422,21 @@ impl FragmentCacheData {
 
 /// A cache of inbound IP packet fragments.
 #[derive(Debug)]
-pub(crate) struct IpPacketFragmentCache<I: Ip> {
+pub(crate) struct IpPacketFragmentCache<I: Ip, Instant> {
     cache: HashMap<FragmentCacheKey<I::Addr>, FragmentCacheData>,
     size: usize,
     threshold: usize,
+    _marker: PhantomData<Instant>,
 }
 
-impl<I: Ip> Default for IpPacketFragmentCache<I> {
-    fn default() -> IpPacketFragmentCache<I> {
-        IpPacketFragmentCache { cache: HashMap::new(), size: 0, threshold: MAX_FRAGMENT_CACHE_SIZE }
+impl<I: Ip, Instant> Default for IpPacketFragmentCache<I, Instant> {
+    fn default() -> IpPacketFragmentCache<I, Instant> {
+        IpPacketFragmentCache {
+            cache: HashMap::new(),
+            size: 0,
+            threshold: MAX_FRAGMENT_CACHE_SIZE,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -438,7 +447,7 @@ enum CacheTimerAction<A: IpAddress> {
 
 // TODO(https://fxbug.dev/92672): Make these operate on a context trait rather
 // than `&self` and `&mut self`.
-impl<I: Ip> IpPacketFragmentCache<I> {
+impl<I: Ip, Instant> IpPacketFragmentCache<I, Instant> {
     /// Attempts to process a packet fragment.
     ///
     /// # Panics
@@ -834,7 +843,7 @@ mod tests {
 
     #[derive(Default)]
     struct DummyFragmentContext<I: Ip> {
-        cache: IpPacketFragmentCache<I>,
+        cache: IpPacketFragmentCache<I, DummyInstant>,
     }
 
     type DummyCtx<I> = crate::context::testutil::DummyCtx<
@@ -845,8 +854,8 @@ mod tests {
         (),
     >;
 
-    impl<I: Ip> FragmentStateContext<I> for DummyCtx<I> {
-        fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I> {
+    impl<I: Ip> FragmentStateContext<I, DummyInstant> for DummyCtx<I> {
+        fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I, DummyInstant> {
             &mut self.get_mut().cache
         }
     }
@@ -909,7 +918,7 @@ mod tests {
     }
 
     /// Validate that IpPacketFragmentCache has correct size.
-    fn validate_size<I: Ip>(cache: &IpPacketFragmentCache<I>) {
+    fn validate_size<I: Ip>(cache: &IpPacketFragmentCache<I, DummyInstant>) {
         let mut sz: usize = 0;
 
         for v in cache.cache.values() {

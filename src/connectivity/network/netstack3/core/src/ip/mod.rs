@@ -46,7 +46,9 @@ use packet_formats::{
 use specialize_ip_macro::specialize_ip;
 
 use crate::{
-    context::{CounterContext, EventContext, InstantContext, StateContext, TimerHandler},
+    context::{
+        CounterContext, EventContext, InstantContext, NonTestCtxMarker, StateContext, TimerHandler,
+    },
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
@@ -386,8 +388,10 @@ impl<I: Instant, DeviceId> IpLayerStateIpExt<I, DeviceId> for Ipv6 {
 // TODO(https://fxbug.dev/48578): Do not return references to state. Instead,
 // callers of methods on this trait should provide a callback that takes a state
 // reference.
-pub(crate) trait IpStateContext<I: IpLayerStateIpExt<Self::Instant, Self::DeviceId>>:
-    IpDeviceIdContext<I> + InstantContext + CounterContext
+pub(crate) trait IpStateContext<
+    I: IpLayerStateIpExt<Instant, Self::DeviceId>,
+    Instant: crate::Instant,
+>: IpDeviceIdContext<I> + CounterContext
 {
     /// Gets immutable access to the IP layer state.
     fn get_ip_layer_state(&self) -> &I::State;
@@ -441,15 +445,24 @@ pub enum IpLayerEvent<DeviceId, I: Ip> {
 }
 
 /// The execution context for the IP layer.
-pub(crate) trait IpLayerContext<I: IpLayerStateIpExt<Self::Instant, Self::DeviceId>, C>:
-    IpStateContext<I> + IpDeviceContext<I, C> + EventContext<IpLayerEvent<Self::DeviceId, I>>
+pub(crate) trait IpLayerContext<
+    I: IpLayerStateIpExt<<Self as InstantContext>::Instant, Self::DeviceId>,
+    C,
+>:
+    InstantContext
+    + IpStateContext<I, <Self as InstantContext>::Instant>
+    + IpDeviceContext<I, C>
+    + EventContext<IpLayerEvent<Self::DeviceId, I>>
 {
 }
 
 impl<
         I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
         C,
-        SC: IpStateContext<I> + IpDeviceContext<I, C> + EventContext<IpLayerEvent<SC::DeviceId, I>>,
+        SC: InstantContext
+            + IpStateContext<I, SC::Instant>
+            + IpDeviceContext<I, C>
+            + EventContext<IpLayerEvent<SC::DeviceId, I>>,
     > IpLayerContext<I, C> for SC
 {
 }
@@ -598,7 +611,7 @@ impl<C, SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>> IpSocket
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4, C::Instant> for Ctx<D, C> {
     fn get_ip_layer_state(&self) -> &Ipv4State<C::Instant, DeviceId> {
         &self.state.ipv4
     }
@@ -608,7 +621,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4> for Ctx<D, 
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6, C::Instant> for Ctx<D, C> {
     fn get_ip_layer_state(&self) -> &Ipv6State<C::Instant, DeviceId> {
         &self.state.ipv6
     }
@@ -897,7 +910,7 @@ impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv4, I, DeviceId>> for Ipv4State<
     }
 }
 
-fn gen_ipv4_packet_id<C: IpStateContext<Ipv4>>(sync_ctx: &mut C) -> u16 {
+fn gen_ipv4_packet_id<I: Instant, C: IpStateContext<Ipv4, I>>(sync_ctx: &mut C) -> u16 {
     // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
     let state = sync_ctx.get_ip_layer_state_mut();
     state.next_packet_id = state.next_packet_id.wrapping_add(1);
@@ -923,7 +936,7 @@ impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv6, I, DeviceId>> for Ipv6State<
 
 pub(crate) struct IpStateInner<I: Ip, Instant: crate::Instant, DeviceId> {
     table: ForwardingTable<I, DeviceId>,
-    fragment_cache: IpPacketFragmentCache<I>,
+    fragment_cache: IpPacketFragmentCache<I, Instant>,
     pmtu_cache: PmtuCache<I, Instant>,
 }
 
@@ -2166,8 +2179,14 @@ trait BufferIpLayerHandler<I: Ip, C, B: BufferMut>: IpDeviceIdContext<I> {
     ) -> Result<(), S>;
 }
 
-impl<B: BufferMut, C, SC: BufferIpDeviceContext<Ipv6, C, B> + IpStateContext<Ipv6>>
-    BufferIpLayerHandler<Ipv6, C, B> for SC
+impl<
+        B: BufferMut,
+        C,
+        SC: BufferIpDeviceContext<Ipv6, C, B>
+            + InstantContext
+            + IpStateContext<Ipv6, SC::Instant>
+            + NonTestCtxMarker,
+    > BufferIpLayerHandler<Ipv6, C, B> for SC
 {
     fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
         &mut self,
@@ -2188,7 +2207,7 @@ impl<B: BufferMut, C, SC: BufferIpDeviceContext<Ipv6, C, B> + IpStateContext<Ipv
 pub(crate) fn send_ipv4_packet_from_device<
     B: BufferMut,
     C,
-    SC: BufferIpDeviceContext<Ipv4, C, B> + IpStateContext<Ipv4>,
+    SC: BufferIpDeviceContext<Ipv4, C, B> + InstantContext + IpStateContext<Ipv4, SC::Instant>,
     S: Serializer<Buffer = B>,
 >(
     sync_ctx: &mut SC,
