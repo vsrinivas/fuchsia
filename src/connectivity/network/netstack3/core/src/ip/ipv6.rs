@@ -221,7 +221,7 @@ mod tests {
     fn test_no_extension_headers() {
         // Test that if we have no extension headers, we continue
 
-        let Ctx { sync_ctx: mut ctx } =
+        let Ctx { mut sync_ctx } =
             DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let builder = Ipv6PacketBuilder::new(
             DUMMY_CONFIG_V6.remote_ip,
@@ -236,7 +236,7 @@ mod tests {
         let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
 
         assert_eq!(
-            handle_extension_headers(&mut ctx, device_id, frame_dst, &packet, false),
+            handle_extension_headers(&mut sync_ctx, device_id, frame_dst, &packet, false),
             Ipv6PacketAction::Continue
         );
     }

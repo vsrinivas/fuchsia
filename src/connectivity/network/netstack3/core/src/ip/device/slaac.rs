@@ -2512,10 +2512,10 @@ mod tests {
             const_unwrap::const_unwrap_option(NonZeroU64::new(TWO_HOURS_AS_SECS as u64)),
         );
 
-        let Ctx { sync_ctx: mut ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { mut sync_ctx } = crate::testutil::DummyCtx::default();
         let device_id =
-            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
+            sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        crate::ip::device::update_ipv6_configuration(&mut sync_ctx, &mut (), device_id, |config| {
             config.slaac_config = SlaacConfiguration {
                 enable_stable_addresses: true,
                 temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
@@ -2527,17 +2527,17 @@ mod tests {
             };
         });
 
-        let set_ip_enabled = |ctx: &mut crate::testutil::DummySyncCtx, enabled| {
-            crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
+        let set_ip_enabled = |sync_ctx: &mut crate::testutil::DummySyncCtx, enabled| {
+            crate::ip::device::update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = enabled;
             })
         };
-        set_ip_enabled(&mut ctx, true /* enabled */);
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        set_ip_enabled(&mut sync_ctx, true /* enabled */);
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
 
         // Generate stable and temporary SLAAC addresses.
         receive_ipv6_packet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             device_id,
             FrameDestination::Multicast,
@@ -2554,7 +2554,7 @@ mod tests {
         let stable_addr_sub =
             calculate_addr_sub(SUBNET, local_mac.to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC));
 
-        let addrs = get_assigned_ipv6_addr_subnets(&ctx, device_id)
+        let addrs = get_assigned_ipv6_addr_subnets(&sync_ctx, device_id)
             .filter(|a| !a.addr().is_link_local())
             .collect::<Vec<_>>();
         let (stable_addr_sub, temp_addr_sub) = assert_matches!(
@@ -2574,7 +2574,7 @@ mod tests {
                 }
             }
         );
-        let now = ctx.now();
+        let now = sync_ctx.now();
         let stable_addr_lifetime_until = now + TWO_HOURS.get();
         let temp_addr_lifetime_until = now + ONE_HOUR.get();
 
@@ -2597,7 +2597,7 @@ mod tests {
         let temp_addr_preferred_until_end = now + ONE_HOUR.get();
         let temp_addr_preferred_until_start =
             temp_addr_preferred_until_end - ((ONE_HOUR.get() * 3) / 5);
-        ctx.ctx.timer_ctx().assert_some_timers_installed([
+        sync_ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 SlaacTimerId::new_invalidate_slaac_address(device_id, stable_addr_sub.addr())
                     .into(),
@@ -2625,11 +2625,11 @@ mod tests {
         ]);
 
         // Disabling IP should remove all the SLAAC addresses.
-        set_ip_enabled(&mut ctx, false /* enabled */);
-        let addrs = get_assigned_ipv6_addr_subnets(&ctx, device_id)
+        set_ip_enabled(&mut sync_ctx, false /* enabled */);
+        let addrs = get_assigned_ipv6_addr_subnets(&sync_ctx, device_id)
             .filter(|a| !a.addr().is_link_local())
             .collect::<Vec<_>>();
         assert_matches!(addrs[..], []);
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
     }
 }

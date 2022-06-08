@@ -994,13 +994,13 @@ pub(crate) mod testutil {
     }
 
     pub fn enable_device<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+        sync_ctx: &mut SyncCtx<D, C>,
         device: DeviceId,
     ) {
-        crate::ip::device::update_ipv4_configuration(ctx, &mut (), device, |config| {
+        crate::ip::device::update_ipv4_configuration(sync_ctx, &mut (), device, |config| {
             config.ip_config.ip_enabled = true;
         });
-        crate::ip::device::update_ipv6_configuration(ctx, &mut (), device, |config| {
+        crate::ip::device::update_ipv6_configuration(sync_ctx, &mut (), device, |config| {
             config.ip_config.ip_enabled = true;
         });
     }
@@ -1018,17 +1018,23 @@ mod tests {
 
     #[test]
     fn test_iter_devices() {
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
 
-        fn check(ctx: &DummySyncCtx, expected: &[DeviceId]) {
-            assert_eq!(IpDeviceContext::<Ipv4, _>::iter_devices(ctx).collect::<Vec<_>>(), expected);
-            assert_eq!(IpDeviceContext::<Ipv6, _>::iter_devices(ctx).collect::<Vec<_>>(), expected);
+        fn check(sync_ctx: &DummySyncCtx, expected: &[DeviceId]) {
+            assert_eq!(
+                IpDeviceContext::<Ipv4, _>::iter_devices(sync_ctx).collect::<Vec<_>>(),
+                expected
+            );
+            assert_eq!(
+                IpDeviceContext::<Ipv6, _>::iter_devices(sync_ctx).collect::<Vec<_>>(),
+                expected
+            );
         }
-        check(&ctx, &[][..]);
+        check(&sync_ctx, &[][..]);
 
-        let loopback_device = crate::add_loopback_device(&mut ctx, 55 /* mtu */)
+        let loopback_device = crate::add_loopback_device(&mut sync_ctx, 55 /* mtu */)
             .expect("error adding loopback device");
-        check(&ctx, &[loopback_device][..]);
+        check(&sync_ctx, &[loopback_device][..]);
 
         let DummyEventDispatcherConfig {
             subnet: _,
@@ -1037,7 +1043,8 @@ mod tests {
             remote_ip: _,
             remote_mac: _,
         } = DUMMY_CONFIG_V4;
-        let ethernet_device = crate::add_ethernet_device(&mut ctx, local_mac, 0 /* mtu */);
-        check(&ctx, &[ethernet_device, loopback_device][..]);
+        let ethernet_device =
+            crate::add_ethernet_device(&mut sync_ctx, local_mac, 0 /* mtu */);
+        check(&sync_ctx, &[ethernet_device, loopback_device][..]);
     }
 }

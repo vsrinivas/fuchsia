@@ -75,20 +75,20 @@ mod tests {
     #[test]
     fn test_loopback_methods() {
         const MTU: u32 = 66;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let device =
-            crate::add_loopback_device(&mut ctx, MTU).expect("error adding loopback device");
-        crate::device::testutil::enable_device(&mut ctx, device);
+            crate::add_loopback_device(&mut sync_ctx, MTU).expect("error adding loopback device");
+        crate::device::testutil::enable_device(&mut sync_ctx, device);
 
-        assert_eq!(crate::ip::IpDeviceContext::<Ipv4, _>::get_mtu(&ctx, device), MTU);
-        assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&ctx, device), MTU);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv4, _>::get_mtu(&sync_ctx, device), MTU);
+        assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device), MTU);
 
         fn test<
             I: TestIpExt + IpDeviceStateIpExt<C::Instant>,
             D: EventDispatcher,
             C: BlanketCoreContext,
         >(
-            ctx: &mut SyncCtx<D, C>,
+            sync_ctx: &mut SyncCtx<D, C>,
             device: DeviceId,
             get_ip_state: for<'a> fn(
                 &'a SyncCtx<D, C>,
@@ -96,7 +96,7 @@ mod tests {
             ) -> &'a IpDeviceState<C::Instant, I>,
         ) {
             assert_eq!(
-                &get_ip_state(ctx, device)
+                &get_ip_state(sync_ctx, device)
                     .iter_addrs()
                     .map(AssignedAddress::addr)
                     .collect::<Vec<_>>()[..],
@@ -112,35 +112,35 @@ mod tests {
             } = I::DUMMY_CONFIG;
             let addr = AddrSubnet::from_witness(local_ip, subnet.prefix())
                 .expect("error creating AddrSubnet");
-            assert_eq!(crate::device::add_ip_addr_subnet(ctx, device, addr,), Ok(()));
+            assert_eq!(crate::device::add_ip_addr_subnet(sync_ctx, device, addr,), Ok(()));
             let addr = addr.addr();
             assert_eq!(
-                &get_ip_state(ctx, device)
+                &get_ip_state(sync_ctx, device)
                     .iter_addrs()
                     .map(AssignedAddress::addr)
                     .collect::<Vec<_>>()[..],
                 [addr]
             );
 
-            assert_eq!(crate::device::del_ip_addr(ctx, device, &addr,), Ok(()));
+            assert_eq!(crate::device::del_ip_addr(sync_ctx, device, &addr,), Ok(()));
             assert_eq!(
-                &get_ip_state(ctx, device)
+                &get_ip_state(sync_ctx, device)
                     .iter_addrs()
                     .map(AssignedAddress::addr)
                     .collect::<Vec<_>>()[..],
                 []
             );
 
-            assert_eq!(crate::device::del_ip_addr(ctx, device, &addr,), Err(NotFoundError));
+            assert_eq!(crate::device::del_ip_addr(sync_ctx, device, &addr,), Err(NotFoundError));
         }
 
         test::<Ipv4, _, _>(
-            &mut ctx,
+            &mut sync_ctx,
             device,
             crate::ip::device::get_ipv4_device_state::<(), DummySyncCtx>,
         );
         test::<Ipv6, _, _>(
-            &mut ctx,
+            &mut sync_ctx,
             device,
             crate::ip::device::get_ipv6_device_state::<(), DummySyncCtx>,
         );

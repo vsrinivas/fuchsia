@@ -1135,9 +1135,12 @@ mod tests {
         // Should only receive a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
-        let device =
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let device = crate::add_ethernet_device(
+            &mut sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
 
         #[ipv4]
         let mut bytes = dns_request_v4::ETHERNET_FRAME.bytes.to_vec();
@@ -1149,20 +1152,20 @@ mod tests {
         bytes[0..6].copy_from_slice(&mac_bytes);
 
         let expected_received = if enable {
-            crate::device::testutil::enable_device(&mut ctx, device);
+            crate::device::testutil::enable_device(&mut sync_ctx, device);
             1
         } else {
             0
         };
 
-        crate::device::receive_frame(&mut ctx, device, Buf::new(bytes, ..))
+        crate::device::receive_frame(&mut sync_ctx, device, Buf::new(bytes, ..))
             .expect("error receiving frame");
 
         #[ipv4]
-        assert_eq!(get_counter_val(&mut ctx, "receive_ipv4_packet"), expected_received);
+        assert_eq!(get_counter_val(&mut sync_ctx, "receive_ipv4_packet"), expected_received);
 
         #[ipv6]
-        assert_eq!(get_counter_val(&mut ctx, "receive_ipv6_packet"), expected_received);
+        assert_eq!(get_counter_val(&mut sync_ctx, "receive_ipv6_packet"), expected_received);
     }
 
     #[ip_test]
@@ -1180,12 +1183,15 @@ mod tests {
         // Should only send a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = crate::testutil::DummyCtx::default();
-        let device =
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let Ctx { mut sync_ctx } = crate::testutil::DummyCtx::default();
+        let device = crate::add_ethernet_device(
+            &mut sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
 
         let expected_sent = if enable {
-            crate::device::testutil::enable_device(&mut ctx, device);
+            crate::device::testutil::enable_device(&mut sync_ctx, device);
             1
         } else {
             0
@@ -1195,7 +1201,7 @@ mod tests {
         {
             let addr = SpecifiedAddr::new(dns_request_v4::IPV4_PACKET.metadata.dst_ip).unwrap();
             crate::device::insert_static_arp_table_entry(
-                &mut ctx,
+                &mut sync_ctx,
                 device,
                 addr.get(),
                 config.remote_mac,
@@ -1203,7 +1209,7 @@ mod tests {
             .expect("insert static ARP entry");
 
             crate::ip::device::send_ip_frame::<Ipv4, _, _, _, _>(
-                &mut ctx,
+                &mut sync_ctx,
                 &mut (),
                 device,
                 addr,
@@ -1215,10 +1221,15 @@ mod tests {
         #[ipv6]
         {
             let addr = UnicastAddr::new(dns_request_v6::IPV6_PACKET.metadata.dst_ip).unwrap();
-            crate::device::insert_ndp_table_entry(&mut ctx, device, addr, config.remote_mac.get())
-                .expect("insert static NDP entry");
+            crate::device::insert_ndp_table_entry(
+                &mut sync_ctx,
+                device,
+                addr,
+                config.remote_mac.get(),
+            )
+            .expect("insert static NDP entry");
             crate::ip::device::send_ip_frame::<Ipv6, _, _, _, _>(
-                &mut ctx,
+                &mut sync_ctx,
                 &mut (),
                 device,
                 addr.into_specified(),
@@ -1227,7 +1238,7 @@ mod tests {
             .expect("error sending IPv6 frame")
         };
 
-        assert_eq!(get_counter_val(&mut ctx, "ethernet::send_ip_frame"), expected_sent);
+        assert_eq!(get_counter_val(&mut sync_ctx, "ethernet::send_ip_frame"), expected_sent);
     }
 
     #[ip_test]
@@ -1242,32 +1253,35 @@ mod tests {
 
     #[test]
     fn initialize_once() {
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let device = crate::add_ethernet_device(
-            &mut ctx,
+            &mut sync_ctx,
             DUMMY_CONFIG_V4.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        crate::device::testutil::enable_device(&mut ctx, device);
+        crate::device::testutil::enable_device(&mut sync_ctx, device);
     }
 
-    fn is_routing_enabled<I: Ip>(ctx: &crate::testutil::DummySyncCtx, device: DeviceId) -> bool {
+    fn is_routing_enabled<I: Ip>(
+        sync_ctx: &crate::testutil::DummySyncCtx,
+        device: DeviceId,
+    ) -> bool {
         match I::VERSION {
-            IpVersion::V4 => is_ipv4_routing_enabled(ctx, device),
-            IpVersion::V6 => is_ipv6_routing_enabled(ctx, device),
+            IpVersion::V4 => is_ipv4_routing_enabled(sync_ctx, device),
+            IpVersion::V6 => is_ipv6_routing_enabled(sync_ctx, device),
         }
     }
 
     #[ip_test]
     fn test_set_ip_routing<I: Ip + TestIpExt + IcmpIpExt + IpExt>() {
         fn check_other_is_routing_enabled<I: Ip>(
-            ctx: &crate::testutil::DummySyncCtx,
+            sync_ctx: &crate::testutil::DummySyncCtx,
             device: DeviceId,
             expected: bool,
         ) {
             let enabled = match I::VERSION {
-                IpVersion::V4 => is_routing_enabled::<Ipv6>(ctx, device),
-                IpVersion::V6 => is_routing_enabled::<Ipv4>(ctx, device),
+                IpVersion::V4 => is_routing_enabled::<Ipv6>(sync_ctx, device),
+                IpVersion::V6 => is_routing_enabled::<Ipv4>(sync_ctx, device),
             };
 
             assert_eq!(enabled, expected);
@@ -1320,30 +1334,31 @@ mod tests {
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
         let device_builder_id = 0;
         add_arp_or_ndp_table_entry(&mut builder, device_builder_id, src_ip.get(), src_mac);
-        let Ctx { sync_ctx: mut ctx } = builder.build();
+        let Ctx { mut sync_ctx } = builder.build();
 
         // Should not be a router (default).
-        assert!(!is_routing_enabled::<I>(&ctx, device));
-        check_other_is_routing_enabled::<I>(&ctx, device, false);
+        assert!(!is_routing_enabled::<I>(&sync_ctx, device));
+        check_other_is_routing_enabled::<I>(&sync_ctx, device, false);
 
         // Receiving a packet not destined for the node should only result in a
         // dest unreachable message if routing is enabled.
-        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_empty(ctx.dispatcher.frames_sent().iter());
+        receive_ip_packet::<_, _, _, I>(&mut sync_ctx, device, frame_dst, buf.clone());
+        assert_empty(sync_ctx.dispatcher.frames_sent().iter());
 
         // Set routing and expect packets to be forwarded.
-        set_routing_enabled::<_, _, I>(&mut ctx, &mut (), device, true)
+        set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut (), device, true)
             .expect("error setting routing enabled");
-        assert!(is_routing_enabled::<I>(&ctx, device));
+        assert!(is_routing_enabled::<I>(&sync_ctx, device));
         // Should not update other Ip routing status.
-        check_other_is_routing_enabled::<I>(&ctx, device, false);
+        check_other_is_routing_enabled::<I>(&sync_ctx, device, false);
 
         // Should route the packet since routing fully enabled (netstack &
         // device).
-        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+        receive_ip_packet::<_, _, _, I>(&mut sync_ctx, device, frame_dst, buf.clone());
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
         let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto, ttl) =
-            parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher.frames_sent()[0].1[..]).unwrap();
+            parse_ip_packet_in_ethernet_frame::<I>(&sync_ctx.dispatcher.frames_sent()[0].1[..])
+                .unwrap();
         assert_eq!(src_ip.get(), packet_src_ip);
         assert_eq!(config.remote_ip.get(), packet_dst_ip);
         assert_eq!(proto, IpProto::Tcp.into());
@@ -1364,19 +1379,19 @@ mod tests {
             .ok()
             .unwrap()
             .unwrap_b();
-        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf_unknown_dest);
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
-        check_icmp::<I>(&ctx.dispatcher.frames_sent()[1].1);
+        receive_ip_packet::<_, _, _, I>(&mut sync_ctx, device, frame_dst, buf_unknown_dest);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
+        check_icmp::<I>(&sync_ctx.dispatcher.frames_sent()[1].1);
 
         // Attempt to unset router
-        set_routing_enabled::<_, _, I>(&mut ctx, &mut (), device, false)
+        set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut (), device, false)
             .expect("error setting routing enabled");
-        assert!(!is_routing_enabled::<I>(&ctx, device));
-        check_other_is_routing_enabled::<I>(&ctx, device, false);
+        assert!(!is_routing_enabled::<I>(&sync_ctx, device));
+        check_other_is_routing_enabled::<I>(&sync_ctx, device, false);
 
         // Should not route packets anymore
-        receive_ip_packet::<_, _, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
+        receive_ip_packet::<_, _, _, I>(&mut sync_ctx, device, frame_dst, buf.clone());
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
     }
 
     #[ip_test]
@@ -1386,8 +1401,7 @@ mod tests {
         // that are destined for a device must always be accepted.
 
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } =
-            DummyEventDispatcherBuilder::from_config(config.clone()).build();
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::from_config(config.clone()).build();
         let device = DeviceId::new_ethernet(0);
         let other_mac = Mac::new([13, 14, 15, 16, 17, 18]);
 
@@ -1409,16 +1423,18 @@ mod tests {
             .unwrap_b();
 
         // Accept packet destined for this device if promiscuous mode is off.
-        crate::device::set_promiscuous_mode(&mut ctx, device, false)
+        crate::device::set_promiscuous_mode(&mut sync_ctx, device, false)
             .expect("error setting promiscuous mode");
-        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
+        crate::device::receive_frame(&mut sync_ctx, device, buf.clone())
+            .expect("error receiving frame");
+        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Accept packet destined for this device if promiscuous mode is on.
-        crate::device::set_promiscuous_mode(&mut ctx, device, true)
+        crate::device::set_promiscuous_mode(&mut sync_ctx, device, true)
             .expect("error setting promiscuous mode");
-        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
+        crate::device::receive_frame(&mut sync_ctx, device, buf.clone())
+            .expect("error receiving frame");
+        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         let buf = Buf::new(Vec::new(), ..)
             .encapsulate(I::PacketBuilder::new(
@@ -1439,25 +1455,30 @@ mod tests {
 
         // Reject packet not destined for this device if promiscuous mode is
         // off.
-        crate::device::set_promiscuous_mode(&mut ctx, device, false)
+        crate::device::set_promiscuous_mode(&mut sync_ctx, device, false)
             .expect("error setting promiscuous mode");
-        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
+        crate::device::receive_frame(&mut sync_ctx, device, buf.clone())
+            .expect("error receiving frame");
+        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // Accept packet not destined for this device if promiscuous mode is on.
-        crate::device::set_promiscuous_mode(&mut ctx, device, true)
+        crate::device::set_promiscuous_mode(&mut sync_ctx, device, true)
             .expect("error setting promiscuous mode");
-        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
-        assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
+        crate::device::receive_frame(&mut sync_ctx, device, buf.clone())
+            .expect("error receiving frame");
+        assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 3);
     }
 
     #[ip_test]
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
-        let device =
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let device = crate::add_ethernet_device(
+            &mut sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
+        crate::device::testutil::enable_device(&mut sync_ctx, device);
 
         let ip1 = I::get_other_ip_address(1);
         let ip2 = I::get_other_ip_address(2);
@@ -1467,60 +1488,60 @@ mod tests {
         let as1 = AddrSubnet::new(ip1.get(), prefix).unwrap();
         let as2 = AddrSubnet::new(ip2.get(), prefix).unwrap();
 
-        assert!(!contains_addr(&ctx, device, ip1));
-        assert!(!contains_addr(&ctx, device, ip2));
-        assert!(!contains_addr(&ctx, device, ip3));
+        assert!(!contains_addr(&sync_ctx, device, ip1));
+        assert!(!contains_addr(&sync_ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip3));
 
         // Add ip1 (ok)
-        crate::device::add_ip_addr_subnet(&mut ctx, device, as1).unwrap();
-        assert!(contains_addr(&ctx, device, ip1));
-        assert!(!contains_addr(&ctx, device, ip2));
-        assert!(!contains_addr(&ctx, device, ip3));
+        crate::device::add_ip_addr_subnet(&mut sync_ctx, device, as1).unwrap();
+        assert!(contains_addr(&sync_ctx, device, ip1));
+        assert!(!contains_addr(&sync_ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip3));
 
         // Add ip2 (ok)
-        crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap();
-        assert!(contains_addr(&ctx, device, ip1));
-        assert!(contains_addr(&ctx, device, ip2));
-        assert!(!contains_addr(&ctx, device, ip3));
+        crate::device::add_ip_addr_subnet(&mut sync_ctx, device, as2).unwrap();
+        assert!(contains_addr(&sync_ctx, device, ip1));
+        assert!(contains_addr(&sync_ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip3));
 
         // Del ip1 (ok)
-        crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert!(!contains_addr(&ctx, device, ip1));
-        assert!(contains_addr(&ctx, device, ip2));
-        assert!(!contains_addr(&ctx, device, ip3));
+        crate::device::del_ip_addr(&mut sync_ctx, device, &ip1).unwrap();
+        assert!(!contains_addr(&sync_ctx, device, ip1));
+        assert!(contains_addr(&sync_ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip3));
 
         // Del ip1 again (ip1 not found)
-        assert_eq!(crate::device::del_ip_addr(&mut ctx, device, &ip1), Err(NotFoundError));
-        assert!(!contains_addr(&ctx, device, ip1));
-        assert!(contains_addr(&ctx, device, ip2));
-        assert!(!contains_addr(&ctx, device, ip3));
+        assert_eq!(crate::device::del_ip_addr(&mut sync_ctx, device, &ip1), Err(NotFoundError));
+        assert!(!contains_addr(&sync_ctx, device, ip1));
+        assert!(contains_addr(&sync_ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip3));
 
         // Add ip2 again (ip2 already exists)
         assert_eq!(
-            crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap_err(),
+            crate::device::add_ip_addr_subnet(&mut sync_ctx, device, as2).unwrap_err(),
             ExistsError,
         );
-        assert!(!contains_addr(&ctx, device, ip1));
-        assert!(contains_addr(&ctx, device, ip2));
-        assert!(!contains_addr(&ctx, device, ip3));
+        assert!(!contains_addr(&sync_ctx, device, ip1));
+        assert!(contains_addr(&sync_ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip3));
 
         // Add ip2 with different subnet (ip2 already exists)
         assert_eq!(
             crate::device::add_ip_addr_subnet(
-                &mut ctx,
+                &mut sync_ctx,
                 device,
                 AddrSubnet::new(ip2.get(), prefix - 1).unwrap()
             )
             .unwrap_err(),
             ExistsError,
         );
-        assert!(!contains_addr(&ctx, device, ip1));
-        assert!(contains_addr(&ctx, device, ip2));
-        assert!(!contains_addr(&ctx, device, ip3));
+        assert!(!contains_addr(&sync_ctx, device, ip1));
+        assert!(contains_addr(&sync_ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip3));
     }
 
     fn receive_simple_ip_packet_test<A: IpAddress>(
-        ctx: &mut crate::testutil::DummySyncCtx,
+        sync_ctx: &mut crate::testutil::DummySyncCtx,
         device: DeviceId,
         src_ip: A,
         dst_ip: A,
@@ -1538,65 +1559,71 @@ mod tests {
             .unwrap()
             .into_inner();
 
-        receive_ip_packet::<_, _, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
-        assert_eq!(get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()), expected);
+        receive_ip_packet::<_, _, _, A::Version>(sync_ctx, device, FrameDestination::Unicast, buf);
+        assert_eq!(
+            get_counter_val(sync_ctx, dispatch_receive_ip_packet_name::<A::Version>()),
+            expected
+        );
     }
 
     #[ip_test]
     fn test_multiple_ip_addresses<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
-        let device =
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let device = crate::add_ethernet_device(
+            &mut sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
+        crate::device::testutil::enable_device(&mut sync_ctx, device);
 
         let ip1 = I::get_other_ip_address(1);
         let ip2 = I::get_other_ip_address(2);
         let from_ip = I::get_other_ip_address(3).get();
 
-        assert!(!contains_addr(&ctx, device, ip1));
-        assert!(!contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&sync_ctx, device, ip1));
+        assert!(!contains_addr(&sync_ctx, device, ip2));
 
         // Should not receive packets on any IP.
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 0);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 0);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip1.get(), 0);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip2.get(), 0);
 
         // Add ip1 to device.
         crate::device::add_ip_addr_subnet(
-            &mut ctx,
+            &mut sync_ctx,
             device,
             AddrSubnet::new(ip1.get(), I::Addr::BYTES * 8).unwrap(),
         )
         .unwrap();
-        assert!(contains_addr(&ctx, device, ip1));
-        assert!(!contains_addr(&ctx, device, ip2));
+        assert!(contains_addr(&sync_ctx, device, ip1));
+        assert!(!contains_addr(&sync_ctx, device, ip2));
 
         // Should receive packets on ip1 but not ip2
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 1);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 1);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip1.get(), 1);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip2.get(), 1);
 
         // Add ip2 to device.
         crate::device::add_ip_addr_subnet(
-            &mut ctx,
+            &mut sync_ctx,
             device,
             AddrSubnet::new(ip2.get(), I::Addr::BYTES * 8).unwrap(),
         )
         .unwrap();
-        assert!(contains_addr(&ctx, device, ip1));
-        assert!(contains_addr(&ctx, device, ip2));
+        assert!(contains_addr(&sync_ctx, device, ip1));
+        assert!(contains_addr(&sync_ctx, device, ip2));
 
         // Should receive packets on both ips
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 2);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 3);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip1.get(), 2);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip2.get(), 3);
 
         // Remove ip1
-        crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert!(!contains_addr(&ctx, device, ip1));
-        assert!(contains_addr(&ctx, device, ip2));
+        crate::device::del_ip_addr(&mut sync_ctx, device, &ip1).unwrap();
+        assert!(!contains_addr(&sync_ctx, device, ip1));
+        assert!(contains_addr(&sync_ctx, device, ip2));
 
         // Should receive packets on ip2
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 3);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 4);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip1.get(), 3);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip2.get(), 4);
     }
 
     /// Get a multicast address.
@@ -1610,19 +1637,19 @@ mod tests {
     }
 
     fn join_ip_multicast<A: IpAddress, D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+        sync_ctx: &mut SyncCtx<D, C>,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,
     ) {
         match multicast_addr.into() {
             IpAddr::V4(multicast_addr) => crate::ip::device::join_ip_multicast::<Ipv4, _, _>(
-                ctx,
+                sync_ctx,
                 &mut (),
                 device,
                 multicast_addr,
             ),
             IpAddr::V6(multicast_addr) => crate::ip::device::join_ip_multicast::<Ipv6, _, _>(
-                ctx,
+                sync_ctx,
                 &mut (),
                 device,
                 multicast_addr,
@@ -1631,19 +1658,19 @@ mod tests {
     }
 
     fn leave_ip_multicast<A: IpAddress, D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+        sync_ctx: &mut SyncCtx<D, C>,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,
     ) {
         match multicast_addr.into() {
             IpAddr::V4(multicast_addr) => crate::ip::device::leave_ip_multicast::<Ipv4, _, _>(
-                ctx,
+                sync_ctx,
                 &mut (),
                 device,
                 multicast_addr,
             ),
             IpAddr::V6(multicast_addr) => crate::ip::device::leave_ip_multicast::<Ipv6, _, _>(
-                ctx,
+                sync_ctx,
                 &mut (),
                 device,
                 multicast_addr,
@@ -1659,39 +1686,42 @@ mod tests {
         I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>,
     >() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
-        let device =
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let device = crate::add_ethernet_device(
+            &mut sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
+        crate::device::testutil::enable_device(&mut sync_ctx, device);
 
         let multicast_addr = get_multicast_addr::<I>();
 
         // Should not be in the multicast group yet.
-        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
+        assert!(!is_in_ip_multicast(&sync_ctx, device, multicast_addr));
 
         // Join the multicast group.
-        join_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
+        join_ip_multicast(&mut sync_ctx, device, multicast_addr);
+        assert!(is_in_ip_multicast(&sync_ctx, device, multicast_addr));
 
         // Leave the multicast group.
-        leave_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
+        leave_ip_multicast(&mut sync_ctx, device, multicast_addr);
+        assert!(!is_in_ip_multicast(&sync_ctx, device, multicast_addr));
 
         // Join the multicst group.
-        join_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
+        join_ip_multicast(&mut sync_ctx, device, multicast_addr);
+        assert!(is_in_ip_multicast(&sync_ctx, device, multicast_addr));
 
         // Join it again...
-        join_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
+        join_ip_multicast(&mut sync_ctx, device, multicast_addr);
+        assert!(is_in_ip_multicast(&sync_ctx, device, multicast_addr));
 
         // Leave it (still in it because we joined twice).
-        leave_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
+        leave_ip_multicast(&mut sync_ctx, device, multicast_addr);
+        assert!(is_in_ip_multicast(&sync_ctx, device, multicast_addr));
 
         // Leave it again... (actually left now).
-        leave_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
+        leave_ip_multicast(&mut sync_ctx, device, multicast_addr);
+        assert!(!is_in_ip_multicast(&sync_ctx, device, multicast_addr));
     }
 
     /// Test leaving a multicast group a device has not yet joined.
@@ -1704,18 +1734,21 @@ mod tests {
     #[should_panic(expected = "attempted to leave IP multicast group we were not a member of:")]
     fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
-        let device =
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let device = crate::add_ethernet_device(
+            &mut sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
+        crate::device::testutil::enable_device(&mut sync_ctx, device);
 
         let multicast_addr = get_multicast_addr::<I>();
 
         // Should not be in the multicast group yet.
-        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
+        assert!(!is_in_ip_multicast(&sync_ctx, device, multicast_addr));
 
         // Leave it (this should panic).
-        leave_ip_multicast(&mut ctx, device, multicast_addr);
+        leave_ip_multicast(&mut sync_ctx, device, multicast_addr);
     }
 
     #[test]
@@ -1726,10 +1759,13 @@ mod tests {
         // solicited-node multicast address.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
-        let device =
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let device = crate::add_ethernet_device(
+            &mut sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
+        crate::device::testutil::enable_device(&mut sync_ctx, device);
 
         let ip1 = SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 1, 0, 0, 0, 1])).unwrap();
         let ip2 = SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 2, 0, 0, 0, 1])).unwrap();
@@ -1744,32 +1780,32 @@ mod tests {
         let addr_sub1 = AddrSubnet::new(ip1.get(), 64).unwrap();
         let addr_sub2 = AddrSubnet::new(ip2.get(), 64).unwrap();
 
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ip_packet"), 0);
 
         // Add ip1 to the device.
         //
         // Should get packets destined for the solicited node address and ip1.
-        crate::device::add_ip_addr_subnet(&mut ctx, device, addr_sub1).unwrap();
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 1);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 1);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 2);
+        crate::device::add_ip_addr_subnet(&mut sync_ctx, device, addr_sub1).unwrap();
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip1.get(), 1);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip2.get(), 1);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, sn_addr, 2);
 
         // Add ip2 to the device.
         //
         // Should get packets destined for the solicited node address, ip1 and
         // ip2.
-        crate::device::add_ip_addr_subnet(&mut ctx, device, addr_sub2).unwrap();
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 3);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 4);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 5);
+        crate::device::add_ip_addr_subnet(&mut sync_ctx, device, addr_sub2).unwrap();
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip1.get(), 3);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip2.get(), 4);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, sn_addr, 5);
 
         // Remove ip1 from the device.
         //
         // Should get packets destined for the solicited node address and ip2.
-        crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 5);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 6);
-        receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 7);
+        crate::device::del_ip_addr(&mut sync_ctx, device, &ip1).unwrap();
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip1.get(), 5);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, ip2.get(), 6);
+        receive_simple_ip_packet_test(&mut sync_ctx, device, from_ip, sn_addr, 7);
     }
 
     #[test]
@@ -1777,17 +1813,22 @@ mod tests {
         // Test that `add_ip_addr_subnet` allows link-local addresses.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let device = EthernetDeviceId(0);
         assert_eq!(
-            crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
+            crate::add_ethernet_device(
+                &mut sync_ctx,
+                config.local_mac,
+                Ipv6::MINIMUM_LINK_MTU.into()
+            ),
             DeviceIdInner::Ethernet(device).into()
         );
 
-        crate::device::testutil::enable_device(&mut ctx, device.into());
+        crate::device::testutil::enable_device(&mut sync_ctx, device.into());
         // Verify that there is a single assigned address.
         assert_eq!(
-            ctx.state
+            sync_ctx
+                .state
                 .device
                 .ethernet
                 .get(0)
@@ -1801,13 +1842,13 @@ mod tests {
             [config.local_mac.to_ipv6_link_local().addr().get()]
         );
         crate::device::add_ip_addr_subnet(
-            &mut ctx,
+            &mut sync_ctx,
             device.into(),
             AddrSubnet::new(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network(), 128).unwrap(),
         )
         .unwrap();
         // Assert that the new address got added.
-        let addr_subs: Vec<_> = ctx
+        let addr_subs: Vec<_> = sync_ctx
             .state
             .device
             .ethernet

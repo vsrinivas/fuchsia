@@ -1095,17 +1095,16 @@ mod tests {
 
     #[test]
     fn enable_disable_ipv6() {
-        let ctx: DummyCtx = Ctx::new(
+        let DummyCtx { mut sync_ctx } = Ctx::new(
             StackStateBuilder::default().build(),
             DummyEventDispatcher::default(),
             Default::default(),
         );
-        let Ctx { sync_ctx: mut ctx } = ctx;
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
         let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
         let device_id =
-            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
+            sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        update_ipv6_configuration(&mut sync_ctx, &mut (), device_id, |config| {
             config.ip_config.gmp_enabled = true;
 
             // Doesn't matter as long as we perform DAD and router
@@ -1113,19 +1112,19 @@ mod tests {
             config.dad_transmits = NonZeroU8::new(1);
             config.max_router_solicitations = NonZeroU8::new(1);
         });
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
 
         let ll_addr = local_mac.to_ipv6_link_local();
 
         // Enable the device and observe an auto-generated link-local address,
         // router solicitation and DAD for the auto-generated address.
         let test_enable_device =
-            |ctx: &mut DummySyncCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
-                update_ipv6_configuration(ctx, &mut (), device_id, |config| {
+            |sync_ctx: &mut DummySyncCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
+                update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
                     config.ip_config.ip_enabled = true;
                 });
                 assert_eq!(
-                    IpDeviceContext::<Ipv6, ()>::get_ip_device_state(ctx, device_id)
+                    IpDeviceContext::<Ipv6, ()>::get_ip_device_state(sync_ctx, device_id)
                         .ip_state
                         .iter_addrs()
                         .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
@@ -1175,25 +1174,27 @@ mod tests {
                         ..,
                     ))
                 }
-                ctx.ctx.timer_ctx().assert_timers_installed(timers);
+                sync_ctx.ctx.timer_ctx().assert_timers_installed(timers);
             };
-        test_enable_device(&mut ctx, None);
+        test_enable_device(&mut sync_ctx, None);
 
-        let test_disable_device = |ctx: &mut DummySyncCtx| {
-            update_ipv6_configuration(ctx, &mut (), device_id, |config| {
+        let test_disable_device = |sync_ctx: &mut DummySyncCtx| {
+            update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = false;
             });
-            ctx.ctx.timer_ctx().assert_no_timers_installed();
+            sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
         };
-        test_disable_device(&mut ctx);
+        test_disable_device(&mut sync_ctx);
         assert_empty(
-            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&ctx, device_id).ip_state.iter_addrs(),
+            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
+                .ip_state
+                .iter_addrs(),
         );
 
         let multicast_addr = Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS;
-        join_ip_multicast::<Ipv6, _, _>(&mut ctx, &mut (), device_id, multicast_addr);
+        join_ip_multicast::<Ipv6, _, _>(&mut sync_ctx, &mut (), device_id, multicast_addr);
         add_ipv6_addr_subnet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             device_id,
             ll_addr.to_witness(),
@@ -1201,7 +1202,7 @@ mod tests {
         )
         .expect("add MAC based IPv6 link-local address");
         assert_eq!(
-            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&ctx, device_id)
+            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
                 .ip_state
                 .iter_addrs()
                 .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
@@ -1211,10 +1212,10 @@ mod tests {
             HashSet::from([ll_addr.ipv6_unicast_addr()])
         );
 
-        test_enable_device(&mut ctx, Some(multicast_addr));
-        test_disable_device(&mut ctx);
+        test_enable_device(&mut sync_ctx, Some(multicast_addr));
+        test_disable_device(&mut sync_ctx);
         assert_eq!(
-            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&ctx, device_id)
+            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
                 .ip_state
                 .iter_addrs()
                 .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
@@ -1225,7 +1226,7 @@ mod tests {
             "manual addresses should not be removed on device disable"
         );
 
-        leave_ip_multicast::<Ipv6, _, _>(&mut ctx, &mut (), device_id, multicast_addr);
-        test_enable_device(&mut ctx, None);
+        leave_ip_multicast::<Ipv6, _, _>(&mut sync_ctx, &mut (), device_id, multicast_addr);
+        test_enable_device(&mut sync_ctx, None);
     }
 }

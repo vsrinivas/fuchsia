@@ -1144,15 +1144,15 @@ mod tests {
             subnet: _,
         } = Ipv6::DUMMY_CONFIG;
 
-        let crate::testutil::DummyCtx { sync_ctx: mut ctx } = Ctx::new(
+        let crate::testutil::DummyCtx { mut sync_ctx } = Ctx::new(
             StackStateBuilder::default().build(),
             DummyEventDispatcher::default(),
             Default::default(),
         );
         let device_id =
-            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+            sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 
-        let now = ctx.now();
+        let now = sync_ctx.now();
         let ll_addr = local_mac.to_ipv6_link_local().addr();
         let snmc_addr = ll_addr.to_solicited_node_address();
         let snmc_timer_id = TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
@@ -1167,9 +1167,9 @@ mod tests {
             ip_enabled: bool,
             gmp_enabled: bool,
         }
-        let set_config = |ctx: &mut crate::testutil::DummySyncCtx,
+        let set_config = |sync_ctx: &mut crate::testutil::DummySyncCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
-            crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
+            crate::ip::device::update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
                 // TODO(https://fxbug.dev/98534): Make sure that DAD resolving
                 // for a link-local address results in reports sent with a
                 // specified source address.
@@ -1179,10 +1179,10 @@ mod tests {
                 config.ip_config.gmp_enabled = gmp_enabled;
             });
         };
-        let check_sent_report = |ctx: &mut crate::testutil::DummySyncCtx,
+        let check_sent_report = |sync_ctx: &mut crate::testutil::DummySyncCtx,
                                  specified_source: bool| {
             assert_matches::assert_matches!(
-                &ctx.dispatcher.take_frames()[..],
+                &sync_ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
@@ -1210,9 +1210,10 @@ mod tests {
                 }
             );
         };
-        let check_sent_done = |ctx: &mut crate::testutil::DummySyncCtx, specified_source: bool| {
+        let check_sent_done = |sync_ctx: &mut crate::testutil::DummySyncCtx,
+                               specified_source: bool| {
             assert_matches::assert_matches!(
-                &ctx.dispatcher.take_frames()[..],
+                &sync_ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
@@ -1245,42 +1246,42 @@ mod tests {
         //
         // MLD should be performed for the auto-generated link-local address's
         // solicited-node multicast address.
-        set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
-        ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
-        check_sent_report(&mut ctx, false);
+        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
+        sync_ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
+        check_sent_report(&mut sync_ctx, false);
 
         // Disable MLD.
-        set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: false });
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
-        check_sent_done(&mut ctx, true);
+        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: false });
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        check_sent_done(&mut sync_ctx, true);
 
         // Enable MLD but disable IPv6.
         //
         // Should do nothing.
-        set_config(&mut ctx, TestConfig { ip_enabled: false, gmp_enabled: true });
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&ctx.dispatcher.take_frames()[..], []);
+        set_config(&mut sync_ctx, TestConfig { ip_enabled: false, gmp_enabled: true });
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Disable MLD but enable IPv6.
         //
         // Should do nothing.
-        set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: false });
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&ctx.dispatcher.take_frames()[..], []);
+        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: false });
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Enable MLD.
-        set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
-        ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
-        check_sent_report(&mut ctx, true);
+        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
+        sync_ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
+        check_sent_report(&mut sync_ctx, true);
 
         // Disable IPv6.
-        set_config(&mut ctx, TestConfig { ip_enabled: false, gmp_enabled: true });
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
-        check_sent_done(&mut ctx, false);
+        set_config(&mut sync_ctx, TestConfig { ip_enabled: false, gmp_enabled: true });
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        check_sent_done(&mut sync_ctx, false);
 
         // Enable IPv6.
-        set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
-        ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range)]);
-        check_sent_report(&mut ctx, false);
+        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
+        sync_ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range)]);
+        check_sent_report(&mut sync_ctx, false);
     }
 }

@@ -1076,39 +1076,39 @@ mod tests {
 
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
-        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::from_config(cfg).build();
-        let loopback_device_id = crate::add_loopback_device(&mut ctx, u16::MAX.into())
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::from_config(cfg).build();
+        let loopback_device_id = crate::add_loopback_device(&mut sync_ctx, u16::MAX.into())
             .expect("create the loopback interface");
-        crate::device::testutil::enable_device(&mut ctx, loopback_device_id);
+        crate::device::testutil::enable_device(&mut sync_ctx, loopback_device_id);
 
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result, device_type } =
             test_case;
 
         #[ipv4]
-        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummySyncCtx| {
-            let devices = crate::ip::device::iter_ipv4_devices(ctx)
+        let remove_all_local_addrs = |sync_ctx: &mut crate::testutil::DummySyncCtx| {
+            let devices = crate::ip::device::iter_ipv4_devices(sync_ctx)
                 .map(|(device, _state)| device)
                 .collect::<Vec<_>>();
             for device in devices {
-                let subnets = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
+                let subnets = crate::ip::device::get_assigned_ipv4_addr_subnets(sync_ctx, device)
                     .collect::<Vec<_>>();
                 for subnet in subnets {
-                    crate::device::del_ip_addr(ctx, device, &subnet.addr())
+                    crate::device::del_ip_addr(sync_ctx, device, &subnet.addr())
                         .expect("failed to remove addr from device");
                 }
             }
         };
 
         #[ipv6]
-        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummySyncCtx| {
-            let devices = crate::ip::device::iter_ipv6_devices(ctx)
+        let remove_all_local_addrs = |sync_ctx: &mut crate::testutil::DummySyncCtx| {
+            let devices = crate::ip::device::iter_ipv6_devices(sync_ctx)
                 .map(|(device, _state)| device)
                 .collect::<Vec<_>>();
             for device in devices {
-                let subnets = crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device)
+                let subnets = crate::ip::device::get_assigned_ipv6_addr_subnets(sync_ctx, device)
                     .collect::<Vec<_>>();
                 for subnet in subnets {
-                    crate::device::del_ip_addr(ctx, device, &subnet.addr())
+                    crate::device::del_ip_addr(sync_ctx, device, &subnet.addr())
                         .expect("failed to remove addr from device");
                 }
             }
@@ -1127,12 +1127,12 @@ mod tests {
             AddressType::Remote => (remote_ip, Some(remote_ip)),
             AddressType::Unspecified { can_select } => {
                 if !can_select {
-                    remove_all_local_addrs(&mut ctx);
+                    remove_all_local_addrs(&mut sync_ctx);
                 }
                 (local_ip, None)
             }
             AddressType::Unroutable => {
-                remove_all_local_addrs(&mut ctx);
+                remove_all_local_addrs(&mut sync_ctx);
                 (local_ip, Some(local_ip))
             }
         };
@@ -1140,7 +1140,7 @@ mod tests {
         let (to_ip, device) = match remote_ip_type {
             AddressType::LocallyOwned => (
                 local_ip,
-                IpDeviceIdContext::<I>::loopback_id(&ctx)
+                IpDeviceIdContext::<I>::loopback_id(&sync_ctx)
                     .expect("local test should have loopback device"),
             ),
             AddressType::Remote => (remote_ip, LOCAL_DEVICE),
@@ -1150,11 +1150,11 @@ mod tests {
             AddressType::Unroutable => {
                 match subnet.into() {
                     SubnetEither::V4(subnet) => {
-                        crate::ip::del_route::<Ipv4, _, _>(&mut ctx, &mut (), subnet)
+                        crate::ip::del_route::<Ipv4, _, _>(&mut sync_ctx, &mut (), subnet)
                             .expect("failed to delete IPv4 device route")
                     }
                     SubnetEither::V6(subnet) => {
-                        crate::ip::del_route::<Ipv6, _, _>(&mut ctx, &mut (), subnet)
+                        crate::ip::del_route::<Ipv6, _, _>(&mut sync_ctx, &mut (), subnet)
                             .expect("failed to delete IPv6 device route")
                     }
                 }
@@ -1192,7 +1192,7 @@ mod tests {
         };
 
         let res = IpSocketHandler::<I, _>::new_ip_socket(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             local_device,
             from_ip,
@@ -1209,7 +1209,7 @@ mod tests {
             let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
             assert_eq!(
                 IpSocketHandler::<Ipv4, _>::new_ip_socket(
-                    &mut ctx,
+                    &mut sync_ctx,
                     &mut (),
                     local_device,
                     from_ip,
@@ -1236,7 +1236,7 @@ mod tests {
                 builder.hop_limit(NonZeroU8::new(SPECIFIED_HOP_LIMIT).unwrap());
             assert_eq!(
                 IpSocketHandler::<Ipv6, _>::new_ip_socket(
-                    &mut ctx,
+                    &mut sync_ctx,
                     &mut (),
                     local_device,
                     from_ip,
@@ -1422,33 +1422,33 @@ mod tests {
 
         let mut builder = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
-        let Ctx { sync_ctx: mut ctx } = builder.build();
+        let Ctx { mut sync_ctx } = builder.build();
         crate::device::add_ip_addr_subnet(
-            &mut ctx,
+            &mut sync_ctx,
             device_id,
             AddrSubnet::new(local_ip.get(), 16).unwrap(),
         )
         .unwrap();
         crate::device::add_ip_addr_subnet(
-            &mut ctx,
+            &mut sync_ctx,
             device_id,
             AddrSubnet::new(remote_ip.get(), 16).unwrap(),
         )
         .unwrap();
         match subnet.into() {
             SubnetEither::V4(subnet) => {
-                crate::ip::add_device_route::<Ipv4, _, _>(&mut ctx, &mut (), subnet, device_id)
+                crate::ip::add_device_route::<Ipv4, _, _>(&mut sync_ctx, &mut (), subnet, device_id)
                     .expect("install IPv4 device route on a fresh stack without routes")
             }
             SubnetEither::V6(subnet) => {
-                crate::ip::add_device_route::<Ipv6, _, _>(&mut ctx, &mut (), subnet, device_id)
+                crate::ip::add_device_route::<Ipv6, _, _>(&mut sync_ctx, &mut (), subnet, device_id)
                     .expect("install IPv6 device route on a fresh stack without routes")
             }
         }
 
-        let loopback_device_id = crate::add_loopback_device(&mut ctx, u16::MAX.into())
+        let loopback_device_id = crate::add_loopback_device(&mut sync_ctx, u16::MAX.into())
             .expect("create the loopback interface");
-        crate::device::testutil::enable_device(&mut ctx, loopback_device_id);
+        crate::device::testutil::enable_device(&mut sync_ctx, loopback_device_id);
 
         let (expected_from_ip, from_ip) = match from_addr_type {
             AddressType::LocallyOwned => (local_ip, Some(local_ip)),
@@ -1467,7 +1467,7 @@ mod tests {
         };
 
         let sock = IpSocketHandler::<I, _>::new_ip_socket(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             None,
             from_ip,
@@ -1492,7 +1492,7 @@ mod tests {
         // Send an echo packet on the socket and validate that the packet is
         // delivered locally.
         BufferIpSocketHandler::<I, _, _>::send_ip_packet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             &sock,
             buffer.into_inner().buffer_view().as_ref().into_serializer(),
@@ -1500,13 +1500,13 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 0);
 
         #[ipv4]
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv4_packet"), 1);
+        assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ipv4_packet"), 1);
 
         #[ipv6]
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
+        assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ipv6_packet"), 1);
     }
 
     #[ip_test]
@@ -1550,12 +1550,11 @@ mod tests {
         let DummyEventDispatcherConfig::<_> { local_mac, remote_mac, local_ip, remote_ip, subnet } =
             cfg;
 
-        let Ctx { sync_ctx: mut ctx } =
-            DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
+        let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
 
         // Create a normal, routable socket.
         let sock = IpSocketHandler::<I, _>::new_ip_socket(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             None,
             None,
@@ -1566,7 +1565,7 @@ mod tests {
         .unwrap();
 
         #[ipv4]
-        let curr_id = crate::ip::gen_ipv4_packet_id(&mut ctx);
+        let curr_id = crate::ip::gen_ipv4_packet_id(&mut sync_ctx);
 
         #[ipv4]
         let check_frame = move |frame: &[u8], packet_count| {
@@ -1596,45 +1595,45 @@ mod tests {
             assert_eq!(ttl, 1);
         };
         let mut packet_count = 0;
-        assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_count);
 
         // Send a packet on the socket and make sure that the right contents
         // are sent.
         BufferIpSocketHandler::<I, _, _>::send_ip_packet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             &sock,
             (&[0u8][..]).into_serializer(),
             None,
         )
         .unwrap();
-        let mut check_sent_frame = |ctx: &SyncCtx<DummyEventDispatcher, _>| {
+        let mut check_sent_frame = |sync_ctx: &SyncCtx<DummyEventDispatcher, _>| {
             packet_count += 1;
-            assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
-            let (dev, frame) = &ctx.dispatcher.frames_sent()[packet_count - 1];
+            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_count);
+            let (dev, frame) = &sync_ctx.dispatcher.frames_sent()[packet_count - 1];
             assert_eq!(dev, &DeviceId::new_ethernet(0));
             check_frame(&frame, packet_count);
         };
-        check_sent_frame(&ctx);
+        check_sent_frame(&sync_ctx);
 
         // Send a packet while imposing an MTU that is large enough to fit the
         // packet.
         let small_body = [0; 1];
         let small_body_serializer = (&small_body).into_serializer();
         let res = BufferIpSocketHandler::<I, _, _>::send_ip_packet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             &sock,
             small_body_serializer,
             Some(Ipv6::MINIMUM_LINK_MTU.into()),
         );
         assert_matches::assert_matches!(res, Ok(()));
-        check_sent_frame(&ctx);
+        check_sent_frame(&sync_ctx);
 
         // Send a packet on the socket while imposing an MTU which will not
         // allow a packet to be sent.
         let res = BufferIpSocketHandler::<I, _, _>::send_ip_packet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             &sock,
             small_body_serializer,
@@ -1642,11 +1641,11 @@ mod tests {
         );
         assert_matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
 
-        assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_count);
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
         let res = BufferIpSocketHandler::<I, _, _>::send_ip_packet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             &sock,
             (&[0; crate::ip::Ipv6::MINIMUM_LINK_MTU as usize][..]).into_serializer(),
@@ -1655,9 +1654,9 @@ mod tests {
         assert_matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
 
         // Make sure that sending on an unroutable socket fails.
-        crate::ip::del_route::<I, _, _>(&mut ctx, &mut (), subnet).unwrap();
+        crate::ip::del_route::<I, _, _>(&mut sync_ctx, &mut (), subnet).unwrap();
         let res = BufferIpSocketHandler::<I, _, _>::send_ip_packet(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             &sock,
             small_body_serializer,

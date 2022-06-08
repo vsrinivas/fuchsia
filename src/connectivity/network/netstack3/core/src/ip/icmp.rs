@@ -2969,30 +2969,38 @@ mod tests {
         modify_packet_builder(&mut pb);
         let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
-        let Ctx { sync_ctx: mut ctx } =
+        let Ctx { mut sync_ctx } =
             I::DUMMY_CONFIG.into_builder().build_with_modifications(modify_stack_state_builder);
 
         let device = DeviceId::new_ethernet(0);
-        set_routing_enabled::<_, _, I>(&mut ctx, &mut (), device, true)
+        set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut (), device, true)
             .expect("error setting routing enabled");
         match I::VERSION {
-            IpVersion::V4 => {
-                receive_ipv4_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buffer)
-            }
-            IpVersion::V6 => {
-                receive_ipv6_packet(&mut ctx, &mut (), device, FrameDestination::Unicast, buffer)
-            }
+            IpVersion::V4 => receive_ipv4_packet(
+                &mut sync_ctx,
+                &mut (),
+                device,
+                FrameDestination::Unicast,
+                buffer,
+            ),
+            IpVersion::V6 => receive_ipv6_packet(
+                &mut sync_ctx,
+                &mut (),
+                device,
+                FrameDestination::Unicast,
+                buffer,
+            ),
         }
 
         for counter in assert_counters {
-            assert!(get_counter_val(&ctx, counter) > 0, "counter at zero: {}", counter);
+            assert!(get_counter_val(&sync_ctx, counter) > 0, "counter at zero: {}", counter);
         }
 
         if let Some((expect_message, expect_code)) = expect_message_code {
-            assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
             let (src_mac, dst_mac, src_ip, dst_ip, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<I, _, M, _>(
-                    &ctx.dispatcher.frames_sent()[0].1,
+                    &sync_ctx.dispatcher.frames_sent()[0].1,
                     f,
                 )
                 .unwrap();
@@ -3004,7 +3012,7 @@ mod tests {
             assert_eq!(message, expect_message);
             assert_eq!(code, expect_code);
         } else {
-            assert_empty(ctx.dispatcher.frames_sent().iter());
+            assert_empty(sync_ctx.dispatcher.frames_sent().iter());
         }
     }
 

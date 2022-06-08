@@ -155,14 +155,14 @@ impl TimerContext<TimerId> for BenchmarkCoreContext {
 // IPv4 packet frame which we expect will be parsed and forwarded without
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
-    let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+    let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
         .build_with(
             StackStateBuilder::default(),
             BenchmarkEventDispatcher::default(),
             BenchmarkCoreContext::default(),
         );
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
-        &mut ctx,
+        &mut sync_ctx,
         &mut (),
         DeviceId::new_ethernet(0),
         true,
@@ -213,7 +213,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
         }
         black_box(
             receive_frame(
-                black_box(&mut ctx),
+                black_box(&mut sync_ctx),
                 black_box(device),
                 black_box(Buf::new(&mut buf[..], range.clone())),
             )
@@ -222,7 +222,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
 
         #[cfg(debug_assertions)]
         {
-            assert_eq!(ctx.dispatcher.frames_sent, iters);
+            assert_eq!(sync_ctx.dispatcher.frames_sent, iters);
         }
 
         // Since we modified the buffer in-place, it now has the wrong source
