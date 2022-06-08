@@ -449,30 +449,3 @@ TEST_F(SessionTest, MaybeShutdownBasemgrV2Session) {
   RunLoopUntil([&]() { return !basemgr_debug.is_running(); });
   EXPECT_FALSE(basemgr_debug.is_running());
 }
-
-// Tests that DeletePersistentConfig invokes basemgr as a v1 component with the
-// "delete_persistent_config" argument.
-TEST_F(SessionTest, DeletePersistentConfig) {
-  sys::testing::FakeLauncher sys_launcher;
-
-  bool launched{false};
-  sys_launcher.RegisterComponent(
-      kBasemgrV1Url,
-      [&](fuchsia::sys::LaunchInfo launch_info,
-          fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request) {
-        launched = true;
-
-        ASSERT_EQ(1u, launch_info.arguments->size());
-        EXPECT_EQ("delete_persistent_config", launch_info.arguments->at(0));
-
-        // Launch must receive the OnTerminated event to return.
-        TestComponentController controller;
-        controller.Connect(std::move(controller_request));
-        controller.SendOnTerminated(EXIT_SUCCESS, fuchsia::sys::TerminationReason::EXITED);
-      });
-
-  auto result = RunPromise(modular::session::DeletePersistentConfig(&sys_launcher));
-  EXPECT_TRUE(result.is_ok());
-
-  EXPECT_TRUE(launched);
-}

@@ -68,10 +68,6 @@ fpromise::result<void, zx_status_t> LaunchSessionmgr(
 // Shuts down any currently running instance of basemgr.
 fpromise::promise<void, zx_status_t> MaybeShutdownBasemgr();
 
-// Clears the persisted Modular configuration by invoking basemgr as a v1 component
-// with the "delete_persistent_config" argument.
-fpromise::promise<void, zx_status_t> DeletePersistentConfig(fuchsia::sys::Launcher* launcher);
-
 // Connects to the BasemgrDebug protocol served by the currently running instance of basemgr.
 //
 // # Errors

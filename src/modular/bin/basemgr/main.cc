@@ -34,9 +34,6 @@
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
-// Command-line command to delete the persistent configuration.
-constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
-
 // Command-line flag that specifies the name of a v2 child that basemgr will
 // start and monitor for crashes.
 constexpr std::string_view kEagerChildFlag = "eager-child";
@@ -124,11 +121,7 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
 }
 
 std::string GetUsage() {
-  return R"(Usage: basemgr [<command>]
-
-  <command>
-    (none)                    Launches basemgr.
-    delete_persistent_config  Deletes any existing persistent configuration, and exits.
+  return R"(Usage: basemgr [flags]
 
 # Flags
 
@@ -185,15 +178,6 @@ int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   const auto& positional_args = command_line.positional_args();
-  if (positional_args.size() == 1 && positional_args[0] == kDeletePersistentConfigCommand) {
-    if (auto result = config_writer.Delete(); result.is_error()) {
-      std::cerr << result.take_error() << std::endl;
-      return EXIT_FAILURE;
-    }
-    std::cout << "Deleted persistent configuration." << std::endl;
-    return EXIT_SUCCESS;
-  }
-
   if (!positional_args.empty()) {
     std::cerr << GetUsage() << std::endl;
     FX_LOGS(ERROR) << "Exiting because positional_args not empty";

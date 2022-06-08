@@ -191,64 +191,6 @@ fpromise::promise<void, zx_status_t> MaybeShutdownBasemgr() {
            std::move(basemgr_debug)]() { /* Keep |basemgr_debug| alive until completed */ });
 }
 
-fpromise::promise<void, zx_status_t> DeletePersistentConfig(fuchsia::sys::Launcher* launcher) {
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kBasemgrV1Url;
-  launch_info.arguments = {"delete_persistent_config"};
-
-  fuchsia::sys::ComponentControllerPtr controller;
-  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
-
-  fpromise::bridge<void, zx_status_t> on_terminated_bridge;
-  fpromise::bridge<void, zx_status_t> error_handler_bridge;
-
-  controller.events().OnTerminated = [completer = std::move(on_terminated_bridge.completer)](
-                                         int64_t exit_code,
-                                         fuchsia::sys::TerminationReason reason) mutable {
-    if (reason != fuchsia::sys::TerminationReason::EXITED || exit_code != EXIT_SUCCESS) {
-      FX_LOGS(ERROR) << "`basemgr delete_peristent_config` did not exit cleanly: reason = "
-                     << static_cast<int>(reason) << ", exit code = " << exit_code;
-      // The termination reason and exit code do not map directly to zx_status_t.
-      completer.complete_error(ZX_ERR_INTERNAL);
-    } else {
-      completer.complete_ok();
-    }
-  };
-
-  controller.set_error_handler(
-      [completer = std::move(error_handler_bridge.completer)](zx_status_t status) mutable {
-        if (status == ZX_OK) {
-          completer.complete_ok();
-        } else {
-          completer.complete_error(status);
-        }
-      });
-
-  return fpromise::join_promises(on_terminated_bridge.consumer.promise(),
-                                 error_handler_bridge.consumer.promise())
-      .then([controller = std::move(controller)](
-                fpromise::result<std::tuple<fpromise::result<void, zx_status_t>,
-                                            fpromise::result<void, zx_status_t>>>& result)
-                -> fpromise::result<void, zx_status_t> {
-        if (result.is_error()) {
-          // Running the joined promises failed.
-          return fpromise::error(ZX_ERR_INTERNAL);
-        }
-
-        auto on_terminated_result = std::get<0>(result.value());
-        if (on_terminated_result.is_error()) {
-          return on_terminated_result;
-        }
-
-        auto error_handler_result = std::get<1>(result.value());
-        if (error_handler_result.is_error() && error_handler_result.error() != ZX_ERR_PEER_CLOSED) {
-          return error_handler_result;
-        }
-
-        return fpromise::ok();
-      });
-}
-
 fpromise::result<fuchsia::modular::internal::BasemgrDebugPtr, zx_status_t> ConnectToBasemgrDebug() {
   return ConnectInPaths<fuchsia::modular::internal::BasemgrDebug>(
       {kBasemgrDebugSessionGlob, kBasemgrDebugV1Glob});
