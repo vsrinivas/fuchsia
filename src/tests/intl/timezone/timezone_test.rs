@@ -12,10 +12,6 @@ mod tests {
     use fuchsia_syslog;
     use tests_intl_timezone;
 
-    // Implements the Echo service which serves an abbreviated form of current time.
-    pub static DART_TIME_SERVICE_URL: &str =
-        "fuchsia-pkg://fuchsia.com/timestamp-server-dart#meta/timestamp-server-dart.cmx";
-
     /// Starts a dart program that uses Dart's idea of the system time zone to report time zone
     /// information.  The test fixture compares its own idea of local time with the one in the dart
     /// VM.
@@ -33,11 +29,7 @@ mod tests {
             "check_reported_time_in_dart_vm",
         ])
         .unwrap();
-        tests_intl_timezone::check_reported_time_with_update(
-            DART_TIME_SERVICE_URL,
-            /*get_view=*/ false,
-        )
-        .await
+        tests_intl_timezone::check_reported_time_with_update(/*get_view=*/ false).await
     }
 } // tests
 

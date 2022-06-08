@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/config.gni")
 import("//build/dart/config.gni")
+import("//build/flutter/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
@@ -26,7 +28,13 @@ group("tests-for-dart") {
   testonly = true
   public_deps = [
     ":timezone-test",
-    "../timestamp-server-dart:timestamp-server-dart",
+    "//src/tests/intl/timestamp-server-dart:timestamp-server-dart",
+  ]
+  data_deps = [
+    "//src/dart:dart_aot_product_runner",
+    "//src/dart:dart_aot_runner",
+    "//src/dart:dart_jit_product_runner",
+    "//src/dart:dart_jit_runner",
   ]
 }
 
@@ -83,16 +91,38 @@ rustc_test("timezone_bin_test") {
 
 fuchsia_unittest_package("timezone-test") {
   component_name = "timezone_bin_test"
-  manifest = "meta/timezone_bin_test.cmx"
+  manifest = "meta/timezone_bin_test.cml"
   deps = [
     ":timezone_bin_test",
     "../timestamp-server-dart:timestamp-server-dart",
+    "//src/dart:dart_aot_runner",
     "//src/intl:icudtl",
+    "//src/intl/intl_services:intl_services_comp_v2",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:stash_v2",
+    "//src/ui/bin/text:text_manager_comp_v2",
   ]
 
   # TODO(fxbug.dev/83076): Legacy test runner does not support sys environment
   # tests. Remove below line once the issue is fixed.
   wrap_cmx_test_with_cml_test = false
+
+  test_specs = {
+    log_settings = {
+      # Do not fail the test if a message with level ERROR is logged.  Several
+      # components will log ERROR if they miss a non-essential FIDL API in the
+      # sandbox.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
 }
 
 # Essentially same as above, but for flutter runner.
@@ -101,6 +131,17 @@ group("tests-for-flutter") {
   public_deps = [
     ":timezone-flutter-test",
     "../timestamp-server-dart:timestamp-server-flutter",
+  ]
+
+  deps = [
+    # The deps below are necessary on minimal product configs.
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/flutter",
+    "//src/graphics/bin/vulkan_loader",
+    "//src/testing/fidl/intl_property_manager",
+    "//src/ui/a11y/bin/a11y_manager:a11y-manager",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+    "//src/ui/bin/text:text_manager",
   ]
 
   # Because we are using test_package instead of fuchsia_test_package, the
@@ -128,16 +169,50 @@ rustc_test("timezone_flutter_bin_test") {
   ]
 }
 
+config_data("scenic-test-config") {
+  for_pkg = "text-input-test"
+  sources = [ "data/scenic_config" ]
+  outputs = [ "scenic_config" ]
+}
+
 fuchsia_unittest_package("timezone-flutter-test") {
   component_name = "timezone_flutter_bin_test"
-  manifest = "meta/timezone_flutter_bin_test.cmx"
+  manifest = "meta/timezone_flutter_bin_test.cml"
   deps = [
+    ":scenic-test-config",
     ":timezone_flutter_bin_test",
-    "../timestamp-server-dart:timestamp-server-flutter",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/dart:dart_aot_runner",
+    "//src/fonts/fake:fake-fonts-cm",
     "//src/intl:icudtl",
+    "//src/intl/intl_services:intl_services_comp_v2",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:stash_v2",
+    "//src/tests/intl/timestamp-server-dart:timestamp-server-flutter",
+    "//src/ui/a11y/bin/a11y_manager:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/bin/text:text_manager_comp_v2",
+    "//src/ui/scenic:component_v2",
   ]
 
   # TODO(fxbug.dev/83076): Legacy test runner does not support sys environment
   # tests. Remove below line once the issue is fixed.
   wrap_cmx_test_with_cml_test = false
+
+  test_specs = {
+    log_settings = {
+      # Do not fail the test if a message with level ERROR is logged.  Several
+      # components will log ERROR if they miss a non-essential FIDL API in the
+      # sandbox.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
 }

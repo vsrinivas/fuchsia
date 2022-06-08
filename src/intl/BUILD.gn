@@ -29,3 +29,9 @@ resource("icudtl") {
   sources = [ "//third_party/icu/common/icudtl.dat" ]
   outputs = [ "data/icudtl.dat" ]
 }
+
+# TODO(fmil): Is there a way to unify with above?
+resource("icudtl_root") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "icudtl.dat" ]
+}

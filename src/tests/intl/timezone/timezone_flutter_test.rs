@@ -12,10 +12,6 @@ mod tests {
     use fuchsia_syslog;
     use tests_intl_timezone;
 
-    // Implements the Echo service which serves an abbreviated form of current time.
-    pub static FLUTTER_TIME_SERVICE_URL: &str =
-        "fuchsia-pkg://fuchsia.com/timestamp-server-flutter#meta/timestamp-server-flutter.cmx";
-
     #[fasync::run_singlethreaded(test)]
     async fn check_reported_time_in_flutter_vm() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&[
@@ -25,11 +21,7 @@ mod tests {
             "check_reported_time_in_flutter_vm",
         ])
         .unwrap();
-        tests_intl_timezone::check_reported_time_with_update(
-            FLUTTER_TIME_SERVICE_URL,
-            /*get_view=*/ true,
-        )
-        .await
+        tests_intl_timezone::check_reported_time_with_update(/*get_view=*/ true).await
     }
 } // tests
 

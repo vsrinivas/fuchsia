@@ -114,9 +114,13 @@ fuchsia_test_package("text-input-test") {
     ":text-input-test-config",
     "text-input-flutter:realm",
     "//examples/fidl/rust/server:echo-server",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/connectivity/network/netstack:component",
     "//src/developer/memory/monitor:component",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/bin/scene_manager:scene_manager_component",
     "//src/ui/bin/text:text_manager_comp_v2",
+    "//src/ui/scenic:component_v2",
   ]
   test_specs = {
     log_settings = {

@@ -1,0 +1,186 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+
+        // Allows using the dart runner.
+        "sys/testing/system-test.shard.cml",
+
+        // Enable system logging.
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/timezone_bin_test",
+    },
+    children: [
+        {
+            name: "dart_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm",
+        },
+        {
+            name: "dart_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cm",
+        },
+        {
+            name: "timestamp_server_dart",
+            url: "#meta/timestamp-server-dart.cm",
+            environment: "#dart_env",
+        },
+        {
+            name: "text_manager",
+            url: "#meta/text_manager.cm",
+        },
+        {
+            name: "intl_services",
+            url: "#meta/intl_services_comp_v2.cm",
+        },
+        {
+            name: "setui_service",
+            url: "#meta/setui_service.cm",
+
+            // Several known errors exist in this setui service setup as
+            // shown below. None seem to be critical for this test, but would
+            // drastically complicate the hermetic setup if fixed.
+            //
+            // - bluetooth_handler.rs(166)] Failed to serve Watcher service
+            // - fuchsia.media.sessions2.Discovery: is not routed.
+        },
+        {
+            name: "stash",
+            url: "#meta/stash.cm",
+        },
+    ],
+    capabilities: [
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config-data",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "test.placeholders.Echo" ],
+            from: "#timestamp_server_dart",
+        },
+        {
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            from: "#intl_services",
+        },
+        {
+            protocol: [ "fuchsia.settings.Intl" ],
+            from: "#setui_service",
+        },
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "parent",
+            to: "#stash",
+        },
+        {
+            // The config data contains time zone resources, required for this
+            // test to work.  All dart runners need it.  The correct config-data
+            // subdir needs to be routed. By convention, the config-data dir is
+            // named after the recipient component.
+            directory: "config-data",
+            from: "parent",
+            to: [ "#dart_jit_runner" ],
+            subdir: "dart_jit_runner",
+            dependency: "weak",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#dart_aot_runner" ],
+            subdir: "dart_aot_runner",
+            dependency: "weak",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#setui_service" ],
+            subdir: "setui_service",
+            dependency: "weak",
+        },
+        {
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            from: "#intl_services",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+            ],
+            from: "#text_manager",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.settings.Intl" ],
+            from: "#setui_service",
+            to: [ "#intl_services" ],
+        },
+        {
+            protocol: [ "fuchsia.stash.Store" ],
+            from: "#stash",
+            to: "#setui_service",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+                "#intl_services",
+                "#setui_service",
+                "#stash",
+                "#text_manager",
+                "#timestamp_server_dart",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+                "#intl_services",
+                "#setui_service",
+                "#stash",
+                "#text_manager",
+                "#timestamp_server_dart",
+            ],
+        },
+    ],
+    environments: [
+        {
+            name: "dart_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "dart_aot_runner",
+                    from: "#dart_aot_runner",
+                },
+                {
+                    runner: "dart_jit_runner",
+                    from: "#dart_jit_runner",
+                },
+            ],
+        },
+    ],
+}

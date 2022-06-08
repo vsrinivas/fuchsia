@@ -4,33 +4,19 @@
 
 //! See the `README.md` file for more detail.
 
-use anyhow::{Context as _, Error};
+use anyhow::{Context as _, Error, Result};
 use crossbeam::channel;
-use fidl_fuchsia_accessibility_semantics as fsemantics;
-use fidl_fuchsia_fonts as ffonts;
 use fidl_fuchsia_intl as fintl;
-use fidl_fuchsia_posix_socket as fsocket;
 use fidl_fuchsia_settings as fsettings;
-use fidl_fuchsia_sys::{ComponentControllerEvent, LauncherProxy};
-use fidl_fuchsia_sysmem as fsysmem;
-use fidl_fuchsia_tracing_provider as fprovider;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
-use fidl_fuchsia_ui_input as finput;
-use fidl_fuchsia_ui_input3 as finput3;
-use fidl_fuchsia_ui_scenic as fscenic;
-use fidl_fuchsia_vulkan_loader as floader;
 use fidl_test_placeholders as fecho;
 use fuchsia_async as fasync;
 use fuchsia_async::DurationExt;
-use fuchsia_component::{client, server};
+use fuchsia_component::client;
 use fuchsia_runtime as runtime;
 use fuchsia_scenic as scenic;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
-use futures::{
-    future,
-    stream::{StreamExt, TryStreamExt},
-};
 use icu_data;
 use rust_icu_ucal as ucal;
 use rust_icu_udat as udat;
@@ -38,7 +24,7 @@ use rust_icu_uloc as uloc;
 use rust_icu_ustring as ustring;
 use std::convert::TryFrom;
 
-fn intl_client() -> Result<fsettings::IntlProxy, Error> {
+fn intl_client() -> Result<fsettings::IntlProxy> {
     client::connect_to_protocol::<fsettings::IntlMarker>()
         .context("Failed to connect to fuchsia.settings.Intl")
 }
@@ -52,7 +38,7 @@ pub struct ScopedTimezone {
 
 impl ScopedTimezone {
     /// Tries to create a new timezone setter.
-    pub async fn try_new(timezone: &str) -> Result<ScopedTimezone, Error> {
+    pub async fn try_new(timezone: &str) -> Result<ScopedTimezone> {
         let client = intl_client().with_context(|| "while creating intl client")?;
         let response =
             client.watch().await.with_context(|| "while creating intl client watcher")?;
@@ -106,66 +92,36 @@ impl Drop for ScopedTimezone {
     }
 }
 
-/// Launch the time server.  The function blocks until the launched time
-/// server says it has started serving its outgoing directory.
-///
-/// If `get_view` is set, the launcher will attempt to get a view provider.
-/// This is required to start the Dart VM when a Flutter runner is
-/// used, but is unnecessary when a Dart runner is used.
-async fn launch_time_service(
-    launcher: &LauncherProxy,
-    url: &str,
-    get_view: bool,
-) -> Result<client::App, Error> {
-    let app = client::launch(&launcher, url.to_string(), None)
-        .context("failed to launch the dart service under test")?;
-    // Keep filtering the events that the component controller emits, until
-    // we find the signal that the outgoing directory is ready.
-    let event_stream = app.controller().take_event_stream();
-    event_stream
-        .try_filter_map(|event| {
-            let event = match event {
-                ComponentControllerEvent::OnDirectoryReady {} => Some(event),
-                _ => {
-                    fx_log_err!("Unexpected event on the time service controller: {:?}", &event);
-                    None
-                }
-            };
-            future::ready(Ok(event))
-        })
-        .next()
-        .await;
-
+/// Connects to `fuchsia.ui.app.ViewProvider` to cause the Flutter runner to
+/// start.
+fn connect_to_view_provider() -> Result<()> {
     // [START flutter_runner_trick]
     // This part is only relevant for launching Flutter apps.  Flutter will not
     // start a Dart VM unless a view is requested.
-    if get_view {
-        let view_provider = app.connect_to_protocol::<ViewProviderMarker>();
-        match view_provider {
-            Err(_) => {
-                fx_log_debug!("could not connect to view provider.  This is expected in dart.")
-            }
-            Ok(ref view_provider) => {
-                fx_log_debug!("connected to view provider");
-                let token_pair = scenic::ViewTokenPair::new()?;
-                let mut viewref_pair = scenic::ViewRefPair::new()?;
+    let view_provider = client::connect_to_protocol::<ViewProviderMarker>();
+    match view_provider {
+        Err(_) => {
+            fx_log_debug!("could not connect to view provider.  This is expected in dart.")
+        }
+        Ok(ref view_provider) => {
+            fx_log_debug!("connected to view provider");
+            let token_pair = scenic::ViewTokenPair::new()?;
+            let mut viewref_pair = scenic::ViewRefPair::new()?;
 
-                view_provider
-                    .create_view_with_view_ref(
-                        token_pair.view_token.value,
-                        &mut viewref_pair.control_ref,
-                        &mut viewref_pair.view_ref,
-                    )
-                    .with_context(|| "could not create a scenic view")?;
-            }
+            view_provider
+                .create_view_with_view_ref(
+                    token_pair.view_token.value,
+                    &mut viewref_pair.control_ref,
+                    &mut viewref_pair.view_ref,
+                )
+                .with_context(|| "could not create a scenic view")?;
         }
     }
     // [END flutter_runner_trick]
-
-    Ok(app)
+    Ok(())
 }
 
-/// Gets a timezone formatter for the givne pattern, and the supplied timezone name.  Patterns are
+/// Gets a timezone formatter for the given pattern, and the supplied timezone name.  Patterns are
 /// described at: http://userguide.icu-project.org/formatparse/datetime
 fn formatter_for_timezone(pattern: &str, timezone: &str) -> udat::UDateFormat {
     let locale = uloc::ULoc::try_from("Etc/Unknown").unwrap();
@@ -197,7 +153,7 @@ async fn loop_until_matching_time(
     detailed_format: &udat::UDateFormat,
     echo: &fecho::EchoProxy,
 ) -> Result<(), Error> {
-    const MAX_ATTEMPTS: usize = 10;
+    const MAX_ATTEMPTS: usize = 100;
     let sleep = zx::Duration::from_millis(3000);
     let utc_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, "UTC");
 
@@ -254,53 +210,18 @@ async fn loop_until_matching_time(
 /// 'get_view` is set if launching a Dart time server requires getting a ViewProvider to kick
 /// off program execution -- which is unnecessary for a Dart runner but required for a Flutter
 /// runner.
-pub async fn check_reported_time_with_update(
-    server_url: &str,
-    get_view: bool,
-) -> Result<(), Error> {
+pub async fn check_reported_time_with_update(get_view: bool) -> Result<()> {
     let _icu_data_loader = icu_data::Loader::new().with_context(|| "could not load ICU data")?;
     let _setter = ScopedTimezone::try_new(TIMEZONE_NAME).await.unwrap();
 
     let formatter = formatter_for_timezone(PARTIAL_TIMESTAMP_FORMAT, TIMEZONE_NAME);
     let detailed_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, TIMEZONE_NAME);
 
-    // Creates a test environment, and wires through to it the services it needs to start up. A
-    // test environment is necessary here, despite this test being a system test to ensure that the
-    // Dart and Flutter runners spawned by the test would be shut down and the entire test fixture
-    // dismantled properly.
-    let mut services = server::ServiceFs::new_local();
-
-    // Needed by both dart and flutter flavor of this test.
-    services
-        .add_proxy_service::<fsysmem::AllocatorMarker, _>()
-        .add_proxy_service::<fsocket::ProviderMarker, _>()
-        .add_proxy_service::<floader::LoaderMarker, _>()
-        .add_proxy_service::<fprovider::RegistryMarker, _>()
-        .add_proxy_service::<fintl::PropertyProviderMarker, _>();
-    // Needed by flutter flavor of this test only.
-    // Flutter runner needs quite a few services to be proxied.
     if get_view {
-        services
-            .add_proxy_service::<finput::ImeServiceMarker, _>()
-            .add_proxy_service::<fsemantics::SemanticsManagerMarker, _>()
-            .add_proxy_service::<fscenic::ScenicMarker, _>()
-            // For reasons I don't quite understand, only this service is reported as missing in
-            // the environment's sandbox, even though it is declared exactly the same way as all
-            // others that are present.  The test still passes, though.
-            .add_proxy_service::<finput3::KeyboardMarker, _>()
-            .add_proxy_service::<ffonts::ProviderMarker, _>();
+        connect_to_view_provider().context("while connecting to fuchsia.ui.app.ViewProvider")?;
     }
-    let env =
-        services.create_nested_environment("timezone-server-env").expect("nested env is created");
-    fasync::Task::local(services.collect()).detach();
 
-    let launcher = env.launcher();
-    let app = launch_time_service(&launcher, server_url, get_view)
-        .await
-        .context("failed to launch the dart service under test")?;
-
-    let echo = app
-        .connect_to_protocol::<fecho::EchoMarker>()
+    let echo = client::connect_to_protocol::<fecho::EchoMarker>()
         .context("Failed to connect to echo service")?;
 
     loop_until_matching_time(TIMEZONE_NAME, &formatter, &detailed_format, &echo)

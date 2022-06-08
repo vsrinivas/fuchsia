@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Enable system logging.
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "data/timestamp-server-dart",
+    },
+    capabilities: [
+        {
+            protocol: [ "test.placeholders.Echo" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.sys.Environment",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "test.placeholders.Echo" ],
+            from: "self",
+        },
+    ],
+}

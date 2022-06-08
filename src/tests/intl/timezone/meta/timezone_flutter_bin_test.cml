@@ -1,0 +1,341 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+
+        // Allows using the flutter runner.
+        "sys/testing/system-test.shard.cml",
+
+        // Enable system logging.
+        "syslog/client.shard.cml",
+
+        // Graphics
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/timezone_flutter_bin_test",
+    },
+    children: [
+        {
+            name: "flutter_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
+
+            // Known missing:
+            //
+            // - fuchsia.memorypressure.Provider: not part of system test env.
+        },
+        {
+            name: "flutter_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm",
+
+            // Known missing:
+            //
+            // - fuchsia.memorypressure.Provider: not part of system test env.
+        },
+        {
+            name: "timestamp_server_flutter",
+            url: "#meta/timestamp-server-flutter.cm",
+            environment: "#flutter_env",
+        },
+        {
+            name: "text_manager",
+            url: "#meta/text_manager.cm",
+        },
+        {
+            name: "intl_services",
+            url: "#meta/intl_services_comp_v2.cm",
+        },
+        {
+            name: "setui_service",
+            url: "#meta/setui_service.cm",
+
+            // Several known errors exist in this setui service setup as
+            // shown below. None seem to be critical for this test, but would
+            // drastically complicate the hermetic setup if fixed.
+            //
+            // - bluetooth_handler.rs(166)] Failed to serve Watcher service
+            // - fuchsia.media.sessions2.Discovery: is not routed.
+            // - fuchsia.media.sessions2.SessionsWatcher: not sure where to get from.
+        },
+        {
+            name: "stash",
+            url: "#meta/stash.cm",
+        },
+
+        // The components below are used to stand up the fake graphics subsystem.
+        {
+            name: "scene_manager",
+            url: "#meta/scene_manager.cm",
+        },
+        {
+            name: "fake_display_provider",
+            url: "#meta/hdcp.cm",
+        },
+        {
+            name: "mock_cobalt",
+            url: "#meta/mock_cobalt.cm",
+        },
+        {
+            name: "scenic",
+            url: "#meta/scenic.cm",
+        },
+        {
+            name: "a11y",
+            url: "#meta/a11y-manager.cm",
+        },
+        {
+            name: "fonts",
+            url: "#meta/fake_fonts.cm",
+        },
+    ],
+    capabilities: [
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config-data",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "test.placeholders.Echo" ],
+            from: "#timestamp_server_flutter",
+        },
+        {
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            from: "#intl_services",
+        },
+        {
+            protocol: [ "fuchsia.settings.Intl" ],
+            from: "#setui_service",
+        },
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "#timestamp_server_flutter",
+        },
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "parent",
+            to: "#stash",
+        },
+        {
+            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
+            from: "#text_manager",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            from: "#mock_cobalt",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.fonts.Provider" ],
+            from: "#fonts",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.accessibility.semantics.SemanticsManager" ],
+            from: "#a11y",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#fake_display_provider" ],
+        },
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#fake_display_provider",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#scenic",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+                "#timestamp_server_flutter",
+            ],
+        },
+        {
+            // The config data contains time zone resources, required for this
+            // test to work.  All flutter runners need it.  The correct config-data
+            // subdir needs to be routed. By convention, the config-data dir is
+            // named after the recipient component.
+            directory: "config-data",
+            from: "parent",
+            to: [ "#flutter_jit_runner" ],
+            subdir: "flutter_jit_runner",
+            dependency: "weak",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#flutter_aot_runner" ],
+            subdir: "flutter_aot_runner",
+            dependency: "weak",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#setui_service" ],
+            subdir: "setui_service",
+            dependency: "weak",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#scenic" ],
+            subdir: "scenic",
+            dependency: "weak",
+        },
+        {
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            from: "#intl_services",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+            ],
+            from: "#text_manager",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.settings.Intl" ],
+            from: "#setui_service",
+            to: [ "#intl_services" ],
+        },
+        {
+            protocol: [ "fuchsia.stash.Store" ],
+            from: "#stash",
+            to: "#setui_service",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#fake_display_provider",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+                "#intl_services",
+                "#mock_cobalt",
+                "#scene_manager",
+                "#scenic",
+                "#setui_service",
+                "#stash",
+                "#text_manager",
+                "#timestamp_server_flutter",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+                "#intl_services",
+                "#scene_manager",
+                "#setui_service",
+                "#stash",
+                "#text_manager",
+                "#timestamp_server_flutter",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+            from: "parent",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.input3.KeyEventInjector" ],
+            from: "#text_manager",
+            to: [ "#scene_manager" ],
+        },
+    ],
+    environments: [
+        {
+            name: "flutter_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "flutter_aot_runner",
+                    from: "#flutter_aot_runner",
+                },
+                {
+                    runner: "flutter_jit_runner",
+                    from: "#flutter_jit_runner",
+                },
+            ],
+        },
+    ],
+}

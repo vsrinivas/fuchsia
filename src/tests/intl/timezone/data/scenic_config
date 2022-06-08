@@ -1,0 +1,5 @@
+{
+  "frame_scheduler_min_predicted_frame_duration_in_us" : 14000,
+  "flatland_buffer_collection_import_mode": "renderer_only",
+  "i_can_haz_flatland": true
+}

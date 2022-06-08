@@ -17,4 +17,10 @@
             protocol: [ "fuchsia.settings.Intl" ],
         },
     ],
+    expose: [
+        {
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            from: "self",
+        },
+    ],
 }

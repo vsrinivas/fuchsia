@@ -3,18 +3,20 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_app.gni")
-import("//build/flutter/flutter_app.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
 
-dart_app("timestamp-server-dart") {
-  main_dart = "lib/main.dart"
-
-  meta = [
-    {
-      path = rebase_path("meta/timestamp-server-dart.cmx")
-      dest = "timestamp-server-dart.cmx"
-    },
+group("tests") {
+  testonly = true
+  deps = [
+    ":timestamp-server-dart",
+    ":timestamp-server-flutter",
   ]
+}
 
+dart_library("lib") {
+  package_name = "timestamp_server_dart"
   sources = [ "main.dart" ]
   deps = [
     "//sdk/dart/fidl",
@@ -25,27 +27,23 @@ dart_app("timestamp-server-dart") {
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
   ]
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+}
+
+dart_component("timestamp-server-dart") {
+  manifest = "meta/timestamp-server-dart.cml"
+  main_dart = "main.dart"
+  deps = [
+    ":lib",
+    "//src/intl:icudtl",
   ]
 }
 
 # Same as above, except uses the flutter runner. The flutter runner is using
 # exactly the same mechanism as dart, but it is a different runner binary
 # nevertheless.  So we should test both.
-flutter_app("timestamp-server-flutter") {
-  main_dart = "lib/main.dart"
 
-  meta = [
-    {
-      path = rebase_path("meta/timestamp-server-flutter.cmx")
-      dest = "timestamp-server-flutter.cmx"
-    },
-  ]
-
+dart_library("lib-flutter") {
+  package_name = "timestamp_server_flutter"
   sources = [ "main.dart" ]
   deps = [
     "//sdk/dart/fidl",
@@ -56,10 +54,13 @@ flutter_app("timestamp-server-flutter") {
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
   ]
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+}
+
+flutter_component("timestamp-server-flutter") {
+  main_dart = "main.dart"
+  manifest = "meta/timestamp-server-flutter.cml"
+  deps = [
+    ":lib-flutter",
+    "//src/intl:icudtl_root",
   ]
 }
