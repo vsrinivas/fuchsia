@@ -25,6 +25,7 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -165,13 +166,17 @@ class SingleVmoTestInstance : public TestInstance {
   // Vector of page requests shared by all pager threads of the instance, to allow
   // requests to be serviced out-of-order.
   fbl::Mutex mtx_;
-  fbl::Vector<zx_packet_page_request_t> requests_;
+  fbl::Vector<zx_packet_page_request_t> requests_ __TA_GUARDED(mtx_);
 
   // Flag used to signal shutdown to worker threads.
   std::atomic<bool> shutdown_{false};
 
   // Counter that allows the last pager thread to clean up the pager itself.
   std::atomic<uint32_t> pager_thread_count_{kNumThreads - kNumVmoThreads};
+
+  // Debug states to help diagnose failures.
+  std::atomic<bool> debug_pager_detached_{false};
+  std::atomic<bool> debug_pager_reset_{false};
 
   zx::vmo vmo_{};
   zx::pager pager_;
@@ -271,6 +276,10 @@ void SingleVmoTestInstance::CheckVmoThreadError(zx_status_t status, const char* 
   // pager disappearing.
   if (!shutdown_ && status != ZX_OK) {
     fprintf(stderr, "[test instance 0x%zx]: %s, error %d\n", test_instance_id_, error, status);
+    fprintf(stderr,
+            "[test instance 0x%zx]: pager debug state: thread count %d, detached %d, reset %d\n",
+            test_instance_id_, pager_thread_count_.load(), debug_pager_detached_.load(),
+            debug_pager_reset_.load());
   }
 }
 
@@ -377,13 +386,15 @@ int SingleVmoTestInstance::pager_thread() {
         }
         break;
       case 55 ... 99:  // fullfil a random request
-        fbl::AutoLock lock(&mtx_);
-        if (requests_.is_empty()) {
-          break;
+        zx_packet_page_request_t req;
+        {
+          fbl::AutoLock lock(&mtx_);
+          if (requests_.is_empty()) {
+            break;
+          }
+          off = uniform_rand(requests_.size(), rng);
+          req = requests_.erase(off);
         }
-        off = uniform_rand(requests_.size(), rng);
-        zx_packet_page_request_t req = requests_.erase(off);
-        lock.release();
 
         supply_pages(req.offset, req.length);
         break;
@@ -396,9 +407,15 @@ int SingleVmoTestInstance::pager_thread() {
   // close the pager after all test threads are done) or immediately close the pager handle.
   if (--pager_thread_count_ == 0) {
     if (uniform_rand(2, rng)) {
-      pager_.detach_vmo(vmo_);
+      status = pager_.detach_vmo(vmo_);
+      if (status != ZX_OK) {
+        fprintf(stderr, "[test instance 0x%zx]: failed to detach vmo, error %d (%s)\n",
+                test_instance_id_, status, zx_status_get_string(status));
+      }
+      debug_pager_detached_ = true;
     } else {
       pager_.reset();
+      debug_pager_reset_ = true;
     }
   }
 
