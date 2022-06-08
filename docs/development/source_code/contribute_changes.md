@@ -58,7 +58,6 @@ in Gerrit, do the following:
 
     ```posix-terminal
     git checkout -b <branch_name>
-
     ```
 
 1.  Create or edit files in the new branch.
@@ -70,7 +69,8 @@ in Gerrit, do the following:
     ```
 
 1.  Commit the updated files and
-    [write a change message](#write-a-change-message):
+[write the change message](https://gerrit-review.googlesource.com/Documentation/concept-changes.html){:.external}
+in Gerrit:
 
     ```posix-terminal
     git commit
@@ -80,7 +80,8 @@ in Gerrit, do the following:
 
 You can use `jiri` or `git`.
 
-    `jiri` is a tool for working with multiple repositories that is [installed with Fuchsia](/docs/get-started/get_fuchsia_source.md). To upload your commit:
+`jiri` is a tool for working with multiple repositories that is [installed with Fuchsia](/docs/get-started/get_fuchsia_source.md).
+To upload your commit:
 
     ```posix-terminal
     jiri upload
@@ -88,7 +89,7 @@ You can use `jiri` or `git`.
 
 See also the [Jiri documentation](https://fuchsia.googlesource.com/jiri/+/HEAD/README.md) for more information.
 
-    If you want to use the `git` command instead, run the following command:
+If you want to use the `git` command instead, run the following command:
 
     ```posix-terminal
     git push origin HEAD:refs/for/main
