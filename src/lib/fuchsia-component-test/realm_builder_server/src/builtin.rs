@@ -145,7 +145,7 @@ fn build_directory(
 mod tests {
     use {
         super::*, fidl::endpoints::create_proxy, fidl_fuchsia_mem as fmem, files_async,
-        fuchsia_async as fasync, futures::TryStreamExt, io_util, maplit::hashset,
+        fuchsia_async as fasync, fuchsia_fs, futures::TryStreamExt, maplit::hashset,
         std::collections::HashSet,
     };
 
@@ -200,14 +200,14 @@ mod tests {
         let open_and_read_file = move |file_path: &'static str| {
             let outgoing_dir_proxy = Clone::clone(&outgoing_dir_proxy);
             async move {
-                let file_proxy = io_util::directory::open_file(
+                let file_proxy = fuchsia_fs::directory::open_file(
                     &outgoing_dir_proxy,
                     file_path,
-                    io_util::OpenFlags::RIGHT_READABLE,
+                    fuchsia_fs::OpenFlags::RIGHT_READABLE,
                 )
                 .await
                 .expect(&format!("failed to open file {:?}", file_path));
-                io_util::read_file(&file_proxy)
+                fuchsia_fs::read_file(&file_proxy)
                     .await
                     .expect(&format!("failed to read file {:?}", file_path))
             }

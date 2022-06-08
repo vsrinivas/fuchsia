@@ -10,9 +10,8 @@ use {
     fidl_fuchsia_component_decl as fcdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fuchsia_component::server as fserver,
-    fuchsia_zircon_status as zx_status,
+    fuchsia_fs, fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
-    io_util,
     lazy_static::lazy_static,
     std::{
         collections::HashMap,
@@ -881,15 +880,15 @@ impl RealmNode2 {
         async move {
             let path = relative_url.trim_start_matches('#');
 
-            let file_proxy_res = io_util::directory::open_file(
+            let file_proxy_res = fuchsia_fs::directory::open_file(
                 &test_pkg_dir,
                 &path,
-                io_util::OpenFlags::RIGHT_READABLE,
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
             )
             .await;
             let file_proxy = match file_proxy_res {
                 Ok(file_proxy) => file_proxy,
-                Err(io_util::node::OpenError::OpenError(zx_status::Status::NOT_FOUND)) => {
+                Err(fuchsia_fs::node::OpenError::OpenError(zx_status::Status::NOT_FOUND)) => {
                     return Err(RealmBuilderError::DeclNotFound(relative_url.clone()))
                 }
                 Err(e) => {
@@ -897,7 +896,7 @@ impl RealmNode2 {
                 }
             };
 
-            let fidl_decl = io_util::read_file_fidl::<fcdecl::Component>(&file_proxy)
+            let fidl_decl = fuchsia_fs::read_file_fidl::<fcdecl::Component>(&file_proxy)
                 .await
                 .map_err(|e| RealmBuilderError::DeclReadError(relative_url.clone(), e))?;
             cm_fidl_validator::validate(&fidl_decl).map_err(|e| {
@@ -1890,7 +1889,7 @@ mod tests {
         fn new() -> Self {
             let (realm_proxy, realm_stream) =
                 create_proxy_and_stream::<ftest::RealmMarker>().unwrap();
-            let pkg_dir = io_util::open_directory_in_namespace(
+            let pkg_dir = fuchsia_fs::open_directory_in_namespace(
                 "/pkg",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )
@@ -2491,12 +2490,12 @@ mod tests {
             .expect("add_child returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
 
-        let a_decl_file = io_util::open_file_in_namespace(
+        let a_decl_file = fuchsia_fs::open_file_in_namespace(
             "/pkg/meta/realm_builder_server_unit_tests.cm",
             fio::OpenFlags::RIGHT_READABLE,
         )
         .expect("failed to open manifest");
-        let a_decl = io_util::read_file_fidl::<fcdecl::Component>(&a_decl_file)
+        let a_decl = fuchsia_fs::read_file_fidl::<fcdecl::Component>(&a_decl_file)
             .await
             .expect("failed to read manifest")
             .fidl_into_native();
@@ -2531,13 +2530,13 @@ mod tests {
             .expect("add_child returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
 
-        let realm_with_child_decl_file = io_util::open_file_in_namespace(
+        let realm_with_child_decl_file = fuchsia_fs::open_file_in_namespace(
             "/pkg/meta/realm_with_child.cm",
             fio::OpenFlags::RIGHT_READABLE,
         )
         .expect("failed to open manifest");
         let mut realm_with_child_decl =
-            io_util::read_file_fidl::<fcdecl::Component>(&realm_with_child_decl_file)
+            fuchsia_fs::read_file_fidl::<fcdecl::Component>(&realm_with_child_decl_file)
                 .await
                 .expect("failed to read manifest")
                 .fidl_into_native();
@@ -2547,9 +2546,9 @@ mod tests {
             realm_with_child_decl.children.into_iter().filter(|c| &c.name != "a").collect();
 
         let a_decl_file =
-            io_util::open_file_in_namespace("/pkg/meta/a.cm", fio::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::open_file_in_namespace("/pkg/meta/a.cm", fio::OpenFlags::RIGHT_READABLE)
                 .expect("failed to open manifest");
-        let a_decl = io_util::read_file_fidl::<fcdecl::Component>(&a_decl_file)
+        let a_decl = fuchsia_fs::read_file_fidl::<fcdecl::Component>(&a_decl_file)
             .await
             .expect("failed to read manifest")
             .fidl_into_native();

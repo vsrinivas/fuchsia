@@ -455,7 +455,7 @@ mod tests {
         let content = String::from("test content").into_bytes();
 
         {
-            let test_file = io_util::directory::open_file(
+            let test_file = fuchsia_fs::directory::open_file(
                 serving.root(),
                 merkle,
                 fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -487,7 +487,7 @@ mod tests {
         let serving = blobfs.serve().await.expect("failed to serve blobfs the second time");
 
         {
-            let test_file = io_util::directory::open_file(
+            let test_file = fuchsia_fs::directory::open_file(
                 serving.root(),
                 merkle,
                 fio::OpenFlags::RIGHT_READABLE,
@@ -495,7 +495,7 @@ mod tests {
             .await
             .expect("failed to open test file");
             let read_content =
-                io_util::file::read(&test_file).await.expect("failed to read from test file");
+                fuchsia_fs::file::read(&test_file).await.expect("failed to read from test file");
             assert_eq!(content, read_content);
         }
 
@@ -618,7 +618,7 @@ mod tests {
         let content = String::from("test content").into_bytes();
 
         {
-            let test_file = io_util::directory::open_file(
+            let test_file = fuchsia_fs::directory::open_file(
                 serving.root(),
                 filename,
                 fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -644,7 +644,7 @@ mod tests {
         let serving = minfs.serve().await.expect("failed to serve minfs the second time");
 
         {
-            let test_file = io_util::directory::open_file(
+            let test_file = fuchsia_fs::directory::open_file(
                 serving.root(),
                 filename,
                 fio::OpenFlags::RIGHT_READABLE,
@@ -652,7 +652,7 @@ mod tests {
             .await
             .expect("failed to open test file");
             let read_content =
-                io_util::file::read(&test_file).await.expect("failed to read from test file");
+                fuchsia_fs::file::read(&test_file).await.expect("failed to read from test file");
             assert_eq!(content, read_content);
         }
 

@@ -9,12 +9,12 @@ use {
     anyhow::{format_err, Result},
     fidl_fuchsia_io as fio,
     files_async::readdir,
-    fuchsia_zircon_status::Status,
-    futures::lock::Mutex,
-    io_util::{
+    fuchsia_fs::{
         directory::{clone_no_describe, open_directory_no_describe, open_file_no_describe},
         file::{close, read, read_to_string, write},
     },
+    fuchsia_zircon_status::Status,
+    futures::lock::Mutex,
     std::path::{Path, PathBuf},
 };
 
@@ -39,7 +39,7 @@ impl Directory {
             .to_str()
             .ok_or_else(|| format_err!("Could not convert path to string"))?;
         let proxy =
-            io_util::directory::open_in_namespace(path_str, fio::OpenFlags::RIGHT_READABLE)?;
+            fuchsia_fs::directory::open_in_namespace(path_str, fio::OpenFlags::RIGHT_READABLE)?;
         let path = path.as_ref().to_path_buf();
         Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) })
     }

@@ -403,7 +403,7 @@ async fn list_service_entries(
 ) -> Result<Vec<String>, Error> {
     let flags =
         fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
-    let instance_proxy = io_util::open_directory(dir_proxy, Path::new(&path), flags)?;
+    let instance_proxy = fuchsia_fs::open_directory(dir_proxy, Path::new(&path), flags)?;
     let mut entries =
         files_async::readdir(&instance_proxy)
             .await?
@@ -637,7 +637,11 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
     // "temp/folder" should appear in this directory as "test/folder".
     fs.add_remote(
         "test",
-        io_util::open_directory(&nested_proxy, Path::new("temp"), fio::OpenFlags::RIGHT_READABLE)?,
+        fuchsia_fs::open_directory(
+            &nested_proxy,
+            Path::new("temp"),
+            fio::OpenFlags::RIGHT_READABLE,
+        )?,
     );
     let (dir_proxy, dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
     fs.serve_connection(dir_server_end.into_channel())?;
@@ -646,7 +650,7 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
 
     // Open and read "test"
     let temp_proxy =
-        io_util::open_directory(&dir_proxy, Path::new("test"), fio::OpenFlags::RIGHT_READABLE)?;
+        fuchsia_fs::open_directory(&dir_proxy, Path::new("test"), fio::OpenFlags::RIGHT_READABLE)?;
     let result = readdir(&temp_proxy).await;
     assert!(!result.is_err(), "got Err instead of Ok: {:?}", result.unwrap_err());
     let files = result.unwrap();

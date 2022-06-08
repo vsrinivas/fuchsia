@@ -12,6 +12,7 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_fs::{open_node_in_namespace, OpenFlags},
     fuchsia_vfs_watcher::Watcher,
     futures::{
         channel::mpsc::{channel, Sender},
@@ -19,7 +20,6 @@ use {
         sink::SinkExt,
         stream::{BoxStream, StreamExt, TryStreamExt},
     },
-    io_util::{open_node_in_namespace, OpenFlags},
     std::path::{Path, PathBuf},
 };
 
@@ -105,8 +105,10 @@ async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Err
  non-blocking directory apis require utf8 paths: {:?}.",
         path
     ))?;
-    let dir_proxy =
-        io_util::open_directory_in_namespace(path_as_str, io_util::OpenFlags::RIGHT_READABLE)?;
+    let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        path_as_str,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )?;
     let (mut tx, rx) = channel(1);
     let mut watcher = Watcher::new(dir_proxy).await?;
 

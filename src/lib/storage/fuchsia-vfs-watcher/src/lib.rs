@@ -190,9 +190,9 @@ impl<'a> VfsWatchMsg<'a> {
 mod tests {
     use super::*;
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+    use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
-    use io_util::{open_directory_in_namespace, OpenFlags};
     use std::fmt::Debug;
     use std::fs::File;
     use std::path::Path;

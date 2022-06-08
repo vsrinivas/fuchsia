@@ -11,9 +11,8 @@ use {
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::DEFAULT_SERVICE_INSTANCE,
-    fuchsia_zircon as zx,
+    fuchsia_fs, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, select, FutureExt, TryStreamExt},
-    io_util,
     runner::get_value as get_dictionary_value,
     std::{collections::HashMap, path::Path, sync::Arc},
     tracing::*,
@@ -76,7 +75,7 @@ impl LocalComponentHandles {
             .namespace
             .get(&"/svc".to_string())
             .ok_or(format_err!("the component's namespace doesn't have a /svc directory"))?;
-        let node_proxy = io_util::open_node(
+        let node_proxy = fuchsia_fs::open_node(
             svc_dir_proxy,
             Path::new(name),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -101,10 +100,10 @@ impl LocalComponentHandles {
             .namespace
             .get(&"/svc".to_string())
             .ok_or(format_err!("the component's namespace doesn't have a /svc directory"))?;
-        io_util::open_directory(
+        fuchsia_fs::open_directory(
             &svc_dir_proxy,
             &Path::new(name),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
         )
     }
 
@@ -133,10 +132,10 @@ impl LocalComponentHandles {
         instance_name: &str,
     ) -> Result<S::Proxy, Error> {
         let service_dir = self.open_named_service(service_name)?;
-        let directory_proxy = io_util::open_directory(
+        let directory_proxy = fuchsia_fs::open_directory(
             &service_dir,
             &Path::new(instance_name),
-            io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
         )?;
         Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
     }
@@ -151,14 +150,14 @@ impl LocalComponentHandles {
     ///
     /// ```
     /// let data_dir = handles.clone_from_namespace("data")?;
-    /// let assets_dir = io_util::open_directory(&data_dir, Path::new("assets"), ...)?;
+    /// let assets_dir = fuchsia_fs::open_directory(&data_dir, Path::new("assets"), ...)?;
     /// ```
     pub fn clone_from_namespace(&self, directory_name: &str) -> Result<fio::DirectoryProxy, Error> {
         let dir_proxy = self.namespace.get(&format!("/{}", directory_name)).ok_or(format_err!(
             "the local component's namespace doesn't have a /{} directory",
             directory_name
         ))?;
-        io_util::clone_directory(dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+        fuchsia_fs::clone_directory(dir_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
     }
 }
 
@@ -493,7 +492,7 @@ mod tests {
             vec![DirEntry { name: local_component_name_filename.clone(), kind: DirentKind::File }],
             dir_entries
         );
-        let local_component_name_file = io_util::directory::open_file(
+        let local_component_name_file = fuchsia_fs::directory::open_file(
             &runner_and_handles.runtime_dir_proxy,
             &local_component_name_filename,
             fio::OpenFlags::RIGHT_READABLE,
@@ -502,7 +501,7 @@ mod tests {
         .expect("failed to open file");
         assert_eq!(
             component_name,
-            io_util::read_file(&local_component_name_file).await.expect("failed to read file"),
+            fuchsia_fs::read_file(&local_component_name_file).await.expect("failed to read file"),
         );
     }
 
