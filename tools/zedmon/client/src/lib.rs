@@ -15,6 +15,7 @@ use {
         sync::mpsc,
         time::{Duration, SystemTime},
     },
+    thiserror::Error,
     usb_bulk::{InterfaceInfo, Open},
 };
 
@@ -24,13 +25,29 @@ const VENDOR_SPECIFIC_CLASS_ID: c_uchar = 0xff;
 const ZEDMON_SUBCLASS_ID: c_uchar = 0xff;
 const ZEDMON_PROTOCOL_ID: c_uchar = 0x00;
 
-/// Matches the USB interface info of a Zedmon device.
-fn zedmon_match(ifc: &InterfaceInfo) -> bool {
-    (ifc.dev_vendor == GOOGLE_VENDOR_ID)
+/// Determines if `ifc` is a Zedmon device. If so, the Zedmon's serial is returned. Otherwise, None.
+fn zedmon_match(ifc: &InterfaceInfo) -> Option<String> {
+    if (ifc.dev_vendor == GOOGLE_VENDOR_ID)
         && (ifc.dev_product == ZEDMON_PRODUCT_ID)
         && (ifc.ifc_class == VENDOR_SPECIFIC_CLASS_ID)
         && (ifc.ifc_subclass == ZEDMON_SUBCLASS_ID)
         && (ifc.ifc_protocol == ZEDMON_PROTOCOL_ID)
+    {
+        let null_pos = match ifc.serial_number.iter().position(|&c| c == 0) {
+            Some(p) => p,
+            None => {
+                eprintln!(
+                    "Warning: Detected a USB device whose serial number was not null-terminated:"
+                );
+                eprintln!("{}", (*String::from_utf8_lossy(&ifc.serial_number)).to_string());
+                return None;
+            }
+        };
+        let serial = (*String::from_utf8_lossy(&ifc.serial_number[..null_pos])).to_string();
+        Some(serial)
+    } else {
+        None
+    }
 }
 
 /// Used by ZedmonClient to determine when data reporting should stop.
@@ -248,21 +265,10 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         // InterfaceType::open iterates through them. InterfaceType::open is expected to return an
         // error because no devices match.
         let mut cb = |info: &InterfaceInfo| -> bool {
-            if zedmon_match(info) {
-                let null_pos = match info.serial_number.iter().position(|&c| c == 0) {
-                    Some(p) => p,
-                    None => {
-                        eprintln!("Warning: Detected a USB device whose serial number was not null-terminated:");
-                        eprintln!(
-                            "{}",
-                            (*String::from_utf8_lossy(&info.serial_number)).to_string()
-                        );
-                        return false;
-                    }
-                };
-                serials
-                    .push((*String::from_utf8_lossy(&info.serial_number[..null_pos])).to_string());
+            if let Some(serial) = zedmon_match(info) {
+                serials.push(serial);
             }
+
             false
         };
 
@@ -740,14 +746,52 @@ pub fn list() -> Vec<String> {
     ZedmonClient::<usb_bulk::Interface>::enumerate()
 }
 
-pub fn zedmon() -> ZedmonClient<usb_bulk::Interface> {
+#[derive(Debug, Error)]
+pub enum ZedmonInitError {
+    #[error("No Zedmon devices are connected")]
+    NoDevices,
+
+    #[error("Multiple Zedmon devices are connected without disambiguation")]
+    MultipleDevices,
+
+    #[error("A Zedmon device with the specified serial is not connected")]
+    MissingDevice,
+}
+
+/// Attempts to open a `ZedmonClient`.
+///
+/// If `serial` is specified and an attached Zedmon device is not found with that serial then an
+/// error is returned.
+///
+/// If `serial` is not specified and one Zedmon device is attached then it will be selected by
+/// default.
+///
+/// If `serial` is not specified and multiple Zedmon devices are attached then an error is returned.
+pub fn zedmon(serial: Option<&str>) -> Result<ZedmonClient<usb_bulk::Interface>, ZedmonInitError> {
     const MAX_ATTEMPTS: u32 = 3;
 
+    // Figure out the serial of the Zedmon device we intend to connect with
+    let target_serial = if let Some(s) = serial {
+        s.to_string()
+    } else {
+        let mut attached_serials = ZedmonClient::<usb_bulk::Interface>::enumerate();
+        match attached_serials.len() {
+            0 => Err(ZedmonInitError::NoDevices),
+            1 => Ok(attached_serials.remove(0)),
+            _ => Err(ZedmonInitError::MultipleDevices),
+        }?
+    };
+
     for attempt in 1..=MAX_ATTEMPTS {
-        let interface = usb_bulk::Interface::open(&mut zedmon_match).unwrap();
+        let interface =
+            usb_bulk::Interface::open(&mut |ifc: &InterfaceInfo| match zedmon_match(ifc) {
+                Some(serial) => serial == target_serial,
+                None => false,
+            })
+            .map_err(|_| ZedmonInitError::MissingDevice)?;
 
         match ZedmonClient::new(interface) {
-            Ok(z) => return z,
+            Ok(z) => return Ok(z),
             Err(e) => {
                 eprintln!("Error initializing ZedmonClient: {:?}", e);
                 if attempt < MAX_ATTEMPTS {
@@ -757,6 +801,7 @@ pub fn zedmon() -> ZedmonClient<usb_bulk::Interface> {
             }
         }
     }
+
     panic!("Failed to create Zedmon client after {} attempts. Aborting.", MAX_ATTEMPTS);
 }
 

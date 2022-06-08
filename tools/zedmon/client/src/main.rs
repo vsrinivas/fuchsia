@@ -20,6 +20,9 @@ use {
 /// Describes allowable values for the --duration arg of `record`.
 const DURATION_REGEX: &'static str = r"^(\d+)(h|m|s|ms)$";
 
+/// Describes allowable values for the --serial arg.
+const SERIAL_REGEX: &'static str = r"^\w{24}$";
+
 const ZEDMON_NOMINAL_DATA_RATE_HZ: u32 = 1500;
 const ZEDMON_NOMINAL_DATA_INTERVAL_USEC: f32 = 1e6 / ZEDMON_NOMINAL_DATA_RATE_HZ as f32;
 
@@ -30,6 +33,16 @@ fn validate_duration(value: String) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("Duration must match the regex {}", DURATION_REGEX))
+    }
+}
+
+/// Validates the --serial arg.
+fn validate_serial(value: String) -> Result<(), String> {
+    let re = regex::Regex::new(SERIAL_REGEX).unwrap();
+    if re.is_match(&value) {
+        Ok(())
+    } else {
+        Err(format!("Serial must match the regex {}", SERIAL_REGEX))
     }
 }
 
@@ -74,7 +87,15 @@ fn main() -> Result<(), Error> {
                     .required(false)
                     .index(1)
                     .possible_values(&lib::DESCRIBABLE_PROPERTIES),
-                ),
+                ).arg(
+                    Arg::with_name("serial")
+                        .help(
+                            "Attempts to connect to the attached Zedmon with the specified serial.\
+                            Required only if multiple Zedmons are attached.")
+                        .short("s")
+                        .takes_value(true)
+                        .validator(&validate_serial)
+                )
         )
         .subcommand(
             SubCommand::with_name("list").about("Lists serial number of connected Zedmon devices"),
@@ -155,7 +176,14 @@ fn main() -> Result<(), Error> {
                     .short("p")
                     .long("power")
                     .takes_value(false)
-
+            ).arg(
+                Arg::with_name("serial")
+                    .help(
+                        "Attempts to connect to the attached Zedmon with the specified serial.\
+                        Required only if multiple Zedmons are attached.")
+                    .short("s")
+                    .takes_value(true)
+                    .validator(&validate_serial)
             )
         )
         .subcommand(
@@ -164,13 +192,21 @@ fn main() -> Result<(), Error> {
                     .help("State of the relay: 'on' or 'off'")
                     .required(true)
                     .index(1)
-                    .possible_values(&["on", "off"]),
-            ),
+                    .possible_values(&["on", "off"]))
+                    .arg(
+                        Arg::with_name("serial")
+                            .help(
+                                "Attempts to connect to the attached Zedmon with the specified \
+                                serial. Required only if multiple Zedmons are attached.")
+                            .short("s")
+                            .takes_value(true)
+                            .validator(&validate_serial)
+                    )
         )
         .get_matches();
 
     match matches.subcommand() {
-        ("describe", Some(arg_matches)) => Ok(run_describe(arg_matches)),
+        ("describe", Some(arg_matches)) => run_describe(arg_matches),
         ("list", _) => run_list(),
         ("record", Some(arg_matches)) => run_record(arg_matches),
         ("relay", Some(arg_matches)) => run_relay(arg_matches),
@@ -178,8 +214,8 @@ fn main() -> Result<(), Error> {
     }
 }
 
-fn run_describe(arg_matches: &ArgMatches<'_>) {
-    let zedmon = lib::zedmon();
+fn run_describe(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
+    let zedmon = lib::zedmon(arg_matches.value_of("serial"))?;
     match arg_matches.value_of("name") {
         Some(name) => println!("{}", zedmon.describe(name).unwrap().to_string()),
         None => {
@@ -190,6 +226,7 @@ fn run_describe(arg_matches: &ArgMatches<'_>) {
             println!("{}", json::to_string_pretty(&json::Value::Object(params)).unwrap());
         }
     }
+    Ok(())
 }
 
 /// Runs the "list" subcommand.
@@ -268,7 +305,7 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
         ),
     };
 
-    let zedmon = lib::zedmon();
+    let zedmon = lib::zedmon(arg_matches.value_of("serial"))?;
 
     println!("Recording to {}.", dest_name);
     let options = lib::ReportingOptions {
@@ -287,7 +324,7 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
 
 /// Runs the "relay" subcommand.
 fn run_relay(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
-    let zedmon = lib::zedmon();
+    let zedmon = lib::zedmon(arg_matches.value_of("serial"))?;
     zedmon.set_relay(arg_matches.value_of("state").unwrap() == "on")?;
     Ok(())
 }
