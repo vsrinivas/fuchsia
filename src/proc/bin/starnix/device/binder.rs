@@ -536,7 +536,7 @@ impl<'a, T: AsBytes> SharedBuffer<'a, T> {
     }
 
     /// Returns a mutable slice of the buffer.
-    fn as_mut_bytes(&mut self) -> &mut [T] {
+    fn as_mut_bytes(&mut self) -> &'a mut [T] {
         // SAFETY: `offset + length` was bounds-checked by `allocate_buffers`, and the
         // memory region pointed to was zero-allocated by mapping a new VMO.
         unsafe {
@@ -548,7 +548,7 @@ impl<'a, T: AsBytes> SharedBuffer<'a, T> {
     }
 
     /// Returns an immutable slice of the buffer.
-    fn as_bytes(&self) -> &[T] {
+    fn as_bytes(&self) -> &'a [T] {
         // SAFETY: `offset + length` was bounds-checked by `allocate_buffers`, and the
         // memory region pointed to was zero-allocated by mapping a new VMO.
         unsafe {
@@ -2074,31 +2074,22 @@ impl BinderDriver {
                             return error!(EINVAL)?;
                         }
 
-                        // Find the parent buffer in the transaction data.
-                        let parent_object_offset = offsets[parent] as usize;
-                        if parent_object_offset >= transaction_data.len() {
+                        // Find the parent buffer payload. There is a pointer in the buffer
+                        // that points to this object.
+                        let parent_buffer_payload = find_parent_buffer(
+                            transaction_data,
+                            sg_buffer,
+                            offsets[parent] as usize,
+                        )?;
+
+                        // Bounds-check that the offset is within the buffer.
+                        if parent_offset >= parent_buffer_payload.len() {
                             return error!(EINVAL)?;
                         }
-                        let parent_buffer_addr = match SerializedBinderObject::from_bytes(
-                            &transaction_data[parent_object_offset..],
-                        )? {
-                            SerializedBinderObject::Buffer { buffer, .. } => buffer,
-                            _ => return error!(EINVAL)?,
-                        };
-
-                        // Calculate the offset of the parent buffer in the scatter gather buffer.
-                        let parent_buffer_offset =
-                            parent_buffer_addr - sg_buffer.user_buffer().address;
-
-                        // Calculate the offset of the pointer to be fixed in the scatter-gather
-                        // buffer.
-                        let pointer_to_fix_offset = parent_buffer_offset
-                            .checked_add(parent_offset)
-                            .ok_or_else(|| errno!(EINVAL))?;
 
                         // Patch the pointer with the translated address.
                         translated_buffer_address
-                            .write_to_prefix(&mut sg_buffer.as_mut_bytes()[pointer_to_fix_offset..])
+                            .write_to_prefix(&mut parent_buffer_payload[parent_offset..])
                             .ok_or_else(|| errno!(EINVAL))?;
                     }
 
@@ -2200,6 +2191,50 @@ impl BinderDriver {
     fn cancel_wait(&self, binder_proc: &Arc<BinderProcess>, key: WaitKey) {
         binder_proc.waiters.lock().cancel_wait(key);
     }
+}
+
+/// Finds a buffer object's payload in the transaction. The buffer object describing the payload is
+/// deserialized from `transaction_data` at `buffer_object_offset`. The actual payload is located in
+/// `sg_buffer`. The buffer object must have already been validated and its payload copied to
+/// `sg_buffer`. This is true for parent objects, as they are required to be processed before being
+/// referenced by child objects.
+fn find_parent_buffer<'a>(
+    transaction_data: &[u8],
+    sg_buffer: &mut SharedBuffer<'a, u8>,
+    buffer_object_offset: usize,
+) -> Result<&'a mut [u8], Errno> {
+    // The buffer object has already been validated, since the requirement is that parent objects
+    // are processed before their children. In addition, the payload has been written by us, so it
+    // should be guaranteed to be valid. Still, it is possible for userspace to mutate this memory
+    // while we are processing it, so we still perform checked arithmetic to avoid panics in
+    // starnix.
+
+    // Verify that the offset is within the transaction data.
+    if buffer_object_offset >= transaction_data.len() {
+        return error!(EINVAL);
+    }
+
+    // Deserialize the parent object buffer and extract the relevant data.
+    let (buffer_payload_addr, buffer_payload_length) =
+        match SerializedBinderObject::from_bytes(&transaction_data[buffer_object_offset..])? {
+            SerializedBinderObject::Buffer { buffer, length, .. } => (buffer, length),
+            _ => return error!(EINVAL)?,
+        };
+
+    // Calculate the start and end of the buffer payload in the scatter gather buffer.
+    // The buffer payload will have been copied to the scatter gather buffer, so recover the
+    // offset from its userspace address.
+    if buffer_payload_addr < sg_buffer.user_buffer().address {
+        // This should never happen unless userspace is messing with us, since we wrote this address
+        // during translation.
+        return error!(EINVAL);
+    }
+    let buffer_payload_start = buffer_payload_addr - sg_buffer.user_buffer().address;
+    let buffer_payload_end =
+        buffer_payload_start.checked_add(buffer_payload_length).ok_or_else(|| errno!(EINVAL))?;
+
+    // Return a slice that represents the parent buffer.
+    Ok(&mut sg_buffer.as_mut_bytes()[buffer_payload_start..buffer_payload_end])
 }
 
 /// Represents a serialized binder object embedded in transaction data.
