@@ -9,7 +9,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <bind/fuchsia/ams/platform/cpp/fidl.h>
+#include <bind/fuchsia/ams/platform/cpp/bind.h>
 #include <ddk/metadata/lights.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
@@ -68,9 +68,9 @@ zx_status_t Nelson::LightInit() {
       },
   };
   constexpr zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, bind::fuchsia::ams::platform::BIND_PLATFORM_DEV_VID_AMS},
-      {BIND_PLATFORM_DEV_PID, 0, bind::fuchsia::ams::platform::BIND_PLATFORM_DEV_PID_TCS3400},
-      {BIND_PLATFORM_DEV_DID, 0, bind::fuchsia::ams::platform::BIND_PLATFORM_DEV_DID_LIGHT},
+      {BIND_PLATFORM_DEV_VID, 0, bind_fuchsia_ams_platform::BIND_PLATFORM_DEV_VID_AMS},
+      {BIND_PLATFORM_DEV_PID, 0, bind_fuchsia_ams_platform::BIND_PLATFORM_DEV_PID_TCS3400},
+      {BIND_PLATFORM_DEV_DID, 0, bind_fuchsia_ams_platform::BIND_PLATFORM_DEV_DID_LIGHT},
   };
 
   const composite_device_desc_t comp_desc = {
