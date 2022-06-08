@@ -177,6 +177,7 @@ class SingleVmoTestInstance : public TestInstance {
   // Debug states to help diagnose failures.
   std::atomic<bool> debug_pager_detached_{false};
   std::atomic<bool> debug_pager_reset_{false};
+  std::atomic<bool> debug_pager_threads_created_{false};
 
   zx::vmo vmo_{};
   zx::pager pager_;
@@ -276,10 +277,26 @@ void SingleVmoTestInstance::CheckVmoThreadError(zx_status_t status, const char* 
   // pager disappearing.
   if (!shutdown_ && status != ZX_OK) {
     fprintf(stderr, "[test instance 0x%zx]: %s, error %d\n", test_instance_id_, error, status);
-    fprintf(stderr,
-            "[test instance 0x%zx]: pager debug state: thread count %d, detached %d, reset %d\n",
-            test_instance_id_, pager_thread_count_.load(), debug_pager_detached_.load(),
-            debug_pager_reset_.load());
+    if (use_pager_) {
+      fprintf(stderr,
+              "[test instance 0x%zx]: pager debug state: thread count %d, created %d, detached %d, "
+              "reset %d\n",
+              test_instance_id_, pager_thread_count_.load(), debug_pager_threads_created_.load(),
+              debug_pager_detached_.load(), debug_pager_reset_.load());
+      for (size_t i = kNumVmoThreads; i < kNumThreads; i++) {
+        zx_info_thread_t info;
+        uint64_t actual, actual_count;
+        status = zx_object_get_info(thread_handles_[i].get(), ZX_INFO_THREAD, &info, sizeof(info),
+                                    &actual, &actual_count);
+        ZX_ASSERT_MSG(status == ZX_OK, "ZX_INFO_THREAD failed with %s\n",
+                      zx_status_get_string(status));
+        fprintf(stderr,
+                "[test instance 0x%zx]: pager thread %lu: state 0x%x, wait_exception_channel_type "
+                "0x%x\n",
+                test_instance_id_, i - kNumVmoThreads, info.state,
+                info.wait_exception_channel_type);
+      }
+    }
   }
 }
 
@@ -462,6 +479,7 @@ zx_status_t SingleVmoTestInstance::Start() {
     zx::unowned_thread unowned(thrd_get_zx_handle(threads_[i]));
     ZX_ASSERT(unowned->duplicate(ZX_RIGHT_SAME_RIGHTS, thread_handles_ + i) == ZX_OK);
   }
+  debug_pager_threads_created_ = use_pager_;
   return ZX_OK;
 }
 
