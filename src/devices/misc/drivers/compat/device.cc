@@ -389,11 +389,14 @@ fpromise::promise<void> Device::Remove() {
           return;
         }
         auto result = controller_->Remove();
-        if (!result.ok() && !result.is_peer_closed()) {
+
+        // If we hit an error calling remove, we should log it.
+        // We don't need to log if the error is that we cannot connect
+        // to the protocol, because that means we are already in the process
+        // of shutting down.
+        if (!result.ok() && !result.is_peer_closed() && !result.is_canceled()) {
           FDF_LOG(ERROR, "Failed to remove device '%s': %s", Name(),
                   result.FormatDescription().data());
-          if (parent_.has_value()) {
-          }
         }
         schedule_removal.cancel();
       }));
