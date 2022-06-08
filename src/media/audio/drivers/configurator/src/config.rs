@@ -15,6 +15,9 @@ pub struct Device {
     /// Is codec or DAI.
     pub is_codec: bool,
 
+    /// Hardwired.
+    pub hardwired: bool,
+
     /// DAI channel for instance TDM slot.
     pub dai_channel: u8,
 }

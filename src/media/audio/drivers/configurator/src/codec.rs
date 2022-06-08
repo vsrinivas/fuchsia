@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(andresoportus): Remove this as usage of it is added.
-#![allow(dead_code)]
-
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::Proxy,
@@ -14,6 +11,8 @@ use {
     std::path::{Path, PathBuf},
 };
 
+// CodecInterface can only be used from a single client since no more than one place at the time
+// can poll the proxy's hanging gets (WatchPlugState and WatchGainState).
 pub struct CodecInterface {
     /// The proxy to the devfs "/dev".
     dev_proxy: fio::DirectoryProxy,
@@ -56,6 +55,13 @@ impl CodecInterface {
     /// Get information from the codec.
     pub async fn get_info(&self) -> Result<CodecInfo, Error> {
         self.get_proxy()?.clone().get_info().err_into().await
+    }
+
+    /// Get plug detect capabilities from the codec.
+    pub async fn get_plug_detect_capabilities(
+        &self,
+    ) -> Result<fidl_fuchsia_hardware_audio::PlugDetectCapabilities, Error> {
+        self.get_proxy()?.clone().get_plug_detect_capabilities().err_into().await
     }
 
     /// Reset codec.

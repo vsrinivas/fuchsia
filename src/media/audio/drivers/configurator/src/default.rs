@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(andresoportus): Remove this as usage of it is added.
-#![allow(dead_code)]
-
 use {
     crate::{
         config::{Config, Device},
@@ -13,6 +10,7 @@ use {
     },
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
+    async_utils::hanging_get::client::HangingGetStream,
     fidl::prelude::*,
     fidl_fuchsia_hardware_audio::*,
     fidl_fuchsia_media::AudioDeviceEnumeratorMarker,
@@ -37,6 +35,9 @@ pub struct CodecState {
 
     /// DAI Channel, for instance TDM slot.
     dai_channel: u8,
+
+    /// Watch plug detect task.
+    _plug_detect_task: fasync::Task<()>,
 }
 
 pub struct DaiState {
@@ -53,13 +54,24 @@ pub struct DaiState {
     interface: crate::dai::DaiInterface,
 }
 
-#[derive(Default)]
 pub struct StreamConfigInner {
     /// Have we replied to the very first gain state watch.
     gain_state_first_watch_replied: bool,
 
-    /// Have we replied to the very first plug state watch.
-    plug_state_first_watch_replied: bool,
+    /// Hardwired and hence no plug detect support.
+    hardwired: bool,
+
+    /// Current plug state.
+    plugged: bool,
+
+    /// Last plugged time.
+    plugged_time: i64,
+
+    /// The plug state shas been updated since the last watch reply.
+    plug_state_updated: bool,
+
+    /// Responder for plug detects hanging get asynchronous replies.
+    plug_state_responder: Option<StreamConfigWatchPlugStateResponder>,
 
     /// Needs a codec to work.
     codec_needed: bool,
@@ -80,6 +92,28 @@ pub struct StreamConfigInner {
     ring_buffer: Option<fidl::endpoints::ServerEnd<RingBufferMarker>>,
 }
 
+impl Default for StreamConfigInner {
+    fn default() -> StreamConfigInner {
+        StreamConfigInner {
+            gain_state_first_watch_replied: false,
+            hardwired: true,
+            // Must reply to the first Watch request, if there is no plug state update before the
+            // first Watch, reply with plugged at time 0.
+            plugged: true,
+            plugged_time: 0,
+            // Mark plug state as updated to always reply to first watch.
+            // If plugged and plugged_time are not updated reply with default values.
+            plug_state_updated: true,
+            plug_state_responder: None,
+            codec_needed: false,
+            codec_states: vec![],
+            dai_state: None,
+            dai_format: None,
+            ring_buffer_format: None,
+            ring_buffer: None,
+        }
+    }
+}
 pub struct StreamConfig {
     /// Handle to remove the audio device processing future when this is dropped.
     control_handle: StreamConfigControlHandle,
@@ -200,20 +234,28 @@ impl StreamConfig {
             }
 
             StreamConfigRequest::WatchPlugState { responder } => {
-                tracing::trace!("StreamConfig watch plug state");
                 let mut state = self.inner.lock().await;
-                if state.plug_state_first_watch_replied == true {
-                    // We will never change plug state.
-                    responder.drop_without_shutdown();
-                    return Ok(());
-                }
+
+                let time = state.plugged_time;
                 let plug_state = PlugState {
-                    plugged: Some(true),
-                    plug_state_time: Some(0i64),
+                    plugged: Some(state.plugged),
+                    plug_state_time: Some(time),
                     ..PlugState::EMPTY
                 };
-                state.plug_state_first_watch_replied = true;
-                responder.send(plug_state)?
+                tracing::trace!("StreamConfig watch plug state: {:?}", plug_state.plugged);
+                if state.plug_state_updated {
+                    state.plug_state_updated = false;
+                    responder.send(plug_state)?;
+                    return Ok(());
+                } else if state.plug_state_responder.is_none() {
+                    state.plug_state_responder = Some(responder);
+                    return Ok(());
+                } else {
+                    tracing::warn!(
+                        "Client watched plug state when another hanging get was pending"
+                    );
+                    // We drop responder which causes a shutdown (no call to drop_without_shutdown).
+                }
             }
 
             StreamConfigRequest::SetGain { target_state: _, control_handle: _ } => {
@@ -384,6 +426,70 @@ impl DefaultConfigurator {
         }
         Ok(())
     }
+
+    async fn watch_plug_detect(
+        proxy: CodecProxy,
+        stream_config_state: Arc<Mutex<StreamConfigInner>>,
+    ) {
+        let mut stream =
+            HangingGetStream::new(proxy.clone(), CodecProxyInterface::watch_plug_state);
+        loop {
+            let plug_detect = stream.next().await;
+            let mut stream_config_state = stream_config_state.lock().await;
+            let plug_detect = match plug_detect {
+                Some(v) => v,
+                None => {
+                    tracing::warn!("Watch stream got no plug state");
+                    break;
+                }
+            };
+            match plug_detect {
+                Ok(v) => {
+                    stream_config_state.plugged = match v.plugged {
+                        Some(v) => v,
+                        None => {
+                            tracing::warn!("Plug state from codec with no plugged field");
+                            break;
+                        }
+                    };
+                    stream_config_state.plugged_time = if stream_config_state.hardwired {
+                        0
+                    } else {
+                        match v.plug_state_time {
+                            Some(v) => v,
+                            None => {
+                                tracing::warn!(
+                                    "Plug state from codec with no plug_state_time field"
+                                );
+                                break;
+                            }
+                        }
+                    };
+                }
+                Err(e) => {
+                    tracing::warn!("Error getting plug state from codec: {:?}", e);
+                    break;
+                }
+            }
+            if let Some(responder) = stream_config_state.plug_state_responder.take() {
+                let plug_state = PlugState {
+                    plugged: Some(stream_config_state.plugged),
+                    plug_state_time: Some(stream_config_state.plugged_time),
+                    ..PlugState::EMPTY
+                };
+                match responder.send(plug_state) {
+                    Ok(()) => continue,
+                    Err(e) => {
+                        tracing::warn!("Could not respond to plug state: {:?}", e);
+                        continue;
+                    }
+                };
+            } else {
+                stream_config_state.plug_state_updated = true;
+            }
+        }
+        tracing::warn!("Exiting watch plug detect");
+    }
 }
 
 #[async_trait]
@@ -394,6 +500,12 @@ impl Configurator for DefaultConfigurator {
         for (device, index) in &config.stream_config_indexes {
             if !states.contains_key(index) {
                 states.insert(index.clone(), Arc::new(Mutex::new(StreamConfigInner::default())));
+            }
+            // If there is a device that is not hardwired then make the stream not hardwired.
+            if !device.hardwired {
+                if let Some(state) = states.get_mut(&index) {
+                    state.try_lock().expect("Must exist").hardwired = false;
+                }
             }
             // If there is at least one codec, we mark the StreamConfig as codec_needed.
             if device.is_codec {
@@ -433,6 +545,8 @@ impl Configurator for DefaultConfigurator {
         };
         let _ = interface.set_gain_state(default_gain).await?;
 
+        let plug_detect_capabilities = interface.get_plug_detect_capabilities().await?;
+
         let inner = self.inner.clone();
         let mut inner = inner.lock().await;
 
@@ -465,6 +579,7 @@ impl Configurator for DefaultConfigurator {
         let device = Device {
             manufacturer: properties.manufacturer,
             product: properties.product_name,
+            hardwired: plug_detect_capabilities != PlugDetectCapabilities::CanAsyncNotify,
             is_codec: true,
             dai_channel: dai_channel,
         };
@@ -478,14 +593,9 @@ impl Configurator for DefaultConfigurator {
             .get_mut(&stream_config_index)
             .ok_or(anyhow!("Codec ({:?}) not in config", device))?;
         let mut stream_config_state2 = stream_config_state.lock().await;
-        let codec_state = CodecState {
-            manufacturer: device.manufacturer.clone(),
-            product: device.product.clone(),
-            supported_formats: codec_formats.clone(),
-            proxy: interface.get_proxy()?.clone(),
-            dai_channel: dai_channel,
-        };
-        stream_config_state2.codec_states.push(codec_state);
+
+        // Use codec's hardwired state for the StreamConfig.
+        stream_config_state2.hardwired = device.hardwired;
 
         // If the DAI already got its formats, lets check we have a match.
         if let Some(dai_state) = &stream_config_state2.dai_state {
@@ -518,6 +628,25 @@ impl Configurator for DefaultConfigurator {
             tracing::info!("When codec was found, there was no format reported by the DAI yet");
         }
 
+        let proxy = interface.get_proxy()?.clone();
+        let stream_config_state_clone = stream_config_state.clone();
+        // TODO(95437): Improve handing of misbehaving codecs for instance dropping the
+        // corresponding StreamConfigs.
+        let task = fasync::Task::spawn(async move {
+            DefaultConfigurator::watch_plug_detect(proxy, stream_config_state_clone).await;
+        });
+
+        let proxy = interface.get_proxy()?.clone();
+        let codec_state = CodecState {
+            manufacturer: device.manufacturer.clone(),
+            product: device.product.clone(),
+            supported_formats: codec_formats.clone(),
+            proxy: proxy,
+            dai_channel: dai_channel,
+            _plug_detect_task: task,
+        };
+        stream_config_state2.codec_states.push(codec_state);
+
         Ok(())
     }
 
@@ -544,6 +673,7 @@ impl Configurator for DefaultConfigurator {
         let device = Device {
             manufacturer: manufacturer,
             product: product,
+            hardwired: true, // Set all DAIs to hardwired.
             is_codec: false,
             dai_channel: 0,
         };
@@ -650,7 +780,11 @@ impl Configurator for DefaultConfigurator {
             min_gain_db: Some(0f32),
             max_gain_db: Some(0f32),
             gain_step_db: Some(0f32),
-            plug_detect_capabilities: Some(PlugDetectCapabilities::Hardwired),
+            plug_detect_capabilities: Some(if stream_config_state2.hardwired {
+                PlugDetectCapabilities::Hardwired
+            } else {
+                PlugDetectCapabilities::CanAsyncNotify
+            }),
             clock_domain: Some(0u32),
             manufacturer: Some("Google".to_string()),
             product: Some(configurator_product),
@@ -720,6 +854,7 @@ mod tests {
             Device {
                 manufacturer: "456".to_string(),
                 product: "789".to_string(),
+                hardwired: true,
                 is_codec: true,
                 dai_channel: 0,
             },
@@ -730,6 +865,7 @@ mod tests {
             Device {
                 manufacturer: "456".to_string(),
                 product: "789".to_string(),
+                hardwired: true,
                 is_codec: true,
                 dai_channel: 1,
             },
@@ -740,6 +876,7 @@ mod tests {
             Device {
                 manufacturer: "test".to_string(),
                 product: "test".to_string(),
+                hardwired: true,
                 is_codec: false,
                 dai_channel: 0,
             },
@@ -765,6 +902,7 @@ mod tests {
             Device {
                 manufacturer: "error".to_string(),
                 product: "e".to_string(),
+                hardwired: true,
                 is_codec: true,
                 dai_channel: 0,
             },
@@ -774,6 +912,7 @@ mod tests {
             Device {
                 manufacturer: "error".to_string(),
                 product: "e".to_string(),
+                hardwired: true,
                 is_codec: true,
                 dai_channel: 0,
             },
@@ -783,6 +922,7 @@ mod tests {
             Device {
                 manufacturer: "error".to_string(),
                 product: "e".to_string(),
+                hardwired: true,
                 is_codec: true,
                 dai_channel: 0,
             },
@@ -793,7 +933,7 @@ mod tests {
             assert_eq!(
                 e.to_string(),
                 "Codec processing error: Codec (Device { manufacturer: \"456\", product: \"789\", \
-                 is_codec: true, dai_channel: 0 }) not in config"
+                 is_codec: true, hardwired: true, dai_channel: 0 }) not in config"
             );
         }
         if let Err(e) = find_dais(dai_proxy, 1, configurator).await {
@@ -801,7 +941,7 @@ mod tests {
             assert_eq!(
                 e.to_string(),
                 "DAI processing error: DAI (Device { manufacturer: \"test\", product: \"test\", is\
-                 _codec: false, dai_channel: 0 }) not in config"
+                 _codec: false, hardwired: true, dai_channel: 0 }) not in config"
             );
         }
         Ok(())
@@ -817,6 +957,7 @@ mod tests {
                 manufacturer: "test".to_string(),
                 product: "test".to_string(),
                 is_codec: false,
+                hardwired: true,
                 dai_channel: 0,
             },
             STREAM_CONFIG_INDEX_SPEAKERS,
@@ -860,6 +1001,7 @@ mod tests {
                 manufacturer: "456".to_string(),
                 product: "789".to_string(),
                 is_codec: true,
+                hardwired: true,
                 dai_channel: 0,
             },
             STREAM_CONFIG_INDEX_SPEAKERS,
@@ -870,6 +1012,7 @@ mod tests {
                 manufacturer: "test".to_string(),
                 product: "test".to_string(),
                 is_codec: false,
+                hardwired: true,
                 dai_channel: 0,
             },
             STREAM_CONFIG_INDEX_SPEAKERS,
@@ -1220,5 +1363,197 @@ mod tests {
         };
         assert_eq!(plug_state.plugged, Some(true));
         assert_eq!(plug_state.plug_state_time, Some(0i64));
+    }
+
+    const TEST_CODEC_PLUGGED: bool = false;
+    const TEST_CODEC_PLUG_STATE_TIME: i64 = 123i64;
+
+    pub struct TestCodec {
+        /// Stream to handle Codec API protocol.
+        stream: CodecRequestStream,
+    }
+
+    impl TestCodec {
+        async fn process_requests(mut self) {
+            loop {
+                select! {
+                    request = self.stream.next() => {
+                        match request {
+                            Some(Ok(request)) => {
+                                if let Err(e) = self.handle_stream_request(request).await {
+                                    tracing::warn!("codec request error: {:?}", e)
+                                }
+                            },
+                            Some(Err(e)) => {
+                                tracing::warn!("codec error: {:?}, stopping", e);
+                            },
+                            None => {
+                                tracing::warn!("no codec error");
+                            },
+                        }
+                    }
+                    complete => break,
+                }
+            }
+        }
+
+        async fn handle_stream_request(
+            &mut self,
+            request: CodecRequest,
+        ) -> std::result::Result<(), anyhow::Error> {
+            match request {
+                CodecRequest::WatchPlugState { responder } => {
+                    responder.send(PlugState {
+                        plugged: Some(TEST_CODEC_PLUGGED),
+                        plug_state_time: Some(TEST_CODEC_PLUG_STATE_TIME),
+                        ..PlugState::EMPTY
+                    })?;
+                }
+                r => panic!("{:?} Not covered by test", r),
+            }
+            Ok(())
+        }
+    }
+
+    #[fixture(with_stream_config_stream)]
+    #[fuchsia::test]
+    fn test_stream_config_watch_plug_with_codec(
+        mut exec: fasync::TestExecutor,
+        mut stream_config: StreamConfig,
+    ) {
+        let (codec_client, codec_stream) = fidl::endpoints::create_request_stream::<CodecMarker>()
+            .expect("Error creating endpoint");
+        let codec = TestCodec { stream: codec_stream };
+        let _codec_task = fasync::Task::spawn(codec.process_requests());
+        let stream_config_inner = stream_config.inner.clone();
+        let _codec_plug_detect_task = fasync::Task::spawn(async move {
+            DefaultConfigurator::watch_plug_detect(
+                codec_client.into_proxy().expect("Must have proxy"),
+                stream_config_inner,
+            )
+            .await;
+        });
+
+        {
+            let stream_config_inner = stream_config.inner.clone();
+            let mut inner = match exec.run_until_stalled(&mut stream_config_inner.lock()) {
+                Poll::Ready(v) => v,
+                Poll::Pending => panic!("Expected Ready Ok from stream config inne, got Pending"),
+            };
+            inner.hardwired = false;
+        }
+
+        let stream_config_client = stream_config.client.take().expect("Must have client");
+        let proxy = stream_config_client.into_proxy().expect("Client should be available");
+        let _stream_config_task = fasync::Task::spawn(stream_config.process_requests());
+
+        // First get plugged with time 0 since there is no plug state before this first watch.
+        let plug_state = match exec.run_until_stalled(&mut proxy.watch_plug_state()) {
+            Poll::Ready(Ok(v)) => v,
+            x => panic!("Expected Ready Ok from watch plug state, got: {:?}", x),
+        };
+        assert_eq!(plug_state.plugged, Some(true));
+        assert_eq!(plug_state.plug_state_time, Some(0i64));
+
+        // Then get unplugged from the TestCodec.
+        let plug_state = match exec.run_until_stalled(&mut proxy.watch_plug_state()) {
+            Poll::Ready(Ok(v)) => v,
+            x => panic!("Expected Ready Ok from watch plug state, got: {:?}", x),
+        };
+        assert_eq!(plug_state.plugged, Some(TEST_CODEC_PLUGGED));
+        assert_eq!(plug_state.plug_state_time, Some(TEST_CODEC_PLUG_STATE_TIME));
+    }
+
+    pub struct TestCodecBad {
+        /// Stream to handle Codec API protocol.
+        stream: CodecRequestStream,
+    }
+
+    impl TestCodecBad {
+        async fn process_requests(mut self) {
+            loop {
+                select! {
+                    request = self.stream.next() => {
+                        match request {
+                            Some(Ok(request)) => {
+                                if let Err(e) = self.handle_stream_request(request).await {
+                                    tracing::warn!("codec request error: {:?}", e)
+                                }
+                            },
+                            Some(Err(e)) => {
+                                tracing::warn!("codec error: {:?}, stopping", e);
+                            },
+                            None => {
+                                tracing::warn!("no codec error");
+                            },
+                        }
+                    }
+                    complete => break,
+                }
+            }
+        }
+
+        async fn handle_stream_request(
+            &mut self,
+            request: CodecRequest,
+        ) -> std::result::Result<(), anyhow::Error> {
+            match request {
+                CodecRequest::WatchPlugState { responder } => {
+                    responder.send(PlugState {
+                        // A plug state with missing plugged field is bad.
+                        plug_state_time: Some(TEST_CODEC_PLUG_STATE_TIME),
+                        ..PlugState::EMPTY
+                    })?;
+                }
+                r => panic!("{:?} Not covered by test", r),
+            }
+            Ok(())
+        }
+    }
+
+    #[fixture(with_stream_config_stream)]
+    #[fuchsia::test]
+    fn test_stream_config_watch_plug_with_bad_codec(
+        mut exec: fasync::TestExecutor,
+        mut stream_config: StreamConfig,
+    ) {
+        let (codec_client, codec_stream) = fidl::endpoints::create_request_stream::<CodecMarker>()
+            .expect("Error creating endpoint");
+        let codec = TestCodecBad { stream: codec_stream };
+        let _codec_task = fasync::Task::spawn(codec.process_requests());
+        let stream_config_inner = stream_config.inner.clone();
+        let _codec_plug_detect_task = fasync::Task::spawn(async move {
+            DefaultConfigurator::watch_plug_detect(
+                codec_client.into_proxy().expect("Must have proxy"),
+                stream_config_inner,
+            )
+            .await;
+        });
+
+        {
+            let stream_config_inner = stream_config.inner.clone();
+            let mut inner = match exec.run_until_stalled(&mut stream_config_inner.lock()) {
+                Poll::Ready(v) => v,
+                Poll::Pending => panic!("Expected Ready Ok from stream config inne, got Pending"),
+            };
+            inner.hardwired = false;
+        }
+
+        let stream_config_client = stream_config.client.take().expect("Must have client");
+        let proxy = stream_config_client.into_proxy().expect("Client should be available");
+        let _stream_config_task = fasync::Task::spawn(stream_config.process_requests());
+
+        let plug_state = match exec.run_until_stalled(&mut proxy.watch_plug_state()) {
+            Poll::Ready(Ok(v)) => v,
+            x => panic!("Expected Ready Ok from watch plug state, got: {:?}", x),
+        };
+        assert_eq!(plug_state.plugged, Some(true));
+        assert_eq!(plug_state.plug_state_time, Some(0i64));
+
+        // Then never respond because our test codec is bad.
+        match exec.run_until_stalled(&mut proxy.watch_plug_state()) {
+            Poll::Pending => {}
+            x => panic!("Expected Pending from watch plug state, got: {:?}", x),
+        }
     }
 }
