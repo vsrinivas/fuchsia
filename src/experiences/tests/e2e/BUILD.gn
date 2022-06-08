@@ -131,6 +131,9 @@ dart_test("experiences_ermine_smoke_e2e_test") {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
       }
+
+      # TODO(fxbug.dev/79921): De-flake and re-enable this test.
+      tags = [ "e2e-fyi" ]
     },
     {
       dimensions = {
