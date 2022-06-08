@@ -238,7 +238,7 @@ TEST_F(LoggingFixture, Log) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -278,7 +278,7 @@ TEST_F(LoggingFixture, LogFirstN) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -313,7 +313,7 @@ TEST_F(LoggingFixture, LogT) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -349,7 +349,7 @@ TEST_F(LoggingFixture, VLogT) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -406,7 +406,7 @@ TEST_F(LoggingFixture, DVLogNoMinLevel) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -434,7 +434,7 @@ TEST_F(LoggingFixture, DVLogWithMinLevel) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -468,7 +468,7 @@ TEST_F(LoggingFixture, Plog) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -497,7 +497,7 @@ TEST_F(LoggingFixture, PlogT) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -533,7 +533,7 @@ TEST_F(LoggingFixture, SLog) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -589,7 +589,7 @@ TEST_F(LoggingFixture, BackendDirect) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -627,7 +627,7 @@ TEST_F(LoggingFixture, LogId) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
@@ -668,7 +668,7 @@ TEST(StructuredLogging, Remaining) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
-  new_settings.archivist_channel_override = local.release();
+  new_settings.log_sink = local.release();
 #else
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));

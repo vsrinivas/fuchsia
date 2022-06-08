@@ -192,9 +192,8 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   auto log_sink = env->ConnectToService<fuchsia::logger::LogSink>();
   const char* tag = "my-tag";
 
-  syslog::SetLogSettings(
-      syslog::LogSettings{.archivist_channel_override = log_sink.Unbind().TakeChannel().release()},
-      {tag});
+  syslog::SetLogSettings(syslog::LogSettings{.log_sink = log_sink.Unbind().TakeChannel().release()},
+                         {tag});
   FX_SLOG(INFO, "hello world");
   StubLogListener log_listener;
   ASSERT_TRUE(log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));

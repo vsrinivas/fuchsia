@@ -394,7 +394,7 @@ class LogState {
   async_dispatcher_t* interest_listener_dispatcher_;
   bool serve_interest_listener_;
   // Handle to a fuchsia.logger.LogSink instance.
-  zx_handle_t fake_archivist_ = ZX_HANDLE_INVALID;
+  zx_handle_t provided_log_sink_ = ZX_HANDLE_INVALID;
 };
 
 // Global state lock. In order to mutate the LogState through SetStateLocked
@@ -459,14 +459,14 @@ void LogState::ConnectAsync() {
   if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
     return;
   }
-  if (fake_archivist_ == ZX_HANDLE_INVALID) {
+  if (provided_log_sink_ == ZX_HANDLE_INVALID) {
     // TODO(https://fxbug.dev/75214): Support for custom names.
     if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
       return;
     }
   } else {
-    logger = zx::channel(fake_archivist_);
-    fake_archivist_ = ZX_HANDLE_INVALID;
+    logger = zx::channel(provided_log_sink_);
+    provided_log_sink_ = ZX_HANDLE_INVALID;
   }
   if (log_sink_.Bind(std::move(logger), loop_.dispatcher()) != ZX_OK) {
     return;
@@ -499,7 +499,7 @@ void LogState::Connect() {
     InitializeAsyncTask();
   } else {
     zx::channel logger, logger_request;
-    if (fake_archivist_ == ZX_HANDLE_INVALID) {
+    if (provided_log_sink_ == ZX_HANDLE_INVALID) {
       if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
         return;
       }
@@ -508,7 +508,7 @@ void LogState::Connect() {
         return;
       }
     } else {
-      logger = zx::channel(fake_archivist_);
+      logger = zx::channel(provided_log_sink_);
     }
     ::fuchsia::logger::LogSink_SyncProxy logger_client(std::move(logger));
     zx::socket local, remote;
@@ -811,7 +811,7 @@ LogState::LogState(const syslog::LogSettings& in_settings,
   }
 
   tag_str_ = tag_str.str();
-  fake_archivist_ = in_settings.archivist_channel_override;
+  provided_log_sink_ = in_settings.log_sink;
   Connect();
 }
 

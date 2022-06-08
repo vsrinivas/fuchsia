@@ -47,9 +47,9 @@ struct LogSettings {
   // from adding a Fuchsia-specific dependency.
   void* single_threaded_dispatcher = nullptr;
 #ifdef __Fuchsia__
-  // Overrides the default Archivist -- allowing structured logs to be sent to a fake Archivist
-  // zx::channel -- but this has to be plain-old-data for backwards-compatibility.
-  zx_handle_t archivist_channel_override = ZX_HANDLE_INVALID;
+  // Allows to define the LogSink handle to use. When no handle is provided, the default LogSink
+  // in the pogram incoming namespace will be used.
+  zx_handle_t log_sink = ZX_HANDLE_INVALID;
 #endif
 };
 static_assert(std::is_copy_constructible<LogSettings>::value);

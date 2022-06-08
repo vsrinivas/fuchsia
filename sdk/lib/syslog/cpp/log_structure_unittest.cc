@@ -48,8 +48,7 @@ TEST(StructuredLogging, ThreadInitialization) {
     while (running) {
       zx::channel temp[2];
       zx::channel::create(0, &temp[0], &temp[1]);
-      syslog_backend::SetLogSettings(
-          syslog::LogSettings{.archivist_channel_override = temp[0].release()});
+      syslog_backend::SetLogSettings(syslog::LogSettings{.log_sink = temp[0].release()});
     }
   });
   std::thread thread_b([&]() {
@@ -66,8 +65,7 @@ TEST(StructuredLogging, ThreadInitialization) {
 
     zx::channel temp[2];
     zx::channel::create(0, &temp[0], &temp[1]);
-    syslog_backend::SetLogSettings(
-        syslog::LogSettings{.archivist_channel_override = temp[0].release()});
+    syslog_backend::SetLogSettings(syslog::LogSettings{.log_sink = temp[0].release()});
     FX_SLOG(WARNING, "test_log", KV("foo", "bar"));
   }
   thread_a.join();
