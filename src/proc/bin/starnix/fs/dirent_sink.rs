@@ -73,6 +73,9 @@ const DIRENT32_HEADER_SIZE: usize = mem::size_of::<DirentHeader32>() - DIRENT32_
 pub trait DirentSink {
     /// Add the given directory entry to this buffer.
     ///
+    /// In case of success, this will update the offset from the FileObject. Any other bookkeeping
+    /// must be done by the caller after this method returns successfully.
+    ///
     /// Returns error!(ENOSPC) if the entry does not fit.
     fn add(
         &mut self,
@@ -82,24 +85,54 @@ pub trait DirentSink {
         name: &FsStr,
     ) -> Result<(), Errno>;
 
+    /// The current offset to return.
+    fn offset(&self) -> off_t;
+
     /// The number of bytes which have been written into the sink.
     fn actual(&self) -> usize;
 }
 
-pub struct DirentSink64<'a> {
+struct BaseDirentSink<'a> {
     current_task: &'a CurrentTask,
+    offset: &'a mut off_t,
     user_buffer: UserAddress,
     user_capacity: usize,
     actual: usize,
 }
 
+impl<'a> BaseDirentSink<'a> {
+    fn add(&mut self, offset: off_t, buffer: &[u8]) -> Result<(), Errno> {
+        if self.actual + buffer.len() > self.user_capacity {
+            return error!(ENOSPC);
+        }
+        self.current_task
+            .mm
+            .write_memory(self.user_buffer + self.actual, buffer)
+            .map_err(|_| errno!(ENOSPC))?;
+        self.actual += buffer.len();
+        *self.offset = offset;
+        Ok(())
+    }
+
+    fn offset(&self) -> off_t {
+        *self.offset
+    }
+}
+
+pub struct DirentSink64<'a> {
+    base: BaseDirentSink<'a>,
+}
+
 impl<'a> DirentSink64<'a> {
     pub fn new(
         current_task: &'a CurrentTask,
+        offset: &'a mut off_t,
         user_buffer: UserAddress,
         user_capacity: usize,
     ) -> Self {
-        Self { current_task, user_buffer, user_capacity, actual: 0 }
+        Self {
+            base: BaseDirentSink { current_task, offset, user_buffer, user_capacity, actual: 0 },
+        }
     }
 }
 
@@ -113,9 +146,6 @@ impl DirentSink for DirentSink64<'_> {
     ) -> Result<(), Errno> {
         let content_size = DIRENT64_HEADER_SIZE + name.len();
         let entry_size = round_up_to_increment(content_size + 1, 8)?; // +1 for the null terminator.
-        if self.actual + entry_size > self.user_capacity {
-            return error!(ENOSPC);
-        }
         let mut buffer = Vec::with_capacity(entry_size);
         let header = DirentHeader64 {
             d_ino: inode_num,
@@ -131,33 +161,32 @@ impl DirentSink for DirentSink64<'_> {
             buffer.push(b'\0');
         }
         assert_eq!(buffer.len(), entry_size);
-        self.current_task
-            .mm
-            .write_memory(self.user_buffer + self.actual, buffer.as_slice())
-            .map_err(|_| errno!(ENOSPC))?;
-        self.actual += entry_size;
-        Ok(())
+        self.base.add(offset, &buffer)
+    }
+
+    fn offset(&self) -> off_t {
+        self.base.offset()
     }
 
     fn actual(&self) -> usize {
-        self.actual
+        self.base.actual
     }
 }
 
 pub struct DirentSink32<'a> {
-    current_task: &'a CurrentTask,
-    user_buffer: UserAddress,
-    user_capacity: usize,
-    actual: usize,
+    base: BaseDirentSink<'a>,
 }
 
 impl<'a> DirentSink32<'a> {
     pub fn new(
         current_task: &'a CurrentTask,
+        offset: &'a mut off_t,
         user_buffer: UserAddress,
         user_capacity: usize,
     ) -> Self {
-        Self { current_task, user_buffer, user_capacity, actual: 0 }
+        Self {
+            base: BaseDirentSink { current_task, offset, user_buffer, user_capacity, actual: 0 },
+        }
     }
 }
 
@@ -171,9 +200,6 @@ impl DirentSink for DirentSink32<'_> {
     ) -> Result<(), Errno> {
         let content_size = DIRENT32_HEADER_SIZE + name.len();
         let entry_size = round_up_to_increment(content_size + 2, 8)?; // +1 for the null terminator, +1 for the type.
-        if self.actual + entry_size > self.user_capacity {
-            return error!(ENOSPC);
-        }
         let mut buffer = Vec::with_capacity(entry_size);
         let header = DirentHeader32 {
             d_ino: inode_num,
@@ -189,15 +215,14 @@ impl DirentSink for DirentSink32<'_> {
         }
         buffer.push(entry_type.bits()); // Include the type.
         assert_eq!(buffer.len(), entry_size);
-        self.current_task
-            .mm
-            .write_memory(self.user_buffer + self.actual, buffer.as_slice())
-            .map_err(|_| errno!(ENOSPC))?;
-        self.actual += entry_size;
-        Ok(())
+        self.base.add(offset, &buffer)
+    }
+
+    fn offset(&self) -> off_t {
+        self.base.offset()
     }
 
     fn actual(&self) -> usize {
-        self.actual
+        self.base.actual
     }
 }

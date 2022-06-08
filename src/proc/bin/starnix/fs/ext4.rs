@@ -173,26 +173,23 @@ impl FileOps for ExtDirFileObject {
 
     fn readdir(
         &self,
-        file: &FileObject,
+        _file: &FileObject,
         _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        let mut offset = file.offset.lock();
         let dir_entries =
             self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
 
-        if *offset as usize >= dir_entries.len() {
+        if sink.offset() as usize >= dir_entries.len() {
             return Ok(());
         }
 
-        for entry in dir_entries[(*offset as usize)..].iter() {
-            let next_offset = *offset + 1;
+        for entry in dir_entries[(sink.offset() as usize)..].iter() {
             let inode_num = entry.e2d_ino.into();
             let entry_type = directory_entry_type(
                 ext_structs::EntryType::from_u8(entry.e2d_type).map_err(ext_error)?,
             );
-            sink.add(inode_num, next_offset, entry_type, entry.name_bytes())?;
-            *offset = next_offset;
+            sink.add(inode_num, sink.offset() + 1, entry_type, entry.name_bytes())?;
         }
         Ok(())
     }

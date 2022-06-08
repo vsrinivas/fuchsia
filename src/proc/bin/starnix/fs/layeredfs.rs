@@ -80,15 +80,12 @@ impl FileOps for LayeredFsRootNodeOps {
 
     fn readdir(
         &self,
-        file: &FileObject,
+        _file: &FileObject,
         current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        let mut current_offset = file.offset.lock();
-
-        for (key, fs) in self.fs.mappings.iter().skip(*current_offset as usize) {
-            sink.add(fs.root().node.inode_num, *current_offset + 1, DirectoryEntryType::DIR, key)?;
-            *current_offset += 1;
+        for (key, fs) in self.fs.mappings.iter().skip(sink.offset() as usize) {
+            sink.add(fs.root().node.inode_num, sink.offset() + 1, DirectoryEntryType::DIR, key)?;
         }
 
         struct DirentSinkWrapper<'a> {
@@ -106,17 +103,21 @@ impl FileOps for LayeredFsRootNodeOps {
                 name: &FsStr,
             ) -> Result<(), Errno> {
                 self.sink.add(inode_num, offset + self.mappings_count, entry_type, name)?;
-                *self.offset = offset + self.mappings_count;
+                *self.offset = offset;
                 Ok(())
+            }
+            fn offset(&self) -> off_t {
+                *self.offset
             }
             fn actual(&self) -> usize {
                 self.sink.actual()
             }
         }
 
+        let mut root_file_offset = self.root_file.offset.lock();
         let mut wrapper = DirentSinkWrapper {
             sink,
-            offset: &mut current_offset,
+            offset: &mut root_file_offset,
             mappings_count: self.fs.mappings.len() as off_t,
         };
 

@@ -55,23 +55,17 @@ impl MemoryDirectoryFile {
 ///
 /// The offset will always be at least 2 after this function returns successfully. It's often
 /// necessary to subtract 2 from the offset in subsequent logic.
-pub fn emit_dotdot(
-    file: &FileObject,
-    sink: &mut dyn DirentSink,
-    offset: &mut i64,
-) -> Result<(), Errno> {
-    if *offset == 0 {
+pub fn emit_dotdot(file: &FileObject, sink: &mut dyn DirentSink) -> Result<(), Errno> {
+    if sink.offset() == 0 {
         sink.add(file.node().inode_num, 1, DirectoryEntryType::DIR, b".")?;
-        *offset += 1;
     }
-    if *offset == 1 {
+    if sink.offset() == 1 {
         sink.add(
             file.name.entry.parent_or_self().node.inode_num,
             2,
             DirectoryEntryType::DIR,
             b"..",
         )?;
-        *offset += 1;
     }
     Ok(())
 }
@@ -129,23 +123,20 @@ impl FileOps for MemoryDirectoryFile {
         _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        let mut offset = file.offset.lock();
-        emit_dotdot(file, sink, &mut offset)?;
+        emit_dotdot(file, sink)?;
 
         let mut readdir_position = self.readdir_position.lock();
         file.name.entry.get_children(|children| {
             for (name, maybe_entry) in children.range((readdir_position.clone(), Bound::Unbounded))
             {
                 if let Some(entry) = maybe_entry.upgrade() {
-                    let next_offset = *offset + 1;
                     let mode = entry.node.info().mode;
                     sink.add(
                         entry.node.inode_num,
-                        next_offset,
+                        sink.offset() + 1,
                         DirectoryEntryType::from_mode(mode),
                         &name,
                     )?;
-                    *offset = next_offset;
                     *readdir_position = Bound::Excluded(name.to_vec());
                 }
             }

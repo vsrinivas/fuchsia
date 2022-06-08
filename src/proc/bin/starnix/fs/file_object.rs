@@ -155,6 +155,10 @@ pub trait FileOps: Send + Sync + AsAny {
         Ok(MappedVmo::new(vmo, addr))
     }
 
+    /// Respond to a `getdents` or `getdents64` calls.
+    ///
+    /// The `file.offset` lock will be held while entering this method. The implementation must look
+    /// at `sink.offset()` to read the current offset into the file.
     fn readdir(
         &self,
         _file: &FileObject,

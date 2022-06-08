@@ -91,19 +91,17 @@ impl FileOps for Arc<StaticDirectory> {
         _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        let mut offset = file.offset.lock();
-        emit_dotdot(file, sink, &mut offset)?;
+        emit_dotdot(file, sink)?;
 
         // Skip through the entries until the current offset is reached.
         // Subtract 2 from the offset to account for `.` and `..`.
-        for (name, node) in self.entries.iter().skip(*offset as usize - 2) {
+        for (name, node) in self.entries.iter().skip(sink.offset() as usize - 2) {
             sink.add(
                 node.inode_num,
-                *offset,
+                sink.offset() + 1,
                 DirectoryEntryType::from_mode(node.info().mode),
                 name,
             )?;
-            *offset += 1;
         }
         Ok(())
     }
@@ -172,8 +170,7 @@ impl<D: DirectoryDelegate> FileOps for Arc<DynamicDirectory<D>> {
         _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        let mut offset = file.offset.lock();
-        emit_dotdot(file, sink, &mut offset)?;
+        emit_dotdot(file, sink)?;
 
         let mut entries = self.0.list(&file.fs)?;
 
@@ -182,11 +179,10 @@ impl<D: DirectoryDelegate> FileOps for Arc<DynamicDirectory<D>> {
 
         // Skip through the entries until the current offset is reached.
         // Subtract 2 from the offset to account for `.` and `..`.
-        for entry in entries.into_iter().skip(*offset as usize - 2) {
+        for entry in entries.into_iter().skip(sink.offset() as usize - 2) {
             // Assign an inode if one wasn't set.
             let inode = entry.inode.unwrap_or_else(|| file.fs.next_inode_num());
-            sink.add(inode, *offset, entry.entry_type, &entry.name)?;
-            *offset += 1;
+            sink.add(inode, sink.offset() + 1, entry.entry_type, &entry.name)?;
         }
         Ok(())
     }

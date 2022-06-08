@@ -387,21 +387,18 @@ impl FileOps for RemoteDirectoryObject {
 
     fn readdir(
         &self,
-        file: &FileObject,
+        _file: &FileObject,
         _current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
         // It is important to acquire the lock to the offset before the context,
         //  to avoid a deadlock where seek() tries to modify the context.
-        let mut offset = file.offset.lock();
         let mut iterator = self.iterator.lock();
 
         let mut add_entry = |entry: &ZxioDirent| {
             let inode_num: ino_t = entry.id.ok_or(errno!(EIO))?;
             let entry_type = DirectoryEntryType::UNKNOWN;
-            let new_offset = *offset + 1;
-            sink.add(inode_num, new_offset, entry_type, &entry.name)?;
-            *offset = new_offset;
+            sink.add(inode_num, sink.offset() + 1, entry_type, &entry.name)?;
             Ok(())
         };
 

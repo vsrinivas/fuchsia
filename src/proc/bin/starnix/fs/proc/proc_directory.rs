@@ -83,26 +83,24 @@ impl FileOps for Arc<ProcDirectory> {
         current_task: &CurrentTask,
         sink: &mut dyn DirentSink,
     ) -> Result<(), Errno> {
-        let mut offset = file.offset.lock();
-        emit_dotdot(file, sink, &mut offset)?;
+        emit_dotdot(file, sink)?;
 
         // Iterate through all the named entries (i.e., non "task directories") and add them to
         // the sink. Subtract 2 from the offset, to account for `.` and `..`.
-        for (name, node) in self.nodes.iter().skip((*offset - 2) as usize) {
+        for (name, node) in self.nodes.iter().skip((sink.offset() - 2) as usize) {
             sink.add(
                 node.inode_num,
-                *offset,
+                sink.offset() + 1,
                 DirectoryEntryType::from_mode(node.info().mode),
                 &name,
             )?;
-            *offset = *offset + 1;
         }
 
         // Add 2 to the number of non-"task directories", to account for `.` and `..`.
         let pid_offset = (self.nodes.len() + 2) as i32;
 
         // Adjust the offset to account for the other nodes in the directory.
-        let adjusted_offset = (*offset - pid_offset as i64) as usize;
+        let adjusted_offset = (sink.offset() - pid_offset as i64) as usize;
         // Sort the pids, to keep the traversal order consistent.
         let mut pids = current_task.thread_group.kernel.pids.read().task_ids();
         pids.sort();
@@ -118,7 +116,6 @@ impl FileOps for Arc<ProcDirectory> {
                 // The + 1 is to set the offset to the next possible pid for subsequent reads.
                 let next_offset = (*pid + pid_offset + 1) as i64;
                 sink.add(inode_num, next_offset, DirectoryEntryType::DIR, name.as_bytes())?;
-                *offset = next_offset;
             }
         }
 

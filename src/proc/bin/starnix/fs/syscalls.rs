@@ -352,7 +352,8 @@ pub fn sys_getdents(
     user_capacity: usize,
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    let mut sink = DirentSink32::new(current_task, user_buffer, user_capacity);
+    let mut offset = file.offset.lock();
+    let mut sink = DirentSink32::new(current_task, &mut offset, user_buffer, user_capacity);
     file.readdir(&current_task, &mut sink)?;
     Ok(sink.actual())
 }
@@ -364,7 +365,8 @@ pub fn sys_getdents64(
     user_capacity: usize,
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    let mut sink = DirentSink64::new(current_task, user_buffer, user_capacity);
+    let mut offset = file.offset.lock();
+    let mut sink = DirentSink64::new(current_task, &mut offset, user_buffer, user_capacity);
     file.readdir(&current_task, &mut sink)?;
     Ok(sink.actual())
 }
