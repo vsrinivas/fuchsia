@@ -4,7 +4,6 @@
 
 #include "max98373.h"
 
-#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 

@@ -5,6 +5,8 @@
 #include "max98373.h"
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-helper.h>
@@ -32,8 +34,23 @@ class Max98373Test : public zxtest::Test {
         .ExpectWriteStop({0x20, 0x26, 0x08})   // 256 ratio.
         .ExpectWriteStop({0x20, 0x24, 0x58})   // TDM 16 bits.
         .ExpectWriteStop({0x20, 0x27, 0x08});  // 48KHz.
+
+    loop_.StartThread();
   }
+
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> GetI2cClient() {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    if (endpoints.is_error()) {
+      return {};
+    }
+
+    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
+                                        &mock_i2c_);
+    return std::move(endpoints->client);
+  }
+
   mock_i2c::MockI2c mock_i2c_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 struct Max98373Codec : public Max98373 {
@@ -47,7 +64,7 @@ TEST_F(Max98373Test, GetInfo) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
   ddk::GpioProtocolClient unused_gpio;
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
-      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+      GetI2cClient(), std::move(unused_gpio), fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Max98373Codec>();
   auto codec_proto = codec->GetProto();
@@ -111,8 +128,8 @@ TEST_F(Max98373Test, Reset) {
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   ddk::GpioProtocolClient gpio(mock_gpio.GetProto());
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
-      mock_i2c_.GetProto(), std::move(gpio), fake_parent.get()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(GetI2cClient(), std::move(gpio),
+                                                                fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Max98373Codec>();
   auto codec_proto = codec->GetProto();
@@ -131,8 +148,8 @@ TEST_F(Max98373Test, GoodSetDai) {
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   ddk::GpioProtocolClient gpio(mock_gpio.GetProto());
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
-      mock_i2c_.GetProto(), std::move(gpio), fake_parent.get()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(GetI2cClient(), std::move(gpio),
+                                                                fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Max98373Codec>();
   auto codec_proto = codec->GetProto();
@@ -230,7 +247,7 @@ TEST_F(Max98373Test, SetGainGood) {
 
   ddk::GpioProtocolClient unused_gpio;
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
-      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+      GetI2cClient(), std::move(unused_gpio), fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Max98373Codec>();
   auto codec_proto = codec->GetProto();
@@ -254,7 +271,7 @@ TEST_F(Max98373Test, SetGainOurOfRangeLow) {
 
   ddk::GpioProtocolClient unused_gpio;
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
-      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+      GetI2cClient(), std::move(unused_gpio), fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Max98373Codec>();
   auto codec_proto = codec->GetProto();
@@ -278,7 +295,7 @@ TEST_F(Max98373Test, SetGainOurOfRangeHigh) {
 
   ddk::GpioProtocolClient unused_gpio;
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
-      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+      GetI2cClient(), std::move(unused_gpio), fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Max98373Codec>();
   auto codec_proto = codec->GetProto();
