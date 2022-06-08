@@ -79,10 +79,10 @@ async fn test_pkg_dir() -> Result<()> {
     let instance = realm.build().await?;
 
     let (pkg, pkg_server) = fidl::endpoints::create_endpoints::<fio::DirectoryMarker>()?;
-    let pkg_flags = io_util::OpenFlags::RIGHT_READABLE
-        | io_util::OpenFlags::RIGHT_EXECUTABLE
+    let pkg_flags = fuchsia_fs::OpenFlags::RIGHT_READABLE
+        | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE
         | fio::OpenFlags::DIRECTORY;
-    io_util::connect_in_namespace("/pkg", pkg_server.into_channel(), pkg_flags).unwrap();
+    fuchsia_fs::connect_in_namespace("/pkg", pkg_server.into_channel(), pkg_flags).unwrap();
     let args = fdt::RealmArgs { boot: Some(pkg), ..fdt::RealmArgs::EMPTY };
 
     instance.driver_test_realm_start(args).await?;

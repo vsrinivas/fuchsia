@@ -16,10 +16,10 @@ rustc_test("driver_test_realm_example_simple_rust") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/simple",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:anyhow",
   ]
 }
