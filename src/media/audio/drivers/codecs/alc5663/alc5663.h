@@ -5,8 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_ALC5663_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_ALC5663_H_
 
-#include <fuchsia/hardware/i2c/c/banjo.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <zircon/types.h>
 

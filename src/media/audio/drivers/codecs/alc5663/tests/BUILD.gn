@@ -20,6 +20,8 @@ test("alc5663-test") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/mock-ddk",
     "//src/media/audio/drivers/codecs/alc5663:shared",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
 }

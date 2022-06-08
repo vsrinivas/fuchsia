@@ -4,8 +4,6 @@
 
 #include "alc5663.h"
 
-#include <fuchsia/hardware/i2c/c/banjo.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
