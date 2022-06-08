@@ -926,7 +926,8 @@ spinel_sc_submit(struct spinel_swapchain_impl * impl, spinel_swapchain_submit_t 
 }
 
 //
-////
+//
+//
 static spinel_result_t
 spinel_sc_release(struct spinel_swapchain_impl * impl)
 {

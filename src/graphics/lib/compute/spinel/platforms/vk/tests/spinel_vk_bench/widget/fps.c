@@ -75,6 +75,15 @@ impl_timestamp(void)
 #define SPN_FPS_PERIOD ((uint64_t)2e9)  // 2 secs.
 
 static void
+impl_fps_labels(struct widget_fps const * impl)
+{
+  if (!impl->is_quiet)
+    {
+      fprintf(stderr, "Labels, HH:MM:SS, TotalFrames, PeriodFrames, FrameMsecs, FPS\n");
+    }
+}
+
+static void
 impl_fps(struct widget_fps * impl, struct widget_control const * const control)
 {
   impl->timestamps[2] = impl_timestamp();
@@ -111,7 +120,7 @@ impl_fps(struct widget_fps * impl, struct widget_control const * const control)
           double const ss   = secs - (hh * 3600) - (mm * 60);
 
           fprintf(stderr,
-                  "HH:MM:SS/TotalFrames/PeriodFrames/FrameMsecs/FPS[%s]: "
+                  "HH:MM:SS/TotalFrames/PeriodFrames/FrameMsecs/FPS[%s], "
                   "%05.0f:%02.0f:%02.0f, "
                   "%10lu, %5lu, %7.3f, %.1f\n",
                   pls,
@@ -416,9 +425,12 @@ widget_fps_create(float glyph_width)
     .is_group = false
   };
 
+  impl_fps_labels(widget_fps.impl);
+
   return widget_fps;
 }
 
 //
 //
+
 //

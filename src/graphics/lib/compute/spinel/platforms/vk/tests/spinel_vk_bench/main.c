@@ -214,18 +214,20 @@ spinel_usage(char * const argv[])
   //
   fprintf(stderr,
           "\n"
-          "Usage: %s -f <filename> [-h] [-d:] [-i:] [-n:] [-p:] [-s:] [-q] [-F] [-Q] [-D] [-X]\n"
-          " -f <filename>             Filename of SVG file.\n"
+          "Usage: %s -f <filename> [...]\n"
           " -h                        Print usage.\n"
           " -d <vendorID>:<deviceID>  Execute on a specific Vulkan physical device.  Defaults to first device.\n"
+          " -f <filename>             Filename of SVG file.\n"
           " -i <min image count>      Minimum number of images in swapchain. Defaults to %u.\n"
-          " -n <iterations>           Maximum iterations before exiting. Defaults to UINT_MAX\n"
+          " -j <pipeline stage>       Select which pipeline stages are enabled on the first loop.    Defaults to `11111`.\n"
+          " -k <pipeline stage>       Select which pipeline stages are enabled after the first loop. Defaults to `11111`.\n"
+          " -n <frames>               Maximum frames before exiting. Defaults to UINT32_MAX\n"
           " -p <present mode>         Select present mode [0-3]*. Defaults to %u/%s.\n"
           " -q <compute>:<present>    Select the compute and presentation queue family indices.  Defaults to `0:0`\n"
-          " -s <pipeline stage>       Select which pipeline stages are enabled on the first loop.    Defaults to `11111`.\n"
-          " -t <pipeline stage>       Select which pipeline stages are enabled after the first loop. Defaults to `11111`.\n"
+          " -r                        Continuously rotate the SVG.\n"
           " -v                        Verbose SVG parsing output.  Quiet by default.\n"
           " -r                        Rotate the SVG file around the origin.  Disabled by default.\n"
+          " -t <seconds>              Maximum seconds before exiting. Defaults to UINT32_MAX\n"
           " -F                        Use VkFences to meter swapchain image acquires.\n"
           " -Q                        Disable Vulkan validation layers.  Enabled by default.\n"
           " -D                        Disable Vulkan debug info labels.  Enabled by default.\n"
@@ -271,6 +273,8 @@ struct spinel_state
     float cy;
     float scale;
   } center;
+
+  uint64_t t0;
 
   bool is_center;
   bool is_rotate;
@@ -319,6 +323,33 @@ struct spinel_vk
     uint64_t *        values;
   } cmd;
 };
+
+//
+//
+//
+static void
+spinel_secs_set(struct spinel_state * state)
+{
+  struct timespec ts;
+
+  timespec_get(&ts, TIME_UTC);
+
+  state->t0 = ts.tv_sec * 1000000000UL + ts.tv_nsec;
+}
+
+static bool
+spinel_secs_lte(struct spinel_state * state, uint32_t seconds)
+{
+  struct timespec ts;
+
+  timespec_get(&ts, TIME_UTC);
+
+  uint64_t const t1 = ts.tv_sec * 1000000000UL + ts.tv_nsec;
+
+  uint64_t const elapsed = t1 - state->t0;
+
+  return (elapsed <= 1000000000UL * seconds);
+}
 
 //
 // NOTE(allanmac): Validation layers either correctly or incorrectly identifying
@@ -631,7 +662,8 @@ main(int argc, char * const argv[])
   uint32_t         vendor_id              = 0;
   uint32_t         device_id              = 0;
   uint32_t         min_image_count        = SPN_PLATFORM_MIN_IMAGE_COUNT;
-  uint32_t         loop_count             = UINT32_MAX;
+  uint32_t         frame_count            = UINT32_MAX;
+  uint32_t         seconds                = UINT32_MAX;
   uint32_t         qfis[2]                = { 0, 0 };
   VkPresentModeKHR present_mode           = SPN_PLATFORM_PRESENT_MODE;
   bool             is_verbose             = false;
@@ -655,7 +687,7 @@ main(int argc, char * const argv[])
   //
   int opt;
 
-  while ((opt = getopt(argc, argv, "c:d:f:i:n:p:q:s:t:R:rvFQDXh")) != EOF)
+  while ((opt = getopt(argc, argv, "c:d:f:i:j:k:n:p:q:t:R:rvFQDXh")) != EOF)
     {
       switch (opt)
         {
@@ -712,9 +744,17 @@ main(int argc, char * const argv[])
             min_image_count = MAX_MACRO(uint32_t, 1, min_image_count);
             break;
 
+          case 'j':
+            state.initial.flags = (uint32_t)strtoul(optarg, NULL, 2);
+            break;
+
+          case 'k':
+            state.control.flags = (uint32_t)strtoul(optarg, NULL, 2);
+            break;
+
           case 'n':
-            loop_count = (uint32_t)strtoul(optarg, NULL, 10);
-            loop_count = MAX_MACRO(uint32_t, 1, loop_count);
+            frame_count = (uint32_t)strtoul(optarg, NULL, 10);
+            frame_count = MAX_MACRO(uint32_t, 1, frame_count);
             break;
 
           case 'p':
@@ -727,16 +767,12 @@ main(int argc, char * const argv[])
             qfis[1] = (uint32_t)strtoul(strchr(optarg, ':') + 1, NULL, 10);  // returns 0 on error
             break;
 
-          case 's':
-            state.initial.flags = (uint32_t)strtoul(optarg, NULL, 2);
+          case 'r':
+            state.is_rotate ^= true;
             break;
 
           case 't':
-            state.control.flags = (uint32_t)strtoul(optarg, NULL, 2);
-            break;
-
-          case 'r':
-            state.is_rotate ^= true;
+            seconds = (uint32_t)strtoul(optarg, NULL, 10);
             break;
 
           case 'v':
@@ -1460,7 +1496,9 @@ main(int argc, char * const argv[])
   //
   // render and process input
   //
-  for (uint32_t ii = 0; ii < loop_count; ii++)
+  spinel_secs_set(&state);
+
+  for (uint32_t ii = 0; (ii < frame_count) && spinel_secs_lte(&state, seconds); ii++)
     {
       //
       // Explicit flushing is only for accurately benchmarking a path declaration.
@@ -1747,6 +1785,11 @@ main(int argc, char * const argv[])
         }
     }
 
+  ////////////////////////////////////
+  //
+  // DISPOSAL
+  //
+
   // done with swapchain
   spinel_swapchain_release(state.swapchain);
 
@@ -1754,7 +1797,7 @@ main(int argc, char * const argv[])
   spinel(composition_unseal(composition));
   spinel(styling_unseal(styling));
 
-  // widgets
+  // widgets -- may release paths and rasters
   widget_destroy(ws, ARRAY_LENGTH_MACRO(ws), &w_context);
 
   // release the Spinel builders, composition and styling
@@ -1768,11 +1811,6 @@ main(int argc, char * const argv[])
 
   // release the Spinel context
   spinel(context_release(state.context));
-
-  ////////////////////////////////////
-  //
-  // DISPOSAL
-  //
 
   // svg doc
   svg_dispose(svg_doc);
