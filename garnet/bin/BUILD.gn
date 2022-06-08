@@ -13,7 +13,6 @@ group("bin") {
     "insntrace",
     "ktrace_provider",
     "run_test_component",
-    "setui",
     "trace",
     "trace2json",
     "trace_manager",
