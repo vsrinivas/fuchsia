@@ -27,7 +27,6 @@ test("lsusb-test-bin") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/runtime",
-    "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/zxtest",
   ]
 }

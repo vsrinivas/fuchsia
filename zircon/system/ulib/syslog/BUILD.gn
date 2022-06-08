@@ -57,7 +57,6 @@ syslog_visibility_allowlist = [
   "//src/devices/bin/driver_host2:*",
   "//src/devices/lib/log:*",
   "//src/devices/tests/fx-logger:*",
-  "//src/devices/usb/bin/lsusb:*",
   "//src/diagnostics/archivist:*",
   "//src/diagnostics/archivist/tests/logs/cpp:*",
   "//src/lib/chunked-compression:*",
