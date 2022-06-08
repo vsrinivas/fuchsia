@@ -1189,21 +1189,21 @@ async fn test_pkgfs_get_flags() {
     // Try get_flags on our own package directory.
     // thinfs returns an error for this call, which closes the channel.
     let this_pkg_dir =
-        io_util::open_directory_in_namespace("/pkg", io_util::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::open_directory_in_namespace("/pkg", fuchsia_fs::OpenFlags::RIGHT_READABLE)
             .expect("opening /pkg");
 
     let (status, flags) = this_pkg_dir.get_flags().await.expect("getting directory flags");
     assert_eq!(status, Status::OK.into_raw());
-    assert_eq!(flags, io_util::OpenFlags::RIGHT_READABLE);
+    assert_eq!(flags, fuchsia_fs::OpenFlags::RIGHT_READABLE);
 
     // Try get_flags on a file within our package directory.
     // thinfs maps GetFlags to GetFlags, so this should not close the channel.
     let meta_far_file_proxy =
-        io_util::open_file_in_namespace("/pkg/meta", io_util::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::open_file_in_namespace("/pkg/meta", fuchsia_fs::OpenFlags::RIGHT_READABLE)
             .expect("opening /pkg/meta as file");
     let (zx_result, flags) = meta_far_file_proxy.get_flags().await.expect("getting file flags");
     assert_eq!(zx_result, Status::OK.into_raw());
-    assert_eq!(flags, io_util::OpenFlags::RIGHT_READABLE);
+    assert_eq!(flags, fuchsia_fs::OpenFlags::RIGHT_READABLE);
 
     // We should still be able to read our own package directory and read our own merkle root,
     // which means pkgfs hasn't crashed.
@@ -1218,7 +1218,7 @@ async fn test_pkgfs_set_flags() {
     // Try set_flags on our own package directory.
     // thinfs returns an error for this call, which closes the channel.
     let this_pkg_dir =
-        io_util::open_directory_in_namespace("/pkg", io_util::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::open_directory_in_namespace("/pkg", fuchsia_fs::OpenFlags::RIGHT_READABLE)
             .expect("opening /pkg");
     let status =
         this_pkg_dir.set_flags(fio::OpenFlags::APPEND).await.expect("setting directory flags");
@@ -1227,7 +1227,7 @@ async fn test_pkgfs_set_flags() {
     // Try set_flags on a file within our package directory.
     // thinfs returns an error for this call, which closes the channel
     let meta_far_file_proxy =
-        io_util::open_file_in_namespace("/pkg/meta", io_util::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::open_file_in_namespace("/pkg/meta", fuchsia_fs::OpenFlags::RIGHT_READABLE)
             .expect("opening /pkg/meta as file");
     let status =
         meta_far_file_proxy.set_flags(fio::OpenFlags::APPEND).await.expect("setting file flags");
@@ -1262,23 +1262,29 @@ async fn test_multiple_opens_on_meta_file() {
         .unwrap();
 
     let d = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
-    let meta_directory = io_util::directory::open_directory(
+    let meta_directory = fuchsia_fs::directory::open_directory(
         &d,
         &format!("versions/{}/meta/", package.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .expect("open meta dir");
 
     // We should be able to open a file twice, close one version, then read from the second.
-    let file_a =
-        io_util::directory::open_file(&meta_directory, "a", io_util::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
-    let file_a_2 =
-        io_util::directory::open_file(&meta_directory, "a", io_util::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
+    let file_a = fuchsia_fs::directory::open_file(
+        &meta_directory,
+        "a",
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .unwrap();
+    let file_a_2 = fuchsia_fs::directory::open_file(
+        &meta_directory,
+        "a",
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .unwrap();
 
     file_a.close().await.unwrap().map_err(Status::from_raw).unwrap();
     let vmo = file_a_2
@@ -1316,28 +1322,29 @@ async fn test_opening_file_within_directory_and_closing_directory() {
         .unwrap();
 
     let d = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
-    let meta_directory = io_util::directory::open_directory(
+    let meta_directory = fuchsia_fs::directory::open_directory(
         &d,
         &format!("versions/{}/meta/", package.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .expect("open meta dir");
 
     // We should be able to open subdir in a meta directory, open a file within it,
     // close the directory, and still read from the file.
-    let subdir = io_util::directory::open_directory(
+    let subdir = fuchsia_fs::directory::open_directory(
         &meta_directory,
         "subdir",
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .unwrap();
-    let file_a = io_util::directory::open_file(&subdir, "a", io_util::OpenFlags::RIGHT_READABLE)
-        .await
-        .unwrap();
+    let file_a =
+        fuchsia_fs::directory::open_file(&subdir, "a", fuchsia_fs::OpenFlags::RIGHT_READABLE)
+            .await
+            .unwrap();
     subdir.close().await.unwrap().map_err(Status::from_raw).unwrap();
-    let a_contents = io_util::file::read_to_string(&file_a).await.unwrap();
+    let a_contents = fuchsia_fs::file::read_to_string(&file_a).await.unwrap();
     assert_eq!(a_contents, "Hello world!\n");
     file_a.close().await.unwrap().map_err(Status::from_raw).unwrap();
 
@@ -1383,34 +1390,34 @@ async fn test_walking_the_pkg_dir() {
 
     // Make sure we can access the files directly through the root.
     {
-        let pkg_directory = io_util::directory::open_directory(
+        let pkg_directory = fuchsia_fs::directory::open_directory(
             &pkgfs_dir,
             &format!("versions/{}", package.meta_far_merkle_root()),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .await
         .expect("open meta dir");
 
         for path in &paths {
-            let file = io_util::directory::open_file(
+            let file = fuchsia_fs::directory::open_file(
                 &pkg_directory,
                 path,
-                io_util::OpenFlags::RIGHT_READABLE,
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
             )
             .await
             .unwrap();
 
-            let body = io_util::file::read_to_string(&file).await.unwrap();
+            let body = fuchsia_fs::file::read_to_string(&file).await.unwrap();
             assert_eq!(path, &body);
         }
     }
 
     // Next, walk through the directories to get to the files.
     for path in &paths {
-        let mut d = io_util::directory::open_directory(
+        let mut d = fuchsia_fs::directory::open_directory(
             &pkgfs_dir,
             &format!("versions/{}", package.meta_far_merkle_root()),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .await
         .expect("open meta dir");
@@ -1419,17 +1426,22 @@ async fn test_walking_the_pkg_dir() {
         let mut entry = entries.next().unwrap();
 
         while let Some(child) = entries.next() {
-            d = io_util::directory::open_directory(&d, entry, io_util::OpenFlags::RIGHT_READABLE)
-                .await
-                .unwrap();
+            d = fuchsia_fs::directory::open_directory(
+                &d,
+                entry,
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            )
+            .await
+            .unwrap();
 
             entry = child;
         }
 
-        let file = io_util::directory::open_file(&d, entry, io_util::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
-        let body = io_util::file::read_to_string(&file).await.unwrap();
+        let file =
+            fuchsia_fs::directory::open_file(&d, entry, fuchsia_fs::OpenFlags::RIGHT_READABLE)
+                .await
+                .unwrap();
+        let body = fuchsia_fs::file::read_to_string(&file).await.unwrap();
         assert_eq!(path, &body);
     }
 
@@ -1473,10 +1485,10 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
     let pkgfs_dir = pkgfs.root_dir_proxy().expect("getting pkgfs root dir");
 
     // Open a pkg dir
-    let pkg_dir = io_util::directory::open_directory(
+    let pkg_dir = fuchsia_fs::directory::open_directory(
         &pkgfs_dir,
         &format!("versions/{}", package_to_corrupt.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .expect("open meta dir");
@@ -1490,34 +1502,34 @@ async fn test_interacting_with_broken_pkg_dir_does_not_break_pkgfs() {
 
     // Opening the meta/ directory should fail
     assert_matches!(
-        io_util::directory::open_directory(
+        fuchsia_fs::directory::open_directory(
             &pkg_dir,
             "meta",
-            io_util::OpenFlags::RIGHT_READABLE
+            fuchsia_fs::OpenFlags::RIGHT_READABLE
         ).await,
-        Err(io_util::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
+        Err(fuchsia_fs::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
     );
 
     // Opening a meta file should fail
     assert_matches!(
-        io_util::directory::open_file(
+        fuchsia_fs::directory::open_file(
             &pkg_dir,
             "meta/a",
-            io_util::OpenFlags::RIGHT_READABLE
+            fuchsia_fs::OpenFlags::RIGHT_READABLE
         ).await,
-        Err(io_util::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
+        Err(fuchsia_fs::node::OpenError::OpenError(s)) if s == Status::NOT_FOUND
     );
 
     // Interacting with other pkg dirs should continue to work
-    let file = io_util::directory::open_file(
+    let file = fuchsia_fs::directory::open_file(
         &pkgfs_dir,
         &format!("versions/{}/meta/b", package_still_good.meta_far_merkle_root()),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .unwrap();
 
-    let actual_contents = io_util::file::read_to_string(&file).await.unwrap();
+    let actual_contents = fuchsia_fs::file::read_to_string(&file).await.unwrap();
     assert_eq!(actual_contents, expected_contents);
 
     pkgfs.stop().await.expect("shutting down pkgfs");

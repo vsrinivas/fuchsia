@@ -126,9 +126,9 @@ impl TestUpdatePackage {
 
     fn new() -> Self {
         let temp_dir = tempfile::tempdir().expect("/tmp to exist");
-        let update_pkg_proxy = io_util::directory::open_in_namespace(
+        let update_pkg_proxy = fuchsia_fs::directory::open_in_namespace(
             temp_dir.path().to_str().unwrap(),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .expect("temp dir to open");
         Self { temp_dir, update_pkg: UpdatePackage::new(update_pkg_proxy) }
@@ -145,7 +145,7 @@ impl TestUpdatePackage {
             None => {}
             Some(parent) => std::fs::create_dir_all(self.temp_dir.path().join(parent)).unwrap(),
         }
-        io_util::file::write_in_namespace(
+        fuchsia_fs::file::write_in_namespace(
             self.temp_dir.path().join(path).to_str().unwrap(),
             contents,
         )

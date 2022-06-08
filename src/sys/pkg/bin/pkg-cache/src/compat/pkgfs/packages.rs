@@ -395,13 +395,13 @@ mod tests {
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(
+            fuchsia_fs::directory::open_directory(
                 &proxy,
                 "invalidname-!@#$%^&*()+=",
                 fio::OpenFlags::RIGHT_READABLE
             )
             .await,
-            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
@@ -413,9 +413,13 @@ mod tests {
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, "missing", fio::OpenFlags::RIGHT_READABLE)
-                .await,
-            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            fuchsia_fs::directory::open_directory(
+                &proxy,
+                "missing",
+                fio::OpenFlags::RIGHT_READABLE
+            )
+            .await,
+            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
@@ -427,7 +431,7 @@ mod tests {
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, "static", fio::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_directory(&proxy, "static", fio::OpenFlags::RIGHT_READABLE)
                 .await,
             Ok(_)
         );
@@ -441,16 +445,24 @@ mod tests {
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, "dynamic", fio::OpenFlags::RIGHT_READABLE)
-                .await,
-            Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+            fuchsia_fs::directory::open_directory(
+                &proxy,
+                "dynamic",
+                fio::OpenFlags::RIGHT_READABLE
+            )
+            .await,
+            Err(fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
 
         register_dynamic_package(&package_index, path("dynamic", "0"), hash(0)).await;
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, "dynamic", fio::OpenFlags::RIGHT_READABLE)
-                .await,
+            fuchsia_fs::directory::open_directory(
+                &proxy,
+                "dynamic",
+                fio::OpenFlags::RIGHT_READABLE
+            )
+            .await,
             Ok(_)
         );
     }
@@ -477,14 +489,14 @@ mod tests {
         blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
         register_dynamic_package(&package_index, path("dynamic", "0"), metafar_blob.merkle).await;
 
-        let file = io_util::directory::open_file(
+        let file = fuchsia_fs::directory::open_file(
             &proxy,
             "dynamic/0/meta/message",
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .unwrap();
-        let message = io_util::file::read_to_string(&file).await.unwrap();
+        let message = fuchsia_fs::file::read_to_string(&file).await.unwrap();
         assert_eq!(message, "yes");
     }
 

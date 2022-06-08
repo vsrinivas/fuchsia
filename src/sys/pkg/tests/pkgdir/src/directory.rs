@@ -8,9 +8,9 @@ use {
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io as fio,
     files_async::{DirEntry, DirentKind},
+    fuchsia_fs::directory::open_directory,
     fuchsia_zircon as zx,
     futures::{future::Future, StreamExt},
-    io_util::directory::open_directory,
     itertools::Itertools as _,
     pretty_assertions::assert_eq,
     std::{
@@ -754,7 +754,7 @@ async fn open_parent(package_root: &fio::DirectoryProxy, parent_path: &str) -> f
     } else {
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
     };
-    io_util::directory::open_directory(package_root, parent_path, parent_rights)
+    fuchsia_fs::directory::open_directory(package_root, parent_path, parent_rights)
         .await
         .expect("open parent directory")
 }
@@ -1152,7 +1152,7 @@ async fn read_dirents_per_package_source(source: PackageSource) {
     )
     .await;
     assert_read_dirents_overflow(
-        &io_util::directory::open_directory(&root_dir, "meta", fio::OpenFlags::empty())
+        &fuchsia_fs::directory::open_directory(&root_dir, "meta", fio::OpenFlags::empty())
             .await
             .expect("open meta as dir"),
         vec![
@@ -1172,7 +1172,7 @@ async fn read_dirents_per_package_source(source: PackageSource) {
     )
     .await;
     assert_read_dirents_overflow(
-        &io_util::directory::open_directory(
+        &fuchsia_fs::directory::open_directory(
             &root_dir,
             "dir_overflow_readdirents",
             fio::OpenFlags::empty(),
@@ -1183,7 +1183,7 @@ async fn read_dirents_per_package_source(source: PackageSource) {
     )
     .await;
     assert_read_dirents_overflow(
-        &io_util::directory::open_directory(
+        &fuchsia_fs::directory::open_directory(
             &root_dir,
             "meta/dir_overflow_readdirents",
             fio::OpenFlags::empty(),
@@ -1196,7 +1196,7 @@ async fn read_dirents_per_package_source(source: PackageSource) {
 
     // Handle no-overflow cases (e.g. when size of total dirents does not exceed MAX_BUF).
     assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "dir", fio::OpenFlags::empty())
+        &fuchsia_fs::directory::open_directory(&root_dir, "dir", fio::OpenFlags::empty())
             .await
             .expect("open dir"),
         vec![
@@ -1206,7 +1206,7 @@ async fn read_dirents_per_package_source(source: PackageSource) {
     )
     .await;
     assert_read_dirents_no_overflow(
-        &io_util::directory::open_directory(&root_dir, "meta/dir", fio::OpenFlags::empty())
+        &fuchsia_fs::directory::open_directory(&root_dir, "meta/dir", fio::OpenFlags::empty())
             .await
             .expect("open meta/dir"),
         vec![
@@ -1282,7 +1282,7 @@ async fn rewind_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
     // Handle overflow cases.
     for path in [".", "meta", "dir_overflow_readdirents", "meta/dir_overflow_readdirents"] {
-        let dir = io_util::directory::open_directory(&root_dir, path, fio::OpenFlags::empty())
+        let dir = fuchsia_fs::directory::open_directory(&root_dir, path, fio::OpenFlags::empty())
             .await
             .unwrap();
         assert_rewind_overflow_when_seek_offset_at_end(&dir).await;
@@ -1292,7 +1292,7 @@ async fn rewind_per_package_source(source: PackageSource) {
     // Handle non-overflow cases.
     for path in ["dir", "meta/dir"] {
         assert_rewind_no_overflow(
-            &io_util::directory::open_directory(&root_dir, path, fio::OpenFlags::empty())
+            &fuchsia_fs::directory::open_directory(&root_dir, path, fio::OpenFlags::empty())
                 .await
                 .unwrap(),
         )
@@ -1369,7 +1369,7 @@ async fn get_token() {
 async fn get_token_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
     for path in [".", "dir", "meta", "meta/dir"] {
-        let dir = io_util::directory::open_directory(root_dir, path, fio::OpenFlags::empty())
+        let dir = fuchsia_fs::directory::open_directory(root_dir, path, fio::OpenFlags::empty())
             .await
             .unwrap();
 
@@ -1421,7 +1421,7 @@ async fn assert_get_flags_directory_calls(
     expected_rights: fio::OpenFlags,
 ) {
     let package_root = &source.dir;
-    let dir = io_util::directory::open_directory(
+    let dir = fuchsia_fs::directory::open_directory(
         package_root,
         path,
         fio::OpenFlags::RIGHT_READABLE
@@ -1474,7 +1474,7 @@ async fn assert_unsupported_directory_calls(
     child_base_path: &str,
 ) {
     let parent =
-        io_util::directory::open_directory(&source.dir, parent_path, fio::OpenFlags::empty())
+        fuchsia_fs::directory::open_directory(&source.dir, parent_path, fio::OpenFlags::empty())
             .await
             .expect("open parent directory");
 

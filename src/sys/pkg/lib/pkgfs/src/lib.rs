@@ -6,8 +6,8 @@
 
 //! Typesafe wrappers around the /pkgfs filesystem.
 
-/// Re-exports of wrapped types from io_util.
-pub use io_util::node::OpenError;
+/// Re-exports of wrapped types from fuchsia_fs.
+pub use fuchsia_fs::node::OpenError;
 
 pub mod control;
 pub mod install;

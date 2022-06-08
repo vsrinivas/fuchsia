@@ -191,7 +191,7 @@ impl UsbUpdateChecker<'_> {
     }
 
     async fn get_system_version(&self) -> Result<SystemVersion, Error> {
-        let string = io_util::file::read_in_namespace_to_string(self.build_info_path)
+        let string = fuchsia_fs::file::read_in_namespace_to_string(self.build_info_path)
             .await
             .context("Reading build info")?;
 
@@ -226,11 +226,14 @@ impl UsbUpdateChecker<'_> {
             .map_err(|e| anyhow!("Package resolver error: {:?}", e))
             .context("Resolving pacakge")?;
 
-        let meta_proxy =
-            io_util::open_file(&dir, std::path::Path::new("meta"), fio::OpenFlags::RIGHT_READABLE)
-                .context("Opening meta in update package")?;
+        let meta_proxy = fuchsia_fs::open_file(
+            &dir,
+            std::path::Path::new("meta"),
+            fio::OpenFlags::RIGHT_READABLE,
+        )
+        .context("Opening meta in update package")?;
         let hash =
-            io_util::file::read_to_string(&meta_proxy).await.context("Reading package hash")?;
+            fuchsia_fs::file::read_to_string(&meta_proxy).await.context("Reading package hash")?;
         let hash = fuchsia_url::Hash::from_str(&hash).context("Parsing hash")?;
         let url = PinnedAbsolutePackageUrl::from_unpinned(url, hash);
 

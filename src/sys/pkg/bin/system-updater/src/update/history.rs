@@ -227,7 +227,7 @@ impl UpdateHistory {
 
     /// Read the update history struct from disk.
     pub async fn load(node: inspect::Node) -> Self {
-        let reader = io_util::file::read_in_namespace(UPDATE_HISTORY_PATH).map_err(|e| e.into());
+        let reader = fuchsia_fs::file::read_in_namespace(UPDATE_HISTORY_PATH).map_err(|e| e.into());
 
         Self::load_from_or_default(reader, node).await
     }
@@ -284,7 +284,7 @@ impl UpdateHistory {
     /// Save the update history to disk.
     pub fn save(&mut self) -> impl Future<Output = ()> {
         let writer = |bytes| async move {
-            let _ = io_util::file::write_in_namespace(UPDATE_HISTORY_PATH, &bytes).await;
+            let _ = fuchsia_fs::file::write_in_namespace(UPDATE_HISTORY_PATH, &bytes).await;
         };
         self.save_to(writer)
     }

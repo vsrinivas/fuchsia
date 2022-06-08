@@ -17,10 +17,10 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fuchsia_archive::AsyncReader,
+    fuchsia_fs::file::AsyncReadAtExt as _,
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
-    io_util::file::AsyncReadAtExt as _,
     std::{collections::HashMap, sync::Arc},
     vfs::{
         common::send_on_open_with_error,
@@ -52,8 +52,8 @@ impl RootDir {
     pub async fn new(blobfs: blobfs::Client, hash: fuchsia_hash::Hash) -> Result<Self, Error> {
         let meta_far = blobfs.open_blob_for_read_no_describe(&hash).map_err(Error::OpenMetaFar)?;
 
-        let reader = io_util::file::AsyncFile::from_proxy(Clone::clone(&meta_far));
-        let mut async_reader = AsyncReader::new(io_util::file::BufferedAsyncReadAt::new(reader))
+        let reader = fuchsia_fs::file::AsyncFile::from_proxy(Clone::clone(&meta_far));
+        let mut async_reader = AsyncReader::new(fuchsia_fs::file::BufferedAsyncReadAt::new(reader))
             .await
             .map_err(Error::ArchiveReader)?;
         let reader_list = async_reader.list();
@@ -96,11 +96,11 @@ impl RootDir {
                 .blobfs
                 .open_blob_for_read_no_describe(hash)
                 .map_err(ReadFileError::BlobfsOpen)?;
-            return io_util::file::read(&blob).await.map_err(ReadFileError::BlobfsRead);
+            return fuchsia_fs::file::read(&blob).await.map_err(ReadFileError::BlobfsRead);
         }
 
         if let Some(location) = self.meta_files.get(path) {
-            let mut file = io_util::file::AsyncFile::from_proxy(Clone::clone(&self.meta_far));
+            let mut file = fuchsia_fs::file::AsyncFile::from_proxy(Clone::clone(&self.meta_far));
             let mut contents = vec![0; crate::u64_to_usize_safe(location.length)];
             let () = file
                 .read_at_exact(location.offset, contents.as_mut_slice())
@@ -148,10 +148,10 @@ impl RootDir {
 #[derive(thiserror::Error, Debug)]
 pub enum ReadFileError {
     #[error("opening blob")]
-    BlobfsOpen(#[source] io_util::node::OpenError),
+    BlobfsOpen(#[source] fuchsia_fs::node::OpenError),
 
     #[error("reading blob")]
-    BlobfsRead(#[source] io_util::file::ReadError),
+    BlobfsRead(#[source] fuchsia_fs::file::ReadError),
 
     #[error("reading part of a blob")]
     PartialBlobRead(#[source] std::io::Error),
@@ -320,9 +320,9 @@ impl vfs::directory::entry_container::Directory for RootDir {
         Ok(fio::NodeAttributes {
             mode: fio::MODE_TYPE_DIRECTORY
                 | vfs::common::rights_to_posix_mode_bits(
-                    true,  // read
+                    true, // read
                     true, // write
-                    true,  // execute
+                    true, // execute
                 ),
             id: 1,
             content_size: 0,
@@ -663,9 +663,11 @@ mod tests {
             );
 
             assert_eq!(
-                io_util::file::read(&fio::FileProxy::from_channel(proxy.into_channel().unwrap()))
-                    .await
-                    .unwrap(),
+                fuchsia_fs::file::read(&fio::FileProxy::from_channel(
+                    proxy.into_channel().unwrap()
+                ))
+                .await
+                .unwrap(),
                 b"blob-contents".to_vec()
             );
         }
@@ -689,7 +691,7 @@ mod tests {
             );
 
             assert_eq!(
-                io_util::file::read(&proxy).await.unwrap(),
+                fuchsia_fs::file::read(&proxy).await.unwrap(),
                 root_dir.hash.to_string().as_bytes()
             );
 
@@ -699,7 +701,7 @@ mod tests {
                 .clone(fio::OpenFlags::RIGHT_READABLE, server_end.into_channel().into())
                 .unwrap();
             assert_eq!(
-                io_util::file::read(&cloned_proxy).await.unwrap(),
+                fuchsia_fs::file::read(&cloned_proxy).await.unwrap(),
                 root_dir.hash.to_string().as_bytes()
             );
         }
@@ -797,7 +799,7 @@ mod tests {
                 server_end.into_channel().into(),
             );
 
-            assert_eq!(io_util::file::read(&proxy).await.unwrap(), b"meta-contents0".to_vec());
+            assert_eq!(fuchsia_fs::file::read(&proxy).await.unwrap(), b"meta-contents0".to_vec());
         }
     }
 

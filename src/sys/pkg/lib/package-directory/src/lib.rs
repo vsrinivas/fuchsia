@@ -26,7 +26,7 @@ pub use vfs::execution_scope::ExecutionScope;
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("while opening the meta.far")]
-    OpenMetaFar(#[source] io_util::node::OpenError),
+    OpenMetaFar(#[source] fuchsia_fs::node::OpenError),
 
     #[error("while instantiating a fuchsia archive reader")]
     ArchiveReader(#[source] fuchsia_archive::Error),
@@ -43,7 +43,7 @@ pub enum Error {
 
 impl Error {
     fn to_zx_status(&self) -> zx::Status {
-        use io_util::node::OpenError;
+        use fuchsia_fs::node::OpenError;
 
         // TODO(fxbug.dev/86995) Align this mapping with pkgfs.
         match self {
@@ -263,7 +263,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            io_util::file::read_to_string(&proxy).await.unwrap(),
+            fuchsia_fs::file::read_to_string(&proxy).await.unwrap(),
             metafar_blob.merkle.to_string(),
         );
     }

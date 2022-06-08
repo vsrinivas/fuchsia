@@ -13,7 +13,6 @@ rustc_library("lib") {
   testonly = true
 
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
@@ -31,6 +30,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-hyper",
     "//src/lib/fuchsia-url",
     "//src/lib/http-uri-ext",
@@ -563,7 +563,6 @@ rustc_test("eager_updates") {
 
   deps = [
     ":lib",
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.internal:fuchsia.pkg.internal-rustc",
@@ -571,6 +570,7 @@ rustc_test("eager_updates") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-url",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",

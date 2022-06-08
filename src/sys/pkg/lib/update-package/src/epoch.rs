@@ -11,10 +11,10 @@ use {epoch::EpochFile, fidl_fuchsia_io as fio, fuchsia_zircon_status::Status, th
 #[allow(missing_docs)]
 pub enum ParseEpochError {
     #[error("while opening the file")]
-    OpenFile(#[source] io_util::node::OpenError),
+    OpenFile(#[source] fuchsia_fs::node::OpenError),
 
     #[error("while reading the file")]
-    ReadFile(#[source] io_util::file::ReadError),
+    ReadFile(#[source] fuchsia_fs::file::ReadError),
 
     #[error("while deserializing: `{0:?}`")]
     Deserialize(String, #[source] serde_json::Error),
@@ -23,13 +23,13 @@ pub enum ParseEpochError {
 pub(crate) async fn epoch(proxy: &fio::DirectoryProxy) -> Result<Option<u64>, ParseEpochError> {
     // Open the epoch.json file.
     let fopen_res =
-        io_util::directory::open_file(proxy, "epoch.json", fio::OpenFlags::RIGHT_READABLE).await;
-    if let Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) = fopen_res {
+        fuchsia_fs::directory::open_file(proxy, "epoch.json", fio::OpenFlags::RIGHT_READABLE).await;
+    if let Err(fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND)) = fopen_res {
         return Ok(None);
     }
 
     // Read the epoch.json file.
-    let contents = io_util::file::read_to_string(&fopen_res.map_err(ParseEpochError::OpenFile)?)
+    let contents = fuchsia_fs::file::read_to_string(&fopen_res.map_err(ParseEpochError::OpenFile)?)
         .await
         .map_err(ParseEpochError::ReadFile)?;
 

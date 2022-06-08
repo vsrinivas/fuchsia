@@ -15,12 +15,12 @@ use {
         MirrorConfig, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
     files_async::readdir,
-    fuchsia_merkle::Hash,
-    fuchsia_url::RepositoryUrl,
-    io_util::{
+    fuchsia_fs::{
         directory::{self, open_directory, open_file},
         file::{read, write},
     },
+    fuchsia_merkle::Hash,
+    fuchsia_url::RepositoryUrl,
     maybe_owned::MaybeOwned,
     serde::Deserialize,
     std::{
@@ -337,7 +337,7 @@ impl Repository {
         for dirent in readdir(&src_blobs).await.unwrap() {
             let sub_dir_name = &dirent.name[..2];
             let sub_dir = blob_sub_dirs.entry(sub_dir_name.to_owned()).or_insert_with(|| {
-                io_util::directory::open_directory_no_describe(
+                fuchsia_fs::directory::open_directory_no_describe(
                     &blobs,
                     sub_dir_name,
                     fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,

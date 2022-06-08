@@ -21,13 +21,13 @@ use {
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
+    fuchsia_fs::file::*,
     fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_merkle::Hash,
     fuchsia_pkg::{MetaContents, PackagePath},
     fuchsia_pkg_testing::{get_inspect_hierarchy, BlobContents, Package, SystemImageBuilder},
     fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
-    io_util::file::*,
     maplit::hashmap,
     mock_boot_arguments::MockBootArgumentsService,
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
@@ -62,7 +62,7 @@ async fn write_blob(contents: &[u8], file: fio::FileProxy) -> Result<(), zx::Sta
     let () =
         file.resize(contents.len() as u64).await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
-    io_util::file::write(&file, contents).await.map_err(|e| match e {
+    fuchsia_fs::file::write(&file, contents).await.map_err(|e| match e {
         WriteError::WriteError(s) => s,
         _ => zx::Status::INTERNAL,
     })?;
@@ -523,19 +523,19 @@ where
                 .root
                 .connect_to_protocol_at_exposed_dir::<RetainedPackagesMarker>()
                 .expect("connect to retained packages"),
-            pkgfs_packages: io_util::directory::open_directory_no_describe(
+            pkgfs_packages: fuchsia_fs::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-packages",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-packages"),
-            pkgfs_versions: io_util::directory::open_directory_no_describe(
+            pkgfs_versions: fuchsia_fs::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-versions",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-versions"),
-            pkgfs: io_util::directory::open_directory_no_describe(
+            pkgfs: fuchsia_fs::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs",
                 fio::OpenFlags::RIGHT_READABLE
@@ -671,7 +671,7 @@ impl<P: PkgFs> TestEnv<P> {
     /// This proxy is not stored in Proxies because the directory is not served when there is no
     /// system_image package.
     async fn system_dir(&self) -> fio::DirectoryProxy {
-        io_util::directory::open_directory(
+        fuchsia_fs::directory::open_directory(
             self.apps.realm_instance.root.get_exposed_dir(),
             "system",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,

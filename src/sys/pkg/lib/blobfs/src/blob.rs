@@ -13,14 +13,15 @@ pub(crate) async fn create(
     let flags =
         fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE;
 
-    let proxy = io_util::directory::open_file(&blobfs, &hash.to_string(), flags).await.map_err(
-        |e| match e {
-            io_util::node::OpenError::OpenError(Status::ACCESS_DENIED) => {
-                CreateError::AlreadyExists
+    let proxy =
+        fuchsia_fs::directory::open_file(&blobfs, &hash.to_string(), flags).await.map_err(|e| {
+            match e {
+                fuchsia_fs::node::OpenError::OpenError(Status::ACCESS_DENIED) => {
+                    CreateError::AlreadyExists
+                }
+                other => CreateError::Io(other),
             }
-            other => CreateError::Io(other),
-        },
-    )?;
+        })?;
 
     Ok(Blob { proxy, state: NeedsTruncate })
 }
@@ -84,7 +85,7 @@ pub enum CreateError {
     AlreadyExists,
 
     #[error("while creating the blob")]
-    Io(#[source] io_util::node::OpenError),
+    Io(#[source] fuchsia_fs::node::OpenError),
 }
 
 /// An error encountered while truncating a blob
@@ -211,7 +212,7 @@ impl Blob<NeedsData> {
     pub async fn write(mut self, buf: &[u8]) -> Result<WriteSuccess, WriteError> {
         assert!(self.state.written + buf.len() as u64 <= self.state.size);
 
-        match io_util::file::write(&self.proxy, buf).await {
+        match fuchsia_fs::file::write(&self.proxy, buf).await {
             Ok(()) => {
                 self.state.written += buf.len() as u64;
 
@@ -226,19 +227,21 @@ impl Blob<NeedsData> {
                 self.close().await;
 
                 Err(match e {
-                    io_util::file::WriteError::Create(_) => {
+                    fuchsia_fs::file::WriteError::Create(_) => {
                         // unreachable!(), but opt to return a confusing error instead of panic.
                         WriteError::UnexpectedResponse(Status::OK)
                     }
-                    io_util::file::WriteError::Fidl(e) => WriteError::Fidl(e),
-                    io_util::file::WriteError::WriteError(Status::IO_DATA_INTEGRITY) => {
+                    fuchsia_fs::file::WriteError::Fidl(e) => WriteError::Fidl(e),
+                    fuchsia_fs::file::WriteError::WriteError(Status::IO_DATA_INTEGRITY) => {
                         WriteError::Corrupt
                     }
-                    io_util::file::WriteError::WriteError(Status::NO_SPACE) => WriteError::NoSpace,
-                    io_util::file::WriteError::WriteError(status) => {
+                    fuchsia_fs::file::WriteError::WriteError(Status::NO_SPACE) => {
+                        WriteError::NoSpace
+                    }
+                    fuchsia_fs::file::WriteError::WriteError(status) => {
                         WriteError::UnexpectedResponse(status)
                     }
-                    io_util::file::WriteError::Overwrite => WriteError::Overwrite,
+                    fuchsia_fs::file::WriteError::Overwrite => WriteError::Overwrite,
                 })
             }
         }
@@ -365,9 +368,9 @@ mod tests {
         assert_eq!(client.list_known_blobs().await.unwrap(), hashset! {hash});
 
         let also_blob = client.open_blob_for_read(&hash).await.unwrap();
-        assert_eq!(contents, io_util::file::read(&also_blob).await.unwrap().as_slice());
+        assert_eq!(contents, fuchsia_fs::file::read(&also_blob).await.unwrap().as_slice());
 
-        assert_eq!(contents, io_util::file::read(&blob).await.unwrap().as_slice());
+        assert_eq!(contents, fuchsia_fs::file::read(&blob).await.unwrap().as_slice());
 
         blobfs.stop().await.unwrap();
     }
@@ -439,11 +442,11 @@ mod tests {
 
         // New connections can now read the blob, even with the original proxy still open.
         let also_blob = client.open_blob_for_read(&hash).await.unwrap();
-        assert_eq!(contents, io_util::file::read(&also_blob).await.unwrap().as_slice());
+        assert_eq!(contents, fuchsia_fs::file::read(&also_blob).await.unwrap().as_slice());
 
         let blob = blob.reopen_for_read().await.unwrap();
 
-        let actual = io_util::file::read(&blob).await.unwrap();
+        let actual = fuchsia_fs::file::read(&blob).await.unwrap();
         assert_eq!(contents, actual.as_slice());
 
         blobfs.stop().await.unwrap();
@@ -469,7 +472,7 @@ mod tests {
 
         let blob = blob.reopen_for_read().await.unwrap();
 
-        let actual = io_util::file::read(&blob).await.unwrap();
+        let actual = fuchsia_fs::file::read(&blob).await.unwrap();
         assert_eq!(contents, actual.as_slice());
 
         blobfs.stop().await.unwrap();
@@ -489,7 +492,7 @@ mod tests {
 
         let blob = blob.reopen_for_read().await.unwrap();
 
-        let actual = io_util::file::read(&blob).await.unwrap();
+        let actual = fuchsia_fs::file::read(&blob).await.unwrap();
         assert_eq!(contents, actual.as_slice());
 
         blobfs.stop().await.unwrap();

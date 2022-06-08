@@ -42,7 +42,7 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
         .unwrap();
     let env = TestEnv::builder().pkgfs(pkgfs).build().await;
 
-    let missing = io_util::directory::open_file(
+    let missing = fuchsia_fs::directory::open_file(
         &env.proxies.pkgfs,
         "ctl/validation/missing",
         fio::OpenFlags::RIGHT_READABLE,
@@ -51,7 +51,7 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
     .unwrap();
 
     assert_eq!(
-        io_util::file::read(&missing).await.unwrap(),
+        fuchsia_fs::file::read(&missing).await.unwrap(),
         format!("{}\n", missing_blob.unwrap()).into_bytes()
     );
 

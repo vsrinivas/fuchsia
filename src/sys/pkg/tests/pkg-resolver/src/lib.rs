@@ -296,7 +296,8 @@ impl DirOrProxy {
     fn to_proxy(&self, rights: fio::OpenFlags) -> fio::DirectoryProxy {
         match &self {
             DirOrProxy::Dir(d) => {
-                io_util::directory::open_in_namespace(d.path().to_str().unwrap(), rights).unwrap()
+                fuchsia_fs::directory::open_in_namespace(d.path().to_str().unwrap(), rights)
+                    .unwrap()
             }
             DirOrProxy::Proxy(p) => clone_directory_proxy(p, rights),
         }
@@ -482,7 +483,7 @@ where
                     mounts.pkg_resolver_config_data.to_proxy(fio::OpenFlags::RIGHT_READABLE)
                 ),
                 "ssl" => vfs::remote::remote_dir(
-                    io_util::directory::open_in_namespace(
+                    fuchsia_fs::directory::open_in_namespace(
                         "/pkg/data/ssl",
                         fio::OpenFlags::RIGHT_READABLE
                     ).unwrap()
@@ -493,7 +494,7 @@ where
 
         let local_mirror_dir = tempfile::tempdir().unwrap();
         if let Some((repo, url)) = self.local_mirror_repo {
-            let proxy = io_util::directory::open_in_namespace(
+            let proxy = fuchsia_fs::directory::open_in_namespace(
                 local_mirror_dir.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )

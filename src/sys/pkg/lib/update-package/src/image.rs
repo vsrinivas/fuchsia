@@ -12,7 +12,7 @@ use {fidl_fuchsia_io as fio, fidl_fuchsia_mem::Buffer, fuchsia_zircon::VmoChildO
 #[allow(missing_docs)]
 pub enum OpenImageError {
     #[error("while opening the file")]
-    OpenFile(#[source] io_util::node::OpenError),
+    OpenFile(#[source] fuchsia_fs::node::OpenError),
 
     #[error("while calling get_buffer")]
     FidlGetBuffer(#[source] fidl::Error),
@@ -176,9 +176,10 @@ pub(crate) async fn open(
     proxy: &fio::DirectoryProxy,
     image: &Image,
 ) -> Result<Buffer, OpenImageError> {
-    let file = io_util::directory::open_file(proxy, &image.name(), fio::OpenFlags::RIGHT_READABLE)
-        .await
-        .map_err(OpenImageError::OpenFile)?;
+    let file =
+        fuchsia_fs::directory::open_file(proxy, &image.name(), fio::OpenFlags::RIGHT_READABLE)
+            .await
+            .map_err(OpenImageError::OpenFile)?;
 
     let vmo = file
         .get_backing_memory(fio::VmoFlags::READ)
@@ -348,7 +349,9 @@ mod tests {
     async fn open_missing_image_fails() {
         assert_matches!(
             TestUpdatePackage::new().open_image(&Image::new(ImageType::Zbi, None)).await,
-            Err(OpenImageError::OpenFile(io_util::node::OpenError::OpenError(Status::NOT_FOUND)))
+            Err(OpenImageError::OpenFile(fuchsia_fs::node::OpenError::OpenError(
+                Status::NOT_FOUND
+            )))
         );
     }
 
