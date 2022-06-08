@@ -14,6 +14,11 @@ TEST(PrctlTest, SubReaperTest) {
   prctl(PR_SET_CHILD_SUBREAPER, 1);
 
   pid_t ancestor_pid = SAFE_SYSCALL(getpid());
+  ASSERT_NE(1, ancestor_pid);
+  pid_t parent_pid = SAFE_SYSCALL(getppid());
+  ASSERT_NE(0, parent_pid);
+  ASSERT_NE(ancestor_pid, parent_pid);
+
   if (SAFE_SYSCALL(fork()) == 0) {
     // Fork again
     if (SAFE_SYSCALL(fork()) == 0) {

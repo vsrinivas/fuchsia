@@ -45,8 +45,19 @@ pub struct Galaxy {
 
 impl Galaxy {
     pub fn create_process(&self, binary_path: &CString) -> Result<CurrentTask, Errno> {
-        // TODO(fxb/101376): The task should be parented to init instead of being rootless.
-        Task::create_process_without_parent(&self.kernel, binary_path.clone(), self.root_fs.clone())
+        let task = Task::create_process_without_parent(
+            &self.kernel,
+            binary_path.clone(),
+            self.root_fs.clone(),
+        )?;
+        let init_task = self.kernel.pids.read().get_task(1);
+        if let Some(init_task) = init_task {
+            let mut new_process_writer = task.thread_group.write();
+            let mut init_writer = init_task.thread_group.write();
+            new_process_writer.parent = Some(init_task.thread_group.clone());
+            init_writer.children.insert(task.id, Arc::downgrade(&task.thread_group));
+        }
+        Ok(task)
     }
 }
 
