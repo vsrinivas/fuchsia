@@ -10,14 +10,14 @@ import("//src/sys/root/build/root.gni")
 group("tools") {
   testonly = true
   public_deps = [
+    "packages/prod:cmdutils",
+    "packages/prod:debug_agent",
+    "packages/prod:far",
+    "packages/prod:run",
+    "packages/prod:tracing",
+    "packages/testing:all",
     "//build/tools/formatjson5:install($host_toolchain)",
     "//garnet/bin/run_test_component:run-test-component",
-    "//garnet/packages/prod:cmdutils",
-    "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:far",
-    "//garnet/packages/prod:run",
-    "//garnet/packages/prod:tracing",
-    "//garnet/packages/testing:all",
     "//src/camera:tools",
     "//src/connectivity:tools",
     "//src/connectivity/bluetooth/tools",
@@ -79,9 +79,9 @@ group("tests") {
   testonly = true
   public_deps = [
     "fidl:tests",
+    "packages/tests:all",
     "//build:tests",
     "//examples:tests",
-    "//garnet/packages/tests:all",
     "//scripts:tests",
     "//sdk:tests",
     "//src:tests",
@@ -108,9 +108,9 @@ group("kitchen_sink") {
   testonly = true
   public_deps = [
     ":tests",
+    "packages:all",
     "//bundles:tools",
     "//examples",
-    "//garnet/packages:all",
     "//src/connectivity/telephony",
     "//src/graphics/examples",
     "//src/lib/ui/carnelian:examples",

@@ -1,0 +1,265 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# WARNING: This file was machine-generated from previous json files and
+# will eventually be deleted.
+
+group("acpidump") {
+  testonly = true
+  if (target_cpu == "x64") {
+    public_deps = [ "//src/devices/bin/acpidump" ]
+  }
+}
+
+group("all") {
+  testonly = true
+  public_deps = [
+    ":acpidump",
+    ":atheros",
+    ":bluetooth_a2dp",
+    ":bluetooth_all",
+    ":bluetooth_atheros",
+    ":bluetooth_avrcp",
+    ":bluetooth_core",
+    ":bluetooth_hci",
+    ":bluetooth_intel",
+    ":bluetooth_profiles",
+    ":broadcom",
+    ":chrealm",
+    ":cmdutils",
+    ":cobalt_client",
+    ":cpuperf",
+    ":debug_agent",
+    ":drivers-system",
+    ":far",
+    ":insntrace",
+    ":run",
+    ":sched",
+    ":telephony",
+    ":terminal",
+    ":tiles",
+    ":tracing",
+    ":wlan_drivers",
+    "//src/connectivity/network/dhcp:dhcpd",
+    "//src/connectivity/network/mdns/bundles:services",
+    "//src/connectivity/network/mdns/bundles:utils",
+    "//src/connectivity/telephony/drivers",
+    "//src/connectivity/wlan:packages",
+    "//src/connectivity/wlan:tools",
+    "//src/developer/memory/mem",
+    "//src/fonts",
+    "//src/power:battery",
+    "//src/ui:runtime_with_root_presenter",
+    "//src/ui/a11y:a11y",
+    "//src/zircon/bin/hwstress",
+    "//third_party/sbase",
+  ]
+}
+
+group("atheros") {
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
+  ]
+}
+
+group("bluetooth_a2dp") {
+  testonly = true
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp" ]
+}
+
+group("bluetooth_all") {
+  testonly = true
+  public_deps = [
+    ":bluetooth_atheros",
+    ":bluetooth_core",
+    ":bluetooth_hci",
+    ":bluetooth_intel",
+    ":bluetooth_profiles",
+  ]
+}
+
+group("bluetooth_atheros") {
+  testonly = true
+  public_deps = [
+    ":bluetooth_hci",
+    "//src/connectivity/bluetooth/hci/vendor/atheros",
+  ]
+}
+
+group("bluetooth_avrcp") {
+  testonly = true
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp" ]
+}
+
+group("bluetooth_core") {
+  public_deps = [
+    "//src/connectivity/bluetooth/core/bt-gap",
+    "//src/connectivity/bluetooth/core/bt-init",
+    "//src/connectivity/bluetooth/tools/bt-snoop",
+  ]
+}
+
+group("bluetooth_drivers") {
+  public_deps = [
+    "//src/connectivity/bluetooth/core/bt-host",
+    "//src/connectivity/bluetooth/hci/passthrough",
+    "//src/connectivity/bluetooth/hci/vendor/atheros",
+    "//src/connectivity/bluetooth/hci/vendor/intel",
+  ]
+}
+
+group("bluetooth_hci") {
+  testonly = true
+  public_deps = [ "//src/connectivity/bluetooth/hci/passthrough" ]
+}
+
+group("bluetooth_intel") {
+  testonly = true
+  public_deps = [
+    ":bluetooth_hci",
+    "//src/connectivity/bluetooth/hci/vendor/intel",
+  ]
+}
+
+group("bluetooth_profiles") {
+  testonly = true
+  public_deps = [
+    ":bluetooth_a2dp",
+    ":bluetooth_avrcp",
+  ]
+}
+
+group("broadcom") {
+  public_deps = [
+    "//src/connectivity/wlan/drivers/wlanif",
+    "//src/connectivity/wlan/drivers/wlanphy",
+  ]
+}
+
+group("chrealm") {
+  testonly = true
+  public_deps = [ "//src/sys/tools/chrealm" ]
+}
+
+group("cmdutils") {
+  testonly = true
+  public_deps = [
+    ":sched",
+    "//examples/cowsay",
+    "//src/zircon/bin/hwstress",
+    "//src/zircon/bin/time",
+    "//src/zircon/bin/uname",
+    "//third_party/sbase",
+  ]
+}
+
+group("cobalt_client") {
+  testonly = true
+  public_deps = [
+    "//src/cobalt/bin/app:cobalt",
+    "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
+  ]
+}
+
+group("cpuperf") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cpuperf",
+    "//garnet/bin/cpuperf/print:host_cpuperf_print",
+  ]
+}
+
+group("debug_agent") {
+  testonly = true
+  public_deps = [ "//src/developer/debug/debug_agent" ]
+}
+
+# Note: elements of this group are all installed in the system package.
+group("drivers-system") {
+  public_deps = [
+    ":bluetooth_drivers",
+    "//src/connectivity/ppp/drivers",
+    "//src/connectivity/telephony/drivers:prod-drivers",
+  ]
+}
+
+group("far") {
+  testonly = true
+  public_deps = [
+    "//src/sys/pkg/bin/far",
+    "//src/sys/pkg/bin/far:host",
+  ]
+}
+
+group("insntrace") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/insntrace",
+    "//garnet/bin/insntrace:host_insntrace_print",
+  ]
+}
+
+group("run") {
+  testonly = true
+  public_deps = [ "//src/sys/tools/run" ]
+}
+
+group("sched") {
+  testonly = true
+  public_deps = [ "//src/developer/sched" ]
+}
+
+group("telephony") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver",
+    "//src/connectivity/telephony/drivers/qmi-usb-transport",
+    "//src/connectivity/telephony/ril-at",
+    "//src/connectivity/telephony/ril-at:ril-at-tests",
+    "//src/connectivity/telephony/ril-qmi",
+    "//src/connectivity/telephony/ril-qmi:ril-qmi-tests",
+    "//src/connectivity/telephony/telephony",
+    "//src/connectivity/telephony/tools/ril-ctl",
+  ]
+}
+
+group("terminal") {
+  testonly = true
+  public_deps = [ "//src/ui/bin/terminal" ]
+}
+
+group("tiles") {
+  testonly = true
+  public_deps = [ "//src/ui/tools/tiles" ]
+}
+
+group("tracing") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/cpuperf_provider",
+    "//garnet/bin/cpuperf_provider:report_generators",
+    "//garnet/bin/ktrace_provider",
+    "//garnet/bin/trace",
+    "//garnet/bin/trace2json",
+    "//garnet/bin/trace_manager",
+    "//garnet/bin/traceutil",
+  ]
+}
+
+group("wifi_intel") {
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
+  ]
+}
+
+group("wlan_drivers") {
+  public_deps = [
+    ":atheros",
+    ":broadcom",
+  ]
+}

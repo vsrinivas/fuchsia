@@ -115,7 +115,7 @@ recovery_packages = [
   "//src/ui/bin/brightness_manager:auto-brightness",
 ]
 
-recovery_system_image_deps = [ "//garnet/packages/prod:broadcom" ]
+recovery_system_image_deps = [ "//bundles/packages/prod:broadcom" ]
 
 recovery_eng_packages =
     recovery_packages + [

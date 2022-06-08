@@ -29,7 +29,7 @@ group("framework") {
 group("testing") {
   testonly = true
   public_deps = [
-    "//garnet/packages/testing:environment_delegating_runner",
+    "//bundles/packages/testing:environment_delegating_runner",
     "//src/modular/bin/modular_test_harness",
   ]
 }

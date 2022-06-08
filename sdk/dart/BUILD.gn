@@ -118,9 +118,9 @@ group("tests") {
   public_deps = [
                   # TODO: This target should just aggregate the top-level directories and
                   # most of these dependencies should be in those subdirectories.
-                  "//garnet/packages:garnet",
-                  "//garnet/packages/testing:run_test_component",
-                  "//garnet/packages/tests:scenic",
+                  "//bundles/packages:base_packages",
+                  "//bundles/packages/testing:run_test_component",
+                  "//bundles/packages/tests:scenic",
                   "//src/modular/bundles:framework",
                   "//src/modular/bundles:tools",
                   "//src/modular/bundles:integration_testing",

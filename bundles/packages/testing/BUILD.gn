@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# WARNING: This file was machine-generated from previous json files and
+# will eventually be deleted.
+
+group("all") {
+  testonly = true
+  public_deps = [
+    ":environment_delegating_runner",
+    ":run_test_component",
+  ]
+}
+
+group("environment_delegating_runner") {
+  testonly = true
+  public_deps = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner" ]
+}
+
+group("run_test_component") {
+  testonly = true
+  public_deps = [ "//garnet/bin/run_test_component" ]
+}

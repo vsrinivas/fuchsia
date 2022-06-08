@@ -21,7 +21,7 @@ group("tests") {
   public_deps = [
     ":modular_lib_tests",
     "tests",  # tests/ directory
-    "//garnet/packages/testing:run_test_component",
+    "//bundles/packages/testing:run_test_component",
     "//sdk/lib/modular/cpp:modular_cpp_tests",
     "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests",
     "//src/modular/bin/basemgr:basemgr_unittests",

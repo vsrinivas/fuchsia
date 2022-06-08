@@ -25,10 +25,10 @@ group("no_e2e_dep") {
   deps = [
     "//build:tests",
     "//bundles:tools",
+    "//bundles/packages:all",
     "//examples",
     "//examples:tests",
     "//garnet",
-    "//garnet/packages:all",
     "//scripts:tests",
     "//scripts/sdk/gn:tests",
     "//src/diagnostics:tests",

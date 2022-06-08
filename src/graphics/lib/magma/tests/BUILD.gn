@@ -61,7 +61,7 @@ group("vulkan-tests") {
   testonly = true
   public_deps = [
     # We also need run-test-component to run these tests.
-    "//garnet/packages/testing:run_test_component",
+    "//bundles/packages/testing:run_test_component",
     "//src/graphics/tests:vulkan-tests",
   ]
 }
