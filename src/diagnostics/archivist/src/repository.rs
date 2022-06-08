@@ -32,10 +32,9 @@ use {
     },
     fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::{LogMarker, LogRequest, LogRequestStream},
-    fuchsia_async as fasync, fuchsia_inspect as inspect, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_fs, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,
-    io_util,
     lazy_static::lazy_static,
     parking_lot::{Mutex, RwLock},
     selectors,
@@ -574,7 +573,7 @@ impl DataRepoState {
                 }
 
                 // This artifact contains inspect and matches a passed selector.
-                io_util::clone_directory(
+                fuchsia_fs::clone_directory(
                     &inspect_artifacts.component_diagnostics_proxy,
                     fio::OpenFlags::CLONE_SAME_RIGHTS,
                 )
@@ -883,8 +882,11 @@ mod tests {
             .write()
             .add_inspect_artifacts(
                 identity,
-                io_util::open_directory_in_namespace("/tmp", io_util::OpenFlags::RIGHT_READABLE)
-                    .expect("open root"),
+                fuchsia_fs::open_directory_in_namespace(
+                    "/tmp",
+                    fuchsia_fs::OpenFlags::RIGHT_READABLE,
+                )
+                .expect("open root"),
                 zx::Time::from_nanos(0),
             )
             .expect("add inspect artifacts");
@@ -906,8 +908,11 @@ mod tests {
             .write()
             .add_inspect_artifacts(
                 identity2,
-                io_util::open_directory_in_namespace("/tmp", io_util::OpenFlags::RIGHT_READABLE)
-                    .expect("open root"),
+                fuchsia_fs::open_directory_in_namespace(
+                    "/tmp",
+                    fuchsia_fs::OpenFlags::RIGHT_READABLE,
+                )
+                .expect("open root"),
                 zx::Time::from_nanos(0),
             )
             .expect("add inspect artifacts");

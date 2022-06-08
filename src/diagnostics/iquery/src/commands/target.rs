@@ -12,10 +12,11 @@ use {
     fidl_fuchsia_io as fio,
     files_async::{self, DirentKind},
     fuchsia_component::client,
+    fuchsia_fs,
     fuchsia_zircon::DurationNum,
     futures::future::join_all,
     futures::StreamExt,
-    glob, io_util,
+    glob,
     lazy_static::lazy_static,
     regex::Regex,
     std::{collections::BTreeSet, path::PathBuf},
@@ -75,8 +76,9 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
     for path_result in path_results {
         if let Ok(path) = path_result {
             let path_str = path.to_string_lossy().to_string();
-            let node = io_util::open_node_in_namespace(&path_str, fio::OpenFlags::NODE_REFERENCE)
-                .map_err(|e| Error::io_error("open node in namespace", e))?;
+            let node =
+                fuchsia_fs::open_node_in_namespace(&path_str, fio::OpenFlags::NODE_REFERENCE)
+                    .map_err(|e| Error::io_error("open node in namespace", e))?;
             if let Ok(node_info) = node.describe().await {
                 match node_info {
                     fio::NodeInfo::Service(_) => {
@@ -86,7 +88,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
                         .map_err(|e| Error::ConnectToArchivist(e));
                     }
                     fio::NodeInfo::Directory(_) => {
-                        let directory = io_util::open_directory_in_namespace(
+                        let directory = fuchsia_fs::open_directory_in_namespace(
                             &path_str,
                             fio::OpenFlags::RIGHT_READABLE,
                         )
@@ -145,9 +147,11 @@ pub async fn get_accessor_paths(paths: &Vec<String>) -> Result<Vec<String>, Erro
 }
 
 async fn all_accessors(root: impl AsRef<str>) -> Result<Vec<String>, Error> {
-    let dir_proxy =
-        io_util::open_directory_in_namespace(root.as_ref(), io_util::OpenFlags::RIGHT_READABLE)
-            .map_err(|e| Error::io_error(format!("Open dir {}", root.as_ref()), e))?;
+    let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        root.as_ref(),
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )
+    .map_err(|e| Error::io_error(format!("Open dir {}", root.as_ref()), e))?;
     let expected_file_re = Regex::new(&EXPECTED_FILE_RE).unwrap();
 
     let paths = files_async::readdir_recursive(&dir_proxy, Some(READDIR_TIMEOUT_SECONDS.seconds()))

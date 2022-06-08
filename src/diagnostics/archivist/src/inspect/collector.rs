@@ -7,10 +7,9 @@ use {
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy},
-    fidl_fuchsia_io as fio, files_async, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, files_async, fuchsia_fs, fuchsia_zircon as zx,
     futures::stream::StreamExt,
     futures::TryFutureExt,
-    io_util,
     pin_utils::pin_mut,
     std::collections::HashMap,
     std::path::Path,
@@ -94,10 +93,10 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
             continue;
         }
 
-        let file_proxy = match io_util::open_file(
+        let file_proxy = match fuchsia_fs::open_file(
             inspect_proxy,
             Path::new(&entry.name),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         ) {
             Ok(proxy) => proxy,
             Err(_) => {
@@ -112,7 +111,7 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
                     data_map.insert(entry.name.into_boxed_str(), InspectData::Vmo(vmofile.vmo));
                 }
                 fio::NodeInfo::File(_) => {
-                    if let Ok(contents) = io_util::read_file_bytes(&file_proxy).await {
+                    if let Ok(contents) = fuchsia_fs::read_file_bytes(&file_proxy).await {
                         data_map.insert(entry.name.into_boxed_str(), InspectData::File(contents));
                     }
                 }
@@ -135,9 +134,9 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
 #[cfg(test)]
 pub async fn find_directory_proxy(path: &Path) -> Result<fio::DirectoryProxy, anyhow::Error> {
     // TODO(fxbug.dev/36762): When available, use the async directory-open api.
-    io_util::open_directory_in_namespace(
+    fuchsia_fs::open_directory_in_namespace(
         &path.to_string_lossy(),
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )
 }
 
