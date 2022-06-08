@@ -22,10 +22,6 @@ toc:
   section:
   - title: "Components v2 migration"
     path: /docs/contribute/open_projects/components/migration.md
-- title: "Source control projects"
-  section:
-  - title: "Layer Cake deprecation"
-    path: /docs/contribute/open_projects/srcs/layer_cake_deprecation.md
 - title: "C++ projects"
   section:
   - title: "Implicit conversions"
@@ -48,5 +44,7 @@ toc:
     path: /docs/contribute/open_projects/graduated/README.md
   - title: "Dismantle the global log severity file"
     path: /docs/contribute/open_projects/graduated/global_severity.md
+  - title: "Layer Cake deprecation"
+    path: /docs/contribute/open_projects/graduated/layer_cake_deprecation.md
   - title: "package() migration"
     path: /docs/contribute/open_projects/graduated/package_migration.md
