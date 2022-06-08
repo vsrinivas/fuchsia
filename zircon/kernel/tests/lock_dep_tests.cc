@@ -1065,6 +1065,34 @@ static bool lock_dep_dynamic_analysis_tests() {
     EXPECT_EQ(ZX_OK, status);
   }
 
+  // Test CallUntracked operation.
+  {
+    Baz<Mutex> a, b;
+
+    // A -> B
+    {
+      Guard<Mutex> guard_a{&a.lock};
+      Guard<Mutex> guard_b{&b.lock};
+    }
+    // Now acquire B -> A using untracked to make it work.
+    {
+      Guard<Mutex> guard_b{&b.lock};
+      guard_b.CallUntracked([&] {
+        // B should still be held.
+        ASSERT(guard_b);
+        Guard<Mutex> guard_a{&a.lock};
+      });
+    }
+    // Should be able to AssertNoLocks held as well.
+    {
+      Guard<Mutex> guard_a{&a.lock};
+      guard_a.CallUntracked([&] {
+        ASSERT(guard_a);
+        AssertNoLocksHeld();
+      });
+    }
+  }
+
   // With all locks released, regardless of what we did in the middle, should still detect no locks
   // held.
   AssertNoLocksHeld();

@@ -247,6 +247,36 @@ class __TA_SCOPED_CAPABILITY
     ValidateAndAcquire();
   }
 
+  // Temporarily un-tracks the lock before executing the given callable Op and
+  // then tracks the lock again. This is similar to LockFlagsTrackingDisabled
+  // flag except that it can scoped to a portion of a critical section, instead
+  // of all usages of a lock. Valid usages of this are where the lockdep
+  // validation may be too pessimistic and is unable to see that an operation is
+  // safe. This should generally only be used in temporary scenarios until
+  // either the underlying code can be restructured or lockdep expanded to
+  // understand the scenario.
+  //
+  // An example of a scenario would be:
+  //
+  // void foo() {
+  //   lockdep::AssertNoLocksHeld();
+  //   // [Do things that require no locks be held]
+  // }
+  //
+  // Guard<Mutex> guard{&lock_};
+  // // lock_ is actually be safe to held over foo, but foo doesn't know that.
+  // guard.CallUntracked([]{foo();});
+  template <typename Op>
+  void CallUntracked(Op&& op) {
+    ZX_DEBUG_ASSERT(validator_.lock() != nullptr);
+
+    validator_.ValidateRelease();
+
+    std::forward<Op>(op)();
+
+    validator_.ValidateAcquire();
+  }
+
  private:
   template <size_t, typename, typename>
   friend class GuardMultiple;
@@ -451,6 +481,36 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
     ValidateAndAcquire();
   }
 
+  // Temporarily un-tracks the lock before executing the given callable Op and
+  // then tracks the lock again. This is similar to LockFlagsTrackingDisabled
+  // flag except that it can scoped to a portion of a critical section, instead
+  // of all usages of a lock. Valid usages of this are where the lockdep
+  // validation may be too pessimistic and is unable to see that an operation is
+  // safe. This should generally only be used in temporary scenarios until
+  // either the underlying code can be restructured or lockdep expanded to
+  // understand the scenario.
+  //
+  // An example of a scenario would be:
+  //
+  // void foo() {
+  //   lockdep::AssertNoLocksHeld();
+  //   // [Do things that require no locks be held]
+  // }
+  //
+  // Guard<Mutex> guard{&lock_};
+  // // lock_ is actually be safe to held over foo, but foo doesn't know that.
+  // guard.CallUntracked([]{foo();});
+  template <typename Op>
+  void CallUntracked(Op&& op) {
+    ZX_DEBUG_ASSERT(validator_.lock() != nullptr);
+
+    validator_.ValidateRelease();
+
+    std::forward<Op>(op)();
+
+    validator_.ValidateAcquire();
+  }
+
  private:
   template <size_t, typename, typename>
   friend class GuardMultiple;
@@ -549,6 +609,10 @@ class NullGuard {
 
   template <typename Op, typename... ReleaseArgs>
   void CallUnlocked(Op&& op, ReleaseArgs&&... release_args) {
+    std::forward<Op>(op)();
+  }
+  template <typename Op>
+  void CallUntracked(Op&& op) {
     std::forward<Op>(op)();
   }
 };
