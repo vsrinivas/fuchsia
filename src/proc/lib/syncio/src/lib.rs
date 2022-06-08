@@ -384,6 +384,35 @@ pub fn directory_open_vmo(
     Ok(vmo)
 }
 
+/// Read the content of the file at the given path in the given directory.
+///
+/// If the node at the given path is not a file, then this function returns
+/// a zx::Status::IO error.
+pub fn directory_read_file(
+    directory: &fio::DirectorySynchronousProxy,
+    path: &str,
+    deadline: zx::Time,
+) -> Result<Vec<u8>, zx::Status> {
+    let description = directory_open(directory, path, fio::OpenFlags::RIGHT_READABLE, 0, deadline)?;
+    let file = match description.kind {
+        NodeKind::File => fio::FileSynchronousProxy::new(description.node.into_channel()),
+        _ => return Err(zx::Status::IO),
+    };
+
+    let mut result = Vec::new();
+    loop {
+        let mut data = file
+            .read(fio::MAX_TRANSFER_SIZE, deadline)
+            .map_err(|_: fidl::Error| zx::Status::IO)?
+            .map_err(zx::Status::from_raw)?;
+        let finished = (data.len() as u64) < fio::MAX_TRANSFER_SIZE;
+        result.append(&mut data);
+        if finished {
+            return Ok(result);
+        }
+    }
+}
+
 /// Open the given path in the given directory without blocking.
 ///
 /// A zx::Channel to the opened node is returned (or an error).
@@ -505,6 +534,15 @@ mod test {
         let info = vmo.basic_info()?;
         assert_eq!(zx::Rights::READ, info.rights & zx::Rights::READ);
         assert_eq!(zx::Rights::EXECUTE, info.rights & zx::Rights::EXECUTE);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_directory_read_file() -> Result<(), Error> {
+        let pkg = open_pkg();
+        let data = directory_read_file(&pkg, "bin/syncio_lib_test", zx::Time::INFINITE)?;
+
+        assert!(data.len() > 0);
         Ok(())
     }
 

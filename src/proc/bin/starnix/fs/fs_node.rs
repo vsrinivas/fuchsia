@@ -334,6 +334,11 @@ impl FsNode {
         &*self.ops.as_ref()
     }
 
+    /// Open a new anonymous FileHandle to the current node.
+    pub fn open_anonymous(self: &FsNodeHandle, flags: OpenFlags) -> Result<FileHandle, Errno> {
+        Ok(FileObject::new_anonymous(self.ops().open(self, flags)?, self.clone(), flags))
+    }
+
     /// Returns the `FsNode`'s `FsNodeOps` as a `&T`, or `None` if the downcast fails.
     pub fn downcast_ops<T>(&self) -> Option<&T>
     where

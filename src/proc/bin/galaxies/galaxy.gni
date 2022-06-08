@@ -23,7 +23,6 @@ template("starnix_galaxy_package") {
   config_target = "${target_name}_config"
   manifest_target = "${target_name}_manifest_compile"
   data_tmp_target = "${target_name}_data_tmp"
-  data_pkg_target = "${target_name}_data_pkg"
   data_init_target = "${target_name}_data_init"
   if (has_system_image) {
     system_image_target = "${target_name}_system_image"
@@ -57,12 +56,6 @@ template("starnix_galaxy_package") {
     outputs = [ "data/tmp/.placeholder" ]
   }
 
-  # A file that makes sure that the data/pkg directory exists.
-  resource(data_pkg_target) {
-    sources = [ "//src/proc/bin/galaxies/placeholder" ]
-    outputs = [ "data/pkg/.placeholder" ]
-  }
-
   # The default init executable. Used if the configuration has no init.
   resource(data_init_target) {
     init_label =
@@ -81,7 +74,6 @@ template("starnix_galaxy_package") {
       ":${component_target}",
       ":${config_target}",
       ":${data_init_target}",
-      ":${data_pkg_target}",
       ":${data_tmp_target}",
     ]
     if (has_system_image) {

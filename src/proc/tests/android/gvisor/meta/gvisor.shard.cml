@@ -7,7 +7,7 @@
         environ: [
             "TEST_TMPDIR=/data/tmp",
             "TEST_ON_GVISOR=1",
-            "TEST_SRCDIR=/data/pkg/data/tests",
+            "TEST_SRCDIR={pkg_path}/data/tests",
         ],
     },
 }

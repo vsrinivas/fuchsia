@@ -8,12 +8,14 @@ use fuchsia_async as fasync;
 use fuchsia_async::DurationExt;
 use fuchsia_zircon as zx;
 use starnix_runner_config::Config;
+use std::collections::BTreeMap;
 use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
 use crate::device::run_features;
 use crate::execution::*;
+use crate::fs::layeredfs::LayeredFs;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::task::*;
@@ -55,7 +57,7 @@ impl Galaxy {
 /// a startup file to be created.
 pub async fn create_galaxy() -> Result<Galaxy, Error> {
     const COMPONENT_PKG_PATH: &'static str = "/pkg";
-    const DEFAULT_INIT: &'static str = "/data/init";
+    const DEFAULT_INIT: &'static str = "/galaxy/init";
 
     let (server, client) = zx::Channel::create().context("failed to create channel pair")?;
     fdio::open(
@@ -135,6 +137,16 @@ fn create_fs_context(
     } else {
         anyhow::bail!("how did a bind mount manage to get created as the root?")
     };
+
+    // Create a layered fs to handle /galaxy and /galaxy/pkg
+    // /galaxy will mount the galaxy pkg
+    // /galaxy/pkg will be a tmpfs where component using the starnix runner will have their package
+    // mounted.
+    let galaxy_fs = LayeredFs::new(
+        create_remotefs_filesystem(&pkg_dir_proxy, "data")?,
+        BTreeMap::from([(b"pkg".to_vec(), TmpFs::new(kernel))]),
+    );
+    let root_fs = LayeredFs::new(root_fs, BTreeMap::from([(b"galaxy".to_vec(), galaxy_fs)]));
 
     Ok(FsContext::new(root_fs))
 }

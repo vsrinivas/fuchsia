@@ -172,6 +172,27 @@ pub fn handle_info_from_socket(
     }
 }
 
+/// Create a filesystem to access the content of the fuchsia directory available at `fs_src` inside
+/// `pkg`.
+pub fn create_remotefs_filesystem(
+    root: &fio::DirectorySynchronousProxy,
+    fs_src: &str,
+) -> Result<FileSystemHandle, Error> {
+    let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
+    let root = syncio::directory_open_directory_async(root, fs_src, rights)
+        .map_err(|e| anyhow!("Failed to open root: {}", e))?;
+    Ok(RemoteFs::new(root.into_channel(), rights)?)
+}
+
+/// Returns a hash representing the fuchsia package `pkg`.
+///
+/// The implementation is hashing /meta/content
+pub fn get_pkg_hash(pkg: &fio::DirectorySynchronousProxy) -> Result<String, Error> {
+    let buffer = syncio::directory_read_file(pkg, "/meta", zx::Time::INFINITE)?;
+    let hash = std::str::from_utf8(&buffer)?;
+    Ok(hash.to_string())
+}
+
 pub fn create_filesystem_from_spec<'a>(
     kernel: &Arc<Kernel>,
     task: Option<&CurrentTask>,
@@ -193,12 +214,7 @@ pub fn create_filesystem_from_spec<'a>(
             let task = task.ok_or(errno!(ENOENT))?;
             Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry)
         }
-        "remotefs" => {
-            let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
-            let root = syncio::directory_open_directory_async(&pkg, &fs_src, rights)
-                .map_err(|e| anyhow!("Failed to open root: {}", e))?;
-            Fs(RemoteFs::new(root.into_channel(), rights)?)
-        }
+        "remotefs" => Fs(create_remotefs_filesystem(pkg, &fs_src)?),
         "ext4" => {
             let vmo =
                 syncio::directory_open_vmo(&pkg, &fs_src, fio::VmoFlags::READ, zx::Time::INFINITE)

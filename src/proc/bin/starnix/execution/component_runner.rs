@@ -19,8 +19,9 @@ use tracing::info;
 
 use crate::auth::Credentials;
 use crate::execution::{
-    create_filesystem_from_spec, execute_task, galaxy::Galaxy, parse_numbered_handles,
+    create_remotefs_filesystem, execute_task, galaxy::Galaxy, get_pkg_hash, parse_numbered_handles,
 };
+use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 
@@ -36,7 +37,7 @@ use crate::types::*;
 ///   - an absolute path, in which case the path is treated as a path into the root filesystem that
 ///     is mounted by the galaxy's configuration
 ///   - relative path, in which case the binary is read from the component's package (which is
-///     mounted at /data/pkg.)
+///     mounted at /galaxy/pkg/{HASH}.)
 pub async fn start_component(
     mut start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
@@ -50,35 +51,6 @@ pub async fn start_component(
         start_info.program,
     );
 
-    let args = get_program_strvec(&start_info, "args")
-        .map(|args| {
-            args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
-        })
-        .unwrap_or(Ok(vec![]))?;
-    let environ = get_program_strvec(&start_info, "environ")
-        .map(|args| {
-            args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
-        })
-        .unwrap_or(Ok(vec![]))?;
-    info!("start_component environment: {:?}", environ);
-
-    const COMPONENT_PKG_DIRECTORY: &str = "/data/pkg/";
-    let binary_path = get_program_string(&start_info, "binary")
-        .ok_or_else(|| anyhow!("Missing \"binary\" in manifest"))?;
-    let binary_in_package = &binary_path[..1] != "/";
-    let binary_path = CString::new(if binary_in_package {
-        // If the binary path is relative, treat it as a path into the component's package
-        // directory.
-        COMPONENT_PKG_DIRECTORY.to_owned() + binary_path
-    } else {
-        // If the binary path is absolute, treat it as a path to an existing binary.
-        binary_path.to_owned()
-    })?;
-    let mut current_task = galaxy.create_process(&binary_path)?;
-    let user_passwd = get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
-    let credentials = Credentials::from_passwd(user_passwd)?;
-    current_task.write().creds = credentials;
-
     let ns = start_info.ns.take().ok_or_else(|| anyhow!("Missing namespace"))?;
     let pkg = fio::DirectorySynchronousProxy::new(
         ns.into_iter()
@@ -88,12 +60,41 @@ pub async fn start_component(
             .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
             .into_channel(),
     );
+    // Mount the package directory.
+    let pkg_directory = mount_component_pkg_data(&galaxy, &pkg)?;
+    let resolve_template = |value: &str| value.replace("{pkg_path}", &pkg_directory);
 
-    if binary_in_package {
-        // If the component's binary path point inside the package, mount the package directory.
-        mount_component_pkg_data(&current_task, &galaxy, &COMPONENT_PKG_DIRECTORY, &pkg)?;
-    }
+    let args = get_program_strvec(&start_info, "args")
+        .map(|args| {
+            args.iter()
+                .map(|arg| CString::new(resolve_template(arg)))
+                .collect::<Result<Vec<CString>, _>>()
+        })
+        .unwrap_or(Ok(vec![]))?;
+    let environ = get_program_strvec(&start_info, "environ")
+        .map(|args| {
+            args.iter()
+                .map(|arg| CString::new(resolve_template(arg)))
+                .collect::<Result<Vec<CString>, _>>()
+        })
+        .unwrap_or(Ok(vec![]))?;
+    info!("start_component environment: {:?}", environ);
 
+    let binary_path = get_program_string(&start_info, "binary")
+        .ok_or_else(|| anyhow!("Missing \"binary\" in manifest"))?;
+    // If the binary path is relative, treat it as a path into the component's package
+    // directory.
+    let binary_in_package = &binary_path[..1] != "/";
+    let binary_path = CString::new(if binary_in_package {
+        pkg_directory + "/" + binary_path
+    } else {
+        binary_path.to_owned()
+    })?;
+
+    let mut current_task = galaxy.create_process(&binary_path)?;
+    let user_passwd = get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
+    let credentials = Credentials::from_passwd(user_passwd)?;
+    current_task.write().creds = credentials;
     let startup_handles =
         parse_numbered_handles(start_info.numbered_handles, &current_task.files, &galaxy.kernel)?;
     let shell_controller = startup_handles.shell_controller;
@@ -130,26 +131,46 @@ pub async fn start_component(
     Ok(())
 }
 
-/// Attempts to mount the component's package directory at `package_directory_path` in the task's
-/// filesystem. This allows components to bundle their own binary in their package, instead of
-/// relying on it existing in the system image of the galaxy.
+/// Attempts to mount the component's package directory in a content addressed directory in the
+/// galaxy's filesystem. This allows components to bundle their own binary in their package,
+/// instead of relying on it existing in the system image of the galaxy.
 fn mount_component_pkg_data(
-    current_task: &CurrentTask,
     galaxy: &Galaxy,
-    package_directory_path: &str,
-    package_proxy: &fio::DirectorySynchronousProxy,
-) -> Result<(), Error> {
-    let remotefs_mount_point = package_directory_path.to_owned() + ":remotefs";
-    let (mount_point, child_fs) = create_filesystem_from_spec(
-        &galaxy.kernel,
-        Some(&current_task),
-        &package_proxy,
-        &remotefs_mount_point,
-    )?;
-    let mount_point = current_task.lookup_path_from_root(mount_point)?;
-    mount_point.mount(child_fs, MountFlags::empty())?;
+    pkg: &fio::DirectorySynchronousProxy,
+) -> Result<String, Error> {
+    const COMPONENT_PKG_ROOT_DIRECTORY: &str = "/galaxy/pkg/";
 
-    Ok(())
+    // Read the package content file and hash it as the name of the mount.
+    let hash = get_pkg_hash(pkg)?;
+    let pkg_path = COMPONENT_PKG_ROOT_DIRECTORY.to_owned() + &hash;
+
+    // If the directory already exist, return it.
+    match galaxy.system_task.lookup_path_from_root(pkg_path.as_bytes()) {
+        Ok(_) => {
+            return Ok(pkg_path);
+        }
+        Err(errno) if errno == ENOENT => {}
+        err @ Err(_) => {
+            err?;
+        }
+    }
+
+    // Create the new directory.
+    let mount_point = {
+        let pkg_dir =
+            galaxy.system_task.lookup_path_from_root(COMPONENT_PKG_ROOT_DIRECTORY.as_bytes())?;
+        pkg_dir.entry.create_node(
+            hash.as_bytes(),
+            FileMode::IFDIR | FileMode::from_bits(0o755),
+            DeviceType::NONE,
+        )?;
+        galaxy.system_task.lookup_path_from_root(pkg_path.as_bytes())?
+    };
+
+    // Create the filesystem and mount it.
+    let fs = create_remotefs_filesystem(pkg, ".")?;
+    mount_point.mount(WhatToMount::Fs(fs), MountFlags::empty())?;
+    Ok(pkg_path.to_owned())
 }
 
 /// Creates a new child component in the `playground` collection.
