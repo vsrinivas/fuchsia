@@ -14,10 +14,10 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/intel_pt_decode/decoder.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/intel_pt_decode/decoder.h"
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 #include "third_party/simple-pt/printer-util.h"
 

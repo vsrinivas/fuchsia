@@ -594,7 +594,6 @@ config("Wno-conversion") {
   # To trim this list:
   # $ scripts/gn/trim_visibility.py --target="//build/config:Wno-conversion"
   visibility = [
-    "//garnet/lib/intel_pt_decode/*",
     "//garnet/lib/perfmon:*",
     "//garnet/lib/profiler:*",
     "//garnet/lib/profiler/tests:*",
@@ -752,6 +751,7 @@ config("Wno-conversion") {
     "//src/lib/fsl/socket:*",
     "//src/lib/fsl/vmo:*",
     "//src/lib/icu/tools/extractor:*",
+    "//src/lib/intel_pt_decode/*",
     "//src/lib/json_parser:*",
     "//src/lib/line_input:*",
     "//src/lib/listnode:*",

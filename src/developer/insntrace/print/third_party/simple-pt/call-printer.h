@@ -36,7 +36,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
-#include "garnet/lib/intel_pt_decode/decoder.h"
+#include "src/lib/intel_pt_decode/decoder.h"
 #pragma GCC diagnostic pop
 
 #include "instruction.h"

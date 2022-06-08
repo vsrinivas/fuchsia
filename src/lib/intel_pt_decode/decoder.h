@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_INTEL_PT_DECODE_DECODER_H_
-#define GARNET_LIB_INTEL_PT_DECODE_DECODER_H_
+#ifndef SRC_LIB_INTEL_PT_DECODE_DECODER_H_
+#define SRC_LIB_INTEL_PT_DECODE_DECODER_H_
 
 #include <string>
 #include <unordered_set>
@@ -165,4 +165,4 @@ class DecoderState {
 
 }  // namespace intel_processor_trace
 
-#endif  // GARNET_LIB_INTEL_PT_DECODE_DECODER_H_
+#endif  // SRC_LIB_INTEL_PT_DECODE_DECODER_H_

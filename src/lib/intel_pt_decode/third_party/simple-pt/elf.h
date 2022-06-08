@@ -27,13 +27,13 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#ifndef SRC_LIB_INTEL_PT_DECODE_THIRD_PARTY_SIMPLE_PT_ELF_H_
+#define SRC_LIB_INTEL_PT_DECODE_THIRD_PARTY_SIMPLE_PT_ELF_H_
 
 #include <cstdint>
 #include <memory>
 
 #include "symtab.h"
-
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 
 namespace simple_pt {
@@ -47,3 +47,5 @@ bool ReadNonPicElf(const char* file_name, pt_image* image, uint64_t cr3, bool is
                    std::unique_ptr<SymbolTable>* out_dynsym);
 
 }  // namespace simple_pt
+
+#endif  // SRC_LIB_INTEL_PT_DECODE_THIRD_PARTY_SIMPLE_PT_ELF_H_
