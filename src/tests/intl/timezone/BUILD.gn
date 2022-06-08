@@ -108,12 +108,6 @@ fuchsia_unittest_package("timezone-test") {
   wrap_cmx_test_with_cml_test = false
 
   test_specs = {
-    log_settings = {
-      # Do not fail the test if a message with level ERROR is logged.  Several
-      # components will log ERROR if they miss a non-essential FIDL API in the
-      # sandbox.
-      max_severity = "ERROR"
-    }
     environments = [
       {
         dimensions = {
@@ -200,12 +194,6 @@ fuchsia_unittest_package("timezone-flutter-test") {
   wrap_cmx_test_with_cml_test = false
 
   test_specs = {
-    log_settings = {
-      # Do not fail the test if a message with level ERROR is logged.  Several
-      # components will log ERROR if they miss a non-essential FIDL API in the
-      # sandbox.
-      max_severity = "ERROR"
-    }
     environments = [
       {
         dimensions = {

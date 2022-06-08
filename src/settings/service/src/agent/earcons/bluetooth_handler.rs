@@ -100,70 +100,81 @@ impl BluetoothHandler {
         let common_earcons_params = self.common_earcons_params.clone();
 
         fasync::Task::spawn(async move {
-            while let Ok(Some(req)) = watcher_requests.try_next().await {
-                match req {
-                    SessionsWatcherRequest::SessionUpdated {
-                        session_id: id,
-                        session_info_delta: delta,
-                        responder,
-                    } => {
-                        if let Err(e) = responder.send() {
-                            fx_log_err!("Failed to acknowledge delta from SessionWatcher: {:?}", e);
-                            return;
-                        }
+            loop {
+                let maybe_req = watcher_requests.try_next().await;
+                match maybe_req {
+                    Ok(Some(req)) => {
+                        match req {
+                            SessionsWatcherRequest::SessionUpdated {
+                                session_id: id,
+                                session_info_delta: delta,
+                                responder,
+                            } => {
+                                if let Err(e) = responder.send() {
+                                    fx_log_err!("Failed to acknowledge delta from SessionWatcher: {:?}", e);
+                                    return;
+                                }
 
-                        if active_sessions_clone.contains(&id)
-                            || !matches!(delta.domain, Some(name) if name == BLUETOOTH_DOMAIN)
-                        {
-                            continue;
-                        }
-                        let _ = active_sessions_clone.insert(id);
+                                if active_sessions_clone.contains(&id)
+                                    || !matches!(delta.domain, Some(name) if name == BLUETOOTH_DOMAIN)
+                                {
+                                    continue;
+                                }
+                                let _ = active_sessions_clone.insert(id);
 
-                        let publisher = publisher.clone();
-                        let common_earcons_params = common_earcons_params.clone();
-                        fasync::Task::spawn(async move {
-                            play_bluetooth_sound(
-                                common_earcons_params,
-                                publisher,
-                                BluetoothSoundType::Connected,
-                            )
-                            .await;
-                        })
-                        .detach();
-                    }
-                    SessionsWatcherRequest::SessionRemoved { session_id, responder } => {
-                        if let Err(e) = responder.send() {
-                            fx_log_err!(
-                                "Failed to acknowledge session removal from SessionWatcher: {:?}",
-                                e
-                            );
-                            return;
-                        }
+                                let publisher = publisher.clone();
+                                let common_earcons_params = common_earcons_params.clone();
+                                fasync::Task::spawn(async move {
+                                    play_bluetooth_sound(
+                                        common_earcons_params,
+                                        publisher,
+                                        BluetoothSoundType::Connected,
+                                    )
+                                    .await;
+                                })
+                                .detach();
+                            }
+                            SessionsWatcherRequest::SessionRemoved { session_id, responder } => {
+                                if let Err(e) = responder.send() {
+                                    fx_log_err!(
+                                        "Failed to acknowledge session removal from SessionWatcher: {:?}",
+                                        e
+                                    );
+                                    return;
+                                }
 
-                        if !active_sessions_clone.contains(&session_id) {
-                            fx_log_warn!(
-                                "Tried to remove nonexistent media session id {:?}",
-                                session_id
-                            );
-                            continue;
+                                if !active_sessions_clone.contains(&session_id) {
+                                    fx_log_warn!(
+                                        "Tried to remove nonexistent media session id {:?}",
+                                        session_id
+                                    );
+                                    continue;
+                                }
+                                let _ = active_sessions_clone.remove(&session_id);
+                                let publisher = publisher.clone();
+                                let common_earcons_params = common_earcons_params.clone();
+                                fasync::Task::spawn(async move {
+                                    play_bluetooth_sound(
+                                        common_earcons_params,
+                                        publisher,
+                                        BluetoothSoundType::Disconnected,
+                                    )
+                                    .await;
+                                })
+                                .detach();
+                            }
                         }
-                        let _ = active_sessions_clone.remove(&session_id);
-                        let publisher = publisher.clone();
-                        let common_earcons_params = common_earcons_params.clone();
-                        fasync::Task::spawn(async move {
-                            play_bluetooth_sound(
-                                common_earcons_params,
-                                publisher,
-                                BluetoothSoundType::Disconnected,
-                            )
-                            .await;
-                        })
-                        .detach();
-                    }
+                    },
+                    Ok(None) => {
+                        fx_log_warn!("stream ended on fuchsia.media.sessions2.SessionsWatcher");
+                        break;
+                    },
+                    Err(e) => {
+                        fx_log_err!("failed to watch fuchsia.media.sessions2.SessionsWatcher: {:?}", &e);
+                        break;
+                    },
                 }
             }
-            // try_next failed, print error and exit.
-            fx_log_err!("Failed to serve Watcher service");
         })
         .detach();
     }
