@@ -78,9 +78,15 @@ in Gerrit, do the following:
 
 1.  Upload the commit to Gerrit:
 
+You can use `jiri` or `git`.
+
+    `jiri` is a tool for working with multiple repositories that is [installed with Fuchsia](/docs/get-started/get_fuchsia_source.md). To upload your commit:
+
     ```posix-terminal
     jiri upload
     ```
+
+See also the [Jiri documentation](https://fuchsia.googlesource.com/jiri/+/HEAD/README.md) for more information.
 
     If you want to use the `git` command instead, run the following command:
 
