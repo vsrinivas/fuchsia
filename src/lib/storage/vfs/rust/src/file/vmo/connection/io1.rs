@@ -382,7 +382,10 @@ impl VmoFileConnection {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.
                 let result = self.handle_close().await;
-                responder.send(&mut result.map_err(zx::Status::into_raw))?;
+                // At this point we've decremented the connection count so we must make sure we
+                // return ConnectionState::Closed here rather than an error since that can result in
+                // us erroneously decrementing the connection count again.
+                let _ = responder.send(&mut result.map_err(zx::Status::into_raw));
                 return Ok(ConnectionState::Closed);
             }
             fio::FileRequest::Describe { responder } => match self.get_node_info().await {
