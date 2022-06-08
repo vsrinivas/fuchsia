@@ -13,8 +13,8 @@
 
 #include <memory>
 
-#include <bind/fuchsia/platform/cpp/fidl.h>
-#include <bind/fuchsia/verisilicon/platform/cpp/fidl.h>
+#include <bind/fuchsia/platform/cpp/bind.h>
+#include <bind/fuchsia/verisilicon/platform/cpp/bind.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
@@ -164,12 +164,12 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
   }
 
   zx_device_prop_t props[] = {
-      {BIND_PROTOCOL, 0, bind::fuchsia::platform::BIND_PROTOCOL_DEVICE},
+      {BIND_PROTOCOL, 0, bind_fuchsia_platform::BIND_PROTOCOL_DEVICE},
       {BIND_PLATFORM_DEV_VID, 0,
-       bind::fuchsia::verisilicon::platform::BIND_PLATFORM_DEV_VID_VERISILICON},
-      {BIND_PLATFORM_DEV_PID, 0, bind::fuchsia::platform::BIND_PLATFORM_DEV_PID_GENERIC},
+       bind_fuchsia_verisilicon_platform::BIND_PLATFORM_DEV_VID_VERISILICON},
+      {BIND_PLATFORM_DEV_PID, 0, bind_fuchsia_platform::BIND_PLATFORM_DEV_PID_GENERIC},
       {BIND_PLATFORM_DEV_DID, 0,
-       bind::fuchsia::verisilicon::platform::BIND_PLATFORM_DEV_DID_MAGMA_VIP},
+       bind_fuchsia_verisilicon_platform::BIND_PLATFORM_DEV_DID_MAGMA_VIP},
   };
 
   status = device->DdkAdd(ddk::DeviceAddArgs("aml-nna").set_props(props));
