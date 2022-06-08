@@ -20,7 +20,6 @@
 #include <zircon/types.h>
 
 #include <bind/fuchsia/acpi/cpp/bind.h>
-#include <bind/fuchsia/pci/cpp/fidl.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 

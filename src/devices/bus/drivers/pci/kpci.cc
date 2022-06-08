@@ -29,7 +29,6 @@
 #include <memory>
 
 #include <bind/fuchsia/acpi/cpp/bind.h>
-#include <bind/fuchsia/pci/cpp/fidl.h>
 #include <ddktl/device.h>
 
 #include "src/devices/bus/drivers/pci/pci_bind.h"

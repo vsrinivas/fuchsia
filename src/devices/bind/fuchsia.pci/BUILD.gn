@@ -7,10 +7,16 @@ import("//build/bind/bind.gni")
 bind_library("fuchsia.pci") {
   sdk_category = "experimental"
   source = "fuchsia.pci.bind"
+
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  generate_deprecated_fidl_binding = false
 }
 
 bind_library("fuchsia.pci.serial") {
   source = "fuchsia.pci.serial.bind"
+
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  generate_deprecated_fidl_binding = false
 }
 
 group("serial") {
@@ -19,6 +25,9 @@ group("serial") {
 
 bind_library("fuchsia.pci.serial.usb") {
   source = "fuchsia.pci.serial.usb.bind"
+
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  generate_deprecated_fidl_binding = false
 }
 
 group("serial.usb") {

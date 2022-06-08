@@ -10,7 +10,6 @@
 #include <zircon/errors.h>
 
 #include <bind/fuchsia/acpi/cpp/bind.h>
-#include <bind/fuchsia/pci/cpp/fidl.h>
 
 #include "src/devices/bus/drivers/pci/device.h"
 

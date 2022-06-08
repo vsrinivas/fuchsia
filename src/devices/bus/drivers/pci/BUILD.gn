@@ -39,10 +39,7 @@ source_set("user_pci") {
     "upstream_node.cc",
   ]
 
-  deps = [
-    "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_cpp",
-    "//src/devices/bind/fuchsia.pci:bind.fuchsia.pci",
-  ]
+  deps = [ "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_cpp" ]
 
   public_deps = [
     ":pci_bind_header",
@@ -126,7 +123,6 @@ if (platform_enable_user_pci) {
       "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
       "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_cpp",
-      "//src/devices/bind/fuchsia.pci:bind.fuchsia.pci",
       "//src/devices/lib/driver",
       "//src/devices/lib/pci",
       "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
