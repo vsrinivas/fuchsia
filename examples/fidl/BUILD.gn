@@ -12,7 +12,6 @@ group("fidl") {
     "hlcpp:all",
     "llcpp:all",
     "rust:all",
-    "test:all",
   ]
 }
 
@@ -24,6 +23,5 @@ group("tests") {
     "go:tests",
     "hlcpp:tests",
     "llcpp:tests",
-    "test",
   ]
 }
