@@ -128,8 +128,7 @@ static bool SupportsH264Decoder() {
 }
 
 static bool SupportsVP9() {
-  // TODO(fxbug.dev/100927): Re-enable.
-  return false;
+  return SupportsProfile(VAProfileVP9Profile0, VAEntrypointVLD, VA_RT_FORMAT_YUV420);
 }
 
 std::vector<fuchsia::mediacodec::CodecDescription> GetCodecList() {

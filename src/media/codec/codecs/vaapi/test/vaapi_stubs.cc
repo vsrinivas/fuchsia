@@ -4,10 +4,12 @@
 
 #include <gtest/gtest.h>
 #include <va/va.h>
+#include <va/va_magma.h>
 
 static VAStatus vaCreateConfigReturn = VA_STATUS_SUCCESS;
 static VAStatus vaCreateContextReturn = VA_STATUS_SUCCESS;
 static VAStatus vaCreateSurfacesReturn = VA_STATUS_SUCCESS;
+static int vaGetDisplayMagmaReturn;
 
 void vaDefaultStubSetReturn() {
   vaCreateConfigReturn = VA_STATUS_SUCCESS;
@@ -231,3 +233,5 @@ const char *vaErrorStr(VAStatus error_status) {
   }
   return "unknown libva error / description missing";
 }
+
+VADisplay vaGetDisplayMagma(magma_device_t device) { return &vaGetDisplayMagmaReturn; }

@@ -17,10 +17,6 @@
 #include "src/media/codec/codecs/vaapi/vaapi_utils.h"
 #include "vaapi_stubs.h"
 
-static int global_display_ptr;
-
-VADisplay vaGetDisplayMagma(magma_device_t device) { return &global_display_ptr; }
-
 namespace {
 
 constexpr uint32_t kBearVideoWidth = 320u;
@@ -337,8 +333,8 @@ TEST_F(H264VaapiTestFixture, DelayedConfiguration) {
 TEST(H264Vaapi, CodecList) {
   EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
   auto codec_list = GetCodecList();
-  // video/h264 decode, video/h264-multi decode, video/h264 encode
-  EXPECT_EQ(3u, codec_list.size());
+  // video/h264 decode, video/h264-multi decode, video/vp9 decode, video/h264 encode
+  EXPECT_EQ(4u, codec_list.size());
 }
 
 // Test that we can connect using the CodecFactory.

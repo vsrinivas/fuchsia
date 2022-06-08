@@ -148,7 +148,9 @@ void CodecAdapterVaApiDecoder::CoreCodecResetStreamAfterCurrentFrame() {
                                                          media::VP9PROFILE_PROFILE0);
   }
 
-  CoreCodecStartStream();
+  input_queue_.Reset(/*keep_data=*/true);
+
+  LaunchInputProcessingLoop();
 }
 
 void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {

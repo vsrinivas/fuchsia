@@ -6,10 +6,6 @@
 
 #include <fuzzer/FuzzedDataProvider.h>
 
-static int global_display_ptr;
-
-VADisplay vaGetDisplayMagma(magma_device_t device) { return &global_display_ptr; }
-
 // A version of fbl::round_up that works on CheckedNumerics.
 template <typename T>
 static T RoundUp(T a, T b) {

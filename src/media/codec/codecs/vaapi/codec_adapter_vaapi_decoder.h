@@ -33,6 +33,11 @@
 
 class CodecAdapterVaApiDecoder;
 
+// Used for friend declarations in CodecAdapterVaApiDecoder
+namespace test {
+class Vp9VaapiTestFixture;
+}  // namespace test
+
 // VA-API outputs are distinct from the DPB and are stored in a regular
 // BufferPool, since the hardware doesn't necessarily support decoding to a
 // linear format like downstream consumers might need.
@@ -117,11 +122,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     output_buffer_pool_.Reset(/*keep_data=*/true);
     LoadStagedOutputBuffers();
 
-    zx_status_t post_result =
-        async::PostTask(input_processing_loop_.dispatcher(), [this] { ProcessInputLoop(); });
-    ZX_ASSERT_MSG(post_result == ZX_OK,
-                  "async::PostTask() failed to post input processing loop - result: %d\n",
-                  post_result);
+    LaunchInputProcessingLoop();
 
     TRACE_INSTANT("codec_runner", "Media:Start", TRACE_SCOPE_THREAD);
   }
@@ -367,6 +368,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
  private:
   friend class VaApiOutput;
+  friend class test::Vp9VaapiTestFixture;
 
   // Used from trace events
   enum DecoderState { kIdle, kDecoding, kError };
@@ -375,6 +377,14 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   template <class... Args>
   void SetCodecFailure(const char* format, Args&&... args);
+
+  void LaunchInputProcessingLoop() {
+    zx_status_t post_result =
+        async::PostTask(input_processing_loop_.dispatcher(), [this] { ProcessInputLoop(); });
+    ZX_ASSERT_MSG(post_result == ZX_OK,
+                  "async::PostTask() failed to post input processing loop - result: %d\n",
+                  post_result);
+  }
 
   void WaitForInputProcessingLoopToEnd() {
     ZX_DEBUG_ASSERT(thrd_current() != input_processing_thread_);

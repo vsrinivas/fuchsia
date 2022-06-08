@@ -20,7 +20,10 @@ source_set("vaapi_stubs") {
     "vaapi_stubs.cc",
     "vaapi_stubs.h",
   ]
-  public_deps = [ "//third_party/intel/libva/fuchsia:headers" ]
+  public_deps = [
+    "//src/graphics/lib/magma/include:magma",
+    "//third_party/intel/libva/fuchsia:headers",
+  ]
   deps = [ "//third_party/googletest:gtest" ]
 }
 
@@ -40,6 +43,7 @@ executable("vaapi_tests") {
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 
