@@ -13,7 +13,6 @@
 
 #include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/vkreadback/vkreadback.h"
-#include "src/lib/fxl/test/test_settings.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -22,15 +21,6 @@ namespace {
 constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ll; }
 
 }  // namespace
-
-int main(int argc, char** argv) {
-  if (!fxl::SetTestSettings(argc, argv)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
 
 TEST(Vulkan, Readback) {
   VkReadbackTest test;

@@ -28,7 +28,10 @@ executable("vkreadback_bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [ ":src" ]
+  deps = [
+    ":src",
+    "//src/lib/fxl/test:gtest_main",
+  ]
 }
 
 group("linux_arm64") {
