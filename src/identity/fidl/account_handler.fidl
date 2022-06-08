@@ -110,9 +110,6 @@ protocol AccountHandlerControl {
     /// interface will fail.
     RemoveAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
-    // TODO(jsankey): Add methods to cover adding an existing account and
-    // handling an account where the disk is not yet decrypted.
-
     /// Connects an interface to read properties of and perform operations on
     /// the account handled by this handler. The AccountHandler must be in the
     /// `Initialized` state.

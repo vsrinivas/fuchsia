@@ -9,9 +9,9 @@ use crate::persona::{Persona, PersonaContext};
 use crate::stored_account::StoredAccount;
 use account_common::{AccountManagerError, FidlPersonaId, PersonaId};
 use anyhow::Error;
-use fidl::endpoints::{ClientEnd, ServerEnd};
+use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_identity_account::{
-    AccountRequest, AccountRequestStream, AuthChangeGranularity, AuthListenerMarker, AuthState,
+    AccountRequest, AccountRequestStream, AuthState, AuthTargetRegisterAuthListenerRequest,
     Error as ApiError, Lifetime, PersonaMarker,
 };
 use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
@@ -184,14 +184,8 @@ impl Account {
                 let mut response = self.get_auth_state();
                 responder.send(&mut response)?;
             }
-            AccountRequest::RegisterAuthListener {
-                listener,
-                initial_state,
-                granularity,
-                responder,
-            } => {
-                let mut response =
-                    self.register_auth_listener(listener, initial_state, granularity);
+            AccountRequest::RegisterAuthListener { payload, responder } => {
+                let mut response = self.register_auth_listener(payload);
                 responder.send(&mut response)?;
             }
             AccountRequest::GetPersonaIds { responder } => {
@@ -237,9 +231,7 @@ impl Account {
 
     fn register_auth_listener(
         &self,
-        _listener: ClientEnd<AuthListenerMarker>,
-        _initial_state: bool,
-        _granularity: AuthChangeGranularity,
+        _payload: AuthTargetRegisterAuthListenerRequest,
     ) -> Result<(), ApiError> {
         // TODO(jsankey): Implement this method.
         warn!("RegisterAuthListener not yet implemented");
@@ -312,7 +304,9 @@ mod tests {
     use super::*;
     use crate::test_util::*;
     use fidl::endpoints::create_endpoints;
-    use fidl_fuchsia_identity_account::{AccountMarker, AccountProxy};
+    use fidl_fuchsia_identity_account::{
+        AccountMarker, AccountProxy, AuthChangeGranularity, AuthTargetRegisterAuthListenerRequest,
+    };
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
@@ -503,24 +497,23 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                let (auth_listener_client_end, _) = create_endpoints().unwrap();
-                assert_eq!(
-                    proxy
-                        .register_auth_listener(
-                            auth_listener_client_end,
-                            true, /* include initial state */
-                            AuthChangeGranularity {
-                                summary_changes: Some(true),
-                                ..AuthChangeGranularity::EMPTY
-                            }
-                        )
-                        .await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            let (auth_listener_client_end, _) = create_endpoints().unwrap();
+            assert_eq!(
+                proxy
+                    .register_auth_listener(AuthTargetRegisterAuthListenerRequest {
+                        listener: Some(auth_listener_client_end),
+                        initial_state: Some(true),
+                        granularity: Some(AuthChangeGranularity {
+                            summary_changes: Some(true),
+                            ..AuthChangeGranularity::EMPTY
+                        }),
+                        ..AuthTargetRegisterAuthListenerRequest::EMPTY
+                    })
+                    .await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         })
         .await;
     }

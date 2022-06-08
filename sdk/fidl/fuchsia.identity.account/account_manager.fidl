@@ -16,7 +16,7 @@ const MAX_PASSWORD_SIZE uint32 = 128;
 /// system.
 @discoverable
 protocol AccountManager {
-    /// Returns a vector of all accounts provisioned on the current device.
+    /// Returns a vector of all accounts provisioned on the device.
     GetAccountIds() -> (struct {
         account_ids vector<AccountId>:MAX_ACCOUNTS_PER_DEVICE;
     });
@@ -34,15 +34,16 @@ protocol AccountManager {
     /// one account. If the account is locked, an interactive authentication
     /// attempt will be invoked as part of this call.
     ///
-    /// `id` The account's identifier as returned by GetAccountIds()
-    /// `context_provider` An `AuthenticationContextProvider` capable of
-    ///                    supplying UI contexts used for interactive
+    /// `id` [required] The account's identifier as returned by GetAccountIds()
+    /// `context_provider` [required] An `AuthenticationContextProvider` capable
+    ///                    of supplying UI contexts used for interactive
     ///                    authentication on this account
-    /// `account` The server end of an `Account` channel
-    GetAccount(resource struct {
-        id AccountId;
-        context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
-        account server_end:Account;
+    /// `account` [required] The server end of an `Account` channel
+    GetAccount(resource table {
+        1: id AccountId;
+        2: context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
+        3: reserved; // 3 is reserved for auto_lock in a near-future CL
+        4: account server_end:Account;
     }) -> (struct {}) error Error;
 
     /// Connects a channel to read properties of and perform operations on
@@ -59,7 +60,7 @@ protocol AccountManager {
     /// `password` The account's password
     /// `account` The server end of an `Account` channel
     ///
-    /// Fails with FAILED_AUTHENTICATION if the password was not correct.
+    /// Fails with `FAILED_AUTHENTICATION` if the password was not correct.
     @deprecated
     DeprecatedGetAccount(resource struct {
         id AccountId;
@@ -67,37 +68,43 @@ protocol AccountManager {
         account server_end:Account;
     }) -> (struct {}) error Error;
 
-    // TODO(dnordstrom): Add option to retrieve an account non-interactively.
-
     /// Connects a channel that will receive changes in the provisioned
     /// accounts and their authentication state. Optionally this channel will
     /// also receive the initial set of accounts and authentication states onto
     /// which changes may be applied.
     ///
-    /// `listener` The client end of an `AccountListener` channel
-    /// `options` An `AccountListenerOptions` that defines the set of events to
-    ///           be sent to the listener.
-    RegisterAccountListener(resource struct {
-        listener client_end:AccountListener;
-        options AccountListenerOptions;
+    /// `listener` [required] The client end of an `AccountListener` channel
+    /// `initial_state` If true, the listener will receive an event containing
+    ///                 the initial state for all accounts.
+    /// `add_account` If true, the listener will receive events when a new
+    ///               account is added to the device.
+    /// `remove_account` If true, the listener will receive events when an
+    ///                  account is removed from the device.
+    /// `granularity` An `AuthChangeGranularity` expressing the magnitude of
+    ///               change in authentication state that will lead to
+    ///               AuthStateChange events. If absent, AuthStateChange events
+    ///               will not be sent.
+    RegisterAccountListener(resource table {
+        1: listener client_end:AccountListener;
+        2: initial_state bool;
+        3: add_account bool;
+        4: remove_account bool;
+        5: granularity AuthChangeGranularity;
     }) -> (struct {}) error Error;
 
-    // TODO(fxbug.dev/561): Define methods to managed locked accounts, i.e. those
-    // where data decryption keys are not currently available.
-
-    /// Removes a provisioned system account from the current device, revoking
-    /// any credentials that are held for the account.
+    /// Removes an account from the device.
     ///
     /// `id` The account's identifier as returned by GetAccountIds()
     RemoveAccount(struct {
         id AccountId;
     }) -> (struct {}) error Error;
 
-    /// Adds a new system account to the current device. If a storage
-    /// unlock-capable authentication mechanism is provided, a single
-    /// enrollment will be created of that mechanism.
+    /// Adds a new account to the device. If a storage unlock-capable
+    /// authentication mechanism is provided, a single enrollment will be
+    /// created of that mechanism.
     ///
-    /// `lifetime` The lifetime of the account
+    /// `lifetime` [required] The lifetime of the account
+    /// `metadata` [required] Metadata for the new account
     /// `auth_mechanism_id` An `AuthMechanismId` for a storage
     ///                     unlock-capable authentication mechanism. If
     ///                     provided, a single enrollment of that
@@ -105,18 +112,18 @@ protocol AccountManager {
     ///                     unlock.
     ///
     /// Returns: `account_id` The identifier of the newly added account
-    ProvisionNewAccount(struct {
-        lifetime Lifetime;
-        auth_mechanism_id AuthMechanismId:optional;
+    ProvisionNewAccount(table {
+        1: lifetime Lifetime;
+        2: metadata AccountMetadata;
+        3: auth_mechanism_id AuthMechanismId;
     }) -> (struct {
         account_id AccountId;
     }) error Error;
 
-    /// Adds a new system account to the current device using the
-    /// supplied password as the only authentication mechanism. The
-    /// account is automatically unlocked and the supplied channel
-    /// is connected to read properties of and perform operations on
-    /// the account.
+    /// Adds a new system account to the device using the supplied password
+    /// as the only authentication mechanism. The account is automatically
+    /// unlocked and the supplied channel is connected to read properties of
+    /// and perform operations on the account.
     ///
     /// This is a temporary method used for an initial prototype of
     /// password-based encryption. Its usage will be replaced by the
@@ -128,7 +135,7 @@ protocol AccountManager {
     /// `metadata` Metadata for the new account
     /// `account` The server end of an `Account` channel
     ///
-    /// Fails with INVALID_REQUEST if the password does not meet
+    /// Fails with `INVALID_REQUEST` if the password does not meet
     /// minimum strength requirements.
     @deprecated
     DeprecatedProvisionNewAccount(resource struct {
@@ -144,33 +151,11 @@ protocol AccountManager {
 };
 
 /// An `AuthState` along with the system account that it applies to.
-@max_handles("0")
 type AccountAuthState = struct {
     /// A unique identifier for the account.
     account_id AccountId;
     /// An authentication state for the account.
     auth_state AuthState;
-};
-
-/// The configuration for an AccountListener, defining the set of events that it
-/// will receive.
-@max_handles("0")
-type AccountListenerOptions = struct {
-    /// If true, the listener will receive an event containing the initial state
-    /// for all accounts. The initial auth states will be populated in this
-    /// event iff the scenario option is set.
-    initial_state bool;
-    /// If true, the listener will receive events when a new account is added
-    /// to the device.
-    add_account bool;
-    /// If true, the listener will receive events when an account is removed
-    /// from the device.
-    remove_account bool;
-    /// An `AuthChangeGranularity` expressing the magnitude of change in
-    /// authentication state that will lead to AuthStateChange events.
-    /// If no granularity fields are populated AuthStateChange events will not
-    /// be sent.
-    granularity AuthChangeGranularity;
 };
 
 /// A protocol to receive events when the set of accounts on a device or the

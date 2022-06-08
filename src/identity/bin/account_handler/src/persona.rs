@@ -6,10 +6,9 @@ use crate::common::AccountLifetime;
 use crate::inspect;
 use account_common::PersonaId;
 use anyhow::Error;
-use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_identity_account::{
-    AuthChangeGranularity, AuthListenerMarker, AuthState, Error as ApiError, Lifetime,
-    PersonaRequest, PersonaRequestStream,
+    AuthState, AuthTargetRegisterAuthListenerRequest, Error as ApiError, Lifetime, PersonaRequest,
+    PersonaRequestStream,
 };
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
@@ -103,14 +102,8 @@ impl Persona {
                 let mut response = self.get_auth_state();
                 responder.send(&mut response)?;
             }
-            PersonaRequest::RegisterAuthListener {
-                listener,
-                initial_state,
-                granularity,
-                responder,
-            } => {
-                let mut response =
-                    self.register_auth_listener(listener, initial_state, granularity);
+            PersonaRequest::RegisterAuthListener { payload, responder } => {
+                let mut response = self.register_auth_listener(payload);
                 responder.send(&mut response)?;
             }
         }
@@ -128,9 +121,7 @@ impl Persona {
 
     fn register_auth_listener(
         &self,
-        _listener: ClientEnd<AuthListenerMarker>,
-        _initial_state: bool,
-        _granularity: AuthChangeGranularity,
+        _payload: AuthTargetRegisterAuthListenerRequest,
     ) -> Result<(), ApiError> {
         // TODO(jsankey): Implement this method.
         warn!("RegisterAuthListener not yet implemented");
@@ -143,7 +134,9 @@ mod tests {
     use super::*;
     use crate::test_util::*;
     use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
-    use fidl_fuchsia_identity_account::{PersonaMarker, PersonaProxy};
+    use fidl_fuchsia_identity_account::{
+        AuthChangeGranularity, AuthTargetRegisterAuthListenerRequest, PersonaMarker, PersonaProxy,
+    };
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use std::path::PathBuf;
@@ -215,24 +208,23 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
-        run_test(create_persona(), |proxy| {
-            async move {
-                let (auth_listener_client_end, _) = create_endpoints().unwrap();
-                assert_eq!(
-                    proxy
-                        .register_auth_listener(
-                            auth_listener_client_end,
-                            true, /* include initial state */
-                            AuthChangeGranularity {
-                                summary_changes: Some(true),
-                                ..AuthChangeGranularity::EMPTY
-                            }
-                        )
-                        .await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        run_test(create_persona(), |proxy| async move {
+            let (auth_listener_client_end, _) = create_endpoints().unwrap();
+            assert_eq!(
+                proxy
+                    .register_auth_listener(AuthTargetRegisterAuthListenerRequest {
+                        listener: Some(auth_listener_client_end),
+                        initial_state: Some(true),
+                        granularity: Some(AuthChangeGranularity {
+                            summary_changes: Some(true),
+                            ..AuthChangeGranularity::EMPTY
+                        }),
+                        ..AuthTargetRegisterAuthListenerRequest::EMPTY
+                    })
+                    .await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         })
         .await;
     }

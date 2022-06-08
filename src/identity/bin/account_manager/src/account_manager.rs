@@ -4,21 +4,24 @@
 
 use account_common::{AccountId, AccountManagerError, FidlAccountId};
 use anyhow::Error;
-use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AuthProviderConfig, AuthenticationContextProviderMarker};
+use fidl_fuchsia_auth::AuthProviderConfig;
 use fidl_fuchsia_identity_account::{
-    AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
-    AccountManagerRequestStream, AccountMarker, Error as ApiError, Lifetime,
+    AccountManagerGetAccountRequest, AccountManagerProvisionNewAccountRequest,
+    AccountManagerRegisterAccountListenerRequest, AccountManagerRequest,
+    AccountManagerRequestStream, Error as ApiError, Lifetime,
 };
 use fuchsia_inspect::{Inspector, Property};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use log::{info, warn};
+use std::convert::TryFrom;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::account_event_emitter::{AccountEvent, AccountEventEmitter};
+use crate::account_event_emitter::{
+    AccountEvent, AccountEventEmitter, Options as AccountEventEmitterOptions,
+};
 use crate::account_handler_connection::AccountHandlerConnection;
 use crate::account_handler_context::AccountHandlerContext;
 use crate::account_map::AccountMap;
@@ -99,8 +102,8 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             AccountManagerRequest::GetAccountMetadata { id: _, responder: _ } => {
                 unimplemented!();
             }
-            AccountManagerRequest::GetAccount { id, context_provider, account, responder } => {
-                let mut response = self.get_account(id.into(), context_provider, account).await;
+            AccountManagerRequest::GetAccount { payload, responder } => {
+                let mut response = self.get_account(payload).await;
                 responder.send(&mut response)?;
             }
             AccountManagerRequest::DeprecatedGetAccount {
@@ -111,20 +114,16 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             } => {
                 unimplemented!();
             }
-            AccountManagerRequest::RegisterAccountListener { listener, options, responder } => {
-                let mut response = self.register_account_listener(listener, options).await;
+            AccountManagerRequest::RegisterAccountListener { payload, responder } => {
+                let mut response = self.register_account_listener(payload).await;
                 responder.send(&mut response)?;
             }
             AccountManagerRequest::RemoveAccount { id, responder } => {
                 let mut response = self.remove_account(id.into()).await;
                 responder.send(&mut response)?;
             }
-            AccountManagerRequest::ProvisionNewAccount {
-                lifetime,
-                auth_mechanism_id,
-                responder,
-            } => {
-                let mut response = self.provision_new_account(lifetime, auth_mechanism_id).await;
+            AccountManagerRequest::ProvisionNewAccount { payload, responder } => {
+                let mut response = self.provision_new_account(payload).await;
                 responder.send(&mut response)?;
             }
             AccountManagerRequest::DeprecatedProvisionNewAccount {
@@ -148,10 +147,17 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
 
     async fn get_account(
         &self,
-        id: AccountId,
-        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
-        account: ServerEnd<AccountMarker>,
+        AccountManagerGetAccountRequest {
+            id,
+            context_provider,
+            account,
+            ..
+        }: AccountManagerGetAccountRequest,
     ) -> Result<(), ApiError> {
+        let id = id.ok_or(ApiError::InvalidRequest)?.into();
+        let account = account.ok_or(ApiError::InvalidRequest)?;
+        let context_provider = context_provider.ok_or(ApiError::InvalidRequest)?;
+
         let mut account_map = self.account_map.lock().await;
         let account_handler = account_map.get_handler(&id).await.map_err(|err| {
             warn!("Failure getting account handler connection: {:?}", err);
@@ -159,22 +165,19 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         })?;
         account_handler.proxy().unlock_account().await.map_err(|_| ApiError::Resource)??;
 
-        account_handler.proxy().get_account(auth_context_provider, account).await.map_err(
-            |err| {
-                warn!("Failure calling get account: {:?}", err);
-                ApiError::Resource
-            },
-        )?
+        account_handler.proxy().get_account(context_provider, account).await.map_err(|err| {
+            warn!("Failure calling get account: {:?}", err);
+            ApiError::Resource
+        })?
     }
 
     async fn register_account_listener(
         &self,
-        listener: ClientEnd<AccountListenerMarker>,
-        options: AccountListenerOptions,
+        mut payload: AccountManagerRegisterAccountListenerRequest,
     ) -> Result<(), ApiError> {
-        if let Some(true) = options.granularity.summary_changes {
-            return Err(ApiError::InvalidRequest);
-        };
+        let listener = payload.listener.take().ok_or(ApiError::InvalidRequest)?;
+        let options = AccountEventEmitterOptions::try_from(payload)?;
+
         let account_ids = self.account_map.lock().await.get_account_ids();
         let proxy = listener.into_proxy().map_err(|err| {
             warn!("Could not convert AccountListener client end to proxy {:?}", err);
@@ -242,10 +245,15 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
 
     async fn provision_new_account(
         &self,
-        lifetime: Lifetime,
-        auth_mechanism_id: Option<String>,
+        AccountManagerProvisionNewAccountRequest {
+            lifetime,
+            auth_mechanism_id,
+            ..
+        }: AccountManagerProvisionNewAccountRequest,
     ) -> Result<FidlAccountId, ApiError> {
-        let account_handler = self.create_account_internal(lifetime, auth_mechanism_id).await?;
+        let account_handler = self
+            .create_account_internal(lifetime.ok_or(ApiError::InvalidRequest)?, auth_mechanism_id)
+            .await?;
         let account_id = account_handler.get_account_id();
 
         // Persist the account both in memory and on disk
@@ -286,8 +294,8 @@ mod tests {
     use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
     use fidl::endpoints::{create_request_stream, RequestStream};
     use fidl_fuchsia_identity_account::{
-        AccountAuthState, AccountListenerRequest, AccountManagerProxy, AccountManagerRequestStream,
-        AuthChangeGranularity,
+        AccountAuthState, AccountListenerMarker, AccountListenerRequest, AccountManagerProxy,
+        AccountManagerRequestStream, AuthChangeGranularity,
     };
     use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_data_tree, Inspector};
@@ -443,16 +451,9 @@ mod tests {
         });
     }
 
-    /// Sets up an AccountListener which an init event.
+    /// Sets up an AccountListener with an init event.
     #[test]
     fn test_account_listener() {
-        let mut options = AccountListenerOptions {
-            initial_state: true,
-            add_account: true,
-            remove_account: true,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
-
         let data_dir = TempDir::new().unwrap();
         let inspector = Inspector::new();
         request_stream_test(
@@ -493,7 +494,15 @@ mod tests {
                         // The registering itself triggers the init event.
                         assert_eq!(
                             proxy
-                                .register_account_listener(client_end, &mut options)
+                                .register_account_listener(
+                                    AccountManagerRegisterAccountListenerRequest {
+                                        listener: Some(client_end),
+                                        initial_state: Some(true),
+                                        add_account: Some(true),
+                                        remove_account: Some(true),
+                                        ..AccountManagerRegisterAccountListenerRequest::EMPTY
+                                    }
+                                )
                                 .await
                                 .unwrap(),
                             Ok(())
@@ -509,13 +518,6 @@ mod tests {
     /// Registers an account listener with invalid request arguments.
     #[test]
     fn test_account_listener_invalid_requests() {
-        let mut options = AccountListenerOptions {
-            initial_state: true,
-            add_account: true,
-            remove_account: true,
-            granularity: TEST_GRANULARITY.clone(),
-        };
-
         let data_dir = TempDir::new().unwrap();
         let inspector = Inspector::new();
         request_stream_test(
@@ -523,7 +525,16 @@ mod tests {
             |proxy, _| async move {
                 let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
                 assert_eq!(
-                    proxy.register_account_listener(client_end, &mut options).await?,
+                    proxy
+                        .register_account_listener(AccountManagerRegisterAccountListenerRequest {
+                            listener: Some(client_end),
+                            initial_state: Some(true),
+                            add_account: Some(true),
+                            remove_account: Some(true),
+                            granularity: Some(TEST_GRANULARITY.clone()),
+                            ..AccountManagerRegisterAccountListenerRequest::EMPTY
+                        })
+                        .await?,
                     Err(ApiError::InvalidRequest)
                 );
                 Ok(())

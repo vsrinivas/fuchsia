@@ -237,20 +237,11 @@ where
                 let mut resp = self.get_account_metadata(id).await;
                 responder.send(&mut resp).context("sending GetAccountMetadata response")?;
             }
-            AccountManagerRequest::GetAccount {
-                id: _,
-                context_provider: _,
-                account: _,
-                responder,
-            } => {
+            AccountManagerRequest::GetAccount { payload: _, responder } => {
                 let mut resp = Err(faccount::Error::UnsupportedOperation);
                 responder.send(&mut resp).context("sending GetAccount response")?;
             }
-            AccountManagerRequest::RegisterAccountListener {
-                listener: _,
-                options: _,
-                responder,
-            } => {
+            AccountManagerRequest::RegisterAccountListener { payload: _, responder } => {
                 let mut resp = Err(faccount::Error::UnsupportedOperation);
                 responder.send(&mut resp).context("sending RegisterAccountListener response")?;
             }
@@ -258,11 +249,7 @@ where
                 let mut resp = self.remove_account(id).await;
                 responder.send(&mut resp).context("sending RemoveAccount response")?;
             }
-            AccountManagerRequest::ProvisionNewAccount {
-                lifetime: _,
-                auth_mechanism_id: _,
-                responder,
-            } => {
+            AccountManagerRequest::ProvisionNewAccount { payload: _, responder } => {
                 let mut resp = Err(faccount::Error::UnsupportedOperation);
                 responder.send(&mut resp).context("sending ProvisionNewAccount response")?;
             }

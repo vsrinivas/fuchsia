@@ -36,7 +36,7 @@ type AuthState = table {
     /// authenticated.
     1: summary AuthStateSummary;
 
-    // TODO(jsankey): Add additional fields to express timeliness and
+    // TODO(fxbug.dev/101929): Add additional fields to express timeliness and
     // confidence. Potentially re-add presence and/or engagement.
 };
 

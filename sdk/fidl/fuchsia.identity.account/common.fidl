@@ -4,19 +4,16 @@
 library fuchsia.identity.account;
 using fuchsia.sys;
 
-/// The maximum number of Fuchsia accounts that may be simultaneously
+/// The maximum number of system accounts that may be simultaneously
 /// provisioned on a device. This number may be increased in the future.
 const MAX_ACCOUNTS_PER_DEVICE uint32 = 128;
 
 /// The maximum number of personae that may be simultaneously defined within a
-/// Fuchsia account. This number may be increased in the future.
+/// system account. This number may be increased in the future.
 const MAX_PERSONAE_PER_ACCOUNT uint32 = 128;
 
 /// The maximum length of the (UTF-8 encoded) human readable names, in bytes.
 const MAX_NAME_SIZE uint32 = 128;
-
-/// The maximum length of an (UTF-8 encoded) auth provider type, in bytes.
-const MAX_AUTH_PROVIDER_TYPE_SIZE uint32 = 128;
 
 /// The maximum number of authentication mechanisms that can be registered
 /// for a device.
@@ -26,8 +23,7 @@ const MAX_AUTH_MECHANISMS uint32 = 16;
 /// simultaneously defined within a Fuchsia account.
 const MAX_AUTH_MECHANISM_ENROLLMENTS uint32 = 32;
 
-/// Provides an upper bound to how long a Fuchsia account can live on the
-/// current device.
+/// Provides an upper bound to how long an account can live on the device.
 type Lifetime = strict enum : uint8 {
     /// The account lives at the longest to the end of the power cycle it
     /// was created in.
@@ -36,16 +32,16 @@ type Lifetime = strict enum : uint8 {
     PERSISTENT = 2;
 };
 
-/// A unique identifier for an account on the current device.
+/// A unique identifier for a system account.
 alias AccountId = uint64;
 
-/// A unique identifier for a persona of an account on the current device.
+/// A unique identifier for a persona of an account.
 /// The AccountId for an account cannot be derived from the PersonaId of its
 /// personae.
 alias PersonaId = uint64;
 
 /// Specifies the reason that a fuchsia.identity.account method failed.
-type Error = strict enum {
+type Error = flexible enum {
     /// Some other problem occurred that cannot be classified using one of the
     /// more specific statuses. Retry is optional.
     UNKNOWN = 1;
@@ -71,8 +67,8 @@ type Error = strict enum {
     /// Retry, after a delay, is recommended.
     NETWORK = 6;
 
-    /// The requested account or persona is not present on the current device.
-    /// The request should not be retried.
+    /// The requested account or persona is not present.  The request should
+    /// not be retried.
     NOT_FOUND = 7;
 
     /// The request cannot be processed due to an ongoing account or persona
@@ -88,10 +84,6 @@ type Error = strict enum {
     /// The request cannot be processed due to a rejected authentication
     /// attempt. User consent or input is required before any retry.
     FAILED_AUTHENTICATION = 10;
-
-    // This enumeration may expand to include additional statuses in the future.
-    // Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,
-    // INVALID_AUTH_PROVIDER,
 };
 
 /// Basic data about a system account. These data are available even while an
@@ -103,22 +95,20 @@ type AccountMetadata = table {
     1: name string:MAX_NAME_SIZE;
 };
 
-/// A fuchsia component URI pointing to a component containing an authentication
+/// A Fuchsia component URI pointing to a component containing an authentication
 /// mechanism. It acts as a unique, stable identifier representing an
 /// authentication mechanism.
-// TODO(dnordstrom): Allow multiple authentication mechanisms in the same
-// component.
+// TODO(fxbug.dev/100785): Remove this type and the knowledge of implementation
+// that it infers.
 alias AuthMechanismId = fuchsia.sys.component_url;
 
 /// Properties describing the authentication mechanism.
-type AuthMechanismProperties = struct {
+type AuthMechanismProperties = table {
     /// A unique identifier for the authentication mechanism.
-    id AuthMechanismId;
+    1: id AuthMechanismId;
 
     /// If true, the authentication mechanism can be used for storage unlock.
-    storage_unlock bool;
-
-    // TODO(dnordstrom): Add more properties as they become useful to clients.
+    2: storage_unlock bool;
 };
 
 /// An identifier for an enrollment of an authentication mechanism. It is
@@ -126,13 +116,11 @@ type AuthMechanismProperties = struct {
 alias AuthMechanismEnrollmentId = uint64;
 
 /// Metadata about an enrollment, such as a human readable name.
-type AuthMechanismEnrollmentMetadata = struct {
+type AuthMechanismEnrollmentMetadata = table {
     /// A unique identifier associated with the enrollment.
-    id AuthMechanismEnrollmentId;
+    1: id AuthMechanismEnrollmentId;
 
     /// A short text describing the enrollment, e.g. "right thumb" for a
     /// fingerprint authenticator.
-    name string:MAX_NAME_SIZE;
-
-    // TODO(dnordstrom): Add field for date created.
+    2: name string:MAX_NAME_SIZE;
 };

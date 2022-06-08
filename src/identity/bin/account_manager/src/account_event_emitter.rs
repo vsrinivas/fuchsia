@@ -9,11 +9,13 @@
 use account_common::AccountId;
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_identity_account::{
-    AccountAuthState, AccountListenerOptions, AccountListenerProxy, AuthState, AuthStateSummary,
+    AccountAuthState, AccountListenerProxy, AccountManagerRegisterAccountListenerRequest,
+    AuthState, AuthStateSummary,
 };
 use fuchsia_inspect::{Node, NumericProperty, Property};
 use futures::future::*;
 use futures::lock::Mutex;
+use std::convert::TryFrom;
 use std::pin::Pin;
 
 use crate::inspect;
@@ -32,15 +34,40 @@ pub enum AccountEvent {
     AccountRemoved(AccountId),
 }
 
+/// The set of conditions under which events should be emitted.
+pub struct Options {
+    initial_state: bool,
+    add_account: bool,
+    remove_account: bool,
+}
+
+impl TryFrom<AccountManagerRegisterAccountListenerRequest> for Options {
+    type Error = fidl_fuchsia_identity_account::Error;
+
+    fn try_from(
+        request: AccountManagerRegisterAccountListenerRequest,
+    ) -> Result<Self, fidl_fuchsia_identity_account::Error> {
+        // Auth state is not yet supported, return an error if its requested.
+        if request.granularity.map(|g| g.summary_changes).is_some() {
+            return Err(fidl_fuchsia_identity_account::Error::InvalidRequest);
+        }
+        Ok(Self {
+            initial_state: request.initial_state.unwrap_or(false),
+            add_account: request.add_account.unwrap_or(false),
+            remove_account: request.remove_account.unwrap_or(false),
+        })
+    }
+}
+
 /// The client end of an account listener.
 struct Client {
     listener: AccountListenerProxy,
-    options: AccountListenerOptions,
+    options: Options,
 }
 
 impl Client {
     /// Create a new client, given the listener's client end and options used for filtering.
-    fn new(listener: AccountListenerProxy, options: AccountListenerOptions) -> Self {
+    fn new(listener: AccountListenerProxy, options: Options) -> Self {
         Self { listener, options }
     }
 
@@ -117,7 +144,7 @@ impl AccountEventEmitter {
     pub async fn add_listener<'a>(
         &'a self,
         listener: AccountListenerProxy,
-        options: AccountListenerOptions,
+        options: Options,
         initial_account_ids: &'a Vec<AccountId>,
     ) -> Result<(), fidl::Error> {
         let mut clients_lock = self.clients.lock().await;
@@ -145,9 +172,7 @@ impl AccountEventEmitter {
 mod tests {
     use super::*;
     use fidl::endpoints::*;
-    use fidl_fuchsia_identity_account::{
-        AccountListenerMarker, AccountListenerRequest, AuthChangeGranularity,
-    };
+    use fidl_fuchsia_identity_account::{AccountListenerMarker, AccountListenerRequest};
     use fuchsia_inspect::{assert_data_tree, Inspector};
     use futures::prelude::*;
     use lazy_static::lazy_static;
@@ -164,12 +189,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_should_send_all() {
-        let options = AccountListenerOptions {
-            initial_state: true,
-            add_account: true,
-            remove_account: true,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
+        let options = Options { initial_state: true, add_account: true, remove_account: true };
         let (listener, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(listener, options);
         assert_eq!(client.should_send(&EVENT_ADDED), true);
@@ -178,12 +198,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_should_send_none() {
-        let options = AccountListenerOptions {
-            initial_state: false,
-            add_account: false,
-            remove_account: false,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
+        let options = Options { initial_state: false, add_account: false, remove_account: false };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
         assert_eq!(client.should_send(&EVENT_ADDED), false);
@@ -192,12 +207,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_should_send_some() {
-        let options = AccountListenerOptions {
-            initial_state: true,
-            add_account: false,
-            remove_account: true,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
+        let options = Options { initial_state: true, add_account: false, remove_account: true };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
         assert_eq!(client.should_send(&EVENT_ADDED), false);
@@ -206,12 +216,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_single_listener() {
-        let options = AccountListenerOptions {
-            initial_state: false,
-            add_account: true,
-            remove_account: false,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
+        let options = Options { initial_state: false, add_account: true, remove_account: false };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let client = Client::new(client_end.into_proxy().unwrap(), options);
 
@@ -241,18 +246,8 @@ mod tests {
     /// that the clients receive the expected messages.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_event_emitter() {
-        let options_1 = AccountListenerOptions {
-            initial_state: false,
-            add_account: true,
-            remove_account: false,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
-        let options_2 = AccountListenerOptions {
-            initial_state: true,
-            add_account: false,
-            remove_account: true,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
+        let options_1 = Options { initial_state: false, add_account: true, remove_account: false };
+        let options_2 = Options { initial_state: true, add_account: false, remove_account: true };
         let (client_end_1, mut stream_1) =
             create_request_stream::<AccountListenerMarker>().unwrap();
         let (client_end_2, mut stream_2) =
@@ -341,12 +336,7 @@ mod tests {
     /// Check that that stale clients are cleaned up, once the server is closed
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_cleanup_stale_clients() {
-        let options = AccountListenerOptions {
-            initial_state: false,
-            add_account: true,
-            remove_account: true,
-            granularity: AuthChangeGranularity::EMPTY,
-        };
+        let options = Options { initial_state: false, add_account: true, remove_account: true };
         let (client_end, mut stream) = create_request_stream::<AccountListenerMarker>().unwrap();
         let listener = client_end.into_proxy().unwrap();
         let inspector = Inspector::new();

@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, format_err, Error};
-use fidl::endpoints::create_endpoints;
+use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
+use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
 use fidl_fuchsia_identity_account::{
-    AccountManagerMarker, AccountManagerProxy, AccountProxy, Error as ApiError, Lifetime,
+    AccountManagerGetAccountRequest, AccountManagerMarker,
+    AccountManagerProvisionNewAccountRequest, AccountManagerProxy, AccountMarker, AccountProxy,
+    Error as ApiError, Lifetime,
 };
 use fidl_fuchsia_stash::StoreMarker;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
@@ -51,9 +54,30 @@ async fn provision_new_account(
     auth_mechanism_id: Option<&str>,
 ) -> Result<LocalAccountId, Error> {
     account_manager
-        .provision_new_account(lifetime, auth_mechanism_id)
+        .provision_new_account(AccountManagerProvisionNewAccountRequest {
+            lifetime: Some(lifetime),
+            auth_mechanism_id: auth_mechanism_id.map(|id| id.to_string()),
+            ..AccountManagerProvisionNewAccountRequest::EMPTY
+        })
         .await?
         .map_err(|error| format_err!("ProvisionNewAccount returned error: {:?}", error))
+}
+
+/// Convenience function to calls get_account on the supplied account_manager.
+async fn get_account(
+    account_manager: &AccountManagerProxy,
+    account_id: u64,
+    acp_client_end: ClientEnd<AuthenticationContextProviderMarker>,
+    account_server_end: ServerEnd<AccountMarker>,
+) -> Result<Result<(), ApiError>, fidl::Error> {
+    account_manager
+        .get_account(AccountManagerGetAccountRequest {
+            id: Some(account_id),
+            context_provider: Some(acp_client_end),
+            account: Some(account_server_end),
+            ..AccountManagerGetAccountRequest::EMPTY
+        })
+        .await
 }
 
 /// A proxy to an account manager running in a nested environment.
@@ -139,10 +163,12 @@ async fn test_provision_new_account() -> Result<(), Error> {
     assert_ne!(account_1, account_2);
 
     // Provision account with an auth mechanism
-    let account_3 = account_manager
-        .provision_new_account(Lifetime::Persistent, Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID))
-        .await?
-        .unwrap();
+    let account_3 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID),
+    )
+    .await?;
 
     let account_ids = account_manager.get_account_ids().await?;
     assert_eq!(account_ids.len(), 3);
@@ -167,7 +193,7 @@ async fn test_provision_then_lock_then_unlock_account() -> Result<(), Error> {
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_id, acp_client_end, account_server_end).await?,
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
@@ -179,7 +205,7 @@ async fn test_provision_then_lock_then_unlock_account() -> Result<(), Error> {
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_id, acp_client_end, account_server_end).await?,
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
@@ -209,7 +235,7 @@ async fn test_unlock_account() -> Result<(), Error> {
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_id, acp_client_end, account_server_end).await?,
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
@@ -231,7 +257,7 @@ async fn test_provision_then_lock_then_unlock_fail_authentication() -> Result<()
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_id, acp_client_end, account_server_end).await?,
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
@@ -243,7 +269,7 @@ async fn test_provision_then_lock_then_unlock_fail_authentication() -> Result<()
     let (acp_client_end, _) = create_endpoints()?;
     let (_, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_id, acp_client_end, account_server_end).await?,
         Err(ApiError::FailedAuthentication)
     );
     Ok(())
@@ -269,7 +295,7 @@ async fn test_unlock_account_fail_authentication() -> Result<(), Error> {
     let (acp_client_end, _) = create_endpoints()?;
     let (_, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_id, acp_client_end, account_server_end).await?,
         Err(ApiError::FailedAuthentication)
     );
     Ok(())
@@ -281,12 +307,12 @@ async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error>
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let account = provision_new_account(&account_manager, lifetime, None).await?;
+    let account_id = provision_new_account(&account_manager, lifetime, None).await?;
     // Connect a channel to the newly created account and verify it's usable.
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_id, acp_client_end, account_server_end).await?,
         Ok(())
     );
     let account_proxy = account_client_end.into_proxy()?;
@@ -338,7 +364,7 @@ async fn test_account_deletion() -> Result<(), Error> {
     let (acp_client_end, _acp_server_end) = create_endpoints()?;
     let (_account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_1, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_1, acp_client_end, account_server_end).await?,
         Err(ApiError::NotFound)
     );
 
@@ -372,14 +398,14 @@ async fn test_lifecycle() -> Result<(), Error> {
     let (acp_client_end, _) = create_endpoints()?;
     let (_account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_3, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_3, acp_client_end, account_server_end).await?,
         Err(ApiError::NotFound)
     );
     // Retrieve a persistent account that was created in the earlier lifetime
     let (acp_client_end, _) = create_endpoints()?;
     let (_account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(
-        account_manager.get_account(account_1, acp_client_end, account_server_end).await?,
+        get_account(&account_manager, account_1, acp_client_end, account_server_end).await?,
         Ok(())
     );
 

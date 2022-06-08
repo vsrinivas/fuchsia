@@ -216,12 +216,7 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
             AccountRequest::GetPersonaIds { responder } => {
                 responder.send(&[]).context("sending GetPersonaIds response")?;
             }
-            AccountRequest::RegisterAuthListener {
-                listener: _,
-                initial_state: _,
-                granularity: _,
-                responder,
-            } => {
+            AccountRequest::RegisterAuthListener { payload: _, responder } => {
                 responder
                     .send(&mut Err(faccount::Error::UnsupportedOperation))
                     .context("sending RegisterAuthListener response")?;

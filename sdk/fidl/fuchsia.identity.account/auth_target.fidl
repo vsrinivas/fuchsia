@@ -44,16 +44,16 @@ protocol AuthTarget {
     /// Connects a channel that will receive changes in the authentication
     /// state of the target.
     ///
-    /// `listener` The client end of an `AuthListener` channel
+    /// `listener` [required] The client end of an `AuthListener` channel
     /// `initial_state` If true, the listener will receive the initial auth
     ///                 state in addition to any changes.
     /// `granularity` An `AuthChangeGranularity` expressing the magnitude of
-    ///               change in authentication state than should lead to a
-    ///               callback
-    RegisterAuthListener(resource struct {
-        listener client_end:AuthListener;
-        initial_state bool;
-        granularity AuthChangeGranularity;
+    ///               change in authentication state that will lead to
+    ///               AuthStateChange events.
+    RegisterAuthListener(resource table {
+        1: listener client_end:AuthListener;
+        2: initial_state bool;
+        3: granularity AuthChangeGranularity;
     }) -> (struct {}) error Error;
 
     // TODO(fxbug.dev/562): Add methods that request in increase in the
@@ -120,8 +120,6 @@ protocol Account {
     ///                     use for the enrollment.
     ///
     /// Returns: The `AuthMechanismEnrollmentId` of the created enrollment.
-    // TODO(dnordstrom): Define and document how to authenticate prior to making
-    // changes to the enrollment set.
     CreateAuthMechanismEnrollment(struct {
         auth_mechanism_id AuthMechanismId;
     }) -> (struct {
@@ -131,20 +129,15 @@ protocol Account {
     /// Remove an authentication mechanism enrollment for the account.
     ///
     /// `enrollment_id` The id of the enrollment to remove.
-    // TODO(dnordstrom): Define and document how to authenticate prior to making
-    // changes to the enrollment set.
     RemoveAuthMechanismEnrollment(struct {
         enrollment_id AuthMechanismEnrollmentId;
     }) -> (struct {}) error Error;
 
-    // TODO(dnordstrom): Add support for modifications and/or replacement of
-    // enrollments.
-
     /// Lock an account. After a successful call, all Account and Persona
     /// channels for this account will be terminated. If storage unlock is not
     /// enabled for the account, a FailedPrecondition error is returned.
-    // TODO(dnordstrom): Document the side effects on underlying storage that
-    // may still be in use by the client.
+    // TODO(fxbug.dev/101934): Document the side effects on underlying storage
+    // that may still be in use by the client.
     Lock() -> (struct {}) error Error;
 
     /// Connects a channel to access a data directory of the account. The
