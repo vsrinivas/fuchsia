@@ -158,11 +158,8 @@ if (is_linux || is_mac) {
   }
 
   system_test_upgrade_suite("workstation-release-upgrade") {
-    # TODO(fxbug.dev/101410): Temporarily pin the build to get around a breaking change created by
-    # fxrev.dev/666129
-    #downgrade_release_builder =
-    #    "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
-    downgrade_release_build_id = "8812712520724452209"
+    downgrade_release_builder =
+        "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
 
     environments = [
       {
@@ -196,10 +193,8 @@ if (is_linux || is_mac) {
   }
 
   system_test_upgrade_suite("workstation-release-upgrade-omaha") {
-    # TODO(fxbug.dev/101410): Temporarily pin the build to bootstrap the builder.
-    #downgrade_release_builder =
-    #    "fuchsia/global.ci/workstation.x64-release-e2e-isolated-omaha"
-    downgrade_release_build_id = "8812703209678143297"
+    downgrade_release_builder =
+        "fuchsia/global.ci/workstation.x64-release-e2e-isolated-omaha"
     installer = "omaha"
     environments = [
       {
