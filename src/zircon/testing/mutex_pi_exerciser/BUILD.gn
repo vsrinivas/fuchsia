@@ -2,16 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("mutex_pi_exerciser") {
+import("//build/components.gni")
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+executable("bin") {
   if (is_fuchsia) {
     configs += [ "//build/config:all_source" ]
   }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+  output_name = "mutex_pi_exerciser"
   sources = [
     "event.cc",
     "main.cc",
@@ -19,7 +19,7 @@ executable("mutex_pi_exerciser") {
     "tracer.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -32,8 +32,8 @@ executable("mutex_pi_exerciser") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
+}
 
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+fuchsia_shell_package("mutex_pi_exerciser") {
+  deps = [ ":bin" ]
 }

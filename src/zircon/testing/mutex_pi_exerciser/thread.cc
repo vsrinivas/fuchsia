@@ -4,7 +4,6 @@
 
 #include "thread.h"
 
-#include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
@@ -16,28 +15,30 @@
 
 #include "utils.h"
 
-// Static storage for Thread::
-zx::channel Thread::scheduler_service_;
-std::array<zx::profile, Thread::PRIORITY_LEVELS> Thread::profiles_;
-
 Thread::Thread(uint32_t prio) : prio_(prio) {
   snprintf(name_, sizeof(name_), "mutex_pi_thread %02u", prio_);
 }
 
 // static
 zx_status_t Thread::ConnectSchedulerService() {
-  if (scheduler_service_.is_valid()) {
+  if (profile_provider_ != nullptr) {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx::channel server_ep;
-  zx::channel::create(0, &scheduler_service_, &server_ep);
+  zx::channel client_ep, server_ep;
+  zx::channel::create(0, &client_ep, &server_ep);
   zx_status_t res;
 
-  res = fdio_service_connect("/svc/" fuchsia_scheduler_ProfileProvider_Name, server_ep.release());
+  res = fdio_service_connect(
+      (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
+      server_ep.release());
   if (res != ZX_OK) {
     fprintf(stderr, "Failed to connect schedule.ProfileProvider! (res %d)\n", res);
+    return res;
   }
+
+  profile_provider_ =
+      std::make_unique<fuchsia::scheduler::ProfileProvider_SyncProxy>(std::move(client_ep));
 
   return res;
 }
@@ -54,13 +55,11 @@ zx_status_t Thread::EnsureProfile(uint32_t prio_level) {
   }
 
   char name[32];
-  size_t name_len = snprintf(name, sizeof(name), "mutex_pi_exerciser %02u", prio_level);
-  zx_status_t get_profile_res;
-  zx_status_t res;
+  snprintf(name, sizeof(name), "mutex_pi_exerciser %02u", prio_level);
 
-  res = fuchsia_scheduler_ProfileProviderGetProfile(scheduler_service_.get(), prio_level, name,
-                                                    name_len, &get_profile_res,
-                                                    profile.reset_and_get_address());
+  zx_status_t get_profile_res;
+  zx_status_t res = profile_provider_->GetProfile(prio_level, name, &get_profile_res, &profile);
+
   if ((res != ZX_OK) || (get_profile_res != ZX_OK)) {
     fprintf(stderr, "Failed to obtain profile for priority %u (res = %d, gp_res = %d)\n",
             prio_level, res, get_profile_res);

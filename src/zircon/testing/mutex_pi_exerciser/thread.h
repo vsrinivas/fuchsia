@@ -5,6 +5,7 @@
 #ifndef SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_THREAD_H_
 #define SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_THREAD_H_
 
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -51,8 +52,8 @@ class Thread {
 
   zx_status_t WaitForState(State target_state);
 
-  static zx::channel scheduler_service_;
-  static std::array<zx::profile, PRIORITY_LEVELS> profiles_;
+  static inline std::unique_ptr<fuchsia::scheduler::ProfileProvider_SyncProxy> profile_provider_;
+  static inline std::array<zx::profile, PRIORITY_LEVELS> profiles_;
 
   const uint32_t prio_;
   char name_[ZX_MAX_NAME_LEN];

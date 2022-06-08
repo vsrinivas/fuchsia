@@ -40,5 +40,5 @@ void Tracer::Trace(trace_scope_t scope, const char* fmt, ...) {
   vsnprintf(buffer, sizeof(buffer), fmt, ap);
   va_end(ap);
 
-  TRACE_INSTANT("app", "mutex_pi_exerciser", scope, "msg", TA_STRING(buffer));
+  TRACE_INSTANT("app", "mpie_trace", scope, "msg", TA_STRING(buffer));
 }

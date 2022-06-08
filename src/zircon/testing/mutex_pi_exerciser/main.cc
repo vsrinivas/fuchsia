@@ -222,17 +222,24 @@ zx_status_t ExerciseMutexChain(ThreadCollection* _threads) {
     }
 
     res = thread.Start([&node]() {
+      Tracer::Trace(TRACE_SCOPE_THREAD, "Acquiring hold mutex");
       node.hold_mutex.Acquire();
+      Tracer::Trace(TRACE_SCOPE_THREAD, "Signalling ready");
       node.ready_evt.Signal();
 
       if (node.blocking_mutex != nullptr) {
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Acquiring blocking mutex");
         node.blocking_mutex->Acquire();
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Waiting for exit event");
         node.exit_evt.Wait();
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Releasing blocking mutex");
         node.blocking_mutex->Release();
       } else {
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Waiting for exit event (no blocking mutex)");
         node.exit_evt.Wait();
       }
 
+      Tracer::Trace(TRACE_SCOPE_THREAD, "Releasing hold mutex");
       node.hold_mutex.Release();
     });
 
@@ -250,7 +257,10 @@ zx_status_t ExerciseMutexChain(ThreadCollection* _threads) {
   }
 
   for (uint32_t i = 0; i < threads.size(); ++i) {
+    const auto& thread = *(threads[i]);
+    Tracer::Trace(TRACE_SCOPE_THREAD, "Signalling exit to thread \"%s\"", thread.name());
     nodes[i].exit_evt.Signal();
+    Tracer::Trace(TRACE_SCOPE_THREAD, "Waiting for \"%s\" to exit", thread.name());
     threads[i]->WaitForReset();
   }
 
@@ -273,9 +283,16 @@ zx_status_t ExerciseMutexMultiWait(ThreadCollection* _threads) {
     auto& thread = *(threads[i]);
     if (i == 0) {
       res = thread.Start([&the_mutex, &exit_evt, &ready_evt]() {
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Acquire mutex");
         the_mutex.Acquire();
+
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Signal ready");
         ready_evt.Signal();
+
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Wait for exit signal");
         exit_evt.Wait();
+
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Releasing mutex");
         the_mutex.Release();
       });
 
@@ -287,8 +304,13 @@ zx_status_t ExerciseMutexMultiWait(ThreadCollection* _threads) {
       }
     } else {
       res = thread.Start([&the_mutex, &exit_evt]() {
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Acquire mutex");
         the_mutex.Acquire();
+
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Wait for exit signal");
         exit_evt.Wait();
+
+        Tracer::Trace(TRACE_SCOPE_THREAD, "Releasing mutex");
         the_mutex.Release();
       });
     }
