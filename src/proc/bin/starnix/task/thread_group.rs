@@ -40,15 +40,18 @@ pub struct ThreadGroupMutableState {
     /// themselves before they are deleted.
     pub children: BTreeMap<pid_t, Weak<ThreadGroup>>,
 
+    /// Child tasks that have exited, but not yet been waited for.
+    pub zombie_children: Vec<ZombieProcess>,
+
+    /// Whether this thread group will inherit from children of dying processes in its descendant
+    /// tree.
+    pub is_child_subreaper: bool,
+
     /// The IDs used to perform shell job control.
     pub process_group: Arc<ProcessGroup>,
 
     /// The itimers for this thread group.
     pub itimers: [itimerval; 3],
-
-    /// WaitQueue for updates to the zombie_children lists of tasks in this group.
-    /// Child tasks that have exited, but not yet been waited for.
-    pub zombie_children: Vec<ZombieProcess>,
 
     pub did_exec: bool,
 
@@ -188,9 +191,10 @@ impl ThreadGroup {
                 parent: parent.as_ref().map(|p| Arc::clone(p.base())),
                 tasks: BTreeMap::new(),
                 children: BTreeMap::new(),
+                zombie_children: vec![],
+                is_child_subreaper: false,
                 process_group: Arc::clone(&process_group),
                 itimers: Default::default(),
-                zombie_children: vec![],
                 did_exec: false,
                 stopped: false,
                 waitable: None,
@@ -706,21 +710,23 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         children: Vec<ThreadGroupWriteGuard<'_>>,
         pids: &PidTable,
     ) {
-        // TODO(qsr): Implement PR_SET_CHILD_SUBREAPER
-
-        // If parent != self, reparent.
-        if let Some(parent) = self.parent.as_ref() {
-            parent.write().adopt_children(other, children, pids);
-        } else {
-            // Else, act like init.
-            for mut child in children.into_iter() {
-                child.parent = Some(Arc::clone(self.base()));
-                self.children.insert(child.leader(), Arc::downgrade(child.base()));
+        // If parent != None and the process has not the PR_SET_CHILD_SUBREAPER, forward the call
+        // to the parent.
+        if !self.is_child_subreaper {
+            if let Some(parent) = self.parent.as_ref() {
+                parent.write().adopt_children(other, children, pids);
+                return;
             }
-
-            other.children.clear();
-            self.zombie_children.append(&mut other.zombie_children);
         }
+
+        // Else, act like init.
+        for mut child in children.into_iter() {
+            child.parent = Some(Arc::clone(self.base()));
+            self.children.insert(child.leader(), Arc::downgrade(child.base()));
+        }
+
+        other.children.clear();
+        self.zombie_children.append(&mut other.zombie_children);
     }
 
     pub fn remove(&mut self, children: Vec<ThreadGroupWriteGuard<'_>>, pids: &mut PidTable) {

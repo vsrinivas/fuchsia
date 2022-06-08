@@ -396,6 +396,17 @@ pub fn sys_prctl(
             not_implemented!("prctl(PR_SET_SECCOMP, {})", arg2);
             Ok(().into())
         }
+        PR_GET_CHILD_SUBREAPER => {
+            let addr = UserAddress::from(arg2);
+            let value: i32 =
+                if current_task.thread_group.read().is_child_subreaper { 1 } else { 0 };
+            current_task.mm.write_object(addr.into(), &value)?;
+            Ok(().into())
+        }
+        PR_SET_CHILD_SUBREAPER => {
+            current_task.thread_group.write().is_child_subreaper = arg2 != 0;
+            Ok(().into())
+        }
         _ => {
             not_implemented!("prctl: Unknown option: 0x{:x}", option);
             error!(ENOSYS)

@@ -19,8 +19,10 @@ group("tests") {
 test("syscalls_test_bin") {
   sources = [
     "fs_test.cc",
+    "prctl_test.cc",
     "restart_read_test.cc",
     "terminal_test.cc",
+    "test_helper.h",
     "trivial_test.cc",
   ]
   deps = [

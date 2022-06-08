@@ -11,18 +11,9 @@
 
 #include <gtest/gtest.h>
 
-namespace {
+#include "src/proc/tests/chromiumos/syscalls/test_helper.h"
 
-#define SAFE_SYSCALL(X)                                                                         \
-  ({                                                                                            \
-    int retval;                                                                                 \
-    retval = (X);                                                                               \
-    if (retval < 0) {                                                                           \
-      fprintf(stderr, "Error at %s:%d: %s (%d)\n", __FILE__, __LINE__, strerror(errno), errno); \
-      exit(retval);                                                                             \
-    };                                                                                          \
-    retval;                                                                                     \
-  })
+namespace {
 
 int received_signal = -1;
 
