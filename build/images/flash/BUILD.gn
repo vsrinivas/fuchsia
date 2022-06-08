@@ -589,7 +589,7 @@ if (!bootfs_only && !build_sdk_archives) {
       emu_manifest = {
         initial_ramdisk = "fuchsia.zbi"
         kernel = rebase_path(qemu_kernel_file, root_out_dir)
-        disk_images = [ rebase_path(files.fvm, root_out_dir) ]
+        disk_images = [ files.fvm ]
       }
     }
 

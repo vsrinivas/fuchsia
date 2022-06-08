@@ -307,7 +307,7 @@ group("default-images") {
   }
 
   if (enable_netboot) {
-    deps += [ ":netboot-script" ]
+    deps += [ "archive:netboot-script" ]
   }
 
   # TODO(fxbug.dev/46415): The build graph for "bringup" (bootfs_only) MUST only
