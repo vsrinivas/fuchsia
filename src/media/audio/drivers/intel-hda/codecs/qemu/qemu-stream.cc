@@ -18,7 +18,7 @@ static const audio_stream_unique_id_t microphone_id = AUDIO_STREAM_UNIQUE_ID_BUI
 static const audio_stream_unique_id_t speaker_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
 QemuStream::QemuStream(uint32_t stream_id, bool is_input, uint16_t converter_nid)
-    : IntelHDAStreamBase(stream_id, is_input), converter_nid_(converter_nid) {
+    : IntelHDAStreamConfigBase(stream_id, is_input), converter_nid_(converter_nid) {
   SetPersistentUniqueId(is_input ? microphone_id : speaker_id);
 }
 
@@ -101,7 +101,7 @@ void QemuStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
       break;
 
     default:
-      IntelHDAStreamBase::OnGetStringLocked(req, out_resp);
+      IntelHDAStreamConfigBase::OnGetStringLocked(req, out_resp);
       return;
   }
 

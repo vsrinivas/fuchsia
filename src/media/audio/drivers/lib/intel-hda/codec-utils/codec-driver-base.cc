@@ -307,7 +307,7 @@ zx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
     case IHDA_CODEC_SET_STREAM_FORMAT: {
       CHECK_RESP_ALLOW_HANDLE(IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt);
 
-      return stream->ProcessSetStreamFmt(resp.set_stream_fmt);
+      return stream->ProcessSetStreamFmtLocked(resp.set_stream_fmt);
     }
 
     default:

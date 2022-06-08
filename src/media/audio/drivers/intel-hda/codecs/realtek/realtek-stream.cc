@@ -25,7 +25,7 @@ namespace intel_hda {
 namespace codecs {
 
 RealtekStream::RealtekStream(const StreamProperties& props)
-    : IntelHDAStreamBase(props.stream_id, props.is_input), props_(props) {
+    : IntelHDAStreamConfigBase(props.stream_id, props.is_input), props_(props) {
   SetPersistentUniqueId(props.uid);
 }
 
@@ -309,7 +309,7 @@ void RealtekStream::OnPlugDetectLocked(StreamChannel* response_channel,
 
   // If our pin cannot perform presence detection, just fall back on the base class impl.
   if (!pc_.pin_caps.can_pres_detect()) {
-    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
+    IntelHDAStreamConfigBase::OnPlugDetectLocked(response_channel, out_resp);
     return;
   }
 
@@ -331,7 +331,7 @@ void RealtekStream::OnPlugDetectLocked(StreamChannel* response_channel,
     // For now, if our hardware does not support async plug detect, we
     // simply fall back on the default implementation which reports that we
     // are hardwired and always plugged in.
-    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
+    IntelHDAStreamConfigBase::OnPlugDetectLocked(response_channel, out_resp);
     return;
   }
 }
@@ -351,7 +351,7 @@ void RealtekStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
       break;
 
     default:
-      IntelHDAStreamBase::OnGetStringLocked(req, out_resp);
+      IntelHDAStreamConfigBase::OnGetStringLocked(req, out_resp);
       return;
   }
 

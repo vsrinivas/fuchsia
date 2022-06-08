@@ -10,7 +10,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
-#include <intel-hda/codec-utils/stream-base.h>
+#include <intel-hda/codec-utils/streamconfig-base.h>
 #include <intel-hda/utils/codec-caps.h>
 
 #include "utils.h"
@@ -22,7 +22,7 @@ namespace codecs {
 #define DECLARE_THUNK(_name) \
   zx_status_t _name(const Command& cmd, const CodecResponse& resp) __TA_REQUIRES(obj_lock());
 
-class RealtekStream : public IntelHDAStreamBase {
+class RealtekStream : public IntelHDAStreamConfigBase {
  public:
   RealtekStream(const StreamProperties& props);
 

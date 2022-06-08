@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/ddk/device.h>
 
-#include <intel-hda/codec-utils/stream-base.h>
+#include <intel-hda/codec-utils/streamconfig-base.h>
 
 #include "debug-logging.h"
 #include "intel-dsp-topology.h"
@@ -16,7 +16,7 @@
 namespace audio {
 namespace intel_hda {
 
-class IntelDspStream : public codecs::IntelHDAStreamBase,
+class IntelDspStream : public codecs::IntelHDAStreamConfigBase,
                        public fidl::WireServer<fuchsia_hardware_audio::RingBuffer> {
  public:
   explicit IntelDspStream(const DspStream& stream);

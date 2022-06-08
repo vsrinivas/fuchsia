@@ -14,7 +14,7 @@
 
 #include <ddktl/device.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>
-#include <intel-hda/codec-utils/stream-base.h>
+#include <intel-hda/codec-utils/streamconfig-base.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -61,9 +61,9 @@ class TestCodec : public codecs::IntelHDACodecDriverBase {
   void DeviceRelease() { codecs::IntelHDACodecDriverBase::DeviceRelease(); }
 };
 
-class TestStream : public codecs::IntelHDAStreamBase {
+class TestStream : public codecs::IntelHDAStreamConfigBase {
  public:
-  explicit TestStream() : codecs::IntelHDAStreamBase(123, false) {}
+  explicit TestStream() : codecs::IntelHDAStreamConfigBase(123, false) {}
   ~TestStream() {}
   zx_status_t Bind() {
     fbl::AutoLock lock(obj_lock());
@@ -275,7 +275,7 @@ class TestStreamCustom : public TestStream {
   void NotifyPlugState(bool plugged, int64_t plug_time) {
     fbl::AutoLock lock(obj_lock());
     plugged_ = plugged;
-    codecs::IntelHDAStreamBase::NotifyPlugStateLocked(plugged, plug_time);
+    codecs::IntelHDAStreamConfigBase::NotifyPlugStateLocked(plugged, plug_time);
   }
 
  private:

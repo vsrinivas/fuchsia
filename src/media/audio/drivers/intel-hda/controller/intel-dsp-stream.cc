@@ -21,7 +21,7 @@ namespace audio {
 namespace intel_hda {
 
 IntelDspStream::IntelDspStream(const DspStream& stream)
-    : IntelHDAStreamBase(stream.stream_id, stream.is_input), stream_(stream) {
+    : IntelHDAStreamConfigBase(stream.stream_id, stream.is_input), stream_(stream) {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %cStream #%u", stream.is_input ? 'I' : 'O',
            stream.stream_id);
 
@@ -49,7 +49,8 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
                                                              this, std::move(on_unbound));
 
   ring_buffer_ = std::move(client);
-  IntelHDAStreamBase::CreateRingBuffer(channel, std::move(format), std::move(server), completer);
+  IntelHDAStreamConfigBase::CreateRingBuffer(channel, std::move(format), std::move(server),
+                                             completer);
 }
 
 // Pass-through.
@@ -178,19 +179,19 @@ zx_status_t IntelDspStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
 
 void IntelDspStream::OnGetGainLocked(audio_proto::GainState* out_resp) {
   LOG(DEBUG, "OnGetGainLocked");
-  IntelHDAStreamBase::OnGetGainLocked(out_resp);
+  IntelHDAStreamConfigBase::OnGetGainLocked(out_resp);
 }
 
 void IntelDspStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
                                      audio_proto::SetGainResp* out_resp) {
   LOG(DEBUG, "OnSetGainLocked");
-  IntelHDAStreamBase::OnSetGainLocked(req, out_resp);
+  IntelHDAStreamConfigBase::OnSetGainLocked(req, out_resp);
 }
 
 void IntelDspStream::OnPlugDetectLocked(StreamChannel* response_channel,
                                         audio_proto::PlugDetectResp* out_resp) {
   LOG(DEBUG, "OnPlugDetectLocked");
-  IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
+  IntelHDAStreamConfigBase::OnPlugDetectLocked(response_channel, out_resp);
 }
 
 void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
@@ -208,7 +209,7 @@ void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
       break;
 
     default:
-      IntelHDAStreamBase::OnGetStringLocked(req, out_resp);
+      IntelHDAStreamConfigBase::OnGetStringLocked(req, out_resp);
       return;
   }
 

@@ -25,7 +25,7 @@ DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(audio::intel_hda::codecs::HdmiStream::PCAT
 namespace audio::intel_hda::codecs {
 
 HdmiStream::HdmiStream(const StreamProperties& props)
-    : IntelHDAStreamBase(props.stream_id, false), props_(props) {}
+    : IntelHDAStreamConfigBase(props.stream_id, false), props_(props) {}
 
 zx_status_t HdmiStream::DisableConverterLocked(bool force_all) {
   const Command DISABLE_CONVERTER_VERBS[] = {
@@ -295,7 +295,7 @@ void HdmiStream::OnPlugDetectLocked(StreamChannel* response_channel,
 
   // If our pin cannot perform presence detection, just fall back on the base class impl.
   if (!pc_.pin_caps.can_pres_detect()) {
-    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
+    IntelHDAStreamConfigBase::OnPlugDetectLocked(response_channel, out_resp);
     return;
   }
 
@@ -317,7 +317,7 @@ void HdmiStream::OnPlugDetectLocked(StreamChannel* response_channel,
     // For now, if our hardware does not support async plug detect, we
     // simply fall back on the default implementation which reports that we
     // are hardwired and always plugged in.
-    IntelHDAStreamBase::OnPlugDetectLocked(response_channel, out_resp);
+    IntelHDAStreamConfigBase::OnPlugDetectLocked(response_channel, out_resp);
   }
 }
 
@@ -336,7 +336,7 @@ void HdmiStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
       break;
 
     default:
-      IntelHDAStreamBase::OnGetStringLocked(req, out_resp);
+      IntelHDAStreamConfigBase::OnGetStringLocked(req, out_resp);
       return;
   }
 

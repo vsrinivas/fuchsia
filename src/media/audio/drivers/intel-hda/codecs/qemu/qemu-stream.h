@@ -6,13 +6,13 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CODECS_QEMU_QEMU_STREAM_H_
 
 #include <fbl/ref_ptr.h>
-#include <intel-hda/codec-utils/stream-base.h>
+#include <intel-hda/codec-utils/streamconfig-base.h>
 
 namespace audio {
 namespace intel_hda {
 namespace codecs {
 
-class QemuStream : public IntelHDAStreamBase {
+class QemuStream : public IntelHDAStreamConfigBase {
  public:
   QemuStream(uint32_t stream_id, bool is_input, uint16_t converter_nid);
 

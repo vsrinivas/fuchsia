@@ -18,11 +18,13 @@ zx_library("intel-hda") {
     "intel-hda/utils/codec-state.h",
     "intel-hda/utils/intel-hda-registers.h",
     "intel-hda/codec-utils/stream-base.h",
+    "intel-hda/codec-utils/streamconfig-base.h",
     "intel-hda/codec-utils/codec-driver-base.h",
   ]
   sources = [
     "codec-utils/codec-driver-base.cc",
     "codec-utils/stream-base.cc",
+    "codec-utils/streamconfig-base.cc",
     "utils/codec-caps.cc",
     "utils/status.cc",
     "utils/utils.cc",
