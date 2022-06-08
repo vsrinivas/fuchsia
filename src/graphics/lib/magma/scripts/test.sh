@@ -38,14 +38,14 @@ mali)
 vsi)
   fx-command-run test --simple -o \
     magma_nonhardware_tests \
-    msd_vsi_vip_nonhardware_tests \
+    msd-vsi-vip-nonhardware-tests \
     magma-conformance-tests-vsi \
     msd-vsi-vip-integration-tests \
     test-magma-vsi-exec \
   ;;
 *)
   echo >&2 "unknown gpu: $1"
-  echo >&2 "usage: $0 [intel|mali|pvr|vsi]"
+  echo >&2 "usage: $0 [intel|mali|vsi]"
   exit 1
   ;;
 esac
