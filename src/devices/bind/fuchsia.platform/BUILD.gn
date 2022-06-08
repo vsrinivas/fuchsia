@@ -6,7 +6,4 @@ import("//build/bind/bind.gni")
 
 bind_library("fuchsia.platform") {
   source = "fuchsia.platform.bind"
-
-  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-  generate_deprecated_fidl_binding = false
 }

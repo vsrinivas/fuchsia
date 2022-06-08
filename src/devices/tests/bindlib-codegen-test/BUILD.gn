@@ -53,9 +53,6 @@ fuchsia_unittest_package("bindlib-codegen-rust-test-pkg") {
 
 bind_library("bindlibparent.codegen.testlib") {
   source = "testbindlib_parent.bind"
-
-  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-  generate_deprecated_fidl_binding = false
 }
 
 bind_library("bindlib.codegen.testlib") {
@@ -64,9 +61,6 @@ bind_library("bindlib.codegen.testlib") {
     # TODO(fxb/95933): depend on bindlibparent when we start using it.
     "//src/devices/bind/fuchsia.pci",
   ]
-
-  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-  generate_deprecated_fidl_binding = false
 }
 
 driver_bind_rules("parent-driver-bind") {

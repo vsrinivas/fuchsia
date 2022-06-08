@@ -4,7 +4,6 @@
 
 import("//build/compiled_action.gni")
 import("//build/dist/generated_resource.gni")
-import("//build/fidl/fidl.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/host_test.gni")
@@ -533,19 +532,7 @@ template("driver_bind_rules") {
 #     [list of labels]: List of other bind_library targets included by the library.
 #
 #   name (optional)
-#     [string] Name of the library. Defaults to the target's name. This is only used when
-#     fidl_target (see below) is not provided, to set the generated FIDL target name.
-#
-#   TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-#   fidl_target (optional)
-#     [label]: The FIDL library target. Defaults to the FIDL library name, which is the bind
-#     library name prepended with the `bind` namespace. Only used if
-#     generate_deprecated_fidl_binding is set to true.
-#
-#   TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-#   generate_deprecated_fidl_binding (optional)
-#     [bool]: Whether to generate a fidl library to get FIDL based bindings. This is deprecated
-#     in favor of the new direct code generation. Defaults to true.
+#     [string] Name of the library. Defaults to the target's name.
 #
 #   testonly, visibility
 #     Forwarded from invoker.
@@ -557,22 +544,6 @@ template("bind_library") {
     library_name = invoker.name
   } else {
     library_name = target_name
-  }
-
-  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-  generate_deprecated_fidl_binding = true
-  if (defined(invoker.generate_deprecated_fidl_binding)) {
-    generate_deprecated_fidl_binding = invoker.generate_deprecated_fidl_binding
-  }
-
-  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-  if (generate_deprecated_fidl_binding) {
-    fidl_file = "${target_gen_dir}/bind.${library_name}.fidl"
-    if (defined(invoker.fidl_target)) {
-      fidl_target = "${invoker.fidl_target}"
-    } else {
-      fidl_target = "bind.${library_name}"
-    }
   }
 
   library_name_slashes = string_replace(library_name, ".", "/")
@@ -615,11 +586,6 @@ template("bind_library") {
     }
 
     deps = [ ":${test_data_target}" ]
-
-    # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-    if (generate_deprecated_fidl_binding) {
-      deps += [ ":${fidl_target}" ]
-    }
 
     forward_variables_from(invoker,
                            [
@@ -715,53 +681,6 @@ template("bind_library") {
       foreach(pub_dep, invoker.public_deps) {
         dep_full_label = get_label_info(pub_dep, "label_no_toolchain")
         deps += [ "${dep_full_label}_rust" ]
-      }
-    }
-  }
-
-  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
-  if (generate_deprecated_fidl_binding) {
-    if (current_toolchain == fidl_toolchain) {
-      # Generates a FIDL file with all the generated FIDL file. It is only ran in
-      # the FIDL toolchain because we want to run this conversion only once.
-
-      fidl_file_target = "${target_name}_fidl"
-
-      compiled_action(fidl_file_target) {
-        forward_variables_from(invoker,
-                               [
-                                 "testonly",
-                                 "visibility",
-                               ])
-
-        tool = "//tools/bindc:bin"
-        tool_output_name = "bindc"
-
-        sources = [ invoker.source ]
-
-        args = [
-          "generate",
-          "--lint",
-          "--output",
-          rebase_path("${fidl_file}", root_build_dir),
-          rebase_path("${invoker.source}", root_build_dir),
-        ]
-
-        outputs = [ fidl_file ]
-      }
-
-      fidl(fidl_target) {
-        sources = [ "${fidl_file}" ]
-        non_fidl_deps = [ ":${fidl_file_target}" ]
-        should_lint = false
-        public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
-      }
-    } else {
-      # The non-FIDL toolchain FIDL libraries are built normally; except based
-      # off of the generated FIDL file.
-      fidl(fidl_target) {
-        sources = [ fidl_file ]
-        public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
       }
     }
   }

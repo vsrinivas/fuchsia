@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/drivers.gni")
+import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.board.test") {
   sources = [ "board.test.fidl" ]
