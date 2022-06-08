@@ -8,9 +8,9 @@
 
 use {
     fuchsia_bluetooth::constants::HOST_DEVICE_DIR,
+    fuchsia_fs::{open_directory_in_namespace, OpenFlags},
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{future, FutureExt, Stream, TryStreamExt},
-    io_util::{open_directory_in_namespace, OpenFlags},
     log::{info, warn},
     std::{
         ffi::OsStr,

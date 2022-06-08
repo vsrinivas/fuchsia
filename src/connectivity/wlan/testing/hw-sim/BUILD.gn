@@ -13,7 +13,6 @@ rustc_library("wlan-hw-sim") {
 
   deps = [
     "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
@@ -38,6 +37,7 @@ rustc_library("wlan-hw-sim") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/network/ethernet",
     "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/syslog/rust:syslog",

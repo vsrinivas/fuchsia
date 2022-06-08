@@ -24,7 +24,6 @@ metrics_registry("wlan_metrics_registry") {
 }
 
 wlandevicemonitor_deps = [
-  "//garnet/lib/rust/io_util",
   "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
   "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
   "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
@@ -43,6 +42,7 @@ wlandevicemonitor_deps = [
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",
   "//src/lib/fuchsia-component",
+  "//src/lib/fuchsia-fs",
   "//src/lib/storage/fuchsia-vfs-watcher",
   "//src/lib/syslog/rust:syslog",
   "//src/lib/zerocopy",

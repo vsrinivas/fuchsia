@@ -9,10 +9,10 @@ use {
     fidl::{endpoints::Proxy, HandleBased},
     fidl_fuchsia_io as fio,
     fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_fs::{self, open_directory_in_namespace},
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
-    io_util::{self, open_directory_in_namespace},
     log::{error, info},
     std::{
         fs::File,
@@ -213,7 +213,7 @@ impl DeviceWatcher {
     }
 
     fn open_device_file(&self, relative_path: PathBuf) -> Result<DeviceFile, Error> {
-        let file = io_util::open_file(
+        let file = fuchsia_fs::open_file(
             &self.watched_dir,
             relative_path.as_path(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -265,7 +265,7 @@ mod tests {
         let _ = realm.driver_test_realm_setup().await?;
         let realm = realm.build().await.expect("failed to build realm");
         let _ = realm.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
-        let dev_dir = io_util::directory::open_directory(
+        let dev_dir = fuchsia_fs::directory::open_directory(
             realm.root.get_exposed_dir(),
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -278,7 +278,7 @@ mod tests {
         // a DirectoryProxy and return that. However, DeviceWatchers created from the converted
         // NodeProxy don't work - likely because we also open a channel to the control device as a
         // RootDeviceProxy later in the test.
-        let control_dev_dir = io_util::directory::open_directory(
+        let control_dev_dir = fuchsia_fs::directory::open_directory(
             &dev_dir,
             CONTROL_DEVICE_RELATIVE,
             fio::OpenFlags::RIGHT_READABLE,
@@ -294,7 +294,7 @@ mod tests {
         dev_dir: &fio::DirectoryProxy,
     ) -> Result<DeviceFile, Error> {
         // Open the control device as a file, then convert the channel to a RootDeviceProxy
-        let control_dev_file = io_util::open_file(
+        let control_dev_file = fuchsia_fs::open_file(
             dev_dir,
             Path::new(CONTROL_DEVICE_RELATIVE),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

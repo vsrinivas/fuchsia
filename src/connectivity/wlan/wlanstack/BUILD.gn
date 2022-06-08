@@ -26,7 +26,6 @@ rustc_binary("bin") {
   deps = [
     ":wlan_metrics_registry_rustlib",
     ":wlanstack_config",
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
@@ -58,6 +57,7 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",
