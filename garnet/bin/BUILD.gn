@@ -13,11 +13,11 @@ group("bin") {
     "ktrace_provider",
     "run_test_component",
     "trace",
-    "trace2json",
     "trace_manager",
     "trace_stress",
     "traceutil",
     "//src/developer/sched",
+    "//src/developer/trace2json",
     "//src/ui/benchmarks",
   ]
 }

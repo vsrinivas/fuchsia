@@ -8,7 +8,7 @@
 #include <map>
 #include <set>
 
-#include "garnet/bin/trace2json/convert.h"
+#include "src/developer/trace2json/convert.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 

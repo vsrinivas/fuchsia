@@ -220,7 +220,7 @@ sdk_molecule("e2e_testing_tools") {
   visibility = [ ":*" ]
 
   deps = [
-    "//garnet/bin/trace2json:bin_sdk($host_toolchain)",
+    "//src/developer/trace2json:bin_sdk($host_toolchain)",
     "//src/sys/pkg/testing/fake-omaha-client:bin_sdk($host_toolchain)",
   ]
 }

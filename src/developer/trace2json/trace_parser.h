@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_TRACE2JSON_TRACE_PARSER_H_
-#define GARNET_BIN_TRACE2JSON_TRACE_PARSER_H_
+#ifndef SRC_DEVELOPER_TRACE2JSON_TRACE_PARSER_H_
+#define SRC_DEVELOPER_TRACE2JSON_TRACE_PARSER_H_
 
 #include <lib/trace-engine/fields.h>
 #include <stdint.h>
@@ -36,4 +36,4 @@ class FuchsiaTraceParser {
 
 }  // namespace tracing
 
-#endif  // GARNET_BIN_TRACE2JSON_TRACE_PARSER_H_
+#endif  // SRC_DEVELOPER_TRACE2JSON_TRACE_PARSER_H_

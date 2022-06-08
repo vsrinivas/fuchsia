@@ -1,0 +1,81 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/sdk/sdk_host_tool.gni")
+import("//build/test.gni")
+import("//build/testing/host_test_data.gni")
+
+executable("bin") {
+  output_name = "trace2json"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "convert.cc",
+    "convert.h",
+    "trace_parser.cc",
+    "trace_parser.h",
+  ]
+
+  deps = [ "//src/lib/fxl" ]
+
+  public_deps = [
+    "//garnet/lib/trace_converters:chromium",
+    "//third_party/rapidjson",
+    "//third_party/zlib:zfstream",
+    "//zircon/system/ulib/trace-reader",
+  ]
+}
+
+sdk_host_tool("bin_sdk") {
+  category = "partner"
+  output_name = "trace2json"
+  deps = [ ":bin" ]
+}
+
+install_host_tools("trace2json") {
+  deps = [ ":bin" ]
+  outputs = [ "trace2json" ]
+}
+
+if (is_host) {
+  host_test_data("test_data") {
+    sources = [
+      "test_data/example_benchmark.fxt",
+      "test_data/example_benchmark_expected.json",
+      "test_data/no_magic.fxt",
+      "test_data/simple_trace.fxt",
+      "test_data/simple_trace.fxt.gz",
+      "test_data/simple_trace_expected.json",
+      "test_data/simple_trace_expected.json.gz",
+    ]
+
+    outputs = [ "$root_out_dir/test_data/trace2json/{{source_file_part}}" ]
+  }
+
+  test("trace2json_tests") {
+    output_name = "trace2json_tests"
+
+    sources = [
+      "convert_test.cc",
+      "trace_parser_test.cc",
+    ]
+
+    deps = [
+      ":lib",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+
+    data_deps = [ ":test_data" ]
+  }
+}

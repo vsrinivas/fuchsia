@@ -183,7 +183,7 @@ if (is_host) {
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
     deps = [
-      "//garnet/bin/trace2json:bin",
+      "//src/developer/trace2json:bin",
       "//src/testing/catapult_converter:converter_bin",
     ]
 
