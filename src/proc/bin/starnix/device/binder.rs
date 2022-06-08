@@ -2468,7 +2468,7 @@ impl FileSystemOps for BinderFs {}
 const BINDERS: &[&'static FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 impl BinderFs {
-    pub fn new(kernel: &Arc<Kernel>) -> Result<FileSystemHandle, Errno> {
+    pub fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(BinderFs(()));
         fs.set_root(ROMemoryDirectory);
         for binder in BINDERS {
@@ -2477,14 +2477,14 @@ impl BinderFs {
         Ok(fs)
     }
 
-    fn add_binder(kernel: &Arc<Kernel>, fs: &FileSystemHandle, name: &FsStr) -> Result<(), Errno> {
+    fn add_binder(kernel: &Kernel, fs: &FileSystemHandle, name: &FsStr) -> Result<(), Errno> {
         let dev = kernel.device_registry.write().register_misc_chrdev(BinderDev::new())?;
         fs.root().add_node_ops_dev(name, mode!(IFCHR, 0o600), dev, SpecialNode)?;
         Ok(())
     }
 }
 
-pub fn create_binders(kernel: &Arc<Kernel>) -> Result<(), Errno> {
+pub fn create_binders(kernel: &Kernel) -> Result<(), Errno> {
     for binder in BINDERS {
         BinderFs::add_binder(kernel, dev_tmp_fs(kernel), binder)?;
     }

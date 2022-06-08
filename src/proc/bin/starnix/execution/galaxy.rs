@@ -144,7 +144,7 @@ fn create_fs_context(
     // mounted.
     let galaxy_fs = LayeredFs::new(
         create_remotefs_filesystem(&pkg_dir_proxy, "data")?,
-        BTreeMap::from([(b"pkg".to_vec(), TmpFs::new(kernel))]),
+        BTreeMap::from([(b"pkg".to_vec(), TmpFs::new())]),
     );
     let root_fs = LayeredFs::new(root_fs, BTreeMap::from([(b"galaxy".to_vec(), galaxy_fs)]));
 
@@ -155,7 +155,7 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
     if !CONFIG.apex_hack.is_empty() {
         init_task
             .lookup_path_from_root(b"apex")?
-            .mount(WhatToMount::Fs(TmpFs::new(init_task.kernel())), MountFlags::empty())?;
+            .mount(WhatToMount::Fs(TmpFs::new()), MountFlags::empty())?;
         let apex_dir = init_task.lookup_path_from_root(b"apex")?;
         for apex in &CONFIG.apex_hack {
             let apex = apex.as_bytes();

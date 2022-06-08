@@ -196,17 +196,28 @@ pub fn create_filesystem(
     fs_type: &FsStr,
     _data: &FsStr,
 ) -> Result<WhatToMount, Errno> {
-    use WhatToMount::*;
-    Ok(match fs_type {
-        b"devtmpfs" => Fs(dev_tmp_fs(kernel).clone()),
-        b"devpts" => Fs(dev_pts_fs(kernel).clone()),
-        b"proc" => Fs(proc_fs(kernel.clone())),
-        b"selinuxfs" => Fs(selinux_fs(kernel).clone()),
-        b"sysfs" => Fs(sys_fs(kernel).clone()),
-        b"tmpfs" => Fs(TmpFs::new(kernel)),
-        b"binder" => Fs(BinderFs::new(kernel)?),
+    let fs = match fs_type {
+        b"devtmpfs" => dev_tmp_fs(kernel).clone(),
+        b"devpts" => dev_pts_fs(kernel).clone(),
+        b"proc" => proc_fs(kernel.clone()),
+        b"selinuxfs" => selinux_fs(kernel).clone(),
+        b"sysfs" => sys_fs(kernel).clone(),
+        b"tmpfs" => TmpFs::new(),
+        b"binder" => BinderFs::new(kernel)?,
         _ => return error!(ENODEV, String::from_utf8_lossy(fs_type)),
-    })
+    };
+
+    if kernel.selinux_enabled() {
+        (|| {
+            let label = match fs_type {
+                b"tmpfs" => b"u:object_r:tmpfs:s0",
+                _ => return,
+            };
+            fs.selinux_context.set(label.to_vec()).unwrap();
+        })();
+    }
+
+    Ok(WhatToMount::Fs(fs))
 }
 
 /// The `SymlinkMode` enum encodes how symlinks are followed during path traversal.
@@ -537,11 +548,11 @@ mod test {
 
     #[::fuchsia::test]
     fn test_namespace() -> anyhow::Result<()> {
-        let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let (_kernel, current_task) = create_kernel_and_task();
+        let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
-        let dev_fs = TmpFs::new(&kernel);
+        let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
@@ -572,11 +583,11 @@ mod test {
 
     #[::fuchsia::test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
-        let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let (_kernel, current_task) = create_kernel_and_task();
+        let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
-        let dev_fs = TmpFs::new(&kernel);
+        let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
@@ -608,11 +619,11 @@ mod test {
 
     #[::fuchsia::test]
     fn test_path() -> anyhow::Result<()> {
-        let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let (_kernel, current_task) = create_kernel_and_task();
+        let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
-        let dev_fs = TmpFs::new(&kernel);
+        let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
@@ -642,14 +653,14 @@ mod test {
 
     #[::fuchsia::test]
     fn test_shadowing() -> anyhow::Result<()> {
-        let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let (_kernel, current_task) = create_kernel_and_task();
+        let root_fs = TmpFs::new();
         let ns = Namespace::new(root_fs.clone());
         let _foo_node = root_fs.root().create_dir(b"foo")?;
         let mut context = LookupContext::default();
         let foo_dir = ns.root().lookup_child(&current_task, &mut context, b"foo")?;
 
-        let foofs1 = TmpFs::new(&kernel);
+        let foofs1 = TmpFs::new();
         foo_dir.mount(WhatToMount::Fs(foofs1.clone()), MountFlags::empty())?;
         let mut context = LookupContext::default();
         assert!(Arc::ptr_eq(
@@ -659,7 +670,7 @@ mod test {
 
         let ns_clone = ns.clone_namespace();
 
-        let foofs2 = TmpFs::new(&kernel);
+        let foofs2 = TmpFs::new();
         foo_dir.mount(WhatToMount::Fs(foofs2.clone()), MountFlags::empty())?;
         let mut context = LookupContext::default();
         assert!(Arc::ptr_eq(
@@ -680,15 +691,15 @@ mod test {
 
     #[::fuchsia::test]
     fn test_unlink_mounted_directory() -> anyhow::Result<()> {
-        let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let (_kernel, current_task) = create_kernel_and_task();
+        let root_fs = TmpFs::new();
         let ns1 = Namespace::new(root_fs.clone());
         let ns2 = Namespace::new(root_fs.clone());
         let _foo_node = root_fs.root().create_dir(b"foo")?;
         let mut context = LookupContext::default();
         let foo_dir = ns1.root().lookup_child(&current_task, &mut context, b"foo")?;
 
-        let foofs = TmpFs::new(&kernel);
+        let foofs = TmpFs::new();
         foo_dir.mount(WhatToMount::Fs(foofs.clone()), MountFlags::empty())?;
 
         assert_eq!(errno!(EBUSY), ns2.root().unlink(b"foo", UnlinkKind::Directory).unwrap_err());

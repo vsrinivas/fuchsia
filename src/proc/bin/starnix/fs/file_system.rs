@@ -49,6 +49,10 @@ pub struct FileSystem {
     /// permanent_entries flag, to store every node and make sure it doesn't get freed without
     /// being explicitly unlinked.
     entries: Mutex<HashMap<usize, DirEntryHandle>>,
+
+    /// Hack meant to stand in for the fs_use_trans selinux feature. If set, this value will be set
+    /// as the selinux label on any newly created inodes in the filesystem.
+    pub selinux_context: OnceCell<FsString>,
 }
 
 impl FileSystem {
@@ -97,6 +101,7 @@ impl FileSystem {
             rename_mutex: Mutex::new(()),
             nodes: Mutex::new(HashMap::new()),
             entries: Mutex::new(HashMap::new()),
+            selinux_context: OnceCell::new(),
         })
     }
 
@@ -157,6 +162,9 @@ impl FileSystem {
     ) -> FsNodeHandle {
         let node = FsNode::new(ops, self, id, mode);
         self.nodes.lock().insert(node.inode_num, Arc::downgrade(&node));
+        if let Some(label) = self.selinux_context.get() {
+            let _ = node.set_xattr(b"security.selinux", label, XattrOp::Create);
+        }
         node
     }
 

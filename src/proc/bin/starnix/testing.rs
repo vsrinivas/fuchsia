@@ -51,7 +51,7 @@ pub fn create_kernel_and_task_with_fs(
     );
 
     if fs.is_none() {
-        fs = Some(FsContext::new(TmpFs::new(&kernel)));
+        fs = Some(FsContext::new(TmpFs::new()));
     }
 
     let task = Task::create_process_without_parent(

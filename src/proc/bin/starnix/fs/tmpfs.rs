@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use std::sync::Arc;
-use std::sync::Weak;
 
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
 use crate::lock::{Mutex, MutexGuard};
-use crate::task::Kernel;
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -61,9 +59,9 @@ impl FileSystemOps for Arc<TmpFs> {
 }
 
 impl TmpFs {
-    pub fn new(kernel: &Arc<Kernel>) -> FileSystemHandle {
+    pub fn new() -> FileSystemHandle {
         let fs = FileSystem::new_with_permanent_entries(Arc::new(TmpFs(())));
-        fs.set_root(TmpfsDirectory::new(Arc::downgrade(kernel)));
+        fs.set_root(TmpfsDirectory::new());
         fs
     }
 }
@@ -71,25 +69,11 @@ impl TmpFs {
 pub struct TmpfsDirectory {
     xattrs: MemoryXattrStorage,
     child_count: Mutex<u32>,
-    kernel: Weak<Kernel>,
 }
 
 impl TmpfsDirectory {
-    pub fn new(kernel: Weak<Kernel>) -> Self {
-        Self { xattrs: MemoryXattrStorage::default(), child_count: Mutex::new(0), kernel: kernel }
-    }
-
-    fn create_node(
-        &self,
-        parent: &FsNode,
-        node: Box<dyn FsNodeOps>,
-        mode: FileMode,
-    ) -> Result<FsNodeHandle, Errno> {
-        let node = parent.fs().create_node(node, mode);
-        if self.kernel.upgrade().expect("Kernel should exist.").selinux_enabled() {
-            let _ = node.set_xattr(b"security.selinux", b"u:object_r:tmpfs:s0", XattrOp::Create);
-        }
-        Ok(node)
+    pub fn new() -> Self {
+        Self { xattrs: MemoryXattrStorage::default(), child_count: Mutex::new(0) }
     }
 }
 
@@ -107,7 +91,7 @@ impl FsNodeOps for TmpfsDirectory {
     fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
         node.info_write().link_count += 1;
         *self.child_count.lock() += 1;
-        self.create_node(node, Box::new(TmpfsDirectory::new(self.kernel.clone())), FileMode::IFDIR)
+        Ok(node.fs().create_node(Box::new(TmpfsDirectory::new()), FileMode::IFDIR))
     }
 
     fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
@@ -120,7 +104,7 @@ impl FsNodeOps for TmpfsDirectory {
             _ => return error!(EACCES),
         };
         *self.child_count.lock() += 1;
-        self.create_node(node, ops, mode)
+        Ok(node.fs().create_node(ops, mode))
     }
 
     fn create_symlink(
@@ -130,7 +114,7 @@ impl FsNodeOps for TmpfsDirectory {
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
         *self.child_count.lock() += 1;
-        self.create_node(node, Box::new(SymlinkNode::new(target)), FileMode::IFLNK)
+        Ok(node.fs().create_node(Box::new(SymlinkNode::new(target)), FileMode::IFLNK))
     }
 
     fn link(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
@@ -180,8 +164,7 @@ mod test {
 
     #[::fuchsia::test]
     fn test_tmpfs() {
-        let (kernel, _current_task) = create_kernel_and_task();
-        let fs = TmpFs::new(&kernel);
+        let fs = TmpFs::new();
         let root = fs.root();
         let usr = root.create_dir(b"usr").unwrap();
         let _etc = root.create_dir(b"etc").unwrap();
@@ -307,7 +290,7 @@ mod test {
             Kernel::new(&CString::new("test-kernel").unwrap(), &Vec::new())
                 .expect("failed to create kernel"),
         );
-        let fs = TmpFs::new(&kernel);
+        let fs = TmpFs::new();
         {
             let root = fs.root();
             let usr = root.create_dir(b"usr").expect("failed to create usr");
