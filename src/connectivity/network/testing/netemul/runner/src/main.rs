@@ -53,26 +53,17 @@ async fn test_setup(
     program: fdata::Dictionary,
     namespace: Vec<frunner::ComponentNamespaceEntry>,
 ) -> Result<(config::NetworkEnvironment, fio::DirectoryProxy), anyhow::Error> {
-    // Retrieve the '/svc' directory from the test root's namespace, so
-    // that we can:
+    // Retrieve the '/svc' directory from the test root's namespace, so that we
+    // can:
     // - access the `fuchsia.test/Suite` protocol from the test driver
+    // - access any netstacks that need to be configured
     // - use the `fuchsia.sys2/LifecycleController` for the test root to start
     //   non-test components once test setup is complete
-    let svc_dir = namespace.into_iter().fold(
-        None,
-        |svc_dir, frunner::ComponentNamespaceEntry { path, directory, .. }| match path
-            .as_ref()
-            .map(|s| s.as_str())
-        {
-            Some("/svc") => {
-                assert_eq!(svc_dir, None);
-                Some(directory)
-            }
-            _ => svc_dir,
-        },
-    );
-
-    let svc_dir = svc_dir
+    let svc_dir = namespace
+        .into_iter()
+        .find_map(|frunner::ComponentNamespaceEntry { path, directory, .. }| {
+            (path.map(|path| path == "/svc").unwrap_or(false)).then(|| directory)
+        })
         .context("/svc directory not in namespace")?
         .context("directory field not set for /svc namespace entry")?
         .into_proxy()
