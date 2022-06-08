@@ -30,7 +30,7 @@ assembled_system("overnet") {
   base_packages = [
     ":core",
     "//src/sys/tools/run",
-    "//garnet/bin/trace",
+    "//src/developer/tracing/bin/trace",
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",

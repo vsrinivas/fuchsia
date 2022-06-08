@@ -224,8 +224,6 @@ group("tracing") {
     "//garnet/bin/cpuperf_provider",
     "//garnet/bin/cpuperf_provider:report_generators",
     "//garnet/bin/ktrace_provider",
-    "//garnet/bin/trace",
-    "//garnet/bin/trace_manager",
     "//garnet/bin/traceutil",
     "//src/developer/trace2json",
   ]

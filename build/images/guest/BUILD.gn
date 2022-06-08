@@ -29,7 +29,7 @@ assembled_system("guest") {
   base_packages = [
     ":core",
     "//src/sys/tools/run",
-    "//garnet/bin/trace",
+    "//src/developer/tracing/bin/trace",
     "//src/diagnostics/log-stats:package",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",

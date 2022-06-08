@@ -15,7 +15,7 @@ product_system_image_deps += [
 
 core_realm_package_name = "core"
 core_realm_shards += [
-  "//garnet/bin/trace_manager:trace_manager_core_shard",
+  "//src/developer/tracing/bin/trace_manager:trace_manager_core_shard",
   "//src/developer/remote-control:laboratory-core-shard",
   "//src/devices/bin/driver_playground:driver-playground-core-shard",
   "//src/developer/sshd-host:core_shard",

@@ -11,8 +11,6 @@ group("bin") {
     # "fidl_compatibility_test",
     "ktrace_provider",
     "run_test_component",
-    "trace",
-    "trace_manager",
     "trace_stress",
     "traceutil",
     "//src/developer/sched",

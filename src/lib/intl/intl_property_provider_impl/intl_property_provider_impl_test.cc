@@ -14,7 +14,7 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "garnet/bin/trace/tests/component_context.h"
+#include "src/developer/tracing/bin/trace/tests/component_context.h"
 #include "src/lib/fidl_fuchsia_intl_ext/cpp/fidl_ext.h"
 #include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "src/lib/fostr/fidl/fuchsia/settings/formatting.h"
