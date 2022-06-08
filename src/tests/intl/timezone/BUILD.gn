@@ -102,21 +102,6 @@ fuchsia_unittest_package("timezone-test") {
     "//src/sys/stash:stash_v2",
     "//src/ui/bin/text:text_manager_comp_v2",
   ]
-
-  # TODO(fxbug.dev/83076): Legacy test runner does not support sys environment
-  # tests. Remove below line once the issue is fixed.
-  wrap_cmx_test_with_cml_test = false
-
-  test_specs = {
-    environments = [
-      {
-        dimensions = {
-          # Ensure the device has Vulkan.
-          device_type = "AEMU"
-        }
-      },
-    ]
-  }
 }
 
 # Essentially same as above, but for flutter runner.
@@ -188,10 +173,6 @@ fuchsia_unittest_package("timezone-flutter-test") {
     "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/scenic:component_v2",
   ]
-
-  # TODO(fxbug.dev/83076): Legacy test runner does not support sys environment
-  # tests. Remove below line once the issue is fixed.
-  wrap_cmx_test_with_cml_test = false
 
   test_specs = {
     environments = [
