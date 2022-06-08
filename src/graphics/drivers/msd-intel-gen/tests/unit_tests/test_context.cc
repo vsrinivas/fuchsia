@@ -175,9 +175,27 @@ class MsdIntelContextSubmit : public testing::TestWithParam<Param> {
     std::unique_ptr<magma::PlatformSemaphore> semaphore_;
     std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   };
+
+  static void NotificationCallback(void* token, msd_notification_t* notification) {
+    auto test = reinterpret_cast<MsdIntelContextSubmit*>(token);
+
+    // Process handle wait starter callbacks immediately so that a context shutdown
+    // early will send handle wait cancellations.
+    if (notification->type == MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT) {
+      notification->u.handle_wait.starter(notification->u.handle_wait.wait_context,
+                                          &test->cancel_token);
+    }
+
+    test->notifications_.push_back(*notification);
+  }
+
+  std::vector<msd_notification_t> notifications_;
+  int cancel_token;
+
+  void SubmitCommandBuffer(bool shutdown_early = false);
 };
 
-TEST_P(MsdIntelContextSubmit, SubmitCommandBuffer) {
+void MsdIntelContextSubmit::SubmitCommandBuffer(bool shutdown_early) {
   Param p = GetParam();
 
   DLOG("SubmitCommandBuffer command_buffer_count %u semaphore_count %u", p.command_buffer_count,
@@ -199,10 +217,11 @@ TEST_P(MsdIntelContextSubmit, SubmitCommandBuffer) {
       std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(owner.get(), 0u));
   auto address_space = std::make_shared<AllocatingAddressSpace>(owner.get(), 0, PAGE_SIZE);
 
+  connection->SetNotificationCallback(NotificationCallback, this);
+
   auto context = std::make_shared<MsdIntelContext>(address_space, connection);
 
   std::vector<std::unique_ptr<CommandBuffer>> command_buffers;
-  std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
 
   for (uint32_t i = 0; i < p.command_buffer_count; i++) {
     // Don't need a fully initialized command buffer
@@ -224,7 +243,6 @@ TEST_P(MsdIntelContextSubmit, SubmitCommandBuffer) {
       auto semaphore =
           std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
       wait_semaphores.push_back(semaphore);
-      semaphores.push_back(semaphore);
     }
     command_buffer_desc->wait_semaphore_count = p.semaphore_count;
 
@@ -246,15 +264,59 @@ TEST_P(MsdIntelContextSubmit, SubmitCommandBuffer) {
     EXPECT_EQ(submitted_command_buffers.empty(), p.semaphore_count > 0);
   }
 
-  for (uint32_t i = 0; i < semaphores.size(); i++) {
-    semaphores[i]->Signal();
+  // It's important to have already sent handle wait starter callbacks (NotificationCallback),
+  // so the context shutdown sends handle wait cancellations.
+  if (shutdown_early)
+    context->Shutdown();
+
+  // Process notifications, which may generate more notifications.
+  std::vector<std::unique_ptr<magma::PlatformSemaphore>> semaphores;
+  uint32_t cancel_count = 0;
+
+  while (notifications_.size()) {
+    std::vector<msd_notification_t> processing_notifications;
+    notifications_.swap(processing_notifications);
+
+    for (auto& notification : processing_notifications) {
+      if (notification.type == MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT_CANCEL) {
+        EXPECT_EQ(notification.u.handle_wait_cancel.cancel_token, &cancel_token);
+        cancel_count++;
+      } else {
+        ASSERT_EQ(notification.type, MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT);
+
+        magma_handle_t handle_copy;
+        ASSERT_TRUE(magma::PlatformHandle::duplicate_handle(notification.u.handle_wait.handle,
+                                                            &handle_copy));
+
+        auto semaphore = magma::PlatformSemaphore::Import(handle_copy);
+        ASSERT_TRUE(semaphore);
+        semaphore->Signal();
+
+        semaphores.push_back(std::move(semaphore));
+
+        notification.u.handle_wait.completer(notification.u.handle_wait.wait_context,
+                                             MAGMA_STATUS_OK, notification.u.handle_wait.handle);
+      }
+    }
   }
 
-  EXPECT_TRUE(finished_semaphore->Wait(5000));
-  ASSERT_EQ(submitted_command_buffers.size(), command_buffers.size());
+  // Ensure wait semaphores are reset.
+  for (auto& semaphore : semaphores) {
+    EXPECT_FALSE(semaphore->Wait(0));
+  }
 
-  context->Shutdown();
+  if (shutdown_early) {
+    EXPECT_EQ(cancel_count, p.semaphore_count);
+  } else {
+    EXPECT_TRUE(finished_semaphore->Wait(5000));
+    ASSERT_EQ(submitted_command_buffers.size(), command_buffers.size());
+    context->Shutdown();
+  }
 }
+
+TEST_P(MsdIntelContextSubmit, SubmitCommandBuffer) { SubmitCommandBuffer(); }
+
+TEST_P(MsdIntelContextSubmit, SubmitCommandBufferShutdownEarly) { SubmitCommandBuffer(true); }
 
 INSTANTIATE_TEST_SUITE_P(MsdIntelContextSubmit, MsdIntelContextSubmit,
                          testing::Values(Param{.command_buffer_count = 1, .semaphore_count = 0},

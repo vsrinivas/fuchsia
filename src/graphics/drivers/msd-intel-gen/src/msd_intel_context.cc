@@ -12,6 +12,42 @@
 #include "platform_thread.h"
 #include "platform_trace.h"
 
+// static
+void MsdIntelContext::HandleWaitContext::Starter(void* context, void* cancel_token) {
+  reinterpret_cast<HandleWaitContext*>(context)->cancel_token = cancel_token;
+}
+
+// static
+void MsdIntelContext::HandleWaitContext::Completer(void* context, magma_status_t status,
+                                                   magma_handle_t handle) {
+  // Ensure handle is closed.
+  auto semaphore = magma::PlatformSemaphore::Import(handle);
+
+  auto wait_context =
+      std::unique_ptr<HandleWaitContext>(reinterpret_cast<HandleWaitContext*>(context));
+
+  // Starter must have been called first.
+  DASSERT(wait_context->cancel_token);
+
+  if (wait_context->completed)
+    return;
+
+  semaphore->Reset();
+
+  // Complete the wait if the context is not shutdown and this wasn't already completed
+  // (see ::UpdateWaitSet())
+  if (wait_context->context)
+    wait_context->context->WaitComplete(wait_context.get(), status);
+}
+
+std::vector<std::shared_ptr<magma::PlatformSemaphore>> MsdIntelContext::GetWaitSemaphores() const {
+  std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
+  for (auto& wait_context : wait_set_) {
+    semaphores.push_back(wait_context->semaphore);
+  }
+  return semaphores;
+}
+
 void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
                                      std::unique_ptr<MsdIntelBuffer> context_buffer,
                                      std::unique_ptr<Ringbuffer> ringbuffer) {
@@ -98,26 +134,19 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
   return true;
 }
 
-MsdIntelContext::~MsdIntelContext() { DASSERT(!wait_thread_.joinable()); }
-
 void MsdIntelContext::Shutdown() {
-  if (semaphore_port_)
-    semaphore_port_->Close();
+  auto connection = connection_.lock();
 
-  if (wait_thread_.joinable()) {
-    DLOG("joining wait thread");
-    wait_thread_.join();
-    DLOG("joined wait thread");
+  for (auto& wait_context : wait_set_) {
+    if (connection && wait_context->cancel_token) {
+      connection->CancelHandleWait(wait_context->cancel_token);
+    }
+    wait_context->context = nullptr;
   }
 
-  semaphore_port_.reset();
-
   // Clear presubmit command buffers so buffer release doesn't see stuck mappings
-  {
-    std::lock_guard lock(presubmit_mutex_);
-    while (presubmit_queue_.size()) {
-      presubmit_queue_.pop();
-    }
+  while (presubmit_queue_.size()) {
+    presubmit_queue_.pop();
   }
 }
 
@@ -136,35 +165,67 @@ magma::Status MsdIntelContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer
 }
 
 magma::Status MsdIntelContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
-  if (!semaphore_port_) {
-    semaphore_port_ = magma::SemaphorePort::Create();
+  presubmit_queue_.push(std::move(batch));
 
-    DASSERT(!wait_thread_.joinable());
-    wait_thread_ = std::thread([this] {
-      magma::PlatformThreadHelper::SetCurrentThreadName("ContextWaitThread");
-      DLOG("context wait thread started");
-      while (semaphore_port_->WaitOne()) {
-      }
-      DLOG("context wait thread exited");
-    });
-  }
-
-  {
-    std::lock_guard lock(presubmit_mutex_);
-    presubmit_queue_.push(std::move(batch));
-
-    if (presubmit_queue_.size() == 1)
-      return SubmitBatchLocked();
-  }
+  if (presubmit_queue_.size() == 1)
+    return ProcessPresubmitQueue();
 
   return MAGMA_STATUS_OK;
 }
 
-magma::Status MsdIntelContext::SubmitBatchLocked() {
-  auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) {
-    std::lock_guard lock(presubmit_mutex_);
-    this->SubmitBatchLocked();
-  };
+void MsdIntelContext::WaitComplete(HandleWaitContext* wait_context, magma_status_t status) {
+  DLOG("WaitComplete semaphore %lu status %d", wait_context->semaphore->id(), status);
+
+  if (status != MAGMA_STATUS_OK) {
+    DMESSAGE("Wait complete failed: %d", status);
+    // Just return as the connection is probably shutting down.
+    return;
+  }
+
+  for (auto iter = wait_set_.begin(); iter != wait_set_.end(); iter++) {
+    if (wait_context == *iter) {
+      wait_context->completed = true;
+      wait_set_.erase(iter);
+
+      wait_context = nullptr;
+      break;
+    }
+  }
+
+  if (wait_context) {
+    // Not found; assume it was handled in UpdateWaitSet()
+    return;
+  }
+
+  // If all semaphores in the wait set have completed, submit the batch.
+  if (wait_set_.empty()) {
+    ProcessPresubmitQueue();
+  }
+}
+
+// Used by the connection for stalling on buffer release.
+void MsdIntelContext::UpdateWaitSet() {
+  for (auto iter = wait_set_.begin(); iter != wait_set_.end();) {
+    HandleWaitContext* wait_context = *iter;
+    if ((*iter)->semaphore->Wait(0)) {
+      // Semaphore was reset; now mark this context to be skipped when the async completer
+      // callback happens
+      wait_context->completed = true;
+
+      iter = wait_set_.erase(iter);
+    } else {
+      iter++;
+    }
+  }
+
+  // If all semaphores in the wait set have completed, submit the batch.
+  if (wait_set_.empty()) {
+    ProcessPresubmitQueue();
+  }
+}
+
+magma::Status MsdIntelContext::ProcessPresubmitQueue() {
+  DASSERT(wait_set_.empty());
 
   while (presubmit_queue_.size()) {
     DLOG("presubmit_queue_ size %zu", presubmit_queue_.size());
@@ -178,13 +239,15 @@ magma::Status MsdIntelContext::SubmitBatchLocked() {
       semaphores = static_cast<CommandBuffer*>(batch.get())->wait_semaphores();
     }
 
-    if (semaphores.size() == 0) {
-      auto connection = connection_.lock();
-      if (!connection)
-        return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "couldn't lock reference to connection");
+    auto connection = connection_.lock();
+    if (!connection)
+      return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "couldn't lock reference to connection");
 
-      if (killed())
-        return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+    if (killed())
+      return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+
+    if (semaphores.size() == 0) {
+      DLOG("queue head has no semaphores, submitting");
 
       if (batch->GetType() == MappedBatch::BatchType::COMMAND_BUFFER) {
         TRACE_DURATION("magma", "SubmitBatchLocked");
@@ -192,24 +255,39 @@ magma::Status MsdIntelContext::SubmitBatchLocked() {
             static_cast<CommandBuffer*>(batch.get())->GetBatchBufferId();
         TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
       }
+
       connection->SubmitBatch(std::move(batch));
       presubmit_queue_.pop();
+
     } else {
       DLOG("adding waitset with %zu semaphores", semaphores.size());
 
-      // Invoke the callback when semaphores are satisfied;
-      // the next ProcessPendingFlip will see an empty semaphore array for the front request.
-      bool result = semaphore_port_->AddWaitSet(
-          std::make_unique<magma::SemaphorePort::WaitSet>(callback, std::move(semaphores)));
-      if (result) {
-        break;
-      } else {
-        MAGMA_LOG(WARNING, "SubmitBatchLocked: failed to add to waitset");
+      for (auto& semaphore : semaphores) {
+        AddToWaitset(connection, std::move(semaphore));
       }
+
+      break;
     }
   }
 
   return MAGMA_STATUS_OK;
+}
+
+void MsdIntelContext::AddToWaitset(std::shared_ptr<MsdIntelConnection> connection,
+                                   std::shared_ptr<magma::PlatformSemaphore> semaphore) {
+  magma_handle_t handle;
+  bool result = semaphore->duplicate_handle(&handle);
+  if (!result) {
+    DASSERT(false);
+    return;
+  }
+
+  auto wait_context = std::make_unique<HandleWaitContext>(this, semaphore);
+
+  wait_set_.push_back(wait_context.get());
+
+  connection->AddHandleWait(HandleWaitContext::Completer, HandleWaitContext::Starter,
+                            wait_context.release(), handle);
 }
 
 void MsdIntelContext::Kill() {

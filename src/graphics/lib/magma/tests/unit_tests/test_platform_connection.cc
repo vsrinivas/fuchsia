@@ -112,15 +112,19 @@ struct SharedData {
   std::unique_ptr<magma::PlatformHandle> test_access_token;
   bool can_access_performance_counters;
   uint64_t pool_id = UINT64_MAX;
+  std::function<void(msd_connection_notification_callback_t callback, void* token)>
+      notification_handler;
+  // Flow control defaults should avoid tests hitting flow control
+  uint64_t max_inflight_messages = 1000u;
+  uint64_t max_inflight_bytes = 1000000u;
 };
 
 // Most tests here execute the client commands in the test thread context,
 // with a separate server thread processing the commands.
 class TestPlatformConnection {
  public:
-  // Defaults should avoid tests hitting flow control
-  static std::unique_ptr<TestPlatformConnection> Create(uint64_t max_inflight_messages = 1000u,
-                                                        uint64_t max_inflight_bytes = 1000000u);
+  static std::unique_ptr<TestPlatformConnection> Create(
+      std::shared_ptr<SharedData> shared_data = std::make_shared<SharedData>());
 
   TestPlatformConnection(std::shared_ptr<magma::PlatformConnectionClient> client_connection,
                          std::thread ipc_thread,
@@ -586,20 +590,17 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
 
   void SetNotificationCallback(msd_connection_notification_callback_t callback,
                                void* token) override {
+    std::unique_lock<std::mutex> lock(shared_data_->mutex);
+
     if (!token) {
-      std::unique_lock<std::mutex> lock(shared_data_->mutex);
       // This doesn't count as test complete because it should happen in every test when the
       // server shuts down.
       shared_data_->got_null_notification = true;
-    } else {
-      msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
-      *reinterpret_cast<uint32_t*>(n.u.channel_send.data) = kNotificationData;
-      n.u.channel_send.size = sizeof(uint32_t);
+      return;
+    }
 
-      for (uint32_t i = 0; i < kNotificationCount; i++) {
-        callback(token, &n);
-        *reinterpret_cast<uint32_t*>(n.u.channel_send.data) += 1;
-      }
+    if (shared_data_->notification_handler) {
+      shared_data_->notification_handler(callback, token);
     }
   }
 
@@ -718,9 +719,7 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
 };
 
 std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create(
-    uint64_t max_inflight_messages, uint64_t max_inflight_bytes) {
-  auto shared_data = std::make_shared<SharedData>();
-
+    std::shared_ptr<SharedData> shared_data) {
   auto delegate = std::make_unique<TestDelegate>(shared_data);
 
   std::shared_ptr<magma::PlatformConnectionClient> client_connection;
@@ -749,7 +748,7 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create(
   if (!client_connection) {
     client_connection = magma::PlatformConnectionClient::Create(
         endpoints->client.channel().release(), client_notification_endpoint.release(),
-        max_inflight_messages, max_inflight_bytes);
+        shared_data->max_inflight_messages, shared_data->max_inflight_bytes);
   }
 
   if (!client_connection)
@@ -828,9 +827,149 @@ TEST(PlatformConnection, MapUnmapBuffer) {
 }
 
 TEST(PlatformConnection, NotificationChannel) {
-  auto Test = TestPlatformConnection::Create();
+  auto shared_data = std::make_shared<SharedData>();
+
+  shared_data->notification_handler = [](msd_connection_notification_callback_t callback,
+                                         void* token) {
+    msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
+    *reinterpret_cast<uint32_t*>(n.u.channel_send.data) = kNotificationData;
+    n.u.channel_send.size = sizeof(uint32_t);
+
+    for (uint32_t i = 0; i < kNotificationCount; i++) {
+      callback(token, &n);
+      *reinterpret_cast<uint32_t*>(n.u.channel_send.data) += 1;
+    }
+  };
+
+  auto Test = TestPlatformConnection::Create(shared_data);
   ASSERT_NE(Test, nullptr);
   Test->TestNotificationChannel();
+}
+
+namespace {
+struct CompleterContext {
+  bool expect_cancelled = false;
+  msd_connection_notification_callback_t callback = nullptr;
+  void* callback_token = nullptr;
+
+  std::shared_ptr<magma::PlatformSemaphore> wait_semaphore = magma::PlatformSemaphore::Create();
+  std::shared_ptr<magma::PlatformSemaphore> signal_semaphore = magma::PlatformSemaphore::Create();
+  std::shared_ptr<magma::PlatformSemaphore> started = magma::PlatformSemaphore::Create();
+  void* cancel_token = nullptr;
+
+  static void Starter(void* _context, void* cancel_token) {
+    auto context = reinterpret_cast<CompleterContext*>(_context);
+    context->cancel_token = cancel_token;
+    context->started->Signal();
+  }
+
+  static void Completer(void* _context, magma_status_t status, magma_handle_t handle) {
+    auto context = reinterpret_cast<CompleterContext*>(_context);
+    if (context->expect_cancelled) {
+      EXPECT_NE(MAGMA_STATUS_OK, status);
+    } else {
+      EXPECT_EQ(MAGMA_STATUS_OK, status);
+    }
+
+    ASSERT_NE(handle, magma::PlatformHandle::kInvalidHandle);
+
+    auto semaphore = magma::PlatformSemaphore::Import(handle);
+    ASSERT_TRUE(semaphore);
+
+    EXPECT_EQ(context->wait_semaphore->id(), semaphore->id());
+
+    context->signal_semaphore->Signal();
+  }
+};
+}  // namespace
+
+TEST(PlatformConnection, NotificationHandleWait) {
+  auto shared_data = std::make_shared<SharedData>();
+
+  auto context = std::make_unique<CompleterContext>();
+
+  // Invoked from connection thread with shared data mutex held
+  shared_data->notification_handler =
+      [context = context.get()](msd_connection_notification_callback_t callback, void* token) {
+        context->callback = callback;
+        context->callback_token = token;
+      };
+
+  auto Test = TestPlatformConnection::Create(shared_data);
+  ASSERT_NE(Test, nullptr);
+
+  while (true) {
+    usleep(10000);
+    std::unique_lock<std::mutex> lock(shared_data->mutex);
+    if (context->callback)
+      break;
+  }
+
+  {
+    msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT};
+    n.u.handle_wait.wait_context = context.get();
+    n.u.handle_wait.completer = CompleterContext::Completer;
+    n.u.handle_wait.starter = CompleterContext::Starter;
+    EXPECT_TRUE(context->wait_semaphore->duplicate_handle(&n.u.handle_wait.handle));
+    context->callback(context->callback_token, &n);
+  };
+
+  EXPECT_EQ(MAGMA_STATUS_OK, context->started->Wait().get());
+  EXPECT_NE(context->cancel_token, nullptr);
+
+  context->wait_semaphore->Signal();
+  EXPECT_EQ(MAGMA_STATUS_OK, context->signal_semaphore->Wait().get());
+
+  Test->FlowControlSkip();
+  shared_data->test_complete = true;
+}
+
+TEST(PlatformConnection, NotificationHandleWaitCancel) {
+  auto shared_data = std::make_shared<SharedData>();
+
+  auto context = std::make_unique<CompleterContext>();
+  context->expect_cancelled = true;
+
+  // Invoked from connection thread with shared data mutex held
+  shared_data->notification_handler =
+      [context = context.get()](msd_connection_notification_callback_t callback, void* token) {
+        context->callback = callback;
+        context->callback_token = token;
+      };
+
+  auto Test = TestPlatformConnection::Create(shared_data);
+  ASSERT_NE(Test, nullptr);
+
+  while (true) {
+    usleep(10000);
+    std::unique_lock<std::mutex> lock(shared_data->mutex);
+    if (context->callback)
+      break;
+  }
+
+  {
+    msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT};
+    n.u.handle_wait.wait_context = context.get();
+    n.u.handle_wait.completer = CompleterContext::Completer;
+    n.u.handle_wait.starter = CompleterContext::Starter;
+    EXPECT_TRUE(context->wait_semaphore->duplicate_handle(&n.u.handle_wait.handle));
+    context->callback(context->callback_token, &n);
+  };
+
+  EXPECT_EQ(MAGMA_STATUS_OK, context->started->Wait().get());
+  EXPECT_NE(context->cancel_token, nullptr);
+
+  {
+    msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT_CANCEL};
+    n.u.handle_wait_cancel.cancel_token = context->cancel_token;
+    context->callback(context->callback_token, &n);
+  };
+
+  // Completer should still be called after cancellation?
+  EXPECT_EQ(MAGMA_STATUS_OK, context->signal_semaphore->Wait().get());
+
+  Test->FlowControlSkip();
+  shared_data->test_complete = true;
 }
 
 TEST(PlatformConnection, ExecuteImmediateCommands) {
