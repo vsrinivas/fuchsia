@@ -23,7 +23,6 @@ executable("logs_integration_cpp_tests") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -62,7 +61,6 @@ executable("logs_integration_structured_cpp_tests") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 

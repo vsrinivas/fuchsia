@@ -8,7 +8,6 @@
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>
 
@@ -116,38 +115,38 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // severities "in the wild" including both those from the
   // legacy syslog severities and the new.
   std::vector<int8_t> severities_in_use = {
-      -10,             // Legacy "verbosity" (v=10)
-      -5,              // Legacy "verbosity" (v=5)
-      -4,              // Legacy "verbosity" (v=4)
-      -3,              // Legacy "verbosity" (v=3)
-      -2,              // Legacy "verbosity" (v=2)
-      -1,              // Legacy "verbosity" (v=1)
-      0,               // Legacy severity (INFO)
-      1,               // Legacy severity (WARNING)
-      2,               // Legacy severity (ERROR)
-      FX_LOG_TRACE,    // 0x10
-      FX_LOG_DEBUG,    // 0x20
-      FX_LOG_INFO,     // 0x30
-      FX_LOG_WARNING,  // 0x40
-      FX_LOG_ERROR,    // 0x50
+      -10,                  // Legacy "verbosity" (v=10)
+      -5,                   // Legacy "verbosity" (v=5)
+      -4,                   // Legacy "verbosity" (v=4)
+      -3,                   // Legacy "verbosity" (v=3)
+      -2,                   // Legacy "verbosity" (v=2)
+      -1,                   // Legacy "verbosity" (v=1)
+      0,                    // Legacy severity (INFO)
+      1,                    // Legacy severity (WARNING)
+      2,                    // Legacy severity (ERROR)
+      syslog::LOG_TRACE,    // 0x10
+      syslog::LOG_DEBUG,    // 0x20
+      syslog::LOG_INFO,     // 0x30
+      syslog::LOG_WARNING,  // 0x40
+      syslog::LOG_ERROR,    // 0x50
   };
 
   // expected severities (sorted), factoring in legacy transforms
   std::vector<int8_t> expected_severities = {
-      FX_LOG_TRACE,      // Legacy "verbosity" (v=2)
-      FX_LOG_TRACE,      // 0x10
-      FX_LOG_DEBUG,      // 0x20
-      FX_LOG_DEBUG,      // Legacy "verbosity" (v=1)
-      FX_LOG_INFO - 10,  // Legacy "verbosity" (v=10)
-      FX_LOG_INFO - 5,   // Legacy "verbosity" (v=5)
-      FX_LOG_INFO - 4,   // Legacy "verbosity" (v=4)
-      FX_LOG_INFO - 3,   // Legacy "verbosity" (v=3)
-      FX_LOG_INFO,       // Legacy severity (INFO)
-      FX_LOG_INFO,       // 0x30
-      FX_LOG_WARNING,    // 0x40
-      FX_LOG_WARNING,    // Legacy severity (WARNING)
-      FX_LOG_ERROR,      // Legacy severity (ERROR)
-      FX_LOG_ERROR,      // 0x50
+      syslog::LOG_TRACE,      // Legacy "verbosity" (v=2)
+      syslog::LOG_TRACE,      // 0x10
+      syslog::LOG_DEBUG,      // 0x20
+      syslog::LOG_DEBUG,      // Legacy "verbosity" (v=1)
+      syslog::LOG_INFO - 10,  // Legacy "verbosity" (v=10)
+      syslog::LOG_INFO - 5,   // Legacy "verbosity" (v=5)
+      syslog::LOG_INFO - 4,   // Legacy "verbosity" (v=4)
+      syslog::LOG_INFO - 3,   // Legacy "verbosity" (v=3)
+      syslog::LOG_INFO,       // Legacy severity (INFO)
+      syslog::LOG_INFO,       // 0x30
+      syslog::LOG_WARNING,    // 0x40
+      syslog::LOG_WARNING,    // Legacy severity (WARNING)
+      syslog::LOG_ERROR,      // Legacy severity (ERROR)
+      syslog::LOG_ERROR,      // 0x50
   };
 
   syslog::LogSettings settings = {.min_log_level = severities_in_use[0]};
@@ -190,26 +189,13 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   auto env = CreateNewEnclosingEnvironment("no_klogs", std::move(svcs));
   WaitForEnclosingEnvToStart(env.get());
 
-  auto logger_sink = env->ConnectToService<fuchsia::logger::LogSink>();
-  zx::socket logger_sock, server_end;
-  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &logger_sock, &server_end));
-  logger_sink->Connect(std::move(server_end));
-
+  auto log_sink = env->ConnectToService<fuchsia::logger::LogSink>();
   const char* tag = "my-tag";
-  const char** tags = &tag;
 
-  fx_logger_config_t config = {
-      .min_severity = FX_LOG_INFO,
-      .console_fd = -1,
-      .log_sink_socket = logger_sock.release(),
-      .tags = tags,
-      .num_tags = 1,
-  };
-
-  fx_logger_t* logger;
-  ASSERT_EQ(ZX_OK, fx_logger_create(&config, &logger));
-  ASSERT_EQ(ZX_OK, fx_logger_log(logger, FX_LOG_INFO, nullptr, "hello world"));
-
+  syslog::SetLogSettings(
+      syslog::LogSettings{.archivist_channel_override = log_sink.Unbind().TakeChannel().release()},
+      {tag});
+  FX_SLOG(INFO, "hello world");
   StubLogListener log_listener;
   ASSERT_TRUE(log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));
 
@@ -218,8 +204,6 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   auto& msg = logs[0];
   ASSERT_EQ(msg.tags.size(), 1u);
   ASSERT_EQ(msg.tags[0], tag);
-
-  fx_logger_destroy(logger);
 }
 
 }  // namespace
