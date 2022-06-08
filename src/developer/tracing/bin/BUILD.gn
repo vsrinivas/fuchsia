@@ -6,6 +6,8 @@ group("bin") {
   deps = [
     "trace",
     "trace_manager",
+    "trace_stress",
+    "traceutil",
   ]
 }
 

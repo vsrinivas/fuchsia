@@ -62,6 +62,6 @@ fuchsia_shell_package("trace") {
 
     # If your build includes the target trace tool, your $host_tools_dir
     # contains the utilities to work with traces copied from the target.
-    "//garnet/bin/traceutil",
+    "//src/developer/tracing/bin/traceutil",
   ]
 }
