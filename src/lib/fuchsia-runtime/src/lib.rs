@@ -36,6 +36,7 @@ use {
 // TODO(fxbug.dev/61174): Document these.
 #[allow(missing_docs)]
 extern "C" {
+    pub fn dl_clone_loader_service(out: *mut zx_handle_t) -> zx_status_t;
     pub fn zx_take_startup_handle(hnd_info: u32) -> zx_handle_t;
     pub fn zx_thread_self() -> zx_handle_t;
     pub fn zx_process_self() -> zx_handle_t;
@@ -323,6 +324,16 @@ pub fn vmar_root_self() -> Unowned<'static, Vmar> {
     }
 }
 
+/// Get a reference to the fuchsia.ldsvc.Loader channel.
+pub fn loader_svc() -> Result<Handle, Status> {
+    unsafe {
+        let mut handle: zx_handle_t = 0;
+        let status = dl_clone_loader_service(&mut handle);
+        Status::ok(status)?;
+        Ok(Handle::from_raw(handle))
+    }
+}
+
 /// Get a reference to the default `Job` provided to the process on startup.
 ///
 /// This typically refers to the `Job` that is the immediate parent of the current
@@ -432,5 +443,10 @@ mod tests {
     #[test]
     fn read_utc_time() {
         utc_time();
+    }
+
+    #[test]
+    fn get_loader_svc() {
+        loader_svc().unwrap();
     }
 }
