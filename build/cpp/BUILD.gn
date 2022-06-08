@@ -18,7 +18,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
   visibility = [
     "//examples/drivers/dotmatrix_display:bin2",
     "//garnet/public/lib/svc/cpp",
-    "//garnet/public/lib/test_runner/cpp",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/svchost",
     "//src/bringup/bin/svchost:crashsvc",

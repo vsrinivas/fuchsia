@@ -598,7 +598,6 @@ config("Wno-conversion") {
     "//garnet/lib/perfmon:*",
     "//garnet/lib/profiler:*",
     "//garnet/lib/profiler/tests:*",
-    "//garnet/public/lib/test_runner/cpp:*",
     "//sdk/lib/media/audio/cpp:*",
     "//sdk/lib/media/cpp:*",
     "//sdk/lib/sys/cpp/tests:*",
