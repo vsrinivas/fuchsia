@@ -7,4 +7,7 @@ import("//build/bind/bind.gni")
 bind_library("fuchsia.acpi") {
   sdk_category = "experimental"
   source = "fuchsia.acpi.bind"
+
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  generate_deprecated_fidl_binding = false
 }

@@ -28,7 +28,7 @@
 
 #include <memory>
 
-#include <bind/fuchsia/acpi/cpp/fidl.h>
+#include <bind/fuchsia/acpi/cpp/bind.h>
 #include <bind/fuchsia/pci/cpp/fidl.h>
 #include <ddktl/device.h>
 
@@ -93,7 +93,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
 
   const zx_bind_inst_t acpi_fragment_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
-      BI_ABORT_IF(NE, BIND_ACPI_BUS_TYPE, bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI),
+      BI_ABORT_IF(NE, BIND_ACPI_BUS_TYPE, bind_fuchsia_acpi::BIND_ACPI_BUS_TYPE_PCI),
       BI_MATCH_IF(EQ, BIND_PCI_TOPO, pci_bind_topo),
   };
 

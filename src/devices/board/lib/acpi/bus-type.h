@@ -6,16 +6,16 @@
 #define SRC_DEVICES_BOARD_LIB_ACPI_BUS_TYPE_H_
 
 #ifdef __Fuchsia__
-#include <bind/fuchsia/acpi/cpp/fidl.h>
+#include <bind/fuchsia/acpi/cpp/bind.h>
 #endif
 
 namespace acpi {
 #ifdef __Fuchsia__
 enum BusType {
-  kUnknown = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_UNKNOWN,
-  kPci = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI,
-  kSpi = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_SPI,
-  kI2c = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_I2C,
+  kUnknown = bind_fuchsia_acpi::BIND_ACPI_BUS_TYPE_UNKNOWN,
+  kPci = bind_fuchsia_acpi::BIND_ACPI_BUS_TYPE_PCI,
+  kSpi = bind_fuchsia_acpi::BIND_ACPI_BUS_TYPE_SPI,
+  kI2c = bind_fuchsia_acpi::BIND_ACPI_BUS_TYPE_I2C,
 };
 #else
 enum BusType {
