@@ -390,7 +390,7 @@ From //build/board.gni:10
 A list of driver package labels to include in the 'base' package set. Used
 by the board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "arm64"`:** `["//bundles/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/arm64.gni:29
 
@@ -398,7 +398,7 @@ From //boards/arm64.gni:29
 
 From //build/board.gni:17
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//bundles/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/common/x64-common.gni:54
 
@@ -553,7 +553,7 @@ From //build/board.gni:75
 ### board_system_image_deps
 A list of binary labels to include in the system_image package.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:wlan_drivers"]`
+**Current value for `target_cpu = "arm64"`:** `["//bundles/packages/prod:wlan_drivers"]`
 
 From //boards/arm64.gni:27
 
