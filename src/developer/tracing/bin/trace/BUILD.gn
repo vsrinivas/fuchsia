@@ -33,11 +33,11 @@ source_set("trace_app") {
   ]
 
   public_deps = [
-    "//garnet/lib/trace_converters:chromium",
     "//sdk/fidl/fuchsia.tracing.controller",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
+    "//src/developer/tracing/lib/trace_converters:chromium",
     "//src/lib/fxl",
     "//third_party/zlib:zfstream",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

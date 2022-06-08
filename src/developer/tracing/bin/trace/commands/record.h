@@ -17,11 +17,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "garnet/lib/trace_converters/chromium_exporter.h"
 #include "src/developer/tracing/bin/trace/cmd_utils.h"
 #include "src/developer/tracing/bin/trace/command.h"
 #include "src/developer/tracing/bin/trace/tracer.h"
 #include "src/developer/tracing/bin/trace/utils.h"
+#include "src/developer/tracing/lib/trace_converters/chromium_exporter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace tracing {

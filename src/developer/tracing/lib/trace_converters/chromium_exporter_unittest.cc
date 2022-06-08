@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/trace_converters/chromium_exporter.h"
+#include "src/developer/tracing/lib/trace_converters/chromium_exporter.h"
 
 #include <sstream>
 
