@@ -52,7 +52,7 @@ class NaturalEncoder {
 
   size_t CurrentLength() const { return bytes_.size(); }
 
-  size_t CurrentHandleCount() const { return handles_.size(); }
+  size_t CurrentHandleCount() const { return handle_actual_; }
 
   std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
@@ -72,13 +72,8 @@ class NaturalEncoder {
  protected:
   const CodingConfig* coding_config_;
   std::vector<uint8_t> bytes_;
-  std::vector<fidl_handle_t> handles_;
-
-  // When handle ownership is transferred to an |OutgoingMessage|, our class
-  // must no longer close those handles, but still need to keep their backing
-  // storage alive. This is done by moving the vector buffer to a second vector
-  // which does not close handles.
-  std::vector<fidl_handle_t> handles_staging_area_;
+  fidl_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t handle_actual_ = 0;
   MallocedUniquePtr handle_metadata_ = MallocedUniquePtr(nullptr, ptr_noop);
   internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV2;
   zx_status_t status_ = ZX_OK;

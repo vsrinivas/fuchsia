@@ -50,8 +50,12 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
   if (handle) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_PRESENT;
 
-    uint32_t handle_index = static_cast<uint32_t>(handles_.size());
-    handles_.push_back(handle);
+    if (handle_actual_ >= std::size(handles_)) {
+      SetError(kCodingErrorTooManyHandlesConsumed);
+      coding_config_->close(handle);
+      return;
+    }
+    handles_[handle_actual_] = handle;
 
     if (coding_config_->encode_process_handle) {
       if (handle_metadata_ == nullptr && coding_config_->handle_metadata_stride != 0) {
@@ -60,10 +64,12 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
       }
 
       const char* error;
-      zx_status_t status =
-          coding_config_->encode_process_handle(attr, handle_index, handle_metadata_.get(), &error);
+      zx_status_t status = coding_config_->encode_process_handle(attr, handle_actual_,
+                                                                 handle_metadata_.get(), &error);
       ZX_ASSERT_MSG(ZX_OK == status, "error in encode_process_handle: %s", error);
     }
+
+    handle_actual_++;
   } else {
     if (!is_optional) {
       SetError(kCodingErrorAbsentNonNullableHandle);
@@ -81,25 +87,25 @@ fidl::OutgoingMessage NaturalBodyEncoder::GetOutgoingMessage(MessageType type) {
     return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));
   }
 
-  handles_staging_area_ = std::move(handles_);
+  uint32_t num_handles = handle_actual_;
+  handle_actual_ = 0;
   return fidl::OutgoingMessage::Create_InternalMayBreak(
       fidl::OutgoingMessage::InternalByteBackedConstructorArgs{
           .transport_vtable = vtable_,
           .bytes = bytes_.data(),
           .num_bytes = static_cast<uint32_t>(bytes_.size()),
-          .handles = handles_staging_area_.data(),
+          .handles = handles_,
           .handle_metadata = static_cast<fidl_handle_metadata_t*>(handle_metadata_.get()),
-          .num_handles = static_cast<uint32_t>(handles_staging_area_.size()),
+          .num_handles = num_handles,
           .is_transactional = type == MessageType::kTransactional,
       });
 }
 
 void NaturalBodyEncoder::Reset() {
   bytes_.clear();
-  vtable_->encoding_configuration->close_many(handles_.data(), handles_.size());
-  handles_.clear();
+  vtable_->encoding_configuration->close_many(handles_, handle_actual_);
   handle_metadata_.reset();
-  handles_staging_area_.clear();
+  handle_actual_ = 0;
 }
 
 }  // namespace fidl::internal
