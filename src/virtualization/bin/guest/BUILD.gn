@@ -56,8 +56,6 @@ rustc_binary("bin") {
     "src/services.rs",
     "src/socat.rs",
   ]
-
-  features = [ "USE_CFV1" ]
 }
 
 fuchsia_unittest_package("guest_tests") {
