@@ -28,7 +28,8 @@ async fn main() -> Result<(), anyhow::Error> {
     tracing::trace!("Initialized.");
     let codec_proxy = open_directory_in_namespace("/dev/class/codec", OpenFlags::RIGHT_READABLE)?;
     let dai_proxy = open_directory_in_namespace("/dev/class/dai", OpenFlags::RIGHT_READABLE)?;
-    let config = Config::new()?;
+    let mut config = Config::new()?;
+    config.load()?;
     let configurator = Arc::new(Mutex::new(DefaultConfigurator::new(config)?));
     let codec_future = discover::find_codecs(codec_proxy, 0, configurator.clone());
     let dai_future = discover::find_dais(dai_proxy, 0, configurator);

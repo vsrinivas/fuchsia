@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(andresoportus): Remove this as usage of it is added.
-#![allow(dead_code)]
-
 #[derive(Eq, Hash, PartialEq, Clone, Debug)]
 pub struct StreamConfigIndex {
     pub id: [u8; 16],
