@@ -19,7 +19,7 @@ To prepare a USB flash drive to be a bootable disk, do the following:
    fx build
    ```
 
-1. Plug a USB flash drive into *your workstation*.
+1. Plug a USB flash drive into your workstation.
 
 1. Identify the path to the USB drive:
 
@@ -62,9 +62,9 @@ To prepare a USB flash drive to be a bootable disk, do the following:
    mkinstaller: INFO: Ejected USB disk
    ```
 
-   Unplug the USB drive from the workstation.
+1. Unplug the USB drive from the workstation.
 
-1. Plug the bootable USB drive into a target device.
+1. Plug the bootable USB drive into your target device.
 
 1. Configure the target device's BIOS to boot from a USB drive.
 

@@ -1,7 +1,7 @@
 # Install Fuchsia on a NUC
 
-This guide provides instructions on how to install Fuchsia on
-Intel's [NUC][nuc-wiki]{:.external} (Next Unit of Computing) device.
+This guide provides instructions on how to install Fuchsia on an
+Intel [NUC][nuc-wiki]{:.external} (Next Unit of Computing) device.
 
 The steps are:
 

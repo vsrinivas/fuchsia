@@ -1,9 +1,9 @@
-# Fuchsia on Khadas VIM3 Board
+# Install Fuchsia on a Khadas VIM3 board
 
-This document describes running Fuchsia on the Khadas VIM3 board.
-Additional documentation can be found at [docs.khadas.com](http://docs.khadas.com/)
+This document describes running Fuchsia on a Khadas VIM3 board.
 
-The Khadas VIM3 board is the successor to the VIM2.
+The Khadas VIM3 board is the successor to the VIM2. For more information,
+check out the [Khadas Docs](http://docs.khadas.com/){:.external} site.
 
 ## Feature support
 

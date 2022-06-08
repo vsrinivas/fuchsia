@@ -3,12 +3,12 @@
 The Fuchsia platform can be installed on the following hardware devices:
 
 - [Chromebooks][install-fuchsia-on-chromebook]
-- [Intel's NUC (Next Unit of Computing) devices][install-fuchsia-on-nuc]
-- [Khadas VIM3 boards][install-fuchsia-on-vim3]
+- [Intel NUC (Next Unit of Computing) devices][install-fuchsia-on-nuc]
+- [Khadas VIM3 board][install-fuchsia-on-vim3]
 
 ## Architecture support
 
-Fuchsia supports two ISAs: arm64 and x86-64.
+Fuchsia supports two ISAs (Instruction Set Architectures):
 
 * `arm64` - Fuchsia supports `arm64` (also called AArch64) with no restrictions on
   supported microarchitectures.
@@ -32,7 +32,7 @@ Fuchsia's support for CPUs:
 - [Install Fuchsia on a Chromebook][install-fuchsia-on-chromebook]
 - [Install Fuchsia on a NUC][install-fuchsia-on-nuc]
 - [Install Fuchsia on a NUC using Zedboot (Legacy)][install-fuchsia-on-nuc-legacy]
-- [Install Fuchsia on Khadas VIM3 board][install-fuchsia-on-vim3]
+- [Install Fuchsia on a Khadas VIM3 board][install-fuchsia-on-vim3]
 - Create a bootable Fuchsia image:
   - [Install Fuchsia from a USB flash drive][prepare-usb]
   - [Use the Fuchsia installer (Legacy)][use-the-installer-legacy]

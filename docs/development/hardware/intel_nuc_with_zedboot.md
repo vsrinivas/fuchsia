@@ -1,7 +1,7 @@
 # Install Fuchsia on a NUC using Zedboot (Legacy)
 
-This guide provides instructions on how to install Fuchsia on
-Intel's [NUC][nuc-wiki]{:.external} (Next Unit of Computing) device
+This guide provides instructions on how to install Fuchsia on an
+Intel [NUC][nuc-wiki]{:.external} (Next Unit of Computing) device
 using a [Zedboot][glossary.zedboot]-based bootable USB drive.
 
 Caution: This legacy installation method is being deprecated
@@ -378,7 +378,7 @@ Do the following:
      uppercase characters, at least one digit and at least one non alphanumeric
      character.
 
-1. Configure network
+1. Configure network:
 
    1. Go to Network Setup > TCP/IP Settings > Wired LAN IPV4 Configuration.
    1. Disable __DHCP Mode__ and set a static __IPV4 Address__. You need to
