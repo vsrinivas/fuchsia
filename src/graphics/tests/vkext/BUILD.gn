@@ -10,7 +10,6 @@ executable("vkext_bin") {
   output_name = "vkext"
 
   sources = [
-    "main.cc",
     "vk_ext_buffer_collection_x.cc",
     "vk_fuchsia_external_memory.cc",
     "vk_fuchsia_external_semaphore.cc",
@@ -26,7 +25,7 @@ executable("vkext_bin") {
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
     "//src/graphics/tests/common",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:test_settings",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
@@ -41,7 +40,6 @@ executable("vkext_linux") {
   deps = [
     "//src/graphics/tests/common",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -79,17 +77,14 @@ executable("vkext_buffer_collection_bin") {
   testonly = true
   output_name = "vkext_buffer_collection"
 
-  sources = [
-    "main.cc",
-    "vk_ext_buffer_collection.cc",
-  ]
+  sources = [ "vk_ext_buffer_collection.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fdio",
     "//src/graphics/tests/common",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:test_settings",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
     "//third_party/googletest:gtest",
   ]
