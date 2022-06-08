@@ -492,12 +492,9 @@ class MemorySnapshot {
     LockedThreadList all_threads = ScopedThreadList();
     for (auto tcb : all_threads) {
       void* ptrs[] = {
-          // For dead threads awaiting pthread_join, report the return values.
-          tcb->result,
-
-          // For threads that have been suspended before they even start, report the argument passed
-          // to them.
-          tcb->start_arg,
+          // Report the thread's starting argument which may only be available in the internal
+          // pthread, or the thread's result join value which may be set once the thread completes.
+          tcb->start_arg_or_result,
       };
       callback(ptrs, sizeof(ptrs), callback_arg_);
     }

@@ -34,15 +34,25 @@ __NO_SAFESTACK NO_ASAN static pthread_t prestart(void* arg, void* caller) {
   return self;
 }
 
+// Once the thread starts, we shouldn't have to keep the thread's starting argument in the internal
+// pthread. This argument gets passed immediately to the thread entry and it's up to the user to
+// keep track of it. This is meaningful to a tool like LSan which could hide an actual leak if the
+// pthread contained a reference to an unhandled allocation.
+__NO_SAFESTACK NO_ASAN static void* get_and_reset_start_arg(pthread_t self) {
+  void* start_arg = self->start_arg_or_result;
+  self->start_arg_or_result = NULL;
+  return start_arg;
+}
+
 __NO_RETURN __NO_SAFESTACK NO_ASAN static void start_pthread(void* arg) {
   pthread_t self = prestart(arg, __builtin_return_address(0));
-  __pthread_exit(self->start(self->start_arg));
+  __pthread_exit(self->start(get_and_reset_start_arg(self)));
 }
 
 __NO_RETURN __NO_SAFESTACK NO_ASAN static void start_c11(void* arg) {
   pthread_t self = prestart(arg, __builtin_return_address(0));
   int (*start)(void*) = (int (*)(void*))(uintptr_t)self->start;
-  __pthread_exit((void*)(intptr_t)start(self->start_arg));
+  __pthread_exit((void*)(intptr_t)start(get_and_reset_start_arg(self)));
 }
 
 __NO_SAFESTACK static void deallocate_region(const struct iovec* region) {
@@ -85,7 +95,7 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
   zxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
 
   new->start = entry;
-  new->start_arg = arg;
+  new->start_arg_or_result = arg;
 
   void* sanitizer_hook = __sanitizer_before_thread_create_hook(
       (thrd_t) new, attr._a_detach, name, new->safe_stack.iov_base, new->safe_stack.iov_len);
@@ -194,7 +204,9 @@ static NO_ASAN _Noreturn void finish_exit(pthread_t self) {
 _Noreturn void __pthread_exit(void* result) {
   pthread_t self = __pthread_self();
 
-  self->result = result;
+  ZX_DEBUG_ASSERT_MSG(self->start_arg_or_result == NULL,
+                      "Expected this to be cleared before jumping into the thread entry point.");
+  self->start_arg_or_result = result;
 
   __tls_run_dtors();
 

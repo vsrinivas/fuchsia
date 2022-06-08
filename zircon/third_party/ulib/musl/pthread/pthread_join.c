@@ -7,7 +7,7 @@ int __pthread_join(pthread_t t, void** res) {
     case ZX_OK:
       __thread_list_erase(t);
       if (res)
-        *res = t->result;
+        *res = t->start_arg_or_result;
       _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)t->tcb_region.iov_base,
                      t->tcb_region.iov_len);
       return 0;

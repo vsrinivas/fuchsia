@@ -86,9 +86,11 @@ struct pthread {
   uint64_t gwp_asan_tsd;
 
   void* sanitizer_hook;
-  void* start_arg;
+
+  // This initially holds the argument passed to a pthread on starting, but since we clear this
+  // before entering `start`, we can also reuse this to store the join value.
+  void* start_arg_or_result;
   void* (*start)(void*);
-  void* result;
   locale_t locale;
   char* dlerror_buf;
   int dlerror_flag;

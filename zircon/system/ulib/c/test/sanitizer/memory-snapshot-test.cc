@@ -15,6 +15,7 @@
 #include <zircon/threads.h>
 
 #include <array>
+#include <condition_variable>
 #include <thread>
 #include <vector>
 
@@ -528,6 +529,164 @@ TEST(SanitizerUtilsTest, MemorySnapshotFull) {
   for (const auto& t : result.dead_threads) {
     EXPECT_TRUE(t.seen(), "dead thread %tu not seen", &t - result.dead_threads.begin());
   }
+}
+
+enum StartArgClearedThreadState {
+  kWaitingThreadStart,
+  kThreadRunning,
+  kFinishedSnapshot,
+};
+
+struct ThreadArgs {
+  std::mutex* mutex;
+  std::condition_variable* cv;
+  StartArgClearedThreadState* state;
+};
+
+struct CallbackArgs {
+  void* data_ptr;
+  bool found_in_tls;
+  bool found_in_stack;
+  bool found_in_regs;
+};
+
+// This is the type we pass as an argument to the thread in the `StartArgCleared` test. It's useful
+// to know the type alignment when iterating over raw data.
+using StartArgClearedSearchType = ThreadArgs;
+
+// For the `StartArgCleared`, we want to iterate over the stack to search for a specific pointer. If
+// this code was ASan-instrumented, then it's possible for this to iterate over redzones which ASan
+// will report. We can ignore these reports while searching for the pointer.
+#ifdef __clang__
+[[clang::no_sanitize("address")]]
+#endif
+void StartArgClearedUnsanitizedStackCallback(void* mem, size_t len, void* arg) {
+  auto args = static_cast<CallbackArgs*>(arg);
+  if (args->found_in_stack)
+    return;
+
+  // See if the data we're looking for points anywhere into this stack.
+  uintptr_t data_ptr = reinterpret_cast<uintptr_t>(args->data_ptr);
+  uintptr_t stack_begin = reinterpret_cast<uintptr_t>(mem);
+  uintptr_t stack_end = reinterpret_cast<uintptr_t>(stack_begin + len);
+  args->found_in_stack = (stack_begin <= data_ptr && data_ptr < stack_end);
+}
+
+// If we take a snapshot now, we should not find the argument in tls callbacks because it was
+// cleared before we enter the thread. It should instead be in either the stack or registers.
+void StartArgClearedTlsCallback(void* mem, size_t len, void* arg) {
+  auto args = static_cast<CallbackArgs*>(arg);
+  if (args->found_in_tls)
+    return;
+
+  // The tls callback iterates over two things: (1) the TLS region that contains actual thread-local
+  // data, or (2) pointers to data pointed to by internal pthread machinery. For (1), we can see if
+  // the pointer we're looking for points into this TLS region.
+  uintptr_t data_ptr = reinterpret_cast<uintptr_t>(args->data_ptr);
+  uintptr_t tls_begin = reinterpret_cast<uintptr_t>(mem);
+  uintptr_t tls_end = reinterpret_cast<uintptr_t>(tls_begin + len);
+  if (tls_begin <= data_ptr && data_ptr < tls_end) {
+    args->found_in_tls = true;
+    return;
+  }
+
+  // For (2), we're iterating over an array of pointers. This should also be pointer-aligned, but if
+  // `mem` happens to point to 4-byte aligned data, then it might not.
+  if (reinterpret_cast<uintptr_t>(mem) % alignof(uintptr_t) == 0) {
+    for (const uintptr_t& val :
+         cpp20::span{reinterpret_cast<const uintptr_t*>(mem), len / sizeof(uintptr_t)}) {
+      if (val == reinterpret_cast<uintptr_t>(args->data_ptr)) {
+        args->found_in_tls = true;
+        return;
+      }
+    }
+  }
+}
+
+void StartArgClearedRegsCallback(void* mem, size_t len, void* arg) {
+  auto args = static_cast<CallbackArgs*>(arg);
+  if (args->found_in_regs)
+    return;
+
+  // The regs callback is passed a pointer to an array of registers (specifically
+  // `zx_thread_state_general_regs_t`), so we'll be iterating over an array of pointers. Check if
+  // any of them match the thread argument.
+  ZX_ASSERT_MSG(reinterpret_cast<uintptr_t>(mem) % alignof(uintptr_t) == 0,
+                "`mem` does not point to an array of register values.");
+  for (const uintptr_t& reg :
+       cpp20::span{reinterpret_cast<const uintptr_t*>(mem), len / sizeof(uintptr_t)}) {
+    if (reg == reinterpret_cast<uintptr_t>(args->data_ptr)) {
+      args->found_in_regs = true;
+      return;
+    }
+  }
+}
+
+TEST(SanitizerUtilsTest, StartArgCleared) {
+  std::mutex mutex;
+  std::condition_variable cv;
+  StartArgClearedThreadState state;
+
+  thrd_t thread;
+
+  auto cleanup = fit::defer([&]() {
+    // Finally allow the thread to finish.
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      state = kFinishedSnapshot;
+    }
+    cv.notify_one();
+
+    int result;
+    EXPECT_EQ(thrd_join(thread, &result), thrd_success);
+    EXPECT_EQ(result, 0);
+  });
+
+  auto thread_entry = [](void* arg) {
+    auto* thread_args = reinterpret_cast<ThreadArgs*>(arg);
+    std::mutex& mutex = *thread_args->mutex;
+    std::condition_variable& cv = *thread_args->cv;
+    StartArgClearedThreadState& state = *thread_args->state;
+
+    // Notify the main thread that we have entered this thread.
+    std::unique_lock<std::mutex> lock(mutex);
+    state = kThreadRunning;
+    cv.notify_one();
+
+    // Wait shortly after entering this thread. At this point, the start_arg field of the pthread
+    // struct should be cleared and inaccessible from the tls callback. We can continue from here
+    // once we are in `cleanup` and have finished the scan.
+    cv.wait(lock, [&state]() { return state == kFinishedSnapshot; });
+
+    return 0;
+  };
+
+  ThreadArgs thread_args = {
+      .mutex = &mutex,
+      .cv = &cv,
+      .state = &state,
+  };
+  state = kWaitingThreadStart;
+  ASSERT_EQ(thrd_create(&thread, thread_entry, &thread_args), thrd_success);
+
+  // Wait here until we ensure the new thread has started.
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    cv.wait(lock, [&state]() { return state == kThreadRunning; });
+  }
+
+  CallbackArgs callback_args = {
+      // Try to look for our thread argument.
+      .data_ptr = &thread_args,
+  };
+
+  __sanitizer_memory_snapshot(/*globals=*/nullptr,
+                              /*stacks=*/StartArgClearedUnsanitizedStackCallback,
+                              /*regs=*/StartArgClearedRegsCallback,
+                              /*tls=*/StartArgClearedTlsCallback, /*done=*/nullptr, &callback_args);
+
+  EXPECT_TRUE(callback_args.found_in_stack || callback_args.found_in_regs);
+  EXPECT_FALSE(callback_args.found_in_tls);
 }
 
 // NOTE: We can't use sanitizers for this specific test because we want to be able to suspend the
