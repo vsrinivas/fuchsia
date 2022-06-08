@@ -41,7 +41,7 @@ void main() {
   test('verify can change timezone setting in quicksettings', () async {
     await ermine.gotoOverview();
 
-    // Change the system timezone using setui_client.
+    // Change the system timezone using setui service.
     await setUi.setTimeZone('UTC');
 
     // tap default timezone (UTC) to launch timezone list
