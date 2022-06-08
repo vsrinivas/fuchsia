@@ -69,8 +69,7 @@ in Gerrit, do the following:
     ```
 
 1.  Commit the updated files and
-[write the change message](https://gerrit-review.googlesource.com/Documentation/concept-changes.html){:.external}
-in Gerrit:
+[write the change message](/docs/contribute/commit-message-style-guide.md):
 
     ```posix-terminal
     git commit
