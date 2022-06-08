@@ -21,16 +21,17 @@ namespace audio {
 namespace intel_hda {
 
 IntelDspStream::IntelDspStream(const DspStream& stream)
-    : IntelHDAStreamConfigBase(stream.stream_id, stream.is_input), stream_(stream) {
+    : IntelHDADaiBase(stream.stream_id, stream.is_input), name_(stream.name), stream_(stream) {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %cStream #%u", stream.is_input ? 'I' : 'O',
            stream.stream_id);
 
   SetPersistentUniqueId(stream.uid);
 }
 
-void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::Format format,
+void IntelDspStream::CreateRingBuffer(DaiChannel* channel, audio_fidl::wire::DaiFormat dai_format,
+                                      audio_fidl::wire::Format ring_buffer_format,
                                       ::fidl::ServerEnd<audio_fidl::RingBuffer> ring_buffer,
-                                      StreamChannel::CreateRingBufferCompleter::Sync& completer) {
+                                      DaiChannel::CreateRingBufferCompleter::Sync& completer) {
   // The DSP needs to coordinate with ring buffer commands. Set up an additional
   // LLCPP server to intercept messages on the ring buffer channel.
 
@@ -49,8 +50,8 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
                                                              this, std::move(on_unbound));
 
   ring_buffer_ = std::move(client);
-  IntelHDAStreamConfigBase::CreateRingBuffer(channel, std::move(format), std::move(server),
-                                             completer);
+  IntelHDADaiBase::CreateRingBuffer(channel, std::move(dai_format), std::move(ring_buffer_format),
+                                    std::move(server), completer);
 }
 
 // Pass-through.
@@ -129,6 +130,10 @@ void IntelDspStream::WatchClockRecoveryPositionInfo(
   completer.Reply(result.value().position_info);
 }
 
+void IntelDspStream::OnResetLocked() {
+  // TODO(84428): As part of redesign SST implement the ability to recover via a reset.
+}
+
 zx_status_t IntelDspStream::OnActivateLocked() {
   // FIXME(yky) Hardcode supported formats.
   audio_stream_format_range_t fmt;
@@ -145,12 +150,42 @@ zx_status_t IntelDspStream::OnActivateLocked() {
   }
 
   SetSupportedFormatsLocked(std::move(supported_formats));
+
+  fuchsia_hardware_audio::wire::DaiFormat dai_format;
+  auto& supported_dai_format = stream_.dai_format;
+  dai_format.number_of_channels = stream_.is_i2s ? 2 : 8;  // 2 channels I2S or 8 channels TDM.
+  switch (supported_dai_format.sample_type) {
+    case SampleType::INT_LSB:
+      return ZX_ERR_NOT_SUPPORTED;
+    case SampleType::INT_MSB:
+      dai_format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
+      break;
+    case SampleType::INT_SIGNED:
+      dai_format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
+      break;
+    case SampleType::INT_UNSIGNED:
+      dai_format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmUnsigned;
+      break;
+    case SampleType::FLOAT:
+      dai_format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmFloat;
+      break;
+  }
+  dai_format.frame_format =
+      stream_.is_i2s ? fuchsia_hardware_audio::wire::DaiFrameFormat::WithFrameFormatStandard(
+                           fuchsia_hardware_audio::wire::DaiFrameFormatStandard::kI2S)
+                     : fuchsia_hardware_audio::wire::DaiFrameFormat::WithFrameFormatStandard(
+                           fuchsia_hardware_audio::wire::DaiFrameFormatStandard::kTdm1);
+  dai_format.frame_rate = static_cast<uint32_t>(supported_dai_format.sampling_frequency);
+  dai_format.bits_per_sample = static_cast<uint8_t>(supported_dai_format.valid_bit_depth);
+  dai_format.bits_per_slot = static_cast<uint8_t>(supported_dai_format.bit_depth);
+  SetSupportedDaiFormatsLocked(std::move(dai_format));
+
   return ZX_OK;
 }
 
 void IntelDspStream::OnDeactivateLocked() { LOG(DEBUG, "OnDeactivateLocked"); }
 
-void IntelDspStream::OnChannelDeactivateLocked(const StreamChannel& channel) {
+void IntelDspStream::OnChannelDeactivateLocked(const DaiChannel& channel) {
   LOG(DEBUG, "OnChannelDeactivateLocked");
 }
 
@@ -177,23 +212,6 @@ zx_status_t IntelDspStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt)
   return ZX_OK;
 }
 
-void IntelDspStream::OnGetGainLocked(audio_proto::GainState* out_resp) {
-  LOG(DEBUG, "OnGetGainLocked");
-  IntelHDAStreamConfigBase::OnGetGainLocked(out_resp);
-}
-
-void IntelDspStream::OnSetGainLocked(const audio_proto::SetGainReq& req,
-                                     audio_proto::SetGainResp* out_resp) {
-  LOG(DEBUG, "OnSetGainLocked");
-  IntelHDAStreamConfigBase::OnSetGainLocked(req, out_resp);
-}
-
-void IntelDspStream::OnPlugDetectLocked(StreamChannel* response_channel,
-                                        audio_proto::PlugDetectResp* out_resp) {
-  LOG(DEBUG, "OnPlugDetectLocked");
-  IntelHDAStreamConfigBase::OnPlugDetectLocked(response_channel, out_resp);
-}
-
 void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
                                        audio_proto::GetStringResp* out_resp) {
   ZX_DEBUG_ASSERT(out_resp);
@@ -209,7 +227,7 @@ void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
       break;
 
     default:
-      IntelHDAStreamConfigBase::OnGetStringLocked(req, out_resp);
+      IntelHDADaiBase::OnGetStringLocked(req, out_resp);
       return;
   }
 

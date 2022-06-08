@@ -191,6 +191,24 @@ fuchsia_unittest_package("intel-hda-stream-test") {
   }
 }
 
+executable("intel-dsp-stream-test-bin") {
+  testonly = true
+  sources = [ "intel-dsp-stream-test.cc" ]
+  deps = [
+    ":src",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("intel-dsp-stream-test") {
+  package_name = "intel-dsp-stream-test"
+  deps = [ ":intel-dsp-stream-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
 # Fuzz testing for NHLT parsing.
 #
 # Name needs to end with "-fuzzer" to be included in the Zircon fuzz test package.
@@ -213,6 +231,7 @@ group("tests") {
   testonly = true
   deps = [
     ":ihda_controller_bind_test",
+    ":intel-dsp-stream-test",
     ":intel-hda-controller-fuzzers",
     ":intel-hda-controller-test",
     ":intel-hda-stream-test",

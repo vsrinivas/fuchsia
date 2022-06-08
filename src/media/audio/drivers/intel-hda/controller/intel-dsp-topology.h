@@ -19,6 +19,8 @@ namespace intel_hda {
 struct DspStream {
   DspPipelineId id;
   AudioDataFormat host_format;
+  AudioDataFormat dai_format;
+  bool is_i2s;  // or TDM1.
   uint32_t stream_id;
   bool is_input;
   audio_stream_unique_id_t uid;

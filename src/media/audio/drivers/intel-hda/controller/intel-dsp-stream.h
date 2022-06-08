@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/ddk/device.h>
 
-#include <intel-hda/codec-utils/streamconfig-base.h>
+#include <intel-hda/codec-utils/dai-base.h>
 
 #include "debug-logging.h"
 #include "intel-dsp-topology.h"
@@ -16,7 +16,7 @@
 namespace audio {
 namespace intel_hda {
 
-class IntelDspStream : public codecs::IntelHDAStreamConfigBase,
+class IntelDspStream : public codecs::IntelHDADaiBase,
                        public fidl::WireServer<fuchsia_hardware_audio::RingBuffer> {
  public:
   explicit IntelDspStream(const DspStream& stream);
@@ -26,9 +26,10 @@ class IntelDspStream : public codecs::IntelHDAStreamConfigBase,
  protected:
   virtual ~IntelDspStream() {}
 
+  void OnResetLocked() __TA_REQUIRES(obj_lock()) final;
   zx_status_t OnActivateLocked() __TA_REQUIRES(obj_lock()) final;
   void OnDeactivateLocked() __TA_REQUIRES(obj_lock()) final;
-  void OnChannelDeactivateLocked(const StreamChannel& channel) __TA_REQUIRES(obj_lock()) final;
+  void OnChannelDeactivateLocked(const DaiChannel& channel) __TA_REQUIRES(obj_lock()) final;
   zx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock()) final;
   zx_status_t OnSolicitedResponseLocked(const CodecResponse& resp) __TA_REQUIRES(obj_lock()) final;
   zx_status_t OnUnsolicitedResponseLocked(const CodecResponse& resp)
@@ -36,17 +37,13 @@ class IntelDspStream : public codecs::IntelHDAStreamConfigBase,
   zx_status_t BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt)
       __TA_REQUIRES(obj_lock()) final;
   zx_status_t FinishChangeStreamFormatLocked(uint16_t encoded_fmt) __TA_REQUIRES(obj_lock()) final;
-  void OnGetGainLocked(audio_proto::GainState* out_resp) __TA_REQUIRES(obj_lock()) final;
-  void OnSetGainLocked(const audio_proto::SetGainReq& req, audio_proto::SetGainResp* out_resp)
-      __TA_REQUIRES(obj_lock()) final;
-  void OnPlugDetectLocked(StreamChannel* response_channel, audio_proto::PlugDetectResp* out_resp)
-      __TA_REQUIRES(obj_lock()) final;
   void OnGetStringLocked(const audio_proto::GetStringReq& req, audio_proto::GetStringResp* out_resp)
       __TA_REQUIRES(obj_lock()) final;
 
-  void CreateRingBuffer(StreamChannel* channel, fuchsia_hardware_audio::wire::Format format,
+  void CreateRingBuffer(DaiChannel* channel, fuchsia_hardware_audio::wire::DaiFormat dai_format,
+                        fuchsia_hardware_audio::wire::Format ring_buffer_format,
                         ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer,
-                        StreamChannel::CreateRingBufferCompleter::Sync& completer) override
+                        DaiChannel::CreateRingBufferCompleter::Sync& completer) override
       __TA_REQUIRES(obj_lock());
 
   // fuchsia hardware audio RingBuffer Interface
