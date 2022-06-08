@@ -19,15 +19,7 @@
 #include <object/handle.h>
 #include <object/mbuf.h>
 
-// TODO(fxb/99589): Sockets presently perform user copying while holding the dispatcher lock. This
-// is generally not allowed, but is exempted here while a fix for sockets is developed. The
-// lockdep::LockFlagsActiveListDisabled flag gets passed to the PeerHolder Mutex declaration, and
-// means the lock will not be considered when checking if there are any active locks, allowing the
-// user copy to go through.
-// As a consequence of being removed from the active list other kinds of lockdep detections will
-// also no longer apply, such as detecting cycles or incorrect lock orderings.
-class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFAULT_SOCKET_RIGHTS,
-                                                       0, lockdep::LockFlagsActiveListDisabled> {
+class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFAULT_SOCKET_RIGHTS> {
  public:
   class Disposition {
    public:
@@ -72,12 +64,12 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
   void OnPeerZeroHandlesLocked() TA_REQ(get_lock());
 
  private:
-  using PeerHolderType = PeerHolder<SocketDispatcher, lockdep::LockFlagsActiveListDisabled>;
+  using PeerHolderType = PeerHolder<SocketDispatcher>;
 
   SocketDispatcher(fbl::RefPtr<PeerHolderType> holder, zx_signals_t starting_signals,
                    uint32_t flags);
-  zx_status_t WriteSelfLocked(user_in_ptr<const char> src, size_t len, size_t* nwritten)
-      TA_REQ(get_lock());
+  zx_status_t WriteSelfLocked(user_in_ptr<const char> src, size_t len, size_t* nwritten,
+                              Guard<Mutex>& guard) TA_REQ(get_lock());
   void UpdateReadStatus(Disposition disposition_peer) TA_REQ(get_lock());
   [[nodiscard]] bool IsDispositionStateValid(Disposition disposition_peer) const TA_REQ(get_lock());
 
