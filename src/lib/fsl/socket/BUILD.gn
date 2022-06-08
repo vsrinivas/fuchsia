@@ -26,8 +26,6 @@ source_set("socket") {
     "//zircon/system/ulib/zx",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

@@ -24,8 +24,6 @@ source_set("callback") {
     "//zircon/system/ulib/zx",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   deps = [ "//zircon/system/ulib/async:async-cpp" ]
 }
 

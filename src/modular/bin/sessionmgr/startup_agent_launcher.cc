@@ -5,10 +5,10 @@
 #include "src/modular/bin/sessionmgr/startup_agent_launcher.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/svc/cpp/service_namespace.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "garnet/public/lib/svc/cpp/service_namespace.h"
 #include "src/lib/files/file.h"
 #include "src/modular/lib/connect/connect.h"
 

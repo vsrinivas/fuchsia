@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/svc/cpp/service_namespace.h"
+#include "garnet/public/lib/svc/cpp/service_namespace.h"
 
 #include <fcntl.h>
 #include <lib/async/default.h>

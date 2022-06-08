@@ -10,8 +10,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/svc/cpp/service_namespace.h>
-#include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
@@ -19,6 +17,8 @@
 #include <string>
 #include <vector>
 
+#include "garnet/public/lib/svc/cpp/service_namespace.h"
+#include "garnet/public/lib/svc/cpp/services.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/bin/sessionmgr/rate_limited_retry.h"

@@ -27,8 +27,6 @@ source_set("amendments") {
     "amendments.h",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//src/lib/fostr",

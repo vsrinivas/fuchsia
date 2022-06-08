@@ -8,7 +8,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/zx/object.h>
 #include <zircon/errors.h>
@@ -18,6 +17,7 @@
 
 #include <gtest/gtest.h>
 
+#include "garnet/public/lib/svc/cpp/service_namespace.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/storage/vfs/cpp/service.h"

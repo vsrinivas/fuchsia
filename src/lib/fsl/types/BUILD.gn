@@ -11,6 +11,4 @@ source_set("types") {
   ]
 
   public_deps = [ "//sdk/lib/fidl/cpp" ]
-
-  public_configs = [ "//garnet/public:config" ]
 }

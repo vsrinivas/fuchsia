@@ -20,7 +20,5 @@ source_set("amendments") {
     "amendments.h",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   public_deps = [ "//sdk/fidl/fuchsia.math" ]
 }

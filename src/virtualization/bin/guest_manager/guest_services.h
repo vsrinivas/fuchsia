@@ -7,8 +7,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/svc/cpp/service_provider_bridge.h>
 
+#include "garnet/public/lib/svc/cpp/service_provider_bridge.h"
 #include "src/virtualization/bin/host_vsock/guest_vsock_endpoint.h"
 
 class GuestServices : public fuchsia::virtualization::GuestConfigProvider {

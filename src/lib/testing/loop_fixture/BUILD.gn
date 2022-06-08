@@ -37,8 +37,6 @@ source_set("gtest") {
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/zx",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 executable("loop_fixture_unittests") {

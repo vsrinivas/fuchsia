@@ -26,8 +26,6 @@ source_set("fostr") {
     public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
   }
 
-  public_configs = [ "//garnet/public:config" ]
-
   deps = [ ":fostr_shared" ]
 }
 

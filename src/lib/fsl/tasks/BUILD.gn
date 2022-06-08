@@ -19,6 +19,4 @@ source_set("tasks") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }

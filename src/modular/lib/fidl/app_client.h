@@ -10,11 +10,11 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/svc/cpp/services.h>
 
 #include <memory>
 #include <string>
 
+#include "garnet/public/lib/svc/cpp/services.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/common/async_holder.h"

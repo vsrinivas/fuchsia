@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/svc/cpp/services.h"
+#include "garnet/public/lib/svc/cpp/services.h"
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

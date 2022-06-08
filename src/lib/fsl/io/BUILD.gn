@@ -32,6 +32,4 @@ source_set("io") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zx",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }

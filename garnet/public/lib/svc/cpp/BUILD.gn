@@ -46,8 +46,6 @@ source_set("cpp") {
     "//src/virtualization/tests:lib",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
