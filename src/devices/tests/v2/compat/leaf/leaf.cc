@@ -4,8 +4,8 @@
 
 // This header has to come first, and we define our ZX_PROTOCOL, so that
 // we don't have to edit protodefs.h to add this test protocol.
-#include <bind/fuchsia/compat/cpp/fidl.h>
-#define ZX_PROTOCOL_PARENT bind::fuchsia::compat::BIND_PROTOCOL_PARENT
+#include <bind/fuchsia/compat/cpp/bind.h>
+#define ZX_PROTOCOL_PARENT bind_fuchsia_compat::BIND_PROTOCOL_PARENT
 
 #include <fidl/fuchsia.hardware.compat/cpp/wire.h>
 #include <fuchsia/hardware/compat/cpp/banjo.h>

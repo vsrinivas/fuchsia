@@ -26,7 +26,7 @@ fuchsia_driver("driver") {
     "//src/devices/lib/driver",
     "//src/devices/tests/v2/compat-globals:fuchsia.hardware.compat_banjo_cpp",
     "//src/devices/tests/v2/compat-globals:fuchsia.hardware.compat_llcpp",
-    "//src/devices/tests/v2/compat-globals/bind:bind.fuchsia.compat",
+    "//src/devices/tests/v2/compat-globals/bind:fuchsia.compat_cpp",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
