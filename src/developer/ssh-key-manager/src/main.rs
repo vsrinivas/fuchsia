@@ -7,8 +7,8 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_ssh::AuthorizedKeysRequestStream,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::fx_log_err,
     futures::prelude::*,
+    tracing::*,
 };
 
 mod keys;
@@ -28,7 +28,7 @@ async fn run() -> Result<(), Error> {
     fs.for_each_concurrent(None, |item| match item {
         Services::AuthorizedKeys(stream) => manager
             .handle_requests(stream)
-            .unwrap_or_else(|e| fx_log_err!("Failed to handle stream: {:?}", e)),
+            .unwrap_or_else(|e| error!(?e, "Failed to handle stream")),
     })
     .await;
     Ok(())
@@ -36,5 +36,5 @@ async fn run() -> Result<(), Error> {
 
 #[fuchsia::main]
 async fn main() {
-    run().await.unwrap_or_else(|e| fx_log_err!("Failed to run ssh-key-manager: {:?}", e));
+    run().await.unwrap_or_else(|e| error!(?e, "Failed to run ssh-key-manager"));
 }

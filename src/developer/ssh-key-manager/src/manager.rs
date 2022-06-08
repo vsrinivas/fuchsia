@@ -11,9 +11,7 @@ use {
         AuthorizedKeysRequest, AuthorizedKeysRequestStream, KeyEvent, KeyEventType,
         KeyWatcherRequest, KeyWatcherRequestStream, SshAuthorizedKeyEntry,
     },
-    fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_warn,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         lock::{Mutex, MutexGuard},
@@ -27,6 +25,7 @@ use {
         sync::Arc,
     },
     thiserror::Error,
+    tracing::*,
 };
 
 #[derive(Error, Debug)]
@@ -94,7 +93,7 @@ impl<'a, T: Read + Write + Seek + Send> Transaction<'a, T> {
             let entry = match line.parse::<KeyEntry>() {
                 Ok(entry) => entry,
                 Err(e) => {
-                    fx_log_warn!("Poorly formatted line in authorized_keys: {}: {}", line, e);
+                    warn!(%e, %line, "Poorly formatted line in authorized_keys");
                     continue;
                 }
             };
@@ -292,14 +291,14 @@ impl<T: Read + Write + Seek + Send> SshKeyManager<T> {
             match req {
                 AuthorizedKeysRequest::AddKey { key, responder } => {
                     responder.send(&mut self.add_key(key).await.map_err(|e| {
-                        fx_log_warn!("Error while adding key: {:?}", e);
+                        warn!(?e, "Error while adding key");
                         e.to_zx_status().into_raw()
                     }))?;
                 }
                 AuthorizedKeysRequest::WatchKeys { watcher, .. } => {
                     let (stream, handle) = watcher.into_stream_and_control_handle()?;
                     let _ = self.start_watch(stream).await.map_err(|e| {
-                        fx_log_warn!("Error while starting watch: {:?}", e);
+                        warn!(?e, "Error while starting watch");
                         handle.shutdown_with_epitaph(e.to_zx_status());
                     });
                 }
@@ -326,7 +325,7 @@ impl<T: Read + Write + Seek + Send> EventSender for SshKeyManager<T> {
             }
             for event in events.iter() {
                 if let Err(e) = watcher.send_event(event.clone()) {
-                    fx_log_warn!("Failed to send event {:?}: {:?}", event, e);
+                    warn!(?e, ?event, "Failed to send event");
                 }
             }
             watchers.push(watcher);
