@@ -36,6 +36,18 @@ form](rfc_process.md). It is also summarized below.
 
 <iframe src="//www.slideshare.net/slideshow/embed_code/key/9hgFMOmVfbDFsI" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="width: 595px; height: 375px; border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen></iframe>
 
+## Stay informed
+
+You can configure [Gerrit Notifications](https://fuchsia-review.googlesource.com/settings/#Notification)
+to email you when new RFCs are uploaded.
+
+Include the `docs/contribute/governance/rfcs` search expression
+and select **Changes** to receive email notifications for
+each new RFC proposal.
+
+![Gerrit settings screenshot demonstrating
+the above](resources/gerrit_notifications.png)
+
 ## Proposals
 
 ### Active RFCs
@@ -100,14 +112,3 @@ form](rfc_process.md). It is also summarized below.
 
 {# This div is used to close the filter that is initialized above #}
 </div>
-
-## Subscribing to RFCs
-
-You can subscribe for email notifications when new RFCs are uploaded using
-[Gerrit Notifications][gerrit-notifications]. A search expression for
-`docs/contribute/governance/rfcs` should capture all new RFC changes.
-
-![Gerrit settings screenshot demonstrating the
-above](resources/gerrit_notifications.png)
-
-[gerrit-notifications]: https://fuchsia-review.googlesource.com/settings/#Notifications
