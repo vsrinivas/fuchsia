@@ -682,12 +682,10 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnteredTable) {
 
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ENTERED_TABLE),
                                                "entered table");
-  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TABLE),
-                                               "table");
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::TABLE_DIMENSIONS),
                                                "dimensions");
   auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
-  ASSERT_EQ(result.size(), 5u);
+  ASSERT_EQ(result.size(), 4u);
   ASSERT_TRUE(result[0].utterance.has_message());
   EXPECT_EQ(result[0].utterance.message(), "entered table");
   ASSERT_TRUE(result[1].utterance.has_message());
@@ -695,9 +693,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnteredTable) {
   ASSERT_TRUE(result[2].utterance.has_message());
   EXPECT_EQ(result[2].utterance.message(), "dimensions");
   ASSERT_TRUE(result[3].utterance.has_message());
-  EXPECT_EQ(result[3].utterance.message(), "table");
-  ASSERT_TRUE(result[4].utterance.has_message());
-  EXPECT_EQ(result[4].utterance.message(), "node label");
+  EXPECT_EQ(result[3].utterance.message(), "node label");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, ExitedTable) {
@@ -849,10 +845,8 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnterAndExitListsAndTables) {
                                                "entered table");
   mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::EXITED_TABLE),
                                                "exited table");
-  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TABLE),
-                                               "table");
   auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
-  ASSERT_EQ(result.size(), 6u);
+  ASSERT_EQ(result.size(), 5u);
   ASSERT_TRUE(result[0].utterance.has_message());
   EXPECT_EQ(result[0].utterance.message(), "exited list");
   ASSERT_TRUE(result[1].utterance.has_message());
@@ -862,9 +856,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, EnterAndExitListsAndTables) {
   ASSERT_TRUE(result[3].utterance.has_message());
   EXPECT_EQ(result[3].utterance.message(), "entered table");
   ASSERT_TRUE(result[4].utterance.has_message());
-  EXPECT_EQ(result[4].utterance.message(), "table");
-  ASSERT_TRUE(result[5].utterance.has_message());
-  EXPECT_EQ(result[5].utterance.message(), "node label");
+  EXPECT_EQ(result[4].utterance.message(), "node label");
 }
 
 }  // namespace

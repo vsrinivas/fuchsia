@@ -348,8 +348,6 @@ ScreenReaderMessageGenerator::DescribeTable(const fuchsia::accessibility::semant
     }
   }
 
-  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE));
-
   return description;
 }
 
