@@ -407,6 +407,12 @@ zx_status_t device_add_composite(zx_device_t* dev, const char* name,
 }
 
 __EXPORT
+zx_status_t device_add_group(zx_device_t* dev, const char* name,
+                             const device_group_desc_t* group_desc) {
+  return ZX_OK;
+}
+
+__EXPORT
 void device_async_remove(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return;
