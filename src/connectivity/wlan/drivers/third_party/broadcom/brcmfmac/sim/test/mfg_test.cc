@@ -107,8 +107,8 @@ TEST_F(MfgTest, CheckConnections) {
   env_->Run(kTestDuration);
 
   // Check if the client's assoc with FakeAP succeeded
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1u);
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1u);
+  EXPECT_EQ(client_ifc_.stats_.connect_attempts, 1u);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1u);
   // Deletion of the client IF should have resulted in disassoc of the
   // client (cleanup during IF delete).
   EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1u);

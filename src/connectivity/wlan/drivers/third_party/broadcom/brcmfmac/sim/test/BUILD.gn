@@ -79,10 +79,10 @@ executable("arp_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("assoc_test") {
-  output_name = "assoc_test"
+executable("connect_test") {
+  output_name = "connect_test"
   testonly = true
-  sources = [ "assoc_test.cc" ]
+  sources = [ "connect_test.cc" ]
   deps = [
     ":sim_test",
     "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
@@ -671,7 +671,6 @@ executable("timeout_test") {
 _tests = [
   "active_scan_test",
   "arp_test",
-  "assoc_test",
   "auth_test",
   "bad_entropy_test",
   "beacon_lost_test",
@@ -679,6 +678,7 @@ _tests = [
   "call_after_del_iface_test",
   "cc_test",
   "channel_switch_test",
+  "connect_test",
   "crash_recovery_test",
   "create_softap_test",
   "data_frame_test",

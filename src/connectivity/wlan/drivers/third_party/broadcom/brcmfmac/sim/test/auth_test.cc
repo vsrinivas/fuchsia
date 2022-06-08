@@ -103,7 +103,7 @@ class AuthTest : public SimTest {
   void Init();
 
   // Start the process of authentication
-  void StartAuth();
+  void StartConnect();
 
   void VerifyAuthFrames();
   void SecErrorInject();
@@ -125,11 +125,10 @@ class AuthTest : public SimTest {
 
   simulation::FakeAp ap_;
 
-  status_code_t join_status_ = STATUS_CODE_SUCCESS;
-  status_code_t auth_status_ = STATUS_CODE_SUCCESS;
-  status_code_t assoc_status_ = STATUS_CODE_SUCCESS;
+  status_code_t connect_status_ = STATUS_CODE_SUCCESS;
   std::list<AuthFrameContent> rx_auth_frames_;
   std::list<AuthFrameContent> expect_auth_frames_;
+  uint8_t security_ie_[fuchsia::wlan::ieee80211::WLAN_IE_MAX_LEN];
 
  private:
   // Stationifc overrides
@@ -140,13 +139,12 @@ class AuthTest : public SimTest {
   static wlan_fullmac_impl_ifc_protocol_ops_t sme_ops_;
   wlan_fullmac_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
-  wlan_fullmac_set_keys_req CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
-                                         const size_t key_count, const uint32_t cipher_suite);
+  static set_key_descriptor CreateSetKeyDescriptor(const uint8_t key[WLAN_MAX_KEY_LEN],
+                                                   const size_t key_count,
+                                                   const uint32_t cipher_suite);
   // Event handlers
   void OnScanResult(const wlan_fullmac_scan_result_t* result);
-  void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
-  void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
-  void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
+  void OnConnectConf(const wlan_fullmac_connect_confirm_t* resp);
   void OnSaeHandshakeInd(const wlan_fullmac_sae_handshake_ind_t* ind);
   void OnSaeFrameRx(const wlan_fullmac_sae_frame_t* frame);
 };
@@ -173,21 +171,13 @@ wlan_fullmac_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
         [](void* cookie, const wlan_fullmac_scan_end_t* end) {
           // Ignore
         },
-    .join_conf =
-        [](void* cookie, const wlan_fullmac_join_confirm_t* resp) {
-          static_cast<AuthTest*>(cookie)->OnJoinConf(resp);
-        },
-    .auth_conf =
-        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
-          static_cast<AuthTest*>(cookie)->OnAuthConf(resp);
+    .connect_conf =
+        [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
+          static_cast<AuthTest*>(cookie)->OnConnectConf(resp);
         },
     .deauth_ind =
         [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
           // Ignore
-        },
-    .assoc_conf =
-        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
-          static_cast<AuthTest*>(cookie)->OnAssocConf(resp);
         },
     .disassoc_conf =
         [](void* cookie, const wlan_fullmac_disassoc_confirm_t* ind) {
@@ -231,110 +221,187 @@ void AuthTest::SecErrorInject() {
   sim->sim_fw->err_inj_.AddErrInjIovar("wsec", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
 }
 
-wlan_fullmac_set_keys_req AuthTest::CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
-                                                 const size_t key_count,
-                                                 const uint32_t cipher_suite) {
+set_key_descriptor AuthTest::CreateSetKeyDescriptor(const uint8_t key[WLAN_MAX_KEY_LEN],
+                                                    const size_t key_count,
+                                                    const uint32_t cipher_suite) {
   set_key_descriptor key_des = {.key_list = key};
   key_des.key_count = key_count;
   key_des.key_id = kDefaultKeyIndex;
   memcpy(key_des.address, kDefaultBssid.byte, ETH_ALEN);
   key_des.cipher_suite_type = cipher_suite;
-
-  wlan_fullmac_set_keys_req set_keys_req = {};
-  set_keys_req.num_keys = 1;
-  set_keys_req.keylist[0] = key_des;
-  return set_keys_req;
+  return key_des;
 }
 
-void AuthTest::StartAuth() {
-  wlan_fullmac_join_req join_req = {};
-  memcpy(join_req.selected_bss.bssid, kDefaultBssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_list = kIes;
-  join_req.selected_bss.ies_count = sizeof(kIes);
-  join_req.selected_bss.channel = kDefaultChannel;
-  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
-}
+void AuthTest::StartConnect() {
+  wlan_fullmac_connect_req connect_req = {};
+  memcpy(connect_req.selected_bss.bssid, kDefaultBssid.byte, ETH_ALEN);
+  connect_req.selected_bss.ies_list = kIes;
+  connect_req.selected_bss.ies_count = sizeof(kIes);
+  connect_req.selected_bss.channel = kDefaultChannel;
+  connect_req.connect_failure_timeout = 1000;
 
-void AuthTest::OnScanResult(const wlan_fullmac_scan_result_t* result) {
-  EXPECT_EQ(result->bss.capability_info, (uint16_t)32);
-}
-
-void AuthTest::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
-  join_status_ = resp->result_code;
-  if (join_status_ != STATUS_CODE_SUCCESS) {
-    return;
-  }
-
-  brcmf_simdev* sim = device_->GetSim();
-  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
-  zx_status_t status;
-
-  status = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec_);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(wsec_, (uint32_t)0);
-
-  status = brcmf_fil_bsscfg_int_get(ifp, "wpa_auth", &wpa_auth_);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(wpa_auth_, (uint32_t)0);
-
-  // Prepare auth request
-  wlan_fullmac_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
-  auth_req.auth_failure_timeout = 1000;
-
+  // Fill out the auth_type arg
   switch (sec_type_) {
     case SEC_TYPE_WEP_SHARED104: {
-      wlan_fullmac_set_keys_req set_keys_req =
-          CreateKeyReq(&test_key13[0], kWEP104KeyLen, WPA_CIPHER_WEP_104);
-      wlan_fullmac_set_keys_resp set_keys_resp;
-      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
-                                             &set_keys_resp);
-      EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
-      auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
+      connect_req.wep_key =
+          CreateSetKeyDescriptor(&test_key13[0], kWEP104KeyLen, WPA_CIPHER_WEP_104);
+      connect_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
       break;
     }
 
     case SEC_TYPE_WEP_SHARED40: {
-      wlan_fullmac_set_keys_req set_keys_req =
-          CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      wlan_fullmac_set_keys_resp set_keys_resp;
-      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
-                                             &set_keys_resp);
-      EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
-      auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
+      connect_req.wep_key = CreateSetKeyDescriptor(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
+      connect_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
       break;
     }
 
     case SEC_TYPE_WEP_OPEN: {
-      wlan_fullmac_set_keys_req set_keys_req =
-          CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      wlan_fullmac_set_keys_resp set_keys_resp;
-      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
-                                             &set_keys_resp);
-      EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
-      auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+      connect_req.wep_key = CreateSetKeyDescriptor(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
+      connect_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
       break;
     }
 
     case SEC_TYPE_WPA1:
     case SEC_TYPE_WPA2: {
-      auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+      connect_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
       break;
     }
     case SEC_TYPE_WPA3: {
-      auth_req.auth_type = WLAN_AUTH_TYPE_SAE;
+      connect_req.auth_type = WLAN_AUTH_TYPE_SAE;
       break;
     }
 
     default:
       return;
   }
-  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
+
+  // Fill out the security_ie arg
+  connect_req.security_ie_list = security_ie_;
+  if (sec_type_ == SEC_TYPE_WEP_SHARED104 || sec_type_ == SEC_TYPE_WEP_SHARED40 ||
+      sec_type_ == SEC_TYPE_WEP_OPEN) {
+    connect_req.security_ie_count = 0;
+  } else if (sec_type_ == SEC_TYPE_WPA1) {
+    // construct a fake vendor ie in wlan_fullmac_assoc_req.
+    uint16_t offset = 0;
+    security_ie_[offset++] = WLAN_IE_TYPE_VENDOR_SPECIFIC;
+    security_ie_[offset++] = 22;  // The length of following content.
+
+    memcpy(&security_ie_[offset], MSFT_OUI, TLV_OUI_LEN);
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = WPA_OUI_TYPE;
+
+    // These two bytes are 16-bit version number.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], MSFT_OUI, TLV_OUI_LEN);
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
+
+    // These two bytes indicate the length of unicast cipher list, in this case is 1.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], MSFT_OUI, TLV_OUI_LEN);
+    offset += TLV_OUI_LEN;                         // The second WPA OUI.
+    security_ie_[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
+
+    // These two bytes indicate the length of auth management suite list, in this case is 1.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], MSFT_OUI, TLV_OUI_LEN);  // WPA OUI for auth management suite.
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = RSN_AKM_PSK;  // Set auth management suite.
+
+    connect_req.security_ie_count = offset;
+    ASSERT_EQ(connect_req.security_ie_count,
+              (const uint32_t)(security_ie_[TLV_LEN_OFF] + TLV_HDR_LEN));
+  } else if (sec_type_ == SEC_TYPE_WPA2) {
+    // construct a fake rsne ie in wlan_fullmac_assoc_req.
+    uint16_t offset = 0;
+    security_ie_[offset++] = WLAN_IE_TYPE_RSNE;
+    security_ie_[offset++] = 20;  // The length of following content.
+
+    // These two bytes are 16-bit version number.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for multicast cipher suite.
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
+
+    // These two bytes indicate the length of unicast cipher list, in this case is 1.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for unicast cipher suite.
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
+
+    // These two bytes indicate the length of auth management suite list, in this case is 1.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for auth management suite.
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = RSN_AKM_PSK;  // Set auth management suite.
+
+    // These two bytes indicate RSN capabilities, in this case is \x0c\x00.
+    security_ie_[offset++] = 12;  // Lower byte
+    security_ie_[offset++] = 0;   // Higher byte
+
+    connect_req.security_ie_count = offset;
+    ASSERT_EQ(connect_req.security_ie_count,
+              (const uint32_t)(security_ie_[TLV_LEN_OFF] + TLV_HDR_LEN));
+  } else if (sec_type_ == SEC_TYPE_WPA3) {
+    uint16_t offset = 0;
+    security_ie_[offset++] = WLAN_IE_TYPE_RSNE;
+    security_ie_[offset++] = 20;  // The length of following content.
+
+    // These two bytes are 16-bit version number.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for multicast cipher suite.
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = WPA_CIPHER_CCMP_128;  // Set multicast cipher suite.
+
+    // These two bytes indicate the length of unicast cipher list, in this case is 1.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for unicast cipher suite.
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
+
+    // These two bytes indicate the length of auth management suite list, in this case is 1.
+    security_ie_[offset++] = 1;  // Lower byte
+    security_ie_[offset++] = 0;  // Higher byte
+
+    memcpy(&security_ie_[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for auth management suite.
+    offset += TLV_OUI_LEN;
+    security_ie_[offset++] = RSN_AKM_SAE_PSK;  // Set auth management suite.
+
+    // These two bytes indicate RSN capabilities, in this case is \x0c\x00.
+    security_ie_[offset++] = 12;  // Lower byte
+    security_ie_[offset++] = 0;   // Higher byte
+
+    connect_req.security_ie_count = offset;
+    ASSERT_EQ(connect_req.security_ie_count,
+              (const uint32_t)(security_ie_[TLV_LEN_OFF] + TLV_HDR_LEN));
+  }
+
+  client_ifc_.if_impl_ops_->connect_req(client_ifc_.if_impl_ctx_, &connect_req);
 }
 
-void AuthTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
-  auth_status_ = resp->result_code;
-  if (auth_status_ != STATUS_CODE_SUCCESS) {
+void AuthTest::OnScanResult(const wlan_fullmac_scan_result_t* result) {
+  EXPECT_EQ(result->bss.capability_info, (uint16_t)32);
+}
+
+void AuthTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
+  connect_status_ = resp->result_code;
+  if (connect_status_ != STATUS_CODE_SUCCESS) {
     return;
   }
 
@@ -353,6 +420,9 @@ void AuthTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
   status = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec_);
   EXPECT_EQ(status, ZX_OK);
 
+  status = brcmf_fil_bsscfg_int_get(ifp, "wpa_auth", &wpa_auth_);
+  EXPECT_EQ(status, ZX_OK);
+
   // The wsec_key iovar is only meaningful for WEP security
   if (sec_type_ == SEC_TYPE_WEP_SHARED104 || sec_type_ == SEC_TYPE_WEP_SHARED40 ||
       sec_type_ == SEC_TYPE_WEP_OPEN) {
@@ -365,7 +435,9 @@ void AuthTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
   switch (sec_type_) {
     case SEC_TYPE_WEP_SHARED104:
       EXPECT_EQ(wsec_, (uint32_t)WEP_ENABLED);
-      EXPECT_EQ(auth_, (uint16_t)BRCMF_AUTH_MODE_AUTO);
+      // The driver would have set BRCMF_AUTH_MODE_AUTO, but the sim_fw changes auth_ to
+      // BRCMF_AUTH_MODE_OPEN when it sees the fake AP rejecting the first auth request.
+      EXPECT_EQ(auth_, (uint16_t)BRCMF_AUTH_MODE_OPEN);
       EXPECT_EQ(wsec_key_.algo, (uint32_t)CRYPTO_ALGO_WEP128);
       EXPECT_EQ(wsec_key_.len, kWEP104KeyLen);
       EXPECT_EQ(memcmp(test_key13, wsec_key_.data, kWEP104KeyLen), 0);
@@ -385,173 +457,19 @@ void AuthTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
       EXPECT_EQ(memcmp(test_key5, wsec_key_.data, kWEP40KeyLen), 0);
       break;
     case SEC_TYPE_WPA1:
+      EXPECT_EQ(wsec_, (uint32_t)(TKIP_ENABLED | AES_ENABLED));
+      EXPECT_EQ(wpa_auth_, (uint32_t)WPA_AUTH_PSK);
+      break;
     case SEC_TYPE_WPA2:
-      // wsec iovar is not set before assoc_req sending to driver, now it should be default value.
-      EXPECT_EQ(wsec_, (uint32_t)WSEC_NONE);
-      EXPECT_EQ(auth_, (uint16_t)BRCMF_AUTH_MODE_OPEN);
+      EXPECT_EQ(wsec_, (uint32_t)(TKIP_ENABLED | AES_ENABLED));
+      EXPECT_EQ(wpa_auth_, (uint32_t)WPA2_AUTH_PSK);
       break;
     case SEC_TYPE_WPA3:
-      // wsec iovar is not set before assoc_req sending to driver, now it should be default value.
-      EXPECT_EQ(wsec_, (uint32_t)WSEC_NONE);
-      EXPECT_EQ(auth_, (uint16_t)BRCMF_AUTH_MODE_SAE);
+      EXPECT_EQ(wsec_, (uint32_t)(AES_ENABLED));
+      EXPECT_EQ(wpa_auth_, (uint32_t)WPA3_AUTH_SAE_PSK);
       break;
-    default:;
-  }
-
-  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0};
-
-  if (sec_type_ == SEC_TYPE_WEP_SHARED104 || sec_type_ == SEC_TYPE_WEP_SHARED40 ||
-      sec_type_ == SEC_TYPE_WEP_OPEN) {
-    assoc_req.vendor_ie_len = 0;
-  } else if (sec_type_ == SEC_TYPE_WPA1) {
-    // construct a fake vendor ie in wlan_fullmac_assoc_req.
-    uint16_t offset = 0;
-    uint8_t* ie = (uint8_t*)assoc_req.vendor_ie;
-
-    ie[offset++] = WLAN_IE_TYPE_VENDOR_SPECIFIC;
-    ie[offset++] = 22;  // The length of following content.
-
-    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);
-    offset += TLV_OUI_LEN;
-    ie[offset++] = WPA_OUI_TYPE;
-
-    // These two bytes are 16-bit version number.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);
-    offset += TLV_OUI_LEN;
-    ie[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
-
-    // These two bytes indicate the length of unicast cipher list, in this case is 1.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);
-    offset += TLV_OUI_LEN;               // The second WPA OUI.
-    ie[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
-
-    // These two bytes indicate the length of auth management suite list, in this case is 1.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], MSFT_OUI, TLV_OUI_LEN);  // WPA OUI for auth management suite.
-    offset += TLV_OUI_LEN;
-    ie[offset++] = RSN_AKM_PSK;  // Set auth management suite.
-
-    assoc_req.vendor_ie_len = offset;
-    ASSERT_EQ(assoc_req.vendor_ie_len, (const uint32_t)(ie[TLV_LEN_OFF] + TLV_HDR_LEN));
-  } else if (sec_type_ == SEC_TYPE_WPA2) {
-    // construct a fake rsne ie in wlan_fullmac_assoc_req.
-    uint16_t offset = 0;
-    uint8_t* ie = (uint8_t*)assoc_req.rsne;
-
-    ie[offset++] = WLAN_IE_TYPE_RSNE;
-    ie[offset++] = 20;  // The length of following content.
-
-    // These two bytes are 16-bit version number.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for multicast cipher suite.
-    offset += TLV_OUI_LEN;
-    ie[offset++] = WPA_CIPHER_TKIP;  // Set multicast cipher suite.
-
-    // These two bytes indicate the length of unicast cipher list, in this case is 1.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for unicast cipher suite.
-    offset += TLV_OUI_LEN;
-    ie[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
-
-    // These two bytes indicate the length of auth management suite list, in this case is 1.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for auth management suite.
-    offset += TLV_OUI_LEN;
-    ie[offset++] = RSN_AKM_PSK;  // Set auth management suite.
-
-    // These two bytes indicate RSN capabilities, in this case is \x0c\x00.
-    ie[offset++] = 12;  // Lower byte
-    ie[offset++] = 0;   // Higher byte
-
-    assoc_req.rsne_len = offset;
-    ASSERT_EQ(assoc_req.rsne_len, (const uint32_t)(ie[TLV_LEN_OFF] + TLV_HDR_LEN));
-  } else if (sec_type_ == SEC_TYPE_WPA3) {
-    uint16_t offset = 0;
-    uint8_t* ie = (uint8_t*)assoc_req.rsne;
-
-    ie[offset++] = WLAN_IE_TYPE_RSNE;
-    ie[offset++] = 20;  // The length of following content.
-
-    // These two bytes are 16-bit version number.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for multicast cipher suite.
-    offset += TLV_OUI_LEN;
-    ie[offset++] = WPA_CIPHER_CCMP_128;  // Set multicast cipher suite.
-
-    // These two bytes indicate the length of unicast cipher list, in this case is 1.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for unicast cipher suite.
-    offset += TLV_OUI_LEN;
-    ie[offset++] = WPA_CIPHER_CCMP_128;  // Set unicast cipher suite.
-
-    // These two bytes indicate the length of auth management suite list, in this case is 1.
-    ie[offset++] = 1;  // Lower byte
-    ie[offset++] = 0;  // Higher byte
-
-    memcpy(&ie[offset], RSN_OUI, TLV_OUI_LEN);  // RSN OUI for auth management suite.
-    offset += TLV_OUI_LEN;
-    ie[offset++] = RSN_AKM_SAE_PSK;  // Set auth management suite.
-
-    // These two bytes indicate RSN capabilities, in this case is \x0c\x00.
-    ie[offset++] = 12;  // Lower byte
-    ie[offset++] = 0;   // Higher byte
-
-    assoc_req.rsne_len = offset;
-    ASSERT_EQ(assoc_req.rsne_len, (const uint32_t)(ie[TLV_LEN_OFF] + TLV_HDR_LEN));
-  }
-
-  memcpy(assoc_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
-  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
-}
-
-void AuthTest::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
-  assoc_status_ = resp->result_code;
-  if (assoc_status_ != STATUS_CODE_SUCCESS) {
-    return;
-  }
-
-  brcmf_simdev* sim = device_->GetSim();
-  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
-  zx_status_t status;
-
-  status = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec_);
-  EXPECT_EQ(status, ZX_OK);
-
-  status = brcmf_fil_bsscfg_int_get(ifp, "wpa_auth", &wpa_auth_);
-  EXPECT_EQ(status, ZX_OK);
-
-  if (sec_type_ == SEC_TYPE_WPA1) {
-    // The wsec iovar is set after sending assoc_req to driver.
-    EXPECT_EQ(wsec_, (uint32_t)(TKIP_ENABLED | AES_ENABLED));
-    EXPECT_EQ(wpa_auth_, (uint32_t)WPA_AUTH_PSK);
-  }
-
-  if (sec_type_ == SEC_TYPE_WPA2) {
-    EXPECT_EQ(wsec_, (uint32_t)(TKIP_ENABLED | AES_ENABLED));
-    EXPECT_EQ(wpa_auth_, (uint32_t)WPA2_AUTH_PSK);
-  }
-
-  if (sec_type_ == SEC_TYPE_WPA3) {
-    EXPECT_EQ(wsec_, (uint32_t)(AES_ENABLED));
-    EXPECT_EQ(wpa_auth_, (uint32_t)WPA3_AUTH_SAE_PSK);
+    default:
+      break;
   }
 }
 
@@ -623,7 +541,7 @@ TEST_F(AuthTest, WEP104) {
   sec_type_ = SEC_TYPE_WEP_SHARED104;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // The first SHARED KEY authentication request will fail, and switch to OPEN SYSTEM automatically.
@@ -644,7 +562,7 @@ TEST_F(AuthTest, WEP40) {
   sec_type_ = SEC_TYPE_WEP_SHARED40;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // It should be a successful shared_key authentication
@@ -665,7 +583,7 @@ TEST_F(AuthTest, WEP40ChallengeFailure) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP,
                    .expect_challenge_failure = true});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // It should be a failed shared_key authentication
@@ -680,7 +598,7 @@ TEST_F(AuthTest, WEP40ChallengeFailure) {
   VerifyAuthFrames();
 
   // Assoc should have failed
-  EXPECT_NE(assoc_status_, STATUS_CODE_SUCCESS);
+  EXPECT_NE(connect_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WEPOPEN) {
@@ -688,7 +606,7 @@ TEST_F(AuthTest, WEPOPEN) {
   sec_type_ = SEC_TYPE_WEP_OPEN;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -706,10 +624,10 @@ TEST_F(AuthTest, AuthFailTest) {
                    .sec_type = simulation::SEC_PROTO_TYPE_OPEN});
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
-  EXPECT_NE(auth_status_, STATUS_CODE_SUCCESS);
+  EXPECT_NE(connect_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WEPIgnoreTest) {
@@ -719,7 +637,7 @@ TEST_F(AuthTest, WEPIgnoreTest) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // The auth request frames should be ignored and the auth timeout in sim-fw will be triggered,
@@ -735,7 +653,7 @@ TEST_F(AuthTest, WEPIgnoreTest) {
                                      wlan_ieee80211::StatusCode::SUCCESS);
   }
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  EXPECT_EQ(connect_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
 }
 
 TEST_F(AuthTest, WPA1Test) {
@@ -743,7 +661,7 @@ TEST_F(AuthTest, WPA1Test) {
   sec_type_ = SEC_TYPE_WPA1;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -753,7 +671,7 @@ TEST_F(AuthTest, WPA1Test) {
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_EQ(assoc_status_, STATUS_CODE_SUCCESS);
+  EXPECT_EQ(connect_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WPA1FailTest) {
@@ -763,12 +681,12 @@ TEST_F(AuthTest, WPA1FailTest) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
   // Assoc should have failed
-  EXPECT_NE(assoc_status_, STATUS_CODE_SUCCESS);
+  EXPECT_NE(connect_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WPA2Test) {
@@ -776,7 +694,7 @@ TEST_F(AuthTest, WPA2Test) {
   sec_type_ = SEC_TYPE_WPA2;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -786,7 +704,7 @@ TEST_F(AuthTest, WPA2Test) {
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_EQ(assoc_status_, STATUS_CODE_SUCCESS);
+  EXPECT_EQ(connect_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WPA2FailTest) {
@@ -795,11 +713,11 @@ TEST_F(AuthTest, WPA2FailTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
   SecErrorInject();
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_NE(join_status_, STATUS_CODE_SUCCESS);
+  EXPECT_NE(connect_status_, STATUS_CODE_SUCCESS);
 }
 
 // This test case verifies that auth req will be refused when security types of client and AP are
@@ -810,7 +728,7 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   sec_type_ = SEC_TYPE_WPA1;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -829,7 +747,7 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   }
 
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(connect_status_, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 }
 
 // Verify a normal SAE authentication work flow in driver.
@@ -838,7 +756,7 @@ TEST_F(AuthTest, WPA3Test) {
   sec_type_ = SEC_TYPE_WPA3;
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SAE,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -853,7 +771,7 @@ TEST_F(AuthTest, WPA3Test) {
 
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_EQ(assoc_status_, STATUS_CODE_SUCCESS);
+  EXPECT_EQ(connect_status_, STATUS_CODE_SUCCESS);
   EXPECT_EQ(sae_auth_state_, DONE);
 }
 
@@ -864,14 +782,14 @@ TEST_F(AuthTest, WPA3ApIgnoreTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SAE,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  EXPECT_EQ(connect_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, COMMIT);
 }
 
@@ -883,7 +801,7 @@ TEST_F(AuthTest, WPA3SupplicantIgnoreTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SAE,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   sae_ignore_confirm = true;
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
@@ -897,7 +815,7 @@ TEST_F(AuthTest, WPA3SupplicantIgnoreTest) {
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
 
-  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  EXPECT_EQ(connect_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, CONFIRM);
 }
 
@@ -919,14 +837,14 @@ TEST_F(AuthTest, WPA3FailStatusCode) {
   kDefaultBssid.CopyTo(frame.peer_sta_address);
   sae_commit_frame = &frame;
 
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // Make sure firmware will not retry for external supplicant authentication.
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
                                    wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  EXPECT_EQ(connect_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, COMMIT);
 }
 
@@ -948,12 +866,12 @@ TEST_F(AuthTest, WPA3WrongBssid) {
   kWrongBssid.CopyTo(frame.peer_sta_address);
   sae_commit_frame = &frame;
 
-  env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&AuthTest::StartConnect, this), zx::msec(10));
   env_->Run(kTestDuration);
 
   // No auth frame will be sent out.
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
+  EXPECT_EQ(connect_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, COMMIT);
 }
 

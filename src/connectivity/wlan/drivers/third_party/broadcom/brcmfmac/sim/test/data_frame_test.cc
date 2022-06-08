@@ -116,7 +116,7 @@ class DataFrameTest : public SimTest {
                                            uint16_t ethType, const std::vector<uint8_t>& data);
 
   // Run through the join => auth => assoc flow
-  void StartAssoc();
+  void StartConnect();
 
   // Send a data frame
   void Tx(std::vector<uint8_t>& ethFrame);
@@ -140,7 +140,7 @@ class DataFrameTest : public SimTest {
     std::list<status_code_t> expected_results;
 
     // Track number of association responses
-    size_t assoc_resp_count = 0;
+    size_t connect_resp_count = 0;
 
     // Track number of deauth indications.
     size_t deauth_ind_count = 0;
@@ -207,6 +207,7 @@ class DataFrameTest : public SimTest {
   void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
   void OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind);
   void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
+  void OnConnectConf(const wlan_fullmac_connect_confirm_t* resp);
   void OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind);
   void OnEapolConf(const wlan_fullmac_eapol_confirm_t* resp);
   void OnSignalReport(const wlan_fullmac_signal_report_indication* ind);
@@ -225,21 +226,13 @@ wlan_fullmac_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
         [](void* cookie, const wlan_fullmac_scan_end_t* end) {
           // Ignore
         },
-    .join_conf =
-        [](void* cookie, const wlan_fullmac_join_confirm_t* resp) {
-          static_cast<DataFrameTest*>(cookie)->OnJoinConf(resp);
-        },
-    .auth_conf =
-        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
-          static_cast<DataFrameTest*>(cookie)->OnAuthConf(resp);
+    .connect_conf =
+        [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
+          static_cast<DataFrameTest*>(cookie)->OnConnectConf(resp);
         },
     .deauth_ind =
         [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
           static_cast<DataFrameTest*>(cookie)->OnDeauthInd(ind);
-        },
-    .assoc_conf =
-        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
-          static_cast<DataFrameTest*>(cookie)->OnAssocConf(resp);
         },
     .disassoc_conf =
         [](void* cookie, const wlan_fullmac_disassoc_confirm_t* resp) {
@@ -271,7 +264,7 @@ wlan_fullmac_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
 void DataFrameTest::Init() {
   // Basic initialization
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  assoc_context_.assoc_resp_count = 0;
+  assoc_context_.connect_resp_count = 0;
   non_eapol_data_count = 0;
   eapol_ind_count = 0;
 
@@ -307,22 +300,6 @@ std::vector<uint8_t> DataFrameTest::CreateEthernetFrame(common::MacAddr dstAddr,
   return ethFrame;
 }
 
-void DataFrameTest::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
-  // Send auth request
-  wlan_fullmac_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, assoc_context_.bssid.byte, ETH_ALEN);
-  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
-}
-
-void DataFrameTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
-  // Send assoc request
-  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, assoc_context_.bssid.byte, ETH_ALEN);
-  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
-}
-
 void DataFrameTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   if (!testing_rx_freeze_deauth_) {
     // This function is only used for rx freeze deauth testing now.
@@ -331,11 +308,17 @@ void DataFrameTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   assoc_context_.deauth_ind_count++;
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   // Do a re-association right after deauth.
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(200));
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), zx::msec(200));
 }
 
 void DataFrameTest::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
-  assoc_context_.assoc_resp_count++;
+  assoc_context_.connect_resp_count++;
+  EXPECT_EQ(resp->result_code, assoc_context_.expected_results.front());
+  assoc_context_.expected_results.pop_front();
+}
+
+void DataFrameTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
+  assoc_context_.connect_resp_count++;
   EXPECT_EQ(resp->result_code, assoc_context_.expected_results.front());
   assoc_context_.expected_results.pop_front();
 }
@@ -351,7 +334,7 @@ void DataFrameTest::OnEapolInd(const wlan_fullmac_eapol_indication_t* ind) {
 
   data_context_.received_data.push_back(std::move(resp));
   if (assoc_check_for_eapol_rx_) {
-    ASSERT_EQ(assoc_context_.assoc_resp_count, 1U);
+    ASSERT_EQ(assoc_context_.connect_resp_count, 1U);
   }
   eapol_ind_count++;
 }
@@ -376,15 +359,16 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
   non_eapol_data_count++;
 }
 
-void DataFrameTest::StartAssoc() {
-  // Send join request
-  wlan_fullmac_join_req join_req = {};
-  std::memcpy(join_req.selected_bss.bssid, assoc_context_.bssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_list = assoc_context_.ies.data();
-  join_req.selected_bss.ies_count = assoc_context_.ies.size();
-  join_req.selected_bss.channel = assoc_context_.channel;
-  join_req.selected_bss.bss_type = BSS_TYPE_INFRASTRUCTURE;
-  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
+void DataFrameTest::StartConnect() {
+  // Send connect request
+  wlan_fullmac_connect_req connect_req = {};
+  std::memcpy(connect_req.selected_bss.bssid, assoc_context_.bssid.byte, ETH_ALEN);
+  connect_req.selected_bss.ies_list = assoc_context_.ies.data();
+  connect_req.selected_bss.ies_count = assoc_context_.ies.size();
+  connect_req.selected_bss.channel = assoc_context_.channel;
+  connect_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+  connect_req.connect_failure_timeout = 1000;  // ~1s (although value is ignored for now)
+  client_ifc_.if_impl_ops_->connect_req(client_ifc_.if_impl_ctx_, &connect_req);
 }
 
 void DataFrameTest::TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf) {
@@ -465,7 +449,7 @@ TEST_F(DataFrameTest, TxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), zx::msec(10));
 
   // Simulate sending a data frame from driver to the AP
   data_context_.expected_sent_data.push_back(
@@ -477,7 +461,7 @@ TEST_F(DataFrameTest, TxDataFrame) {
   env_->Run(kSimulatedClockDuration);
 
   // Verify frame was sent successfully
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
   EXPECT_EQ(data_context_.tx_data_status_codes.front(), ZX_OK);
   ASSERT_EQ(data_context_.sent_data.size(), data_context_.expected_sent_data.size());
   EXPECT_EQ(data_context_.sent_data.front(), data_context_.expected_sent_data.front());
@@ -504,7 +488,7 @@ TEST_F(DataFrameTest, TxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), zx::msec(10));
 
   // Simulate sending a illegal ethernet frame from us to the AP
   std::vector<uint8_t> ethFrame = {0x20, 0x43};
@@ -513,7 +497,7 @@ TEST_F(DataFrameTest, TxMalformedDataFrame) {
   env_->Run(kSimulatedClockDuration);
 
   // Verify frame was rejected
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
   EXPECT_EQ(data_context_.tx_data_status_codes.front(), ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(data_context_.sent_data.size(), 0U);
 }
@@ -529,7 +513,7 @@ TEST_F(DataFrameTest, TxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), zx::msec(10));
 
   // Simulate sending a EAPOL packet from us to the AP
   data_context_.expected_sent_data.push_back(kSampleEapol);
@@ -541,7 +525,7 @@ TEST_F(DataFrameTest, TxEapolFrame) {
   env_->Run(kSimulatedClockDuration);
 
   // Verify response
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
   EXPECT_EQ(data_context_.tx_eapol_conf_codes.front(), WLAN_EAPOL_RESULT_SUCCESS);
 
   ASSERT_EQ(env_data_frame_capture_.size(), 1U);
@@ -564,7 +548,7 @@ TEST_F(DataFrameTest, RxDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), delay);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(
@@ -579,7 +563,7 @@ TEST_F(DataFrameTest, RxDataFrame) {
   env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
   EXPECT_EQ(non_eapol_data_count, 1U);
   ASSERT_EQ(data_context_.received_data.size(), data_context_.expected_received_data.size());
   EXPECT_EQ(data_context_.received_data.front(), data_context_.expected_received_data.front());
@@ -596,7 +580,7 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(30));
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), zx::msec(30));
 
   // ethernet frame too small to hold ethernet header
   std::vector<uint8_t> ethFrame = {0x00, 0x45};
@@ -610,7 +594,7 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
   env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
   EXPECT_EQ(non_eapol_data_count, 0U);
   ASSERT_EQ(data_context_.received_data.size(), 0U);
 }
@@ -625,7 +609,7 @@ TEST_F(DataFrameTest, RxEapolFrame) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(30));
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), zx::msec(30));
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
@@ -638,7 +622,7 @@ TEST_F(DataFrameTest, RxEapolFrame) {
   env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
   EXPECT_EQ(eapol_ind_count, 1U);
   ASSERT_EQ(data_context_.received_data.size(), data_context_.expected_received_data.size());
   EXPECT_EQ(data_context_.received_data.front(), data_context_.expected_received_data.front());
@@ -656,7 +640,7 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), delay);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEapol);
@@ -671,7 +655,7 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
   env_->Run(kSimulatedClockDuration);
 
   // Confirm that the driver received that packet
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
   EXPECT_EQ(eapol_ind_count, 1U);
 }
 
@@ -689,7 +673,7 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
 
   // Assoc driver with fake AP
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), delay);
 
   // Want to send packet from test to driver
   data_context_.expected_received_data.push_back(kSampleEthBody);
@@ -704,7 +688,7 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
 
   // Confirm that the driver did not receive the packet
   EXPECT_EQ(non_eapol_data_count, 0U);
-  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(assoc_context_.connect_resp_count, 1U);
 }
 
 TEST_F(DataFrameTest, DeauthWhenRxFreeze) {
@@ -721,7 +705,7 @@ TEST_F(DataFrameTest, DeauthWhenRxFreeze) {
   aps_.push_back(&ap);
 
   assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), kFirstAssocDelay);
+  env_->ScheduleNotification(std::bind(&DataFrameTest::StartConnect, this), kFirstAssocDelay);
 
   env_->Run(kRxFreezeTestDuration);
 

@@ -55,6 +55,10 @@ static wlan_fullmac_impl_ifc_protocol_ops_t wlan_fullmac_impl_ifc_ops = {
         },
     .on_scan_end = [](void* cookie,
                       const wlan_fullmac_scan_end_t* end) { DEV(cookie)->OnScanEnd(end); },
+    .connect_conf =
+        [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
+          DEV(cookie)->ConnectConf(resp);
+        },
     .join_conf = [](void* cookie,
                     const wlan_fullmac_join_confirm_t* resp) { DEV(cookie)->JoinConf(resp); },
     .auth_conf =
@@ -183,6 +187,8 @@ zx_status_t Device::Bind() {
   VERIFY_PROTO_OP(query_security_support);
   VERIFY_PROTO_OP(query_spectrum_management_support);
   VERIFY_PROTO_OP(start_scan);
+  VERIFY_PROTO_OP(connect_req);
+  VERIFY_PROTO_OP(reconnect_req);
   VERIFY_PROTO_OP(join_req);
   VERIFY_PROTO_OP(auth_req);
   VERIFY_PROTO_OP(auth_resp);
@@ -337,13 +343,56 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
 }
 
 void Device::ConnectReq(wlan_mlme::ConnectRequest req) {
-  // TODO(fxbug.dev/66772) - implement this
-  lerror("ConnectConf is not implemented\n");
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
+
+  wlan_fullmac_connect_req_t impl_req = {};
+
+  // selected_bss
+  ConvertBssDescription(&impl_req.selected_bss, req.selected_bss);
+
+  // connect_failure_timeout
+  impl_req.connect_failure_timeout = req.connect_failure_timeout;
+
+  // auth_type
+  impl_req.auth_type = ConvertAuthType(req.auth_type);
+
+  // sae_password
+  impl_req.sae_password_count = req.sae_password.size();
+  impl_req.sae_password_list = req.sae_password.data();
+
+  // wep_key
+  if (req.wep_key) {
+    ConvertSetKeyDescriptor(&impl_req.wep_key, *req.wep_key);
+  } else {
+    impl_req.wep_key.key_count = 0;
+  }
+
+  // security_ie
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    protected_bss_ = !req.security_ie.empty();
+    if (protected_bss_) {
+      if (req.security_ie.size() > wlan_ieee80211::WLAN_IE_MAX_LEN) {
+        lwarn("Security IE length truncated from %lu to %d\n", req.security_ie.size(),
+              wlan_ieee80211::WLAN_IE_MAX_LEN);
+        impl_req.security_ie_count = wlan_ieee80211::WLAN_IE_MAX_LEN;
+      } else {
+        impl_req.security_ie_count = req.security_ie.size();
+      }
+      impl_req.security_ie_list = req.security_ie.data();
+    }
+  }
+
+  wlan_fullmac_impl_connect_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::ReconnectReq(wlan_mlme::ReconnectRequest req) {
-  // TODO(fxbug.dev/96011) - implement this
-  lerror("ReconnectReq is not implemented\n");
+  wlan_fullmac_reconnect_req_t impl_req = {};
+
+  // peer_sta_address
+  std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
+
+  wlan_fullmac_impl_reconnect_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::JoinReq(wlan_mlme::JoinRequest req) {
@@ -888,8 +937,36 @@ void Device::SendScanEndUnlocked(::fuchsia::wlan::mlme::ScanEnd scan_end) {
 }
 
 void Device::ConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
-  // TODO(fxbug.dev/66772) - implement this
-  lerror("ConnectConf is not implemented\n");
+  std::lock_guard<std::mutex> lock(lock_);
+
+  // For unprotected network, set data state to online immediately. For protected network, do
+  // nothing. Later on upper layer would send message to open controlled port.
+  if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS && !protected_bss_) {
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, true);
+  }
+
+  if (binding_ == nullptr) {
+    return;
+  }
+
+  wlan_mlme::ConnectConfirm fidl_resp;
+
+  // peer_sta_address
+  std::memcpy(&fidl_resp.peer_sta_address, resp->peer_sta_address, ETH_ALEN);
+
+  // result_code
+  fidl_resp.result_code = static_cast<wlan_ieee80211::StatusCode>(resp->result_code);
+
+  // association_id
+  fidl_resp.association_id = resp->association_id;
+
+  // association_ies
+  if (resp->association_ies_count > 0) {
+    fidl_resp.association_ies = std::vector(
+        resp->association_ies_list, resp->association_ies_list + resp->association_ies_count);
+  }
+
+  binding_->events().ConnectConf(std::move(fidl_resp));
 }
 
 void Device::JoinConf(const wlan_fullmac_join_confirm_t* resp) {

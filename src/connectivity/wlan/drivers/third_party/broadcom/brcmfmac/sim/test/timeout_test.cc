@@ -91,16 +91,16 @@ TEST_F(TimeoutTest, AssocTimeout) {
       zx::duration(BRCMF_CONNECT_TIMER_DUR_MS - ZX_MSEC(500));
   env_->Run(kTempDuration);
   // Assoc attempts should be 1 but assoc results should be 0.
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
-  const auto assoc_results = &client_ifc_.stats_.assoc_results;
-  EXPECT_EQ(assoc_results->size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.connect_attempts, 1U);
+  const auto connect_results = &client_ifc_.stats_.connect_results;
+  EXPECT_EQ(connect_results->size(), 0U);
   // run for the reminder of the test duration
   env_->Run(kTestDuration);
 
   // Receiving assoc_resp in SME with error status.
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
-  EXPECT_EQ(assoc_results->size(), 1U);
-  EXPECT_EQ(assoc_results->front().result_code, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(client_ifc_.stats_.connect_attempts, 1U);
+  EXPECT_EQ(connect_results->size(), 1U);
+  EXPECT_EQ(connect_results->front().result_code, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 }
 
 // verify the disassociation timeout is triggered.
@@ -145,7 +145,7 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
 
   // This when we issue a deauth request right after and assoc_req, the successful deauth_req will
   // stop the connect timer for assoc_req, thus no assoc_conf event will be received.
-  EXPECT_EQ(client_ifc_.stats_.assoc_results.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.connect_results.size(), 0U);
   EXPECT_EQ(client_ifc_.stats_.deauth_results.size(), 1U);
 
   // Verify that the scan completed successfully

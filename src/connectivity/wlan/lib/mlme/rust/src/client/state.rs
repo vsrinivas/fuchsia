@@ -1401,6 +1401,7 @@ mod tests {
             connect_failure_timeout: 10,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         };
         Client::new(connect_req, IFACE_MAC, fake_client_capabilities())
@@ -1412,6 +1413,7 @@ mod tests {
             connect_failure_timeout: 10,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![
                 0x30, 0x14, //  ID and len
                 1, 0, //  version

@@ -14,6 +14,30 @@ using zx;
 
 // TODO(fxbug.dev/21133): restore the commented out enum aliases
 
+// MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
+
+type KeyType = strict enum {
+    GROUP = 1;
+    PAIRWISE = 2;
+    PEER_KEY = 3;
+    IGTK = 4;
+};
+
+type SetKeyDescriptor = struct {
+    // Specs specify a bit string, we use byte array.
+    key bytes;
+    key_id uint16;
+    key_type KeyType;
+    address ieee80211.MacAddr;
+    rsc uint64;
+    cipher_suite_oui array<uint8, 3>;
+    cipher_suite_type uint8;
+};
+
+type SetKeysRequest = struct {
+    keylist vector<SetKeyDescriptor>:MAX;
+};
+
 // MLME-SCAN.request (IEEE Std 802.11-2016 6.3.3.2)
 
 type ScanTypes = strict enum {
@@ -99,6 +123,8 @@ type ConnectRequest = struct {
     // sae_password is ignored except when SAE_DRIVER_AUTH is enabled and the
     // auth_type is SAE.
     sae_password vector<uint8>:MAX;
+    /// WEP key used in the authentication exchange. Only included for WEP security type.
+    wep_key box<SetKeyDescriptor>;
 
     /// Additional parameters specific to the association exchange.
     security_ie vector<uint8>:ieee80211.WLAN_IE_MAX_LEN;
@@ -423,30 +449,6 @@ type StopResultCode = strict enum {
 
 type StopConfirm = struct {
     result_code StopResultCode;
-};
-
-// MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
-
-type KeyType = strict enum {
-    GROUP = 1;
-    PAIRWISE = 2;
-    PEER_KEY = 3;
-    IGTK = 4;
-};
-
-type SetKeyDescriptor = struct {
-    // Specs specify a bit string, we use byte array.
-    key bytes;
-    key_id uint16;
-    key_type KeyType;
-    address ieee80211.MacAddr;
-    rsc uint64;
-    cipher_suite_oui array<uint8, 3>;
-    cipher_suite_type uint8;
-};
-
-type SetKeysRequest = struct {
-    keylist vector<SetKeyDescriptor>;
 };
 
 // MLME-DELETEKEYS.request (IEEE Std 802.11-2016 6.3.20.1)

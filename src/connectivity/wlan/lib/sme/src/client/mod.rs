@@ -1154,7 +1154,8 @@ mod tests {
             connect_req(Ssid::try_from("foo").unwrap(), bss_description, authentication_wep40());
         let _recv = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Connect(..))));
     }
 
     #[test]
@@ -1188,7 +1189,7 @@ mod tests {
         let _recv = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
 
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Connect(..))));
     }
 
     #[test]
@@ -1208,7 +1209,7 @@ mod tests {
         let _recv = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("IEEE").unwrap()), sme.status());
 
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Connect(..))));
     }
 
     #[test]
@@ -1299,7 +1300,7 @@ mod tests {
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bssname").unwrap()), sme.status());
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Connect(..))));
         // There should be no message in the connect_txn_stream
         assert_variant!(connect_txn_stream.try_next(), Err(_));
     }
@@ -1320,7 +1321,7 @@ mod tests {
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bssname").unwrap()), sme.status());
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Connect(..))));
         // There should be no message in the connect_txn_stream
         assert_variant!(connect_txn_stream.try_next(), Err(_));
     }

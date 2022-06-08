@@ -21,7 +21,6 @@ use {
         bss::Protection,
         channel,
         ie::fake_ies::{fake_ht_cap_bytes, fake_vht_cap_bytes},
-        test_utils::fake_capabilities::fake_capability_info,
     },
     wlan_rsn::{auth, format_rsn_err, psk, rsna::UpdateSink, Error},
 };
@@ -79,40 +78,6 @@ pub fn create_connect_conf(
             result_code,
             association_id: 42,
             association_ies: vec![],
-        },
-    }
-}
-
-pub fn create_join_conf(result_code: fidl_ieee80211::StatusCode) -> fidl_mlme::MlmeEvent {
-    fidl_mlme::MlmeEvent::JoinConf { resp: fidl_mlme::JoinConfirm { result_code } }
-}
-
-pub fn create_auth_conf(
-    bssid: Bssid,
-    result_code: fidl_ieee80211::StatusCode,
-) -> fidl_mlme::MlmeEvent {
-    fidl_mlme::MlmeEvent::AuthenticateConf {
-        resp: fidl_mlme::AuthenticateConfirm {
-            peer_sta_address: bssid.0,
-            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-            result_code,
-        },
-    }
-}
-
-pub fn create_assoc_conf(result_code: fidl_ieee80211::StatusCode) -> fidl_mlme::MlmeEvent {
-    fidl_mlme::MlmeEvent::AssociateConf {
-        resp: fidl_mlme::AssociateConfirm {
-            result_code,
-            association_id: 55,
-            capability_info: fake_capability_info().raw(),
-            rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-            // TODO(fxbug.dev/43938): mock with fake WMM param
-            wmm_param: None,
-            ht_cap: Some(Box::new(fidl_ieee80211::HtCapabilities { bytes: fake_ht_cap_bytes() })),
-            vht_cap: Some(Box::new(fidl_ieee80211::VhtCapabilities {
-                bytes: fake_vht_cap_bytes(),
-            })),
         },
     }
 }

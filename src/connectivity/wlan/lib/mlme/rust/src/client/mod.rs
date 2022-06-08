@@ -333,6 +333,7 @@ impl ClientMlme {
                     connect_failure_timeout: req.connect_failure_timeout,
                     auth_type: req.auth_type,
                     sae_password: req.sae_password,
+                    wep_key: req.wep_key.map(|k| *k),
                     security_ie: req.security_ie,
                 };
                 self.join_device(&req.selected_bss).map(|cap| (req, cap))
@@ -1207,6 +1208,7 @@ pub struct ParsedConnectRequest {
     pub connect_failure_timeout: u32,
     pub auth_type: fidl_mlme::AuthenticationTypes,
     pub sae_password: Vec<u8>,
+    pub wep_key: Option<fidl_mlme::SetKeyDescriptor>,
     pub security_ie: Vec<u8>,
 }
 
@@ -1432,6 +1434,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         };
         Client::new(connect_req, IFACE_MAC, fake_client_capabilities())
@@ -1443,7 +1446,8 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
-            security_ie: vec![],
+            wep_key: None,
+            security_ie: RSNE.to_vec(),
         };
         Client::new(connect_req, IFACE_MAC, fake_client_capabilities())
     }
@@ -1517,6 +1521,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         })
         .expect("valid ConnectRequest should be handled successfully");
@@ -1534,6 +1539,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         })
         .expect("valid ConnectRequest should be handled successfully");
@@ -1552,6 +1558,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         })
         .expect("valid ConnectRequest should be handled successfully");
@@ -1570,6 +1577,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         })
         .expect("valid ConnectRequest should be handled successfully");
@@ -1905,6 +1913,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: RSNE.to_vec(),
         };
         let client_capabilities = ClientCapabilities(StaCapabilities {
@@ -2887,6 +2896,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         };
         let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ConnectReq {
@@ -3035,6 +3045,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![
                 48, 18, // RSNE header
                 1, 0, // Version
@@ -3218,6 +3229,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         };
         let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ConnectReq {
@@ -3293,6 +3305,7 @@ mod tests {
             connect_failure_timeout: 100,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             sae_password: vec![],
+            wep_key: None,
             security_ie: vec![],
         };
         let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ConnectReq {

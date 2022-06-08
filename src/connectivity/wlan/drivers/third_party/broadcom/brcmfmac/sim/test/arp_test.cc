@@ -258,7 +258,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   env_->Run(kTestDuration);
 
   // Verify that we completed the association process
-  EXPECT_EQ(sim_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(sim_ifc_.stats_.connect_successes, 1U);
 
   // Verify that all ARP frames were received, and not offloaded
   EXPECT_EQ(sim_ifc_.arp_frames_received_, 2U);
@@ -294,7 +294,7 @@ TEST_F(ArpTest, SoftAPStartStopDoesNotAffectArpOl) {
   env_->Run(kTestDuration);
 
   // Verify that we completed the association process
-  EXPECT_EQ(sim_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(sim_ifc_.stats_.connect_successes, 1U);
 
   // Verify that all ARP frames were received, and not offloaded
   EXPECT_EQ(sim_ifc_.arp_frames_received_, 2U);
@@ -333,7 +333,7 @@ TEST_F(ArpTest, ClientArpOffloadNoSoftApFeat) {
   env_->Run(kTestDuration);
 
   // Verify that we completed the association process
-  EXPECT_EQ(sim_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(sim_ifc_.stats_.connect_successes, 1U);
 
   // Verify that all ARP frames were offloaded
   EXPECT_EQ(sim_ifc_.arp_frames_received_, 0U);

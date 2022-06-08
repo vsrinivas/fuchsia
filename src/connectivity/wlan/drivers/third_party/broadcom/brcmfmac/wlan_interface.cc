@@ -71,6 +71,10 @@ wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
         [](void* ctx, const wlan_fullmac_connect_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->ConnectReq(req);
         },
+    .reconnect_req =
+        [](void* ctx, const wlan_fullmac_reconnect_req_t* req) {
+          return static_cast<WlanInterface*>(ctx)->ReconnectReq(req);
+        },
     .join_req =
         [](void* ctx, const wlan_fullmac_join_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->JoinReq(req);
@@ -336,6 +340,13 @@ void WlanInterface::ConnectReq(const wlan_fullmac_connect_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_connect_req(wdev_->netdev, req);
+  }
+}
+
+void WlanInterface::ReconnectReq(const wlan_fullmac_reconnect_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_reconnect_req(wdev_->netdev, req);
   }
 }
 

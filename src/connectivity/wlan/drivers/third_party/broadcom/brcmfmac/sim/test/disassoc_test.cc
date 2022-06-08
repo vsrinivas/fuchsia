@@ -37,9 +37,9 @@ TEST_F(SimTest, Disassoc) {
   env_->Run(kTestDuration);
 
   // Make sure association was successful
-  ASSERT_EQ(client_ifc.stats_.assoc_attempts, 1U);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.size(), 1U);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.front().result_code, STATUS_CODE_SUCCESS);
+  ASSERT_EQ(client_ifc.stats_.connect_attempts, 1U);
+  ASSERT_EQ(client_ifc.stats_.connect_results.size(), 1U);
+  ASSERT_EQ(client_ifc.stats_.connect_results.front().result_code, STATUS_CODE_SUCCESS);
 
   // Make sure disassociation was successful
   EXPECT_EQ(ap.GetNumAssociatedClient(), 0U);
@@ -83,10 +83,10 @@ TEST_F(SimTest, SmeDeauthFollowedByFwDisassoc) {
   env_->Run(kTestDuration);
 
   // Make sure associations were successful
-  ASSERT_EQ(client_ifc.stats_.assoc_attempts, 2U);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.size(), 2U);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.front().result_code, STATUS_CODE_SUCCESS);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.back().result_code, STATUS_CODE_SUCCESS);
+  ASSERT_EQ(client_ifc.stats_.connect_attempts, 2U);
+  ASSERT_EQ(client_ifc.stats_.connect_results.size(), 2U);
+  ASSERT_EQ(client_ifc.stats_.connect_results.front().result_code, STATUS_CODE_SUCCESS);
+  ASSERT_EQ(client_ifc.stats_.connect_results.back().result_code, STATUS_CODE_SUCCESS);
 
   // Make sure disassociation was successful
   EXPECT_EQ(ap.GetNumAssociatedClient(), 0U);

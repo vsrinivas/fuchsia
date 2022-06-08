@@ -10,7 +10,7 @@ use {
         ie::{
             rsn::{
                 akm::{self, Akm, AKM_PSK},
-                cipher::{self, Cipher, CIPHER_CCMP_128, CIPHER_TKIP},
+                cipher::{self, Cipher, CIPHER_CCMP_128},
             },
             wpa::WpaIe,
             *,
@@ -26,9 +26,9 @@ use {
 
 pub fn make_wpa1_ie() -> WpaIe {
     WpaIe {
-        multicast_cipher: CIPHER_TKIP,
-        unicast_cipher_list: vec![CIPHER_TKIP],
-        akm_list: vec![AKM_PSK],
+        multicast_cipher: Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP },
+        unicast_cipher_list: vec![Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }],
+        akm_list: vec![Akm { oui: Oui::MSFT, suite_type: akm::PSK }],
     }
 }
 

@@ -735,11 +735,11 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   env_->Run(kTestDuration);
 
   // Check if the client's assoc with FakeAP succeeded
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_attempts, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
   // Verify Assoc with SoftAP succeeded
   VerifyAssocWithSoftAP();
-  // Disassoc related tests are in assoc_test.cc
+  // Disassoc related tests are in connect_test.cc
 }
 
 void DynamicIfTest::TestApStop(bool use_cdown) {
@@ -770,9 +770,9 @@ void DynamicIfTest::TestApStop(bool use_cdown) {
   env_->Run(kTestDuration);
 
   // Check if the client's assoc with FakeAP succeeded
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
-  // Disassoc and other assoc scenarios are covered in assoc_test.cc
+  EXPECT_EQ(client_ifc_.stats_.connect_attempts, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
+  // Disassoc and other assoc scenarios are covered in connect_test.cc
 }
 
 // Start both client and SoftAP interfaces simultaneously and check if
@@ -805,8 +805,8 @@ TEST_F(DynamicIfTest, PM_ModeDoesNotGetAffected) {
   env_->Run(kTestDuration);
 
   // Check if the client's assoc with FakeAP succeeded
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_attempts, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
   // Verify Assoc with SoftAP succeeded
   VerifyAssocWithSoftAP();
   EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
@@ -903,7 +903,7 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
   env_->ScheduleNotification(std::bind(&DynamicIfTest::ChannelCheck, this), delay);
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
 }
 
 // This intricate test name means that, the timeout timer should fire when SME issued an iface start

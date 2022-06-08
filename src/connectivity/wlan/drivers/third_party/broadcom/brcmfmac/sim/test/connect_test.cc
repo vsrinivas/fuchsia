@@ -82,7 +82,7 @@ constexpr auto kDefaultClientDeauthReason = wlan_ieee80211::ReasonCode::LEAVING_
 const uint8_t kDefaultSimFwSnr = 40;
 const int8_t kDefaultSimFwRssi = -20;
 
-class AssocTest : public SimTest {
+class ConnectTest : public SimTest {
  public:
   // How long an individual test will run for. We need an end time because tests run until no more
   // events remain and so we need to stop aps from beaconing to drain the event queue.
@@ -90,16 +90,12 @@ class AssocTest : public SimTest {
 
   void Init();
 
-  // Run through the join => auth => assoc flow
-  void StartAssoc();
   void StartDisassoc();
   void DisassocFromAp();
 
-  // Run the unified connect flow
+  // Run through the connect flow
   void StartConnect();
-
-  // Re-association, skips join => auth steps.
-  void ReAssoc();
+  void StartReconnect();
 
   // Send bad association responses
   void SendBadResp();
@@ -124,8 +120,8 @@ class AssocTest : public SimTest {
   void DeauthClient();
   void DeauthFromAp();
 
-  void AssocErrorInject();
-  void AssocErrorEventInject(brcmf_fweh_event_status_t ret_status, status_code_t ret_reason);
+  void ConnectErrorInject();
+  void ConnectErrorEventInject(brcmf_fweh_event_status_t ret_status, status_code_t ret_reason);
 
   void SendStatsQuery();
   void GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats);
@@ -133,7 +129,7 @@ class AssocTest : public SimTest {
   void DetailedHistogramErrorInject();
 
  protected:
-  struct AssocContext {
+  struct ConnectContext {
     // Information about the BSS we are attempting to associate with. Used to generate the
     // appropriate MLME calls (Join => Auth => Assoc).
     simulation::WlanTxInfo tx_info = {.channel = kDefaultChannel};
@@ -150,8 +146,6 @@ class AssocTest : public SimTest {
     // An optional function to call when we see the authentication request go out.
     std::function<void()> on_auth_req_callback;
 
-    // Track number of association responses
-    size_t assoc_resp_count = 0;
     // Track number of connection responses
     size_t connect_resp_count = 0;
     // Track number of disassociation confs (initiated from self)
@@ -184,7 +178,7 @@ class AssocTest : public SimTest {
   // This is the interface we will use for our single client interface
   SimInterface client_ifc_;
 
-  AssocContext context_;
+  ConnectContext context_;
 
   // Keep track of the APs that are in operation so we can easily disable beaconing on all of them
   // at the end of each test.
@@ -217,7 +211,7 @@ class AssocTest : public SimTest {
   // Indicates reassoc needs to be schedule when disassoc_ind is received.
   bool start_reassoc_ = false;
   // Indicates reassoc needs to be issued right when disassoc_ind is received.
-  bool start_reassoc_instant_ = false;
+  bool start_reconnect_instant_ = false;
 
  private:
   // StationIfc overrides
@@ -242,7 +236,7 @@ class AssocTest : public SimTest {
 };
 
 // Since we're acting as wlan_fullmac, we need handlers for any protocol calls we may receive
-wlan_fullmac_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
+wlan_fullmac_impl_ifc_protocol_ops_t ConnectTest::sme_ops_ = {
     .on_scan_result =
         [](void* cookie, const wlan_fullmac_scan_result_t* result) {
           // Ignore
@@ -253,48 +247,36 @@ wlan_fullmac_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
         },
     .connect_conf =
         [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
-          static_cast<AssocTest*>(cookie)->OnConnectConf(resp);
-        },
-    .join_conf =
-        [](void* cookie, const wlan_fullmac_join_confirm_t* resp) {
-          static_cast<AssocTest*>(cookie)->OnJoinConf(resp);
-        },
-    .auth_conf =
-        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
-          static_cast<AssocTest*>(cookie)->OnAuthConf(resp);
+          static_cast<ConnectTest*>(cookie)->OnConnectConf(resp);
         },
     .deauth_conf =
         [](void* cookie, const wlan_fullmac_deauth_confirm_t* resp) {
-          static_cast<AssocTest*>(cookie)->OnDeauthConf(resp);
+          static_cast<ConnectTest*>(cookie)->OnDeauthConf(resp);
         },
     .deauth_ind =
         [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
-          static_cast<AssocTest*>(cookie)->OnDeauthInd(ind);
-        },
-    .assoc_conf =
-        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
-          static_cast<AssocTest*>(cookie)->OnAssocConf(resp);
+          static_cast<ConnectTest*>(cookie)->OnDeauthInd(ind);
         },
     .disassoc_conf =
         [](void* cookie, const wlan_fullmac_disassoc_confirm_t* resp) {
-          static_cast<AssocTest*>(cookie)->OnDisassocConf(resp);
+          static_cast<ConnectTest*>(cookie)->OnDisassocConf(resp);
         },
     .disassoc_ind =
         [](void* cookie, const wlan_fullmac_disassoc_indication_t* ind) {
-          static_cast<AssocTest*>(cookie)->OnDisassocInd(ind);
+          static_cast<ConnectTest*>(cookie)->OnDisassocInd(ind);
         },
     .signal_report =
         [](void* cookie, const wlan_fullmac_signal_report_indication* ind) {
-          static_cast<AssocTest*>(cookie)->OnSignalReport(ind);
+          static_cast<ConnectTest*>(cookie)->OnSignalReport(ind);
         },
     .stats_query_resp =
         [](void* cookie, const wlan_fullmac_stats_query_response_t* resp) {
-          static_cast<AssocTest*>(cookie)->OnStatsQueryResp(resp);
+          static_cast<ConnectTest*>(cookie)->OnStatsQueryResp(resp);
         },
 };
 
-void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
-                   std::shared_ptr<const simulation::WlanRxInfo> info) {
+void ConnectTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                     std::shared_ptr<const simulation::WlanRxInfo> info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
   auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
@@ -335,10 +317,9 @@ void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 }
 
 // Create our device instance and hook up the callbacks
-void AssocTest::Init() {
+void ConnectTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
-  context_.assoc_resp_count = 0;
   context_.connect_resp_count = 0;
   context_.disassoc_conf_count = 0;
   context_.deauth_ind_count = 0;
@@ -357,7 +338,7 @@ void AssocTest::Init() {
   deauth_from_ap_ = false;
 }
 
-void AssocTest::DisassocFromAp() {
+void ConnectTest::DisassocFromAp() {
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
 
@@ -367,7 +348,7 @@ void AssocTest::DisassocFromAp() {
   }
 }
 
-void AssocTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
+void ConnectTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
   context_.connect_resp_count++;
   EXPECT_EQ(resp->result_code, context_.expected_results.front());
 
@@ -375,7 +356,7 @@ void AssocTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
     EXPECT_GT(resp->association_ies_count, 0ul);
     bool contains_wmm_param = false;
     for (size_t offset = 0;
-         offset < resp->association_ies_count - context_.expected_wmm_param.size(); offset++) {
+         offset <= resp->association_ies_count - context_.expected_wmm_param.size(); offset++) {
       if (memcmp(resp->association_ies_list + offset, &context_.expected_wmm_param[0],
                  context_.expected_wmm_param.size()) == 0) {
         contains_wmm_param = true;
@@ -395,58 +376,17 @@ void AssocTest::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
   }
 }
 
-void AssocTest::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
-  // Send auth request
-  wlan_fullmac_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
-  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
-}
-
-void AssocTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
-  // Send assoc request
-  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
-  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
-}
-
-void AssocTest::ReAssoc(void) {
-  // Start directly with assoc request (skipping join -> auth).
-  // This is what SME does on a disassoc ind.
-  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
-  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
-}
-
-void AssocTest::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
-  context_.assoc_resp_count++;
-  EXPECT_EQ(resp->result_code, context_.expected_results.front());
-  EXPECT_EQ(resp->wmm_param_present, !context_.expected_wmm_param.empty());
-  if (resp->wmm_param_present && !context_.expected_wmm_param.empty()) {
-    EXPECT_EQ(memcmp(resp->wmm_param, context_.expected_wmm_param.data(), WLAN_WMM_PARAM_LEN), 0);
-  }
-  context_.expected_results.pop_front();
-  context_.expected_wmm_param.clear();
-
-  if (start_disassoc_) {
-    env_->ScheduleNotification(std::bind(&AssocTest::StartDisassoc, this), zx::msec(200));
-  } else if (start_deauth_) {
-    env_->ScheduleNotification(std::bind(&AssocTest::StartDeauth, this), zx::msec(200));
-  }
-}
-
-void AssocTest::OnDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp) {
+void ConnectTest::OnDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp) {
   if (resp->status == ZX_OK) {
     context_.disassoc_conf_count++;
   }
 }
 
-void AssocTest::OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {
+void ConnectTest::OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {
   context_.deauth_conf_count++;
 }
 
-void AssocTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
+void ConnectTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   context_.deauth_ind_count++;
   if (ind->locally_initiated) {
     context_.ind_locally_initiated_count++;
@@ -454,40 +394,30 @@ void AssocTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   client_ifc_.stats_.deauth_indications.push_back(*ind);
 }
 
-void AssocTest::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
+void ConnectTest::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
   context_.disassoc_ind_count++;
   if (ind->locally_initiated) {
     context_.ind_locally_initiated_count++;
   }
   client_ifc_.stats_.disassoc_indications.push_back(*ind);
-  if (start_reassoc_instant_) {
-    ReAssoc();
+  if (start_reconnect_instant_) {
+    StartReconnect();
   } else if (start_reassoc_) {
-    env_->ScheduleNotification(std::bind(&AssocTest::ReAssoc, this), zx::sec(3));
+    env_->ScheduleNotification(std::bind(&ConnectTest::StartReconnect, this), zx::sec(3));
   }
 }
 
-void AssocTest::OnSignalReport(const wlan_fullmac_signal_report_indication* ind) {
+void ConnectTest::OnSignalReport(const wlan_fullmac_signal_report_indication* ind) {
   context_.signal_ind_count++;
   context_.signal_ind_rssi = ind->rssi_dbm;
   context_.signal_ind_snr = ind->snr_db;
 }
 
-void AssocTest::OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {
+void ConnectTest::OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {
   wlanif::ConvertIfaceStats(&context_.iface_stats, resp->stats);
 }
 
-void AssocTest::StartAssoc() {
-  // Send join request
-  wlan_fullmac_join_req join_req = {};
-  std::memcpy(join_req.selected_bss.bssid, context_.bssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_list = context_.ies.data();
-  join_req.selected_bss.ies_count = context_.ies.size();
-  join_req.selected_bss.channel = context_.tx_info.channel;
-  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
-}
-
-void AssocTest::StartConnect() {
+void ConnectTest::StartConnect() {
   // Send connect request
   wlan_fullmac_connect_req connect_req = {};
   std::memcpy(connect_req.selected_bss.bssid, context_.bssid.byte, ETH_ALEN);
@@ -499,8 +429,16 @@ void AssocTest::StartConnect() {
   client_ifc_.if_impl_ops_->connect_req(client_ifc_.if_impl_ctx_, &connect_req);
 }
 
+void ConnectTest::StartReconnect() {
+  // Send reconnect request
+  // This is what SME does on a disassoc ind.
+  wlan_fullmac_reconnect_req reconnect_req = {};
+  std::memcpy(reconnect_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
+  client_ifc_.if_impl_ops_->reconnect_req(client_ifc_.if_impl_ctx_, &reconnect_req);
+}
+
 // Verify that we get a signal report when associated.
-TEST_F(AssocTest, SignalReportTest) {
+TEST_F(ConnectTest, SignalReportTest) {
   // Create our device instance
   Init();
 
@@ -511,7 +449,7 @@ TEST_F(AssocTest, SignalReportTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -522,20 +460,20 @@ TEST_F(AssocTest, SignalReportTest) {
   EXPECT_EQ(context_.signal_ind_rssi, kDefaultSimFwRssi);
 }
 
-void AssocTest::SendStatsQuery() {
+void ConnectTest::SendStatsQuery() {
   client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
 }
 
-void AssocTest::GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats) {
+void ConnectTest::GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats) {
   client_ifc_.if_impl_ops_->get_iface_counter_stats(client_ifc_.if_impl_ctx_, out_stats);
 }
 
-void AssocTest::GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats) {
+void ConnectTest::GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats) {
   client_ifc_.if_impl_ops_->get_iface_histogram_stats(client_ifc_.if_impl_ctx_, out_stats);
 }
 
 // Verify that StatsQueryReq works when associated.
-TEST_F(AssocTest, StatsQueryReqTest) {
+TEST_F(ConnectTest, StatsQueryReqTest) {
   // Create our device instance
   Init();
 
@@ -545,8 +483,8 @@ TEST_F(AssocTest, StatsQueryReqTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::SendStatsQuery, this), zx::msec(30));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::SendStatsQuery, this), zx::msec(30));
 
   env_->Run(kTestDuration);
 
@@ -617,7 +555,7 @@ TEST_F(AssocTest, StatsQueryReqTest) {
 }
 
 // Verify that StatsQueryReq works when detailed histogram feature is disabled.
-TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
+TEST_F(ConnectTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
   // Create our device instance
   Init();
 
@@ -628,8 +566,8 @@ TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   DetailedHistogramErrorInject();
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::SendStatsQuery, this), zx::msec(30));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::SendStatsQuery, this), zx::msec(30));
 
   env_->Run(kTestDuration);
 
@@ -645,7 +583,7 @@ TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
   ASSERT_THAT(client_mlme_stats.snr_histograms, IsEmpty());
 }
 
-TEST_F(AssocTest, GetIfaceCounterStatsTest) {
+TEST_F(ConnectTest, GetIfaceCounterStatsTest) {
   // Create our device instance
   Init();
 
@@ -656,8 +594,8 @@ TEST_F(AssocTest, GetIfaceCounterStatsTest) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   wlan_fullmac_iface_counter_stats_t stats = {};
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceCounterStats, this, &stats),
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::GetIfaceCounterStats, this, &stats),
                              zx::msec(30));
 
   env_->Run(kTestDuration);
@@ -675,7 +613,7 @@ TEST_F(AssocTest, GetIfaceCounterStatsTest) {
   EXPECT_EQ(stats.tx_drop, fw_tx_bad);
 }
 
-TEST_F(AssocTest, GetIfaceHistogramStatsTest) {
+TEST_F(ConnectTest, GetIfaceHistogramStatsTest) {
   // Create our device instance
   Init();
 
@@ -686,8 +624,8 @@ TEST_F(AssocTest, GetIfaceHistogramStatsTest) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   wlan_fullmac_iface_histogram_stats_t banjo_stats = {};
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceHistogramStats, this, &banjo_stats),
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::GetIfaceHistogramStats, this, &banjo_stats),
                              zx::msec(30));
 
   env_->Run(kTestDuration);
@@ -734,7 +672,7 @@ TEST_F(AssocTest, GetIfaceHistogramStatsTest) {
   EXPECT_EQ(stats.snr_histograms[0].snr_samples[0].num_samples, expected_snr_num_frames);
 }
 
-TEST_F(AssocTest, GetIfaceHistogramStatsNotSupportedTest) {
+TEST_F(ConnectTest, GetIfaceHistogramStatsNotSupportedTest) {
   // Create our device instance
   Init();
 
@@ -746,8 +684,8 @@ TEST_F(AssocTest, GetIfaceHistogramStatsNotSupportedTest) {
   wlan_fullmac_iface_histogram_stats_t banjo_stats = {};
 
   DetailedHistogramErrorInject();
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceHistogramStats, this, &banjo_stats),
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::GetIfaceHistogramStats, this, &banjo_stats),
                              zx::msec(30));
 
   env_->Run(kTestDuration);
@@ -761,19 +699,19 @@ TEST_F(AssocTest, GetIfaceHistogramStatsNotSupportedTest) {
   ASSERT_THAT(stats.snr_histograms, IsEmpty());
 }
 
-void AssocTest::AssocErrorInject() {
+void ConnectTest::ConnectErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_OK, client_ifc_.iface_id_);
 }
 
-void AssocTest::AssocErrorEventInject(brcmf_fweh_event_status_t ret_status,
-                                      status_code_t ret_reason) {
+void ConnectTest::ConnectErrorEventInject(brcmf_fweh_event_status_t ret_status,
+                                          status_code_t ret_reason) {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrEventInjCmd(BRCMF_C_SET_SSID, BRCMF_E_ASSOC, ret_status, ret_reason,
                                           0, client_ifc_.iface_id_);
 }
 
-void AssocTest::StartDisassoc() {
+void ConnectTest::StartDisassoc() {
   // Send disassoc request
   if (!disassoc_from_ap_) {
     if (disassoc_self_) {
@@ -786,7 +724,7 @@ void AssocTest::StartDisassoc() {
   }
 }
 
-void AssocTest::StartDeauth() {
+void ConnectTest::StartDeauth() {
   // Send deauth request
   if (!deauth_from_ap_) {
     DeauthClient();
@@ -796,14 +734,14 @@ void AssocTest::StartDeauth() {
   }
 }
 
-void AssocTest::DisassocClient(const common::MacAddr& mac_addr) {
+void ConnectTest::DisassocClient(const common::MacAddr& mac_addr) {
   wlan_fullmac_disassoc_req disassoc_req = {};
 
   std::memcpy(disassoc_req.peer_sta_address, mac_addr.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->disassoc_req(client_ifc_.if_impl_ctx_, &disassoc_req);
 }
 
-void AssocTest::DeauthClient() {
+void ConnectTest::DeauthClient() {
   wlan_fullmac_deauth_req_t deauth_req = {
       .reason_code = static_cast<reason_code_t>(kDefaultClientDeauthReason)};
 
@@ -811,7 +749,7 @@ void AssocTest::DeauthClient() {
   client_ifc_.if_impl_ops_->deauth_req(client_ifc_.if_impl_ctx_, &deauth_req);
 }
 
-void AssocTest::DeauthFromAp() {
+void ConnectTest::DeauthFromAp() {
   // Figure out our own MAC
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
@@ -821,7 +759,7 @@ void AssocTest::DeauthFromAp() {
   env_->Tx(deauth_frame, context_.tx_info, this);
 }
 
-void AssocTest::TxFakeDisassocReq() {
+void ConnectTest::TxFakeDisassocReq() {
   // Figure out our own MAC
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
@@ -845,14 +783,14 @@ void AssocTest::TxFakeDisassocReq() {
   env_->Tx(wrong_sta_frame, context_.tx_info, this);
 }
 
-void AssocTest::DetailedHistogramErrorInject() {
+void ConnectTest::DetailedHistogramErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("wstats_counters", ZX_ERR_NOT_SUPPORTED, BCME_OK,
                                        client_ifc_.iface_id_);
 }
 
 // For this test, we want the pre-assoc scan test to fail because no APs are found.
-TEST_F(AssocTest, NoAps) {
+TEST_F(ConnectTest, NoAps) {
   // Create our device instance
   Init();
 
@@ -862,15 +800,15 @@ TEST_F(AssocTest, NoAps) {
   context_.ssid = {.len = 6, .data = "TestAP"};
   context_.tx_info.channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Verify that we can successfully associate to a fake AP
-TEST_F(AssocTest, SimpleTest) {
+TEST_F(ConnectTest, SimpleTest) {
   // Create our device instance
   Init();
 
@@ -881,17 +819,17 @@ TEST_F(AssocTest, SimpleTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ((int64_t)context_.signal_ind_count,
             kTestDuration.get() / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
 }
 
 // Verify that we can successfully associate to a fake AP using the new connect API.
-TEST_F(AssocTest, SimpleConnectTest) {
+TEST_F(ConnectTest, SimpleConnectTest) {
   // Create our device instance
   Init();
 
@@ -912,7 +850,7 @@ TEST_F(AssocTest, SimpleConnectTest) {
 }
 
 // Verify that we can associate using only SSID, not BSSID
-TEST_F(AssocTest, SsidTest) {
+TEST_F(ConnectTest, SsidTest) {
   // Create our device instance
   Init();
 
@@ -923,15 +861,15 @@ TEST_F(AssocTest, SsidTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Verify that APs with incorrect SSIDs or BSSIDs are ignored
-TEST_F(AssocTest, WrongIds) {
+TEST_F(ConnectTest, WrongIds) {
   // Create our device instance
   Init();
 
@@ -953,17 +891,17 @@ TEST_F(AssocTest, WrongIds) {
 
   context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
   // The APs aren't giving us a response, but the driver is telling us that the operation failed
   // because it couldn't find a matching AP.
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Attempt to associate while already associated
-TEST_F(AssocTest, RepeatedAssocTest) {
+TEST_F(ConnectTest, RepeatedConnectTest) {
   // Create our device instance
   Init();
 
@@ -977,17 +915,17 @@ TEST_F(AssocTest, RepeatedAssocTest) {
   context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   context_.expected_results.push_back(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(11));
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(12));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(11));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(12));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 3U);
+  EXPECT_EQ(context_.connect_resp_count, 3U);
 }
 
 // Verify that if an AP does not respond to an association response we return a failure
-TEST_F(AssocTest, ApIgnoredRequest) {
+TEST_F(ConnectTest, ApIgnoredRequest) {
   // Create our device instance
   Init();
 
@@ -998,7 +936,7 @@ TEST_F(AssocTest, ApIgnoredRequest) {
 
   context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1006,12 +944,12 @@ TEST_F(AssocTest, ApIgnoredRequest) {
   EXPECT_EQ(assoc_responses_.size(), 0U);
 
   // But we still got our response from the driver
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Verify that if an AP refuses an association request we return a temporary refusal.  The driver
 // will also send a BRCMF_C_DISASSOC to clear AP state each time when refused.
-TEST_F(AssocTest, ApTemporarilyRefusedRequest) {
+TEST_F(ConnectTest, ApTemporarilyRefusedRequest) {
   // Create our device instance
   Init();
 
@@ -1022,7 +960,7 @@ TEST_F(AssocTest, ApTemporarilyRefusedRequest) {
 
   context_.expected_results.push_front(STATUS_CODE_REFUSED_TEMPORARILY);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1037,12 +975,12 @@ TEST_F(AssocTest, ApTemporarilyRefusedRequest) {
   EXPECT_EQ(assoc_responses_.front().status, wlan_ieee80211::StatusCode::REFUSED_TEMPORARILY);
 
   // Make sure we got our response from the driver
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Verify that if an AP refuses an association request we return a failure.  The driver will also
 // send a BRCMF_C_DISASSOC to clear AP state each time when refused.
-TEST_F(AssocTest, ApRefusedRequest) {
+TEST_F(ConnectTest, ApRefusedRequest) {
   // Create our device instance
   Init();
 
@@ -1053,7 +991,7 @@ TEST_F(AssocTest, ApRefusedRequest) {
 
   context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1073,13 +1011,13 @@ TEST_F(AssocTest, ApRefusedRequest) {
   EXPECT_EQ(deauth_frames_.size(), 1U);
   EXPECT_EQ(deauth_frames_.front(), wlan_ieee80211::ReasonCode::STA_LEAVING);
   // Make sure we got our response from the driver
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // SIM FW ignore client assoc request. Note that currently there is no timeout
 // mechanism in the driver to handle this situation. It is currently being
 // worked on.
-TEST_F(AssocTest, SimFwIgnoreAssocReq) {
+TEST_F(ConnectTest, SimFwIgnoreConnectReq) {
   // Create our device instance
   Init();
 
@@ -1089,15 +1027,15 @@ TEST_F(AssocTest, SimFwIgnoreAssocReq) {
 
   context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
-  AssocErrorInject();
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(50));
+  ConnectErrorInject();
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(50));
   env_->Run(kTestDuration);
 
   // We should not have received a assoc response from SIM FW
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
-void AssocTest::SendBadResp() {
+void ConnectTest::SendBadResp() {
   // Figure out our own MAC
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
@@ -1119,7 +1057,7 @@ void AssocTest::SendBadResp() {
 
 // Verify that any non-applicable association responses (i.e., sent to or from the wrong MAC)
 // are ignored
-TEST_F(AssocTest, IgnoreRespMismatch) {
+TEST_F(ConnectTest, IgnoreRespMismatch) {
   // Create our device instance
   Init();
 
@@ -1133,17 +1071,17 @@ TEST_F(AssocTest, IgnoreRespMismatch) {
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
-  context_.on_assoc_req_callback = std::bind(&AssocTest::SendBadResp, this);
+  context_.on_assoc_req_callback = std::bind(&ConnectTest::SendBadResp, this);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
   // Make sure that the firmware/driver ignored bad responses and sent back its own (failure)
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
-void AssocTest::SendMultipleResp() {
+void ConnectTest::SendMultipleResp() {
   constexpr unsigned kRespCount = 100;
 
   // Figure out our own MAC
@@ -1156,7 +1094,7 @@ void AssocTest::SendMultipleResp() {
   }
 }
 
-void AssocTest::SendAssocRespWithWmm() {
+void ConnectTest::SendAssocRespWithWmm() {
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
@@ -1181,7 +1119,7 @@ void AssocTest::SendAssocRespWithWmm() {
   env_->Tx(assoc_resp_frame, context_.tx_info, this);
 }
 
-void AssocTest::SendOpenAuthResp() {
+void ConnectTest::SendOpenAuthResp() {
   common::MacAddr my_mac;
   client_ifc_.GetMacAddr(&my_mac);
   simulation::SimAuthFrame auth_resp(context_.bssid, my_mac, 2, simulation::AUTH_TYPE_OPEN,
@@ -1190,24 +1128,24 @@ void AssocTest::SendOpenAuthResp() {
 }
 
 // Verify that responses after association are ignored
-TEST_F(AssocTest, IgnoreExtraResp) {
+TEST_F(ConnectTest, IgnoreExtraResp) {
   // Create our device instance
   Init();
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
-  context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
+  context_.on_assoc_req_callback = std::bind(&ConnectTest::SendMultipleResp, this);
+  context_.on_auth_req_callback = std::bind(&ConnectTest::SendOpenAuthResp, this);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
   // Make sure that the firmware/driver only responded to the first response
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Attempt to associate while a scan is in-progress
-TEST_F(AssocTest, AssocWhileScanning) {
+TEST_F(ConnectTest, AssocWhileScanning) {
   // Create our device instance
   Init();
 
@@ -1216,9 +1154,9 @@ TEST_F(AssocTest, AssocWhileScanning) {
   aps_.push_back(&ap);
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
+  context_.on_assoc_req_callback = std::bind(&ConnectTest::SendMultipleResp, this);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   const uint8_t channels_list[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
   wlan_fullmac_scan_req_t scan_req = {
@@ -1235,10 +1173,10 @@ TEST_F(AssocTest, AssocWhileScanning) {
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
-TEST_F(AssocTest, AssocWithWmm) {
+TEST_F(ConnectTest, AssocWithWmm) {
   // Create our device instance
   Init();
 
@@ -1247,31 +1185,31 @@ TEST_F(AssocTest, AssocWithWmm) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_wmm_param.insert(context_.expected_wmm_param.end(), expected_wmm_param,
                                      expected_wmm_param + sizeof(expected_wmm_param));
-  context_.on_assoc_req_callback = std::bind(&AssocTest::SendAssocRespWithWmm, this);
-  context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
+  context_.on_assoc_req_callback = std::bind(&ConnectTest::SendAssocRespWithWmm, this);
+  context_.on_auth_req_callback = std::bind(&ConnectTest::SendOpenAuthResp, this);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
-TEST_F(AssocTest, AssocStatusAndReasonCodeMismatchHandling) {
+TEST_F(ConnectTest, AssocStatusAndReasonCodeMismatchHandling) {
   // Create our device instance
   Init();
 
-  AssocErrorEventInject(BRCMF_E_STATUS_NO_ACK, STATUS_CODE_SUCCESS);
+  ConnectErrorEventInject(BRCMF_E_STATUS_NO_ACK, STATUS_CODE_SUCCESS);
   context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(50));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(50));
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Verify that we can successfully associate to a fake AP & disassociate
-TEST_F(AssocTest, DisassocFromSelfTest) {
+TEST_F(ConnectTest, DisassocFromSelfTest) {
   // Create our device instance
   Init();
 
@@ -1281,19 +1219,19 @@ TEST_F(AssocTest, DisassocFromSelfTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   start_disassoc_ = true;
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 1U);
 }
 
 // Verify that disassoc from fake AP fails when not associated. Also check
 // disassoc meant for a different STA, different BSS or when not associated
 // is not accepted by the current STA.
-TEST_F(AssocTest, DisassocWithoutAssocTest) {
+TEST_F(ConnectTest, DisassocWithoutConnectTest) {
   // Create our device instance
   Init();
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
@@ -1301,17 +1239,17 @@ TEST_F(AssocTest, DisassocWithoutAssocTest) {
 
   // Attempt to disassociate. In this case client is not associated. AP
   // will not transmit the disassoc request
-  env_->ScheduleNotification(std::bind(&AssocTest::StartDisassoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::TxFakeDisassocReq, this), zx::msec(50));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartDisassoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::TxFakeDisassocReq, this), zx::msec(50));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 0U);
+  EXPECT_EQ(context_.connect_resp_count, 0U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
 }
 
 // Verify that disassociate for a different client is ignored
-TEST_F(AssocTest, DisassocNotSelfTest) {
+TEST_F(ConnectTest, DisassocNotSelfTest) {
   // Create our device instance
   Init();
 
@@ -1321,18 +1259,18 @@ TEST_F(AssocTest, DisassocNotSelfTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   start_disassoc_ = true;
   disassoc_self_ = false;
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
 }
 
 // After association, send disassoc from the AP
-TEST_F(AssocTest, DisassocFromAPTest) {
+TEST_F(ConnectTest, DisassocFromAPTest) {
   // Create our device instance
   Init();
 
@@ -1342,13 +1280,13 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 
@@ -1359,7 +1297,7 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 }
 
 // After assoc & disassoc, send disassoc again to test event handling
-TEST_F(AssocTest, LinkEventTest) {
+TEST_F(ConnectTest, LinkEventTest) {
   // Create our device instance
   Init();
 
@@ -1370,7 +1308,7 @@ TEST_F(AssocTest, LinkEventTest) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
@@ -1378,13 +1316,13 @@ TEST_F(AssocTest, LinkEventTest) {
 
   // Send Deauth frame after disassociation
   DeauthFromAp();
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
 // After assoc, send a deauth from ap - client should disassociate
-TEST_F(AssocTest, deauth_from_ap) {
+TEST_F(ConnectTest, deauth_from_ap) {
   // Create our device instance
   Init();
 
@@ -1395,13 +1333,13 @@ TEST_F(AssocTest, deauth_from_ap) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   deauth_from_ap_ = true;
   start_deauth_ = true;
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.deauth_conf_count, 0U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
@@ -1410,7 +1348,7 @@ TEST_F(AssocTest, deauth_from_ap) {
 }
 
 // After assoc, send a deauth from client - client should disassociate
-TEST_F(AssocTest, deauth_from_self) {
+TEST_F(ConnectTest, deauth_from_self) {
   // Create our device instance
   Init();
 
@@ -1421,13 +1359,13 @@ TEST_F(AssocTest, deauth_from_self) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   deauth_from_ap_ = false;
   start_deauth_ = true;
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.deauth_conf_count, 1U);
   EXPECT_EQ(context_.deauth_ind_count, 0U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
@@ -1436,7 +1374,7 @@ TEST_F(AssocTest, deauth_from_self) {
 }
 
 // Associate, send a deauth from client, associate again, then send deauth from AP.
-TEST_F(AssocTest, deauth_from_self_then_from_ap) {
+TEST_F(ConnectTest, deauth_from_self_then_from_ap) {
   // Create our device instance
   Init();
 
@@ -1448,14 +1386,14 @@ TEST_F(AssocTest, deauth_from_self_then_from_ap) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::DeauthClient, this), zx::sec(1));
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::sec(2));
-  env_->ScheduleNotification(std::bind(&AssocTest::DeauthFromAp, this), zx::sec(3));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::DeauthClient, this), zx::sec(1));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&ConnectTest::DeauthFromAp, this), zx::sec(3));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 2U);
+  EXPECT_EQ(context_.connect_resp_count, 2U);
   EXPECT_EQ(context_.deauth_conf_count, 1U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
@@ -1463,7 +1401,7 @@ TEST_F(AssocTest, deauth_from_self_then_from_ap) {
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
-TEST_F(AssocTest, simple_reassoc) {
+TEST_F(ConnectTest, simple_reassoc) {
   // Create our device instance
   Init();
 
@@ -1474,19 +1412,19 @@ TEST_F(AssocTest, simple_reassoc) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
-  env_->ScheduleNotification(std::bind(&AssocTest::ReAssoc, this), zx::sec(3));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::DisassocFromAp, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartReconnect, this), zx::sec(3));
 
   env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.assoc_resp_count, 2U);
+  EXPECT_EQ(context_.connect_resp_count, 2U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
 // Reassoc should pass since the attempt is made after disassoc completes.
-TEST_F(AssocTest, reassoc_success) {
+TEST_F(ConnectTest, reassoc_success) {
   // Create our device instance
   Init();
 
@@ -1499,20 +1437,20 @@ TEST_F(AssocTest, reassoc_success) {
   // Schedule reassoc when disassoc notification is received at SME.
   start_reassoc_ = true;
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::DisassocFromAp, this), zx::sec(2));
 
   env_->Run(kTestDuration);
 
   // Since reassoc occurs after disassoc is completed it succeeds.
-  EXPECT_EQ(context_.assoc_resp_count, 2U);
+  EXPECT_EQ(context_.connect_resp_count, 2U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
 // Reassoc should fail since the attempt is made soon after SME is notified but before disassoc
 // completes.
-TEST_F(AssocTest, reassoc_fails) {
+TEST_F(ConnectTest, reassoc_fails) {
   // Create our device instance
   Init();
 
@@ -1523,20 +1461,20 @@ TEST_F(AssocTest, reassoc_fails) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   // Issue reassoc soon after disassoc notification is received at SME.
-  start_reassoc_instant_ = true;
+  start_reconnect_instant_ = true;
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::DisassocFromAp, this), zx::sec(2));
 
   env_->Run(kTestDuration);
 
   // Although we attempted to reassoc, it fails because disconnect is in progress
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
-TEST_F(AssocTest, deauth_during_reassoc) {
+TEST_F(ConnectTest, deauth_during_reassoc) {
   // Create our device instance
   Init();
 
@@ -1547,25 +1485,26 @@ TEST_F(AssocTest, deauth_during_reassoc) {
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
-  env_->ScheduleNotification(std::bind(&AssocTest::ReAssoc, this), zx::sec(3));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::DisassocFromAp, this), zx::sec(2));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartReconnect, this), zx::sec(3));
   // Schedule a deauth immediately, before the above assoc can complete.
-  env_->ScheduleNotification(std::bind(&AssocTest::DeauthClient, this), zx::sec(3) + zx::usec(500));
+  env_->ScheduleNotification(std::bind(&ConnectTest::DeauthClient, this),
+                             zx::sec(3) + zx::usec(500));
 
   env_->Run(kTestDuration);
 
   // If the deauth is successful, we will not get the second assoc response.
   // If it fails for some reason (e.g. profile->bssid mismatch), then the
   // assoc response count will be 2.
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
   EXPECT_EQ(context_.deauth_conf_count, 1U);
 }
 
 // Verify that association is retried as per the setting
-TEST_F(AssocTest, AssocMaxRetries) {
+TEST_F(ConnectTest, AssocMaxRetries) {
   // Create our device instance
   Init();
 
@@ -1582,7 +1521,7 @@ TEST_F(AssocTest, AssocMaxRetries) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1599,11 +1538,11 @@ TEST_F(AssocTest, AssocMaxRetries) {
   EXPECT_EQ(deauth_frames_.size(), 1U);
   EXPECT_EQ(deauth_frames_.front(), wlan_ieee80211::ReasonCode::STA_LEAVING);
   // Make sure we got our response from the driver
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Verify that association is retried as per the setting
-TEST_F(AssocTest, AssocMaxRetriesWhenTimedOut) {
+TEST_F(ConnectTest, AssocMaxRetriesWhenTimedOut) {
   // Create our device instance
   Init();
 
@@ -1619,18 +1558,18 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedOut) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   zx_status_t status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
   // Should have not received any responses
   EXPECT_EQ(assoc_responses_.size(), 0U);
   // Make sure we got our response from the driver
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 
 // Verify that association is attempted when retries is set to zero
-TEST_F(AssocTest, AssocNoRetries) {
+TEST_F(ConnectTest, AssocNoRetries) {
   // Create our device instance
   Init();
 
@@ -1647,7 +1586,7 @@ TEST_F(AssocTest, AssocNoRetries) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   status = brcmf_fil_iovar_int_set(ifp, "assoc_retry_max", max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -1666,6 +1605,6 @@ TEST_F(AssocTest, AssocNoRetries) {
   EXPECT_EQ(deauth_frames_.front(), wlan_ieee80211::ReasonCode::STA_LEAVING);
 
   // Make sure we got our response from the driver
-  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.connect_resp_count, 1U);
 }
 }  // namespace wlan::brcmfmac

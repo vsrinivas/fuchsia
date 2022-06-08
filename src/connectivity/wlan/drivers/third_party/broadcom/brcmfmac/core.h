@@ -41,6 +41,7 @@
 #include <wlan/drivers/components/frame_container.h>
 
 #include "bus.h"
+#include "fuchsia/wlan/ieee80211/cpp/fidl.h"
 #include "fuchsia/wlan/internal/c/banjo.h"
 #include "fweh.h"
 #include "fwil_types.h"
@@ -78,6 +79,8 @@
 #define NDOL_MAX_ENTRIES 8
 
 #define RSSI_HISTOGRAM_LEN 129
+
+#define MAX_SUPPORTED_WEP_KEY_LEN 13
 
 static inline bool address_is_multicast(const uint8_t* address) { return 1 & *address; }
 
@@ -238,8 +241,10 @@ struct brcmf_if {
   int32_t bsscfgidx;
   uint8_t mac_addr[ETH_ALEN];
   uint8_t netif_stop;
-  bss_description_t bss;
+  wlan_fullmac_connect_req_t connect_req;
   uint8_t ies[fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN];
+  uint8_t wep_key_bytes[MAX_SUPPORTED_WEP_KEY_LEN];
+  uint8_t security_ie[fuchsia::wlan::ieee80211::WLAN_IE_MAX_LEN];
   // spinlock_t netif_stop_lock;
   std::atomic<int> pend_8021x_cnt;
   sync_completion_t pend_8021x_wait;

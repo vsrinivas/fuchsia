@@ -28,8 +28,6 @@ class SimInterface {
   struct AssocContext {
     enum AssocState {
       kNone,
-      kJoining,
-      kAuthenticating,
       kAssociating,
       kAssociated,
     } state = kNone;
@@ -45,11 +43,9 @@ class SimInterface {
 
   // Useful statistics about operations performed
   struct Stats {
-    size_t assoc_attempts = 0;
-    size_t assoc_successes = 0;
-    std::list<wlan_join_result_t> join_results;
-    std::list<wlan_fullmac_auth_confirm_t> auth_results;
-    std::list<wlan_fullmac_assoc_confirm_t> assoc_results;
+    size_t connect_attempts = 0;
+    size_t connect_successes = 0;
+    std::list<wlan_fullmac_connect_confirm_t> connect_results;
     std::list<wlan_fullmac_assoc_ind_t> assoc_indications;
     std::list<wlan_fullmac_auth_ind_t> auth_indications;
     std::list<wlan_fullmac_deauth_confirm_t> deauth_results;
@@ -91,12 +87,10 @@ class SimInterface {
   // Default SME Callbacks
   virtual void OnScanResult(const wlan_fullmac_scan_result_t* result);
   virtual void OnScanEnd(const wlan_fullmac_scan_end_t* end);
-  virtual void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
-  virtual void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
   virtual void OnAuthInd(const wlan_fullmac_auth_ind_t* resp);
   virtual void OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp);
   virtual void OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind);
-  virtual void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
+  virtual void OnConnectConf(const wlan_fullmac_connect_confirm_t* resp);
   virtual void OnAssocInd(const wlan_fullmac_assoc_ind_t* ind);
   virtual void OnDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp) {}
   virtual void OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind);
@@ -132,7 +126,8 @@ class SimInterface {
   // Start an assocation with a fake AP. We can use these for subsequent association events, but
   // not interleaved association events (which I doubt are terribly useful, anyway). Note that for
   // the moment only non-authenticated associations are supported.
-  void StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid, const wlan_channel_t& channel);
+  void StartConnect(const common::MacAddr& bssid, const cssid_t& ssid,
+                    const wlan_channel_t& channel);
   void AssociateWith(const simulation::FakeAp& ap,
                      std::optional<zx::duration> delay = std::nullopt);
 

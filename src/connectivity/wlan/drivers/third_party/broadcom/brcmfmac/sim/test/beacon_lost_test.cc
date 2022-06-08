@@ -99,7 +99,7 @@ TEST_F(BeaconLostTest, NoBeaconDisassocTest) {
   env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
 
   // A deauth should have occurred due a beacon timeout
   EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
@@ -133,7 +133,7 @@ TEST_F(BeaconLostTest, BeaconTooFarDisassocTest) {
   env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
 
   // A deauth should have occurred due to moving away from the AP
   ASSERT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
@@ -175,7 +175,7 @@ TEST_F(BeaconLostTest, WrongBeaconLossTest) {
   env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
 
   // No disassociation should occur
   EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 0U);
@@ -218,7 +218,7 @@ TEST_F(BeaconLostTest, TempBeaconLossTest) {
   env_->Run(kSimulatedClockDuration);
 
   // Association with fake AP should be successful
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
 
   // No disassociation should occur
   EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 0U);

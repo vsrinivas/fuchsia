@@ -28,13 +28,9 @@ wlan_fullmac_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
         [](void* ctx, const wlan_fullmac_scan_end_t* end) {
           static_cast<SimInterface*>(ctx)->OnScanEnd(end);
         },
-    .join_conf =
-        [](void* ctx, const wlan_fullmac_join_confirm_t* resp) {
-          static_cast<SimInterface*>(ctx)->OnJoinConf(resp);
-        },
-    .auth_conf =
-        [](void* ctx, const wlan_fullmac_auth_confirm_t* resp) {
-          static_cast<SimInterface*>(ctx)->OnAuthConf(resp);
+    .connect_conf =
+        [](void* ctx, const wlan_fullmac_connect_confirm_t* resp) {
+          static_cast<SimInterface*>(ctx)->OnConnectConf(resp);
         },
     .auth_ind =
         [](void* ctx, const wlan_fullmac_auth_ind_t* resp) {
@@ -47,10 +43,6 @@ wlan_fullmac_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
     .deauth_ind =
         [](void* ctx, const wlan_fullmac_deauth_indication_t* ind) {
           static_cast<SimInterface*>(ctx)->OnDeauthInd(ind);
-        },
-    .assoc_conf =
-        [](void* ctx, const wlan_fullmac_assoc_confirm_t* resp) {
-          static_cast<SimInterface*>(ctx)->OnAssocConf(resp);
         },
     .assoc_ind =
         [](void* ctx, const wlan_fullmac_assoc_ind_t* ind) {
@@ -111,14 +103,14 @@ zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env, wla
   return result;
 }
 
-void SimInterface::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
+void SimInterface::OnConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kAssociating);
 
-  stats_.assoc_results.push_back(*resp);
+  stats_.connect_results.push_back(*resp);
 
   if (resp->result_code == STATUS_CODE_SUCCESS) {
     assoc_ctx_.state = AssocContext::kAssociated;
-    stats_.assoc_successes++;
+    stats_.connect_successes++;
   } else {
     assoc_ctx_.state = AssocContext::kNone;
   }
@@ -132,29 +124,6 @@ void SimInterface::OnAssocInd(const wlan_fullmac_assoc_ind_t* ind) {
 void SimInterface::OnAuthInd(const wlan_fullmac_auth_ind_t* resp) {
   ZX_ASSERT(role_ == WLAN_MAC_ROLE_AP);
   stats_.auth_indications.push_back(*resp);
-}
-
-void SimInterface::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
-  ZX_ASSERT(if_impl_ops_);
-  ZX_ASSERT(assoc_ctx_.state == AssocContext::kAuthenticating);
-  ZX_ASSERT(!memcmp(assoc_ctx_.bssid.byte, resp->peer_sta_address, ETH_ALEN));
-
-  stats_.auth_results.push_back(*resp);
-
-  // We only support open authentication, for now
-  ZX_ASSERT(resp->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM);
-
-  if (resp->result_code != STATUS_CODE_SUCCESS) {
-    assoc_ctx_.state = AssocContext::kNone;
-    return;
-  }
-
-  assoc_ctx_.state = AssocContext::kAssociating;
-
-  //  Send assoc request
-  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
-  memcpy(assoc_req.peer_sta_address, assoc_ctx_.bssid.byte, ETH_ALEN);
-  if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
 }
 
 void SimInterface::OnChannelSwitch(const wlan_fullmac_channel_switch_info_t* ind) {
@@ -171,27 +140,6 @@ void SimInterface::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
 
 void SimInterface::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
   stats_.disassoc_indications.push_back(*ind);
-}
-
-void SimInterface::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
-  ZX_ASSERT(if_impl_ops_);
-  ZX_ASSERT(assoc_ctx_.state == AssocContext::kJoining);
-
-  stats_.join_results.push_back(resp->result_code);
-
-  if (resp->result_code != STATUS_CODE_SUCCESS) {
-    assoc_ctx_.state = AssocContext::kNone;
-    return;
-  }
-
-  assoc_ctx_.state = AssocContext::kAuthenticating;
-
-  // Send auth request
-  wlan_fullmac_auth_req_t auth_req;
-  std::memcpy(auth_req.peer_sta_address, assoc_ctx_.bssid.byte, ETH_ALEN);
-  auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-  auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
 }
 
 void SimInterface::OnScanEnd(const wlan_fullmac_scan_end_t* end) {
@@ -260,16 +208,16 @@ void SimInterface::GetMacAddr(common::MacAddr* out_macaddr) {
   memcpy(out_macaddr->byte, info.sta_addr, ETH_ALEN);
 }
 
-void SimInterface::StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid,
-                              const wlan_channel_t& channel) {
+void SimInterface::StartConnect(const common::MacAddr& bssid, const cssid_t& ssid,
+                                const wlan_channel_t& channel) {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on a Client interface
   ZX_ASSERT(role_ == WLAN_MAC_ROLE_CLIENT);
 
-  stats_.assoc_attempts++;
+  stats_.connect_attempts++;
 
   // Save off context
-  assoc_ctx_.state = AssocContext::kJoining;
+  assoc_ctx_.state = AssocContext::kAssociating;
   assoc_ctx_.bssid = bssid;
 
   assoc_ctx_.ies.clear();
@@ -278,14 +226,16 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid,
   assoc_ctx_.ies.insert(assoc_ctx_.ies.end(), ssid.data, ssid.data + ssid.len);
   assoc_ctx_.channel = channel;
 
-  // Send join request
-  wlan_fullmac_join_req join_req = {};
-  std::memcpy(join_req.selected_bss.bssid, bssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_list = assoc_ctx_.ies.data();
-  join_req.selected_bss.ies_count = assoc_ctx_.ies.size();
-  join_req.selected_bss.channel = channel;
-  join_req.selected_bss.bss_type = BSS_TYPE_INFRASTRUCTURE;
-  if_impl_ops_->join_req(if_impl_ctx_, &join_req);
+  // Send connect request
+  wlan_fullmac_connect_req connect_req = {};
+  std::memcpy(connect_req.selected_bss.bssid, bssid.byte, ETH_ALEN);
+  connect_req.selected_bss.ies_list = assoc_ctx_.ies.data();
+  connect_req.selected_bss.ies_count = assoc_ctx_.ies.size();
+  connect_req.selected_bss.channel = channel;
+  connect_req.selected_bss.bss_type = BSS_TYPE_INFRASTRUCTURE;
+  connect_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+  connect_req.connect_failure_timeout = 1000;  // ~1s (although value is ignored for now)
+  if_impl_ops_->connect_req(if_impl_ctx_, &connect_req);
 }
 
 void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx::duration> delay) {
@@ -297,10 +247,10 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
   wlan_channel_t channel = ap.GetChannel();
 
   if (delay) {
-    env_->ScheduleNotification(std::bind(&SimInterface::StartAssoc, this, bssid, ssid, channel),
+    env_->ScheduleNotification(std::bind(&SimInterface::StartConnect, this, bssid, ssid, channel),
                                *delay);
   } else {
-    StartAssoc(ap.GetBssid(), ap.GetSsid(), ap.GetChannel());
+    StartConnect(ap.GetBssid(), ap.GetSsid(), ap.GetChannel());
   }
 }
 

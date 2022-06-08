@@ -51,31 +51,6 @@ type WlanFullmacScanReq = struct {
 const WLAN_VIE_MAX_LEN uint32 = 510;
 const WLAN_MAX_OP_RATES uint32 = 12;
 
-type WlanFullmacConnectReq = struct {
-    selected_bss fuchsia.wlan.internal.BssDescription;
-    // Timeout specified in beacon interval.
-    connect_failure_timeout uint32;
-
-    /// Additional parameters specific to the authentication exchange.
-    auth_type WlanAuthType;
-    // sae_password is ignored except when SAE_DRIVER_AUTH is enabled and the
-    // auth_type is SAE.
-    sae_password vector<uint8>:MAX;
-
-    /// Additional parameters specific to the association exchange.
-    rsne vector<uint8>:ieee80211.WLAN_IE_BODY_MAX_LEN;
-    vendor_ie vector<uint8>:WLAN_VIE_MAX_LEN;
-};
-
-type WlanFullmacConnectConfirm = struct {
-    peer_sta_address ieee80211.MacAddr;
-    result_code ieee80211.StatusCode;
-
-    // These fields are only valid if the result is success.
-    association_id uint16;
-    association_ies vector<uint8>:MAX;
-};
-
 type WlanFullmacJoinReq = struct {
     selected_bss fuchsia.wlan.internal.BssDescription;
     // Timeout specified in beacon intervals.
@@ -264,6 +239,39 @@ type WlanScanResult = strict enum : uint8 {
 type WlanFullmacScanEnd = struct {
     txn_id uint64;
     code WlanScanResult;
+};
+
+type WlanFullmacConnectReq = struct {
+    selected_bss fuchsia.wlan.internal.BssDescription;
+    // Timeout specified in beacon interval.
+    connect_failure_timeout uint32;
+
+    /// Additional parameters specific to the authentication exchange.
+    auth_type WlanAuthType;
+    // sae_password is ignored except when SAE_DRIVER_AUTH is enabled and the
+    // auth_type is SAE.
+    sae_password vector<uint8>:MAX;
+
+    /// WEP key used in the authentication exchange. Only included for WEP security type.
+    // TODO(fxbug.dev/85462): this should be optional, but we can't because
+    // Banjo code generation would give us "a field has incomplete type" error
+    wep_key SetKeyDescriptor;
+
+    /// Additional parameters specific to the association exchange.
+    security_ie vector<uint8>:ieee80211.WLAN_IE_MAX_LEN;
+};
+
+type WlanFullmacReconnectReq = struct {
+    peer_sta_address ieee80211.MacAddr;
+};
+
+type WlanFullmacConnectConfirm = struct {
+    peer_sta_address ieee80211.MacAddr;
+    result_code ieee80211.StatusCode;
+
+    // These fields are only valid if the result is success.
+    association_id uint16;
+    association_ies vector<uint8>:MAX;
 };
 
 type WlanJoinResult = strict enum : uint8 {
@@ -816,6 +824,9 @@ protocol WlanFullmacImpl {
     }) -> ();
     ConnectReq(struct {
         req WlanFullmacConnectReq;
+    }) -> ();
+    ReconnectReq(struct {
+        req WlanFullmacReconnectReq;
     }) -> ();
     // TODO(fxbug.dev/88275): Remove Join/Auth/Assoc when Connect is supported.
     JoinReq(struct {

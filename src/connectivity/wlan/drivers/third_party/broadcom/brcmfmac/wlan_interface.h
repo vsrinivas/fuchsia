@@ -65,6 +65,7 @@ class WlanInterface : public wlan::drivers::components::NetworkPort,
   void QuerySpectrumManagementSupport(spectrum_management_support_t* resp);
   void StartScan(const wlan_fullmac_scan_req_t* req);
   void ConnectReq(const wlan_fullmac_connect_req_t* req);
+  void ReconnectReq(const wlan_fullmac_reconnect_req_t* req);
   void JoinReq(const wlan_fullmac_join_req_t* req);
   void AuthReq(const wlan_fullmac_auth_req_t* req);
   void AuthResp(const wlan_fullmac_auth_resp_t* resp);

@@ -177,6 +177,8 @@ wlan_fullmac_impl_protocol_ops_t EmptyProtoOps() {
       .query_spectrum_management_support =
           [](void* ctx, spectrum_management_support_t* resp) { memset(resp, 0, sizeof(*resp)); },
       .start_scan = [](void* ctx, const wlan_fullmac_scan_req_t* req) {},
+      .connect_req = [](void* ctx, const wlan_fullmac_connect_req_t* req) {},
+      .reconnect_req = [](void* ctx, const wlan_fullmac_reconnect_req_t* req) {},
       .join_req = [](void* ctx, const wlan_fullmac_join_req_t* req) {},
       .auth_req = [](void* ctx, const wlan_fullmac_auth_req_t* req) {},
       .auth_resp = [](void* ctx, const wlan_fullmac_auth_resp_t* req) {},

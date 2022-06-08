@@ -140,7 +140,7 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashDuringScan) {
   EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
 
   // Verify that the association succeeded.
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 1U);
 
   // Verify inspect is updated.
   uint64_t count;
@@ -162,8 +162,8 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashAfterConnect) {
   env_->Run(kTestDuration);
 
   // Verify that both association succeeded.
-  EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 2U);
-  EXPECT_EQ(client_ifc_.stats_.assoc_successes, 2U);
+  EXPECT_EQ(client_ifc_.stats_.connect_attempts, 2U);
+  EXPECT_EQ(client_ifc_.stats_.connect_successes, 2U);
 
   // Verify inspect is updated.
   uint64_t count;

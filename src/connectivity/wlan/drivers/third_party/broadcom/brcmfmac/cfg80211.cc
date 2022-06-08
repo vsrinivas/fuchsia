@@ -1705,23 +1705,6 @@ static inline bool brcmf_tlv_ie_has_msft_type(const uint8_t* ie, uint8_t oui_typ
           ie[TLV_BODY_OFF + TLV_OUI_LEN] == oui_type);
 }
 
-static struct brcmf_vs_tlv* brcmf_find_wpaie(const uint8_t* ie_buf, uint32_t ie_len) {
-  size_t offset = 0;
-
-  while (offset < ie_len) {
-    uint8_t type = ie_buf[offset];
-    uint8_t length = ie_buf[offset + TLV_LEN_OFF];
-    if (type == WLAN_IE_TYPE_VENDOR_SPECIFIC) {
-      if (brcmf_tlv_ie_has_msft_type(ie_buf + offset, WPA_OUI_TYPE)) {
-        BRCMF_DBG(CONN, "Found WPA IE");
-        return (struct brcmf_vs_tlv*)(ie_buf + offset);
-      }
-    }
-    offset += length + TLV_HDR_LEN;
-  }
-  return nullptr;
-}
-
 void set_conf_wmm_param(const brcmf_cfg80211_info* cfg, bool* wmm_param_present,
                         uint8_t wmm_param[18]) {
   *wmm_param_present = false;
@@ -1765,31 +1748,22 @@ void brcmf_return_assoc_result(struct net_device* ndev, status_code_t status_cod
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
-  BRCMF_DBG(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
-  uint16_t association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
-
-  if (ndev->new_connect_api) {
-    wlan_fullmac_connect_confirm_t conf;
-    conf.result_code = status_code;
+  wlan_fullmac_connect_confirm_t conf;
+  conf.result_code = status_code;
+  if (conf.result_code == STATUS_CODE_SUCCESS && cfg->conn_info.resp_ie_len > 0) {
+    BRCMF_DBG(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
+    uint16_t association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
     conf.association_id = association_id;
-    if (cfg->conn_info.resp_ie_len > 0) {
-      conf.association_ies_count = cfg->conn_info.resp_ie_len;
-      conf.association_ies_list = cfg->conn_info.resp_ie;
-    }
-
-    BRCMF_IFDBG(WLANIF, ndev, "Sending connect result to SME. result: %" PRIu16 ", aid: %" PRIu16,
-                conf.result_code, conf.association_id);
-    wlan_fullmac_impl_ifc_connect_conf(&ndev->if_proto, &conf);
+    conf.association_ies_count = cfg->conn_info.resp_ie_len;
+    conf.association_ies_list = cfg->conn_info.resp_ie;
   } else {
-    // TODO(fxbug.dev/88275): Remove when only ConnectConfirm is needed.
-    wlan_fullmac_assoc_confirm_t conf;
-    conf.result_code = status_code;
-    conf.association_id = 42;
-    set_conf_wmm_param(cfg, &conf.wmm_param_present, conf.wmm_param);
-    BRCMF_IFDBG(WLANIF, ndev, "Sending assoc result to SME. result: %" PRIu16 ", aid: %" PRIu16,
-                conf.result_code, conf.association_id);
-    wlan_fullmac_impl_ifc_assoc_conf(&ndev->if_proto, &conf);
+    conf.association_id = 0;
+    conf.association_ies_count = 0;
   }
+
+  BRCMF_IFDBG(WLANIF, ndev, "Sending connect result to SME. result: %" PRIu16 ", aid: %" PRIu16,
+              conf.result_code, conf.association_id);
+  wlan_fullmac_impl_ifc_connect_conf(&ndev->if_proto, &conf);
 }
 
 std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len) {
@@ -1810,18 +1784,15 @@ std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len) {
   return ssid;
 }
 
-zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_assoc_req_t* req) {
+zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_connect_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct brcmf_join_params join_params;
   wlan_channel_t chan_override;
   uint16_t chanspec;
   size_t join_params_size = 0;
-  const void* ie;
-  uint32_t ie_len;
   std::vector<uint8_t> ssid;
   zx_status_t err = ZX_OK;
-  const struct brcmf_vs_tlv* wpa_ie;
   bcme_status_t fw_err = BCME_OK;
   bool is_rsn_ie = true;
 
@@ -1835,7 +1806,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_a
     BRCMF_ERR("Timed out waiting for client disconnect");
     goto fail;
   }
-  // Firmware is already processing a join request. Don't clear the CONNECTING bit because the
+  // Firmware is already processing a connect request. Don't clear the CONNECTING bit because the
   // operation is still expected to complete.
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
     err = ZX_ERR_BAD_STATE;
@@ -1844,31 +1815,17 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_a
     goto done;
   }
 
-  if (req->rsne_len) {
-    BRCMF_DBG(CONN, "using RSNE rsn len: %zu", req->rsne_len);
-    // Pass RSNE to firmware
-    ie_len = req->rsne_len;
-    ie = req->rsne;
-  } else if (req->vendor_ie_len) {
-    BRCMF_DBG(CONN, "using WPA1 vendor_ie len: %zu", req->vendor_ie_len);
-    wpa_ie = brcmf_find_wpaie(req->vendor_ie, req->vendor_ie_len);
-    if (!wpa_ie) {
-      BRCMF_ERR("No WPA IE found");
-      return ZX_ERR_INVALID_ARGS;
-    }
-    BRCMF_DBG(CONN, "Found WPA IE, len: %d", wpa_ie->len);
+  if (req->security_ie_count >= TLV_HDR_LEN &&
+      req->security_ie_list[0] == WLAN_IE_TYPE_VENDOR_SPECIFIC &&
+      brcmf_tlv_ie_has_msft_type(req->security_ie_list, WPA_OUI_TYPE)) {
+    // Not RSNE but is WPA1 IE
     is_rsn_ie = false;
-    ie_len = wpa_ie->len + TLV_HDR_LEN;
-    ie = wpa_ie;
-  } else {
-    // Neither RSNE or WPA1 is set
-    ie = nullptr;
-    ie_len = 0;
   }
 
-  if (ie) {
-    // Set wpaie only if ie is set
-    err = brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len, &fw_err);
+  if (req->security_ie_count > 0) {
+    // Set wpaie only if there's security ie
+    err = brcmf_fil_iovar_data_set(ifp, "wpaie", req->security_ie_list, req->security_ie_count,
+                                   &fw_err);
     if (err != ZX_OK) {
       BRCMF_ERR("wpaie failed: %s, fw err %s", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
@@ -1885,8 +1842,8 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_a
     BRCMF_DBG(TRACE, "Applied Vndr IEs for Assoc request");
   }
 
-  if (ie_len > 0) {
-    struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)ie;
+  if (req->security_ie_count > 0) {
+    struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)req->security_ie_list;
     err = brcmf_configure_wpaie(ifp, tmp_ie, is_rsn_ie, false);
     if (err != ZX_OK) {
       BRCMF_ERR("Failed to install RSNE: %s", zx_status_get_string(err));
@@ -1900,13 +1857,14 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_a
   // encoding 80Mhz and the upper layer had always passed 20Mhz historically so also need to
   // test whether the 40Mhz encoding works properly.
   // TODO(fxbug.dev/65770) - Remove this override.
-  chan_override = ifp->bss.channel;
+  chan_override = ifp->connect_req.selected_bss.channel;
   chan_override.cbw = CHANNEL_BANDWIDTH_CBW20;
 
   chanspec = channel_to_chanspec(&cfg->d11inf, &chan_override);
   cfg->channel = chanspec;
 
-  ssid = brcmf_find_ssid_in_ies(ifp->bss.ies_list, ifp->bss.ies_count);
+  ssid = brcmf_find_ssid_in_ies(ifp->connect_req.selected_bss.ies_list,
+                                ifp->connect_req.selected_bss.ies_count);
 
   join_params_size = sizeof(join_params);
   memset(&join_params, 0, join_params_size);
@@ -1914,7 +1872,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_a
   memcpy(&join_params.ssid_le.SSID, ssid.data(), ssid.size());
   join_params.ssid_le.SSID_len = ssid.size();
 
-  memcpy(join_params.params_le.bssid, ifp->bss.bssid, ETH_ALEN);
+  memcpy(join_params.params_le.bssid, ifp->connect_req.selected_bss.bssid, ETH_ALEN);
   join_params.params_le.chanspec_num = 1;
   join_params.params_le.chanspec_list[0] = chanspec;
 
@@ -3460,169 +3418,132 @@ void brcmf_if_start_scan(net_device* ndev, const wlan_fullmac_scan_req_t* req) {
 
 void brcmf_if_connect_req(net_device* ndev, const wlan_fullmac_connect_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
+
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping connect request");
     return;
   }
 
-  ndev->new_connect_api = true;
-
   wlan_fullmac_connect_confirm_t result;
+  zx_status_t status;
   memcpy(result.peer_sta_address, req->selected_bss.bssid, sizeof(req->selected_bss.bssid));
 
-  wlan_join_result_t join_result = brcmf_if_join_req_impl(ndev, req->selected_bss);
-  if (join_result != WLAN_JOIN_RESULT_SUCCESS) {
-    BRCMF_IFDBG(WLANIF, ndev, "Connect request from SME exited: bad join parameters");
+  auto ssid = brcmf_find_ssid_in_ies(req->selected_bss.ies_list, req->selected_bss.ies_count);
+
+  if (ssid.empty()) {
+    BRCMF_DBG(WLANIF, "Connect request from SME exited: no SSID in request");
     result.result_code = STATUS_CODE_JOIN_FAILURE;
-    wlan_fullmac_impl_ifc_connect_conf(&ndev->if_proto, &result);
-    return;
+    goto fail;
   }
 
-  wlan_auth_result_t auth_result =
-      brcmf_if_auth_req_impl(ndev, req->selected_bss.bssid, req->auth_type);
-  if (auth_result != WLAN_AUTH_RESULT_SUCCESS) {
-    BRCMF_IFDBG(WLANIF, ndev, "Connect request from SME exited: bad auth parameters");
+  if (req->wep_key.key_count > 0 && !(req->auth_type == WLAN_AUTH_TYPE_SHARED_KEY ||
+                                      req->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM)) {
+    BRCMF_DBG(WLANIF, "Connect request from SME exited: unexpected WEP key in request");
+    result.result_code = STATUS_CODE_JOIN_FAILURE;
+    goto fail;
+  }
+
+  if (req->wep_key.key_count > MAX_SUPPORTED_WEP_KEY_LEN) {
+    BRCMF_DBG(WLANIF, "Connect request from SME exited: WEP key len %zu larger than %d",
+              req->wep_key.key_count, MAX_SUPPORTED_WEP_KEY_LEN);
+    result.result_code = STATUS_CODE_JOIN_FAILURE;
+    goto fail;
+  }
+
+  BRCMF_IFDBG(WLANIF, ndev, "Connect request from SME.");
+#if !defined(NDEBUG)
+  BRCMF_IFDBG(WLANIF, ndev, "  ssid: " FMT_SSID ", bssid: " FMT_MAC ", channel: %u",
+              FMT_SSID_VECT(ssid), FMT_MAC_ARGS(req->selected_bss.bssid),
+              req->selected_bss.channel.primary);
+#endif /* !defined(NDEBUG) */
+
+  memcpy(&ifp->connect_req, req, sizeof(ifp->connect_req));
+  if (ifp->connect_req.selected_bss.ies_count > fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN) {
+    ifp->connect_req.selected_bss.ies_count = fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN;
+  }
+  // BSS IES, WEP key, and security IE pointers point to data we don't own,
+  // so we have to copy them over.
+  memcpy(&ifp->ies, ifp->connect_req.selected_bss.ies_list,
+         ifp->connect_req.selected_bss.ies_count);
+  ifp->connect_req.selected_bss.ies_list = ifp->ies;
+
+  if (ifp->connect_req.wep_key.key_count > 0) {
+    memcpy(&ifp->wep_key_bytes, ifp->connect_req.wep_key.key_list,
+           ifp->connect_req.wep_key.key_count);
+    ifp->connect_req.wep_key.key_list = ifp->wep_key_bytes;
+  }
+
+  if (ifp->connect_req.security_ie_count > fuchsia::wlan::ieee80211::WLAN_IE_MAX_LEN) {
+    ifp->connect_req.security_ie_count = fuchsia::wlan::ieee80211::WLAN_IE_MAX_LEN;
+  }
+  memcpy(&ifp->security_ie, ifp->connect_req.security_ie_list, ifp->connect_req.security_ie_count);
+  ifp->connect_req.security_ie_list = ifp->security_ie;
+
+  memcpy(profile->bssid, req->selected_bss.bssid, ETH_ALEN);
+
+  status = brcmf_configure_opensecurity(ifp);
+  if (status != ZX_OK) {
+    BRCMF_DBG(WLANIF, "Connect request from SME exited: unable to reset security iovars");
+    result.result_code = STATUS_CODE_JOIN_FAILURE;
+    goto fail;
+  }
+
+  if (ifp->connect_req.wep_key.key_count > 0) {
+    auto add_key_result = brcmf_cfg80211_add_key(ndev, &ifp->connect_req.wep_key);
+    if (add_key_result != ZX_OK) {
+      BRCMF_DBG(WLANIF, "Connect request from SME exited: unable to set WEP key");
+      result.result_code = STATUS_CODE_JOIN_FAILURE;
+      goto fail;
+    }
+  }
+
+  if (brcmf_set_auth_type(ndev, ifp->connect_req.auth_type) != ZX_OK) {
+    BRCMF_IFDBG(WLANIF, ndev, "Connect request from SME exited: bad auth_type parameters");
     result.result_code = STATUS_CODE_UNSUPPORTED_AUTH_ALGORITHM;
-    wlan_fullmac_impl_ifc_connect_conf(&ndev->if_proto, &result);
-    return;
+    goto fail;
   }
 
-  wlan_fullmac_assoc_req_t assoc_req;
-  memcpy(assoc_req.peer_sta_address, req->selected_bss.bssid, sizeof(req->selected_bss.bssid));
-  assoc_req.rsne_len = req->rsne_count;
-  assoc_req.vendor_ie_len = req->vendor_ie_count;
-  memcpy(assoc_req.rsne, req->rsne_list, req->rsne_count);
-  memcpy(assoc_req.vendor_ie, req->vendor_ie_list, req->vendor_ie_count);
-  status_code_t assoc_init_status = brcmf_if_init_assoc_req(ndev, &assoc_req);
-  if (assoc_init_status != STATUS_CODE_SUCCESS) {
-    BRCMF_IFDBG(WLANIF, ndev, "Connect request from SME exited: bad assoc parameters");
-    brcmf_return_assoc_result(ndev, assoc_init_status);
-    return;
+  if (ifp->connect_req.security_ie_count > 0) {
+    BRCMF_DBG(TEMP, " * * Security IE non-zero! %ld", ifp->connect_req.security_ie_count);
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES), ifp->connect_req.security_ie_list,
+                       ifp->connect_req.security_ie_count, "Security IE:");
   }
 
+  brcmf_cfg80211_connect(ndev, &ifp->connect_req);
   BRCMF_IFDBG(WLANIF, ndev, "Initiated connect request from SME");
+  return;
+
+fail:
+  wlan_fullmac_impl_ifc_connect_conf(&ndev->if_proto, &result);
 }
 
-wlan_join_result_t brcmf_if_join_req_impl(net_device* ndev, const bss_description_t& sme_bss) {
+void brcmf_if_reconnect_req(net_device* ndev, const wlan_fullmac_reconnect_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
-  struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
 
-  auto ssid = brcmf_find_ssid_in_ies(sme_bss.ies_list, sme_bss.ies_count);
-
-  if (!ssid.empty()) {
-    BRCMF_IFDBG(WLANIF, ndev, "Join request from SME.");
+  if (memcmp(req->peer_sta_address, ifp->connect_req.selected_bss.bssid, ETH_ALEN)) {
+    BRCMF_ERR("Requested MAC != Connected MAC");
 #if !defined(NDEBUG)
-    BRCMF_IFDBG(WLANIF, ndev, "  ssid: " FMT_SSID ", bssid: " FMT_MAC ", channel: %u",
-                FMT_SSID_VECT(ssid), FMT_MAC_ARGS(sme_bss.bssid), sme_bss.channel.primary);
+    const uint8_t* old_mac = ifp->connect_req.selected_bss.bssid;
+    const uint8_t* new_mac = req->peer_sta_address;
+    BRCMF_IFDBG(WLANIF, ndev, " requested mac: " FMT_MAC ", connected mac: " FMT_MAC,
+                FMT_MAC_ARGS(new_mac), FMT_MAC_ARGS(old_mac));
 #endif /* !defined(NDEBUG) */
 
-    memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
-    if (ifp->bss.ies_count > fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN) {
-      ifp->bss.ies_count = fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN;
-    }
-    // BSS IES pointer points to data we don't own, so we have to copy the IES over.
-    memcpy(&ifp->ies, ifp->bss.ies_list, ifp->bss.ies_count);
-    ifp->bss.ies_list = ifp->ies;
-    memcpy(profile->bssid, sme_bss.bssid, ETH_ALEN);
-
-    zx_status_t status = brcmf_configure_opensecurity(ifp);
-    if (status != ZX_OK) {
-      return WLAN_JOIN_RESULT_INTERNAL_ERROR;
-    }
-  } else {
-    BRCMF_DBG(WLANIF, "Received invalid join request with no SSID");
-    return WLAN_JOIN_RESULT_INTERNAL_ERROR;
-  }
-
-  return WLAN_JOIN_RESULT_SUCCESS;
-}
-
-// Because brcm's join/assoc is handled in a single operation (BRCMF_C_SET_SSID), we save off
-// the bss information, but otherwise wait until an ASSOCIATE.request is received to join so
-// that we have the negotiated RSNE.
-void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req) {
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping join callback");
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
     return;
   }
 
-  wlan_fullmac_join_confirm_t result;
-  result.result_code = brcmf_if_join_req_impl(ndev, req->selected_bss);
-  BRCMF_IFDBG(WLANIF, ndev, "Sending join confirm to SME. result: %s",
-              result.result_code == WLAN_JOIN_RESULT_SUCCESS           ? "success"
-              : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout"
-              : result.result_code == WLAN_JOIN_RESULT_INTERNAL_ERROR  ? "internal error"
-                                                                       : "unknown");
-  wlan_fullmac_impl_ifc_join_conf(&ndev->if_proto, &result);
+  brcmf_cfg80211_connect(ndev, &ifp->connect_req);
 }
 
-wlan_auth_result_t brcmf_if_auth_req_impl(net_device* ndev, const uint8_t peer_sta_address[6],
-                                          const wlan_auth_type_t auth_type) {
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-
-#if !defined(NDEBUG)
-  BRCMF_IFDBG(WLANIF, ndev, "  address: " FMT_MAC, FMT_MAC_ARGS(peer_sta_address));
-#endif /* !defined(NDEBUG) */
-
-  // Ensure that join bssid matches auth bssid
-  if (memcmp(peer_sta_address, ifp->bss.bssid, ETH_ALEN) != 0) {
-    BRCMF_ERR("Auth MAC != Join MAC");
-#if !defined(NDEBUG)
-    const uint8_t* old_mac = ifp->bss.bssid;
-    const uint8_t* new_mac = peer_sta_address;
-    BRCMF_IFDBG(WLANIF, ndev, "  auth mac: " FMT_MAC "join mac: " FMT_MAC, FMT_MAC_ARGS(new_mac),
-                FMT_MAC_ARGS(old_mac));
-#endif /* !defined(NDEBUG) */
-
-    // In debug builds, we should investigate why the MLME is giving us inconsitent
-    // requests.
-    ZX_DEBUG_ASSERT(0);
-
-    // In release builds, ignore and continue.
-    BRCMF_ERR("Ignoring mismatch and using join MAC address");
-  }
-
-  if (brcmf_set_auth_type(ndev, auth_type) != ZX_OK) {
-    return WLAN_AUTH_RESULT_REJECTED;
-  }
-
-  return WLAN_AUTH_RESULT_SUCCESS;
+void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req) {
+  BRCMF_WARN("join req is deprecated and no longer implemented");
 }
 
 void brcmf_if_auth_req(net_device* ndev, const wlan_fullmac_auth_req_t* req) {
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping auth callback");
-    return;
-  }
-
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-
-  BRCMF_IFDBG(WLANIF, ndev, "Auth request from SME. type: %s",
-              req->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM           ? "open"
-              : req->auth_type == WLAN_AUTH_TYPE_SHARED_KEY          ? "shared"
-              : req->auth_type == WLAN_AUTH_TYPE_FAST_BSS_TRANSITION ? "fast BSS"
-              : req->auth_type == WLAN_AUTH_TYPE_SAE                 ? "SAE"
-                                                                     : "invalid");
-
-  wlan_fullmac_auth_confirm_t response;
-  response.auth_type = req->auth_type;
-  memcpy(&response.peer_sta_address, ifp->bss.bssid, ETH_ALEN);
-  response.result_code = brcmf_if_auth_req_impl(ndev, req->peer_sta_address, req->auth_type);
-
-  BRCMF_IFDBG(WLANIF, ndev, "Sending auth confirm to SME. result: %s",
-              response.result_code == WLAN_AUTH_RESULT_SUCCESS   ? "success"
-              : response.result_code == WLAN_AUTH_RESULT_REFUSED ? "refused"
-              : response.result_code == WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED
-                  ? "anti-clogging token required"
-              : response.result_code == WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED
-                  ? "finite cyclic group not supported"
-              : response.result_code == WLAN_AUTH_RESULT_REJECTED        ? "rejected"
-              : response.result_code == WLAN_AUTH_RESULT_FAILURE_TIMEOUT ? "timeout"
-                                                                         : "unknown");
-
-  wlan_fullmac_impl_ifc_auth_conf(&ndev->if_proto, &response);
+  BRCMF_WARN("auth req is deprecated and no longer implemented");
 }
 
 // In AP mode, receive a response from wlan_fullmac confirming that a client was successfully
@@ -3706,44 +3627,8 @@ void brcmf_if_deauth_req(net_device* ndev, const wlan_fullmac_deauth_req_t* req)
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 }
 
-status_code_t brcmf_if_init_assoc_req(net_device* ndev, const wlan_fullmac_assoc_req_t* req) {
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-
-  if (req->rsne_len != 0) {
-    BRCMF_DBG(TEMP, " * * RSNE non-zero! %ld", req->rsne_len);
-    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES), req->rsne, req->rsne_len, "RSNE:");
-  }
-
-  if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
-    BRCMF_ERR("Requested MAC != Connected MAC");
-#if !defined(NDEBUG)
-    const uint8_t* old_mac = ifp->bss.bssid;
-    const uint8_t* new_mac = req->peer_sta_address;
-    BRCMF_IFDBG(WLANIF, ndev, " requested mac: " FMT_MAC ", connected mac: " FMT_MAC,
-                FMT_MAC_ARGS(new_mac), FMT_MAC_ARGS(old_mac));
-#endif /* !defined(NDEBUG) */
-
-    return STATUS_CODE_REFUSED_REASON_UNSPECIFIED;
-  }
-
-  brcmf_cfg80211_connect(ndev, req);
-  return STATUS_CODE_SUCCESS;
-}
-
 void brcmf_if_assoc_req(net_device* ndev, const wlan_fullmac_assoc_req_t* req) {
-  BRCMF_IFDBG(WLANIF, ndev, "Assoc request from SME. rsne_len: %zd venie len %zd", req->rsne_len,
-              req->vendor_ie_len);
-#if !defined(NDEBUG)
-  BRCMF_IFDBG(WLANIF, ndev, "  address: " FMT_MAC, FMT_MAC_ARGS(req->peer_sta_address));
-#endif /* !defined(NDEBUG) */
-
-  ndev->new_connect_api = false;
-
-  status_code_t status = brcmf_if_init_assoc_req(ndev, req);
-
-  if (status != STATUS_CODE_SUCCESS) {
-    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
-  }
+  BRCMF_WARN("assoc req is deprecated and no longer implemented");
 }
 
 void brcmf_if_assoc_resp(net_device* ndev, const wlan_fullmac_assoc_resp_t* ind) {
@@ -4945,10 +4830,10 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (memcmp(resp->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
+  if (memcmp(resp->peer_sta_address, ifp->connect_req.selected_bss.bssid, ETH_ALEN)) {
     BRCMF_ERR("Auth MAC != Join MAC");
 #if !defined(NDEBUG)
-    const uint8_t* old_mac = ifp->bss.bssid;
+    const uint8_t* old_mac = ifp->connect_req.selected_bss.bssid;
     const uint8_t* new_mac = resp->peer_sta_address;
     BRCMF_DBG(CONN, " auth mac: " FMT_MAC ", join mac: " FMT_MAC, FMT_MAC_ARGS(new_mac),
               FMT_MAC_ARGS(old_mac));
@@ -4961,7 +4846,8 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev,
     BRCMF_ERR("Ignoring mismatch and using join MAC address");
   }
 
-  auto ssid = brcmf_find_ssid_in_ies(ifp->bss.ies_list, ifp->bss.ies_count);
+  auto ssid = brcmf_find_ssid_in_ies(ifp->connect_req.selected_bss.ies_list,
+                                     ifp->connect_req.selected_bss.ies_count);
   if (ssid.empty()) {
     BRCMF_ERR("No SSID IE in BSS");
     brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
@@ -5372,7 +5258,7 @@ static zx_status_t brcmf_rx_auth_frame(struct brcmf_if* ifp, const uint32_t data
   BRCMF_DBG(CONN, " sequence number: %u", pframe_hdr->auth_txn_seq_number);
 
   // Copy authentication frame header information.
-  memcpy(frame.peer_sta_address, &ifp->bss.bssid, ETH_ALEN);
+  memcpy(frame.peer_sta_address, &ifp->connect_req.selected_bss.bssid, ETH_ALEN);
   frame.status_code = pframe_hdr->status_code;
   frame.seq_num = pframe_hdr->auth_txn_seq_number;
 
@@ -5413,7 +5299,7 @@ static zx_status_t brcmf_clear_firmware_connection_state(brcmf_if* ifp) {
   bcme_status_t fw_err = BCME_OK;
 
   struct brcmf_scb_val_le scbval;
-  memcpy(&scbval.ea, ifp->bss.bssid, ETH_ALEN);
+  memcpy(&scbval.ea, ifp->connect_req.selected_bss.bssid, ETH_ALEN);
   scbval.val = static_cast<uint32_t>(wlan_ieee80211::ReasonCode::STA_LEAVING);
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
   status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval), &fw_err);
