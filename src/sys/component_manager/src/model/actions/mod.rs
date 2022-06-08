@@ -37,23 +37,23 @@
 //! - Before it returns, the `DestroyChild` FIDL handler registers the `DeleteChild` action on the
 //!   parent component for child being destroyed.
 //! - This results in a call to `Action::handle` for the component. In response to
-//!   `DestroyChild`, `Action::handle()` spawns a future that sets a `Purge` action on the child.
+//!   `DestroyChild`, `Action::handle()` spawns a future that sets a `Destroy` action on the child.
 //!   Note that `Action::handle()` is not async, it always spawns any work that might block
 //!   in a future.
-//! - `Action::handle()` is called on the child. In response to `Purge`, it sets a `Shutdown`
-//!   action on itself (the component instance must be stopped before it is purged).
+//! - `Action::handle()` is called on the child. In response to `Destroy`, it sets a `Shutdown`
+//!   action on itself (the component instance must be stopped before it is destroyed).
 //! - `Action::handle()` is called on the child again, in response to `Shutdown`. It turns out the
 //!   instance is still running, so the `Shutdown` future tells the instance to stop. When this
 //!   completes, the `Shutdown` action is finished.
-//! - The future that was spawned for `Purge` is notified that `Shutdown` completes, so it cleans
-//!   up the instance's resources and finishes the `Purge` action.
-//! - When the work for `Purge` completes, the future spawned for `DestroyChild` deletes the
+//! - The future that was spawned for `Destroy` is notified that `Shutdown` completes, so it cleans
+//!   up the instance's resources and finishes the `Destroy` action.
+//! - When the work for `Destroy` completes, the future spawned for `DestroyChild` deletes the
 //!   child and marks `DestroyChild` finished, which will notify the client that the action is
 //!   complete.
 
+mod destroy;
+mod destroy_child;
 mod discover;
-mod purge;
-mod purge_child;
 mod resolve;
 pub mod shutdown;
 pub mod start;
@@ -62,15 +62,15 @@ mod unresolve;
 
 // Re-export the actions
 pub use {
-    discover::DiscoverAction, purge_child::PurgeChildAction, resolve::ResolveAction,
+    destroy_child::DestroyChildAction, discover::DiscoverAction, resolve::ResolveAction,
     shutdown::ShutdownAction, start::StartAction, stop::StopAction, unresolve::UnresolveAction,
 };
 
 // Limit visibility of internal actions
 #[cfg(test)]
-pub use purge::PurgeAction;
+pub use destroy::DestroyAction;
 #[cfg(not(test))]
-pub(self) use purge::PurgeAction;
+pub(self) use destroy::DestroyAction;
 
 use {
     crate::model::component::ComponentInstance,
@@ -112,8 +112,7 @@ pub enum ActionKey {
     Stop,
     Shutdown,
     DestroyChild(InstancedChildMoniker),
-    PurgeChild(InstancedChildMoniker),
-    Purge,
+    Destroy,
 }
 
 /// A set of actions on a component that must be completed.
@@ -349,7 +348,7 @@ pub mod tests {
     use {
         super::*,
         crate::model::{
-            actions::{purge::PurgeAction, shutdown::ShutdownAction},
+            actions::{destroy::DestroyAction, shutdown::ShutdownAction},
             error::ModelError,
             testing::test_helpers::ActionsTest,
         },
@@ -399,7 +398,7 @@ pub mod tests {
         let component = test.model.root().clone();
 
         let (tx1, rx1) = oneshot::channel();
-        register_action_in_new_task(PurgeAction::new(), component.clone(), tx1, Ok(())).await;
+        register_action_in_new_task(DestroyAction::new(), component.clone(), tx1, Ok(())).await;
         let (tx2, rx2) = oneshot::channel();
         register_action_in_new_task(
             ShutdownAction::new(),
@@ -409,10 +408,10 @@ pub mod tests {
         )
         .await;
         let (tx3, rx3) = oneshot::channel();
-        register_action_in_new_task(PurgeAction::new(), component.clone(), tx3, Ok(())).await;
+        register_action_in_new_task(DestroyAction::new(), component.clone(), tx3, Ok(())).await;
 
         // Complete actions, while checking notifications.
-        ActionSet::finish(&component, &ActionKey::Purge).await;
+        ActionSet::finish(&component, &ActionKey::Destroy).await;
         assert_matches!(rx1.await.expect("Unable to receive result of Notification"), Ok(()));
         assert_matches!(rx3.await.expect("Unable to receive result of Notification"), Ok(()));
 
@@ -461,7 +460,7 @@ pub(crate) mod test_utils {
         let found_child_moniker = parent_resolved_state.all_children().get(child_moniker);
 
         found_child_moniker.is_none()
-            && matches!(*child_state, InstanceState::Purged)
+            && matches!(*child_state, InstanceState::Destroyed)
             && child_execution.runtime.is_none()
             && child_execution.is_shut_down()
     }
@@ -478,17 +477,17 @@ pub(crate) mod test_utils {
                 }
                 None => false,
             },
-            InstanceState::Purged => false,
+            InstanceState::Destroyed => false,
             InstanceState::New | InstanceState::Discovered => {
                 panic!("not resolved")
             }
         }
     }
 
-    pub async fn is_purged(component: &ComponentInstance) -> bool {
+    pub async fn is_destroyed(component: &ComponentInstance) -> bool {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;
-        matches!(*state, InstanceState::Purged)
+        matches!(*state, InstanceState::Destroyed)
             && execution.runtime.is_none()
             && execution.is_shut_down()
     }

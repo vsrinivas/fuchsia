@@ -164,7 +164,6 @@ events!([
     (Discovered, discovered),
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
-    /// TODO(fxbug.dev/39417): Ensure the instance is stopped before this event.
     (Destroyed, destroyed),
     /// An instance's declaration was resolved successfully for the first time.
     (Resolved, resolved),
@@ -571,12 +570,29 @@ impl Hooks {
         Self { hooks_map: Mutex::new(HashMap::new()) }
     }
 
+    /// For every hook in `hooks`, add it to the list of hooks that are executed when `dispatch`
+    /// is called for `hook.event`.
     pub async fn install(&self, hooks: Vec<HooksRegistration>) {
         let mut hooks_map = self.hooks_map.lock().await;
         for hook in hooks {
             for event in hook.events {
                 let existing_hooks = hooks_map.entry(event).or_insert(vec![]);
                 existing_hooks.push(hook.callback.clone());
+            }
+        }
+    }
+
+    /// Same as `install`, but adds the hook to the front of the queue.
+    ///
+    /// This is test-only because in general it shouldn't matter what order hooks are executed
+    /// in. This is useful for tests that need guarantees about hook execution order.
+    #[cfg(test)]
+    pub async fn install_front(&self, hooks: Vec<HooksRegistration>) {
+        let mut hooks_map = self.hooks_map.lock().await;
+        for hook in hooks {
+            for event in hook.events {
+                let existing_hooks = hooks_map.entry(event).or_insert(vec![]);
+                existing_hooks.insert(0, hook.callback.clone());
             }
         }
     }

@@ -100,7 +100,6 @@ impl ComponentInstance {
 pub enum Lifecycle {
     Start(InstancedAbsoluteMoniker),
     Stop(InstancedAbsoluteMoniker),
-    PreDestroy(InstancedAbsoluteMoniker),
     Destroy(InstancedAbsoluteMoniker),
 }
 
@@ -109,7 +108,6 @@ impl fmt::Display for Lifecycle {
         match self {
             Lifecycle::Start(m) => write!(f, "bind({})", m),
             Lifecycle::Stop(m) => write!(f, "stop({})", m),
-            Lifecycle::PreDestroy(m) => write!(f, "predestroy({})", m),
             Lifecycle::Destroy(m) => write!(f, "destroy({})", m),
         }
     }
@@ -198,15 +196,6 @@ impl TestHook {
         }
 
         let mut events = self.lifecycle_events.lock().await;
-        events.push(Lifecycle::PreDestroy(target_moniker.clone()));
-        Ok(())
-    }
-
-    pub async fn on_purged_async<'a>(
-        &'a self,
-        target_moniker: &InstancedAbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let mut events = self.lifecycle_events.lock().await;
         events.push(Lifecycle::Destroy(target_moniker.clone()));
         Ok(())
     }
@@ -270,9 +259,6 @@ impl Hook for TestHook {
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
-            Ok(EventPayload::Purged) => {
-                self.on_purged_async(&target_moniker).await?;
-            }
             Ok(EventPayload::Discovered { .. }) => {
                 self.create_instance_if_necessary(&target_moniker).await?;
             }

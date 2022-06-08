@@ -463,7 +463,9 @@ mod tests {
 
             let hook = Arc::new(TestHook::new());
             let hooks = hook.hooks();
-            model.root().hooks.install(hooks).await;
+            // Install TestHook at the front so that when we receive an event the hook has already
+            // run so the result is reflected in its printout
+            model.root().hooks.install_front(hooks).await;
 
             // Look up and start component.
             let component = model
@@ -998,11 +1000,7 @@ mod tests {
 
         let (_event_source, mut event_stream) = test
             .new_event_stream(
-                vec![
-                    EventType::Stopped.into(),
-                    EventType::Destroyed.into(),
-                    EventType::Purged.into(),
-                ],
+                vec![EventType::Stopped.into(), EventType::Destroyed.into()],
                 EventMode::Sync,
             )
             .await;
@@ -1055,7 +1053,7 @@ mod tests {
             .unwrap();
         event.resume();
         let event = event_stream
-            .wait_until(EventType::Purged, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
         event.resume();
@@ -1172,7 +1170,7 @@ mod tests {
 
         let (_event_source, mut event_stream) = test
             .new_event_stream(
-                vec![EventType::Started.into(), EventType::Purged.into()],
+                vec![EventType::Started.into(), EventType::Destroyed.into()],
                 EventMode::Sync,
             )
             .await;
@@ -1205,7 +1203,7 @@ mod tests {
         child.stop_instance(false, false).await.unwrap();
 
         let event_a = event_stream
-            .wait_until(EventType::Purged, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
         event_a.resume();

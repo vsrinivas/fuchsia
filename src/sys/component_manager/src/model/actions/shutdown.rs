@@ -240,7 +240,7 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
                 Box::pin(shutdown_job.execute()).await?;
                 return Ok(());
             }
-            InstanceState::New | InstanceState::Discovered | InstanceState::Purged => {}
+            InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {}
         }
     }
     // Control flow arrives here if the component isn't resolved.
@@ -340,7 +340,7 @@ pub struct Child {
     pub environment_name: Option<String>,
 
     /// True if this child is static, or dynamic and "live". False if this is a
-    /// dynamic component that is being deleted, but has not yet been purged.
+    /// dynamic component that is being deleted, but has not yet been destroyed.
     pub is_live: bool,
 }
 

@@ -139,7 +139,7 @@ async fn do_unresolve(component: &Arc<ComponentInstance>) -> Result<(), ModelErr
 pub mod tests {
     use {
         crate::model::{
-            actions::test_utils::{is_discovered, is_executing, is_purged, is_resolved},
+            actions::test_utils::{is_destroyed, is_discovered, is_executing, is_resolved},
             actions::{ActionSet, ShutdownAction, UnresolveAction},
             component::{ComponentInstance, InstanceState, StartReason},
             error::ModelError,
@@ -363,7 +363,7 @@ pub mod tests {
     }
 
     /// Test a collection with the given durability.
-    /// Also tests UnresolveAction on InstanceState::Purged.
+    /// Also tests UnresolveAction on InstanceState::Destroyed.
     async fn test_collection(durability: fdecl::Durability) {
         let (_test, component_container, component_a, component_b) =
             start_collection(durability).await;
@@ -372,24 +372,24 @@ pub mod tests {
         ActionSet::register(component_container.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        assert!(is_purged(&component_a).await);
-        assert!(is_purged(&component_b).await);
+        assert!(is_destroyed(&component_a).await);
+        assert!(is_destroyed(&component_b).await);
         ActionSet::register(component_container.clone(), UnresolveAction::new())
             .await
             .expect("unresolve failed");
         assert!(is_discovered(&component_container).await);
 
-        // Trying to unresolve a child fails because the children of a collection are purged when
-        // the collection is stopped. Then it's an error to unresolve a Purged component.
+        // Trying to unresolve a child fails because the children of a collection are destroyed when
+        // the collection is stopped. Then it's an error to unresolve a Destroyed component.
         assert_matches!(
             ActionSet::register(component_a.clone(), UnresolveAction::new()).await,
             Err(ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::UnresolveFailed { .. }
             })
         );
-        // Still Purged.
-        assert!(is_purged(&component_a).await);
-        assert!(is_purged(&component_b).await);
+        // Still Destroyed.
+        assert!(is_destroyed(&component_a).await);
+        assert!(is_destroyed(&component_b).await);
     }
 
     /// Test a collection whose children have transient durability.

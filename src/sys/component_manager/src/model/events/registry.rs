@@ -347,7 +347,7 @@ impl EventRegistry {
                     panic!("route_events: not resolved");
                 }
                 InstanceState::Resolved(ref s) => s.decl().clone(),
-                InstanceState::Purged => {
+                InstanceState::Destroyed => {
                     return Err(ModelError::instance_not_found(target_moniker.clone()));
                 }
             }

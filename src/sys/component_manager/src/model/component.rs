@@ -5,7 +5,7 @@
 use {
     crate::model::{
         actions::{
-            shutdown, start, ActionSet, DiscoverAction, PurgeChildAction, ResolveAction,
+            shutdown, start, ActionSet, DestroyChildAction, DiscoverAction, ResolveAction,
             StartAction, StopAction, UnresolveAction,
         },
         context::{ModelContext, WeakModelContext},
@@ -462,7 +462,7 @@ impl ComponentInstance {
                 InstanceState::Resolved(_) => {
                     return Ok(MutexGuard::map(state, get_resolved));
                 }
-                InstanceState::Purged => {
+                InstanceState::Destroyed => {
                     return Err(ComponentInstanceError::instance_not_found(
                         self.abs_moniker.clone(),
                     ));
@@ -475,7 +475,7 @@ impl ComponentInstance {
             .await
             .map_err(|err| ComponentInstanceError::resolve_failed(self.abs_moniker.clone(), err))?;
         let state = self.state.lock().await;
-        if let InstanceState::Purged = *state {
+        if let InstanceState::Destroyed = *state {
             return Err(ComponentInstanceError::instance_not_found(self.abs_moniker.clone()));
         }
         Ok(MutexGuard::map(state, get_resolved))
@@ -579,7 +579,7 @@ impl ComponentInstance {
                 let state = self.lock_state().await;
                 match *state {
                     InstanceState::Resolved(ref s) => s.decl.clone(),
-                    InstanceState::Purged => {
+                    InstanceState::Destroyed => {
                         return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
                     }
                     _ => {
@@ -745,7 +745,7 @@ impl ComponentInstance {
             let (instance, _) = tup;
             let instanced_moniker =
                 InstancedChildMoniker::from_child_moniker(child_moniker, instance);
-            ActionSet::register(self.clone(), PurgeChildAction::new(instanced_moniker)).await
+            ActionSet::register(self.clone(), DestroyChildAction::new(instanced_moniker)).await
         } else {
             Err(ModelError::instance_not_found_in_realm(
                 self.abs_moniker.clone(),
@@ -871,7 +871,7 @@ impl ComponentInstance {
                 fasync::Task::spawn(async move {
                     match ActionSet::register(
                         component.clone(),
-                        PurgeChildAction::new(instanced_moniker.clone()),
+                        DestroyChildAction::new(instanced_moniker.clone()),
                     )
                     .await
                     {
@@ -983,7 +983,7 @@ impl ComponentInstance {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    let nf = ActionSet::register(self.clone(), PurgeChildAction::new(m));
+                    let nf = ActionSet::register(self.clone(), DestroyChildAction::new(m));
                     futures.push(nf);
                 }
             }
@@ -1040,7 +1040,9 @@ impl ComponentInstance {
                 exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::dot(), server_end);
                 Ok(())
             }
-            InstanceState::Purged => Err(ModelError::instance_not_found(self.abs_moniker.clone())),
+            InstanceState::Destroyed => {
+                Err(ModelError::instance_not_found(self.abs_moniker.clone()))
+            }
             _ => {
                 panic!("Component must be resolved or destroyed before using this function")
             }
@@ -1073,7 +1075,7 @@ impl ComponentInstance {
                         fdecl::StartupMode::Lazy => None,
                     })
                     .collect(),
-                InstanceState::Purged => {
+                InstanceState::Destroyed => {
                     return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
                 }
                 InstanceState::New | InstanceState::Discovered => {
@@ -1309,14 +1311,14 @@ pub enum InstanceState {
     Resolved(ResolvedInstanceState),
     /// The instance has been destroyed. It has no content and no further actions may be registered
     /// on it.
-    Purged,
+    Destroyed,
 }
 
 impl InstanceState {
     /// Changes the state, checking invariants.
     /// The allowed transitions:
-    /// • New -> Discovered <-> Resolved -> Purged
-    /// • {New, Discovered, Resolved} -> Purged
+    /// • New -> Discovered <-> Resolved -> Destroyed
+    /// • {New, Discovered, Resolved} -> Destroyed
     pub fn set(&mut self, next: Self) {
         match (&self, &next) {
             (Self::New, Self::New)
@@ -1325,10 +1327,10 @@ impl InstanceState {
             | (Self::Discovered, Self::New)
             | (Self::Resolved(_), Self::Resolved(_))
             | (Self::Resolved(_), Self::New)
-            | (Self::Purged, Self::Purged)
-            | (Self::Purged, Self::New)
-            | (Self::Purged, Self::Discovered)
-            | (Self::Purged, Self::Resolved(_)) => {
+            | (Self::Destroyed, Self::Destroyed)
+            | (Self::Destroyed, Self::New)
+            | (Self::Destroyed, Self::Discovered)
+            | (Self::Destroyed, Self::Resolved(_)) => {
                 panic!("Invalid instance state transition from {:?} to {:?}", self, next);
             }
             _ => {
@@ -1344,7 +1346,7 @@ impl fmt::Debug for InstanceState {
             Self::New => "New",
             Self::Discovered => "Discovered",
             Self::Resolved(_) => "Resolved",
-            Self::Purged => "Purged",
+            Self::Destroyed => "Destroyed",
         };
         f.write_str(s)
     }
@@ -3041,7 +3043,7 @@ pub mod tests {
 
         // Destroy `coll_1:b`. It should still be listed, but shouldn't be live.
         // The dynamic offer should be deleted.
-        ActionSet::register(root_component.clone(), PurgeChildAction::new("coll_1:b:2".into()))
+        ActionSet::register(root_component.clone(), DestroyChildAction::new("coll_1:b:2".into()))
             .await
             .expect("destroy failed");
 
@@ -3199,30 +3201,30 @@ pub mod tests {
         is.set(InstanceState::Discovered);
         assert_matches!(is, InstanceState::Discovered);
 
-        // New --> Purged.
+        // New --> Destroyed.
         let mut is = InstanceState::New;
-        is.set(InstanceState::Purged);
-        assert_matches!(is, InstanceState::Purged);
+        is.set(InstanceState::Destroyed);
+        assert_matches!(is, InstanceState::Destroyed);
 
         // Discovered --> Resolved.
         let mut is = InstanceState::Discovered;
         is.set(new_resolved().await);
         assert_matches!(is, InstanceState::Resolved(_));
 
-        // Discovered --> Purged.
+        // Discovered --> Destroyed.
         let mut is = InstanceState::Discovered;
-        is.set(InstanceState::Purged);
-        assert_matches!(is, InstanceState::Purged);
+        is.set(InstanceState::Destroyed);
+        assert_matches!(is, InstanceState::Destroyed);
 
         // Resolved --> Discovered.
         let mut is = new_resolved().await;
         is.set(InstanceState::Discovered);
         assert_matches!(is, InstanceState::Discovered);
 
-        // Resolved --> Purged.
+        // Resolved --> Destroyed.
         let mut is = new_resolved().await;
-        is.set(InstanceState::Purged);
-        assert_matches!(is, InstanceState::Purged);
+        is.set(InstanceState::Destroyed);
+        assert_matches!(is, InstanceState::Destroyed);
     }
 
     // Macro to make the panicking tests more readable.
@@ -3253,11 +3255,11 @@ pub mod tests {
     // and should panic. As a result of the macro, the test names will be generated like
     // `confirm_invalid_transition___p2r`.
     panic_test!([
-        // Purged !-> {Purged, Resolved, Discovered, New}..
-        p2p(InstanceState::Purged, InstanceState::Purged),
-        p2r(InstanceState::Purged, new_resolved().await),
-        p2d(InstanceState::Purged, InstanceState::Discovered),
-        p2n(InstanceState::Purged, InstanceState::New),
+        // Destroyed !-> {Destroyed, Resolved, Discovered, New}..
+        p2p(InstanceState::Destroyed, InstanceState::Destroyed),
+        p2r(InstanceState::Destroyed, new_resolved().await),
+        p2d(InstanceState::Destroyed, InstanceState::Discovered),
+        p2n(InstanceState::Destroyed, InstanceState::New),
         // Resolved !-> {Resolved, New}.
         r2r(new_resolved().await, new_resolved().await),
         r2n(new_resolved().await, InstanceState::New),

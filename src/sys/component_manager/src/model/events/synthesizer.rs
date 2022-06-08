@@ -236,7 +236,9 @@ fn get_subcomponents(
                     }
                     let state_guard = curr_component.lock_state().await;
                     match *state_guard {
-                        InstanceState::New | InstanceState::Discovered | InstanceState::Purged => {}
+                        InstanceState::New
+                        | InstanceState::Discovered
+                        | InstanceState::Destroyed => {}
                         InstanceState::Resolved(ref s) => {
                             for (_, child) in s.live_children() {
                                 pending.push(child.clone());

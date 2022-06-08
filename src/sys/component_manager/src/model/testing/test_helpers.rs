@@ -139,7 +139,7 @@ pub async fn has_live_child<'a>(component: &'a ComponentInstance, child: &'a str
 pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -> bool {
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.all_children().contains_key(&moniker.into()),
-        InstanceState::Purged => false,
+        InstanceState::Destroyed => false,
         _ => panic!("not resolved"),
     }
 }
@@ -156,7 +156,7 @@ pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a 
 pub async fn get_live_children(component: &ComponentInstance) -> HashSet<ChildMoniker> {
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.live_children().map(|(m, _)| m.clone()).collect(),
-        InstanceState::Purged => HashSet::new(),
+        InstanceState::Destroyed => HashSet::new(),
         _ => panic!("not resolved"),
     }
 }
