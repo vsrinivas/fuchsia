@@ -43,6 +43,9 @@ pub fn get_categories() -> HashMap<String, HashSet<String>> {
         .arg("-Whelp")
         .output()
         .expect("Couldn't run clippy-driver");
+    if !output.status.success() {
+        panic!("Couldn't run clippy-driver: {:?}", output);
+    }
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut lines = stdout.lines().map(str::trim);
     let parse_categories = |line: &str| {
@@ -52,11 +55,12 @@ pub fn get_categories() -> HashMap<String, HashSet<String>> {
             panic!("Malformed lint category output")
         }
     };
-    lines.find(|s| s.starts_with("Lint groups provided by rustc")).expect(&format!(
+    let err_msg = format!(
         "Couldn't parse clippy-driver help output:\nstdout: {}\nstderr:{}\n",
         stdout,
         &String::from_utf8_lossy(&output.stderr)
-    ));
+    );
+    lines.find(|s| s.starts_with("Lint groups provided by rustc")).expect(&err_msg);
     // Skip the expected header from table
     assert_eq!(
         lines.by_ref().take(4).collect::<Vec<_>>(),
@@ -72,11 +76,7 @@ pub fn get_categories() -> HashMap<String, HashSet<String>> {
         .take_while(|line| !line.is_empty())
         .map(parse_categories)
         .collect::<HashMap<_, _>>();
-    lines.find(|s| s.starts_with("Lint groups provided by plugins")).expect(&format!(
-        "Couldn't parse clippy-driver help output:\nstdout: {}\nstderr:{}\n",
-        stdout,
-        &String::from_utf8_lossy(&output.stderr)
-    ));
+    lines.find(|s| s.starts_with("Lint groups provided by plugins")).expect(&err_msg);
     categories.extend(lines.skip(1).take_while(|line| !line.is_empty()).map(parse_categories));
     categories
 }
