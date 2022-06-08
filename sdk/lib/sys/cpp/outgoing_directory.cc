@@ -57,9 +57,6 @@ OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexc
 
 zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
                                      async_dispatcher_t* dispatcher) {
-  if (!directory_request.is_valid()) {
-    return ZX_ERR_BAD_HANDLE;
-  }
   return root_->Serve(
       fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
       std::move(directory_request), dispatcher);
