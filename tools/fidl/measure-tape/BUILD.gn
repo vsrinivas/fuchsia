@@ -8,12 +8,9 @@ group("tests") {
   testonly = true
   deps = [
     ":integration-tests",
+    "rust-tests",
     "src:measure-tape_test($host_toolchain)",
   ]
-}
-
-fuchsia_unittest_component("rust-tests-comp") {
-  deps = [ "rust-tests" ]
 }
 
 fuchsia_unittest_component("hlcpp-tests-comp") {
@@ -21,8 +18,5 @@ fuchsia_unittest_component("hlcpp-tests-comp") {
 }
 
 fuchsia_test_package("integration-tests") {
-  test_components = [
-    ":rust-tests-comp",
-    ":hlcpp-tests-comp",
-  ]
+  test_components = [ ":hlcpp-tests-comp" ]
 }

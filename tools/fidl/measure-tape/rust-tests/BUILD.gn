@@ -2,30 +2,360 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
-rustc_test("rust-tests") {
-  output_name = "rust-tests"
-  edition = "2018"
-  disable_clippy = true
-  deps = [
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//tools/fidl/measure-tape/testdata:measuretape-rustc",
-  ]
+# Types to enable for Rust measure tape tests.
+# Ideally this wouldn't be needed and all tests would be enabled
+# (or a denylist would be used), but given the significant number of
+# denylisted tests and the additional complexity of adding a denylist
+# to the measure tape binary, an allowlist was used instead.
+#
+# Regen with:
+# grep "= struct {" src/tests/fidl/conformance_suite/*.test.fidl
+#   | cut -d\  -f2
+#   | xargs printf "\"test.conformance/%s\",\n"
+#   | sort
+supported_conformance_types = [
+  "test.conformance/ArrayWithInternalPadding",
+  "test.conformance/Bounded32NonnullableString",
+  "test.conformance/Bounded32NonnullableVectorOfUint32s",
+  "test.conformance/Bounded32NullableString",
+  "test.conformance/Bounded32NullableVectorOfUint32s",
+  "test.conformance/CompatTable",
+  "test.conformance/CreateComponentRequest",
+  "test.conformance/EmptyStruct",
+  "test.conformance/EmptyStructSandwich",
+  "test.conformance/EmptyStructsInArrayInStruct",
+  "test.conformance/EmptyStructsInVectorInStruct",
+  "test.conformance/FidlvizStruct1",
+  "test.conformance/FidlvizStruct2",
+  "test.conformance/FileGetAttrResponse",
+  "test.conformance/FiveByte",
+  "test.conformance/FiveByteInArray",
+  "test.conformance/FiveByteInStruct",
+  "test.conformance/FiveByteInVector",
+  "test.conformance/FlexibleBitsUint16Struct",
+  "test.conformance/FlexibleBitsUint32Struct",
+  "test.conformance/FlexibleBitsUint64Struct",
+  "test.conformance/FlexibleBitsUint8Struct",
+  "test.conformance/FlexibleEnumInt16Struct",
+  "test.conformance/FlexibleEnumInt32Struct",
+  "test.conformance/FlexibleEnumInt64Struct",
+  "test.conformance/FlexibleEnumInt8Struct",
+  "test.conformance/FlexibleEnumUint16Struct",
+  "test.conformance/FlexibleEnumUint32Struct",
+  "test.conformance/FlexibleEnumUint64Struct",
+  "test.conformance/FlexibleEnumUint8Struct",
+  "test.conformance/GoldenBitsStruct",
+  "test.conformance/GoldenBoolStruct",
+  "test.conformance/GoldenByteArrayStruct",
+  "test.conformance/GoldenByteVectorStruct",
+  "test.conformance/GoldenDoubleStruct",
+  "test.conformance/GoldenEnumStruct",
+  "test.conformance/GoldenFloatStruct",
+  "test.conformance/GoldenIntStruct",
+  "test.conformance/GoldenNullableByteVectorStruct",
+  "test.conformance/GoldenNullableStringStruct",
+  "test.conformance/GoldenStringStruct",
+  "test.conformance/GoldenStringWithMaxSize2",
+  "test.conformance/GoldenStructArrayStruct",
+  "test.conformance/GoldenStructVectorStruct",
+  "test.conformance/GoldenTableStruct",
+  "test.conformance/GoldenUintStruct",
+  "test.conformance/Int64Struct",
+  "test.conformance/InterfaceConfig",
+  "test.conformance/LaunchInfo",
+  "test.conformance/Length2StringWrapper",
+  "test.conformance/LotsOfVectors",
+  "test.conformance/MixedFieldsBody",
+  "test.conformance/MixedFieldsMessage",
+  "test.conformance/MultipleBoundedNonnullableVectorsOfUint32s",
+  "test.conformance/MultipleBoundedNullableVectorsOfUint32s",
+  "test.conformance/MultipleNonnullableStrings",
+  "test.conformance/MultipleNonnullableVectorsOfUint32s",
+  "test.conformance/MultipleNullableStrings",
+  "test.conformance/MultipleShortNonnullableStrings",
+  "test.conformance/MultipleShortNullableStrings",
+  "test.conformance/MyBool",
+  "test.conformance/MyByte",
+  "test.conformance/MyFloat32",
+  "test.conformance/MyFloat64",
+  "test.conformance/MyInt16",
+  "test.conformance/MyInt32",
+  "test.conformance/MyInt64",
+  "test.conformance/MyInt8",
+  "test.conformance/MyUint16",
+  "test.conformance/MyUint32",
+  "test.conformance/MyUint64",
+  "test.conformance/MyUint8",
+  "test.conformance/NodeAttributes",
+  "test.conformance/OneEmptyStructInStruct",
+  "test.conformance/OneLayerStructNoPaddingAlign4",
+  "test.conformance/OneLayerStructNoPaddingAlign8",
+  "test.conformance/OneLayerStructWithBool",
+  "test.conformance/OneLayerStructWithPaddingAlign4",
+  "test.conformance/OneLayerStructWithPaddingAlign8",
+  "test.conformance/OptionalStringWrapper",
+  "test.conformance/OptionalVectorWrapper",
+  "test.conformance/OutOfLineSandwich1",
+  "test.conformance/PaddedTableStruct",
+  "test.conformance/PaddedUnionStruct",
+  "test.conformance/PaddingAlignment2MaskMayBe4Bytes",
+  "test.conformance/PaddingAlignment2MaskMayBe4BytesVector",
+  "test.conformance/PaddingAlignment4MaskMayBe8Bytes",
+  "test.conformance/PaddingAlignment4MaskMayBe8BytesVector",
+  "test.conformance/PaddingBetweenFieldsInt16Int32",
+  "test.conformance/PaddingBetweenFieldsInt16Int64",
+  "test.conformance/PaddingBetweenFieldsInt32Int64",
+  "test.conformance/PaddingBetweenFieldsInt8Int16",
+  "test.conformance/PaddingBetweenFieldsInt8Int32",
+  "test.conformance/PaddingBetweenFieldsInt8Int64",
+  "test.conformance/PaddingEndOfOutOfLineObject1Byte",
+  "test.conformance/PaddingEndOfOutOfLineObject2Byte",
+  "test.conformance/PaddingEndOfOutOfLineObject3Byte",
+  "test.conformance/PaddingEndOfOutOfLineObject4Byte",
+  "test.conformance/PaddingEndOfOutOfLineObject5Byte",
+  "test.conformance/PaddingEndOfOutOfLineObject6Byte",
+  "test.conformance/PaddingEndOfOutOfLineObject7Byte",
+  "test.conformance/Persistent1Message",
+  "test.conformance/PersistentHeader",
+  "test.conformance/Regression1",
+  "test.conformance/Regression10V1",
+  "test.conformance/Regression10V2",
+  "test.conformance/Regression10V3",
+  "test.conformance/Regression11",
+  "test.conformance/Regression2",
+  "test.conformance/Regression4",
+  "test.conformance/Regression5",
+  "test.conformance/Regression6",
+  "test.conformance/Regression7TableUnionXUnion",
+  "test.conformance/ReverseOrdinalUnionStruct",
+  "test.conformance/Sandwich1",
+  "test.conformance/Sandwich1Message",
+  "test.conformance/Sandwich3",
+  "test.conformance/Sandwich4",
+  "test.conformance/Sandwich4Align8",
+  "test.conformance/Sandwich4Message",
+  "test.conformance/Sandwich5",
+  "test.conformance/Sandwich5Message",
+  "test.conformance/Sandwich6",
+  "test.conformance/Sandwich8",
+  "test.conformance/SimpleTableArrayStruct",
+  "test.conformance/SimpleTableThenUint64",
+  "test.conformance/SingleVariantUnionStruct",
+  "test.conformance/Size5Alignment1",
+  "test.conformance/Size5Alignment1Array",
+  "test.conformance/Size5Alignment1Vector",
+  "test.conformance/Size5Alignment4",
+  "test.conformance/Size5Alignment4Array",
+  "test.conformance/Size5Alignment4Vector",
+  "test.conformance/Size8Align8",
+  "test.conformance/StrictBitsUint16Struct",
+  "test.conformance/StrictBitsUint32Struct",
+  "test.conformance/StrictBitsUint64Struct",
+  "test.conformance/StrictBitsUint8Struct",
+  "test.conformance/StrictEnumInt16Struct",
+  "test.conformance/StrictEnumInt32Struct",
+  "test.conformance/StrictEnumInt64Struct",
+  "test.conformance/StrictEnumInt8Struct",
+  "test.conformance/StrictEnumUint16Struct",
+  "test.conformance/StrictEnumUint32Struct",
+  "test.conformance/StrictEnumUint64Struct",
+  "test.conformance/StrictEnumUint8Struct",
+  "test.conformance/StringWrapper",
+  "test.conformance/Struct1Byte",
+  "test.conformance/Struct2Byte",
+  "test.conformance/Struct3Byte",
+  "test.conformance/Struct4Byte",
+  "test.conformance/Struct5Byte",
+  "test.conformance/Struct6Byte",
+  "test.conformance/Struct7Byte",
+  "test.conformance/Struct8Byte",
+  "test.conformance/StructOfReverseOrdinalTable",
+  "test.conformance/StructOfTableWithGaps",
+  "test.conformance/StructOfTableWithStringAndVector",
+  "test.conformance/StructOfTableWithXUnion",
+  "test.conformance/StructOfUnionOfTable",
+  "test.conformance/StructSize16Align8",
+  "test.conformance/StructSize3Align1",
+  "test.conformance/StructSize3Align2",
+  "test.conformance/StructWithInt",
+  "test.conformance/TableFieldOutOfLineStruct",
+  "test.conformance/TableStructWithReservedSandwichStruct",
+  "test.conformance/TableStructWithUint32SandwichStruct",
+  "test.conformance/TableUnionWithVectorReservedSandwichStruct",
+  "test.conformance/TableUnionWithVectorStructSandwichStruct",
+  "test.conformance/TableWithReservedFieldThenUnionStruct",
+  "test.conformance/TestAddEthernetDeviceRequest",
+  "test.conformance/TestInlineXUnionInStruct",
+  "test.conformance/TestXUnionInTable",
+  "test.conformance/ThreeByte",
+  "test.conformance/ThreeByteInArray",
+  "test.conformance/ThreeByteInStruct",
+  "test.conformance/ThreeByteInVector",
+  "test.conformance/TransactionHeader",
+  "test.conformance/TransformerEmptyStruct",
+  "test.conformance/TwoEmptyStructsInStruct",
+  "test.conformance/TwoEmptyStructsInStructInVectorInStruct",
+  "test.conformance/TwoLayerStructInnerBool",
+  "test.conformance/TwoLayerStructInnerPaddingAlign4",
+  "test.conformance/TwoLayerStructInnerPaddingAlign8",
+  "test.conformance/TwoLayerStructNoPaddingAlign4",
+  "test.conformance/TwoLayerStructNoPaddingAlign8",
+  "test.conformance/Uint16Struct",
+  "test.conformance/Uint32Struct",
+  "test.conformance/Uint64Struct",
+  "test.conformance/Uint64Uint32Uint16Uint8",
+  "test.conformance/Uint8Struct",
+  "test.conformance/Uint8Uint16Uint32Uint64",
+  "test.conformance/Uint8UnionStruct",
+  "test.conformance/UnboundedNonnullableString",
+  "test.conformance/UnboundedNonnullableVectorOfUint32s",
+  "test.conformance/UnboundedNullableString",
+  "test.conformance/UnboundedNullableVectorOfUint32s",
+  "test.conformance/UnionInlinePaddingStruct",
+  "test.conformance/UpdatePolicy",
+  "test.conformance/VectorOfByteVector",
+  "test.conformance/VectorOfEnumStruct",
+  "test.conformance/VectorOfStrings",
+  "test.conformance/VectorWithLimit",
+  "test.conformance/VectorWrapper",
+  "test.conformance/XUnionWithStructStruct",
+  "test.conformance/XUnionWithXUnionStruct",
 
-  non_rust_deps = [ ":measure_tape_for_toplevelunion" ]
+  # Measure tape generated code won't build for these types.
+  # TODO(fxbug.dev/101585) Fix this.
+  # "test.conformance/ArrayStruct",
+  # "test.conformance/EmptyStructUnionStruct",
+  # "test.conformance/GoldenNullableUnionStruct",
+  # "test.conformance/GoldenUnionStruct",
+  # "test.conformance/LargeArrays",
+  # "test.conformance/MutualRecursionUnionStruct",
+  # "test.conformance/OutOfLineSandwich1WithOptUnion",
+  # "test.conformance/RecursiveOptionalAndTableStruct",
+  # "test.conformance/RecursiveOptionalAndUnionStruct",
+  # "test.conformance/RecursiveOptionalAndVectorStruct",
+  # "test.conformance/RecursiveOptionalBasicStruct",
+  # "test.conformance/RecursiveOptionalStruct",
+  # "test.conformance/RecursiveOptionalStructArrayWrapper",
+  # "test.conformance/RecursiveOptionalStructWithString",
+  # "test.conformance/RecursiveTableHolder",
+  # "test.conformance/RecursiveTableOptionalHolder",
+  # "test.conformance/RecursiveUnionStruct",
+  # "test.conformance/RecursiveVectorStruct",
+  # "test.conformance/RecursiveVectorUnionStruct",
+  # "test.conformance/Regression8OptUnionSize12Align4",
+  # "test.conformance/Regression8TableWithUnionSize12Align4",
+  # "test.conformance/Regression8VectorOfOptUnionSize12Align4",
+  # "test.conformance/Regression9Message",
+  # "test.conformance/Regression9Value",
+  # "test.conformance/Sandwich1WithOptUnion",
+  # "test.conformance/Sandwich2",
+  # "test.conformance/Sandwich7",
+  # "test.conformance/Sandwich7Message",
+  # "test.conformance/StringUnionStruct",
+  # "test.conformance/StringUnionStructWrapper",
+  # "test.conformance/StringUnionStructWrapperResponse",
+  # "test.conformance/StringUnionVector",
+  # "test.conformance/StructOfEmptyTable",
+  # "test.conformance/StructTableNoFields",
+  # "test.conformance/StructTableTwoReservedFields",
+  # "test.conformance/StructWithArrays",
+  # "test.conformance/StructWithVectors",
+  # "test.conformance/StructWithOptionals",
+  # "test.conformance/TableFieldUnknownStruct",
+  # "test.conformance/TestOptionalFlexibleXUnionInStruct",
+  # "test.conformance/TestOptionalStrictXUnionInStruct",
+  # "test.conformance/TestOptionalXUnionInStruct",
+  # "test.conformance/TestStrictXUnionInStruct",
+  # "test.conformance/UnionWithBoundStringStruct",
 
-  sources = [ "src/lib.rs" ]
-}
+  # These types build, but tests that use them fail.
+  # TODO(fxbug.dev/101585) Fix this.
+  # "test.conformance/GoldenNullableStruct",
+  # "test.conformance/NoCodingTablesStressor",
+  # "test.conformance/OptionalEmptyStructWrapper",
+  # "test.conformance/OutOfLinePaddingZeroed4",
+  # "test.conformance/OutOfLinePaddingZeroed6",
+  # "test.conformance/OutOfLinePaddingZeroed7",
+  # "test.conformance/PaddingEndOfInlineObject1Byte",
+  # "test.conformance/PaddingEndOfInlineObject2Byte",
+  # "test.conformance/PaddingEndOfInlineObject3Byte",
+  # "test.conformance/PaddingEndOfInlineObject4Byte",
+  # "test.conformance/PaddingEndOfInlineObject5Byte",
+  # "test.conformance/PaddingEndOfInlineObject6Byte",
+  # "test.conformance/PaddingEndOfInlineObject7Byte",
+  # "test.conformance/PaddingEndOfInlineObjectBeforeNextObject1Byte",
+  # "test.conformance/PaddingEndOfInlineObjectBeforeNextObject2Byte",
+  # "test.conformance/PaddingEndOfInlineObjectBeforeNextObject3Byte",
+  # "test.conformance/PaddingEndOfInlineObjectBeforeNextObject4Byte",
+  # "test.conformance/PaddingEndOfInlineObjectBeforeNextObject5Byte",
+  # "test.conformance/PaddingEndOfInlineObjectBeforeNextObject6Byte",
+  # "test.conformance/PaddingEndOfInlineObjectBeforeNextObject7Byte",
+  # "test.conformance/PaddingInBetweenOutOfLineObjects1Byte",
+  # "test.conformance/PaddingInBetweenOutOfLineObjects2Byte",
+  # "test.conformance/PaddingInBetweenOutOfLineObjects3Byte",
+  # "test.conformance/PaddingInBetweenOutOfLineObjects4Byte",
+  # "test.conformance/PaddingInBetweenOutOfLineObjects5Byte",
+  # "test.conformance/PaddingInBetweenOutOfLineObjects6Byte",
+  # "test.conformance/PaddingInBetweenOutOfLineObjects7Byte",
+  # "test.conformance/Regression3",
+  # "test.conformance/Sandwich4Align8WithPointer",
+  # "test.conformance/Sandwich9",
+  # "test.conformance/StructOfSimpleTable",
+  # "test.conformance/TableFieldInlinedStruct",
+  # "test.conformance/TestFlexibleXUnionInStruct",
+]
 
-measure_tape("measure_tape_for_toplevelunion") {
+measure_tape("measure_tape_for_conformance") {
   testonly = true
   target_binding = "rust"
-  target_types = [
-    "test.measuretape/TopLevelUnion",
-    "test.measuretape/AnotherTopLevelThing",
+  target_types = supported_conformance_types
+  fidls = [ conformance_suite_fidl_target ]
+}
+
+measure_tape_test_source = "$target_gen_dir/src/measure_tape_test.rs"
+
+gidl("generate_measure_tape_test") {
+  type = "measure_tape"
+  language = "rust"
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
+  output = measure_tape_test_source
+  extra_args = []
+  foreach(type, supported_conformance_types) {
+    extra_args += [
+      "--filter-type",
+      type,
+    ]
+  }
+}
+
+rustc_test("fidl_rust_measure_tape_tests_bin") {
+  output_name = "fidl_rust_measure_tape_tests"
+  edition = "2018"
+  source_root = measure_tape_test_source
+  deps = [
+    ":measure_tape_for_conformance",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/gidl_util",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//src/tests/fidl/conformance_suite:conformance_fidl-rustc",
+    "//third_party/rust_crates:assert_matches",
   ]
-  fidls = [ "//tools/fidl/measure-tape/testdata:measuretape" ]
+  non_rust_deps = [ ":generate_measure_tape_test" ]
+  sources = [ measure_tape_test_source ]
+}
+
+fuchsia_unittest_package("fidl_rust_measure_tape_tests") {
+  deps = [ ":fidl_rust_measure_tape_tests_bin" ]
+}
+
+group("rust-tests") {
+  testonly = true
+  deps = [ ":fidl_rust_measure_tape_tests" ]
 }

@@ -5,6 +5,7 @@
 package ir
 
 import (
+	"fmt"
 	"reflect"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
@@ -87,8 +88,10 @@ func ValidateAllType(input All, generatorType string) {
 		forbid(input.Benchmark)
 	case "benchmark":
 		forbid(input.EncodeSuccess, input.DecodeSuccess, input.EncodeFailure, input.DecodeFailure)
+	case "measure_tape":
+		forbid(input.Benchmark)
 	default:
-		panic("unknown case: expected 'conformance' or 'benchmark'")
+		panic(fmt.Sprintf("unexpected generator type: %s", generatorType))
 	}
 }
 

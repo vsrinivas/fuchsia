@@ -19,4 +19,6 @@ type GeneratorConfig struct {
 	// FuzzerCorpusPackageDataDir is the directory to which corpus files are mapped in their fuchsia
 	// package's data directory.
 	FuzzerCorpusPackageDataDir string
+	// FilterTypes is a list of FIDL types to use as a filter (for test cases).
+	FilterTypes []string
 }

@@ -65,9 +65,14 @@ var benchmarkGenerators = map[string]Generator{
 	"driver_llcpp": gidldriverllcpp.GenerateBenchmarks,
 }
 
+var measureTapeGenerators = map[string]Generator{
+	"rust": gidlrust.GenerateMeasureTapeTests,
+}
+
 var allGenerators = map[string]map[string]Generator{
-	"conformance": conformanceGenerators,
-	"benchmark":   benchmarkGenerators,
+	"conformance":  conformanceGenerators,
+	"benchmark":    benchmarkGenerators,
+	"measure_tape": measureTapeGenerators,
 }
 
 var allGeneratorTypes = func() []string {
@@ -99,6 +104,17 @@ var allWireFormats = []gidlir.WireFormat{
 	gidlir.V2WireFormat,
 }
 
+type listOfStrings []string
+
+func (l *listOfStrings) String() string {
+	return strings.Join(*l, " ")
+}
+
+func (l *listOfStrings) Set(s string) error {
+	*l = append(*l, s)
+	return nil
+}
+
 // GIDLFlags stores the command-line flags for the GIDL program.
 type GIDLFlags struct {
 	JSONPath                   *string
@@ -109,6 +125,7 @@ type GIDLFlags struct {
 	CppBenchmarksFidlLibrary   *string
 	FuzzerCorpusHostDir        *string
 	FuzzerCorpusPackageDataDir *string
+	FilterTypes                listOfStrings
 }
 
 // valid indicates whether the parsed Flags are valid to be used.
@@ -131,6 +148,7 @@ var flags = GIDLFlags{
 		"output directory for fuzzer_corpus"),
 	FuzzerCorpusPackageDataDir: flag.String("fuzzer-corpus-package-data-dir", "",
 		"directory to which fuzzer_corpus output files are mapped in their fuchsia package's data directory"),
+	FilterTypes: nil,
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -162,6 +180,7 @@ func parseFidlJSONIr(filename string) fidlgen.Root {
 }
 
 func main() {
+	flag.Var(&flags.FilterTypes, "filter-type", "List of types to filter to (for measure tape backends)")
 	flag.Parse()
 
 	if !flags.valid() {
@@ -182,6 +201,7 @@ func main() {
 	if *flags.FuzzerCorpusPackageDataDir != "" {
 		config.FuzzerCorpusPackageDataDir = *flags.FuzzerCorpusPackageDataDir
 	}
+	config.FilterTypes = []string(flags.FilterTypes)
 
 	ir := parseFidlJSONIr(*flags.JSONPath)
 

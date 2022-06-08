@@ -1,0 +1,31 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+#![cfg(test)]
+#![allow(unused_imports)]
+
+use {
+	fidl_test_conformance as test_conformance,
+	fidl::{AsHandleRef, Error, Handle, HandleDisposition, HandleInfo, HandleOp, ObjectType, Rights, UnknownData},
+	fidl::encoding::{Context, WireFormatVersion},
+	measure_tape_for_conformance::Measurable as _,
+	measure_tape_for_conformance::Size,
+	gidl_util::{HandleDef, HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec, get_info_handle_valid},
+};
+
+{{ range .MeasureTapeTestCases }}
+{{- if .HandleDefs }}#[cfg(target_os = "fuchsia")]{{ end }}
+#[test]
+fn test_{{ .Name }}_measure_tape() {
+	{{- if .HandleDefs }}
+	let handle_defs = create_handles(&{{ .HandleDefs }});
+	let handle_defs = unsafe { disown_vec(handle_defs) };
+	let handle_defs = handle_defs.as_ref();
+	{{- end }}
+	let value = &mut {{ .Value }};
+    assert_eq!(value.measure(), Size { num_bytes: {{ .NumBytes }}, num_handles: {{ .NumHandles }} });
+}
+{{ end }}
