@@ -12,7 +12,7 @@ use {
     futures::channel::oneshot,
     ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::{bss::Protection, ie::rsn::cipher::CIPHER_CCMP_128},
+    wlan_common::bss::Protection,
     wlan_hw_sim::*,
     wlan_rsn::{
         self,
@@ -154,16 +154,7 @@ async fn reconnect_to_wpa2_network() {
     pin_mut!(test_actions_fut);
 
     // Validate the connect request.
-    let mut authenticator = password.map(|p| {
-        create_authenticator(
-            &BSSID,
-            &AP_SSID,
-            p,
-            CIPHER_CCMP_128,
-            Protection::Wpa2Personal,
-            Protection::Wpa2Personal,
-        )
-    });
+    let mut authenticator = password.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
     let mut update_sink = match authenticator {
         Some(_) => Some(wlan_rsn::rsna::UpdateSink::default()),
         None => None,

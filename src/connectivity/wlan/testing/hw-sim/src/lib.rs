@@ -25,7 +25,7 @@ use {
         data_writer,
         ie::{
             rsn::{
-                cipher::{Cipher, CIPHER_CCMP_128, CIPHER_TKIP},
+                cipher::{CIPHER_CCMP_128, CIPHER_TKIP},
                 rsne,
                 suite_filter::DEFAULT_GROUP_MGMT_CIPHER,
             },
@@ -110,7 +110,7 @@ pub fn send_beacon(
     proxy: &WlantapPhyProxy,
     rssi_dbm: i8,
 ) -> Result<(), anyhow::Error> {
-    let wpa1_ie = wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie();
+    let wpa1_ie = default_deprecated_wpa1_vendor_ie();
 
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
         headers: {
@@ -136,7 +136,7 @@ pub fn send_beacon(
             rsne?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep | Protection::Wpa1 => None,
-                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(rsne::Rsne::wpa2_rsne()),
+                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(default_wpa2_psk_rsne()),
                 Protection::Wpa2Wpa3Personal => Some(rsne::Rsne::wpa2_wpa3_rsne()),
                 Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
                 _ => panic!("unsupported fake beacon: {:?}", protection),
@@ -162,7 +162,7 @@ pub fn send_probe_resp(
     wsc_ie: Option<&[u8]>,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
-    let wpa1_ie = wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie();
+    let wpa1_ie = default_deprecated_wpa1_vendor_ie();
 
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
         headers: {
@@ -188,9 +188,8 @@ pub fn send_probe_resp(
             rsne?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep | Protection::Wpa1 => None,
-                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(rsne::Rsne::wpa2_rsne()),
-                Protection::Wpa2Wpa3Personal => Some(rsne::Rsne::wpa2_wpa3_rsne()),
-                Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
+                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(default_wpa2_psk_rsne()),
+                Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
                 _ => panic!("unsupported fake beacon: {:?}", protection),
             },
             wpa1?: match protection {
@@ -321,6 +320,14 @@ pub fn send_disassociate(
     Ok(())
 }
 
+fn default_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
+    rsne::Rsne::wpa2_rsne()
+}
+
+fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
+    wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie()
+}
+
 pub fn password_to_policy_credential<S: ToString>(password: Option<S>) -> fidl_policy::Credential {
     return match password {
         None => fidl_policy::Credential::None(fidl_policy::Empty),
@@ -328,82 +335,75 @@ pub fn password_to_policy_credential<S: ToString>(password: Option<S>) -> fidl_p
     };
 }
 
-pub fn create_authenticator(
+// WPA1 still needs to be tested until we remove support.
+pub fn create_deprecated_wpa1_psk_authenticator(
     bssid: &Bssid,
     ssid: &Ssid,
     password: &str,
-    // The group key cipher
-    gtk_cipher: Cipher,
-    // The advertised protection in the IEs during the 4-way handshake
-    advertised_protection: Protection,
-    // The protection used for the actual handshake
-    supplicant_protection: Protection,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
-    let gtk_provider = wlan_rsn::GtkProvider::new(gtk_cipher).expect("creating gtk provider");
+    let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_TKIP).expect("creating gtk provider");
+    let psk = wlan_rsn::psk::compute(password.as_bytes(), ssid).expect("computing PSK");
+    let s_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
+    let a_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
+    wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
+        nonce_rdr,
+        std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
+        psk,
+        CLIENT_MAC_ADDR,
+        s_protection,
+        bssid.0,
+        a_protection,
+    )
+    .expect("creating authenticator")
+}
 
-    let advertised_protection_info = match advertised_protection {
-        Protection::Wpa3Personal => wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne()),
-        Protection::Wpa2Wpa3Personal => {
-            wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa2_wpa3_rsne())
-        }
-        Protection::Wpa2Personal | Protection::Wpa1Wpa2Personal => {
-            wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa2_rsne())
-        }
-        Protection::Wpa2PersonalTkipOnly | Protection::Wpa1Wpa2PersonalTkipOnly => {
-            panic!("need tkip support")
-        }
-        Protection::Wpa1 => {
-            wlan_rsn::ProtectionInfo::LegacyWpa(wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie())
-        }
-        _ => {
-            panic!("{} not implemented", advertised_protection)
-        }
-    };
+pub fn create_wpa3_authenticator(
+    bssid: &Bssid,
+    ssid: &Ssid,
+    password: &str,
+) -> wlan_rsn::Authenticator {
+    let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
+    let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_CCMP_128).expect("creating gtk provider");
+    let igtk_provider =
+        wlan_rsn::IgtkProvider::new(DEFAULT_GROUP_MGMT_CIPHER).expect("creating igtk provider");
+    let password = password.as_bytes().to_vec();
+    let s_rsne = wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne());
+    let a_rsne = wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne());
+    wlan_rsn::Authenticator::new_wpa3(
+        nonce_rdr,
+        std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
+        std::sync::Arc::new(std::sync::Mutex::new(igtk_provider)),
+        ssid.clone(),
+        password,
+        CLIENT_MAC_ADDR,
+        s_rsne,
+        bssid.0,
+        a_rsne,
+    )
+    .expect("creating authenticator")
+}
 
-    match supplicant_protection {
-        Protection::Wpa1 | Protection::Wpa2Personal => {
-            let psk = wlan_rsn::psk::compute(password.as_bytes(), ssid).expect("computing PSK");
-            let supplicant_protection_info = match supplicant_protection {
-                Protection::Wpa1 => wlan_rsn::ProtectionInfo::LegacyWpa(
-                    wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie(),
-                ),
-                Protection::Wpa2Personal => wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa2_rsne()),
-                _ => unreachable!("impossible combination in this nested match"),
-            };
-            wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
-                nonce_rdr,
-                std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
-                psk,
-                CLIENT_MAC_ADDR,
-                supplicant_protection_info,
-                bssid.0,
-                advertised_protection_info,
-            )
-            .expect("creating authenticator")
-        }
-        Protection::Wpa3Personal => {
-            let igtk_provider = wlan_rsn::IgtkProvider::new(DEFAULT_GROUP_MGMT_CIPHER)
-                .expect("creating igtk provider");
-            let supplicant_protection_info =
-                wlan_rsn::ProtectionInfo::Rsne(rsne::Rsne::wpa3_rsne());
-            wlan_rsn::Authenticator::new_wpa3(
-                nonce_rdr,
-                std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
-                std::sync::Arc::new(std::sync::Mutex::new(igtk_provider)),
-                ssid.clone(),
-                password.as_bytes().to_vec(),
-                CLIENT_MAC_ADDR,
-                supplicant_protection_info,
-                bssid.0,
-                advertised_protection_info,
-            )
-            .expect("creating authenticator")
-        }
-        _ => {
-            panic!("Cannot create an authenticator for {}", supplicant_protection)
-        }
-    }
+pub fn create_wpa2_psk_authenticator(
+    bssid: &Bssid,
+    ssid: &Ssid,
+    password: &str,
+) -> wlan_rsn::Authenticator {
+    let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
+    let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_CCMP_128).expect("creating gtk provider");
+    let psk = wlan_rsn::psk::compute(password.as_bytes(), ssid).expect("computing PSK");
+    let s_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());
+    let a_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());
+    wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
+        nonce_rdr,
+        std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
+        psk,
+        CLIENT_MAC_ADDR,
+        s_rsne,
+        bssid.0,
+        a_rsne,
+    )
+    .expect("creating authenticator")
 }
 
 pub fn process_tx_auth_updates(
@@ -722,39 +722,16 @@ pub async fn connect_with_security_type(
 
     // Create the authenticator
     let (mut authenticator, mut update_sink) = match bss_protection {
-        Protection::Wpa3Personal | Protection::Wpa2Wpa3Personal => (
-            password.map(|p| {
-                create_authenticator(
-                    bssid,
-                    ssid,
-                    p,
-                    CIPHER_CCMP_128,
-                    bss_protection,
-                    Protection::Wpa3Personal,
-                )
-            }),
+        Protection::Wpa3Personal => (
+            password.map(|p| create_wpa3_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
         ),
-        Protection::Wpa2Personal | Protection::Wpa1Wpa2Personal => (
-            password.map(|p| {
-                create_authenticator(
-                    bssid,
-                    ssid,
-                    p,
-                    CIPHER_CCMP_128,
-                    bss_protection,
-                    Protection::Wpa2Personal,
-                )
-            }),
+        Protection::Wpa2Personal => (
+            password.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
         ),
-        Protection::Wpa2PersonalTkipOnly | Protection::Wpa1Wpa2PersonalTkipOnly => {
-            panic!("need tkip support")
-        }
         Protection::Wpa1 => (
-            password.map(|p| {
-                create_authenticator(bssid, ssid, p, CIPHER_TKIP, bss_protection, Protection::Wpa1)
-            }),
+            password.map(|p| create_deprecated_wpa1_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
         ),
         Protection::Open => (None, None),
