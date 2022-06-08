@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.fido.report;
+
+using zx;
+
+/// The maximum message payload is based on the packet size of 64 bytes for full speed devices.
+/// See the CTAP specification for the calculation of this value.
+const MAX_DATA_LENGTH uint64 = 7609;
+
+/// CTAPHID commands as defined in the CTAP specification.
+/// Note that the logical rather than numeric ordering here matches that in the specification.
+type CtapHidCommand = flexible enum {
+    /// Mandatory commands required by a CTAPHID device.
+    MSG = 0x03;
+    CBOR = 0x10;
+    INIT = 0x06;
+    PING = 0x01;
+    CANCEL = 0x11;
+    ERROR = 0x3f;
+    KEEPALIVE = 0x3b;
+    /// Optional commands required by a CTAPHID device. Some devices may not support these.
+    WINK = 0x08;
+    LOCK = 0x04;
+
+    /// Vendor specific commands may appear in the following range.
+    VENDOR_FIRST = 0x40;
+    VENDOR_LAST = 0x7F;
+};
+
+/// Fields in Response and Request are based on the packet tables in the CTAP specification.
+type Request = table {
+    1: channel_id uint32;
+    2: command_id CtapHidCommand;
+    3: payload_len uint16;
+    4: data vector<uint8>:MAX_DATA_LENGTH;
+};
+
+type Response = table {
+    1: channel_id uint32;
+    2: data vector<uint8>:MAX_DATA_LENGTH;
+};
+
+/// All defined values and fields for this protocol come from the CTAP specification at
+/// https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-20210615.html#usb-message-and-packet-structure
+protocol SecurityKeyDevice {
+    /// Send a message (request) to a FIDO key.
+    SendMessage(struct {
+        request Request;
+    }) -> (struct {}) error zx.status;
+
+    /// Wait for and receive a message (response) from a FIDO key.
+    /// Returns ZX_ERR_ACCESS_DENIED if `channel_id` does not match the
+    /// channel_id in `response`.
+    GetMessage(struct {
+        channel_id uint32;
+    }) -> (struct {
+        response Response;
+    }) error zx.status;
+};
