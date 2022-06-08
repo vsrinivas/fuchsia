@@ -26,6 +26,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <ffl/string.h>
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
@@ -37,12 +38,14 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_zmips(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("thread", "manipulate kernel threads", &cmd_thread, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
 STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
 STATIC_COMMAND("threadq", "toggle thread queue display", &cmd_threadq)
+STATIC_COMMAND("zmips", "compute zmips of a cpu", &cmd_zmips)
 STATIC_COMMAND_END(kernel)
 
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
@@ -229,4 +232,86 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
   g_threadq_callback.Toggle();
   return 0;
+}
+
+static int cmd_zmips(int argc, const cmd_args* argv, uint32_t flags) {
+  if (argc < 2) {
+    printf("Not enough arguments.\n");
+  usage:
+    printf("%s <cpu number>\n", argv[0].str);
+    return -1;
+  }
+
+  cpu_num_t cpu_num = static_cast<cpu_num_t>(argv[1].u);
+  if (cpu_num >= percpu::processor_count()) {
+    printf("CPU number must be in the range [%zu, %zu].\n", size_t{0},
+           percpu::processor_count() - 1);
+    goto usage;
+  }
+
+  const auto calibrate = [](void* arg) -> int {
+    const cpu_num_t cpu_num = *static_cast<cpu_num_t*>(arg);
+
+    // Busy loop for the given number of iterations.
+    const auto delay = [](uint64_t loops) {
+      while (loops != 0) {
+        __asm__ volatile("" : "+g"(loops)::);
+        --loops;
+      }
+    };
+
+    using U30 = ffl::Fixed<uint64_t, 30>;
+    U30 zmips_min = U30::Max();
+    U30 zmips_max = U30::Min();
+
+    const int max_samples = 10;
+    const uint64_t max_loops = uint64_t{1} << 48;
+    const zx_duration_t target_duration_ns = ZX_SEC(1) / 20;
+
+    for (int i = 0; i < max_samples; i++) {
+      // Quickly find the number of loops it takes for the delay loop to run for at least the target
+      // duration by stepping in power of two increments, avoiding excessively large values.
+      for (uint64_t loops = 1; loops < max_loops; loops *= 2) {
+        // Disable interrupts to limit the noise of the measurement. The target duration is selected
+        // to provide suitable precision without disabling interrupts for too long to risk tripping
+        // software/hardware watchdogs.
+        InterruptDisableGuard interrupt_disable;
+        const zx_time_t start_ns = current_time();
+        delay(loops);
+        const zx_time_t stop_ns = current_time();
+        interrupt_disable.Reenable();
+
+        const zx_duration_t duration_ns = zx_time_sub_time(stop_ns, start_ns);
+        if (duration_ns >= target_duration_ns) {
+          printf("Calibrating CPU %u: %" PRIu64 " loops per %" PRId64 " ns\n", cpu_num, loops,
+                 duration_ns);
+
+          const U30 zmips = U30{loops} / duration_ns * 1000;
+          zmips_min = ktl::min(zmips_min, zmips);
+          zmips_max = ktl::max(zmips_max, zmips);
+          break;
+        }
+      }
+    }
+
+    printf("Calibrated CPU %u: %s-%s ZMIPS\n", cpu_num,
+           Format(zmips_min, ffl::String::Mode::Dec, 2).c_str(),
+           Format(zmips_max, ffl::String::Mode::Dec, 2).c_str());
+
+    return 0;
+  };
+
+  Thread* thread = Thread::Create("calibrate_zmips", +calibrate, &cpu_num, DEFAULT_PRIORITY);
+  if (thread == nullptr) {
+    printf("Failed to create calibration thread!\n");
+    return -1;
+  }
+
+  thread->SetCpuAffinity(cpu_num_to_mask(cpu_num));
+  thread->Resume();
+
+  int retcode;
+  thread->Join(&retcode, ZX_TIME_INFINITE);
+
+  return retcode;
 }
