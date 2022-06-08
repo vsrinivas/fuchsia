@@ -12,8 +12,8 @@
 #include <cstdint>
 #include <string>
 
-#include "garnet/lib/perfmon/config.h"
-#include "garnet/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/config.h"
+#include "src/performance/lib/perfmon/events.h"
 
 namespace cpuperf {
 

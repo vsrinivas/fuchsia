@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_DEVICE_READER_H_
-#define GARNET_LIB_PERFMON_DEVICE_READER_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_DEVICE_READER_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_DEVICE_READER_H_
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/perfmon/controller.h"
-#include "garnet/lib/perfmon/properties.h"
-#include "garnet/lib/perfmon/reader.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/performance/lib/perfmon/controller.h"
+#include "src/performance/lib/perfmon/properties.h"
+#include "src/performance/lib/perfmon/reader.h"
 
 namespace perfmon {
 namespace internal {
@@ -45,4 +45,4 @@ class DeviceReader final : public Reader {
 }  // namespace internal
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_DEVICE_READER_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_DEVICE_READER_H_

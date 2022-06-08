@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_TYPES_H_
-#define GARNET_LIB_PERFMON_TYPES_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_TYPES_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_TYPES_H_
 
 #include <stdint.h>
+
 #include <string>
 
 namespace perfmon {
@@ -31,4 +32,4 @@ std::string ReaderStatusToString(ReaderStatus status);
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_TYPES_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_TYPES_H_

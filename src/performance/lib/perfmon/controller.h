@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_CONTROLLER_H_
-#define GARNET_LIB_PERFMON_CONTROLLER_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_H_
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/vmo.h>
@@ -12,10 +12,10 @@
 #include <memory>
 #include <string>
 
-#include "garnet/lib/perfmon/config.h"
-#include "garnet/lib/perfmon/properties.h"
-#include "garnet/lib/perfmon/reader.h"
 #include "src/lib/fxl/macros.h"
+#include "src/performance/lib/perfmon/config.h"
+#include "src/performance/lib/perfmon/properties.h"
+#include "src/performance/lib/perfmon/reader.h"
 
 namespace perfmon {
 
@@ -64,4 +64,4 @@ class Controller {
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_CONTROLLER_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_H_

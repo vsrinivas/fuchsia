@@ -57,12 +57,12 @@ executable("cpuperf_integration_tests_bin") {
   }
 
   deps = [
-    "//garnet/lib/perfmon",
     "//sdk/lib/fdio",
     "//src/developer/cpuperf:session_result_spec",
     "//src/developer/cpuperf:session_spec",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
+    "//src/performance/lib/perfmon",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
   ]

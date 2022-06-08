@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_EVENT_REGISTRY_H_
-#define GARNET_LIB_PERFMON_EVENT_REGISTRY_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_EVENT_REGISTRY_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_EVENT_REGISTRY_H_
 
 #include <stddef.h>
+
 #include <string>
 #include <unordered_map>
 
-#include "garnet/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/events.h"
 
 namespace perfmon {
 namespace internal {
@@ -50,4 +51,4 @@ void RegisterAllArm64ModelEvents(EventRegistry* registry);
 }  // namespace internal
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_EVENT_REGISTRY_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_EVENT_REGISTRY_H_

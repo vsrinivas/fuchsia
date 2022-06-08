@@ -8,9 +8,9 @@
 #include <lib/trace-provider/provider.h>
 
 #include "garnet/bin/cpuperf_provider/app.h"
-#include "garnet/lib/perfmon/controller.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/performance/lib/perfmon/controller.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

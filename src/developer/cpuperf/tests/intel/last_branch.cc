@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/lib/perfmon/events.h"
 #include "intel_tests.h"
+#include "src/performance/lib/perfmon/events.h"
 
 class LastBranchVerifier : public Verifier {
  public:

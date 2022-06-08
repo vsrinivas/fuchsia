@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_EVENTS_H_
-#define GARNET_LIB_PERFMON_EVENTS_H_
-
-#include <memory>
-#include <stdint.h>
-#include <string>
-#include <vector>
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_EVENTS_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_EVENTS_H_
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <stdint.h>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace perfmon {
 
@@ -104,4 +104,4 @@ std::string GetDefaultModelName();
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_EVENTS_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_EVENTS_H_

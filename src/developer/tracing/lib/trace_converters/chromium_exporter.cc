@@ -14,10 +14,10 @@
 #include <third_party/modp_b64/modp_b64.h>
 #include <trace-reader/reader.h>
 
-#include "garnet/lib/perfmon/writer.h"
 #include "rapidjson/writer.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
+#include "src/performance/lib/perfmon/writer.h"
 
 namespace tracing {
 namespace {

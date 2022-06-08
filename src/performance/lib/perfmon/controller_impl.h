@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_CONTROLLER_IMPL_H_
-#define GARNET_LIB_PERFMON_CONTROLLER_IMPL_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_IMPL_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_IMPL_H_
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
 
-#include "garnet/lib/perfmon/controller.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/performance/lib/perfmon/controller.h"
 
 namespace perfmon {
 namespace internal {
@@ -56,4 +56,4 @@ class ControllerImpl final : public Controller {
 }  // namespace internal
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_CONTROLLER_IMPL_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_IMPL_H_

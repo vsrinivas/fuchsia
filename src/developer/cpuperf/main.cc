@@ -13,8 +13,6 @@
 #include <algorithm>
 #include <limits>
 
-#include "garnet/lib/perfmon/controller.h"
-#include "garnet/lib/perfmon/events.h"
 #include "print_tallies.h"
 #include "session_result_spec.h"
 #include "session_spec.h"
@@ -23,6 +21,8 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/performance/lib/perfmon/controller.h"
+#include "src/performance/lib/perfmon/events.h"
 
 const char kUsageString[] =
     "Usage: cpuperf [options]\n"

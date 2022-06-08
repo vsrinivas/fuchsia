@@ -11,9 +11,9 @@ source_set("session_spec") {
   ]
 
   public_deps = [
-    "//garnet/lib/perfmon",
     "//src/lib/fxl",
     "//src/lib/json_parser",
+    "//src/performance/lib/perfmon",
     "//third_party/rapidjson",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
@@ -27,9 +27,9 @@ source_set("session_result_spec") {
   ]
 
   public_deps = [
-    "//garnet/lib/perfmon",
     "//src/lib/fxl",
     "//src/lib/json_parser",
+    "//src/performance/lib/perfmon",
     "//third_party/rapidjson",
   ]
 }
@@ -46,9 +46,9 @@ executable("bin") {
   deps = [
     ":session_result_spec",
     ":session_spec",
-    "//garnet/lib/perfmon",
     "//src/lib/debugger_utils",
     "//src/lib/fxl",
+    "//src/performance/lib/perfmon",
     "//src/zircon/lib/zircon",
   ]
 }

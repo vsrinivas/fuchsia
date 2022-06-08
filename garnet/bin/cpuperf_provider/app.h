@@ -11,8 +11,8 @@
 #include <memory>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
-#include "garnet/lib/perfmon/controller.h"
 #include "src/lib/fxl/command_line.h"
+#include "src/performance/lib/perfmon/controller.h"
 
 namespace cpuperf_provider {
 

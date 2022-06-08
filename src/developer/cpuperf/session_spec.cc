@@ -21,9 +21,9 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "garnet/lib/perfmon/events.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
+#include "src/performance/lib/perfmon/events.h"
 
 namespace cpuperf {
 

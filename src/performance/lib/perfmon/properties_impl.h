@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_PROPERTIES_IMPL_H_
-#define GARNET_LIB_PERFMON_PROPERTIES_IMPL_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_PROPERTIES_IMPL_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_PROPERTIES_IMPL_H_
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
-#include "garnet/lib/perfmon/properties.h"
+#include "src/performance/lib/perfmon/properties.h"
 
 namespace perfmon {
 
@@ -22,4 +22,4 @@ void FidlToPerfmonProperties(const FidlPerfmonProperties& props, Properties* out
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_PROPERTIES_IMPL_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_PROPERTIES_IMPL_H_

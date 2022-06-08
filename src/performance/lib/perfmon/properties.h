@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_PROPERTIES_H_
-#define GARNET_LIB_PERFMON_PROPERTIES_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_PROPERTIES_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_PROPERTIES_H_
 
 #include <stdint.h>
 
@@ -54,4 +54,4 @@ struct Properties {
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_PROPERTIES_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_PROPERTIES_H_

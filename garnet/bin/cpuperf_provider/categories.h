@@ -8,6 +8,7 @@
 #ifndef GARNET_BIN_CPUPERF_PROVIDER_CATEGORIES_H_
 #define GARNET_BIN_CPUPERF_PROVIDER_CATEGORIES_H_
 
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,10 +16,8 @@
 #include <string>
 #include <unordered_set>
 
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-
-#include "garnet/lib/perfmon/config.h"
-#include "garnet/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/config.h"
+#include "src/performance/lib/perfmon/events.h"
 
 namespace cpuperf_provider {
 

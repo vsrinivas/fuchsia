@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_FILE_READER_H_
-#define GARNET_LIB_PERFMON_FILE_READER_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_FILE_READER_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_FILE_READER_H_
 
 #include <lib/fit/function.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
@@ -48,4 +48,4 @@ class FileReader final : public Reader {
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_FILE_READER_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_FILE_READER_H_

@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/events.h"
 
 namespace cpuperf {
 

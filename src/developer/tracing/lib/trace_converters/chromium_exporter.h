@@ -13,9 +13,9 @@
 
 #include <trace-reader/reader.h>
 
-#include "garnet/lib/perfmon/writer.h"
 #include "rapidjson/ostreamwrapper.h"
 #include "rapidjson/writer.h"
+#include "src/performance/lib/perfmon/writer.h"
 
 namespace tracing {
 

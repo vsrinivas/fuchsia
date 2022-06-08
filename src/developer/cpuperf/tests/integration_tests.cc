@@ -7,11 +7,11 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/lib/perfmon/controller.h"
 #include "run_test.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/performance/lib/perfmon/controller.h"
 #include "verify_test.h"
 
 static syslog::LogSettings g_log_settings;

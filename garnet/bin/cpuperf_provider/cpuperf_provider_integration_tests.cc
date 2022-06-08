@@ -9,10 +9,10 @@
 #include <gtest/gtest.h>
 #include <trace-reader/file_reader.h>
 
-#include "garnet/lib/perfmon/controller.h"
 #include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/performance/lib/perfmon/controller.h"
 
 const char kTracePath[] = "/pkg/bin/trace";
 

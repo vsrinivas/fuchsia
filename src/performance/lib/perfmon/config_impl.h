@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_CONFIG_IMPL_H_
-#define GARNET_LIB_PERFMON_CONFIG_IMPL_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_CONFIG_IMPL_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_CONFIG_IMPL_H_
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
 
-#include "garnet/lib/perfmon/config.h"
+#include "src/performance/lib/perfmon/config.h"
 
 namespace perfmon {
 
@@ -22,4 +22,4 @@ void PerfmonToFidlConfig(const Config& config, FidlPerfmonConfig* out_config);
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_CONFIG_IMPL_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_CONFIG_IMPL_H_

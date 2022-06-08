@@ -5,7 +5,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "arm64_tests.h"
-#include "garnet/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/events.h"
 
 class TallyVerifier : public Verifier {
  public:

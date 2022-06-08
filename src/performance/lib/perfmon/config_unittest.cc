@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
+#include "src/performance/lib/perfmon/config.h"
 
-#include "garnet/lib/perfmon/config.h"
+#include <gtest/gtest.h>
 
 namespace perfmon {
 namespace {

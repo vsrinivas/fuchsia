@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_CONFIG_H_
-#define GARNET_LIB_PERFMON_CONFIG_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_CONFIG_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_CONFIG_H_
+
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <stdint.h>
 
 #include <functional>
-#include <stdint.h>
 #include <string>
 #include <unordered_set>
 
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
-
-#include "garnet/lib/perfmon/types.h"
+#include "src/performance/lib/perfmon/types.h"
 
 namespace perfmon {
 
@@ -133,4 +133,4 @@ class Config {
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_CONFIG_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_CONFIG_H_

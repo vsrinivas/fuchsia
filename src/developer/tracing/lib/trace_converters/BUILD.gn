@@ -18,8 +18,8 @@ source_set("chromium") {
   deps = [ "//src/lib/fxl" ]
 
   public_deps = [
-    "//garnet/lib/perfmon",
     "//sdk/lib/stdcompat",
+    "//src/performance/lib/perfmon",
     "//third_party/modp_b64",
     "//third_party/rapidjson",
     "//zircon/system/ulib/trace-reader",

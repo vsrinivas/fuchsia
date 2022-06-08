@@ -13,9 +13,9 @@
 #include <atomic>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
-#include "garnet/lib/perfmon/reader.h"
-#include "garnet/lib/perfmon/writer.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/performance/lib/perfmon/reader.h"
+#include "src/performance/lib/perfmon/writer.h"
 
 namespace cpuperf_provider {
 

@@ -19,7 +19,6 @@ group("all") {
     "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/run_test_component:tests",
-    "//garnet/lib/perfmon:tests",
     "//garnet/lib/profiler/tests:profiler_tests",
     "//garnet/lib/rust/files_async:files_async_tests",
     "//sdk/lib/fuzzing/cpp:fuzz_input_unittests($host_toolchain)",

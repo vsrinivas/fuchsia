@@ -38,7 +38,7 @@ source_set("categories") {
   ]
 
   public_deps = [
-    "//garnet/lib/perfmon",
+    "//src/performance/lib/perfmon",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zircon-internal",
   ]
@@ -57,9 +57,9 @@ executable("bin") {
 
   deps = [
     ":categories",
-    "//garnet/lib/perfmon",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/performance/lib/perfmon",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
@@ -97,11 +97,11 @@ if (current_cpu == "x64") {
     sources = [ "cpuperf_provider_integration_tests.cc" ]
 
     deps = [
-      "//garnet/lib/perfmon",
       "//src/developer/tracing/bin/trace:bin",
       "//src/developer/tracing/lib/test_utils",
       "//src/lib/fxl",
       "//src/lib/fxl/test:test_settings",
+      "//src/performance/lib/perfmon",
       "//third_party/googletest:gtest",
       "//zircon/system/ulib/trace-reader",
       "//zircon/system/ulib/zx",

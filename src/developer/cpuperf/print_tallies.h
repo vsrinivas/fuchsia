@@ -7,10 +7,10 @@
 
 #include <stdio.h>
 
-#include "garnet/lib/perfmon/controller.h"
-#include "garnet/lib/perfmon/events.h"
 #include "session_result_spec.h"
 #include "session_spec.h"
+#include "src/performance/lib/perfmon/controller.h"
+#include "src/performance/lib/perfmon/events.h"
 
 void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
                        const cpuperf::SessionResultSpec& result_spec,

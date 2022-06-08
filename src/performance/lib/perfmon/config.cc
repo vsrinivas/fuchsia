@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/perfmon/config.h"
+#include "src/performance/lib/perfmon/config.h"
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "garnet/lib/perfmon/config_impl.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/performance/lib/perfmon/config_impl.h"
 
 namespace perfmon {
 

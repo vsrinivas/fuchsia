@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/perfmon/controller_impl.h"
+#include "src/performance/lib/perfmon/controller_impl.h"
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "garnet/lib/perfmon/config_impl.h"
-#include "garnet/lib/perfmon/device_reader.h"
-#include "garnet/lib/perfmon/properties_impl.h"
+#include "src/performance/lib/perfmon/config_impl.h"
+#include "src/performance/lib/perfmon/device_reader.h"
+#include "src/performance/lib/perfmon/properties_impl.h"
 
 namespace perfmon {
 namespace internal {

@@ -9,9 +9,9 @@
 #include <cstdint>
 #include <memory>
 
-#include "garnet/lib/perfmon/events.h"
-#include "garnet/lib/perfmon/records.h"
 #include "src/developer/cpuperf/session_result_spec.h"
+#include "src/performance/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/records.h"
 
 class Verifier {
  public:

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_RECORDS_H_
-#define GARNET_LIB_PERFMON_RECORDS_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_RECORDS_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_RECORDS_H_
+
+#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
 #include <cstddef>
 #include <cstdint>
-
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
 namespace perfmon {
 
@@ -39,4 +39,4 @@ size_t GetRecordSize(const RecordHeader* hdr);
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_RECORDS_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_RECORDS_H_

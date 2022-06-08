@@ -13,10 +13,10 @@
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/bin/cpuperf_provider/importer.h"
-#include "garnet/lib/perfmon/controller.h"
-#include "garnet/lib/perfmon/reader.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/performance/lib/perfmon/controller.h"
+#include "src/performance/lib/perfmon/reader.h"
 
 namespace cpuperf_provider {
 

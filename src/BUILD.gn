@@ -82,6 +82,7 @@ group("tests_no_e2e") {
     "lib:tests",
     "media:tests",
     "modular:tests",
+    "performance:tests",
     "power:tests",
     "proc:tests",
     "recovery:tests_no_e2e",

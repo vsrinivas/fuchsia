@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PERFMON_WRITER_H_
-#define GARNET_LIB_PERFMON_WRITER_H_
+#ifndef SRC_PERFORMANCE_LIB_PERFMON_WRITER_H_
+#define SRC_PERFORMANCE_LIB_PERFMON_WRITER_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -47,4 +47,4 @@ static inline size_t LastBranchRecordBlobSize(uint16_t num_branches) {
 
 }  // namespace perfmon
 
-#endif  // GARNET_LIB_PERFMON_WRITER_H_
+#endif  // SRC_PERFORMANCE_LIB_PERFMON_WRITER_H_

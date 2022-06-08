@@ -7,7 +7,7 @@
 #include <fbl/algorithm.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
-#include "garnet/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/events.h"
 
 namespace cpuperf_provider {
 

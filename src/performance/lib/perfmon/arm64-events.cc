@@ -7,8 +7,8 @@
 
 #include <iterator>
 
-#include "garnet/lib/perfmon/event-registry.h"
-#include "garnet/lib/perfmon/events.h"
+#include "src/performance/lib/perfmon/event-registry.h"
+#include "src/performance/lib/perfmon/events.h"
 
 namespace perfmon {
 

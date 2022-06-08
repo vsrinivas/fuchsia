@@ -14,10 +14,10 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/perfmon/file_reader.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/performance/lib/perfmon/file_reader.h"
 
 namespace cpuperf {
 

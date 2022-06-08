@@ -9,9 +9,9 @@
 #include <memory>
 #include <string>
 
-#include "garnet/lib/perfmon/records.h"
 #include "src/developer/cpuperf/session_result_spec.h"
 #include "src/lib/fxl/macros.h"
+#include "src/performance/lib/perfmon/records.h"
 
 namespace cpuperf {
 

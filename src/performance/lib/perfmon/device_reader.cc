@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/perfmon/device_reader.h"
+#include "src/performance/lib/perfmon/device_reader.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmar.h>
