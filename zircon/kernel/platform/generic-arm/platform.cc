@@ -555,11 +555,9 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
   // catch all fallthrough cases
   arch_disable_ints();
 
-  // msm8053: hack touch 0 in physical space which should cause a reboot
-  __UNUSED volatile auto hole = *REG32(PHYSMAP_BASE);
-
-  for (;;)
-    ;
+  for (;;) {
+    __wfi();
+  }
 }
 
 void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
