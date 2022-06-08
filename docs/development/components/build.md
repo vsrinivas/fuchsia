@@ -316,6 +316,7 @@ paths.
 
    rustc_binary("bin") {
      output_name = "my_program"
+     sources = [ "src/main.rs" ]
    }
 
    fuchsia_component("my_component") {
@@ -336,6 +337,7 @@ paths.
 
    go_binary("bin") {
      output_name = "my_program"
+     sources = [ "main.go" ]
    }
 
    fuchsia_component("my_component") {
@@ -431,6 +433,7 @@ template as a convenience. This template fuses together `fuchsia_package()` and
    import("//build/components.gni")
 
    rustc_binary("rot13_encoder_decoder") {
+     sources = [ "src/rot13_encoder_decoder.rs" ]
    }
 
    fuchsia_package_with_single_component("rot13") {
@@ -446,6 +449,7 @@ template as a convenience. This template fuses together `fuchsia_package()` and
    import("//build/components.gni")
 
    go_binary("rot13_encoder_decoder") {
+     sources = [ "rot13_encoder_decoder.go" ]
    }
 
    fuchsia_package_with_single_component("rot13") {
@@ -650,7 +654,10 @@ package and component for the test.
    import("//build/rust/rustc_test.gni")
    import("//build/components.gni")
 
-   rustc_test("my_test") {}
+   rustc_test("my_test") {
+     sources = [ "test.rs" ]
+     testonly = true
+   }
 
    fuchsia_unittest_package("my_test") {
      manifest = "meta/my_test.cml"
@@ -664,7 +671,10 @@ package and component for the test.
    import("//build/go/go_test.gni")
    import("//build/components.gni")
 
-   go_test("my_test") {}
+   go_test("my_test") {
+     sources = [ "test.go" ]
+     testonly = true
+   }
 
    fuchsia_unittest_package("my_test") {
      manifest = "meta/my_test.cml"
@@ -724,7 +734,10 @@ for us.
    import("//build/rust/rustc_test.gni")
    import("//build/components.gni")
 
-   rustc_test("rot13_test") {}
+   rustc_test("rot13_test") {
+     sources = [ "rot13_test.rs" ]
+     testonly = true
+   }
 
    fuchsia_unittest_package("rot13_test") {
      deps = [ ":rot13_test" ]
@@ -737,7 +750,10 @@ for us.
    import("//build/go/go_test.gni")
    import("//build/components.gni")
 
-   go_test("rot13_test") {}
+   go_test("rot13_test") {
+     sources = [ "rot13_test.go" ]
+     testonly = true
+   }
 
    fuchsia_unittest_package("rot13_test") {
      deps = [ ":rot13_test" ]
