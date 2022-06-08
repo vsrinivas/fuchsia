@@ -5,7 +5,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 
-#include "src/devices/tests/bindlib-to-fidl-codegen-test/child-driver-bind.h"
+#include "src/devices/tests/bindlib-codegen-test/child-driver-bind.h"
 
 static zx_device_t* dev = nullptr;
 
@@ -34,4 +34,4 @@ static constexpr zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(bindlib_fidl_test_child, driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(bindlib_codegen_test_child, driver_ops, "zircon", "0.1");

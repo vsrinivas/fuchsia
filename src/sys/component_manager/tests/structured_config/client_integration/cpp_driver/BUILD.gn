@@ -30,7 +30,6 @@ fuchsia_driver("receiver_driver") {
     "//sdk/lib/sys/component/llcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
     "//src/devices/lib/driver:driver_runtime",
     "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_llcpp",
   ]

@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(fxb/95933): Use extended values on the right when extending is fixed.
+// TODO(fxb/95939): Alias library as parent when aliasing is fixed for bind rules.
+
+using bindlib.codegen.testlib;
+using bindlibparent.codegen.testlib;
+using fuchsia.test;
+
+bindlib.codegen.testlib.kinglet == "firecrest";
+fuchsia.BIND_PROTOCOL == 3;
+bindlib.codegen.testlib.bobolink == 10;
+bindlib.codegen.testlib.Moon == bindlib.codegen.testlib.Moon.Half;
+fuchsia.BIND_PCI_VID == bindlib.codegen.testlib.BIND_PCI_VID.PIE;
+bindlib.codegen.testlib.flag == bindlib.codegen.testlib.flag.ENABLE;
+
+bindlibparent.codegen.testlib.Pizza ==
+    bindlibparent.codegen.testlib.Pizza.Pepperoni;
+
+bindlibparent.codegen.testlib.Grit ==
+    bindlibparent.codegen.testlib.Grit.Coarse;

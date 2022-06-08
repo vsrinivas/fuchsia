@@ -7,7 +7,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 
-#include <bind/fuchsia/test/cpp/fidl.h>
+#include <bind/fuchsia/test/cpp/bind.h>
 
 #include "src/devices/tests/device-group-test/drivers/root-driver-bind.h"
 
@@ -31,11 +31,10 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
   };
 
   auto fragment_dev_1 = std::make_unique<RootDriver>(dev);
-  status =
-      fragment_dev_1->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_a")
-                                 .set_props(fragment_props_1)
-                                 .set_str_props(str_fragment_props_1)
-                                 .set_proto_id(bind::fuchsia::test::BIND_PROTOCOL_COMPAT_CHILD));
+  status = fragment_dev_1->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_a")
+                                      .set_props(fragment_props_1)
+                                      .set_str_props(str_fragment_props_1)
+                                      .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
   if (status != ZX_OK) {
     return status;
   }
@@ -43,13 +42,13 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
 
   // Add the leaf device.
   zx_device_prop_t leaf_props[] = {
-      {BIND_PROTOCOL, 0, bind::fuchsia::test::BIND_PROTOCOL_DEVICE},
+      {BIND_PROTOCOL, 0, bind_fuchsia_test::BIND_PROTOCOL_DEVICE},
   };
 
   auto leaf_dev = std::make_unique<RootDriver>(dev);
   status = leaf_dev->DdkAdd(ddk::DeviceAddArgs("leaf")
                                 .set_props(leaf_props)
-                                .set_proto_id(bind::fuchsia::test::BIND_PROTOCOL_DEVICE));
+                                .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_DEVICE));
   if (status != ZX_OK) {
     return status;
   }
@@ -61,10 +60,9 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
   };
 
   auto fragment_dev_2 = std::make_unique<RootDriver>(dev);
-  status =
-      fragment_dev_2->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_b")
-                                 .set_str_props(str_fragment_props_2)
-                                 .set_proto_id(bind::fuchsia::test::BIND_PROTOCOL_COMPAT_CHILD));
+  status = fragment_dev_2->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_b")
+                                      .set_str_props(str_fragment_props_2)
+                                      .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
   if (status != ZX_OK) {
     return status;
   }

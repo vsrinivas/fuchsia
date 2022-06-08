@@ -5,16 +5,25 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
 
-test("test") {
-  output_name = "bindlib-to-fidl-codegen-test"
+group("bindlib-codegen-test") {
+  testonly = true
+  deps = [
+    ":bindlib-codegen-rust-test-pkg",
+    ":bindlib-codegen-test-pkg",
+  ]
+}
 
-  sources = [ "bindlib-to-fidl-codegen-test.cc" ]
+test("test") {
+  output_name = "bindlib-codegen-test"
+
+  sources = [ "bindlib-codegen-test.cc" ]
 
   deps = [
-    ":bind.bindlib.to.fidl.testlib",
-    ":bind.bindlibparent.to.fidl.testlib",
+    ":bindlib.codegen.testlib_cpp",
+    ":bindlibparent.codegen.testlib_cpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//sdk/fidl/fuchsia.driver.development",
@@ -29,7 +38,7 @@ test("test") {
   ]
 }
 
-fuchsia_unittest_package("bindlib-to-fidl-codegen-test") {
+fuchsia_unittest_package("bindlib-codegen-test-pkg") {
   deps = [
     ":child-driver",
     ":parent-driver",
@@ -38,16 +47,26 @@ fuchsia_unittest_package("bindlib-to-fidl-codegen-test") {
   ]
 }
 
-bind_library("bindlibparent.to.fidl.testlib") {
-  source = "testbindlib_parent.bind"
+fuchsia_unittest_package("bindlib-codegen-rust-test-pkg") {
+  deps = [ ":bindlib-codegen-rust-test" ]
 }
 
-bind_library("bindlib.to.fidl.testlib") {
+bind_library("bindlibparent.codegen.testlib") {
+  source = "testbindlib_parent.bind"
+
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  generate_deprecated_fidl_binding = false
+}
+
+bind_library("bindlib.codegen.testlib") {
   source = "testbindlib.bind"
   public_deps = [
     # TODO(fxb/95933): depend on bindlibparent when we start using it.
     "//src/devices/bind/fuchsia.pci",
   ]
+
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  generate_deprecated_fidl_binding = false
 }
 
 driver_bind_rules("parent-driver-bind") {
@@ -57,15 +76,15 @@ driver_bind_rules("parent-driver-bind") {
 }
 
 fuchsia_driver("parent-driver-driver") {
-  output_name = "bindlib-to-fidl-codegen-parent"
+  output_name = "bindlib-codegen-parent"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = [ "parent-driver.cc" ]
   deps = [
-    ":bind.bindlib.to.fidl.testlib",
-    ":bind.bindlibparent.to.fidl.testlib",
+    ":bindlib.codegen.testlib_cpp",
+    ":bindlibparent.codegen.testlib_cpp",
     ":parent-driver-bind",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -73,7 +92,7 @@ fuchsia_driver("parent-driver-driver") {
 }
 
 fuchsia_driver_component("parent-driver") {
-  component_name = "bindlib-to-fidl-codegen-parent"
+  component_name = "bindlib-codegen-parent"
   deps = [ ":parent-driver-driver" ]
   info = "parent-driver-info.json"
   colocate = true
@@ -83,14 +102,14 @@ driver_bind_rules("child-driver-bind") {
   rules = "child-driver.bind"
   header_output = "child-driver-bind.h"
   deps = [
-    ":bindlib.to.fidl.testlib",
-    ":bindlibparent.to.fidl.testlib",
+    ":bindlib.codegen.testlib",
+    ":bindlibparent.codegen.testlib",
     "//src/devices/bind/fuchsia.test",
   ]
 }
 
 fuchsia_driver("child-driver-driver") {
-  output_name = "bindlib-to-fidl-codegen-child"
+  output_name = "bindlib-codegen-child"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -104,8 +123,19 @@ fuchsia_driver("child-driver-driver") {
 }
 
 fuchsia_driver_component("child-driver") {
-  component_name = "bindlib-to-fidl-codegen-child"
+  component_name = "bindlib-codegen-child"
   deps = [ ":child-driver-driver" ]
   info = "child-driver-info.json"
   colocate = true
+}
+
+rustc_test("bindlib-codegen-rust-test") {
+  testonly = true
+  source_root = "rust_test.rs"
+  sources = [ "rust_test.rs" ]
+  deps = [
+    ":bindlib.codegen.testlib_rust",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+  ]
 }

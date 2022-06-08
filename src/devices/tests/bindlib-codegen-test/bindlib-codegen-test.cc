@@ -9,19 +9,17 @@
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <bind/bindlib/to/fidl/testlib/cpp/fidl.h>
-#include <bind/bindlibparent/to/fidl/testlib/cpp/fidl.h>
+#include <bind/bindlib/codegen/testlib/cpp/bind.h>
+#include <bind/bindlibparent/codegen/testlib/cpp/bind.h>
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "lib/ddk/binding_priv.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace bindlib = bind::bindlib::to::fidl::testlib;
-namespace bindlibparent = bind::bindlibparent::to::fidl::testlib;
+namespace lib = bind_bindlib_codegen_testlib;
+namespace parent = bind_bindlibparent_codegen_testlib;
 
-const std::string kDriverBaseUrl = "fuchsia-boot:///#driver";
-const std::string kStringBindDriverLibPath = kDriverBaseUrl + "/bindlib-to-fidl-codegen-child.so";
 const std::string kChildDevicePath = "sys/test/parent";
 
 class BindLibToFidlCodeGenTest : public testing::Test {
@@ -51,7 +49,7 @@ TEST_F(BindLibToFidlCodeGenTest, DeviceProperties) {
 
   constexpr zx_device_prop_t kExpectedProps[] = {
       {BIND_PROTOCOL, 0, 3},
-      {BIND_PCI_VID, 0, bindlib::BIND_PCI_VID_PIE},
+      {BIND_PCI_VID, 0, lib::BIND_PCI_VID_PIE},
       {BIND_PCI_DID, 0, 1234},
   };
 
@@ -67,37 +65,37 @@ TEST_F(BindLibToFidlCodeGenTest, DeviceProperties) {
   auto& str_props = devices[0].property_list().str_props;
   ASSERT_EQ(static_cast<size_t>(6), str_props.size());
 
-  ASSERT_STREQ("bindlib.to.fidl.testlib.kinglet", str_props[0].key.data());
-  ASSERT_STREQ(bindlib::KINGLET, str_props[0].key.data());
+  ASSERT_EQ("bindlib.codegen.testlib.kinglet", str_props[0].key);
+  ASSERT_EQ(lib::KINGLET, str_props[0].key);
   ASSERT_TRUE(str_props[0].value.is_str_value());
-  ASSERT_STREQ("firecrest", str_props[0].value.str_value().data());
+  ASSERT_EQ("firecrest", str_props[0].value.str_value());
 
-  ASSERT_STREQ("bindlib.to.fidl.testlib.Moon", str_props[1].key.data());
-  ASSERT_STREQ(bindlib::MOON, str_props[1].key.data());
+  ASSERT_EQ("bindlib.codegen.testlib.Moon", str_props[1].key);
+  ASSERT_EQ(lib::MOON, str_props[1].key);
   ASSERT_TRUE(str_props[1].value.is_enum_value());
-  ASSERT_STREQ("bindlib.to.fidl.testlib.Moon.Half", str_props[1].value.enum_value().data());
-  ASSERT_STREQ(bindlib::MOON_HALF, str_props[1].value.enum_value().data());
+  ASSERT_EQ("bindlib.codegen.testlib.Moon.Half", str_props[1].value.enum_value());
+  ASSERT_EQ(lib::MOON_HALF, str_props[1].value.enum_value());
 
-  ASSERT_STREQ("bindlib.to.fidl.testlib.bobolink", str_props[2].key.data());
-  ASSERT_STREQ(bindlib::BOBOLINK, str_props[2].key.data());
+  ASSERT_EQ("bindlib.codegen.testlib.bobolink", str_props[2].key);
+  ASSERT_EQ(lib::BOBOLINK, str_props[2].key);
   ASSERT_TRUE(str_props[2].value.is_int_value());
   ASSERT_EQ(static_cast<uint32_t>(10), str_props[2].value.int_value());
 
-  ASSERT_STREQ("bindlib.to.fidl.testlib.flag", str_props[3].key.data());
-  ASSERT_STREQ(bindlib::FLAG, str_props[3].key.data());
+  ASSERT_EQ("bindlib.codegen.testlib.flag", str_props[3].key);
+  ASSERT_EQ(lib::FLAG, str_props[3].key);
   ASSERT_TRUE(str_props[3].value.is_bool_value());
   ASSERT_TRUE(str_props[3].value.bool_value());
-  ASSERT_EQ(bindlib::FLAG_ENABLE, str_props[3].value.bool_value());
+  ASSERT_EQ(lib::FLAG_ENABLE, str_props[3].value.bool_value());
 
-  ASSERT_STREQ("bindlibparent.to.fidl.testlib.Pizza", str_props[4].key.data());
-  ASSERT_STREQ(bindlibparent::PIZZA, str_props[4].key.data());
+  ASSERT_EQ("bindlibparent.codegen.testlib.Pizza", str_props[4].key);
+  ASSERT_EQ(parent::PIZZA, str_props[4].key);
   ASSERT_TRUE(str_props[4].value.is_str_value());
-  ASSERT_STREQ("pepperoni pizza", str_props[4].value.str_value().data());
-  ASSERT_STREQ(bindlibparent::PIZZA_PEPPERONI, str_props[4].value.str_value().data());
+  ASSERT_EQ("pepperoni pizza", str_props[4].value.str_value());
+  ASSERT_EQ(parent::PIZZA_PEPPERONI, str_props[4].value.str_value());
 
-  ASSERT_STREQ("bindlibparent.to.fidl.testlib.Grit", str_props[5].key.data());
-  ASSERT_STREQ(bindlibparent::GRIT, str_props[5].key.data());
+  ASSERT_EQ("bindlibparent.codegen.testlib.Grit", str_props[5].key);
+  ASSERT_EQ(parent::GRIT, str_props[5].key);
   ASSERT_TRUE(str_props[5].value.is_int_value());
   ASSERT_EQ(static_cast<uint32_t>(100), str_props[5].value.int_value());
-  ASSERT_EQ(bindlibparent::GRIT_COARSE, str_props[5].value.int_value());
+  ASSERT_EQ(parent::GRIT_COARSE, str_props[5].value.int_value());
 }

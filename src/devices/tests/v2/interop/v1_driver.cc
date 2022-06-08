@@ -6,7 +6,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 
-#include <bind/fuchsia/test/cpp/fidl.h>
+#include <bind/fuchsia/test/cpp/bind.h>
 
 #include "src/devices/tests/v2/interop/v1.bind.h"
 
@@ -22,7 +22,7 @@ zx_status_t v1_bind(void* ctx, zx_device_t* dev) {
   device_add_args_t args{
       .name = "leaf",
       .prop_count = 0,
-      .proto_id = bind::fuchsia::test::BIND_PROTOCOL_DEVICE,
+      .proto_id = bind_fuchsia_test::BIND_PROTOCOL_DEVICE,
   };
   zx_device_t* out = nullptr;
   return device_add(dev, &args, &out);

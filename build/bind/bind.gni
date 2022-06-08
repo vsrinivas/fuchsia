@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/dist/generated_resource.gni")
 import("//build/fidl/fidl.gni")
 import("//build/host.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
 
@@ -535,9 +536,16 @@ template("driver_bind_rules") {
 #     [string] Name of the library. Defaults to the target's name. This is only used when
 #     fidl_target (see below) is not provided, to set the generated FIDL target name.
 #
+#   TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
 #   fidl_target (optional)
 #     [label]: The FIDL library target. Defaults to the FIDL library name, which is the bind
-#     library name prepended with the `bind` namespace.
+#     library name prepended with the `bind` namespace. Only used if
+#     generate_deprecated_fidl_binding is set to true.
+#
+#   TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+#   generate_deprecated_fidl_binding (optional)
+#     [bool]: Whether to generate a fidl library to get FIDL based bindings. This is deprecated
+#     in favor of the new direct code generation. Defaults to true.
 #
 #   testonly, visibility
 #     Forwarded from invoker.
@@ -551,17 +559,44 @@ template("bind_library") {
     library_name = target_name
   }
 
-  fidl_file = "${target_gen_dir}/bind.${library_name}.fidl"
-  if (defined(invoker.fidl_target)) {
-    fidl_target = "${invoker.fidl_target}"
-  } else {
-    fidl_target = "bind.${library_name}"
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  generate_deprecated_fidl_binding = true
+  if (defined(invoker.generate_deprecated_fidl_binding)) {
+    generate_deprecated_fidl_binding = invoker.generate_deprecated_fidl_binding
   }
 
-  test_data_dir = "${target_out_dir}/test_data/bind-tests/"
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  if (generate_deprecated_fidl_binding) {
+    fidl_file = "${target_gen_dir}/bind.${library_name}.fidl"
+    if (defined(invoker.fidl_target)) {
+      fidl_target = "${invoker.fidl_target}"
+    } else {
+      fidl_target = "bind.${library_name}"
+    }
+  }
+
+  library_name_slashes = string_replace(library_name, ".", "/")
+  cpp_header_file = "${target_gen_dir}/${target_name}/bind_cpp/bind/${library_name_slashes}/cpp/bind.h"
+  cpp_header_file_gen_target = "${target_name}_cpp_header_gen"
+  cpp_header_file_target = "${target_name}_cpp"
+  include_config = "${target_name}_include_config"
+  config(include_config) {
+    include_dirs = [ "${target_gen_dir}/${target_name}/bind_cpp" ]
+  }
+
+  library_name_underscore = string_replace(library_name, ".", "_")
+  rust_file =
+      "${target_gen_dir}/${target_name}/rust/${library_name_underscore}_lib.rs"
+  crate_name = "bind_${library_name_underscore}"
+  rust_file_gen_target = "${target_name}_rust_file_gen"
+  rust_library_target = "${target_name}_rust"
+  crate_output_directory = "${target_out_dir}/${target_name}"
+
+  test_data_dir = "${target_out_dir}/${target_name}/test_data/bind-tests/"
   test_data_target = "${target_name}_test_data"
 
   copy(test_data_target) {
+    forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     sources = [ invoker.source ]
     outputs = [ "${test_data_dir}/{{source_file_part}}" ]
@@ -579,10 +614,12 @@ template("bind_library") {
                                  root_build_dir)
     }
 
-    deps = [
-      ":${fidl_target}",
-      ":${test_data_target}",
-    ]
+    deps = [ ":${test_data_target}" ]
+
+    # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+    if (generate_deprecated_fidl_binding) {
+      deps += [ ":${fidl_target}" ]
+    }
 
     forward_variables_from(invoker,
                            [
@@ -598,47 +635,134 @@ template("bind_library") {
     }
   }
 
-  if (current_toolchain == fidl_toolchain) {
-    # Generates a FIDL file with all the generated FIDL file. It is only ran in
-    # the FIDL toolchain because we want to run this conversion only once.
+  compiled_action(cpp_header_file_gen_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
-    fidl_file_target = "${target_name}_fidl"
+    tool = "//tools/bindc:bin"
+    tool_output_name = "bindc"
 
-    compiled_action(fidl_file_target) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
+    sources = [ invoker.source ]
 
-      tool = "//tools/bindc:bin"
-      tool_output_name = "bindc"
+    args = [
+      "generate-cpp",
+      "--lint",
+      "--output",
+      rebase_path("${cpp_header_file}", root_build_dir),
+      rebase_path("${invoker.source}", root_build_dir),
+    ]
 
-      sources = [ invoker.source ]
+    outputs = [ cpp_header_file ]
+  }
 
-      args = [
-        "generate",
-        "--lint",
-        "--output",
-        rebase_path("${fidl_file}", root_build_dir),
-        rebase_path("${invoker.source}", root_build_dir),
-      ]
+  compiled_action(rust_file_gen_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
-      outputs = [ fidl_file ]
+    tool = "//tools/bindc:bin"
+    tool_output_name = "bindc"
+
+    sources = [ invoker.source ]
+
+    args = [
+      "generate-rust",
+      "--lint",
+      "--output",
+      rebase_path("${rust_file}", root_build_dir),
+      rebase_path("${invoker.source}", root_build_dir),
+    ]
+
+    outputs = [ rust_file ]
+  }
+
+  source_set(cpp_header_file_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [ ":${cpp_header_file_gen_target}" ]
+    sources = [ cpp_header_file ]
+    public_configs = [ ":${include_config}" ]
+    if (defined(invoker.public_deps)) {
+      public_deps = []
+      foreach(pub_dep, invoker.public_deps) {
+        dep_full_label = get_label_info(pub_dep, "label_no_toolchain")
+        public_deps += [ "${dep_full_label}_cpp" ]
+      }
     }
+  }
 
-    fidl(fidl_target) {
-      sources = [ "${fidl_file}" ]
-      non_fidl_deps = [ ":${fidl_file_target}" ]
-      should_lint = false
-      public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
+  rustc_library(rust_library_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    name = crate_name
+    output_dir = crate_output_directory
+    non_rust_deps = [ ":${rust_file_gen_target}" ]
+    sources = [ rust_file ]
+    source_root = rust_file
+    if (defined(invoker.public_deps)) {
+      deps = []
+      foreach(pub_dep, invoker.public_deps) {
+        dep_full_label = get_label_info(pub_dep, "label_no_toolchain")
+        deps += [ "${dep_full_label}_rust" ]
+      }
     }
-  } else {
-    # The non-FIDL toolchain FIDL libraries are built normally; except based
-    # off of the generated FIDL file.
-    fidl(fidl_target) {
-      sources = [ fidl_file ]
-      public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
+  }
+
+  # TODO(fxb/101314): Remove everything related to deprecated FIDL bindings.
+  if (generate_deprecated_fidl_binding) {
+    if (current_toolchain == fidl_toolchain) {
+      # Generates a FIDL file with all the generated FIDL file. It is only ran in
+      # the FIDL toolchain because we want to run this conversion only once.
+
+      fidl_file_target = "${target_name}_fidl"
+
+      compiled_action(fidl_file_target) {
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+
+        tool = "//tools/bindc:bin"
+        tool_output_name = "bindc"
+
+        sources = [ invoker.source ]
+
+        args = [
+          "generate",
+          "--lint",
+          "--output",
+          rebase_path("${fidl_file}", root_build_dir),
+          rebase_path("${invoker.source}", root_build_dir),
+        ]
+
+        outputs = [ fidl_file ]
+      }
+
+      fidl(fidl_target) {
+        sources = [ "${fidl_file}" ]
+        non_fidl_deps = [ ":${fidl_file_target}" ]
+        should_lint = false
+        public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
+      }
+    } else {
+      # The non-FIDL toolchain FIDL libraries are built normally; except based
+      # off of the generated FIDL file.
+      fidl(fidl_target) {
+        sources = [ fidl_file ]
+        public_deps = [ "//sdk/fidl/fuchsia.driver.framework" ]
+      }
     }
   }
 }

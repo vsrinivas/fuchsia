@@ -14,7 +14,7 @@
 #include <lib/fpromise/scope.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 
-#include <bind/fuchsia/test/cpp/fidl.h>
+#include <bind/fuchsia/test/cpp/bind.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
@@ -99,7 +99,7 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
     auto property = fdf::wire::NodeProperty::Builder(arena)
                         .key(fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
                         .value(fdf::wire::NodePropertyValue::WithIntValue(
-                            bind::fuchsia::test::BIND_PROTOCOL_DEVICE))
+                            bind_fuchsia_test::BIND_PROTOCOL_DEVICE))
                         .Build();
 
     auto args =

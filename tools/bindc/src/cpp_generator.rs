@@ -11,7 +11,7 @@ pub struct CppGenerator {}
 impl BindingGenerator for CppGenerator {
     fn generate_using_declaration(self: &Self, using_decl: &Include) -> String {
         let include_stem = using_decl.name.to_string().replace(".", "/");
-        format!("#include <{}/bindlib.h>\n", include_stem)
+        format!("#include <bind/{}/cpp/bind.h>\n", include_stem)
     }
 
     fn generate_identifier_declaration(self: &Self, path: &str, identifier_name: &str) -> String {
@@ -51,7 +51,7 @@ impl BindingGenerator for CppGenerator {
         using_declarations: &str,
         constant_declarations: &str,
     ) -> String {
-        let namespace = bind_name.replace(".", "_");
+        let namespace = format!("bind_{}", bind_name.replace(".", "_"));
         let header_guard = format!("{}_BINDLIB_", namespace.to_uppercase());
         format!(
             include_str!("templates/cpp_header.template"),

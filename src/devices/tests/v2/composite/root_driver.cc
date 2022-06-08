@@ -11,7 +11,7 @@
 #include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/scope.h>
 
-#include <bind/fuchsia/test/cpp/fidl.h>
+#include <bind/fuchsia/test/cpp/bind.h>
 
 #include "src/devices/lib/compat/compat.h"
 
@@ -122,8 +122,8 @@ class RootDriver {
     service_dir_->AddEntry(kRightName, right_dir);
 
     // Start the driver.
-    auto task = AddChild(kLeftName, bind::fuchsia::test::BIND_PROTOCOL_DEVICE, left_controller_)
-                    .and_then(AddChild(kRightName, bind::fuchsia::test::BIND_PROTOCOL_POWER_CHILD,
+    auto task = AddChild(kLeftName, bind_fuchsia_test::BIND_PROTOCOL_DEVICE, left_controller_)
+                    .and_then(AddChild(kRightName, bind_fuchsia_test::BIND_PROTOCOL_POWER_CHILD,
                                        right_controller_))
                     .or_else(fit::bind_member(this, &RootDriver::UnbindNode))
                     .wrap_with(scope_);

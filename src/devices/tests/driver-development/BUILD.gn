@@ -24,7 +24,7 @@ rustc_test("driver_development_test") {
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
-    "//src/devices/bind/fuchsia.test:bind.fuchsia.test-rustc",
+    "//src/devices/bind/fuchsia.test:fuchsia.test_rust",
     "//src/devices/lib/bind:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

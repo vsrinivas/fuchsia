@@ -24,8 +24,6 @@
 #include <optional>
 #include <vector>
 
-#include <bind/fuchsia/test/cpp/fidl.h>
-
 #include "fidl/test.structuredconfig.receiver.shim/cpp/wire_messaging.h"
 #include "lib/fidl/llcpp/arena.h"
 #include "lib/fidl/llcpp/string_view.h"

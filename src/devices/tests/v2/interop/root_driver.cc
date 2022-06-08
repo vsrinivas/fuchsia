@@ -14,7 +14,7 @@
 #include <lib/fpromise/scope.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 
-#include <bind/fuchsia/test/cpp/fidl.h>
+#include <bind/fuchsia/test/cpp/bind.h>
 
 #include "src/devices/lib/compat/compat.h"
 #include "src/devices/lib/compat/symbols.h"
@@ -99,7 +99,7 @@ class RootDriver {
           fdf::wire::NodeProperty property(arena);
           property.set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
               .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(
-                                    bind::fuchsia::test::BIND_PROTOCOL_COMPAT_CHILD));
+                                    bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
           auto offers = child_->CreateOffers(arena);
 
           fdf::wire::NodeAddArgs args(arena);

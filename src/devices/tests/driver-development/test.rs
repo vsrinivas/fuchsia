@@ -42,9 +42,7 @@ fn get_test_parent_dfv2_property_list() -> Option<[fdf::NodeProperty; 2]> {
     Some([
         fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
-            value: Some(fdf::NodePropertyValue::IntValue(
-                fidl_bind_fuchsia_test::BIND_PROTOCOL_PARENT,
-            )),
+            value: Some(fdf::NodePropertyValue::IntValue(bind_fuchsia_test::BIND_PROTOCOL_PARENT)),
             unknown_data: None,
             ..fdf::NodeProperty::EMPTY
         },

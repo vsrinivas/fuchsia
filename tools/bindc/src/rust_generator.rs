@@ -11,7 +11,7 @@ pub struct RustGenerator {}
 impl BindingGenerator for RustGenerator {
     fn generate_using_declaration(self: &Self, using_decl: &Include) -> String {
         let dep_name_underscores = using_decl.name.to_string().replace(".", "_");
-        format!("pub use {}_bindlib;\n", dep_name_underscores)
+        format!("pub use bind_{};\n", dep_name_underscores)
     }
 
     fn generate_identifier_declaration(self: &Self, path: &str, identifier_name: &str) -> String {

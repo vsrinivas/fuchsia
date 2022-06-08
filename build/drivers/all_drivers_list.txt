@@ -193,8 +193,8 @@
 //src/devices/tests/autobind:driver
 //src/devices/tests/bind-fail-test:fuchsia_driver
 //src/devices/tests/bind-test-v2:bind-test-driver-v2-driver
-//src/devices/tests/bindlib-to-fidl-codegen-test:child-driver-driver
-//src/devices/tests/bindlib-to-fidl-codegen-test:parent-driver-driver
+//src/devices/tests/bindlib-codegen-test:child-driver-driver
+//src/devices/tests/bindlib-codegen-test:parent-driver-driver
 //src/devices/tests/composite-driver-v1/test-root:driver
 //src/devices/tests/composite-driver-v1:driver
 //src/devices/tests/ddk-environment-test:ddk-environment-test-driver

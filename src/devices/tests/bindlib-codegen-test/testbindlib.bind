@@ -4,7 +4,7 @@
 
 // TODO(fxb/95933): Extend parent items when extending non-deprecated works.
 
-library bindlib.to.fidl.testlib;
+library bindlib.codegen.testlib;
 
 using fuchsia.pci;
 
