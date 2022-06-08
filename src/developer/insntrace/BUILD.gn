@@ -40,6 +40,12 @@ executable("bin") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [ "tests" ]
+}
+
 install_host_tools("host_insntrace_print") {
   deps = [ "print:insntrace_print" ]
   outputs = [ "insntrace_print" ]

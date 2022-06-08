@@ -31,19 +31,19 @@
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/bin/insntrace/config.h"
-#include "garnet/bin/insntrace/control.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
+#include "src/developer/insntrace/config.h"
+#include "src/developer/insntrace/control.h"
 
 // The lower 5 bits of CR3_MATCH MSR are reserved.
 static constexpr uint32_t kCr3MatchReservedMask = 0x1f;
 
 // TODO(dje): Split up into topics, output is long and can scroll off screen.
 //
-// TODO(fxbug.dev/39631): Support tracing a particular program or individual threads. It's simplest, and
-// consistent with other programs, if the syntax is "insntrace program [argv]". That is why
+// TODO(fxbug.dev/39631): Support tracing a particular program or individual threads. It's simplest,
+// and consistent with other programs, if the syntax is "insntrace program [argv]". That is why
 // "--control" is a required argument at the moment.
 constexpr char kUsageString[] =
     "Usage: insntrace [options] --control action1 [action2 ...]\n"

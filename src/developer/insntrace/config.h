@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_INSNTRACE_CONFIG_H_
-#define GARNET_BIN_INSNTRACE_CONFIG_H_
+#ifndef SRC_DEVELOPER_INSNTRACE_CONFIG_H_
+#define SRC_DEVELOPER_INSNTRACE_CONFIG_H_
 
 #include <fuchsia/hardware/cpu/insntrace/cpp/fidl.h>
 #include <zircon/syscalls.h>
@@ -81,4 +81,4 @@ struct IptConfig {
 
 }  // namespace insntrace
 
-#endif  // GARNET_BIN_INSNTRACE_CONFIG_H_
+#endif  // SRC_DEVELOPER_INSNTRACE_CONFIG_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/insntrace/utils.h"
+#include "src/developer/insntrace/utils.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>

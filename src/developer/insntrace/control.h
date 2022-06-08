@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_INSNTRACE_CONTROL_H_
+#define SRC_DEVELOPER_INSNTRACE_CONTROL_H_
 
-#include "garnet/bin/insntrace/config.h"
+#include "src/developer/insntrace/config.h"
 
 namespace insntrace {
 
@@ -29,3 +30,5 @@ void ResetTrace(const IptConfig& config);
 void FreeTrace(const IptConfig& config);
 
 }  // namespace insntrace
+
+#endif  // SRC_DEVELOPER_INSNTRACE_CONTROL_H_

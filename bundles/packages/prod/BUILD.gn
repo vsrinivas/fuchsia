@@ -167,8 +167,8 @@ group("cobalt_client") {
 group("cpuperf") {
   testonly = true
   public_deps = [
-    "//garnet/bin/cpuperf",
-    "//garnet/bin/cpuperf/print:host_cpuperf_print",
+    "//src/developer/cpuperf",
+    "//src/developer/cpuperf/print:host_cpuperf_print",
   ]
 }
 
@@ -197,8 +197,8 @@ group("far") {
 group("insntrace") {
   testonly = true
   public_deps = [
-    "//garnet/bin/insntrace",
-    "//garnet/bin/insntrace:host_insntrace_print",
+    "//src/developer/insntrace",
+    "//src/developer/insntrace:host_insntrace_print",
   ]
 }
 
@@ -243,9 +243,9 @@ group("tracing") {
     "//garnet/bin/cpuperf_provider:report_generators",
     "//garnet/bin/ktrace_provider",
     "//garnet/bin/trace",
-    "//garnet/bin/trace2json",
     "//garnet/bin/trace_manager",
     "//garnet/bin/traceutil",
+    "//src/developer/trace2json",
   ]
 }
 

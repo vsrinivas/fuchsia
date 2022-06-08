@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_INSNTRACE_KTRACE_CONTROLLER_H_
-#define GARNET_BIN_INSNTRACE_KTRACE_CONTROLLER_H_
+#ifndef SRC_DEVELOPER_INSNTRACE_KTRACE_CONTROLLER_H_
+#define SRC_DEVELOPER_INSNTRACE_KTRACE_CONTROLLER_H_
 
 #include <fuchsia/tracing/kernel/cpp/fidl.h>
 #include <stdint.h>
@@ -24,4 +24,4 @@ void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_su
 
 }  // namespace insntrace
 
-#endif  // GARNET_BIN_INSNTRACE_KTRACE_CONTROLLER_H_
+#endif  // SRC_DEVELOPER_INSNTRACE_KTRACE_CONTROLLER_H_

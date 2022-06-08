@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/insntrace/control.h"
+#include "src/developer/insntrace/control.h"
 
 #include <fcntl.h>
 #include <fuchsia/hardware/cpu/insntrace/cpp/fidl.h>
@@ -25,12 +25,12 @@
 
 #include <fbl/unique_fd.h>
 
-#include "garnet/bin/insntrace/config.h"
-#include "garnet/bin/insntrace/ktrace_controller.h"
-#include "garnet/bin/insntrace/utils.h"
 #include "garnet/lib/debugger_utils/util.h"
 #include "garnet/lib/debugger_utils/x86_cpuid.h"
 #include "garnet/lib/debugger_utils/x86_pt.h"
+#include "src/developer/insntrace/config.h"
+#include "src/developer/insntrace/ktrace_controller.h"
+#include "src/developer/insntrace/utils.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {

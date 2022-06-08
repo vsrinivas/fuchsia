@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/insntrace/ktrace_controller.h"
+#include "src/developer/insntrace/ktrace_controller.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -15,8 +15,8 @@
 
 #include <fbl/unique_fd.h>
 
-#include "garnet/bin/insntrace/utils.h"
 #include "garnet/lib/debugger_utils/util.h"
+#include "src/developer/insntrace/utils.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {

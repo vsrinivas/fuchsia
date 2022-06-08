@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_
+#define SRC_DEVELOPER_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_
 
 #include <string>
 
-#include "third_party/simple-pt/call-printer.h"
-
 #include "printer_config.h"
 #include "raw_printer.h"
+#include "third_party/simple-pt/call-printer.h"
 
 namespace intel_processor_trace {
 
@@ -38,3 +38,5 @@ struct CommandLineSettings {
 };
 
 }  // namespace intel_processor_trace
+
+#endif  // SRC_DEVELOPER_INSNTRACE_PRINT_COMMAND_LINE_SETTINGS_H_

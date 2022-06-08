@@ -17,7 +17,6 @@ group("all") {
     "//examples/intl/tz_version_parrot:tests",
     "//examples/intl/wisdom:tests",
     "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
-    "//garnet/bin/insntrace/tests",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/run_test_component:tests",
     "//garnet/bin/trace/tests:trace_tests",
