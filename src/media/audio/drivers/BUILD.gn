@@ -14,7 +14,6 @@ group("drivers") {
     "codecs/max98927",
     "codecs/tas27xx",
     "codecs/tas5720",
-    "codecs/tas5782",
     "codecs/tas58xx",
     "dai-test",
     "intel-hda/codecs/hdmi:hdmi-audio-codec",

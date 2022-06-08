@@ -13,7 +13,6 @@ group("tests") {
     "max98927:tests",
     "tas27xx:tests",
     "tas5720:tests",
-    "tas5782:tests",
     "tas58xx:tests",
   ]
 }

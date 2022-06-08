@@ -380,3 +380,9 @@
   available_in_git: 'e5cb9cb2fa06ad1bd95f0e5357b00d62f8bb34e6'
   areas: ['Power']
   path: '/src/devices/power/drivers/silergy'
+- short_description: 'TI TAS5782 codec driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '688547'
+  available_in_git: 'db7856d0d304cfbb0f4beed0b73644a645aab0a5'
+  areas: ['Audio']
+  path: '/src/media/audio/drivers/codecs/tas5782'
