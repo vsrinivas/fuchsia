@@ -490,7 +490,10 @@ driver_bind_rules("sherlock-woofer-bind") {
   header_output = "sherlock-woofer-bind.h"
   bind_output = "sherlock-woofer-bind.bc"
   tests = "bind-tests/sherlock-woofer-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 driver_bind_rules("sherlock-tweeter-left-bind") {
@@ -498,7 +501,10 @@ driver_bind_rules("sherlock-tweeter-left-bind") {
   header_output = "sherlock-tweeter-left-bind.h"
   bind_output = "sherlock-tweeter-left-bind.bc"
   tests = "bind-tests/sherlock-tweeter-left-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 driver_bind_rules("sherlock-tweeter-right-bind") {
@@ -506,7 +512,10 @@ driver_bind_rules("sherlock-tweeter-right-bind") {
   header_output = "sherlock-tweeter-right-bind.h"
   bind_output = "sherlock-tweeter-right-bind.bc"
   tests = "bind-tests/sherlock-tweeter-right-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 driver_bind_rules("ernie-tweeter-bind") {

@@ -5,6 +5,8 @@
 #include "tas5720.h"
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
@@ -54,8 +56,23 @@ struct Tas5720Test : public zxtest::Test {
         .ExpectWrite({0x03})
         .ExpectReadStop({0x80})
         .ExpectWriteStop({0x03, 0x90});  // Muted.
+
+    loop_.StartThread();
   }
+
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> GetI2cClient() {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    if (endpoints.is_error()) {
+      return {};
+    }
+
+    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
+                                        &mock_i2c_);
+    return std::move(endpoints->client);
+  }
+
   mock_i2c::MockI2c mock_i2c_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 struct Tas5720Codec : public Tas5720 {
@@ -69,8 +86,7 @@ TEST_F(Tas5720Test, CodecInitGood) {
   uint32_t instance_count = 0;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
 
@@ -87,6 +103,9 @@ TEST(Tas5720Test, CodecInitBad) {
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   mock_i2c::MockI2c mock_i2c;
+
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
   // Bad replies (2 retries) to enter shutdown (part of reset).
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 1.
@@ -96,8 +115,14 @@ TEST(Tas5720Test, CodecInitBad) {
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 1.
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 2.
 
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  ASSERT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  loop.StartThread();
+
   ASSERT_EQ(ZX_ERR_TIMED_OUT, SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(
-                                  fake_parent.get(), mock_i2c.GetProto()));
+                                  fake_parent.get(), std::move(endpoints->client)));
 
   mock_i2c.VerifyAndClear();
 }
@@ -107,8 +132,7 @@ TEST_F(Tas5720Test, CodecGetInfo) {
   uint32_t instance_count = 0;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
@@ -160,8 +184,7 @@ TEST_F(Tas5720Test, CodecReset) {
 
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
@@ -179,8 +202,7 @@ TEST_F(Tas5720Test, CodecBridgedMode) {
   uint32_t instance_count = 0;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
@@ -205,8 +227,7 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   uint32_t instance_count = 0;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
@@ -302,8 +323,7 @@ TEST_F(Tas5720Test, CodecGain) {
   uint32_t instance_count = 0;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
@@ -365,8 +385,7 @@ TEST_F(Tas5720Test, CodecPlugState) {
   uint32_t instance_count = 0;
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
@@ -388,6 +407,9 @@ TEST(Tas5720Test, InstanceCount) {
 
   // Reset by the TAS driver initialization setting slot to 2.
   mock_i2c::MockI2c mock_i2c;
+
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
   mock_i2c.ExpectWrite({0x01})
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x01, 0xfe})  // Enter shutdown (part of reset).
@@ -411,8 +433,14 @@ TEST(Tas5720Test, InstanceCount) {
       .ExpectReadStop({0x80})
       .ExpectWriteStop({0x03, 0x90});  // Muted.
 
-  ASSERT_OK(
-      SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), mock_i2c.GetProto()));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  ASSERT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  loop.StartThread();
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(),
+                                                               std::move(endpoints->client)));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
 
