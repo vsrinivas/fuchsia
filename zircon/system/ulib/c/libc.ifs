@@ -34,7 +34,6 @@ Symbols:
   - { Name: __expo2f, Type: Func }
   - { Name: __fgetwc_unlocked, Type: Func }
   - { Name: __flock, Type: Func }
-  - { Name: __flt_rounds, Type: Func }
   - { Name: __fpclassify, Type: Func }
   - { Name: __fpclassifyf, Type: Func }
   - { Name: __fpclassifyl, Type: Func }

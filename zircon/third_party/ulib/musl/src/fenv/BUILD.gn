@@ -8,7 +8,6 @@ source_set("fenv") {
   deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "${clang_cpu}/fenv.c",
-    "__flt_rounds.c",
     "fegetexceptflag.c",
     "feholdexcept.c",
     "fesetexceptflag.c",
