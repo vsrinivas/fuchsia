@@ -99,6 +99,7 @@ class Bus : public PciBusType,
   void GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& completer) final;
   void GetHostBridgeInfo(GetHostBridgeInfoRequestView request,
                          GetHostBridgeInfoCompleter::Sync& completer) final;
+  void ReadBar(ReadBarRequestView request, ReadBarCompleter::Sync& completer) final;
 
   zx::vmo GetInspectVmo() { return inspector_.DuplicateVmo(); }
 

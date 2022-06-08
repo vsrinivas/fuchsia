@@ -36,6 +36,7 @@ pub async fn lspci(cmd: LspciCommand, dev: fio::DirectoryProxy) -> Result<()> {
         print_numeric: cmd.print_numeric,
         only_print_numeric: cmd.only_print_numeric,
         filter: cmd.filter,
+        ..Default::default()
     };
 
     // Prints PCI Info

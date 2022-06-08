@@ -8,12 +8,16 @@ using zx;
 const MAX_DEVICES uint32 = 64;
 const MAX_CAPABILITIES uint32 = 32;
 const MAX_EXT_CAPABILITIES uint32 = 32;
+const READBAR_MAX_SIZE uint32 = 1024;
 
 // Per the PCI specification.
 const BASE_CONFIG_SIZE uint32 = 256;
 const BASE_ADDRESS_COUNT uint32 = 6;
 
+const MAX_NAME_LEN uint32 = 32;
+
 type HostBridgeInfo = struct {
+    name string:MAX_NAME_LEN;
     start_bus_number uint8;
     end_bus_number uint8;
     segment_group uint16;
@@ -26,6 +30,13 @@ type BaseAddress = struct {
     is_prefetchable bool;
     is_64bit bool;
     id uint8;
+};
+
+/// An address of a PCI device.
+type Address = struct {
+    bus uint8;
+    device uint8;
+    function uint8;
 };
 
 type Capability = struct {
@@ -48,14 +59,40 @@ type PciDevice = struct {
     function_id uint8;
 };
 
+/// The Bus protocol provides information about PCI device children on the PCI
+/// providing the service.
 @discoverable
 protocol Bus {
+    /// Retrieve information about the segment group and buses covered by a Bus.
     GetHostBridgeInfo() -> (struct {
         info HostBridgeInfo;
     });
+    /// Retrieve all Devices on the Bus.
     GetDevices() -> (struct {
         devices vector<PciDevice>:MAX_DEVICES;
     });
+    /// Read from a Device's base address register (BAR). The BAR must be an MMIO type.
+    ///
+    /// Parameters
+    /// |device|: The address of the device to read from.
+    /// |bar_id|: The ID of the BAR to read.
+    /// |offset|: The offset, in bytes, to start the read (default: 0 bytes).
+    /// |size|: The size of the read (default: 128 bytes). The max size for a
+    /// read is |READBAR_MAX_SIZE|.
+    ///
+    /// Errors:
+    /// |ZX_ERR_NOT_FOUND|: |device| was not found, or |bar_id| did not exist in |device|.
+    /// |ZX_ERR_INVALID_ARGS|: |bar_id| is invalid,  or offset / size combined
+    /// are invalid for the given BAR's size.
+    /// |ZX_ERR_NOT_SUPPORTED|: The BAR specified by |bar_id| is not an MMIO BAR.
+    ReadBar(struct {
+        device Address;
+        bar_id uint8;
+        offset uint64;
+        size uint64;
+    }) -> (struct {
+        buffer bytes;
+    }) error zx.status;
 };
 
 /// PCI Configuration Header registers.

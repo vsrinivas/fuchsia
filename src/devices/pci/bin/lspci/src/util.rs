@@ -42,9 +42,10 @@ pub struct Hexdumper<'a> {
 
 impl std::fmt::Display for Hexdumper<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let size = std::cmp::min(self.bytes.len(), SLICE_SIZE);
         // Weep for those who do not use monospace terminal fonts.
         write!(f, "        ")?;
-        for col in 0..SLICE_SIZE {
+        for col in 0..size {
             write!(f, " {:1x} ", col)?;
             if col == 7 {
                 write!(f, " ")?;

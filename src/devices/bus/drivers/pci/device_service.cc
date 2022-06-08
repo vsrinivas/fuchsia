@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <fidl/fuchsia.hardware.pci/cpp/wire.h>
+#include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/mmio/mmio-buffer.h>
+#include <zircon/errors.h>
 #include <zircon/hw/pci.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <memory>
 
@@ -101,11 +106,77 @@ void Bus::GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& c
 void Bus::GetHostBridgeInfo(GetHostBridgeInfoRequestView request,
                             GetHostBridgeInfoCompleter::Sync& completer) {
   PciFidl::wire::HostBridgeInfo info = {
+      .name = fidl::StringView::FromExternal(info_.name),
       .start_bus_number = info_.start_bus_num,
       .end_bus_number = info_.end_bus_num,
       .segment_group = info_.segment_group,
   };
   completer.Reply(info);
+}
+
+void Bus::ReadBar(ReadBarRequestView request, ReadBarCompleter::Sync& completer) {
+  pci_bdf_t bdf = {request->device.bus, request->device.device, request->device.function};
+  uint8_t bar_id = request->bar_id;
+  auto find_fn = [&bdf](pci::Device& device) -> bool {
+    return bdf.bus_id == device.bus_id() && bdf.device_id == device.dev_id() &&
+           bdf.function_id == device.func_id();
+  };
+
+  fbl::AutoLock devices_lock(&devices_lock_);
+  auto device = std::find_if(devices_.begin(), devices_.end(), find_fn);
+  if (device == std::end(devices_)) {
+    zxlogf(DEBUG, "could not find device %02x:%02x.%1x", bdf.bus_id, bdf.device_id,
+           bdf.function_id);
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  if (device->bar_count() <= bar_id) {
+    zxlogf(DEBUG, "invalid BAR id %d", bar_id);
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  fbl::AutoLock dev_lock(device->dev_lock());
+  auto& bar = device->bars()[bar_id];
+  if (!bar.has_value()) {
+    zxlogf(DEBUG, "no BAR %d found for device", bar_id);
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  if (request->offset > bar->size || request->offset + request->size > bar->size) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  // Only MMIO is supported.
+  if (!bar->is_mmio) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  auto result = bar->allocation->CreateVmo();
+  if (result.is_error()) {
+    zxlogf(DEBUG, "failed to create VMO: %s", result.status_string());
+    completer.ReplyError(result.error_value());
+    return;
+  }
+
+  size_t size = std::min<uint64_t>(request->size, PciFidl::wire::kReadbarMaxSize);
+  size = std::min<uint64_t>(bar->size, size);
+  std::optional<fdf::MmioBuffer> mmio;
+  zx_status_t status = fdf::MmioBuffer::Create(request->offset, bar->size, std::move(result.value()),
+                                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  if (status != ZX_OK) {
+    zxlogf(DEBUG, "failed to create MmioBuffer: %s", zx_status_get_string(status));
+    completer.ReplyError(result.error_value());
+    return;
+  }
+
+  std::vector<uint8_t> buffer;
+  buffer.resize(size);
+  mmio->ReadBuffer(0, buffer.data(), size);
+  completer.ReplySuccess(::fidl::VectorView<uint8_t>::FromExternal(buffer));
 }
 
 }  // namespace pci
