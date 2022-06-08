@@ -49,22 +49,23 @@ struct SockOption {
 
 constexpr int INET_ECN_MASK = 3;
 
-std::string socketTypeToString(const int type) {
-  switch (type) {
-    case SOCK_DGRAM:
+constexpr std::string_view socketTypeToString(const SocketType& type) {
+  switch (type.which()) {
+    case SocketType::Which::Dgram:
       return "Datagram";
-    case SOCK_STREAM:
+    case SocketType::Which::Stream:
       return "Stream";
-    default:
-      return std::to_string(type);
   }
 }
 
-using SocketKind = std::tuple<int, int>;
+using SocketKind = std::tuple<SocketDomain, SocketType>;
 
 std::string SocketKindToString(const testing::TestParamInfo<SocketKind>& info) {
   auto const& [domain, type] = info.param;
-  return socketDomainToString(domain) + "_" + socketTypeToString(type);
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << socketTypeToString(type);
+  return oss.str();
 }
 
 // Share common functions for SocketKind based tests.
@@ -72,23 +73,20 @@ class SocketKindTest : public testing::TestWithParam<SocketKind> {
  protected:
   static fbl::unique_fd NewSocket() {
     auto const& [domain, type] = GetParam();
-    return fbl::unique_fd(socket(domain, type, 0));
+    return fbl::unique_fd(socket(domain.Get(), type.Get(), 0));
   }
 
   static void LoopbackAddr(sockaddr_storage* ss, socklen_t* len) {
     auto const& [domain, protocol] = GetParam();
 
-    switch (domain) {
-      case AF_INET:
+    switch (domain.which()) {
+      case SocketDomain::Which::IPv4:
         *(reinterpret_cast<sockaddr_in*>(ss)) = LoopbackSockaddrV4(0);
         *len = sizeof(sockaddr_in);
         break;
-      case AF_INET6:
+      case SocketDomain::Which::IPv6:
         *(reinterpret_cast<sockaddr_in6*>(ss)) = LoopbackSockaddrV6(0);
         *len = sizeof(sockaddr_in6);
-        break;
-      default:
-        FAIL() << "unexpected domain = " << domain;
         break;
     }
   }
@@ -119,11 +117,13 @@ struct IntSocketOption {
 
 class SocketOptionTestBase : public testing::Test {
  public:
-  SocketOptionTestBase(int domain, int type) : sock_domain_(domain), sock_type_(type) {}
+  SocketOptionTestBase(const SocketDomain& domain, const SocketType& type)
+      : sock_domain_(domain), sock_type_(type) {}
 
  protected:
   void SetUp() override {
-    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(sock_domain_, sock_type_, 0))) << strerror(errno);
+    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(sock_domain_.Get(), sock_type_.Get(), 0)))
+        << strerror(errno);
   }
 
   void TearDown() override { EXPECT_EQ(close(sock_.release()), 0) << strerror(errno); }
@@ -135,7 +135,7 @@ class SocketOptionTestBase : public testing::Test {
     return true;
 #else
     // IPv6 options are only supported on AF_INET6 sockets.
-    return sock_domain_ == AF_INET6 || level != IPPROTO_IPV6;
+    return sock_domain_.which() == SocketDomain::Which::IPv6 || level != IPPROTO_IPV6;
 #endif
   }
 
@@ -143,11 +143,12 @@ class SocketOptionTestBase : public testing::Test {
 
  private:
   fbl::unique_fd sock_;
-  const int sock_domain_;
-  const int sock_type_;
+  const SocketDomain sock_domain_;
+  const SocketType sock_type_;
 };
 
-std::string socketKindAndOptionToString(int domain, int type, SocketOption opt) {
+std::string socketKindAndOptionToString(const SocketDomain& domain, const SocketType& type,
+                                        SocketOption opt) {
   std::ostringstream oss;
   oss << socketDomainToString(domain);
   oss << '_' << socketTypeToString(type);
@@ -156,7 +157,7 @@ std::string socketKindAndOptionToString(int domain, int type, SocketOption opt) 
   return oss.str();
 }
 
-using SocketKindAndIntOption = std::tuple<int, int, IntSocketOption>;
+using SocketKindAndIntOption = std::tuple<SocketDomain, SocketType, IntSocketOption>;
 
 std::string SocketKindAndIntOptionToString(
     const testing::TestParamInfo<SocketKindAndIntOption>& info) {
@@ -347,7 +348,8 @@ const std::vector<int> kBooleanOptionValidValues = {-2, -1, 0, 1, 2, 15, 255, 25
 // Special values (e.g. ones that reset an option to its default) have option-specific tests.
 INSTANTIATE_TEST_SUITE_P(
     IntSocketOptionTests, IntSocketOptionTest,
-    testing::Combine(testing::Values(AF_INET, AF_INET6), testing::Values(SOCK_STREAM, SOCK_DGRAM),
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                     testing::Values(SocketType::Stream(), SocketType::Dgram()),
                      testing::Values(
                          IntSocketOption{
                              .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_MULTICAST_LOOP),
@@ -475,7 +477,8 @@ INSTANTIATE_TEST_SUITE_P(
 // fails (no error returned but no change observed).
 INSTANTIATE_TEST_SUITE_P(
     DatagramIntSocketOptionTests, IntSocketOptionTest,
-    testing::Combine(testing::Values(AF_INET, AF_INET6), testing::Values(SOCK_DGRAM),
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                     testing::Values(SocketType::Dgram()),
                      testing::Values(
                          IntSocketOption{
                              .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_MULTICAST_TTL),
@@ -497,7 +500,7 @@ INSTANTIATE_TEST_SUITE_P(
                          })),
     SocketKindAndIntOptionToString);
 
-using SocketKindAndOption = std::tuple<int, int, SocketOption>;
+using SocketKindAndOption = std::tuple<SocketDomain, SocketType, SocketOption>;
 
 std::string SocketKindAndOptionToString(const testing::TestParamInfo<SocketKindAndOption>& info) {
   auto const& [domain, type, opt] = info.param;
@@ -561,7 +564,8 @@ TEST_P(TtlHopLimitSocketOptionTest, ResetToDefault) {
 
 INSTANTIATE_TEST_SUITE_P(
     TtlHopLimitSocketOptionTests, TtlHopLimitSocketOptionTest,
-    testing::Combine(testing::Values(AF_INET, AF_INET6), testing::Values(SOCK_DGRAM, SOCK_STREAM),
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                     testing::Values(SocketType::Dgram(), SocketType::Stream()),
                      testing::Values(STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_TTL),
                                      STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_UNICAST_HOPS))),
     SocketKindAndOptionToString);
@@ -569,9 +573,9 @@ INSTANTIATE_TEST_SUITE_P(
 // TODO(https://fxbug.dev/90038): Use SocketOptionTestBase for these tests.
 class SocketOptsTest : public SocketKindTest {
  protected:
-  static bool IsTCP() { return std::get<1>(GetParam()) == SOCK_STREAM; }
+  static bool IsTCP() { return std::get<1>(GetParam()).which() == SocketType::Which::Stream; }
 
-  static bool IsIPv6() { return std::get<0>(GetParam()) == AF_INET6; }
+  static bool IsIPv6() { return std::get<0>(GetParam()).which() == SocketDomain::Which::IPv6; }
 
   static SockOption GetTOSOption() {
     if (IsIPv6()) {
@@ -1088,22 +1092,24 @@ TEST_P(SocketOptsTest, UpdateAnyTimestampDisablesOtherTimestampOptions) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
-                         testing::Combine(testing::Values(AF_INET, AF_INET6),
-                                          testing::Values(SOCK_DGRAM, SOCK_STREAM)),
-                         SocketKindToString);
+INSTANTIATE_TEST_SUITE_P(
+    LocalhostTest, SocketOptsTest,
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                     testing::Values(SocketType::Dgram(), SocketType::Stream())),
+    SocketKindToString);
 
-using TypeMulticast = std::tuple<int, bool>;
+using TypeMulticast = std::tuple<SocketType, bool>;
 
 std::string TypeMulticastToString(const testing::TestParamInfo<TypeMulticast>& info) {
   auto const& [type, multicast] = info.param;
-  std::string addr;
+  std::ostringstream oss;
+  oss << socketTypeToString(type);
   if (multicast) {
-    addr = "Multicast";
+    oss << "Multicast";
   } else {
-    addr = "Loopback";
+    oss << "Loopback";
   }
-  return socketTypeToString(type) + addr;
+  return oss.str();
 }
 
 class ReuseTest : public testing::TestWithParam<TypeMulticast> {};
@@ -1113,7 +1119,7 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   auto const& [type, multicast] = GetParam();
 
 #if defined(__Fuchsia__)
-  if (multicast && type == SOCK_STREAM) {
+  if (multicast && type.which() == SocketType::Which::Stream) {
     GTEST_SKIP() << "Cannot bind a TCP socket to a multicast address on Fuchsia";
   }
 #endif
@@ -1126,13 +1132,13 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   }
 
   fbl::unique_fd s1;
-  ASSERT_TRUE(s1 = fbl::unique_fd(socket(AF_INET, type, 0))) << strerror(errno);
+  ASSERT_TRUE(s1 = fbl::unique_fd(socket(AF_INET, type.Get(), 0))) << strerror(errno);
 
 // TODO(https://gvisor.dev/issue/3839): Remove this.
 #if defined(__Fuchsia__)
   // Must outlive the block below.
   fbl::unique_fd s;
-  if (type != SOCK_DGRAM && multicast) {
+  if (type.which() != SocketType::Which::Dgram && multicast) {
     ASSERT_EQ(bind(s1.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), -1);
     ASSERT_EQ(errno, EADDRNOTAVAIL) << strerror(errno);
     ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
@@ -1159,14 +1165,15 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   ASSERT_EQ(addrlen, sizeof(addr));
 
   fbl::unique_fd s2;
-  ASSERT_TRUE(s2 = fbl::unique_fd(socket(AF_INET, type, 0))) << strerror(errno);
+  ASSERT_TRUE(s2 = fbl::unique_fd(socket(AF_INET, type.Get(), 0))) << strerror(errno);
   ASSERT_EQ(setsockopt(s2.get(), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
   ASSERT_EQ(bind(s2.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 }
 
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, ReuseTest,
-                         testing::Combine(testing::Values(SOCK_DGRAM, SOCK_STREAM),
+                         testing::Combine(testing::Values(SocketType::Dgram(),
+                                                          SocketType::Stream()),
                                           testing::Values(false, true)),
                          TypeMulticastToString);
 
@@ -1200,25 +1207,25 @@ template <int socktype>
 class SocketTest : public testing::TestWithParam<AddrKind> {
  protected:
   void SetUp() override {
-    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(Domain(), socktype, 0))) << strerror(errno);
+    ASSERT_TRUE(sock_ = fbl::unique_fd(socket(Domain().Get(), socktype, 0))) << strerror(errno);
   }
 
   void TearDown() override { EXPECT_EQ(close(sock_.release()), 0) << strerror(errno); }
 
   const fbl::unique_fd& sock() { return sock_; }
 
-  sa_family_t Domain() const {
+  SocketDomain Domain() const {
     switch (GetParam().Kind()) {
       case AddrKind::Kind::V4:
-        return AF_INET;
+        return SocketDomain::IPv4();
       case AddrKind::Kind::V6:
       case AddrKind::Kind::V4MAPPEDV6:
-        return AF_INET6;
+        return SocketDomain::IPv6();
     }
   }
 
   socklen_t AddrLen() const {
-    if (Domain() == AF_INET) {
+    if (Domain().which() == SocketDomain::Which::IPv4) {
       return sizeof(sockaddr_in);
     }
     return sizeof(sockaddr_in6);
@@ -1235,7 +1242,7 @@ class AnyAddrSocketTest : public SocketTest<socktype> {
  protected:
   sockaddr_storage Address(uint16_t port) const override {
     sockaddr_storage addr{
-        .ss_family = this->Domain(),
+        .ss_family = this->Domain().Get(),
     };
 
     switch (this->GetParam().Kind()) {
@@ -1300,7 +1307,7 @@ INSTANTIATE_TEST_SUITE_P(AnyAddrSocketTestDatagram, AnyAddrDatagramSocketTest,
                          [](const auto info) { return info.param.AddrKindToString(); });
 
 // Socket tests across multiple socket-types, SOCK_DGRAM, SOCK_STREAM.
-class NetSocketTest : public testing::TestWithParam<int> {};
+class NetSocketTest : public testing::TestWithParam<SocketType> {};
 
 // Test MSG_PEEK
 // MSG_PEEK : Peek into the socket receive queue without moving the contents from it.
@@ -1308,7 +1315,7 @@ class NetSocketTest : public testing::TestWithParam<int> {};
 // TODO(https://fxbug.dev/90876): change this test to use recvmsg instead of recvfrom to exercise
 // MSG_PEEK with scatter/gather.
 TEST_P(NetSocketTest, SocketPeekTest) {
-  int socket_type = GetParam();
+  const SocketType socket_type = GetParam();
   sockaddr_in addr = LoopbackSockaddrV4(0);
   socklen_t addrlen = sizeof(addr);
   fbl::unique_fd sendfd;
@@ -1318,12 +1325,13 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   char recvbuf[2 * sizeof(sendbuf)] = {};
   ssize_t sendlen = sizeof(sendbuf);
 
-  ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, socket_type, 0))) << strerror(errno);
+  ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, socket_type.Get(), 0))) << strerror(errno);
   // Setup the sender and receiver sockets.
-  switch (socket_type) {
-    case SOCK_STREAM: {
+  switch (socket_type.which()) {
+    case SocketType::Which::Stream: {
       fbl::unique_fd acptfd;
-      ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, socket_type, 0))) << strerror(errno);
+      ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, socket_type.Get(), 0)))
+          << strerror(errno);
       EXPECT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
           << strerror(errno);
       EXPECT_EQ(getsockname(acptfd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
@@ -1339,8 +1347,9 @@ TEST_P(NetSocketTest, SocketPeekTest) {
       expectReadLen = sizeof(recvbuf);
       break;
     }
-    case SOCK_DGRAM: {
-      ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, socket_type, 0))) << strerror(errno);
+    case SocketType::Which::Dgram: {
+      ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, socket_type.Get(), 0)))
+          << strerror(errno);
       EXPECT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
           << strerror(errno);
       EXPECT_EQ(getsockname(recvfd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
@@ -1349,9 +1358,6 @@ TEST_P(NetSocketTest, SocketPeekTest) {
       // Expect to read single packet per recv() call.
       expectReadLen = sizeof(sendbuf);
       break;
-    }
-    default: {
-      FAIL() << "unexpected test variant";
     }
   }
 
@@ -1417,7 +1423,8 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, testing::Values(SOCK_DGRAM, SOCK_STREAM));
+INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest,
+                         testing::Values(SocketType::Dgram(), SocketType::Stream()));
 
 TEST_P(SocketKindTest, IoctlInterfaceLookupRoundTrip) {
   fbl::unique_fd fd;
@@ -1571,7 +1578,7 @@ TEST_P(SocketKindTest, Getpeername) {
   socklen_t ss_len = sizeof(ss);
   ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<sockaddr*>(&ss), &ss_len), 0)
       << strerror(errno);
-  if (protocol == SOCK_STREAM) {
+  if (protocol.which() == SocketType::Which::Stream) {
     ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
   }
 
@@ -1613,12 +1620,13 @@ TEST(SocketKindTest, IoctlLookupForNonSocketFd) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
-                         testing::Combine(testing::Values(AF_INET, AF_INET6),
-                                          testing::Values(SOCK_DGRAM, SOCK_STREAM)),
-                         SocketKindToString);
+INSTANTIATE_TEST_SUITE_P(
+    NetSocket, SocketKindTest,
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                     testing::Values(SocketType::Dgram(), SocketType::Stream())),
+    SocketKindToString);
 
-using DomainProtocol = std::tuple<int, int>;
+using DomainProtocol = std::tuple<SocketDomain, int>;
 class IcmpSocketTest : public testing::TestWithParam<DomainProtocol> {
  protected:
   void SetUp() override {
@@ -1628,7 +1636,8 @@ class IcmpSocketTest : public testing::TestWithParam<DomainProtocol> {
     }
 #endif
     auto const& [domain, protocol] = GetParam();
-    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(domain, SOCK_DGRAM, protocol))) << strerror(errno);
+    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, protocol)))
+        << strerror(errno);
   }
 
   const fbl::unique_fd& fd() const { return fd_; }
@@ -1653,8 +1662,8 @@ TEST_P(IcmpSocketTest, PayloadIdentIgnored) {
   constexpr short kBindIdent = 3;
   constexpr short kDestinationIdent = kBindIdent + 1;
 
-  switch (domain) {
-    case AF_INET: {
+  switch (domain.which()) {
+    case SocketDomain::Which::IPv4: {
       const sockaddr_in bind_addr = LoopbackSockaddrV4(kBindIdent);
       ASSERT_EQ(bind(fd().get(), reinterpret_cast<const sockaddr*>(&bind_addr), sizeof(bind_addr)),
                 0)
@@ -1693,7 +1702,7 @@ TEST_P(IcmpSocketTest, PayloadIdentIgnored) {
       EXPECT_EQ(htons(hdr_with_extra.hdr.un.echo.id), kBindIdent);
       EXPECT_EQ(hdr_with_extra.hdr.un.echo.sequence, pkt.un.echo.sequence);
     } break;
-    case AF_INET6: {
+    case SocketDomain::Which::IPv6: {
       const sockaddr_in6 bind_addr = LoopbackSockaddrV6(kBindIdent);
       ASSERT_EQ(bind(fd().get(), reinterpret_cast<const sockaddr*>(&bind_addr), sizeof(bind_addr)),
                 0)
@@ -1732,13 +1741,11 @@ TEST_P(IcmpSocketTest, PayloadIdentIgnored) {
       EXPECT_EQ(htons(hdr_with_extra.hdr.icmp6_id), kBindIdent);
       EXPECT_EQ(hdr_with_extra.hdr.icmp6_seq, pkt.icmp6_seq);
     } break;
-    default:
-      FAIL() << "unknown domain";
   }
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, IcmpSocketTest,
-                         testing::Values(std::make_pair(AF_INET, IPPROTO_ICMP),
-                                         std::make_pair(AF_INET6, IPPROTO_ICMPV6)));
+                         testing::Values(std::make_pair(SocketDomain::IPv4(), IPPROTO_ICMP),
+                                         std::make_pair(SocketDomain::IPv6(), IPPROTO_ICMPV6)));
 
 }  // namespace

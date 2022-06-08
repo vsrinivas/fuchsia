@@ -20,6 +20,42 @@
 
 constexpr std::chrono::duration kTimeout = std::chrono::seconds(10);
 
+struct SocketDomain {
+  // Should only be used when switching on the return value of which(), because
+  // enum classes don't guarantee type-safe construction.
+  enum class Which : sa_family_t {
+    IPv4 = AF_INET,
+    IPv6 = AF_INET6,
+  };
+  constexpr static SocketDomain IPv4() { return SocketDomain(Which::IPv4); }
+  constexpr static SocketDomain IPv6() { return SocketDomain(Which::IPv6); }
+  sa_family_t Get() const { return static_cast<sa_family_t>(which_); }
+
+  Which which() const { return which_; }
+
+ private:
+  explicit constexpr SocketDomain(Which which) : which_(which) {}
+  Which which_;
+};
+
+struct SocketType {
+  // Should only be used when switching on the return value of which(), because
+  // enum classes don't guarantee type-safe construction.
+  enum class Which : int {
+    Stream = SOCK_STREAM,
+    Dgram = SOCK_DGRAM,
+  };
+  constexpr static SocketType Stream() { return SocketType(Which::Stream); }
+  constexpr static SocketType Dgram() { return SocketType(Which::Dgram); }
+  int Get() const { return static_cast<int>(which_); }
+
+  Which which() const { return which_; }
+
+ private:
+  explicit constexpr SocketType(Which which) : which_(which) {}
+  Which which_;
+};
+
 // Returns a `sockaddr_in6` address mapped from the provided `sockaddr_in`.
 sockaddr_in6 MapIpv4SockaddrToIpv6Sockaddr(const sockaddr_in& addr4);
 
@@ -132,10 +168,17 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
 //      (2) 0, when we abort a blocked recv
 //      (3) -1, on failure of both of the above operations.
 ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flags,
-                        sockaddr_in* addr, const socklen_t* addrlen, int socket_type,
+                        sockaddr_in* addr, const socklen_t* addrlen, SocketType socket_type,
                         std::chrono::duration<double> timeout);
 
 // Returns a human-readable string representing the provided domain.
-std::string socketDomainToString(int domain);
+constexpr std::string_view socketDomainToString(const SocketDomain& domain) {
+  switch (domain.which()) {
+    case SocketDomain::Which::IPv4:
+      return "IPv4";
+    case SocketDomain::Which::IPv6:
+      return "IPv6";
+  }
+}
 
 #endif  // SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_

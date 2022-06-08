@@ -728,7 +728,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   }
   auto start = std::chrono::steady_clock::now();
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SOCK_DGRAM, kTimeout),
+                            &addrlen, SocketType::Dgram(), kTimeout),
             ssize_t(msg.size()));
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_EQ(std::string_view(recvbuf, msg.size()), msg);
@@ -757,7 +757,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
     }
   }
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SOCK_DGRAM, kTimeout),
+                            &addrlen, SocketType::Dgram(), kTimeout),
             ssize_t(msg.size()));
   EXPECT_EQ(std::string_view(recvbuf, msg.size()), msg);
 
@@ -802,7 +802,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   // As we expect failure, to keep the recv wait time minimal, we base it on the time taken for a
   // successful recv.
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SOCK_DGRAM, success_rcv_duration * 10),
+                            &addrlen, SocketType::Dgram(), success_rcv_duration * 10),
             0);
 
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
@@ -1306,38 +1306,30 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
 
 class NetDatagramSocketsTestBase {
  protected:
-  std::optional<std::pair<sockaddr_storage, uint32_t>> GetSockaddrAndSocklenForDomain(
-      sa_family_t domain) {
+  std::pair<sockaddr_storage, uint32_t> GetSockaddrAndSocklenForDomain(const SocketDomain& domain) {
     sockaddr_storage addr{
-        .ss_family = domain,
+        .ss_family = domain.Get(),
     };
-    switch (domain) {
-      case AF_INET: {
+    switch (domain.which()) {
+      case SocketDomain::Which::IPv4: {
         auto sin = reinterpret_cast<sockaddr_in*>(&addr);
         sin->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         sin->sin_port = 0;  // Automatically pick a port.
         return std::make_pair(addr, sizeof(sockaddr_in));
       }
-      case AF_INET6: {
+      case SocketDomain::Which::IPv6: {
         auto sin6 = reinterpret_cast<sockaddr_in6*>(&addr);
         sin6->sin6_addr = IN6ADDR_LOOPBACK_INIT;
         sin6->sin6_port = 0;  // Automatically pick a port.
         return std::make_pair(addr, sizeof(sockaddr_in6));
       }
-      default: {
-        return std::nullopt;
-      }
     }
   }
 
-  void SetUpDatagramSockets(sa_family_t domain) {
-    ASSERT_TRUE(bound_ = fbl::unique_fd(socket(domain, SOCK_DGRAM, 0))) << strerror(errno);
+  void SetUpDatagramSockets(const SocketDomain& domain) {
+    ASSERT_TRUE(bound_ = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0))) << strerror(errno);
 
-    std::optional addr_info = GetSockaddrAndSocklenForDomain(domain);
-    if (!addr_info.has_value()) {
-      FAIL() << "unexpected test variant";
-    }
-    auto [addr, addrlen] = addr_info.value();
+    auto [addr, addrlen] = GetSockaddrAndSocklenForDomain(domain);
     ASSERT_EQ(bind(bound_.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
         << strerror(errno);
 
@@ -1348,7 +1340,8 @@ class NetDatagramSocketsTestBase {
       ASSERT_EQ(addrlen, bound_addrlen);
     }
 
-    ASSERT_TRUE(connected_ = fbl::unique_fd(socket(domain, SOCK_DGRAM, 0))) << strerror(errno);
+    ASSERT_TRUE(connected_ = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0)))
+        << strerror(errno);
     ASSERT_EQ(connect(connected_.get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
         << strerror(errno);
   }
@@ -1434,7 +1427,7 @@ std::string_view enableCmsgReceiveTimeToString(EnableCmsgReceiveTime enable_cmsg
 }
 
 using SocketDomainAndOptionAndEnableCmsgReceiveTime =
-    std::tuple<sa_family_t, CmsgSocketOption, EnableCmsgReceiveTime>;
+    std::tuple<SocketDomain, CmsgSocketOption, EnableCmsgReceiveTime>;
 
 std::string SocketDomainAndOptionAndEnableCmsgReceiveTimeToString(
     const testing::TestParamInfo<SocketDomainAndOptionAndEnableCmsgReceiveTime>& info) {
@@ -1448,7 +1441,8 @@ std::string SocketDomainAndOptionAndEnableCmsgReceiveTimeToString(
 
 class NetDatagramSocketsCmsgRecvTestBase : public NetDatagramSocketsCmsgTestBase {
  protected:
-  void SetUpDatagramSockets(sa_family_t domain, EnableCmsgReceiveTime enable_cmsg_receive_time) {
+  void SetUpDatagramSockets(const SocketDomain& domain,
+                            EnableCmsgReceiveTime enable_cmsg_receive_time) {
     enable_cmsg_receive_time_ = enable_cmsg_receive_time;
     ASSERT_NO_FATAL_FAILURE(NetDatagramSocketsCmsgTestBase::SetUpDatagramSockets(domain));
     if (enable_cmsg_receive_time_ == EnableCmsgReceiveTime::AfterSocketSetup) {
@@ -1621,7 +1615,7 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageByOneByte) {
 
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgRecvTests, NetDatagramSocketsCmsgRecvTest,
-    testing::Combine(testing::Values(AF_INET, AF_INET6),
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
                      testing::Values(
                          CmsgSocketOption{
                              .cmsg = STRINGIFIED_CMSG(SOL_SOCKET, SO_TIMESTAMP),
@@ -1639,7 +1633,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
-    testing::Combine(testing::Values(AF_INET),
+    testing::Combine(testing::Values(SocketDomain::IPv4()),
                      testing::Values(
                          CmsgSocketOption{
                              .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TOS),
@@ -1657,7 +1651,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
-    testing::Combine(testing::Values(AF_INET6),
+    testing::Combine(testing::Values(SocketDomain::IPv6()),
                      testing::Values(
                          CmsgSocketOption{
                              .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_TCLASS),
@@ -1721,7 +1715,7 @@ TEST_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest, DisableReceiveSocketOpt
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTests,
     NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest,
-    testing::Combine(testing::Values(AF_INET, AF_INET6),
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
                      testing::Values(
                          CmsgSocketOption{
                              .cmsg = STRINGIFIED_CMSG(SOL_SOCKET, SO_TIMESTAMP),
@@ -1738,7 +1732,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv4Tests,
                          NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest,
-                         testing::Combine(testing::Values(AF_INET),
+                         testing::Combine(testing::Values(SocketDomain::IPv4()),
                                           testing::Values(
                                               CmsgSocketOption{
                                                   .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TOS),
@@ -1755,7 +1749,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv4Tests,
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv6Tests,
                          NetDatagramSocketsCmsgRequestOnSetupOnlyRecvTest,
-                         testing::Combine(testing::Values(AF_INET6),
+                         testing::Combine(testing::Values(SocketDomain::IPv6()),
                                           testing::Values(
                                               CmsgSocketOption{
                                                   .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_TCLASS),
@@ -1776,7 +1770,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv6Tests,
                          SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
-                                       public testing::TestWithParam<sa_family_t> {
+                                       public testing::TestWithParam<SocketDomain> {
  protected:
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam())); }
 
@@ -1923,10 +1917,12 @@ TEST_P(NetDatagramSocketsCmsgSendTest, CmsgLengthSmallerThanCmsgHeader) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgSendTests, NetDatagramSocketsCmsgSendTest,
-                         testing::Values(AF_INET, AF_INET6),
-                         [](const auto info) { return socketDomainToString(info.param); });
+                         testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                         [](const auto info) {
+                           return std::string(socketDomainToString(info.param));
+                         });
 
-using SocketDomainAndEnableCmsgReceiveTime = std::tuple<sa_family_t, EnableCmsgReceiveTime>;
+using SocketDomainAndEnableCmsgReceiveTime = std::tuple<SocketDomain, EnableCmsgReceiveTime>;
 
 std::string SocketDomainAndEnableCmsgReceiveTimeToString(
     const testing::TestParamInfo<SocketDomainAndEnableCmsgReceiveTime>& info) {
@@ -2026,7 +2022,7 @@ TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsgUnalignedControlBuffer) {
 
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgTimestampTests, NetDatagramSocketsCmsgTimestampTest,
-    testing::Combine(testing::Values(AF_INET, AF_INET6),
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
                      testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
                                      EnableCmsgReceiveTime::BetweenSendAndRecv)),
     SocketDomainAndEnableCmsgReceiveTimeToString);
@@ -2136,7 +2132,7 @@ TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvCmsgUnalignedControlBuffer) {
 
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgTimestampNsTests, NetDatagramSocketsCmsgTimestampNsTest,
-    testing::Combine(testing::Values(AF_INET, AF_INET6),
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
                      testing::Values(EnableCmsgReceiveTime::AfterSocketSetup,
                                      EnableCmsgReceiveTime::BetweenSendAndRecv)),
     SocketDomainAndEnableCmsgReceiveTimeToString);
@@ -2144,7 +2140,9 @@ INSTANTIATE_TEST_SUITE_P(
 class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgRecvTestBase,
                                         public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET, GetParam())); }
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(SocketDomain::IPv4(), GetParam()));
+  }
 
   void EnableReceivingCmsg() const override {
     // Enable receiving IP_RECVTOS control message.
@@ -2241,7 +2239,9 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpTosTests, NetDatagramSocketsCms
 class NetDatagramSocketsCmsgIpTtlTest : public NetDatagramSocketsCmsgRecvTestBase,
                                         public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET, GetParam())); }
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(SocketDomain::IPv4(), GetParam()));
+  }
 
   void EnableReceivingCmsg() const override {
     // Enable receiving IP_TTL control message.
@@ -2367,7 +2367,9 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpTtlTests, NetDatagramSocketsCms
 class NetDatagramSocketsCmsgIpv6TClassTest : public NetDatagramSocketsCmsgRecvTestBase,
                                              public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(SocketDomain::IPv6(), GetParam()));
+  }
 
   void EnableReceivingCmsg() const override {
     // Enable receiving IPV6_TCLASS control message.
@@ -2444,7 +2446,9 @@ class NetDatagramSocketsCmsgIpv6HopLimitTest
     : public NetDatagramSocketsCmsgRecvTestBase,
       public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(SocketDomain::IPv6(), GetParam()));
+  }
 
   void EnableReceivingCmsg() const override {
     // Enable receiving IPV6_HOPLIMIT control message.
@@ -2600,7 +2604,9 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6HopLimitTests,
 class NetDatagramSocketsCmsgIpv6PktInfoTest : public NetDatagramSocketsCmsgRecvTestBase,
                                               public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(SocketDomain::IPv6(), GetParam()));
+  }
 
   void EnableReceivingCmsg() const override {
     // Enable receiving IPV6_PKTINFO control message.
@@ -2716,7 +2722,7 @@ std::ostream& operator<<(std::ostream& oss, const CmsgValues<T>& cmsg_values) {
 using cmsgValuesVariant = std::variant<CmsgValues<int>, CmsgValues<uint8_t>>;
 
 struct CmsgLinearizedSendTestCase {
-  sa_family_t domain;
+  SocketDomain domain;
   CmsgSocketOption recv_option;
   int send_type;
   cmsgValuesVariant send_values;
@@ -2817,7 +2823,7 @@ INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsCmsgTests,
                          DatagramLinearizedSendSemanticsCmsgTest,
                          testing::Values(
                              CmsgLinearizedSendTestCase{
-                                 .domain = AF_INET,
+                                 .domain = SocketDomain::IPv4(),
                                  .recv_option =
                                      {
                                          .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TOS),
@@ -2831,7 +2837,7 @@ INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsCmsgTests,
                                  }),
                              },
                              CmsgLinearizedSendTestCase{
-                                 .domain = AF_INET,
+                                 .domain = SocketDomain::IPv4(),
                                  .recv_option =
                                      {
                                          .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TTL),
@@ -2845,7 +2851,7 @@ INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsCmsgTests,
                                  }),
                              },
                              CmsgLinearizedSendTestCase{
-                                 .domain = AF_INET6,
+                                 .domain = SocketDomain::IPv6(),
                                  .recv_option =
                                      {
                                          .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_TCLASS),
@@ -2859,7 +2865,7 @@ INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsCmsgTests,
                                  }),
                              },
                              CmsgLinearizedSendTestCase{
-                                 .domain = AF_INET6,
+                                 .domain = SocketDomain::IPv6(),
                                  .recv_option =
                                      {
                                          .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_HOPLIMIT),
@@ -2876,7 +2882,7 @@ INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsCmsgTests,
 
 class DatagramLinearizedSendSemanticsTestInstance : public NetDatagramSocketsTestBase {
  public:
-  DatagramLinearizedSendSemanticsTestInstance(sa_family_t domain) : domain_(domain) {}
+  DatagramLinearizedSendSemanticsTestInstance(const SocketDomain& domain) : domain_(domain) {}
 
   virtual void SetUpInstance() {
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain_));
@@ -2901,7 +2907,7 @@ class DatagramLinearizedSendSemanticsTestInstance : public NetDatagramSocketsTes
     ASSERT_EQ(read(fd, recvbuf_.data(), recvbuf_.size()), ssize_t(kBuf.size())) << strerror(errno);
     EXPECT_STREQ(kBuf.data(), recvbuf_.data());
   }
-  sa_family_t domain_;
+  SocketDomain domain_;
 
   static constexpr std::string_view kBuf = "hello";
 
@@ -2909,29 +2915,26 @@ class DatagramLinearizedSendSemanticsTestInstance : public NetDatagramSocketsTes
   std::string recvbuf_;
 };
 
-class DatagramLinearizedSendSemanticsTest : public testing::TestWithParam<sa_family_t> {};
+class DatagramLinearizedSendSemanticsTest : public testing::TestWithParam<SocketDomain> {};
 
 class DatagramLinearizedSendSemanticsConnectInstance
     : public DatagramLinearizedSendSemanticsTestInstance {
  public:
-  DatagramLinearizedSendSemanticsConnectInstance(sa_family_t domain)
+  DatagramLinearizedSendSemanticsConnectInstance(const SocketDomain& domain)
       : DatagramLinearizedSendSemanticsTestInstance(domain) {}
 
   void SetUpInstance() override {
     DatagramLinearizedSendSemanticsTestInstance::SetUpInstance();
-    std::optional addrinfo = GetSockaddrAndSocklenForDomain(domain_);
-    if (!addrinfo.has_value()) {
-      FAIL() << "unexpected_domain: " << domain_;
-    }
-    sockaddr_storage addr = addrinfo.value().first;
-    addrlen_ = addrinfo.value().second;
+    const auto [addr, addrlen] = GetSockaddrAndSocklenForDomain(domain_);
+    addrlen_ = addrlen;
 
     // Create a third socket on the system with a distinct bound address. We alternate
     // between connecting the `connected()` socket to this new socket vs the original `bound()`
     // socket. We validate that packets reach the address to which `connected()` was bound
     // when `send()` was called -- even when the socket is re-`connect()`ed elsewhere immediately
     // afterwards.
-    ASSERT_TRUE(receiver_fd_ = fbl::unique_fd(socket(domain_, SOCK_DGRAM, 0))) << strerror(errno);
+    ASSERT_TRUE(receiver_fd_ = fbl::unique_fd(socket(domain_.Get(), SOCK_DGRAM, 0)))
+        << strerror(errno);
     ASSERT_EQ(bind(receiver_fd_.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen_), 0)
         << strerror(errno);
   }
@@ -2977,20 +2980,17 @@ TEST_P(DatagramLinearizedSendSemanticsTest, Connect) {
 class DatagramLinearizedSendSemanticsCloseInstance
     : public DatagramLinearizedSendSemanticsTestInstance {
  public:
-  DatagramLinearizedSendSemanticsCloseInstance(sa_family_t domain)
+  DatagramLinearizedSendSemanticsCloseInstance(const SocketDomain& domain)
       : DatagramLinearizedSendSemanticsTestInstance(domain) {}
 
   void SetUpInstance() override {
     DatagramLinearizedSendSemanticsTestInstance::SetUpInstance();
-    std::optional addrinfo = GetSockaddrAndSocklenForDomain(domain_);
-    if (!addrinfo.has_value()) {
-      FAIL() << "unexpected test variant";
-    }
-    addrlen_ = addrinfo.value().second;
+    const auto [addr, addrlen] = GetSockaddrAndSocklenForDomain(domain_);
+    addrlen_ = addrlen;
   }
 
   void ToggleOn() {
-    ASSERT_TRUE(other_sender_fd_ = fbl::unique_fd(socket(domain_, SOCK_DGRAM, 0)))
+    ASSERT_TRUE(other_sender_fd_ = fbl::unique_fd(socket(domain_.Get(), SOCK_DGRAM, 0)))
         << strerror(errno);
     sockaddr_storage addr;
     socklen_t found_addrlen = addrlen_;
@@ -3027,7 +3027,7 @@ TEST_P(DatagramLinearizedSendSemanticsTest, Close) {
 class DatagramLinearizedSendSemanticsIpv6OnlyInstance
     : public DatagramLinearizedSendSemanticsTestInstance {
  public:
-  DatagramLinearizedSendSemanticsIpv6OnlyInstance(sa_family_t domain)
+  DatagramLinearizedSendSemanticsIpv6OnlyInstance(const SocketDomain& domain)
       : DatagramLinearizedSendSemanticsTestInstance(domain) {}
 
   void SetUpInstance() override {
@@ -3089,7 +3089,7 @@ class DatagramLinearizedSendSemanticsIpv6OnlyInstance
 };
 
 TEST_P(DatagramLinearizedSendSemanticsTest, Ipv6Only) {
-  if (GetParam() != AF_INET6) {
+  if (GetParam().Get() != AF_INET6) {
     GTEST_SKIP() << "IPV6_V6ONLY can only be used on AF_INET6 sockets.";
   }
 // TODO(https://fxbug.dev/96108): Remove this test after setting IPV6_V6ONLY after bind is
@@ -3103,7 +3103,9 @@ TEST_P(DatagramLinearizedSendSemanticsTest, Ipv6Only) {
 }
 
 INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsTests, DatagramLinearizedSendSemanticsTest,
-                         testing::Values(AF_INET, AF_INET6),
-                         [](const auto info) { return socketDomainToString(info.param); });
+                         testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                         [](const auto info) {
+                           return std::string(socketDomainToString(info.param));
+                         });
 
 }  // namespace

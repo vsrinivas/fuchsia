@@ -487,7 +487,7 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
 }
 
 ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flags,
-                        sockaddr_in* addr, const socklen_t* addrlen, int socket_type,
+                        sockaddr_in* addr, const socklen_t* addrlen, SocketType socket_type,
                         std::chrono::duration<double> timeout) {
   std::future<ssize_t> recv = std::async(std::launch::async, [recvfd, buf, len, flags]() {
     memset(buf, 0xde, len);
@@ -499,17 +499,17 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
   }
 
   // recover the blocked receiver thread
-  switch (socket_type) {
-    case SOCK_STREAM: {
+  switch (socket_type.which()) {
+    case SocketType::Which::Stream: {
       // shutdown() would unblock the receiver thread with recv returning 0.
       EXPECT_EQ(shutdown(recvfd, SHUT_RD), 0) << strerror(errno);
       // We do not use 'timeout' because that maybe short here. We expect to succeed and hence use
       // a known large timeout to ensure the test does not hang in case underlying code is broken.
       EXPECT_EQ(recv.wait_for(kTimeout), std::future_status::ready);
       EXPECT_EQ(recv.get(), 0);
-      break;
+      return 0;
     }
-    case SOCK_DGRAM: {
+    case SocketType::Which::Dgram: {
       // Send a 0 length payload to unblock the receiver.
       // This would ensure that the async-task deterministically exits before call to future`s
       // destructor. Calling close(.release()) on recvfd when the async task is blocked on recv(),
@@ -523,22 +523,7 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
       // We use a known large timeout for the same reason as for the above case.
       EXPECT_EQ(recv.wait_for(kTimeout), std::future_status::ready);
       EXPECT_EQ(recv.get(), 0);
-      break;
+      return 0;
     }
-    default: {
-      return -1;
-    }
-  }
-  return 0;
-}
-
-std::string socketDomainToString(const int domain) {
-  switch (domain) {
-    case AF_INET:
-      return "IPv4";
-    case AF_INET6:
-      return "IPv6";
-    default:
-      return std::to_string(domain);
   }
 }
