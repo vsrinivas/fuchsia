@@ -619,6 +619,18 @@ TEST_F(LoggingFixture, BackendDirect) {
                        "ERROR: [foo.cc(42)] Check failed: condition. fake message foo=42\n"));
 }
 
+TEST_F(LoggingFixture, MacroCompilationTest) {
+  uint8_t zero = 0;
+  FX_SLOG(DEBUG, "test log", KV("key", static_cast<uint16_t>(zero)));
+  FX_SLOG(DEBUG, "test log", KV("key", static_cast<uint32_t>(zero)));
+  FX_SLOG(DEBUG, "test log", KV("key", static_cast<uint64_t>(zero)));
+  FX_SLOG(DEBUG, "test log", KV("key", static_cast<size_t>(zero)));
+
+  FX_SLOG(DEBUG, "test log", KV("key", static_cast<int16_t>(zero)));
+  FX_SLOG(DEBUG, "test log", KV("key", static_cast<int32_t>(zero)));
+  FX_SLOG(DEBUG, "test log", KV("key", static_cast<int64_t>(zero)));
+}
+
 TEST_F(LoggingFixture, LogId) {
   LogSettings new_settings;
   EXPECT_EQ(LOG_INFO, new_settings.min_log_level);

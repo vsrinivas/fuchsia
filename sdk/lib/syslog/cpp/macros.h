@@ -104,8 +104,30 @@ struct LogBuffer {
     syslog_backend::WriteKeyValue(this, value.key, value.value);
   }
 
+#ifdef __APPLE__
+  // Encodes a size_t. On Apple Clang, size_t is a special type.
+  void Encode(KeyValue<const char*, size_t> value) {
+    syslog_backend::WriteKeyValue(this, value.key, static_cast<int64_t>(value.value));
+  }
+#endif
+
   // Encodes an int
-  void Encode(KeyValue<const char*, int> value) {
+  void Encode(KeyValue<const char*, int32_t> value) {
+    Encode(KeyValue<const char*, int64_t>(value.key, value.value));
+  }
+
+  // Encodes a uint32_t
+  void Encode(KeyValue<const char*, uint32_t> value) {
+    Encode(KeyValue<const char*, uint64_t>(value.key, value.value));
+  }
+
+  // Encodes an uint16_t
+  void Encode(KeyValue<const char*, uint16_t> value) {
+    Encode(KeyValue<const char*, uint64_t>(value.key, value.value));
+  }
+
+  // Encodes an int16_t
+  void Encode(KeyValue<const char*, int16_t> value) {
     Encode(KeyValue<const char*, int64_t>(value.key, value.value));
   }
 
