@@ -101,11 +101,6 @@ zx_status_t Sherlock::AudioInit() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
   };
-  constexpr zx_bind_inst_t luis_codec_i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
-      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4c),
-  };
   constexpr zx_bind_inst_t codec_woofer_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
@@ -145,9 +140,6 @@ zx_status_t Sherlock::AudioInit() {
   const device_fragment_part_t enable_gpio_fragment[] = {
       {std::size(enable_gpio_match), enable_gpio_match},
   };
-  const device_fragment_part_t luis_codec_i2c_fragment[] = {
-      {std::size(luis_codec_i2c_match), luis_codec_i2c_match},
-  };
 
   // Fragment to be used by the controller, pointing to the codecs.
   const device_fragment_part_t codec_woofer_fragment[] = {
@@ -167,10 +159,6 @@ zx_status_t Sherlock::AudioInit() {
   };
   const device_fragment_part_t ernie_codec_tweeter_fragment[] = {
       {std::size(ernie_codec_tweeter_match), ernie_codec_tweeter_match},
-  };
-
-  const device_fragment_t luis_codec_fragments[] = {
-      {"i2c", std::size(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
   };
 
   const device_fragment_t sherlock_tdm_i2s_fragments[] = {

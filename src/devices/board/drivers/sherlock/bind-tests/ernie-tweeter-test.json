@@ -7,8 +7,9 @@
                 "expected": "match",
                 "device": {
                     "fuchsia.BIND_I2C_BUS_ID": "0",
-                    "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE",
-                    "fuchsia.BIND_I2C_ADDRESS": "0x2d"
+                    "fuchsia.BIND_I2C_ADDRESS": "0x2d",
+                    "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.misc.BIND_PROTOCOL.DEVICE"
                 }
             }
         ]

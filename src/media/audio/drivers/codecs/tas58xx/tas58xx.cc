@@ -4,7 +4,6 @@
 
 #include "tas58xx.h"
 
-#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>

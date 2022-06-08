@@ -482,7 +482,10 @@ driver_bind_rules("luis-codec-bind") {
   header_output = "luis-codec-bind.h"
   bind_output = "luis-codec-bind.bc"
   tests = "bind-tests/luis-codec-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 driver_bind_rules("sherlock-woofer-bind") {
@@ -523,7 +526,10 @@ driver_bind_rules("ernie-tweeter-bind") {
   header_output = "ernie-tweeter-bind.h"
   bind_output = "ernie-tweeter-bind.bc"
   tests = "bind-tests/ernie-tweeter-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 driver_bind_rules("ernie-woofer-bind") {
@@ -531,7 +537,10 @@ driver_bind_rules("ernie-woofer-bind") {
   header_output = "ernie-woofer-bind.h"
   bind_output = "ernie-woofer-bind.bc"
   tests = "bind-tests/ernie-woofer-test.json"
-  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
+  ]
 }
 
 driver_bind_rules("luis-power-domain-bind") {

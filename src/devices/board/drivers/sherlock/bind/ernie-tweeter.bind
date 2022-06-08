@@ -5,9 +5,11 @@
 composite ernie_tweeter;
 
 using fuchsia.i2c;
+using fuchsia.misc;
 
 primary node "i2c" {
-    fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PROTOCOL == fuchsia.misc.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_FIDL_PROTOCOL == fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE;
     fuchsia.BIND_I2C_BUS_ID == 0; // SHERLOCK_I2C_A0_0
     fuchsia.BIND_I2C_ADDRESS == 0x2d;
 }
