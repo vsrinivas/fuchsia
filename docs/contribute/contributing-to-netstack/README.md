@@ -249,9 +249,12 @@ The following code review guidelines are adopted within the Netstack team:
 - When your CL is ready for review, request a review from a team member listed
   in the closest OWNERS file.
 - If your CL introduces non-trivial changes, also add a secondary reviewer
-  picked from `src/connectivity/network/OWNERS'. This should happen
+  picked from `src/connectivity/network/OWNERS`. This should happen
   simultaneously to requesting review from owners. You can choose any team
   member you want, consider the following criteria:
+  - Listed as readability reviewer in
+    [`src/connectivity/network/tests/integration/common/OWNERS`][netemul-owners]
+    if the CL consists primarily of changes to netemul integration tests.
   - Ramping up in the target area.
   - Working in tangentially related areas.
   - Language/patterns experience.
@@ -322,3 +325,4 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [`fuchsia_async::Executor::new_with_fake_time`]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fuchsia-async/src/executor.rs#345
 [fake-clock]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fake-clock
 [determinism]: /docs/contribute/testing/best-practices.md#write_reproducible_deterministic_tests
+[netemul-owners]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/src/connectivity/network/tests/integration/common/OWNERS
