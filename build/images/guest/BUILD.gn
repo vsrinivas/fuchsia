@@ -29,7 +29,6 @@ assembled_system("guest") {
   base_packages = [
     ":core",
     "//src/sys/tools/run",
-    "//garnet/bin/sysmgr",
     "//garnet/bin/trace",
     "//src/diagnostics/log-stats:package",
     "//src/sys/appmgr:appmgr_scheme_config",
@@ -41,6 +40,7 @@ assembled_system("guest") {
     "//src/sys/pkg/bin/system-updater",
     "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/pkg/bin/system-update-committer",
+    "//src/sys/sysmgr",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
     "//src/zircon/bin/vsock_service:vsock_service",

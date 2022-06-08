@@ -16,7 +16,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "garnet/bin/sysmgr/config.h"
 #include "lib/inspect/cpp/hierarchy.h"
 #include "lib/inspect/cpp/vmo/types.h"
 #include "src/lib/files/directory.h"
@@ -25,6 +24,7 @@
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/sys/sysmgr/config.h"
 
 namespace component {
 namespace {

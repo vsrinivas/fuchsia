@@ -85,12 +85,12 @@ executable("hub_tests") {
 
   deps = [
     "fidl:echo",
-    "//garnet/bin/sysmgr:lib",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/sysmgr:lib",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async:async-cpp",
   ]

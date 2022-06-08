@@ -95,7 +95,6 @@ root_realm("root") {
 
 recovery_packages = [
   "//build/info:build-info",
-  "//garnet/bin/sysmgr",
   "//src/connectivity/location/regulatory_region:regulatory_region",
   "//src/connectivity/network",
   "//src/connectivity/network/netcfg:config-default",
@@ -111,6 +110,7 @@ recovery_packages = [
   "//src/sys/appmgr:component_id_index_no_restrict_storage",
   "//src/sys/pkg:recovery",
   "//src/sys/stash:pkg",
+  "//src/sys/sysmgr",
   "//src/sys/time:recovery",
   "//src/ui/bin/brightness_manager:auto-brightness",
 ]
