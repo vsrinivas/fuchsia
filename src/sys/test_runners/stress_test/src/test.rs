@@ -15,10 +15,10 @@ use {
     fuchsia_async::{Task, TimeoutExt},
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     futures::FutureExt,
-    log::{debug, info},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::str::FromStr,
     std::time::Duration,
+    tracing::{debug, info},
 };
 
 /// Stress tests assume that this collection exists and actors can be created in it.

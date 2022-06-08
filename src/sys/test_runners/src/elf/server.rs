@@ -19,13 +19,13 @@ use {
         lock::Mutex,
         prelude::*,
     },
-    log::{error, warn},
     rust_measure_tape_for_case::Measurable as _,
     std::{
         pin::Pin,
         sync::{Arc, Weak},
     },
     thiserror::Error,
+    tracing::{error, warn},
 };
 
 /// A pinned, boxed future whose output is `Result<T, E>`.

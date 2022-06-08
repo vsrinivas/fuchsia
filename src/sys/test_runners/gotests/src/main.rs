@@ -8,15 +8,14 @@ use {
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    log::{error, warn},
     test_runners_lib::elf,
     test_server::TestServer,
     thiserror::Error,
+    tracing::{error, warn},
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags=["go_test_runner"])]
 async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init_with_tags(&["go_test_runner"])?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(

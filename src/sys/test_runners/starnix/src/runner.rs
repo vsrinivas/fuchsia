@@ -53,10 +53,8 @@ pub async fn handle_runner_requests(
                     )
                     .await
                     {
-                        Ok(_) => fuchsia_syslog::fx_log_info!(
-                            "Finished serving test suite for component."
-                        ),
-                        Err(e) => fuchsia_syslog::fx_log_err!("Error serving test suite: {:?}", e),
+                        Ok(_) => tracing::info!("Finished serving test suite for component."),
+                        Err(e) => tracing::error!("Error serving test suite: {:?}", e),
                     }
                 })
                 .detach();
@@ -101,9 +99,9 @@ async fn serve_test_suite(
                 match handle_suite_requests(&test_url, Some(program), namespace.clone(), stream)
                     .await
                 {
-                    Ok(_) => fuchsia_syslog::fx_log_info!("Finished serving test suite requests."),
+                    Ok(_) => tracing::info!("Finished serving test suite requests."),
                     Err(e) => {
-                        fuchsia_syslog::fx_log_err!("Error serving test suite requests: {:?}", e)
+                        tracing::error!("Error serving test suite requests: {:?}", e)
                     }
                 }
                 let _ = controller.close_with_epitaph(zx::Status::OK);

@@ -12,7 +12,7 @@ fn get_test_server() -> ElfTestServer {
     TestServer { launcher: ElfComponentLauncher::new() }
 }
 
+#[fuchsia::main(logging_tags=["elf_test_runner"])]
 fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init_with_tags(&["elf_test_runner"])?;
     add_runner_service(get_test_server, ElfTestServer::validate_args)
 }

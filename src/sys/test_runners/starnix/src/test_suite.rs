@@ -239,7 +239,7 @@ async fn read_result(mut event_stream: frunner::ComponentControllerEventStream) 
     let component_epitaph = match event_stream.next().await {
         Some(Err(fidl::Error::ClientChannelClosed { status, .. })) => status,
         result => {
-            fuchsia_syslog::fx_log_err!(
+            tracing::error!(
                 "Didn't get epitaph from the component controller, instead got: {:?}",
                 result
             );

@@ -5,20 +5,18 @@
 mod test_server;
 
 use {
-    anyhow::Context as _,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    log::{error, info, warn},
     test_runners_lib::elf,
     test_server::TestServer,
     thiserror::Error,
+    tracing::{error, info, warn},
 };
 
-fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init_with_tags(&["rust_test_runner"])?;
+#[fuchsia::main(logging_tags=["rust_test_runner"])]
+async fn main() -> Result<(), anyhow::Error> {
     info!("started");
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(
@@ -27,7 +25,7 @@ fn main() -> Result<(), anyhow::Error> {
         .detach();
     });
     fs.take_and_serve_directory_handle()?;
-    executor.run_singlethreaded(fs.collect::<()>());
+    fs.collect::<()>().await;
     Ok(())
 }
 

@@ -33,8 +33,8 @@ rustc_binary("echo_actor_bin") {
     "//src/sys/test_runners/stress_test/actor",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "actor/main.rs" ]

@@ -11,9 +11,9 @@ use {
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    log::{error, info},
     test_server::TestServer,
     thiserror::Error,
+    tracing::{error, info},
 };
 
 #[fuchsia::main(logging = true)]

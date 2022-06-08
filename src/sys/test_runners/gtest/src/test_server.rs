@@ -17,7 +17,6 @@ use {
         TryStreamExt,
     },
     lazy_static::lazy_static,
-    log::{debug, error, info, warn},
     serde::{Deserialize, Serialize},
     std::{
         num::NonZeroUsize,
@@ -35,6 +34,7 @@ use {
         launch,
         logs::{LogError, LogStreamReader, LoggerStream, SocketLogWriter},
     },
+    tracing::{debug, error, info, warn},
 };
 
 /// In `gtest_list_test` output, provides info about individual test cases.

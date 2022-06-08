@@ -18,9 +18,9 @@ use {
         future::{abortable, select, Either},
         pin_mut, select, stream, FutureExt, StreamExt, TryStreamExt,
     },
-    log::warn,
     std::convert::TryFrom,
     std::sync::Arc,
+    tracing::warn,
 };
 
 const NANOS_IN_SECONDS: f64 = 1_000_000_000.0;

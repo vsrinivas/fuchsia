@@ -13,7 +13,6 @@ use {
         prelude::*,
     },
     lazy_static::lazy_static,
-    log::{debug, error},
     regex::Regex,
     std::{
         collections::HashSet,
@@ -29,6 +28,7 @@ use {
         launch,
         logs::{LogStreamReader, LoggerStream, SocketLogWriter},
     },
+    tracing::{debug, error},
     zx::Task,
 };
 

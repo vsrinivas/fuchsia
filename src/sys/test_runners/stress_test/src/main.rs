@@ -12,8 +12,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    log::{error, info},
     test::StressTest,
+    tracing::{error, info},
 };
 
 #[fuchsia::main]

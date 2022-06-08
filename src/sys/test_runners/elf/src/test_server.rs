@@ -14,7 +14,6 @@ use {
         prelude::*,
         TryStreamExt,
     },
-    log::{debug, error},
     std::sync::{Arc, Weak},
     test_runners_lib::{
         cases::TestCaseInfo,
@@ -22,6 +21,7 @@ use {
         errors::*,
         logs::SocketLogWriter,
     },
+    tracing::{debug, error},
 };
 
 /// Implements `fuchsia.test.Suite` and runs provided test.

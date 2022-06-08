@@ -6,11 +6,11 @@ use {
     anyhow::Context as _,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::prelude::*,
     test_runners_lib::elf,
     test_runners_lib::{elf::SuiteServer, errors::*},
     thiserror::Error,
+    tracing::{info, warn},
 };
 
 pub fn add_runner_service<F, U, S>(
@@ -22,7 +22,7 @@ where
     U: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError> + Copy,
     S: SuiteServer,
 {
-    fx_log_info!("started");
+    info!("started");
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
     let mut fs = ServiceFs::new_local();
@@ -64,7 +64,7 @@ where
                     elf::start_component(start_info, controller, get_test_server, validate_args)
                         .await
                 {
-                    fx_log_warn!("Cannot start component '{}': {:?}", url, e)
+                    warn!("Cannot start component '{}': {:?}", url, e)
                 };
             }
         }

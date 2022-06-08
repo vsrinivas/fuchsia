@@ -8,8 +8,8 @@ use {
     fidl_fuchsia_test_runner as ftestrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    log::{error, info, warn},
     thiserror::Error,
+    tracing::{error, info, warn},
 };
 
 /// Run with 3 threads as all test runners will share the instance of this component.

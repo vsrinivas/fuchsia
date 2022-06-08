@@ -17,7 +17,6 @@ use {
         stream, AsyncReadExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
     lazy_static::lazy_static,
-    log::{debug, error},
     regex::bytes::Regex,
     std::{
         collections::HashSet,
@@ -34,6 +33,7 @@ use {
         launch,
         logs::{LogError, LogStreamReader, LoggerStream, SocketLogWriter},
     },
+    tracing::{debug, error},
     zx::HandleBased as _,
 };
 
@@ -594,9 +594,8 @@ mod tests {
         collect_listener_event(run_listener).await.context("Failed to collect results")
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test(logging_tags=["gtest_runner_test"])]
     async fn run_multiple_tests() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let events = run_tests(
             names_to_invocation(vec![
                 "TestCrashing",
@@ -666,9 +665,8 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test(logging_tags=["gtest_runner_test"])]
     async fn run_multiple_tests_parallel() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let mut events = run_tests(
             names_to_invocation(vec![
                 "TestCrashing",

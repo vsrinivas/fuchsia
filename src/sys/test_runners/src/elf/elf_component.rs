@@ -22,7 +22,6 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::future::abortable,
     futures::{future::BoxFuture, prelude::*},
-    log::{error, info},
     runner::component::ComponentNamespace,
     std::{
         boxed::Box,
@@ -33,6 +32,7 @@ use {
         sync::{Arc, Mutex},
     },
     thiserror::Error,
+    tracing::{error, info},
     zx::{HandleBased, Task},
 };
 

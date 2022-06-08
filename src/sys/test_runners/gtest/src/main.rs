@@ -5,27 +5,31 @@
 mod test_server;
 
 use {
-    anyhow::Context as _,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::prelude::*,
     rand::Rng,
     std::{fs, path::Path},
     test_runners_lib::elf,
     test_server::TestServer,
     thiserror::Error,
+    tracing::{info, warn},
 };
 
-fn main() -> Result<(), anyhow::Error> {
-    #[cfg(feature = "gtest")]
-    fuchsia_syslog::init_with_tags(&["gtest_runner"])?;
+#[cfg(feature = "gtest")]
+#[fuchsia::main(logging_tags=["gtest_runner"])]
+async fn main() -> Result<(), anyhow::Error> {
+    main_impl().await
+}
 
-    #[cfg(feature = "gunit")]
-    fuchsia_syslog::init_with_tags(&["gunit_runner"])?;
+#[cfg(feature = "gunit")]
+#[fuchsia::main(logging_tags=["gunit_runner"])]
+async fn main() -> Result<(), anyhow::Error> {
+    main_impl().await
+}
 
-    fx_log_info!("started");
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
+async fn main_impl() -> Result<(), anyhow::Error> {
+    info!("started");
     // We will divide this directory up and pass to  tests as /test_result so that they can write
     // their json output
     let path = Path::new("/data/test_data");
@@ -39,7 +43,7 @@ fn main() -> Result<(), anyhow::Error> {
         .detach();
     });
     fs.take_and_serve_directory_handle()?;
-    executor.run_singlethreaded(fs.collect::<()>());
+    fs.collect::<()>().await;
     Ok(())
 }
 
@@ -65,7 +69,7 @@ async fn start_runner(
                 )
                 .await
                 {
-                    fx_log_warn!("Cannot start component '{}': {:?}", url, e)
+                    warn!("Cannot start component '{}': {:?}", url, e)
                 };
             }
         }

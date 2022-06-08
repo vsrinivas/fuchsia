@@ -13,9 +13,9 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex as FutMutex,
     futures::prelude::*,
-    log::warn,
     std::collections::HashMap,
     std::sync::{Arc, Weak},
+    tracing::warn,
 };
 
 /// maps vmo key with vmo result.
