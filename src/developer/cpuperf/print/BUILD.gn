@@ -25,9 +25,9 @@ executable("cpuperf_print") {
   ]
 
   deps = [
-    "//garnet/bin/cpuperf:session_result_spec",
     "//garnet/lib/debugger_utils",
     "//garnet/lib/perfmon",
+    "//src/developer/cpuperf:session_result_spec",
     "//src/lib/fxl",
   ]
 }
@@ -36,4 +36,10 @@ install_host_tools("host_cpuperf_print") {
   deps = [ ":cpuperf_print" ]
 
   outputs = [ "cpuperf_print" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ "tests" ]
 }

@@ -11,8 +11,8 @@
 #include <chrono>
 #include <string>
 
-#include "garnet/bin/cpuperf/session_result_spec.h"
 #include "printer_config.h"
+#include "src/developer/cpuperf/session_result_spec.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"

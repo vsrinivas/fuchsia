@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CPUPERF_SESSION_SPEC_H_
-#define GARNET_BIN_CPUPERF_SESSION_SPEC_H_
+#ifndef SRC_DEVELOPER_CPUPERF_SESSION_SPEC_H_
+#define SRC_DEVELOPER_CPUPERF_SESSION_SPEC_H_
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/time.h>
@@ -65,4 +65,4 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* spec);
 
 }  // namespace cpuperf
 
-#endif  // GARNET_BIN_CPUPERF_SESSION_SPEC_H_
+#endif  // SRC_DEVELOPER_CPUPERF_SESSION_SPEC_H_

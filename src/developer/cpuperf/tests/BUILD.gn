@@ -17,7 +17,7 @@ executable("cpuperf_tests_bin") {
   output_name = "cpuperf_tests"
 
   deps = [
-    "//garnet/bin/cpuperf:unittests",
+    "//src/developer/cpuperf:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -57,10 +57,10 @@ executable("cpuperf_integration_tests_bin") {
   }
 
   deps = [
-    "//garnet/bin/cpuperf:session_result_spec",
-    "//garnet/bin/cpuperf:session_spec",
     "//garnet/lib/perfmon",
     "//sdk/lib/fdio",
+    "//src/developer/cpuperf:session_result_spec",
+    "//src/developer/cpuperf:session_spec",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/cpuperf/session_result_spec.h"
+#include "src/developer/cpuperf/session_result_spec.h"
 
 #include <lib/syslog/cpp/macros.h>
 

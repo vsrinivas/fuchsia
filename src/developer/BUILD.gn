@@ -7,6 +7,7 @@ group("developer") {
   deps = [
     ":tests",
     "build_info:build-info-service",
+    "cpuperf",
     "debug",
     "ffx",
     "forensics",
@@ -21,16 +22,17 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//src/developer/build_info:tests",
-    "//src/developer/debug:tests",
-    "//src/developer/ffx:tests",
-    "//src/developer/forensics:tests",
-    "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
-    "//src/developer/memory:tests",
-    "//src/developer/remote-control:tests",
-    "//src/developer/shell:tests",
-    "//src/developer/ssh-key-manager:tests",
-    "//src/developer/sshd-host:tests",
-    "//src/developer/tracing:tests",
+    "build_info:tests",
+    "cpuperf:tests",
+    "debug:tests",
+    "ffx:tests",
+    "forensics:tests",
+    "fuchsia-criterion:fuchsia-criterion-tests",
+    "memory:tests",
+    "remote-control:tests",
+    "shell:tests",
+    "ssh-key-manager:tests",
+    "sshd-host:tests",
+    "tracing:tests",
   ]
 }

@@ -26,7 +26,7 @@ if (is_host) {
 
   host_test_data("cpuperf_print") {
     sources = [ "$root_out_dir/cpuperf_print" ]
-    deps = [ "//garnet/bin/cpuperf/print:cpuperf_print" ]
+    deps = [ "//src/developer/cpuperf/print:cpuperf_print" ]
   }
 
   go_library("raw_printer_test_lib") {

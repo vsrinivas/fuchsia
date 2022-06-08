@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CPUPERF_SESSION_RESULT_SPEC_H_
-#define GARNET_BIN_CPUPERF_SESSION_RESULT_SPEC_H_
+#ifndef SRC_DEVELOPER_CPUPERF_SESSION_RESULT_SPEC_H_
+#define SRC_DEVELOPER_CPUPERF_SESSION_RESULT_SPEC_H_
 
 #include <cstddef>
 #include <string>
@@ -35,4 +35,4 @@ bool WriteSessionResultSpec(const std::string& output_file_path, const SessionRe
 
 }  // namespace cpuperf
 
-#endif  // GARNET_BIN_CPUPERF_SESSION_RESULT_SPEC_H_
+#endif  // SRC_DEVELOPER_CPUPERF_SESSION_RESULT_SPEC_H_

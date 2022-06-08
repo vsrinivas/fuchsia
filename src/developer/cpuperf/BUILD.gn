@@ -95,3 +95,12 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "print:tests",
+    "tests",
+  ]
+}

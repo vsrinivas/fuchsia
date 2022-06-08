@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CPUPERF_PRINT_RAW_PRINTER_H_
-#define GARNET_BIN_CPUPERF_PRINT_RAW_PRINTER_H_
+#ifndef SRC_DEVELOPER_CPUPERF_PRINT_RAW_PRINTER_H_
+#define SRC_DEVELOPER_CPUPERF_PRINT_RAW_PRINTER_H_
 
 #include <cstdio>
 #include <memory>
 #include <string>
 
-#include "garnet/bin/cpuperf/session_result_spec.h"
 #include "garnet/lib/perfmon/records.h"
+#include "src/developer/cpuperf/session_result_spec.h"
 #include "src/lib/fxl/macros.h"
 
 namespace cpuperf {
@@ -54,4 +54,4 @@ class RawPrinter {
 
 }  // namespace cpuperf
 
-#endif  // GARNET_BIN_CPUPERF_PRINT_RAW_PRINTER_H_
+#endif  // SRC_DEVELOPER_CPUPERF_PRINT_RAW_PRINTER_H_

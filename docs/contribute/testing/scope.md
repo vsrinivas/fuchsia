@@ -344,7 +344,7 @@ See also:
 [continuous-integration]: https://martinfowler.com/articles/continuousIntegration.html
 [contract-test]: https://martinfowler.com/bliki/ContractTest.html
 [coverage-no-e2e]: /docs/contribute/testing/coverage.md#end-to-end_e2e_tests_exclusion
-[cpuperf]: /garnet/bin/cpuperf/README.md
+[cpuperf]: /src/developer/cpuperf/README.md
 [create-e2e-test]: /docs/development/testing/create_a_new_end_to_end_test.md
 [cts]: /sdk/cts/README.md
 [dependency-injection]: https://en.m.wikipedia.org/wiki/Dependency_injection

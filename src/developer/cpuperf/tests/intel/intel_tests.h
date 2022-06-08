@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_CPUPERF_TESTS_INTEL_TESTS_H_
-#define GARNET_BIN_CPUPERF_TESTS_INTEL_TESTS_H_
+#ifndef SRC_DEVELOPER_CPUPERF_TESTS_INTEL_INTEL_TESTS_H_
+#define SRC_DEVELOPER_CPUPERF_TESTS_INTEL_INTEL_TESTS_H_
 
 #include "../verify_test.h"
 
@@ -17,4 +17,4 @@ extern const TestSpec kTallySpec;
 extern const TestSpec kUserFlagSpec;
 extern const TestSpec kValueRecordsSpec;
 
-#endif  // GARNET_BIN_CPUPERF_TESTS_INTEL_TESTS_H_
+#endif  // SRC_DEVELOPER_CPUPERF_TESTS_INTEL_INTEL_TESTS_H_

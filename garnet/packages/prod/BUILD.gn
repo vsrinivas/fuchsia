@@ -29,7 +29,6 @@ group("all") {
     "//garnet/packages/prod:chrealm",
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:cobalt_client",
-    "//garnet/packages/prod:cpuperf",
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:drivers-system",
     "//garnet/packages/prod:far",
@@ -161,14 +160,6 @@ group("cobalt_client") {
   public_deps = [
     "//src/cobalt/bin/app:cobalt",
     "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
-  ]
-}
-
-group("cpuperf") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/cpuperf",
-    "//garnet/bin/cpuperf/print:host_cpuperf_print",
   ]
 }
 

@@ -5,7 +5,6 @@
 group("bin") {
   testonly = true
   deps = [
-    "cpuperf",
     "cpuperf_provider",
 
     # TODO(fxbug.dev/49942): temporarily disable while flake is investigated.
