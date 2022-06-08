@@ -727,7 +727,7 @@ mod tests {
         exec.run_until_stalled(&mut handler_fut)
             .expect_pending("shouldn't be done while service_sender is live");
 
-        // A new client connects to bt-rfcomm.cmx.
+        // A new client connects to bt-rfcomm.
         let client = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -764,7 +764,7 @@ mod tests {
         exec.run_until_stalled(&mut handler_fut)
             .expect_pending("shouldn't be done while service_sender is live");
 
-        // A new client connects to bt-rfcomm.cmx.
+        // A new client connects to bt-rfcomm.
         let client = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -862,7 +862,7 @@ mod tests {
         exec.run_until_stalled(&mut handler_fut)
             .expect_pending("shouldn't be done while service_sender is live");
 
-        // A new client connects to bt-rfcomm.cmx.
+        // A new client connects to bt-rfcomm.
         let client = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -900,7 +900,7 @@ mod tests {
         exec.run_until_stalled(&mut handler_fut)
             .expect_pending("shouldn't be done while service_sender is live");
 
-        // A new client connects to bt-rfcomm.cmx.
+        // A new client connects to bt-rfcomm.
         let client = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -951,7 +951,7 @@ mod tests {
         exec.run_until_stalled(&mut handler_fut)
             .expect_pending("shouldn't be done while service_sender is live");
 
-        // A new client connects to bt-rfcomm.cmx.
+        // A new client connects to bt-rfcomm.
         let client1 = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -977,8 +977,7 @@ mod tests {
             x => panic!("Expected advertise request, got: {:?}", x),
         };
 
-        // A different client connects to bt-rfcomm.cmx. It decides to try to advertise over same
-        // PSM.
+        // A different client connects to bt-rfcomm. It decides to try to advertise over same PSM.
         let client2 = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -1016,7 +1015,7 @@ mod tests {
         exec.run_until_stalled(&mut handler_fut)
             .expect_pending("shouldn't be done while service_sender is live");
 
-        // A new client connects to bt-rfcomm.cmx.
+        // A new client connects to bt-rfcomm.
         let client1 = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -1045,8 +1044,7 @@ mod tests {
             x => panic!("Expected advertise request, got: {:?}", x),
         };
 
-        // A different client connects to bt-rfcomm.cmx. It decides to try to advertise over same
-        // PSM.
+        // A different client connects to bt-rfcomm. It decides to try to advertise over same PSM.
         let client2 = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);

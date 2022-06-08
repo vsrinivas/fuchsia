@@ -44,7 +44,7 @@ fuchsia_test_package("bt-rfcomm-integration-tests") {
 
   deps = [
     # The RFCOMM v2 component.
-    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
+    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component",
 
     # Mock Piconet Server component.
     "//src/connectivity/bluetooth/testing/mock-piconet-server:component-v2",

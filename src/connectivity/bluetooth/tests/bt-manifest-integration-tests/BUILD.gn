@@ -36,7 +36,7 @@ fuchsia_test_component("bt-rfcomm-smoke-test-component") {
 
 fuchsia_test_package("bt-rfcomm-smoke-test") {
   test_components = [ ":bt-rfcomm-smoke-test-component" ]
-  deps = [ "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2" ]
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-rfcomm:component" ]
 }
 
 rustc_test("bt_avrcp_smoke_test_bin") {
@@ -289,7 +289,7 @@ fuchsia_component("test-bt-init") {
     "//src/connectivity/bluetooth/core/bt-gap:component",
     "//src/connectivity/bluetooth/core/bt-init:bin",
     "//src/connectivity/bluetooth/core/bt-init:default-config",
-    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
+    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component",
   ]
 }
 

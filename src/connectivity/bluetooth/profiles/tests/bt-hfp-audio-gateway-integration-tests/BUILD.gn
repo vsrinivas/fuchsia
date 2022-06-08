@@ -66,7 +66,7 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
     "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:default_config",
 
     # The RFCOMM component that is the intermediary for HFP and test driven peers.
-    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
+    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component",
 
     # The component mock for the `fuchsia.bluetooth.internal.a2dp.Controller` capability.
     "//src/connectivity/bluetooth/testing/mock-a2dp-controller:mock-a2dp-controller",

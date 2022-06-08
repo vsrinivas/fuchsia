@@ -25,11 +25,6 @@ Add the following to your Fuchsia set configuration to include the component:
 
 `--with //src/connectivity/bluetooth/profiles/bt-rfcomm`
 
-To run the component:
-
-1. `fx shell`
-1. `run bt-rfcomm.cmx`
-
 ## Testing
 
 RFCOMM relies on unit tests to validate behavior. Add the following to your Fuchsia set
@@ -52,7 +47,7 @@ Follow the instructions in the [manual testing README](manual_testing.md).
 
 The `bt-rfcomm` component includes support for
 [component inspection](https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect). To view
-the current state of the RFCOMM server, use `fx iquery show bt-rfcomm_*/bt-rfcomm.cmx`.
+the current state of the RFCOMM server, use `fx iquery show core/bluetooth-core/bt-rfcomm`.
 
 ### Hierarchy
 
