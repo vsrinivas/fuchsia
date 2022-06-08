@@ -294,6 +294,7 @@ driver_bind_rules("audio-codec-tas27xx-bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
