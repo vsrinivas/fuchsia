@@ -44,6 +44,9 @@ pub struct ImageAssemblyConfigBuilder {
     /// The config_data entries, by package and by destination path.
     config_data: ConfigDataMap,
 
+    /// Modifications that must be made to structured config within bootfs.
+    bootfs_structured_config: PackageConfigPatch,
+
     /// Modifications that must be made to structured config within packages.
     structured_config: StructuredConfigPatches,
 
@@ -70,6 +73,7 @@ impl ImageAssemblyConfigBuilder {
             boot_args: BTreeSet::default(),
             bootfs_files: FileEntryMap::new("bootfs files"),
             config_data: ConfigDataMap::default(),
+            bootfs_structured_config: PackageConfigPatch::default(),
             structured_config: StructuredConfigPatches::default(),
             kernel_path: None,
             kernel_args: BTreeSet::default(),
@@ -200,6 +204,10 @@ impl ImageAssemblyConfigBuilder {
         self.config_data.entry(package.as_ref().into()).or_default().add_entry(entry)
     }
 
+    pub fn set_bootfs_structured_config(&mut self, config: PackageConfigPatch) {
+        self.bootfs_structured_config = config;
+    }
+
     /// Set the structured configuration updates for a package. Can only be called once per
     /// package.
     pub fn set_structured_config(
@@ -236,14 +244,27 @@ impl ImageAssemblyConfigBuilder {
             mut cache,
             mut system,
             boot_args,
-            bootfs_files,
+            mut bootfs_files,
             bootfs_packages,
+            bootfs_structured_config,
             config_data,
             kernel_path,
             kernel_args,
             kernel_clock_backstop,
             qemu_kernel,
         } = self;
+
+        // add structured config value files to bootfs
+        let mut bootfs_repackager = Repackager::for_bootfs(&mut bootfs_files.entries, &outdir);
+        for (component, values) in bootfs_structured_config.components {
+            // check if we should try to configure the component before attempting so we can still
+            // return errors for other conditions like a missing config field or a wrong type
+            if bootfs_repackager.has_component(&component) {
+                bootfs_repackager.set_component_config(&component, values.fields)?;
+            } else {
+                // TODO(https://fxbug.dev/101556) return an error here
+            }
+        }
 
         // repackage any matching packages
         for (package, config) in structured_config {

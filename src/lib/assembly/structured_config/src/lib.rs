@@ -4,6 +4,7 @@
 
 //! Utilities for working with structured configuration during the product assembly process.
 
+use anyhow::{ensure, format_err, Context};
 use assembly_validate_util::PkgNamespace;
 use cm_rust::{FidlIntoNative, NativeIntoFidl};
 use fidl::encoding::{decode_persistent, Persistable};
@@ -15,12 +16,12 @@ use std::{
 };
 
 /// Add structured configuration values to an existing package.
-pub struct Repackager {
-    builder: PackageBuilder,
+pub struct Repackager<B> {
+    builder: B,
     outdir: PathBuf,
 }
 
-impl Repackager {
+impl Repackager<PackageBuilder> {
     /// Read an existing package manifest for modification. The new manifest will be written to
     /// `outdir` along with any needed temporary files.
     pub fn new(
@@ -33,6 +34,28 @@ impl Repackager {
         Ok(Self { builder, outdir })
     }
 
+    /// Build the modified package, returning a path to its new manifest.
+    pub fn build(self) -> Result<PathBuf, RepackageError> {
+        let Self { mut builder, outdir } = self;
+        let manifest_path = outdir.join("package_manifest.json");
+        builder.manifest_path(&manifest_path);
+        builder.build(&outdir, outdir.join("meta.far")).map_err(RepackageError::BuildPackage)?;
+        Ok(manifest_path)
+    }
+}
+
+impl<'f> Repackager<&'f mut BTreeMap<String, PathBuf>> {
+    pub fn for_bootfs(files: &'f mut BTreeMap<String, PathBuf>, outdir: impl AsRef<Path>) -> Self {
+        Self { builder: files, outdir: outdir.as_ref().to_owned() }
+    }
+}
+
+impl<B: PkgNamespaceBuilder> Repackager<B> {
+    /// Check if the package we're building has a particular component manifest.
+    pub fn has_component(&self, manifest_path: &str) -> bool {
+        self.builder.read_contents(manifest_path).is_ok()
+    }
+
     /// Apply structured configuration values to this package, failing if the package already has
     /// a configuration value file for the component.
     pub fn set_component_config(
@@ -41,10 +64,8 @@ impl Repackager {
         values: BTreeMap<String, serde_json::Value>,
     ) -> Result<(), RepackageError> {
         // read the manifest from the meta.far and parse it
-        let manifest_bytes = self
-            .builder
-            .read_contents_from_far(manifest_path)
-            .map_err(RepackageError::ReadManifest)?;
+        let manifest_bytes =
+            self.builder.read_contents(manifest_path).map_err(RepackageError::ReadManifest)?;
         let manifest: cm_rust::ComponentDecl =
             read_and_validate_fidl(&manifest_bytes, cm_fidl_validator::validate)
                 .map_err(RepackageError::ParseManifest)?;
@@ -59,21 +80,60 @@ impl Repackager {
             // write it to the meta.far at the path expected by the resolver
             let cm_rust::ConfigValueSource::PackagePath(path) = &config_decl.value_source;
             self.builder
-                .add_contents_to_far(path, config_bytes, &self.outdir)
+                .add_contents(path, &config_bytes, &self.outdir)
                 .map_err(RepackageError::WriteValueFile)?;
             Ok(())
         } else {
             Err(RepackageError::MissingConfigDecl)
         }
     }
+}
 
-    /// Build the modified package, returning a path to its new manifest.
-    pub fn build(self) -> Result<PathBuf, RepackageError> {
-        let Self { mut builder, outdir } = self;
-        let manifest_path = outdir.join("package_manifest.json");
-        builder.manifest_path(&manifest_path);
-        builder.build(&outdir, outdir.join("meta.far")).map_err(RepackageError::BuildPackage)?;
-        Ok(manifest_path)
+pub trait PkgNamespaceBuilder {
+    fn read_contents(&self, path: &str) -> anyhow::Result<Vec<u8>>;
+    fn add_contents(
+        &mut self,
+        path: &str,
+        contents: &[u8],
+        outdir: impl AsRef<Path>,
+    ) -> anyhow::Result<()>;
+}
+
+impl PkgNamespaceBuilder for PackageBuilder {
+    fn read_contents(&self, path: &str) -> anyhow::Result<Vec<u8>> {
+        ensure!(path.starts_with("meta/"), "reading outside of meta/ is not supported");
+        self.read_contents_from_far(path)
+    }
+
+    fn add_contents(
+        &mut self,
+        path: &str,
+        contents: &[u8],
+        outdir: impl AsRef<Path>,
+    ) -> anyhow::Result<()> {
+        ensure!(path.starts_with("meta/"), "writing outside of meta/ is not supported");
+        self.add_contents_to_far(path, contents, outdir)
+    }
+}
+
+impl PkgNamespaceBuilder for &mut BTreeMap<String, PathBuf> {
+    fn read_contents(&self, path: &str) -> anyhow::Result<Vec<u8>> {
+        let src_path = self.get(path).ok_or_else(|| format_err!("missing {path}"))?;
+        Ok(std::fs::read(&src_path).with_context(|| format!("reading {}", src_path.display()))?)
+    }
+
+    fn add_contents(
+        &mut self,
+        path: &str,
+        contents: &[u8],
+        outdir: impl AsRef<Path>,
+    ) -> anyhow::Result<()> {
+        let out_path = outdir.as_ref().join("bootfs/repackaging/components").join(path);
+        std::fs::create_dir_all(out_path.parent().unwrap()).context("creating outdir")?;
+        std::fs::write(&out_path, contents)
+            .with_context(|| format!("writing {}", out_path.display()))?;
+        self.insert(path.to_owned(), out_path);
+        Ok(())
     }
 }
 

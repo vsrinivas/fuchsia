@@ -62,17 +62,12 @@ executable("console") {
   ]
 }
 
-fuchsia_structured_config_values("default_config") {
-  cm_label = ":manifest"
-  values_source = "configs/default_console_config.json5"
-}
-
 group("bootfs") {
   deps = [
     ":console",
-    ":default_config",
     ":manifest",
   ]
+  # NOTE: this group does not include configuration values. They are provided by product assembly.
 }
 
 test("console-test") {

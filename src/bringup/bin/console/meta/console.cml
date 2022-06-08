@@ -25,6 +25,8 @@
             from: "self",
         },
     ],
+
+    // Console's config values are defined by product assembly. See ../README.md for details.
     config: {
         allowed_log_tags: {
             type: "vector",

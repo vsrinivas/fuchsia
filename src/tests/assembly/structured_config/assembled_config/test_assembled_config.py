@@ -54,6 +54,9 @@ def main():
         legacy_bundle=args.legacy_bundle_dir,
         outdir=args.outdir,
         extra_config=["assembly_example_enabled=true"])
-    output.check_returncode()
+    if output.returncode != 0:
+        print('command failed! stderr:')
+        print(output.stderr.decode('UTF-8'))
+        sys.exit(1)
     with open(args.stamp, 'w') as f:
         pass  # creates the file

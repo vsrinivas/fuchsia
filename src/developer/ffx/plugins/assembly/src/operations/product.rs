@@ -22,6 +22,8 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
 
     let mut builder = ImageAssemblyConfigBuilder::default();
 
+    // Set structured configuration
+    builder.set_bootfs_structured_config(config.define_bootfs_config()?);
     for (package, config) in config.define_repackaging()? {
         builder.set_structured_config(package, config)?;
     }

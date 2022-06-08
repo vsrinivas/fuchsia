@@ -6,6 +6,7 @@ use crate as image_assembly_config;
 use crate::FileEntry;
 use anyhow::ensure;
 use camino::Utf8PathBuf;
+use fidl_fuchsia_logger::MAX_TAGS;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -72,7 +73,51 @@ pub struct ProductPackagesConfig {
     pub cache: Vec<Utf8PathBuf>,
 }
 
+static BASE_CONSOLE_ALLOWED_TAGS: &[&str] = &[
+    "console-launcher",
+    "driver_manager.cm",
+    "driver_host2.cm",
+    "driver",
+    "device",
+    "mdns",
+    "netcfg",
+    "netstack",
+    "fshost",
+    "blobfs",
+    "minfs",
+    "wlan",
+    "fxfs",
+    "sshd-host",
+];
+static BASE_CONSOLE_DENIED_TAGS: &[&str] = &["NUD", "klog"];
+
 impl ProductAssemblyConfig {
+    /// Convert the high-level description of product configuration into a series of configuration
+    /// value files with concrete component tuples.
+    ///
+    /// Returns a map from components manifest paths to configuration fields.
+    pub fn define_bootfs_config(&self) -> anyhow::Result<PackageConfigPatch> {
+        let mut bootfs_patches = PackageConfigPatch::default();
+
+        // Configure the serial console.
+        let allowed_log_tags: Vec<_> =
+            BASE_CONSOLE_ALLOWED_TAGS.iter().map(|s| s.to_string()).collect();
+        let denied_log_tags: Vec<_> =
+            BASE_CONSOLE_DENIED_TAGS.iter().map(|s| s.to_string()).collect();
+
+        let num_allowed_tags = allowed_log_tags.len();
+        ensure!(
+            num_allowed_tags <= MAX_TAGS as usize,
+            "A maximum of {MAX_TAGS} tags can be defined for serial forwarding, got {num_allowed_tags}."
+        );
+        bootfs_patches
+            .component("meta/console.cm")
+            .field("allowed_log_tags", allowed_log_tags)
+            .field("denied_log_tags", denied_log_tags);
+
+        Ok(bootfs_patches)
+    }
+
     /// Convert the high-level description of product configuration into a series of configuration
     /// value files with concrete package/component tuples.
     ///
