@@ -277,7 +277,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		var imgs []*bootserver.Image
 		for _, img := range images {
 			img := img
-			if img.IsFlashable || img.Name == "script_flash-script" {
+			if neededForFlashing(&img) {
 				imgs = append(imgs, &img)
 			}
 		}
@@ -437,4 +437,8 @@ func parseOutSigners(keyPaths []string) ([]ssh.Signer, error) {
 		signers = append(signers, signer)
 	}
 	return signers, nil
+}
+
+func neededForFlashing(img *bootserver.Image) bool {
+	return img.IsFlashable || img.Name == "script_flash-script" || img.Name == "exe.linux-x64_fastboot"
 }
