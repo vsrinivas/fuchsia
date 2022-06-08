@@ -469,6 +469,7 @@ rustflags = ["--cfg=has_const_fn_trait_bound"]
 
 [gn.package.log."0.4.11"]
 rustflags = ["--cfg=atomic_cas"]
+group_visibility = { import = "//src/lib/syslog/rust/log_visibility.gni", variable = "third_party_rust_crate_log_visibility" }
 
 [gn.package.memchr."2.4.0"]
 rustflags = ["--cfg=memchr_runtime_simd", "--cfg=memchr_runtime_sse2", "--cfg=memchr_runtime_sse42", "--cfg=memchr_runtime_avx"]
