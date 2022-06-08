@@ -45,7 +45,7 @@ fuchsia_driver_component("driver") {
 
 fuchsia_driver_package("passthrough") {
   driver_components = [ ":driver" ]
-  # This package is reachable from //garnet/packages/prod:all
+  # This package is reachable from //bundles/packages/prod:all
 }
 
 group("tests") {

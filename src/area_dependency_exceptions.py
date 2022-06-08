@@ -33,10 +33,11 @@ exceptions = {
         ],
     '//src/developer/debug': ['//src/lib/process:process',],
     '//src/developer/feedback_agent': ['//src/ui/lib/escher/test',],
-    '//src/modular': [
-        '//garnet/testing/benchmarking',
-        '//src/modular/bin',
-    ],
+    '//src/modular':
+        [
+            '//garnet/testing/benchmarking',
+            '//src/modular/bin',
+        ],
     '//src/stories/bin/discovermgr': ['//src/sys/component_index/fidl',],
     '//src/sys': ['//examples/components/',],
     '//src/testing/host-target-testing': ['//garnet/go/src',],
@@ -45,8 +46,8 @@ exceptions = {
     '//src/virtualization':
         [
             '//src/graphics/lib/magma',
-            '//garnet/packages/experimental:debian_guest',
-            '//garnet/packages/experimental:zircon_guest',
-            '//garnet/packages/prod:guest_runner',
+            '//bundles/packages/experimental:debian_guest',
+            '//bundles/packages/experimental:zircon_guest',
+            '//bundles/packages/prod:guest_runner',
         ],
 }

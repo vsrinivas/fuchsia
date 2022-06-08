@@ -85,7 +85,7 @@ fuchsia_driver_package("atheros") {
     deps = [ ":btatheros-firmware" ]
   }
 
-  # This package is reachable from //garnet/packages/prod:all
+  # This package is reachable from //bundles/packages/prod:all
 }
 
 group("tests") {

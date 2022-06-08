@@ -62,9 +62,9 @@ Examples of test packages:
 
 To ensure the test is run on CQ, it requires an unbroken chain of dependencies that roll up to your
 `fx set` command's available packages (expandable using the `--with` flag), typically
-going through the all target of `//garnet/packages/tests:all`.
+going through the all target of `//bundles/packages/tests:all`.
 
-You need to make sure that there is a dependency chain from `//garnet/packages/tests:all` to
+You need to make sure that there is a dependency chain from `//bundles/packages/tests:all` to
 your test package. For more information, see
 [Testing FAQ documentation](/docs/development/testing/faq.md#q_what-ensures-it-is-run).
 
@@ -80,7 +80,7 @@ both debug and release builds. For running on other environments, refer to
 [Test environments](/docs/contribute/testing/environments.md).
 
 Reference the test package transitively. For example, the packages above are
-referenced by `//garnet/packages/tests:all` through `//garnet/packages/tests:scenic`.
+referenced by `//bundles/packages/tests:all` through `//bundles/packages/tests:scenic`.
 
 ## Unit tests and integration tests
 

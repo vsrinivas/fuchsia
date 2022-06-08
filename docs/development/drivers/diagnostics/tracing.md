@@ -71,10 +71,10 @@ fuchsia_driver("my_driver") {
 ## Building with tracing
 
 The following needs to be passed to fx set in order to trace drivers
-that are loaded during boot: `--with-base=//garnet/packages/prod:tracing`.
+that are loaded during boot: `--with-base=//bundles/packages/prod:tracing`.
 
 ```sh
-$ fx set ${PRODUCT}.${BOARD} --with-base=//garnet/packages/prod:tracing
+$ fx set ${PRODUCT}.${BOARD} --with-base=//bundles/packages/prod:tracing
 $ fx build
 ```
 

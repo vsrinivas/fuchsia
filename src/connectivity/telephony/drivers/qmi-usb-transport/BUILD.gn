@@ -8,7 +8,7 @@ import("//build/drivers.gni")
 
 fuchsia_driver_package("qmi-usb-transport") {
   driver_components = [ ":qmi_driver" ]
-  # This package is reachable from //garnet/packages/prod:all
+  # This package is reachable from //bundles/packages/prod:all
 }
 
 driver_bind_rules("qmi_usb_bind") {

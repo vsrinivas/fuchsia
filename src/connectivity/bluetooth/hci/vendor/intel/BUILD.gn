@@ -87,5 +87,5 @@ fuchsia_driver_package("intel") {
     deps += [ ":btintel-firmware($shlib_toolchain)" ]
   }
 
-  # This package is reachable from //garnet/packages/prod:all
+  # This package is reachable from //bundles/packages/prod:all
 }

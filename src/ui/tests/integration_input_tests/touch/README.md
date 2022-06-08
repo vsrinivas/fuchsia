@@ -53,7 +53,7 @@ Trace event types can be found in
 Add the tracing package to your `fx set`:
 
 ```shell
-$ fx set <product>.<arch> --with //src/ui/tests/integration_input_tests/touch:tests --with-base=//garnet/packages/prod:tracing
+$ fx set <product>.<arch> --with //src/ui/tests/integration_input_tests/touch:tests --with-base=//bundles/packages/prod:tracing
 ```
 
 To record a trace of the test, use this fx invocation:
