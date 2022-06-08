@@ -40,11 +40,11 @@ static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t 
   return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
-zx_status_t x64Pciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
+zx_status_t AcpiPciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
   return pciroot_op_get_bti(nullptr, bdf, index, bti->reset_and_get_address());
 }
 
-zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
+zx_status_t AcpiPciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
   *info = context_.info;
   info->irq_routing_list = context_.routing.data();
   info->irq_routing_count = context_.routing.size();
@@ -54,38 +54,39 @@ zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t x64Pciroot::PcirootReadConfig8(const pci_bdf_t* address, uint16_t offset,
-                                           uint8_t* value) {
+zx_status_t AcpiPciroot::PcirootReadConfig8(const pci_bdf_t* address, uint16_t offset,
+                                            uint8_t* value) {
   return pci_pio_read8(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootReadConfig16(const pci_bdf_t* address, uint16_t offset,
-                                            uint16_t* value) {
+zx_status_t AcpiPciroot::PcirootReadConfig16(const pci_bdf_t* address, uint16_t offset,
+                                             uint16_t* value) {
   return pci_pio_read16(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootReadConfig32(const pci_bdf_t* address, uint16_t offset,
-                                            uint32_t* value) {
+zx_status_t AcpiPciroot::PcirootReadConfig32(const pci_bdf_t* address, uint16_t offset,
+                                             uint32_t* value) {
   return pci_pio_read32(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootWriteConfig8(const pci_bdf_t* address, uint16_t offset,
-                                            uint8_t value) {
+zx_status_t AcpiPciroot::PcirootWriteConfig8(const pci_bdf_t* address, uint16_t offset,
+                                             uint8_t value) {
   return pci_pio_write8(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootWriteConfig16(const pci_bdf_t* address, uint16_t offset,
-                                             uint16_t value) {
+zx_status_t AcpiPciroot::PcirootWriteConfig16(const pci_bdf_t* address, uint16_t offset,
+                                              uint16_t value) {
   return pci_pio_write16(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootWriteConfig32(const pci_bdf_t* address, uint16_t offset,
-                                             uint32_t value) {
+zx_status_t AcpiPciroot::PcirootWriteConfig32(const pci_bdf_t* address, uint16_t offset,
+                                              uint32_t value) {
   return pci_pio_write32(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
-                               const char* name, std::vector<pci_bdf_t> acpi_bdfs) {
-  auto pciroot = new x64Pciroot(root_host, std::move(ctx), parent, name, std::move(acpi_bdfs));
+zx_status_t AcpiPciroot::Create(PciRootHost* root_host, AcpiPciroot::Context ctx,
+                                zx_device_t* parent, const char* name,
+                                std::vector<pci_bdf_t> acpi_bdfs) {
+  auto pciroot = new AcpiPciroot(root_host, std::move(ctx), parent, name, std::move(acpi_bdfs));
   return pciroot->DdkAdd(name);
 }

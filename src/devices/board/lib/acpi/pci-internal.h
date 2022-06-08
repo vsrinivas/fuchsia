@@ -45,7 +45,7 @@ struct acpi_legacy_irq {
 zx_status_t get_pci_init_arg(acpi::Acpi* acpi, zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(acpi::Acpi* acpi, zx_handle_t root_resource_handle);
 
-class x64Pciroot : public PcirootBase {
+class AcpiPciroot : public PcirootBase {
  public:
   struct Context {
     char name[ACPI_NAMESEG_SIZE + 1];
@@ -58,7 +58,7 @@ class x64Pciroot : public PcirootBase {
     struct pci_platform_info info;
   };
 
-  static zx_status_t Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
+  static zx_status_t Create(PciRootHost* root_host, AcpiPciroot::Context ctx, zx_device_t* parent,
                             const char* name, std::vector<pci_bdf_t> acpi_bdfs);
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
   zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
@@ -72,8 +72,8 @@ class x64Pciroot : public PcirootBase {
  private:
   Context context_;
   std::vector<pci_bdf_t> acpi_bdfs_;
-  x64Pciroot(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent, const char* name,
-             std::vector<pci_bdf_t> acpi_bdfs)
+  AcpiPciroot(PciRootHost* root_host, AcpiPciroot::Context ctx, zx_device_t* parent,
+              const char* name, std::vector<pci_bdf_t> acpi_bdfs)
       : PcirootBase(root_host, parent, name),
         context_(std::move(ctx)),
         acpi_bdfs_(std::move(acpi_bdfs)) {}
@@ -82,7 +82,7 @@ class x64Pciroot : public PcirootBase {
 namespace acpi {
 
 ACPI_STATUS GetPciRootIrqRouting(acpi::Acpi* acpi, ACPI_HANDLE root_obj,
-                                 x64Pciroot::Context* context);
+                                 AcpiPciroot::Context* context);
 
 }  // namespace acpi
 

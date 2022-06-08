@@ -272,7 +272,7 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
 }
 
 zx_status_t pci_init_interrupts(acpi::Acpi* acpi, ACPI_HANDLE object,
-                                x64Pciroot::Context* dev_ctx) {
+                                AcpiPciroot::Context* dev_ctx) {
   zx::vmo routing_vmo{};
   if (acpi::GetPciRootIrqRouting(acpi, object, dev_ctx) != AE_OK) {
     zxlogf(ERROR, "Failed to obtain PCI IRQ routing information, legacy IRQs will not function");
@@ -318,7 +318,7 @@ zx_status_t pci_init_interrupts(acpi::Acpi* acpi, ACPI_HANDLE object,
 }
 
 zx_status_t pci_init_segment_and_ecam(acpi::Acpi* acpi, ACPI_HANDLE object,
-                                      x64Pciroot::Context* dev_ctx) {
+                                      AcpiPciroot::Context* dev_ctx) {
   auto bbn = acpi->CallBbn(object);
   if (bbn.is_error() && acpi_to_zx_status(bbn.error_value()) != ZX_ERR_NOT_FOUND) {
     zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx->name,
@@ -442,7 +442,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object,
   // Build up a context structure for the PCI Root / Host Bridge we've found.
   // If we find _BBN / _SEG we will use those, but if we don't we can fall
   // back on having an ecam from mcfg allocations.
-  x64Pciroot::Context dev_ctx = {};
+  AcpiPciroot::Context dev_ctx = {};
   dev_ctx.platform_bus = parent;
   dev_ctx.acpi_object = object;
   dev_ctx.acpi_device_info = std::move(info);
@@ -470,7 +470,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object,
   char name[ZX_DEVICE_NAME_MAX] = {0};
   memcpy(name, dev_ctx.name, sizeof(dev_ctx.name));
 
-  status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name, std::move(acpi_bdfs));
+  status = AcpiPciroot::Create(&*RootHost, std::move(dev_ctx), parent, name, std::move(acpi_bdfs));
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);
   } else {
