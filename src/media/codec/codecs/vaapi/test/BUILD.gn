@@ -45,13 +45,13 @@ executable("vaapi_tests") {
 
 resource("bear_h264") {
   sources = [
-    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+    "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear.h264",
   ]
   outputs = [ "data/bear.h264" ]
 }
 
 resource("test_25fps") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9" ]
   outputs = [ "data/test-25fps.vp9" ]
 }
 

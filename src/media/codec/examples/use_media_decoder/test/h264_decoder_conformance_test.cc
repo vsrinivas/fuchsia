@@ -34,7 +34,7 @@
 namespace {
 
 // The actual contents of these files will vary per test package.  See files
-// under garnet/test_data/media/third_party/webm_vp9_conformance_streams.
+// under prebuilt/test_data/media/third_party/webm_vp9_conformance_streams.
 constexpr char kInputFilePath[] = "/pkg/data/foo.h264";
 constexpr char kI420Md5FilePath[] = "/pkg/data/foo.md5";
 

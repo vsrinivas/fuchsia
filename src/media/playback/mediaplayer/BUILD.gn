@@ -151,12 +151,12 @@ executable("mediaplayer_tests_bin") {
 }
 
 resource("mp4_resource") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4" ]
   outputs = [ "data/media_test_data/bear.mp4" ]
 }
 
 resource("webm_resource") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/sfx-opus-441.webm" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/sfx-opus-441.webm" ]
   outputs = [ "data/media_test_data/sfx-opus-441.webm" ]
 }
 

@@ -327,7 +327,7 @@ rustc_test("h264_decoder_test_bin") {
 
 resource("bear_video") {
   sources = [
-    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+    "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear.h264",
   ]
   outputs = [ "data/bear.h264" ]
 }

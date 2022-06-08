@@ -97,12 +97,12 @@ executable("soundplayer-tests-bin") {
 }
 
 resource("ogg_file") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/bear-opus.ogg" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear-opus.ogg" ]
   outputs = [ "data/testfile.ogg" ]
 }
 
 resource("wav_file") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/sfx_s16le.wav" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/sfx_s16le.wav" ]
   outputs = [ "data/sfx.wav" ]
 }
 

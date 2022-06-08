@@ -125,7 +125,7 @@ fuchsia_component("web_runner_pixel_tests") {
 
 resource("resources") {
   sources = [
-    "//garnet/test_data/media/third_party/chromium_media_test_data/blackwhite_yuv420p.webm",
+    "//prebuilt/test_data/media/third_party/chromium_media_test_data/blackwhite_yuv420p.webm",
     "data/dynamic.html",
     "data/static.html",
     "data/video.html",

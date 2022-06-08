@@ -35,7 +35,7 @@ rustc_binary("bin") {
 }
 
 resource("data") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/sfx_s16le.wav" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/sfx_s16le.wav" ]
   outputs = [ "data/sfx.wav" ]
 }
 

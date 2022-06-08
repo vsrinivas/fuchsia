@@ -173,7 +173,7 @@
             "prebuilt/third_party/flutter"
         ],
         "khronos.lic": [
-            "garnet/test_data/media/third_party/chromium_media_test_data/COPYING",
+            "prebuilt/test_data/media/third_party/chromium_media_test_data/COPYING",
             "prebuilt/third_party/flutter",
             "third_party/android",
             "third_party/glslang",

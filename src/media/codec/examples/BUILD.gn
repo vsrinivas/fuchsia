@@ -35,18 +35,18 @@ fuchsia_shell_package("use_media_decoder") {
 
 resource("bear_h264") {
   sources = [
-    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+    "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear.h264",
   ]
   outputs = [ "data/bear.h264" ]
 }
 
 resource("bear_vp9") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf" ]
   outputs = [ "data/bear-vp9.ivf" ]
 }
 
 resource("1080p_10_frames_h264") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/1080p_10_frames.h264" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data_downstream/1080p_10_frames.h264" ]
   outputs = [ "data/1080p_10_frames.h264" ]
 }
 
@@ -56,12 +56,12 @@ resource("adts_audio_resource") {
 }
 
 resource("bear-1280x546-vp9") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/bear-1280x546-vp9.ivf" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data_downstream/bear-1280x546-vp9.ivf" ]
   outputs = [ "data/bear-1280x546-vp9.ivf" ]
 }
 
 resource("test-25fps.vp9") {
-  sources = [ "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9" ]
+  sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9" ]
   outputs = [ "data/test-25fps.vp9.ivf" ]
 }
 
@@ -591,7 +591,7 @@ _vp9_file_conformance_tests_group_deps = []
 # decode conformance tests.
 package_name = "vp9-decoder-conformance-test--bear-vp9"
 vp9_file_decoder_conformance_test(package_name) {
-  ivf_file = "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
+  ivf_file = "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
   md5_file = "use_media_decoder/test/bear-vp9.i420.md5"
 }
 _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
@@ -614,7 +614,7 @@ _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
 # success/failure in the e2e test script, not on the target.
 if (build_all_vp9_file_decoder_conformance_tests) {
   testcases = read_file(
-          "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/test_cases_all.list",
+          "//prebuilt/test_data/media/third_party/webm_vp9_conformance_streams/test_cases_all.list",
           "trim list lines")
   foreach(testcase, testcases) {
     # remove prefix
@@ -638,8 +638,8 @@ if (build_all_vp9_file_decoder_conformance_tests) {
     # Avoid any "_" in the package name.
     package_name = string_replace(package_name, "_", "-")
     vp9_file_decoder_conformance_test(package_name) {
-      ivf_file = "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/processed/" + testcase_partial_path + ".webm.ivf"
-      md5_file = "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/decompressed_md5/" + testcase_partial_path + ".md5"
+      ivf_file = "//prebuilt/test_data/media/third_party/webm_vp9_conformance_streams/processed/" + testcase_partial_path + ".webm.ivf"
+      md5_file = "//prebuilt/test_data/media/third_party/webm_vp9_conformance_streams/decompressed_md5/" + testcase_partial_path + ".md5"
     }
     _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
   }

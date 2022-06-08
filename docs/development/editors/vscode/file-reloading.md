@@ -63,7 +63,7 @@ To manually exclude a directory from VS Code’s watcher:
             "**/PATENTS": true,
             "**/buildtools": true,
             "**/examples": true,
-            "**/garnet/test_data": true,
+            "**/prebuilt/test_data": true,
             "**/garnet/third_party": true,
             "**/out": true,
             "**/prebuilt": true,
