@@ -202,6 +202,9 @@ int pthread_setaffinity_np(pthread_t, size_t, const struct cpu_set_t*);
 int pthread_getattr_np(pthread_t, pthread_attr_t*);
 #endif
 
+int pthread_getname_np(pthread_t, char*, size_t);
+int pthread_setname_np(pthread_t, const char*);
+
 #ifdef __cplusplus
 }
 #endif

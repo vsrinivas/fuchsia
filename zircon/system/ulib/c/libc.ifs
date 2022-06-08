@@ -952,6 +952,7 @@ Symbols:
   - { Name: pthread_getattr_np, Type: Func }
   - { Name: pthread_getconcurrency, Type: Func }
   - { Name: pthread_getcpuclockid, Type: Func }
+  - { Name: pthread_getname_np, Type: Func }
   - { Name: pthread_getspecific, Type: Func, Weak: true }
   - { Name: pthread_join, Type: Func, Weak: true }
   - { Name: pthread_key_create, Type: Func }
@@ -991,6 +992,7 @@ Symbols:
   - { Name: pthread_setcancelstate, Type: Func }
   - { Name: pthread_setcanceltype, Type: Func }
   - { Name: pthread_setconcurrency, Type: Func }
+  - { Name: pthread_setname_np, Type: Func }
   - { Name: pthread_setspecific, Type: Func }
   - { Name: pthread_sigmask, Type: Func }
   - { Name: pthread_spin_destroy, Type: Func }

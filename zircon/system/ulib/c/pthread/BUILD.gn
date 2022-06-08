@@ -1,0 +1,17 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../libc.gni")
+
+source_set("pthread") {
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
+  sources = [
+    "pthread_getname_np.c",
+    "pthread_setname_np.c",
+  ]
+}
+
+libc_test("unittests") {
+  sources = [ "pthread-getsetname-test.cc" ]
+}
