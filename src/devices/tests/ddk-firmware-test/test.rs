@@ -121,17 +121,17 @@ async fn load_package_firmware_test() -> Result<(), Error> {
             },
         },
     };
-    let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+    let driver_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
         "/pkg/driver",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
     )?);
-    let meta_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+    let meta_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
         "/pkg/meta",
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?);
-    let bind_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+    let bind_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
         "/pkg/bind",
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?);
     let base_manifest = vfs::file::vmo::asynchronous::read_only_static(
         r#"[{"driver_url": "fuchsia-pkg://fuchsia.com/my-package#meta/ddk-firmware-test-driver.cm"}]"#,
@@ -246,9 +246,9 @@ async fn load_package_firmware_test_dfv2() -> Result<(), Error> {
 #[fuchsia::test]
 async fn load_system_firmware_test() -> Result<(), Error> {
     let firmware_file = vfs::file::vmo::asynchronous::read_only_static(b"this is some firmware\n");
-    let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+    let driver_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
         "/pkg/driver",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
     )?);
     let system: Directory = vfs::pseudo_directory! {
         "driver" => driver_dir,

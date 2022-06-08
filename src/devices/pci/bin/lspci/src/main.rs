@@ -10,8 +10,8 @@ use {
     fidl_fuchsia_hardware_pci::{Address, BusMarker, BusProxy, HeaderType},
     files_async::{dir_contains, readdir, DirentKind},
     fuchsia_async,
+    fuchsia_fs::{directory::open_in_namespace, OpenFlags},
     fuchsia_zircon::Status,
-    io_util::{directory::open_in_namespace, OpenFlags},
     lspci::{
         bridge::Bridge, db, device::Device, filter::Filter, util::Hexdumper, Args, SubCommand,
     },
