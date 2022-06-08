@@ -33,6 +33,7 @@ use {
             realm_query::RealmQuery,
             root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
+            route_validator::RouteValidator,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
             smc_resource::SmcResource,
             system_controller::SystemController,
@@ -412,6 +413,7 @@ pub struct BuiltinEnvironment {
     pub realm_explorer: Option<Arc<RealmExplorer>>,
     pub realm_query: Option<Arc<RealmQuery>>,
     pub lifecycle_controller: Option<Arc<LifecycleController>>,
+    pub route_validator: Option<Arc<RouteValidator>>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
@@ -824,6 +826,14 @@ impl BuiltinEnvironment {
             None
         };
 
+        let route_validator = if enable_introspection {
+            let route_validator = Arc::new(RouteValidator::new(model.clone()));
+            model.root().hooks.install(route_validator.hooks()).await;
+            Some(route_validator)
+        } else {
+            None
+        };
+
         // Set up the Component Tree Diagnostics runtime statistics.
         let component_tree_stats =
             ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
@@ -903,6 +913,7 @@ impl BuiltinEnvironment {
             realm_explorer,
             realm_query,
             lifecycle_controller,
+            route_validator,
             builtin_runners,
             event_registry,
             event_source_factory,

@@ -25,6 +25,7 @@ pub mod realm_explorer;
 pub mod realm_query;
 pub mod root_job;
 pub mod root_resource;
+pub mod route_validator;
 pub mod runner;
 pub mod smc_resource;
 pub mod system_controller;

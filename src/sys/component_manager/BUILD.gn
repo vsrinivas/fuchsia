@@ -118,6 +118,7 @@ template("component_manager") {
     "src/builtin/realm_query.rs",
     "src/builtin/root_job.rs",
     "src/builtin/root_resource.rs",
+    "src/builtin/route_validator.rs",
     "src/builtin/runner.rs",
     "src/builtin/smc_resource.rs",
     "src/builtin/system_controller.rs",

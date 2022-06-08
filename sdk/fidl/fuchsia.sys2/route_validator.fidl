@@ -1,0 +1,50 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.sys2;
+
+using fuchsia.component;
+
+/// Routing error for a particular capability.
+type RouteError = table {
+    /// A human-readable explanation of the routing error.
+    1: summary string:MAX;
+};
+
+type DeclType = flexible enum {
+    /// The capability comes from a `use` declaration in the component's manifest.
+    /// It will be available in the namespace of the component instance.
+    USE = 1;
+
+    /// The capability comes from an `expose` declaration in the component's manifest.
+    EXPOSE = 2;
+};
+
+/// Routing result for a particular capability.
+type RouteReport = table {
+    /// The capability whose routing was attempted.
+    1: capability string:MAX;
+
+    /// Type of capability declaration
+    2: decl_type DeclType;
+
+    /// Describes the error that occurred from routing this capability.
+    /// This field is not present if routing succeeded.
+    3: error RouteError;
+};
+
+@discoverable
+protocol RouteValidator {
+    /// Routes all incoming and exposed capabilities of a component identified by the given
+    /// relative moniker. If the routing failed, an error is returned in the response.
+    /// This function may cause components to be resolved.
+    ///
+    /// Errors:
+    /// * INVALID_ARGUMENTS: The given moniker is not valid.
+    /// * INSTANCE_NOT_FOUND: No instance was found matching the given moniker.
+    Validate(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (struct {
+        reports vector<RouteReport>:MAX;
+    }) error fuchsia.component.Error;
+};

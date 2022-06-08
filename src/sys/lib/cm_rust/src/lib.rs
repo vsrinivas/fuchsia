@@ -1451,6 +1451,20 @@ impl UseDecl {
     }
 }
 
+impl SourceName for UseDecl {
+    fn source_name(&self) -> &CapabilityName {
+        match self {
+            UseDecl::Event(event_decl) => &event_decl.source_name,
+            UseDecl::Storage(storage_decl) => &storage_decl.source_name,
+            UseDecl::EventStreamDeprecated(event_stream_decl) => &event_stream_decl.name,
+            UseDecl::Service(service_decl) => &service_decl.source_name,
+            UseDecl::Protocol(protocol_decl) => &protocol_decl.source_name,
+            UseDecl::Directory(directory_decl) => &directory_decl.source_name,
+            UseDecl::EventStream(event_stream_decl) => &event_stream_decl.source_name,
+        }
+    }
+}
+
 /// A named capability.
 ///
 /// Unlike a `CapabilityPath`, a `CapabilityName` doesn't encode any form

@@ -27,6 +27,7 @@ fidl("fuchsia.sys2") {
     "events.fidl",
     "lifecycle_controller.fidl",
     "realm.fidl",
+    "route_validator.fidl",
     "storage_admin.fidl",
     "system_controller.fidl",
   ]

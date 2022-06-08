@@ -65,6 +65,26 @@ pub(super) async fn route_and_open_capability(
     }
 }
 
+/// Routes a capability from `target` to its source.
+///
+/// If the capability is not allowed to be routed to the `target`, per the
+/// [`crate::model::policy::GlobalPolicyChecker`], the capability is not opened and an error
+/// is returned.
+pub async fn route(
+    route_request: RouteRequest,
+    target: &Arc<ComponentInstance>,
+) -> Result<(), RoutingError> {
+    match route_request {
+        RouteRequest::UseStorage(use_storage_decl) => {
+            route_storage_and_backing_directory(use_storage_decl, target).await?;
+        }
+        _ => {
+            route_capability(route_request, target).await?;
+        }
+    }
+    Ok(())
+}
+
 /// Routes a capability from `target` to its source, starting from a `use_decl`.
 ///
 /// If the capability is allowed to be routed to the `target`, per the
@@ -127,7 +147,7 @@ pub(super) async fn route_and_open_namespace_capability_from_expose(
 
 /// Create a new `RouteRequest` from a `UseDecl`, checking that the capability type can
 /// be installed in a namespace.
-fn request_for_namespace_capability_use(use_decl: UseDecl) -> Result<RouteRequest, ModelError> {
+pub fn request_for_namespace_capability_use(use_decl: UseDecl) -> Result<RouteRequest, ModelError> {
     match use_decl {
         UseDecl::Directory(decl) => Ok(RouteRequest::UseDirectory(decl)),
         UseDecl::Protocol(decl) => Ok(RouteRequest::UseProtocol(decl)),
@@ -139,7 +159,7 @@ fn request_for_namespace_capability_use(use_decl: UseDecl) -> Result<RouteReques
 
 /// Create a new `RouteRequest` from an `ExposeDecl`, checking that the capability type can
 /// be installed in a namespace.
-fn request_for_namespace_capability_expose(
+pub fn request_for_namespace_capability_expose(
     expose_decl: ExposeDecl,
 ) -> Result<RouteRequest, ModelError> {
     match expose_decl {
