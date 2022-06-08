@@ -7,23 +7,24 @@ use {
         capability_source::{
             AggregateCapability, CapabilitySourceInterface, ComponentCapability, InternalCapability,
         },
-        collection::CollectionCapabilityProvider,
+        collection::{AggregateServiceProvider, CollectionCapabilityProvider},
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
             TopInstanceInterface,
         },
         error::RoutingError,
-        DebugRouteMapper, RegistrationDecl,
+        DebugRouteMapper, RegistrationDecl, ServiceVisitor,
     },
     cm_rust::{
         name_mappings_to_map, CapabilityDecl, CapabilityDeclCommon, CapabilityName, ExposeDecl,
-        ExposeDeclCommon, ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource,
-        OfferTarget, RegistrationDeclCommon, RegistrationSource, UseDecl, UseDeclCommon, UseSource,
+        ExposeDeclCommon, ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
+        OfferDeclCommon, OfferServiceDecl, OfferSource, OfferTarget, RegistrationDeclCommon,
+        RegistrationSource, ServiceDecl, UseDecl, UseDeclCommon, UseServiceDecl, UseSource,
     },
     derivative::Derivative,
     from_enum::FromEnum,
     moniker::{AbsoluteMoniker, ChildMoniker, ChildMonikerBase},
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::{marker::PhantomData, sync::Arc},
 };
 
@@ -153,7 +154,7 @@ where
         S: Sources,
         V: OfferVisitor<OfferDecl = O>,
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
-        M: DebugRouteMapper,
+        M: DebugRouteMapper + 'static,
     {
         match Use::route(use_decl, use_target, &sources, visitor, mapper).await? {
             UseResult::Source(source) => return Ok(source),
@@ -169,7 +170,7 @@ where
                     )
                     .await
                 } else {
-                    create_aggregate_source(offers, component)
+                    create_aggregate_source(offers, component, mapper.clone())
                 }
             }
             UseResult::FromChild(_use_decl, _component) => {
@@ -281,7 +282,7 @@ where
                     )
                     .await
                 } else {
-                    create_aggregate_source(offers, component)
+                    create_aggregate_source(offers, component, mapper.clone())
                 }
             }
             UseResult::FromChild(use_decl, child_component) => {
@@ -368,7 +369,7 @@ where
                     )
                     .await
                 } else {
-                    create_aggregate_source(offers, component)
+                    create_aggregate_source(offers, component, mapper.clone())
                 }
             }
             RegistrationResult::FromChild(expose, component) => {
@@ -468,22 +469,78 @@ where
                 })
             }
             OfferResult::OfferFromAggregate(offer_decls, aggregation_component) => {
-                create_aggregate_source(offer_decls, aggregation_component)
+                create_aggregate_source(offer_decls, aggregation_component, mapper.clone())
             }
         }
     }
 }
 
-fn create_aggregate_source<C, O>(
-    _offer_decls: Vec<O>,
-    _aggregation_component: Arc<C>,
+fn create_aggregate_source<C, O, M>(
+    offer_decls: Vec<O>,
+    aggregation_component: Arc<C>,
+    mapper: M,
 ) -> Result<CapabilitySourceInterface<C>, RoutingError>
 where
     C: ComponentInstanceInterface + 'static,
     O: OfferDeclCommon + FromEnum<OfferDecl> + Into<OfferDecl> + Clone,
+    M: DebugRouteMapper + 'static,
 {
-    //TODO(fxbug.dev/100985) Update to support aggregate service capabilities.
-    Err(RoutingError::unsupported_route_source("Aggregate offers not yet supported"))
+    // Check that all of the service offers contain non-conflicting filter instances.
+    {
+        let mut seen_instances: HashSet<String> = HashSet::new();
+        for o in offer_decls.iter() {
+            if let OfferDecl::Service(offer_service_decl) = o.clone().into() {
+                match offer_service_decl.source_instance_filter {
+                    None => {
+                        return Err(RoutingError::unsupported_route_source(
+                            "Aggregate offers must be of service capabilities with source_instance_filter set",
+                        ));
+                    }
+                    Some(allowed_instances) => {
+                        for instance in allowed_instances.iter() {
+                            if !seen_instances.insert(instance.clone()) {
+                                return Err(RoutingError::unsupported_route_source(format!(
+                                    "Instance {} found in multiple offers of the same service.",
+                                    instance
+                                )));
+                            }
+                        }
+                    }
+                }
+            } else {
+                return Err(RoutingError::unsupported_route_source(
+                    "Aggregate source must consist of only service capabilities",
+                ));
+            }
+        }
+    }
+    let (source_name, offer_service_decls) = offer_decls.iter().fold(
+        (CapabilityName("".to_string()), Vec::<OfferServiceDecl>::new()),
+        |(_, mut decls), o| {
+            if let OfferDecl::Service(offer_service_decl) = o.clone().into() {
+                decls.push(offer_service_decl);
+            }
+            (o.source_name().clone(), decls)
+        },
+    );
+    // TODO(fxbug.dev/71881) Make the Collection CapabilitySourceInterface type generic
+    // for other types of aggregations.
+    Ok(CapabilitySourceInterface::<C>::Collection {
+        capability: AggregateCapability::Service(source_name),
+        component: aggregation_component.as_weak(),
+        collection_name: "".to_string(),
+        capability_provider: Box::new(AggregateServiceProvider {
+            router: RoutingStrategy::new()
+                .use_::<UseServiceDecl>()
+                .offer::<OfferServiceDecl>()
+                .expose::<ExposeServiceDecl>(),
+            component: aggregation_component.as_weak(),
+            offer_decls: offer_service_decls,
+            sources: AllowedSourcesBuilder::<ServiceDecl>::new().component().collection(),
+            visitor: ServiceVisitor {},
+            mapper,
+        }),
+    })
 }
 
 // Common expose routing shared between Registration and Use routing.
@@ -1578,7 +1635,7 @@ macro_rules! make_noop_visitor {
         $(CapabilityDecl => $cap_decl:ty,)*
     }) => {
         #[derive(Clone)]
-        struct $name;
+        pub struct $name;
 
         $(
             impl $crate::router::OfferVisitor for $name {

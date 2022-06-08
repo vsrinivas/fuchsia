@@ -405,7 +405,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
         scope: ExecutionScope,
         flags: fio::OpenFlags,
         mode: u32,
-        mut path: vfs::path::Path,
+        path: vfs::path::Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let mut server_end = server_end.into_channel();
@@ -436,8 +436,6 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
                 }
             };
 
-            // Consume the next path segment, which is the "component,instance" portion we've already extracted.
-            path.next();
 
             let mut relative_path = PathBuf::from(&self.instance);
 
@@ -499,7 +497,9 @@ struct CollectionServiceDirectory {
 impl lazy::LazyDirectory for CollectionServiceDirectory {
     async fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, zx::Status> {
         // Parse the entry name into its (component,instance) parts.
-        let (component, instance) = name.split_once(',').ok_or(zx::Status::NOT_FOUND)?;
+        // In the case of non-comma separated entries, treat the component and
+        // instance name as the same.
+        let (component, instance) = name.split_once(',').unwrap_or((name, name));
         Ok(Arc::new(ServiceInstanceDirectoryEntry {
             component: component.to_string(),
             instance: instance.to_string(),
@@ -523,7 +523,7 @@ impl lazy::LazyDirectory for CollectionServiceDirectory {
             TraversalPosition::Start => None,
             TraversalPosition::Name(entry) => {
                 // All generated filenames are guaranteed to have the ',' separator.
-                entry.split_once(',')
+                entry.split_once(',').or(Some((entry.as_str(), entry.as_str())))
             }
             TraversalPosition::Index(_) => panic!("TraversalPosition::Index is never used"),
         };
@@ -581,8 +581,14 @@ impl lazy::LazyDirectory for CollectionServiceDirectory {
 
                         for dirent in dirents {
                             // Encode the (component,instance) tuple so that it can be represented in a single
-                            // path segment.
-                            let entry_name = format!("{},{}", &instance, &dirent.name);
+                            // path segment. If the component and instance name are identical ignore comma separation.
+                            let entry_name = {
+                                if instance == &dirent.name {
+                                    instance.clone()
+                                } else {
+                                    format!("{},{}", &instance, &dirent.name)
+                                }
+                            };
                             sink = match sink.append(
                                 &EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
                                 &entry_name,

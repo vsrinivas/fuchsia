@@ -34,7 +34,9 @@ use {
         RelativeMonikerBase,
     },
     routing::{
-        capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
+        capability_source::{
+            AggregateCapability, CapabilitySourceInterface, ComponentCapability, InternalCapability,
+        },
         component_id_index::ComponentInstanceId,
         component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource},
@@ -301,6 +303,9 @@ macro_rules! instantiate_common_routing_tests {
             test_use_from_expose_to_framework,
             test_offer_from_non_executable,
             test_route_aggregate_protocol_fails,
+            test_route_aggregate_service,
+            test_route_aggregate_service_without_filter_fails,
+            test_route_aggregate_service_with_conflicting_filter_fails,
             test_use_directory_with_subdir_from_grandparent,
             test_use_directory_with_subdir_from_sibling,
             test_expose_directory_with_subdir,
@@ -1969,9 +1974,10 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
     /// / | \
     /// b c d
     ///
-    /// a: exposes "foo" to parent from child
-    /// b: exposes "foo" to parent from child
-    /// c: uses "foo" from parent
+    /// a: offers "foo" from both b and c to d
+    /// b: exposes "foo" to parent from self
+    /// c: exposes "foo" to parent from self
+    /// d: uses "foo" from parent
     /// routing an aggregate protocol should fail
     pub async fn test_route_aggregate_protocol_fails(&self) {
         let expected_protocol_decl =
@@ -2056,6 +2062,316 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             Err(RoutingError::UnsupportedRouteSource { source_type: _ })
         );
     }
+
+    ///   a
+    /// / | \
+    /// b c d
+    ///
+    /// a: offers "foo" from both b and c to d
+    /// b: exposes "foo" to parent from self
+    /// c: exposes "foo" to parent from self
+    /// d: uses "foo" from parent
+    /// routing an aggregate service with non-conflicting filters should succeed.
+    pub async fn test_route_aggregate_service(&self) {
+        let expected_service_decl =
+            ServiceDecl { name: "foo".into(), source_path: Some("/svc/foo".parse().unwrap()) };
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("b".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("d".to_string()),
+                        source_instance_filter: Some(vec![
+                            "instance_0".to_string(),
+                            "instance_1".to_string(),
+                        ]),
+                        renamed_instances: None,
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("c".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("d".to_string()),
+                        source_instance_filter: Some(vec![
+                            "instance_2".to_string(),
+                            "instance_3".to_string(),
+                        ]),
+                        renamed_instances: None,
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .add_lazy_child("d")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(expected_service_decl.clone())
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(expected_service_decl.clone())
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Parent,
+                        source_name: "foo".into(),
+                        target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+
+        let d_component = model.look_up_instance(&vec!["d"].into()).await.expect("b instance");
+
+        let (source, _route) = route_capability(
+            RouteRequest::UseService(UseServiceDecl {
+                source: UseSource::Parent,
+                source_name: "foo".into(),
+                target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                dependency_type: DependencyType::Strong,
+                availability: Availability::Required,
+            }),
+            &d_component,
+        )
+        .await
+        .expect("failed to route service");
+        match source {
+            RouteSource::Service(CapabilitySourceInterface::<
+                <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
+            >::Collection {
+                capability: AggregateCapability::Service(name),
+                collection_name,
+                ..
+            }) => {
+                assert_eq!(name, CapabilityName("foo".into()));
+                assert_eq!(collection_name, String::new(),);
+            }
+            _ => panic!("bad capability source"),
+        };
+    }
+
+    ///   a
+    /// / | \
+    /// b c d
+    ///
+    /// a: offers "foo" from both b and c to d
+    /// b: exposes "foo" to parent from self
+    /// c: exposes "foo" to parent from self
+    /// d: uses "foo" from parent
+    /// routing an aggregate service without specifying a source_instance_filter should fail.
+    pub async fn test_route_aggregate_service_without_filter_fails(&self) {
+        let expected_service_decl =
+            ServiceDecl { name: "foo".into(), source_path: Some("/svc/foo".parse().unwrap()) };
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("b".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("d".to_string()),
+                        source_instance_filter: None,
+                        renamed_instances: None,
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("c".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("d".to_string()),
+                        source_instance_filter: None,
+                        renamed_instances: None,
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .add_lazy_child("d")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(expected_service_decl.clone())
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(expected_service_decl.clone())
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Parent,
+                        source_name: "foo".into(),
+                        target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+
+        let d_component = model.look_up_instance(&vec!["d"].into()).await.expect("b instance");
+        assert_matches!(
+            route_capability(
+                RouteRequest::UseService(UseServiceDecl {
+                    source: UseSource::Parent,
+                    source_name: "foo".into(),
+                    target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
+                }),
+                &d_component
+            )
+            .await,
+            Err(RoutingError::UnsupportedRouteSource { source_type: _ })
+        );
+    }
+
+    ///   a
+    /// / | \
+    /// b c d
+    ///
+    /// a: offers "foo" from both b and c to d
+    /// b: exposes "foo" to parent from self
+    /// c: exposes "foo" to parent from self
+    /// d: uses "foo" from parent
+    /// routing an aggregate service with conflicting source_instance_filters should fail.
+    pub async fn test_route_aggregate_service_with_conflicting_filter_fails(&self) {
+        let expected_service_decl =
+            ServiceDecl { name: "foo".into(), source_path: Some("/svc/foo".parse().unwrap()) };
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("b".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("d".to_string()),
+                        source_instance_filter: Some(vec![
+                            "default".to_string(),
+                            "other_a".to_string(),
+                        ]),
+                        renamed_instances: None,
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::static_child("c".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: OfferTarget::static_child("d".to_string()),
+                        source_instance_filter: Some(vec![
+                            "default".to_string(),
+                            "other_b".to_string(),
+                        ]),
+                        renamed_instances: None,
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .add_lazy_child("d")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(expected_service_decl.clone())
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(expected_service_decl.clone())
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Service(UseServiceDecl {
+                        source: UseSource::Parent,
+                        source_name: "foo".into(),
+                        target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+
+        let d_component = model.look_up_instance(&vec!["d"].into()).await.expect("b instance");
+        assert_matches!(
+            route_capability(
+                RouteRequest::UseService(UseServiceDecl {
+                    source: UseSource::Parent,
+                    source_name: "foo".into(),
+                    target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                    availability: Availability::Required,
+                }),
+                &d_component
+            )
+            .await,
+            Err(RoutingError::UnsupportedRouteSource { source_type: _ })
+        );
+    }
+
     ///   a
     ///    \
     ///     b

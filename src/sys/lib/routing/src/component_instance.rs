@@ -26,7 +26,7 @@ use {
 /// A trait providing a representation of a component instance.
 #[async_trait]
 pub trait ComponentInstanceInterface: Sized + Send + Sync {
-    type TopInstance: TopInstanceInterface;
+    type TopInstance: TopInstanceInterface + Send + Sync;
     type DebugRouteMapper: DebugRouteMapper;
 
     /// Returns a new `WeakComponentInstanceInterface<Self>` pointing to `self`.

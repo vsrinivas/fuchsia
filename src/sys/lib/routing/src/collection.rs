@@ -11,12 +11,15 @@ use {
         error::RoutingError,
         router::{
             find_matching_expose, CapabilityVisitor, ErrorNotFoundInChild, Expose, ExposeVisitor,
-            RoutingStrategy, Sources,
+            Offer, OfferVisitor, RoutingStrategy, Sources,
         },
         DebugRouteMapper,
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon},
+    cm_rust::{
+        CapabilityName, ExposeDecl, ExposeDeclCommon, ExposeServiceDecl, OfferServiceDecl,
+        ServiceDecl,
+    },
     derivative::Derivative,
     from_enum::FromEnum,
     moniker::{ChildMoniker, ChildMonikerBase},
@@ -145,6 +148,80 @@ where
                 &mut self.mapper.clone(),
             )
             .await
+    }
+
+    fn clone_boxed(&self) -> Box<dyn AggregateCapabilityProvider<C>> {
+        Box::new(self.clone())
+    }
+}
+
+#[derive(Derivative)]
+#[derivative(Clone(bound = "S: Clone, M: Clone, V: Clone"))]
+pub(super) struct AggregateServiceProvider<C: ComponentInstanceInterface, U, S, M, V> {
+    pub router: RoutingStrategy<U, Offer<OfferServiceDecl>, Expose<ExposeServiceDecl>>,
+
+    /// Component that offered the aggregate service
+    pub component: WeakComponentInstanceInterface<C>,
+
+    /// List of offer decl to follow for routing each service provider used in the overall aggregation
+    pub offer_decls: Vec<OfferServiceDecl>,
+
+    pub sources: S,
+    pub visitor: V,
+    pub mapper: M,
+}
+
+#[async_trait]
+impl<C, U, S, M, V> AggregateCapabilityProvider<C> for AggregateServiceProvider<C, U, S, M, V>
+where
+    C: ComponentInstanceInterface + 'static,
+    U: Send + Sync + 'static,
+    S: Sources<CapabilityDecl = ServiceDecl> + 'static,
+    V: OfferVisitor<OfferDecl = OfferServiceDecl>
+        + ExposeVisitor<ExposeDecl = ExposeServiceDecl>
+        + CapabilityVisitor<CapabilityDecl = ServiceDecl>,
+    V: Send + Sync + Clone + 'static,
+    M: DebugRouteMapper + Send + Sync + Clone + 'static,
+{
+    async fn list_instances(&self) -> Result<Vec<String>, RoutingError> {
+        // Returns the offer source string as the instance name. e.g child instance name, collection name, "parent", "framework", etc.
+        Ok(self
+            .offer_decls
+            .iter()
+            .flat_map(|o| o.clone().source_instance_filter.unwrap_or(Vec::new()))
+            .collect())
+    }
+
+    async fn route_instance(
+        &self,
+        instance: &str,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError> {
+        for offer_decl in &self.offer_decls {
+            if offer_decl
+                .source_instance_filter
+                .as_ref()
+                .map(|allowed_instances| allowed_instances.contains(&instance.to_string()))
+                .unwrap_or(false)
+            {
+                let capability_source = self
+                    .router
+                    .route_from_offer(
+                        offer_decl.clone(),
+                        self.component.upgrade().map_err(|e| {
+                            RoutingError::unsupported_route_source(format!(
+                                "error upgrading aggregation point component {}",
+                                e
+                            ))
+                        })?,
+                        self.sources.clone(),
+                        &mut self.visitor.clone(),
+                        &mut self.mapper.clone(),
+                    )
+                    .await?;
+                return Ok(capability_source);
+            }
+        }
+        Err(RoutingError::unsupported_route_source(format!("instance '{}' not found", instance)))
     }
 
     fn clone_boxed(&self) -> Box<dyn AggregateCapabilityProvider<C>> {

@@ -27,21 +27,6 @@
         { service: "fuchsia.examples.EchoService" },
     ],
     use: [
-        { protocol: "fuchsia.sys2.EventSource" },
-        {
-            event: [
-                "discovered",
-                "started",
-            ],
-            from: "framework",
-        },
-        {
-            directory: "hub",
-            from: "framework",
-            rights: [ "r*" ],
-            path: "/hub",
-        },
-
         // Needed to create children
         {
             protocol: "fuchsia.component.Realm",
