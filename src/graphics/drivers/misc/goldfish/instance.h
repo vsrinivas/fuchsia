@@ -18,6 +18,8 @@
 
 #include <ddktl/device.h>
 
+#include "src/graphics/drivers/misc/goldfish/pipe_device.h"
+
 namespace goldfish {
 
 class Pipe;
@@ -31,7 +33,7 @@ using InstanceType =
 // to the virtual device.
 class Instance : public InstanceType {
  public:
-  explicit Instance(zx_device_t* parent);
+  explicit Instance(zx_device_t* parent, PipeDevice* pipe_device);
   ~Instance();
 
   zx_status_t Bind();
@@ -49,6 +51,7 @@ class Instance : public InstanceType {
   thrd_t client_thread_{};
   async::Loop client_loop_;
   using PipeMap = std::map<Pipe*, std::unique_ptr<Pipe>>;
+  PipeDevice* pipe_device_ = nullptr;
   PipeMap pipes_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Instance);

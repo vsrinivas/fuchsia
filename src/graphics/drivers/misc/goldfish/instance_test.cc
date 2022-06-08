@@ -16,18 +16,34 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/devices/lib/acpi/mock/mock-acpi.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "src/graphics/drivers/misc/goldfish/pipe_device.h"
 
 namespace goldfish {
 
 class FakeInstance : public Instance {
  public:
-  FakeInstance(zx_device_t* parent) : Instance(parent) {}
+  FakeInstance(zx_device_t* parent, PipeDevice* pipe_device) : Instance(parent, pipe_device) {}
 
   zx_status_t Connect(async_dispatcher_t* dispatcher,
                       fidl::ServerEnd<fuchsia_hardware_goldfish::PipeDevice> server) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(server), this);
   }
+};
+
+class FakePipeDevice : public PipeDevice {
+ public:
+  FakePipeDevice(zx_device_t* parent, acpi::Client client)
+      : PipeDevice(parent, std::move(client)) {}
+
+  zx_status_t Create(int32_t* out_id, zx::vmo* out_vmo) {
+    zx_status_t status = zx::vmo::create(16 * 1024, 0u, out_vmo);
+    (*out_id)++;
+    return status;
+  }
+
+  zx_status_t GetBti(zx::bti* out_bti) { return fake_bti_create(out_bti->reset_and_get_address()); }
 };
 
 // Test suite creating fake Instance on a mock Pipe device.
@@ -40,34 +56,17 @@ class InstanceDeviceTest : public zxtest::Test {
 
   // |zxtest::Test|
   void SetUp() override {
-    zx::bti out_bti;
-    ASSERT_OK(fake_bti_create(out_bti.reset_and_get_address()));
-    ASSERT_OK(out_bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &acpi_bti_));
+    auto acpi_result = mock_acpi_.CreateClient(loop_.dispatcher());
+    ASSERT_OK(acpi_result.status_value());
 
-    zx::vmo out_vmo;
-    ASSERT_OK(zx::vmo::create(16 * 1024, 0u, &out_vmo));
-
-    mock_pipe_.ExpectGetBti(ZX_OK, std::move(out_bti));
-    mock_pipe_.mock_open().ExpectCallWithMatcher([](int32_t) {});
-    mock_pipe_.mock_exec().ExpectCallWithMatcher([](int32_t) {});
-    mock_pipe_.mock_destroy().ExpectCallWithMatcher([](int32_t) {});
-    mock_pipe_.mock_connect_sysmem().ExpectCallWithMatcher(
-        [](const zx::channel&) { return std::make_tuple(ZX_OK); });
-    mock_pipe_.mock_register_sysmem_heap().ExpectCallWithMatcher(
-        [](uint64_t, const zx::channel&) { return std::make_tuple(ZX_OK); });
-    mock_pipe_.mock_set_event().ExpectCallWithMatcher(
-        [](int32_t, const zx::event&) { return std::make_tuple(ZX_OK); });
-    mock_pipe_.mock_create().ExpectCallWithMatcher([this]() {
-      zx::vmo out_vmo;
-      zx::vmo::create(16 * 1024, 0u, &out_vmo);
-      return std::make_tuple(ZX_OK, ++id_, std::move(out_vmo));
-    });
-
-    fake_root_->AddProtocol(ZX_PROTOCOL_GOLDFISH_PIPE, mock_pipe_.GetProto()->ops,
-                            mock_pipe_.GetProto()->ctx);
-
-    auto dut = std::make_unique<FakeInstance>(fake_root_.get());
+    pipe_device_ =
+        std::make_unique<FakePipeDevice>(fake_root_.get(), std::move(acpi_result.value()));
+    auto dut = std::make_unique<FakeInstance>(fake_root_.get(), pipe_device_.get());
     ASSERT_OK(dut->Bind());
+    // dut is now managed by the Driver Framework so we release the unique
+    // pointer. Note that pipe_device_ is not managed by the framework so we
+    // retain the unique pointer as an instance variable so that it is freed at
+    // the end of the test.
     dut_ = dut.release();
 
     zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::PipeDevice>();
@@ -84,8 +83,9 @@ class InstanceDeviceTest : public zxtest::Test {
   }
 
  protected:
-  ddk::MockGoldfishPipe mock_pipe_;
+  acpi::mock::Device mock_acpi_;
 
+  std::unique_ptr<FakePipeDevice> pipe_device_;
   FakeInstance* dut_;
   std::shared_ptr<MockDevice> fake_root_;
 
@@ -94,7 +94,6 @@ class InstanceDeviceTest : public zxtest::Test {
 
  private:
   zx::bti acpi_bti_;
-  int32_t id_ = 0;
 };
 
 TEST_F(InstanceDeviceTest, OpenPipe) {

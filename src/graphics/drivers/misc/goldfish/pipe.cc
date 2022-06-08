@@ -25,12 +25,11 @@ constexpr zx_signals_t SIGNALS = fuchsia_hardware_goldfish::wire::kSignalReadabl
 
 }  // namespace
 
-Pipe::Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher, OnBindFn on_bind,
-           OnCloseFn on_close)
+Pipe::Pipe(PipeDevice* pipe, async_dispatcher_t* dispatcher, OnBindFn on_bind, OnCloseFn on_close)
     : on_bind_(std::move(on_bind)),
       on_close_(std::move(on_close)),
       dispatcher_(dispatcher),
-      pipe_(parent) {}
+      pipe_(pipe) {}
 
 Pipe::~Pipe() {
   fbl::AutoLock lock(&lock_);
@@ -41,10 +40,10 @@ Pipe::~Pipe() {
       buffer->cmd = PIPE_CMD_CODE_CLOSE;
       buffer->status = PIPE_ERROR_INVAL;
 
-      pipe_.Exec(id_);
+      pipe_->Exec(id_);
       ZX_DEBUG_ASSERT(!buffer->status);
     }
-    pipe_.Destroy(id_);
+    pipe_->Destroy(id_);
   }
 
   if (binding_ref_) {
@@ -55,12 +54,7 @@ Pipe::~Pipe() {
 void Pipe::Init() {
   fbl::AutoLock lock(&lock_);
 
-  if (!pipe_.is_valid()) {
-    FAIL_ASYNC(ZX_ERR_BAD_STATE, "[%s] Pipe::Pipe() no pipe protocol", kTag);
-    return;
-  }
-
-  zx_status_t status = pipe_.GetBti(&bti_);
+  zx_status_t status = pipe_->GetBti(&bti_);
   if (status != ZX_OK) {
     FAIL_ASYNC(status, "[%s] Pipe::Pipe() GetBti failed", kTag);
     return;
@@ -82,12 +76,12 @@ void Pipe::Init() {
   ZX_ASSERT(status == ZX_OK);
 
   zx::vmo vmo;
-  status = pipe_.Create(&id_, &vmo);
+  status = pipe_->Create(&id_, &vmo);
   if (status != ZX_OK) {
     FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to create pipe", kTag);
     return;
   }
-  status = pipe_.SetEvent(id_, std::move(event));
+  status = pipe_->SetEvent(id_, std::move(event));
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Pipe::Pipe() failed to set event: %d", kTag, status);
     return;
@@ -104,7 +98,7 @@ void Pipe::Init() {
   buffer->cmd = PIPE_CMD_CODE_OPEN;
   buffer->status = PIPE_ERROR_INVAL;
 
-  pipe_.Open(id_);
+  pipe_->Open(id_);
   if (buffer->status) {
     FAIL_ASYNC(ZX_ERR_INTERNAL, "[%s] Pipe::Pipe() failed to open pipe", kTag);
     cmd_buffer_.release();
@@ -161,7 +155,7 @@ void Pipe::SetEvent(SetEventRequestView request, SetEventCompleter::Sync& comple
 
   fbl::AutoLock lock(&lock_);
 
-  zx_status_t status = pipe_.SetEvent(id_, std::move(request->event));
+  zx_status_t status = pipe_->SetEvent(id_, std::move(request->event));
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] SetEvent failed: %d", kTag, status);
     completer.Close(ZX_ERR_INTERNAL);
@@ -283,7 +277,7 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
   buffer->rw_params.buffers_count = read_paddr ? 2 : 1;
   buffer->rw_params.consumed_size = 0;
   buffer->rw_params.read_index = 1;  // Read buffer is always second.
-  pipe_.Exec(id_);
+  pipe_->Exec(id_);
 
   // Positive consumed size always indicate a successful transfer.
   if (buffer->rw_params.consumed_size) {
@@ -301,7 +295,7 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
   buffer->id = id_;
   buffer->cmd = wake_cmd;
   buffer->status = PIPE_ERROR_INVAL;
-  pipe_.Exec(id_);
+  pipe_->Exec(id_);
   if (buffer->status) {
     zxlogf(ERROR, "[%s] Pipe::Transfer() failed to request interrupt: %d", kTag, buffer->status);
     return ZX_ERR_INTERNAL;

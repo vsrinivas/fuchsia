@@ -19,6 +19,8 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 
+#include "src/graphics/drivers/misc/goldfish/pipe_device.h"
+
 namespace goldfish {
 
 // An instance of this class serves a Pipe connection.
@@ -27,7 +29,7 @@ class Pipe : public fidl::WireServer<fuchsia_hardware_goldfish::Pipe> {
   using OnBindFn = fit::function<void(Pipe*)>;
   using OnCloseFn = fit::function<void(Pipe*)>;
 
-  Pipe(zx_device_t* parent, async_dispatcher_t* dispatcher, OnBindFn on_bind, OnCloseFn on_close);
+  Pipe(PipeDevice* pipe, async_dispatcher_t* dispatcher, OnBindFn on_bind, OnCloseFn on_close);
   // Public for std::unique_ptr<Pipe>:
   ~Pipe();
 
@@ -79,7 +81,7 @@ class Pipe : public fidl::WireServer<fuchsia_hardware_goldfish::Pipe> {
   async_dispatcher_t* dispatcher_;
 
   fbl::Mutex lock_;
-  ddk::GoldfishPipeProtocolClient pipe_;
+  PipeDevice* pipe_ = nullptr;
   int32_t id_ TA_GUARDED(lock_) = 0;
   zx::bti bti_;
   ddk::IoBuffer cmd_buffer_;

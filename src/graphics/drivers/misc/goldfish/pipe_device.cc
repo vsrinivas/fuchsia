@@ -392,7 +392,7 @@ zx_status_t PipeChildDevice::Bind(cpp20::span<const zx_device_prop_t> props, con
 }
 
 zx_status_t PipeChildDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-  auto instance = std::make_unique<Instance>(zxdev());
+  auto instance = std::make_unique<Instance>(zxdev(), parent_);
 
   zx_status_t status = instance->Bind();
   if (status != ZX_OK) {

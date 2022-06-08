@@ -15,6 +15,7 @@
 #include <ddktl/fidl.h>
 
 #include "src/graphics/drivers/misc/goldfish/pipe.h"
+#include "src/graphics/drivers/misc/goldfish/pipe_device.h"
 
 namespace goldfish {
 namespace {
@@ -23,8 +24,10 @@ const char kTag[] = "goldfish-pipe";
 
 }  // namespace
 
-Instance::Instance(zx_device_t* parent)
-    : InstanceType(parent), client_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+Instance::Instance(zx_device_t* parent, PipeDevice* pipe_device)
+    : InstanceType(parent),
+      client_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      pipe_device_(pipe_device) {}
 
 Instance::~Instance() {
   client_loop_.Quit();
@@ -58,7 +61,7 @@ void Instance::OpenPipe(OpenPipeRequestView request, OpenPipeCompleter::Sync& co
   async::PostTask(
       client_loop_.dispatcher(), [this, pipe_request = std::move(request->pipe_request)]() mutable {
         auto pipe =
-            std::make_unique<Pipe>(parent(), client_loop_.dispatcher(), /* OnBind */ nullptr,
+            std::make_unique<Pipe>(pipe_device_, client_loop_.dispatcher(), /* OnBind */ nullptr,
                                    /* OnClose */ [this](Pipe* pipe_ptr) {
                                      // We know |pipe_ptr| is still alive because |pipe_ptr| is
                                      // still in |pipes_|.
