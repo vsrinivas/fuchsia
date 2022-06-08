@@ -8,7 +8,7 @@
 #include <lib/sys/cpp/testing/fake_launcher.h>
 
 #include <gtest/gtest.h>
-#include <test/peridot/lib/fidl/appclient/cpp/fidl.h>
+#include <test/modular/lib/fidl/appclient/cpp/fidl.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
@@ -16,7 +16,7 @@ namespace modular_testing {
 namespace {
 
 using ::sys::testing::FakeLauncher;
-using ::test::peridot::lib::fidl::appclient::Terminator;
+using ::test::modular::lib::fidl::appclient::Terminator;
 
 constexpr char kServiceName[] = "service1";
 constexpr char kTestUrl[] = "some/test/url";

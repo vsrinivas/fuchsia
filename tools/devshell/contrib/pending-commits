@@ -26,7 +26,6 @@ PETALS = [
 IGNORED_AUTHORS = [
     'skia-fuchsia-autoroll@skia-buildbots.google.com.iam.gserviceaccount.com',
     'third-party-roller',
-    'peridot-roller',
     'garnet-roller',
     'zircon-roller',
 ]

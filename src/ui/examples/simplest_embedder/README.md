@@ -10,8 +10,7 @@ and children in the Scenic view tree.
 Includes a simple implementation of
 [`fuchsia.ui.policy.Presenter`](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
 which it uses instead of connecting to `root_presenter`; the topology is
-analogous to how Peridot's `basemgr` connects the `base_shell` to
-`root_presenter`.
+analogous to how `basemgr` connects the `base_shell` to `root_presenter`.
 
 This configuration requires connecting directly to Scenic; it will not work if
 there is already a `Compositor` attached to the default display.

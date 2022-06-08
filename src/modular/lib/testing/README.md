@@ -6,5 +6,5 @@ the `TestRunner` service in its environment. This is the standard way to test
 multi-process modular applications; these functions allow a test to declare
 failure, and signal tear down of tests to the TestRunner service.
 
-See [//peridot/tests](/peridot/tests) for more details on running
+See [//src/modular/tests](/src/modular/tests) for more details on running
 tests.

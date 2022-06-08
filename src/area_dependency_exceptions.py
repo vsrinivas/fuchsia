@@ -33,13 +33,10 @@ exceptions = {
         ],
     '//src/developer/debug': ['//src/lib/process:process',],
     '//src/developer/feedback_agent': ['//src/ui/lib/escher/test',],
-    '//src/modular':
-        [
-            '//garnet/testing/benchmarking',
-            '//src/modular/bin',
-            '//peridot/lib',
-            '//peridot/public',
-        ],
+    '//src/modular': [
+        '//garnet/testing/benchmarking',
+        '//src/modular/bin',
+    ],
     '//src/stories/bin/discovermgr': ['//src/sys/component_index/fidl',],
     '//src/sys': ['//examples/components/',],
     '//src/testing/host-target-testing': ['//garnet/go/src',],

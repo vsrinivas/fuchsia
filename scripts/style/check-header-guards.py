@@ -37,9 +37,7 @@ SYSROOT_PREFIXES = [
 ]
 sysroot_prefix = re.compile('^(' + '|'.join(SYSROOT_PREFIXES) + ')_')
 
-PUBLIC_PREFIXES = [
-    'ZIRCON_SYSTEM_ULIB_.*_INCLUDE', 'GARNET_PUBLIC', 'PERIDOT_PUBLIC', 'SDK'
-]
+PUBLIC_PREFIXES = ['ZIRCON_SYSTEM_ULIB_.*_INCLUDE', 'GARNET_PUBLIC', 'SDK']
 public_prefix = re.compile('^(' + '|'.join(PUBLIC_PREFIXES) + ')_')
 
 all_header_guards = collections.defaultdict(list)

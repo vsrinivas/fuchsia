@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 // Interface(s) used by AppClient's unittest.
 
-library test.peridot.lib.fidl.appclient;
+library test.modular.lib.fidl.appclient;
 
 @discoverable
 protocol Terminator {

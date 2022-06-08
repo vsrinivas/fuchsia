@@ -42,10 +42,9 @@ int main(int argc, const char** argv) {
   // the rest of our UI to), and one which we pass to a Presenter to create
   // a ViewHolder to embed us.
   //
-  // In the Peridot layer of Fuchsia, the device_runner both launches the
-  // device shell, and connects it to the root presenter.  Here, we create
-  // two eventpair handles, one of which will be passed to the root presenter
-  // and the other to the View.
+  // The device_runner both launches the device shell, and connects it to the
+  // root presenter.  Here, we create two eventpair handles, one of which will
+  // be passed to the root presenter and the other to the View.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   // Create a startup context for ourselves and use it to connect to

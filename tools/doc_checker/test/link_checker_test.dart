@@ -104,11 +104,13 @@ void main() {
     });
 
     test('link_to_unrelated project', () async {
-      const String codelink = 'https://fuchsia.googlesource.com/peridot/';
+      const String codelink = 'https://fuchsia.googlesource.com/unrelated/';
 
       List<String> links = [codelink];
 
-      List<DocContext> docList = [DocContext(docsDir, 'peridot', null, links)];
+      List<DocContext> docList = [
+        DocContext(docsDir, 'unrelated', null, links)
+      ];
 
       bool sawError = await checker.check(docList, [], null);
       expect(sawError, isTrue);

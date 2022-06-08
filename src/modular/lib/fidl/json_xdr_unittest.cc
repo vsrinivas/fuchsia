@@ -8,12 +8,12 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <test/peridot/lib/fidl/jsonxdr/cpp/fidl.h>
+#include <test/modular/lib/fidl/jsonxdr/cpp/fidl.h>
 
 namespace modular {
 namespace {
 
-namespace json_xdr_unittest = ::test::peridot::lib::fidl::jsonxdr;
+namespace json_xdr_unittest = ::test::modular::lib::fidl::jsonxdr;
 
 struct T {
   int i;

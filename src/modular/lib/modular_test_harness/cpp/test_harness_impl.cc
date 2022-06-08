@@ -435,7 +435,7 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
   session_agents->push_back(kSessionAgentFakeInterceptionUrl);
 
   // 3. Write sessionmgr and basemgr configs into a single modular config
-  // json object, as described in //peridot/docs/modular/guide/config.md
+  // json object, as described in //docs/development/modular/config.md
   std::string basemgr_json;
   std::string sessionmgr_json;
   XdrWrite(&basemgr_json, basemgr_config, modular::XdrBasemgrConfig);

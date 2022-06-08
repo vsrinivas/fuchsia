@@ -25,7 +25,7 @@ go_fidl_benchmarks
 netstack-benchmarks
 rust_inspect_benchmarks
 
-# Needed by the peridot tests
+# Needed by the e2e tests
 catapult_converter
 
 # remote-control is a v2 component that is cached (not in base)
