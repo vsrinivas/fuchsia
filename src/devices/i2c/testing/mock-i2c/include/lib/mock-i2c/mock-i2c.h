@@ -87,7 +87,7 @@ class MockI2c : ddk::I2cProtocol<MockI2c>, public fidl::WireServer<fuchsia_hardw
 
   void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override {
     fbl::Vector<i2c_op_t> read_ops;
-    zx_status_t status;
+    zx_status_t status = ZX_OK;
 
     for (auto it = request->transactions.cbegin(); it != request->transactions.cend();) {
       if (!it->has_data_transfer()) {
@@ -113,6 +113,11 @@ class MockI2c : ddk::I2cProtocol<MockI2c>, public fidl::WireServer<fuchsia_hardw
       }
 
       CheckI2cOp(op, &read_ops, &status);
+    }
+
+    if (status != ZX_OK) {
+      completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithErr(status));
+      return;
     }
 
     fidl::Arena arena;
