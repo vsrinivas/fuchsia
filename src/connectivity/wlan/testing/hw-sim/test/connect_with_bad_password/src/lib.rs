@@ -2,8 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    fidl_fuchsia_wlan_policy as fidl_policy, ieee80211::Bssid, log::info, pin_utils::pin_mut,
-    wlan_common::bss::Protection, wlan_hw_sim::*, wlan_rsn,
+    fidl_fuchsia_wlan_policy as fidl_policy,
+    ieee80211::Bssid,
+    log::info,
+    pin_utils::pin_mut,
+    wlan_common::{
+        bss::Protection,
+        ie::rsn::cipher::{CIPHER_CCMP_128, CIPHER_TKIP},
+    },
+    wlan_hw_sim::*,
+    wlan_rsn,
 };
 
 const BSSID: &Bssid = &Bssid(*b"wpa2ok");
@@ -55,8 +63,14 @@ async fn connect_with_bad_password() {
     // password is provided. The DisconnectStatus::CredentialsFailed status should be
     // returned by policy.
     {
-        let mut authenticator =
-            Some(create_wpa2_psk_authenticator(BSSID, &AP_SSID, AUTHENTICATOR_PASSWORD));
+        let mut authenticator = Some(create_authenticator(
+            BSSID,
+            &AP_SSID,
+            AUTHENTICATOR_PASSWORD,
+            CIPHER_CCMP_128,
+            Protection::Wpa2Personal,
+            Protection::Wpa2Personal,
+        ));
         let main_future = connect_future(
             &client_controller,
             &mut client_state_update_stream,
@@ -82,8 +96,14 @@ async fn connect_with_bad_password() {
     // password is provided. The DisconnectStatus::CredentialsFailed status should be
     // returned by policy.
     {
-        let mut authenticator =
-            Some(create_deprecated_wpa1_psk_authenticator(BSSID, &AP_SSID, AUTHENTICATOR_PASSWORD));
+        let mut authenticator = Some(create_authenticator(
+            BSSID,
+            &AP_SSID,
+            AUTHENTICATOR_PASSWORD,
+            CIPHER_TKIP,
+            Protection::Wpa1,
+            Protection::Wpa1,
+        ));
         let main_future = connect_future(
             &client_controller,
             &mut client_state_update_stream,

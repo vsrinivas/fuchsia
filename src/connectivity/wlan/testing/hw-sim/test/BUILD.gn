@@ -27,6 +27,17 @@ fuchsia_component("scan-legacy-privacy-on-driver") {
   deps = [ "scan_legacy_privacy_on" ]
 }
 
+fuchsia_component("connect-to-all-modern-bss-protections") {
+  testonly = true
+  manifest = "meta/connect_to_all_modern_bss_protections.cml"
+}
+
+fuchsia_component("connect-to-all-modern-bss-protections-driver") {
+  testonly = true
+  manifest = "meta/connect_to_all_modern_bss_protections_driver.cml"
+  deps = [ "connect_to_all_modern_bss_protections" ]
+}
+
 fuchsia_component("connect-to-open-network") {
   testonly = true
   manifest = "meta/connect_to_open_network.cml"
@@ -47,28 +58,6 @@ fuchsia_component("connect-to-wpa1-network-driver") {
   testonly = true
   manifest = "meta/connect_to_wpa1_network_driver.cml"
   deps = [ "connect_to_wpa1_network" ]
-}
-
-fuchsia_component("connect-to-wpa2-network") {
-  testonly = true
-  manifest = "meta/connect_to_wpa2_network.cml"
-}
-
-fuchsia_component("connect-to-wpa2-network-driver") {
-  testonly = true
-  manifest = "meta/connect_to_wpa2_network_driver.cml"
-  deps = [ "connect_to_wpa2_network" ]
-}
-
-fuchsia_component("connect-to-wpa3-network") {
-  testonly = true
-  manifest = "meta/connect_to_wpa3_network.cml"
-}
-
-fuchsia_component("connect-to-wpa3-network-driver") {
-  testonly = true
-  manifest = "meta/connect_to_wpa3_network_driver.cml"
-  deps = [ "connect_to_wpa3_network" ]
 }
 
 fuchsia_component("connect-with-bad-password") {
@@ -247,9 +236,8 @@ shared_deps = [
 ]
 
 hw_sim_test_components_for_all_privacies = [
+  ":connect-to-all-modern-bss-protections",
   ":connect-to-open-network",
-  ":connect-to-wpa2-network",
-  ":connect-to-wpa3-network",
   ":connect-with-failed-association",
   ":connect-with-wrong-credential-type",
   ":ethernet-tx-rx",
@@ -267,9 +255,8 @@ hw_sim_test_components_for_all_privacies = [
 ]
 
 hw_sim_deps_for_all_privacies = [
+  ":connect-to-all-modern-bss-protections-driver",
   ":connect-to-open-network-driver",
-  ":connect-to-wpa2-network-driver",
-  ":connect-to-wpa3-network-driver",
   ":connect-with-failed-association-driver",
   ":connect-with-wrong-credential-type-driver",
   ":ethernet-tx-rx-driver",

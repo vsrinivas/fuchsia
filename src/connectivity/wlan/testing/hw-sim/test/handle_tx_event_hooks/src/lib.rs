@@ -10,7 +10,7 @@ use {
     fuchsia_zircon::prelude::*,
     ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::{assert_variant_at_idx, bss::Protection},
+    wlan_common::{assert_variant_at_idx, bss::Protection, ie::rsn::cipher::CIPHER_CCMP_128},
     wlan_hw_sim::*,
     wlan_rsn::{
         self,
@@ -97,7 +97,16 @@ async fn handle_tx_event_hooks() {
     let phy = helper.proxy();
 
     // Validate the connect request.
-    let mut authenticator = password.map(|p| create_wpa2_psk_authenticator(&BSSID, &AP_SSID, p));
+    let mut authenticator = password.map(|p| {
+        create_authenticator(
+            &BSSID,
+            &AP_SSID,
+            p,
+            CIPHER_CCMP_128,
+            Protection::Wpa2Personal,
+            Protection::Wpa2Personal,
+        )
+    });
     let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
     let protection = Protection::Wpa2Personal;
 
