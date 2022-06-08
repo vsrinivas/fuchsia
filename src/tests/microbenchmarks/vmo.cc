@@ -269,6 +269,44 @@ bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, b
   return true;
 }
 
+// Measure the times taken to create, write and then read some data from a VMO on a single thread.
+// This is used to measure the performance of a brand new VMO's entire lifecycle up to data read
+// completion time. This test is useful because this is essentially what users of `fuchsia.mem.Data`
+// or `fuchsia.mem.Buffer` must do on top of their default zx.channel write/read operations. It's
+// worth measuring these operations together (when they are also tested separately) because we
+// expect them to have different performance behavior together.
+//
+// The zx_vmo_write() call will cause pages to be allocated in the VMO, and closing the VMO handle
+// will free those pages.
+bool VmoCreateWriteReadCloseTest(perftest::RepeatState* state, uint32_t copy_size) {
+  state->DeclareStep("create");
+  state->DeclareStep("write");
+  state->DeclareStep("read");
+  state->DeclareStep("close");
+  state->SetBytesProcessedPerRun(copy_size);
+
+  // Use a vmo as the buffer to read from / write to.
+  zx::vmo buffer_vmo;
+  ASSERT_OK(zx::vmo::create(copy_size, 0, &buffer_vmo));
+  zx_vaddr_t buffer_addr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, buffer_vmo, 0,
+                                       copy_size, &buffer_addr));
+  memset(reinterpret_cast<void*>(buffer_addr), 0xa, copy_size);
+
+  while (state->KeepRunning()) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
+    state->NextStep();
+    ASSERT_OK(vmo.write(reinterpret_cast<void*>(buffer_addr), 0, copy_size));
+    state->NextStep();
+    ASSERT_OK(vmo.read(reinterpret_cast<void*>(buffer_addr), 0, copy_size));
+    state->NextStep();
+  }
+
+  ASSERT_OK(zx::vmar::root_self()->unmap(buffer_addr, copy_size));
+  return true;
+}
+
 template <typename Func, typename... Args>
 void RegisterVmoTest(const char* name, Func fn, Args... args) {
   for (unsigned size_in_kbytes : {128, 512, 2048}) {
@@ -335,6 +373,9 @@ void RegisterTests() {
       }
     }
   }
+
+  name = fbl::StringPrintf("Vmo/CreateWriteReadClose");
+  RegisterVmoTest(name.c_str(), VmoCreateWriteReadCloseTest);
 }
 PERFTEST_CTOR(RegisterTests)
 
