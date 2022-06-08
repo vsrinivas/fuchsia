@@ -59,7 +59,7 @@ use crate::{
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap},
-    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
+    BlanketCoreContext, BufferDispatcher, EventDispatcher, SyncCtx,
 };
 
 /// The default number of ICMP error messages to send per second.
@@ -594,7 +594,7 @@ pub trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>: IcmpContext<I> {
 }
 
 impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>, C: BlanketCoreContext> IcmpContext<I>
-    for Ctx<D, C>
+    for SyncCtx<D, C>
 {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
         IcmpContext::receive_icmp_error(&mut self.dispatcher, conn, seq_num, err);
@@ -606,7 +606,7 @@ impl<
         B: BufferMut,
         D: EventDispatcher + BufferIcmpContext<I, B>,
         C: BlanketCoreContext,
-    > BufferIcmpContext<I, B> for Ctx<D, C>
+    > BufferIcmpContext<I, B> for SyncCtx<D, C>
 {
     fn receive_icmp_echo_reply(
         &mut self,
@@ -2577,7 +2577,7 @@ fn receive_icmp_echo_reply<
 /// `send_icmpv4_echo_request` panics if `conn` is not associated with an ICMPv4
 /// connection.
 pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
     body: B,
@@ -2592,7 +2592,7 @@ pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: Blanket
 /// `send_icmpv6_echo_request` panics if `conn` is not associated with an ICMPv6
 /// connection.
 pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
     body: B,
@@ -2653,7 +2653,7 @@ pub enum IcmpSockCreationError {
 
 /// Creates a new unbound ICMPv4 socket.
 pub fn create_icmpv4_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
 ) -> IcmpUnboundId<Ipv4> {
     create_icmpv4_unbound_inner(ctx)
 }
@@ -2668,7 +2668,7 @@ fn create_icmpv4_unbound_inner<C, SC: InnerIcmpv4Context<C>>(ctx: &mut SC) -> Ic
 
 /// Creates a new unbound ICMPv6 socket.
 pub fn create_icmpv6_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
 ) -> IcmpUnboundId<Ipv6> {
     create_icmpv6_unbound_inner(ctx)
 }
@@ -2687,7 +2687,7 @@ fn create_icmpv6_unbound_inner<C, SC: InnerIcmpv6Context<C>>(ctx: &mut SC) -> Ic
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
 pub fn remove_icmpv4_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     id: IcmpUnboundId<Ipv4>,
 ) {
     remove_icmpv4_unbound_inner(ctx, id)
@@ -2710,7 +2710,7 @@ fn remove_icmpv4_unbound_inner<C, SC: InnerIcmpv4Context<C>>(
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
 pub fn remove_icmpv6_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     id: IcmpUnboundId<Ipv6>,
 ) {
     remove_icmpv6_unbound_inner(ctx, id)
@@ -2740,7 +2740,7 @@ fn remove_icmpv6_unbound_inner<C, SC: InnerIcmpv6Context<C>>(
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
 pub fn connect_icmpv4<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     id: IcmpUnboundId<Ipv4>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
@@ -2778,7 +2778,7 @@ fn connect_icmpv4_inner<C, SC: InnerIcmpv4Context<C>>(
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
 pub fn connect_icmpv6<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     id: IcmpUnboundId<Ipv6>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
@@ -2857,19 +2857,19 @@ mod tests {
         },
         testutil::{assert_empty, get_counter_val, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
         transport::udp::UdpStateBuilder,
-        StackStateBuilder,
+        Ctx, StackStateBuilder,
     };
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
         fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
             local_addr: Option<SpecifiedAddr<Self::Addr>>,
             remote_addr: SpecifiedAddr<Self::Addr>,
             icmp_id: u16,
         ) -> Result<IcmpConnId<Self>, IcmpSockCreationError>;
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
             conn: IcmpConnId<Self>,
             seq_num: u16,
             body: B,
@@ -2878,7 +2878,7 @@ mod tests {
 
     impl TestIpExt for Ipv4 {
         fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
             local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
             remote_addr: SpecifiedAddr<Ipv4Addr>,
             icmp_id: u16,
@@ -2888,7 +2888,7 @@ mod tests {
         }
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
             conn: IcmpConnId<Ipv4>,
             seq_num: u16,
             body: B,
@@ -2899,7 +2899,7 @@ mod tests {
 
     impl TestIpExt for Ipv6 {
         fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
             local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
             remote_addr: SpecifiedAddr<Ipv6Addr>,
             icmp_id: u16,
@@ -2909,7 +2909,7 @@ mod tests {
         }
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
             conn: IcmpConnId<Ipv6>,
             seq_num: u16,
             body: B,
@@ -2969,7 +2969,7 @@ mod tests {
         modify_packet_builder(&mut pb);
         let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
-        let mut ctx =
+        let Ctx { sync_ctx: mut ctx } =
             I::DUMMY_CONFIG.into_builder().build_with_modifications(modify_stack_state_builder);
 
         let device = DeviceId::new_ethernet(0);
@@ -3570,12 +3570,12 @@ mod tests {
         };
 
         let loopback_device_id =
-            crate::add_loopback_device(net.context(LOCAL_CTX_NAME), u16::MAX.into())
+            crate::add_loopback_device(net.sync_ctx(LOCAL_CTX_NAME), u16::MAX.into())
                 .expect("create the loopback interface");
-        crate::device::testutil::enable_device(net.context(LOCAL_CTX_NAME), loopback_device_id);
+        crate::device::testutil::enable_device(net.sync_ctx(LOCAL_CTX_NAME), loopback_device_id);
 
         let conn = I::new_icmp_connection(
-            net.context(LOCAL_CTX_NAME),
+            net.sync_ctx(LOCAL_CTX_NAME),
             Some(config.local_ip),
             remote_addr,
             icmp_id,
@@ -3585,30 +3585,33 @@ mod tests {
         let echo_body = vec![1, 2, 3, 4];
 
         I::send_icmp_echo_request(
-            net.context(LOCAL_CTX_NAME),
+            net.sync_ctx(LOCAL_CTX_NAME),
             conn,
             7,
             Buf::new(echo_body.clone(), ..),
         )
         .unwrap();
 
-        net.run_until_idle(crate::device::testutil::receive_frame_or_panic, crate::handle_timer);
+        net.run_until_idle(
+            crate::device::testutil::receive_frame_or_panic,
+            |Ctx { sync_ctx }, ctx, id| crate::handle_timer(sync_ctx, ctx, id),
+        );
 
         assert_eq!(
             get_counter_val(
-                net.context(ctx_name_receiving_req),
-                &format!("{}::echo_request", recv_icmp_packet_name)
-            ),
-            1
-        );
-        assert_eq!(
-            get_counter_val(
-                net.context(LOCAL_CTX_NAME),
+                net.sync_ctx(LOCAL_CTX_NAME),
                 &format!("{}::echo_reply", recv_icmp_packet_name)
             ),
             1
         );
-        let replies = net.context(LOCAL_CTX_NAME).dispatcher.take_icmp_replies(conn);
+        assert_eq!(
+            get_counter_val(
+                &net.context(ctx_name_receiving_req).sync_ctx,
+                &format!("{}::echo_request", recv_icmp_packet_name)
+            ),
+            1
+        );
+        let replies = net.sync_ctx(LOCAL_CTX_NAME).dispatcher.take_icmp_replies(conn);
         assert_matches::assert_matches!(&replies[..], [(7, body)] if *body == echo_body);
     }
 

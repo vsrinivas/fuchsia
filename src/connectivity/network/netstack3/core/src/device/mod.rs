@@ -57,7 +57,7 @@ use crate::{
         },
         IpDeviceId, IpDeviceIdContext,
     },
-    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant,
+    BlanketCoreContext, BufferDispatcher, EventDispatcher, Instant, SyncCtx,
 };
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -140,7 +140,7 @@ impl<
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
-    RecvFrameContext<(), B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>> for Ctx<D, C>
+    RecvFrameContext<(), B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>> for SyncCtx<D, C>
 {
     fn receive_frame(
         &mut self,
@@ -159,7 +159,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
-    RecvFrameContext<(), B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>> for Ctx<D, C>
+    RecvFrameContext<(), B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>> for SyncCtx<D, C>
 {
     fn receive_frame(
         &mut self,
@@ -179,7 +179,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
 
 impl<D: EventDispatcher, C: BlanketCoreContext>
     DualStateContext<IpLinkDeviceState<C::Instant, EthernetDeviceState>, C::Rng, EthernetDeviceId>
-    for Ctx<D, C>
+    for SyncCtx<D, C>
 {
     fn get_states_with(
         &self,
@@ -194,13 +194,12 @@ impl<D: EventDispatcher, C: BlanketCoreContext>
         id0: EthernetDeviceId,
         _id1: (),
     ) -> (&mut IpLinkDeviceState<C::Instant, EthernetDeviceState>, &mut C::Rng) {
-        let Ctx { state, dispatcher: _, ctx } = self;
-        (state.device.ethernet.get_mut(id0.0).unwrap(), ctx.rng_mut())
+        (self.state.device.ethernet.get_mut(id0.0).unwrap(), self.ctx.rng_mut())
     }
 }
 
 fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &Ctx<D, C>,
+    ctx: &SyncCtx<D, C>,
     device: DeviceId,
 ) -> &DualStackIpDeviceState<C::Instant> {
     match device.inner() {
@@ -212,7 +211,7 @@ fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext>(
 }
 
 fn get_ip_device_state_mut_and_rng<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
 ) -> (&mut DualStackIpDeviceState<C::Instant>, &mut C::Rng) {
     let state = match device.inner() {
@@ -226,7 +225,7 @@ fn get_ip_device_state_mut_and_rng<D: EventDispatcher, C: BlanketCoreContext>(
 }
 
 fn iter_devices<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &Ctx<D, C>,
+    ctx: &SyncCtx<D, C>,
 ) -> impl Iterator<Item = DeviceId> + '_ {
     let DeviceLayerState { ethernet, loopback } = &ctx.state.device;
 
@@ -236,7 +235,10 @@ fn iter_devices<D: EventDispatcher, C: BlanketCoreContext>(
         .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback.into()))
 }
 
-fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>, device: DeviceId) -> u32 {
+fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(
+    ctx: &SyncCtx<D, C>,
+    device: DeviceId,
+) -> u32 {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(ctx, &mut (), id),
         DeviceIdInner::Loopback => self::loopback::get_mtu(ctx),
@@ -244,7 +246,7 @@ fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>, device: D
 }
 
 fn join_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
@@ -260,7 +262,7 @@ fn join_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAdd
 }
 
 fn leave_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
@@ -275,7 +277,7 @@ fn leave_link_multicast_group<D: EventDispatcher, C: BlanketCoreContext, A: IpAd
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, T> EventContext<T> for Ctx<D, C>
+impl<D: EventDispatcher, C: BlanketCoreContext, T> EventContext<T> for SyncCtx<D, C>
 where
     D: EventContext<T>,
 {
@@ -284,7 +286,7 @@ where
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv4, ()> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv4, ()> for SyncCtx<D, C> {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv4DeviceState<Self::Instant> {
         &get_ip_device_state(self, device).ipv4
     }
@@ -331,7 +333,7 @@ fn send_ip_frame<
     S: Serializer<Buffer = B>,
     A: IpAddress,
 >(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     local_addr: SpecifiedAddr<A>,
     body: S,
@@ -345,7 +347,7 @@ fn send_ip_frame<
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv4, (), B>
-    for Ctx<D, C>
+    for SyncCtx<D, C>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -358,7 +360,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDevice
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6, ()> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6, ()> for SyncCtx<D, C> {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv6DeviceState<Self::Instant> {
         &get_ip_device_state(self, device).ipv6
     }
@@ -398,7 +400,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpDeviceContext<Ipv6, ()> for Ct
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext<()> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext<()> for SyncCtx<D, C> {
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => {
@@ -419,7 +421,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> Ipv6DeviceContext<()> for Ctx<D,
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDeviceContext<Ipv6, (), B>
-    for Ctx<D, C>
+    for SyncCtx<D, C>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -433,7 +435,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferIpDevice
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
-    FrameContext<(), B, EthernetDeviceId> for Ctx<D, C>
+    FrameContext<(), B, EthernetDeviceId> for SyncCtx<D, C>
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -485,7 +487,9 @@ impl From<EthernetTimerId<EthernetDeviceId>> for DeviceLayerTimerId {
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> DeviceIdContext<EthernetLinkDevice> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> DeviceIdContext<EthernetLinkDevice>
+    for SyncCtx<D, C>
+{
     type DeviceId = EthernetDeviceId;
 }
 
@@ -498,7 +502,7 @@ impl_timer_context!(
 
 /// Handle a timer event firing in the device layer.
 pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     id: DeviceLayerTimerId,
 ) {
     match id.0 {
@@ -679,7 +683,7 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
 ///
 /// Panics if `device` does not refer to an existing device.
 pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
 ) {
     // Uninstall all routes associated with the device.
@@ -707,7 +711,7 @@ pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Adds a new Ethernet device to the stack.
 pub fn add_ethernet_device<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     mac: UnicastAddr<Mac>,
     mtu: u32,
 ) -> DeviceId {
@@ -730,7 +734,7 @@ pub fn add_ethernet_device<D: EventDispatcher, C: BlanketCoreContext>(
 ///
 /// Only one loopback device may be installed at any point in time.
 pub fn add_loopback_device<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     mtu: u32,
 ) -> Result<DeviceId, crate::error::ExistsError> {
     ctx.state.device.add_loopback_device(mtu)
@@ -738,7 +742,7 @@ pub fn add_loopback_device<D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Receive a device layer frame from the network.
 pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     buffer: B,
 ) -> Result<(), NotSupportedError> {
@@ -752,7 +756,7 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
 pub(crate) fn set_promiscuous_mode<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     enabled: bool,
 ) -> Result<(), NotSupportedError> {
@@ -769,7 +773,7 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher, C: BlanketCoreContext>(
 /// For IPv6, this function also joins the solicited-node multicast group and
 /// begins performing Duplicate Address Detection (DAD).
 pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), ExistsError> {
@@ -793,7 +797,7 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, A: I
 ///
 /// Should only be called on user action.
 pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     addr: &SpecifiedAddr<A>,
 ) -> Result<(), NotFoundError> {
@@ -813,7 +817,7 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, A: IpAddres
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // the `context` module.
-impl<D: EventDispatcher, C: BlanketCoreContext, I: Ip> IpDeviceIdContext<I> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext, I: Ip> IpDeviceIdContext<I> for SyncCtx<D, C> {
     type DeviceId = DeviceId;
 
     fn loopback_id(&self) -> Option<DeviceId> {
@@ -829,7 +833,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext, I: Ip> IpDeviceIdContext<I> for 
 // called by a pub fn in the device mod.
 #[cfg(test)]
 pub(super) fn insert_static_arp_table_entry<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     addr: Ipv4Addr,
     mac: UnicastAddr<Mac>,
@@ -850,7 +854,7 @@ pub(super) fn insert_static_arp_table_entry<D: EventDispatcher, C: BlanketCoreCo
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
 pub(crate) fn insert_ndp_table_entry<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
@@ -865,7 +869,7 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Gets the IPv4 Configuration for a `device`.
 pub fn get_ipv4_configuration<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &Ctx<D, C>,
+    ctx: &SyncCtx<D, C>,
     device: DeviceId,
 ) -> Ipv4DeviceConfiguration {
     crate::ip::device::get_ipv4_configuration(ctx, device)
@@ -873,7 +877,7 @@ pub fn get_ipv4_configuration<D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Gets the IPv6 Configuration for a `device`.
 pub fn get_ipv6_configuration<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &Ctx<D, C>,
+    ctx: &SyncCtx<D, C>,
     device: DeviceId,
 ) -> Ipv6DeviceConfiguration {
     crate::ip::device::get_ipv6_configuration(ctx, device)
@@ -885,7 +889,7 @@ pub fn update_ipv4_configuration<
     C: BlanketCoreContext,
     F: FnOnce(&mut Ipv4DeviceConfiguration),
 >(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     update_cb: F,
 ) {
@@ -898,7 +902,7 @@ pub fn update_ipv6_configuration<
     C: BlanketCoreContext,
     F: FnOnce(&mut Ipv6DeviceConfiguration),
 >(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     update_cb: F,
 ) {
@@ -917,7 +921,7 @@ pub fn update_ipv6_configuration<
 pub struct Tentative<T>(T, bool);
 
 /// This implementation of `NdpPacketHandler` is consumed by ICMPv6.
-impl<D: EventDispatcher, C: BlanketCoreContext> NdpPacketHandler<(), DeviceId> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> NdpPacketHandler<(), DeviceId> for SyncCtx<D, C> {
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
         _ctx: &mut (),
@@ -953,14 +957,14 @@ pub(crate) mod testutil {
         IpDeviceStateIpExt<Instant>
     {
         fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext<Instant = Instant>>(
-            ctx: &Ctx<D, C>,
+            ctx: &SyncCtx<D, C>,
             device: DeviceId,
         ) -> &IpDeviceState<C::Instant, Self>;
     }
 
     impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv4 {
         fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext<Instant = Instant>>(
-            ctx: &Ctx<D, C>,
+            ctx: &SyncCtx<D, C>,
             device: DeviceId,
         ) -> &IpDeviceState<C::Instant, Ipv4> {
             crate::ip::device::get_ipv4_device_state(ctx, device)
@@ -969,7 +973,7 @@ pub(crate) mod testutil {
 
     impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv6 {
         fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext<Instant = Instant>>(
-            ctx: &Ctx<D, C>,
+            ctx: &SyncCtx<D, C>,
             device: DeviceId,
         ) -> &IpDeviceState<C::Instant, Ipv6> {
             crate::ip::device::get_ipv6_device_state(ctx, device)
@@ -982,15 +986,15 @@ pub(crate) mod testutil {
         D: BufferDispatcher<B>,
         C: BlanketCoreContext,
     >(
-        ctx: &mut Ctx<D, C>,
+        Ctx { sync_ctx }: &mut Ctx<D, C>,
         device: DeviceId,
         buffer: B,
     ) {
-        crate::device::receive_frame(ctx, device, buffer).unwrap()
+        crate::device::receive_frame(sync_ctx, device, buffer).unwrap()
     }
 
     pub fn enable_device<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut Ctx<D, C>,
+        ctx: &mut SyncCtx<D, C>,
         device: DeviceId,
     ) {
         crate::ip::device::update_ipv4_configuration(ctx, &mut (), device, |config| {
@@ -1005,15 +1009,18 @@ pub(crate) mod testutil {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::{
-        DummyCtx, DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DUMMY_CONFIG_V4,
+    use crate::{
+        testutil::{
+            DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DummySyncCtx, DUMMY_CONFIG_V4,
+        },
+        Ctx,
     };
 
     #[test]
     fn test_iter_devices() {
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
 
-        fn check(ctx: &DummyCtx, expected: &[DeviceId]) {
+        fn check(ctx: &DummySyncCtx, expected: &[DeviceId]) {
             assert_eq!(IpDeviceContext::<Ipv4, _>::iter_devices(ctx).collect::<Vec<_>>(), expected);
             assert_eq!(IpDeviceContext::<Ipv6, _>::iter_devices(ctx).collect::<Vec<_>>(), expected);
         }

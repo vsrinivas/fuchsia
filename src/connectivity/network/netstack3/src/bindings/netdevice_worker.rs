@@ -4,6 +4,7 @@
 
 use std::{
     convert::{TryFrom as _, TryInto as _},
+    ops::DerefMut as _,
     sync::Arc,
 };
 
@@ -12,6 +13,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 
 use futures::{lock::Mutex, FutureExt as _, TryStreamExt as _};
+use netstack3_core::Ctx;
 
 use crate::bindings::{
     devices, BindingId, DeviceId, InterfaceEventProducerFactory as _, Netstack, NetstackContext,
@@ -96,7 +98,6 @@ impl NetdeviceWorker {
                 log::debug!("dropping frame for port {:?}, no device mapping available", port);
                 continue;
             };
-            let mut ctx = ctx.lock().await;
 
             // TODO(https://fxbug.dev/100873): pass strongly owned buffers down
             // to the stack instead of copying it out.
@@ -104,7 +105,10 @@ impl NetdeviceWorker {
                 log::error!("failed to read from buffer {:?}", e);
                 Error::Client(e)
             })?;
-            netstack3_core::receive_frame(&mut ctx, id, packet::Buf::new(&mut buff[..], ..len))
+
+            let mut ctx = ctx.lock().await;
+            let Ctx { sync_ctx } = ctx.deref_mut();
+            netstack3_core::receive_frame(sync_ctx, id, packet::Buf::new(&mut buff[..], ..len))
                 .unwrap_or_else(|e| {
                     log::error!(
                         "failed to receive frame {:?} on port {:?} {:?}",
@@ -190,7 +194,6 @@ impl DeviceHandler {
         };
 
         let mut state = state.lock().await;
-        let ctx = &mut ns.ctx.lock().await;
         let state_entry = match state.entry(port) {
             netdevice_client::port_slab::Entry::Occupied(occupied) => {
                 log::warn!(
@@ -210,7 +213,9 @@ impl DeviceHandler {
             }
             netdevice_client::port_slab::Entry::Vacant(e) => e,
         };
-        let core_id = netstack3_core::add_ethernet_device(&mut *ctx, mac_addr, mtu);
+        let ctx = &mut ns.ctx.lock().await;
+        let Ctx { sync_ctx } = ctx.deref_mut();
+        let core_id = netstack3_core::add_ethernet_device(sync_ctx, mac_addr, mtu);
         state_entry.insert(core_id);
         let make_info = |id| {
             let name = name.unwrap_or_else(|| format!("eth{}", id));
@@ -234,7 +239,8 @@ impl DeviceHandler {
         };
 
         Ok((
-            ctx.dispatcher
+            ctx.sync_ctx
+                .dispatcher
                 .devices
                 .add_device(core_id, make_info)
                 .expect("duplicate core id in set"),

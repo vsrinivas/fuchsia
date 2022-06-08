@@ -222,12 +222,8 @@ impl<I: Instant> Default for StackState<I> {
     }
 }
 
-/// Context available during the execution of the netstack.
-///
-/// `Ctx` provides access to the state of the netstack and to an event
-/// dispatcher which can be used to emit events and schedule timers. A mutable
-/// reference to a `Ctx` is passed to every function in the netstack.
-pub struct Ctx<D: EventDispatcher, C: BlanketCoreContext> {
+/// The synchronized context.
+pub struct SyncCtx<D: EventDispatcher, C: BlanketCoreContext> {
     /// Contains the state of the stack.
     pub state: StackState<C::Instant>,
     /// The dispatcher, take a look at [`EventDispatcher`] for more details.
@@ -236,31 +232,47 @@ pub struct Ctx<D: EventDispatcher, C: BlanketCoreContext> {
     pub ctx: C,
 }
 
+/// Context available during the execution of the netstack.
+///
+/// `Ctx` provides access to the state of the netstack and to an event
+/// dispatcher which can be used to emit events and schedule timers. A mutable
+/// reference to a `Ctx` is passed to every function in the netstack.
+pub struct Ctx<D: EventDispatcher, C: BlanketCoreContext> {
+    /// The synchronized context.
+    pub sync_ctx: SyncCtx<D, C>,
+}
+
 impl<D: EventDispatcher + Default, C: BlanketCoreContext + Default> Default for Ctx<D, C>
 where
     StackState<C::Instant>: Default,
 {
     fn default() -> Ctx<D, C> {
-        Ctx { state: StackState::default(), dispatcher: D::default(), ctx: C::default() }
+        Ctx {
+            sync_ctx: SyncCtx {
+                state: StackState::default(),
+                dispatcher: D::default(),
+                ctx: C::default(),
+            },
+        }
     }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext> Ctx<D, C> {
     /// Constructs a new `Ctx`.
     pub fn new(state: StackState<C::Instant>, dispatcher: D, ctx: C) -> Ctx<D, C> {
-        Ctx { state, dispatcher, ctx }
+        Ctx { sync_ctx: SyncCtx { state, dispatcher, ctx } }
     }
 
     /// Constructs a new `Ctx` using the default `StackState`.
     pub fn with_default_state(dispatcher: D, ctx: C) -> Ctx<D, C> {
-        Ctx { state: StackState::default(), dispatcher, ctx }
+        Ctx { sync_ctx: SyncCtx { state: StackState::default(), dispatcher, ctx } }
     }
 }
 
 impl<D: EventDispatcher + Default, C: BlanketCoreContext> Ctx<D, C> {
     /// Construct a new `Ctx` using the default dispatcher.
     pub fn with_default_dispatcher(state: StackState<C::Instant>, ctx: C) -> Ctx<D, C> {
-        Ctx { state, dispatcher: D::default(), ctx }
+        Ctx { sync_ctx: SyncCtx { state, dispatcher: D::default(), ctx } }
     }
 }
 
@@ -326,7 +338,7 @@ impl_timer_context!(
 
 /// Handles a generic timer event.
 pub fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     _ctx: &mut (),
     id: TimerId,
 ) {
@@ -470,7 +482,7 @@ impl<
 
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device
 pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &'a Ctx<D, C>,
+    ctx: &'a SyncCtx<D, C>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
     let addr_v4 = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
@@ -483,7 +495,7 @@ pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Set the IP address and subnet for a device.
 pub fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
 ) -> error::Result<()> {
@@ -496,7 +508,7 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Delete an IP address on a device.
 pub fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     addr: IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>,
 ) -> error::Result<()> {
@@ -509,7 +521,7 @@ pub fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Adds a route to the forwarding table.
 pub fn add_route<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     entry: AddableEntryEither<DeviceId>,
 ) -> Result<(), AddRouteError> {
     let (subnet, device, gateway) = entry.into_subnet_device_gateway();
@@ -536,7 +548,7 @@ pub fn add_route<D: EventDispatcher, C: BlanketCoreContext>(
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
 pub fn del_route<D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     subnet: SubnetEither,
 ) -> error::Result<()> {
     map_addr_version!(
@@ -549,7 +561,7 @@ pub fn del_route<D: EventDispatcher, C: BlanketCoreContext>(
 
 /// Get all the routes.
 pub fn get_all_routes<'a, D: EventDispatcher, C: BlanketCoreContext>(
-    ctx: &'a Ctx<D, C>,
+    ctx: &'a SyncCtx<D, C>,
 ) -> impl 'a + Iterator<Item = EntryEither<DeviceId>> {
     let v4_routes = ip::iter_all_routes::<_, _, Ipv4Addr>(ctx);
     let v6_routes = ip::iter_all_routes::<_, _, Ipv6Addr>(ctx);
@@ -568,7 +580,7 @@ mod tests {
 
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
         let device =
             crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, device);

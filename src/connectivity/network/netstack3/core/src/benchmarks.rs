@@ -41,7 +41,7 @@ use crate::{
         DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    {StackStateBuilder, TimerId},
+    Ctx, StackStateBuilder, TimerId,
 };
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
@@ -155,11 +155,12 @@ impl TimerContext<TimerId> for BenchmarkCoreContext {
 // IPv4 packet frame which we expect will be parsed and forwarded without
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
-    let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build_with(
-        StackStateBuilder::default(),
-        BenchmarkEventDispatcher::default(),
-        BenchmarkCoreContext::default(),
-    );
+    let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+        .build_with(
+            StackStateBuilder::default(),
+            BenchmarkEventDispatcher::default(),
+            BenchmarkCoreContext::default(),
+        );
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut ctx,
         &mut (),

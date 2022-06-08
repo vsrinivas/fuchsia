@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::ops::DerefMut as _;
+
 use fidl::endpoints::ProtocolMarker as _;
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
@@ -9,6 +11,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use netstack3_core::Ctx;
 
 use crate::bindings::{
     devices, netdevice_worker, BindingId, InterfaceControl as _, Netstack, NetstackContext,
@@ -260,6 +263,7 @@ async fn run_interface_control<
                 log::debug!("observed interface {} online = {}", id, online);
                 let mut ctx = ctx.lock().await;
                 match ctx
+                    .sync_ctx
                     .dispatcher
                     .devices
                     .get_device_mut(id)
@@ -356,12 +360,13 @@ async fn run_interface_control<
 
     {
         let mut ctx = ctx.lock().await;
-        let info = ctx
+        let Ctx { sync_ctx } = ctx.deref_mut();
+        let info = sync_ctx
             .dispatcher
             .devices
             .remove_device(id)
             .expect("device lifetime should be tied to channel lifetime");
-        netstack3_core::remove_device(&mut *ctx, info.core_id());
+        netstack3_core::remove_device(sync_ctx, info.core_id());
     }
 }
 
@@ -371,28 +376,34 @@ async fn run_interface_control<
 /// this call.
 async fn set_interface_enabled(ctx: &NetstackContext, enabled: bool, id: BindingId) -> bool {
     let mut ctx = ctx.lock().await;
-    let (common_info, port_handler) =
-        match ctx.dispatcher.devices.get_device_mut(id).expect("device not present").info_mut() {
-            devices::DeviceSpecificInfo::Ethernet(devices::EthernetInfo {
-                common_info,
-                // NB: In theory we should also start and stop the ethernet
-                // device when we enable and disable, we'll skip that because
-                // it's work and Ethernet is going to be deleted soon.
-                client: _,
-                mac: _,
-                features: _,
-                phy_up: _,
-            })
-            | devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo { common_info }) => {
-                (common_info, None)
-            }
-            devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {
-                common_info,
-                handler,
-                mac: _,
-                phy_up: _,
-            }) => (common_info, Some(handler)),
-        };
+    let (common_info, port_handler) = match ctx
+        .sync_ctx
+        .dispatcher
+        .devices
+        .get_device_mut(id)
+        .expect("device not present")
+        .info_mut()
+    {
+        devices::DeviceSpecificInfo::Ethernet(devices::EthernetInfo {
+            common_info,
+            // NB: In theory we should also start and stop the ethernet
+            // device when we enable and disable, we'll skip that because
+            // it's work and Ethernet is going to be deleted soon.
+            client: _,
+            mac: _,
+            features: _,
+            phy_up: _,
+        })
+        | devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo { common_info }) => {
+            (common_info, None)
+        }
+        devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {
+            common_info,
+            handler,
+            mac: _,
+            phy_up: _,
+        }) => (common_info, Some(handler)),
+    };
     // Already set to expected value.
     if common_info.admin_enabled == enabled {
         return false;

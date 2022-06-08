@@ -1089,17 +1089,18 @@ mod tests {
 
     use crate::{
         ip::gmp::GmpDelayedReportTimerId,
-        testutil::{assert_empty, DummyCtx, DummyEventDispatcher, TestIpExt as _},
+        testutil::{assert_empty, DummyCtx, DummyEventDispatcher, DummySyncCtx, TestIpExt as _},
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     #[test]
     fn enable_disable_ipv6() {
-        let mut ctx: DummyCtx = Ctx::new(
+        let ctx: DummyCtx = Ctx::new(
             StackStateBuilder::default().build(),
             DummyEventDispatcher::default(),
             Default::default(),
         );
+        let Ctx { sync_ctx: mut ctx } = ctx;
         ctx.ctx.timer_ctx().assert_no_timers_installed();
         let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
         let device_id =
@@ -1119,7 +1120,7 @@ mod tests {
         // Enable the device and observe an auto-generated link-local address,
         // router solicitation and DAD for the auto-generated address.
         let test_enable_device =
-            |ctx: &mut DummyCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
+            |ctx: &mut DummySyncCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
                 update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                     config.ip_config.ip_enabled = true;
                 });
@@ -1178,7 +1179,7 @@ mod tests {
             };
         test_enable_device(&mut ctx, None);
 
-        let test_disable_device = |ctx: &mut DummyCtx| {
+        let test_disable_device = |ctx: &mut DummySyncCtx| {
             update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = false;
             });

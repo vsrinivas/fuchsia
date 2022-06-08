@@ -1455,6 +1455,7 @@ mod tests {
             receive_ipv6_packet, DummyDeviceId,
         },
         testutil::{assert_empty, DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _},
+        Ctx,
     };
 
     struct MockSlaacContext {
@@ -2511,7 +2512,7 @@ mod tests {
             const_unwrap::const_unwrap_option(NonZeroU64::new(TWO_HOURS_AS_SECS as u64)),
         );
 
-        let mut ctx = crate::testutil::DummyCtx::default();
+        let Ctx { sync_ctx: mut ctx } = crate::testutil::DummyCtx::default();
         let device_id =
             ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
@@ -2526,7 +2527,7 @@ mod tests {
             };
         });
 
-        let set_ip_enabled = |ctx: &mut crate::testutil::DummyCtx, enabled| {
+        let set_ip_enabled = |ctx: &mut crate::testutil::DummySyncCtx, enabled| {
             crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                 config.ip_config.ip_enabled = enabled;
             })

@@ -230,7 +230,7 @@ mod tests {
         device::FrameDestination,
         ip::{device::Ipv6DeviceTimerId, receive_ipv6_packet, DummyDeviceId, IPV6_DEFAULT_SUBNET},
         testutil::{DummyEventDispatcherConfig, TestIpExt as _},
-        DeviceId, TimerId, TimerIdInner,
+        Ctx, DeviceId, TimerId, TimerIdInner,
     };
 
     #[derive(Default)]
@@ -509,13 +509,14 @@ mod tests {
         } = Ipv6::DUMMY_CONFIG;
 
         let mut ctx = crate::testutil::DummyCtx::default();
+        let Ctx { sync_ctx } = &mut ctx;
         let device_id =
-            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device_id, |config| {
+            sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        crate::ip::device::update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
             config.ip_config.ip_enabled = true;
         });
 
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
 
         (ctx, device_id, Ipv6::DUMMY_CONFIG)
     }
@@ -543,7 +544,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let ctx = &mut ctx;
+        let Ctx { sync_ctx: ctx } = &mut ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
 
@@ -559,7 +560,7 @@ mod tests {
 
         let timer_id = |route| timer_id(route, device_id);
 
-        let check_event = |ctx: &mut crate::testutil::DummyCtx,
+        let check_event = |ctx: &mut crate::testutil::DummySyncCtx,
                            event: Option<Ipv6RouteDiscoveryEvent<_>>| {
             assert_eq!(
                 AsMut::<DummyEventCtx<_>>::as_mut(ctx).take().into_iter().collect::<HashSet<_>>(),
@@ -683,7 +684,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let ctx = &mut ctx;
+        let Ctx { sync_ctx: ctx } = &mut ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
 
@@ -816,7 +817,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let ctx = &mut ctx;
+        let Ctx { sync_ctx: ctx } = &mut ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
         let gateway_route =

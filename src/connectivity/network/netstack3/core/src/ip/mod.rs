@@ -74,7 +74,7 @@ use crate::{
             IpSocketContext, IpSocketHandler,
         },
     },
-    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
+    BlanketCoreContext, BufferDispatcher, EventDispatcher, Instant, StackState, SyncCtx,
 };
 
 /// Default IPv4 TTL.
@@ -611,7 +611,7 @@ impl<C, SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>> IpSocket
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4, C::Instant> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4, C::Instant> for SyncCtx<D, C> {
     fn get_ip_layer_state(&self) -> &Ipv4State<C::Instant, DeviceId> {
         &self.state.ipv4
     }
@@ -621,7 +621,7 @@ impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv4, C::Instant>
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6, C::Instant> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> IpStateContext<Ipv6, C::Instant> for SyncCtx<D, C> {
     fn get_ip_layer_state(&self) -> &Ipv6State<C::Instant, DeviceId> {
         &self.state.ipv6
     }
@@ -1014,7 +1014,7 @@ impl_timer_context!(IpLayerTimerId, PmtuTimerId<Ipv6>, IpLayerTimerId::PmtuTimeo
 
 /// Handle a timer event firing in the IP layer.
 pub(crate) fn handle_timer<D: EventDispatcher, C: BlanketCoreContext>(
-    sync_ctx: &mut Ctx<D, C>,
+    sync_ctx: &mut SyncCtx<D, C>,
     id: IpLayerTimerId,
 ) {
     match id {
@@ -1334,7 +1334,7 @@ pub(crate) fn receive_ip_packet<
     C: BlanketCoreContext,
     I: Ip,
 >(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     device: DeviceId,
     frame_dst: FrameDestination,
     buffer: B,
@@ -2123,7 +2123,7 @@ pub(crate) fn del_device_routes<
 
 /// Returns all the routes for the provided `IpAddress` type.
 pub(crate) fn iter_all_routes<D: EventDispatcher, C: BlanketCoreContext, A: IpAddress>(
-    ctx: &Ctx<D, C>,
+    ctx: &SyncCtx<D, C>,
 ) -> Iter<'_, Entry<A, DeviceId>> {
     get_state_inner::<A::Version, _>(&ctx.state).table.iter_table()
 }
@@ -2423,8 +2423,11 @@ mod tests {
         context::testutil::{DummyInstant, DummyTimerCtxExt as _},
         device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
         ip::device::set_routing_enabled,
-        testutil::*,
-        DeviceId,
+        testutil::{
+            assert_empty, get_counter_val, handle_timer, new_rng, DummyCtx,
+            DummyEventDispatcherBuilder, DummySyncCtx, TestIpExt, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
+        },
+        Ctx, DeviceId,
     };
 
     // Some helper functions
@@ -2436,7 +2439,7 @@ mod tests {
     /// frame in `net` is an ICMP packet with code set to `code`, and pointer
     /// set to `pointer`.
     fn verify_icmp_for_unrecognized_ext_hdr_option(
-        ctx: &mut DummyCtx,
+        ctx: &mut DummySyncCtx,
         code: Icmpv6ParameterProblemCode,
         pointer: u32,
         offset: usize,
@@ -2526,7 +2529,7 @@ mod tests {
     /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
     /// specialized with.
     fn process_ip_fragment<I: Ip, D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut Ctx<D, C>,
+        ctx: &mut SyncCtx<D, C>,
         device: DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
@@ -2548,7 +2551,7 @@ mod tests {
     /// of fragments for a packet. The generated packet will have a body of size
     /// 8 bytes.
     fn process_ipv4_fragment<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut Ctx<D, C>,
+        ctx: &mut SyncCtx<D, C>,
         device: DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
@@ -2575,7 +2578,7 @@ mod tests {
     /// of fragments for a packet. The generated packet will have a body of size
     /// 8 bytes.
     fn process_ipv6_fragment<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut Ctx<D, C>,
+        ctx: &mut SyncCtx<D, C>,
         device: DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
@@ -2604,7 +2607,8 @@ mod tests {
 
     #[test]
     fn test_ipv6_icmp_parameter_problem_non_must() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let device = DeviceId::new_ethernet(0);
 
         // Test parsing an IPv6 packet with invalid next header value which
@@ -2639,7 +2643,8 @@ mod tests {
 
     #[test]
     fn test_ipv6_icmp_parameter_problem_must() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let device = DeviceId::new_ethernet(0);
 
         // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
@@ -2684,7 +2689,8 @@ mod tests {
 
     #[test]
     fn test_ipv6_unrecognized_ext_hdr_option() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let device = DeviceId::new_ethernet(0);
         let mut expected_icmps = 0;
         let mut bytes = [0; 64];
@@ -2800,7 +2806,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_packet_reassembly_not_needed<I: Ip + TestIpExt>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
@@ -2816,7 +2823,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_packet_reassembly<I: Ip + TestIpExt>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
@@ -2842,7 +2850,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_packet_reassembly_with_packets_arriving_out_of_order<I: Ip + TestIpExt>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let device = DeviceId::new_ethernet(0);
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
@@ -2895,7 +2904,8 @@ mod tests {
     where
         IpLayerTimerId: From<FragmentCacheKey<I::Addr>>,
     {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
@@ -2952,7 +2962,7 @@ mod tests {
         let dummy_config = I::DUMMY_CONFIG;
         let device = DeviceId::new_ethernet(0);
         let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap()).build();
-        set_routing_enabled::<_, _, I>(&mut alice, &mut (), device, true)
+        set_routing_enabled::<_, _, I>(&mut alice.sync_ctx, &mut (), device, true)
             .expect("error setting routing enabled");
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(a, alice, b, bob);
@@ -2965,41 +2975,35 @@ mod tests {
         // fragments.
 
         // Process fragment #0
-        process_ip_fragment::<I, _, _>(&mut net.context("alice"), device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _, _>(net.sync_ctx("alice"), device, fragment_id, 0, 3);
         // Make sure the packet got sent from alice to bob
-        assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
+        assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
         // Process fragment #1
-        process_ip_fragment::<I, _, _>(&mut net.context("alice"), device, fragment_id, 1, 3);
-        assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
+        process_ip_fragment::<I, _, _>(net.sync_ctx("alice"), device, fragment_id, 1, 3);
+        assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
         // Make sure no packets got dispatched yet.
         assert_eq!(
-            get_counter_val(&mut net.context("alice"), dispatch_receive_ip_packet_name::<I>()),
+            get_counter_val(net.sync_ctx("alice"), dispatch_receive_ip_packet_name::<I>()),
             0
         );
-        assert_eq!(
-            get_counter_val(&mut net.context("bob"), dispatch_receive_ip_packet_name::<I>()),
-            0
-        );
+        assert_eq!(get_counter_val(net.sync_ctx("bob"), dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Process fragment #2
-        process_ip_fragment::<I, _, _>(&mut net.context("alice"), device, fragment_id, 2, 3);
-        assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
+        process_ip_fragment::<I, _, _>(net.sync_ctx("alice"), device, fragment_id, 2, 3);
+        assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been received by bob.
         assert_eq!(
-            get_counter_val(&mut net.context("alice"), dispatch_receive_ip_packet_name::<I>()),
+            get_counter_val(net.sync_ctx("alice"), dispatch_receive_ip_packet_name::<I>()),
             0
         );
-        assert_eq!(
-            get_counter_val(&mut net.context("bob"), dispatch_receive_ip_packet_name::<I>()),
-            1
-        );
+        assert_eq!(get_counter_val(net.sync_ctx("bob"), dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Make sure there are no more events.
-        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
+        assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
     }
 
     #[test]
@@ -3021,7 +3025,7 @@ mod tests {
             extra_mac.to_ipv6_link_local().addr().get(),
             extra_mac,
         );
-        let mut ctx = dispatcher_builder.build();
+        let Ctx { sync_ctx: mut ctx } = dispatcher_builder.build();
         let device = DeviceId::new_ethernet(0);
         set_routing_enabled::<_, _, Ipv6>(&mut ctx, &mut (), device, true)
             .expect("error setting routing enabled");
@@ -3128,7 +3132,8 @@ mod tests {
         // less than the current value.
 
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
@@ -3222,7 +3227,8 @@ mod tests {
         // is less than the min MTU.
 
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
@@ -3268,7 +3274,8 @@ mod tests {
         // Required from a node that does not implement RFC 1191.
 
         let dummy_config = Ipv4::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
@@ -3388,7 +3395,8 @@ mod tests {
     #[test]
     fn test_invalid_icmpv4_in_ipv6() {
         let ip_config = Ipv6::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(ip_config.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(ip_config.clone()).build();
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
@@ -3430,7 +3438,8 @@ mod tests {
     #[test]
     fn test_invalid_icmpv6_in_ipv4() {
         let ip_config = Ipv4::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(ip_config.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(ip_config.clone()).build();
         // First possible device id.
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
@@ -3492,7 +3501,8 @@ mod tests {
         // multicast MAC).
 
         let config = I::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(config.clone()).build();
         let device = DeviceId::new_ethernet(0);
         let multi_addr = get_multicast_addr::<I::Addr>();
         let dst_mac = Mac::from(&MulticastAddr::new(multi_addr).unwrap());
@@ -3564,7 +3574,7 @@ mod tests {
         // Detection (DAD)) -- IPv6 only.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
         let device =
             crate::add_ethernet_device(&mut ctx, config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::ip::device::update_ipv6_configuration(&mut ctx, &mut (), device, |config| {
@@ -3637,7 +3647,8 @@ mod tests {
         // Test that an inbound IPv6 packet with a non-unicast source address is
         // dropped.
         let cfg = DUMMY_CONFIG_V6;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
         let device =
             crate::add_ethernet_device(&mut ctx, cfg.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, device);
@@ -3676,7 +3687,7 @@ mod tests {
         let v4_dev = DeviceId::new_ethernet(0);
         let v6_dev = DeviceId::new_ethernet(1);
 
-        let mut ctx = builder.clone().build();
+        let Ctx { sync_ctx: mut ctx } = builder.clone().build();
 
         // Receive packet addressed to us.
         assert_eq!(
@@ -3749,7 +3760,7 @@ mod tests {
             // Construct a one-off context that has DAD enabled. The context
             // built above has DAD disabled, and so addresses start off in the
             // assigned state rather than the tentative state.
-            let mut ctx = DummyCtx::default();
+            let Ctx { sync_ctx: mut ctx } = DummyCtx::default();
             let local_mac = v6_config.local_mac;
             let device =
                 crate::add_ethernet_device(&mut ctx, local_mac, Ipv6::MINIMUM_LINK_MTU.into());

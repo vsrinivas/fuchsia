@@ -1144,7 +1144,7 @@ mod tests {
             subnet: _,
         } = Ipv6::DUMMY_CONFIG;
 
-        let mut ctx: crate::testutil::DummyCtx = Ctx::new(
+        let crate::testutil::DummyCtx { sync_ctx: mut ctx } = Ctx::new(
             StackStateBuilder::default().build(),
             DummyEventDispatcher::default(),
             Default::default(),
@@ -1167,7 +1167,7 @@ mod tests {
             ip_enabled: bool,
             gmp_enabled: bool,
         }
-        let set_config = |ctx: &mut crate::testutil::DummyCtx,
+        let set_config = |ctx: &mut crate::testutil::DummySyncCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
             crate::ip::device::update_ipv6_configuration(ctx, &mut (), device_id, |config| {
                 // TODO(https://fxbug.dev/98534): Make sure that DAD resolving
@@ -1179,7 +1179,8 @@ mod tests {
                 config.ip_config.gmp_enabled = gmp_enabled;
             });
         };
-        let check_sent_report = |ctx: &mut crate::testutil::DummyCtx, specified_source: bool| {
+        let check_sent_report = |ctx: &mut crate::testutil::DummySyncCtx,
+                                 specified_source: bool| {
             assert_matches::assert_matches!(
                 &ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {
@@ -1209,7 +1210,7 @@ mod tests {
                 }
             );
         };
-        let check_sent_done = |ctx: &mut crate::testutil::DummyCtx, specified_source: bool| {
+        let check_sent_done = |ctx: &mut crate::testutil::DummySyncCtx, specified_source: bool| {
             assert_matches::assert_matches!(
                 &ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {

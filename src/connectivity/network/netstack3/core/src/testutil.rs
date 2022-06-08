@@ -37,7 +37,7 @@ use crate::{
         AddableEntryEither, DummyDeviceId, IpLayerEvent, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, TimerId,
+    BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, SyncCtx, TimerId,
 };
 
 /// Asserts that an iterable object produces zero items.
@@ -109,6 +109,11 @@ pub(crate) mod benchmarks {
 // accesses the frame contents rather than the frame metadata will still
 // compile).
 pub(crate) type DummyCtx = Ctx<
+    DummyEventDispatcher,
+    crate::context::testutil::DummyCtx<(), TimerId, Never, (), DummyDeviceId>,
+>;
+
+pub(crate) type DummySyncCtx = SyncCtx<
     DummyEventDispatcher,
     crate::context::testutil::DummyCtx<(), TimerId, Never, (), DummyDeviceId>,
 >;
@@ -255,7 +260,7 @@ pub(crate) fn set_logger_for_test() {
 }
 
 /// Get the counter value for a `key`.
-pub(crate) fn get_counter_val(ctx: &DummyCtx, key: &str) -> usize {
+pub(crate) fn get_counter_val(ctx: &DummySyncCtx, key: &str) -> usize {
     *ctx.state.test_counters.borrow().get(key)
 }
 
@@ -513,6 +518,7 @@ impl DummyEventDispatcherBuilder {
         ctx: C,
     ) -> Ctx<D, C> {
         let mut ctx = Ctx::new(state_builder.build(), dispatcher, ctx);
+        let Ctx { sync_ctx } = &mut ctx;
 
         let DummyEventDispatcherBuilder {
             devices,
@@ -525,16 +531,16 @@ impl DummyEventDispatcherBuilder {
             .into_iter()
             .enumerate()
             .map(|(idx, (mac, ip_subnet))| {
-                let id = crate::add_ethernet_device(&mut ctx, mac, Ipv6::MINIMUM_LINK_MTU.into());
-                crate::device::testutil::enable_device(&mut ctx, id);
+                let id = crate::add_ethernet_device(sync_ctx, mac, Ipv6::MINIMUM_LINK_MTU.into());
+                crate::device::testutil::enable_device(sync_ctx, id);
                 match ip_subnet {
                     Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
                         let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                        crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
+                        crate::device::add_ip_addr_subnet(sync_ctx, id, addr_sub).unwrap();
                     }
                     Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
                         let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                        crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
+                        crate::device::add_ip_addr_subnet(sync_ctx, id, addr_sub).unwrap();
                     }
                     None => {}
                     _ => unreachable!(),
@@ -544,18 +550,18 @@ impl DummyEventDispatcherBuilder {
             .collect();
         for (idx, ip, mac) in arp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_static_arp_table_entry(&mut ctx, device, ip, mac)
+            crate::device::insert_static_arp_table_entry(sync_ctx, device, ip, mac)
                 .expect("error inserting static ARP entry");
         }
         for (idx, ip, mac) in ndp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_ndp_table_entry(&mut ctx, device, ip, mac.get())
+            crate::device::insert_ndp_table_entry(sync_ctx, device, ip, mac.get())
                 .expect("error inserting static NDP entry");
         }
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
             crate::add_route(
-                &mut ctx,
+                sync_ctx,
                 AddableEntryEither::new(subnet, Some(device), None)
                     .expect("valid forwarding table entry"),
             )
@@ -563,7 +569,7 @@ impl DummyEventDispatcherBuilder {
         }
         for (subnet, next_hop) in routes {
             crate::add_route(
-                &mut ctx,
+                sync_ctx,
                 AddableEntryEither::new(subnet, None, Some(next_hop.into()))
                     .expect("valid forwarding table entry"),
             )
@@ -601,27 +607,45 @@ pub(crate) struct DummyEventDispatcher {
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
 }
 
-impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
+impl AsMut<DummyEventCtx<DispatchedEvent>> for DummySyncCtx {
     fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
         &mut self.dispatcher.events
     }
 }
 
-impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
+impl AsRef<DummyTimerCtx<TimerId>> for DummySyncCtx {
     fn as_ref(&self) -> &DummyTimerCtx<TimerId> {
         self.ctx.timer_ctx()
     }
 }
 
-impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
+impl AsMut<DummyTimerCtx<TimerId>> for DummySyncCtx {
     fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
         self.ctx.timer_ctx_mut()
     }
 }
 
+impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
+        self.sync_ctx.as_mut()
+    }
+}
+
+impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
+    fn as_ref(&self) -> &DummyTimerCtx<TimerId> {
+        self.sync_ctx.as_ref()
+    }
+}
+
+impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
+        self.sync_ctx.as_mut()
+    }
+}
+
 impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
-        &mut self.dispatcher.frames
+        &mut self.sync_ctx.dispatcher.frames
     }
 }
 
@@ -749,6 +773,10 @@ impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyEventDispatcher {
     }
 }
 
+pub(crate) fn handle_timer(DummyCtx { sync_ctx }: &mut DummyCtx, ctx: &mut (), id: TimerId) {
+    crate::handle_timer(sync_ctx, ctx, id)
+}
+
 #[cfg(test)]
 mod tests {
     use packet::{Buf, Serializer};
@@ -766,6 +794,10 @@ mod tests {
         TimerIdInner,
     };
 
+    fn handle_timer(Ctx { sync_ctx }: &mut crate::testutil::DummyCtx, ctx: &mut (), id: TimerId) {
+        crate::handle_timer(sync_ctx, ctx, id)
+    }
+
     #[test]
     fn test_dummy_network_transmits_packets() {
         set_logger_for_test();
@@ -779,7 +811,7 @@ mod tests {
         // Alice sends Bob a ping.
 
         BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
-            net.context("alice"),
+            net.sync_ctx("alice"),
             &mut (),
             None, // device
             None, // local_ip
@@ -803,11 +835,11 @@ mod tests {
         .unwrap();
 
         // Send from Alice to Bob.
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).frames_sent, 1);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).frames_sent, 1);
         // Respond from Bob to Alice.
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).frames_sent, 1);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).frames_sent, 1);
         // Should've starved all events.
-        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
+        assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
     }
 
     #[test]
@@ -821,70 +853,70 @@ mod tests {
         );
 
         assert_eq!(
-            net.context(1)
+            net.sync_ctx(1)
                 .ctx
                 .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
-            net.context(2)
+            net.sync_ctx(2)
                 .ctx
                 .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
-            net.context(2)
+            net.sync_ctx(2)
                 .ctx
                 .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
             None
         );
         assert_eq!(
-            net.context(1)
+            net.sync_ctx(1)
                 .ctx
                 .schedule_timer(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4))),
             None
         );
         assert_eq!(
-            net.context(1)
+            net.sync_ctx(1)
                 .ctx
                 .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5))),
             None
         );
         assert_eq!(
-            net.context(2)
+            net.sync_ctx(2)
                 .ctx
                 .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6))),
             None
         );
 
         // No timers fired before.
-        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 0);
-        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 0);
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
+        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 0);
+        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 0);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 1 should have fired.
-        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
-        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 0);
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
+        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 0);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 2 should have fired.
-        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
-        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 1);
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
+        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 1);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 2 should have fired.
-        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
-        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 2);
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
+        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 2);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         // Only timer in context 1 should have fired.
-        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 2);
-        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 2);
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 2);
+        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 2);
+        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 2);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 2);
         // Both timers have fired at the same time.
-        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 3);
-        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 3);
+        assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 3);
+        assert_eq!(get_counter_val(net.sync_ctx(2), "timer::nop"), 3);
 
-        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
+        assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
         // Check that current time on contexts tick together.
-        let t1 = net.context(1).now();
-        let t2 = net.context(2).now();
+        let t1 = net.sync_ctx(1).now();
+        let t2 = net.sync_ctx(2).now();
         assert_eq!(t1, t2);
     }
 
@@ -898,31 +930,31 @@ mod tests {
             DUMMY_CONFIG_V4.swap().into_builder().build(),
         );
         assert_eq!(
-            net.context(1)
+            net.sync_ctx(1)
                 .ctx
                 .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
-            net.context(2)
+            net.sync_ctx(2)
                 .ctx
                 .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
-            net.context(2)
+            net.sync_ctx(2)
                 .ctx
                 .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
             None
         );
 
-        while !net.step(receive_frame_or_panic, crate::handle_timer).is_idle()
-            && (get_counter_val(net.context(1), "timer::nop") < 1
-                || get_counter_val(net.context(2), "timer::nop") < 1)
+        while !net.step(receive_frame_or_panic, handle_timer).is_idle()
+            && (get_counter_val(net.sync_ctx(1), "timer::nop") < 1
+                || get_counter_val(net.sync_ctx(2), "timer::nop") < 1)
         {}
         // Assert that we stopped before all times were fired, meaning we can
         // step again.
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
     }
 
     #[test]
@@ -947,7 +979,7 @@ mod tests {
 
         // Alice sends Bob a ping.
         BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
-            net.context("alice"),
+            net.sync_ctx("alice"),
             &mut (),
             None, // device
             None, // local_ip
@@ -971,19 +1003,19 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            net.context("alice")
+            net.sync_ctx("alice")
                 .ctx
                 .schedule_timer(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
-            net.context("bob")
+            net.sync_ctx("bob")
                 .ctx
                 .schedule_timer(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
-            net.context("bob")
+            net.sync_ctx("bob")
                 .ctx
                 .schedule_timer(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1))),
             None
@@ -1002,39 +1034,39 @@ mod tests {
             bob_echo_request: usize,
             alice_echo_response: usize,
         ) {
-            let alice = net.context("alice");
+            let alice = net.sync_ctx("alice");
             assert_eq!(get_counter_val(alice, "timer::nop"), alice_nop);
             assert_eq!(get_counter_val(alice, "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply"),
                 alice_echo_response
             );
 
-            let bob = net.context("bob");
+            let bob = net.sync_ctx("bob");
             assert_eq!(get_counter_val(bob, "timer::nop"), bob_nop);
             assert_eq!(get_counter_val(bob, "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_request"),
                 bob_echo_request
             );
         }
 
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         assert_full_state(&mut net, 1, 0, 0, 0);
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).frames_sent, 1);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).frames_sent, 1);
         assert_full_state(&mut net, 1, 0, 1, 0);
-        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
+        assert_eq!(net.step(receive_frame_or_panic, handle_timer).timers_fired, 1);
         assert_full_state(&mut net, 1, 1, 1, 0);
-        let step = net.step(receive_frame_or_panic, crate::handle_timer);
+        let step = net.step(receive_frame_or_panic, handle_timer);
         assert_eq!(step.frames_sent, 1);
         assert_eq!(step.timers_fired, 1);
         assert_full_state(&mut net, 1, 2, 1, 1);
 
         // Should've starved all events.
-        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
+        assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
     }
 
     #[ip_test]
     fn test_send_to_many<I: Ip + TestIpExt>() {
         #[specialize_ip_address]
         fn send_packet<A: IpAddress>(
-            ctx: &mut DummyCtx,
+            ctx: &mut DummySyncCtx,
             src_ip: SpecifiedAddr<A>,
             dst_ip: SpecifiedAddr<A>,
             device: DeviceId,
@@ -1099,22 +1131,22 @@ mod tests {
         );
 
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
 
         // Bob and Calvin should get any packet sent by Alice.
 
-        send_packet(net.context("alice"), ip_a, ip_b, device);
-        assert_eq!(net.context("alice").dispatcher.frames_sent().len(), 1);
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        send_packet(net.sync_ctx("alice"), ip_a, ip_b, device);
+        assert_eq!(net.sync_ctx("alice").dispatcher.frames_sent().len(), 1);
+        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 2);
         assert!(net
             .iter_pending_frames()
@@ -1126,15 +1158,15 @@ mod tests {
         // Only Alice should get packets sent by Bob.
 
         net.drop_pending_frames();
-        send_packet(net.context("bob"), ip_b, ip_a, device);
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_eq!(net.context("bob").dispatcher.frames_sent().len(), 1);
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        send_packet(net.sync_ctx("bob"), ip_b, ip_a, device);
+        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
+        assert_eq!(net.sync_ctx("bob").dispatcher.frames_sent().len(), 1);
+        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 1);
         assert!(net
             .iter_pending_frames()
@@ -1143,15 +1175,15 @@ mod tests {
         // No one gets packets sent by Calvin.
 
         net.drop_pending_frames();
-        send_packet(net.context("calvin"), ip_c, ip_a, device);
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_eq!(net.context("calvin").dispatcher.frames_sent().len(), 1);
+        send_packet(net.sync_ctx("calvin"), ip_c, ip_a, device);
+        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
+        assert_eq!(net.sync_ctx("calvin").dispatcher.frames_sent().len(), 1);
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.iter_pending_frames());
     }
 }

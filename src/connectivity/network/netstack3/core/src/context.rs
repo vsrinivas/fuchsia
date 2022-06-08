@@ -85,7 +85,7 @@ use core::time::Duration;
 use packet::{BufferMut, Serializer};
 use rand::{CryptoRng, RngCore};
 
-use crate::{BlanketCoreContext, Ctx, EventDispatcher, Instant, TimerId};
+use crate::{BlanketCoreContext, EventDispatcher, Instant, SyncCtx, TimerId};
 
 /// A marker trait indicating that the implementor is not the [`DummyCtx`]
 /// type found in test environments.
@@ -96,7 +96,7 @@ use crate::{BlanketCoreContext, Ctx, EventDispatcher, Instant, TimerId};
 /// [this issue]: https://github.com/rust-lang/rust/issues/97811
 pub(crate) trait NonTestCtxMarker {}
 
-impl<D: EventDispatcher, C: BlanketCoreContext> NonTestCtxMarker for Ctx<D, C> {}
+impl<D: EventDispatcher, C: BlanketCoreContext> NonTestCtxMarker for SyncCtx<D, C> {}
 
 /// A context that provides access to a monotonic clock.
 pub trait InstantContext {
@@ -117,7 +117,7 @@ pub trait InstantContext {
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher, C: BlanketCoreContext> InstantContext for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> InstantContext for SyncCtx<D, C> {
     type Instant = C::Instant;
 
     fn now(&self) -> Self::Instant {
@@ -198,7 +198,7 @@ pub trait TimerContext<Id>: InstantContext {
     fn scheduled_instant(&self, id: Id) -> Option<Self::Instant>;
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> TimerContext<TimerId> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> TimerContext<TimerId> for SyncCtx<D, C> {
     fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
@@ -286,7 +286,7 @@ impl<State, C: RngStateContext<State>> RngStateContextExt<State> for C {}
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher, C: BlanketCoreContext> RngContext for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> RngContext for SyncCtx<D, C> {
     type Rng = C::Rng;
 
     fn rng(&self) -> &C::Rng {
@@ -510,7 +510,7 @@ pub trait CounterContext {
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher, C: BlanketCoreContext> CounterContext for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> CounterContext for SyncCtx<D, C> {
     // TODO(rheacock): This is tricky because it's used in test only macro
     // code so the compiler thinks `key` is unused. Remove this when this is
     // no longer a problem.
@@ -1752,6 +1752,21 @@ pub(crate) mod testutil {
                 None => next_packet_due,
             }
             .map(|t| t.max(self.current_time))
+        }
+    }
+
+    impl<CtxId, Links> DummyNetwork<CtxId, DeviceId, crate::testutil::DummyCtx, Links>
+    where
+        CtxId: Eq + Hash + Copy + Debug,
+        Links: DummyNetworkLinks<DeviceId, DeviceId, CtxId>,
+    {
+        /// Retrieves a `DummySyncCtx` named `context`.
+        pub(crate) fn sync_ctx<K: Into<CtxId>>(
+            &mut self,
+            context: K,
+        ) -> &mut crate::testutil::DummySyncCtx {
+            let crate::testutil::DummyCtx { sync_ctx } = self.context(context);
+            sync_ctx
         }
     }
 

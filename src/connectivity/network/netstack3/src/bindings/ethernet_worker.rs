@@ -15,7 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error, info, trace};
-use netstack3_core::{receive_frame, BufferDispatcher};
+use netstack3_core::{receive_frame, BufferDispatcher, Ctx};
 use packet::serialize::Buf;
 use std::ops::DerefMut as _;
 
@@ -103,7 +103,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             // We need to call get_status even if we don't use the output, since
                             // calling it acks the message, and prevents the device from sending
                             // more status changed messages.
-                            if let Some(device) = ctx.dispatcher.as_ref().get_device(id) {
+                            if let Some(device) = ctx.sync_ctx.dispatcher.as_ref().get_device(id) {
                                 let device = assert_matches!(
                                     device.info(),
                                     DeviceSpecificInfo::Ethernet(device) => device
@@ -141,12 +141,12 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                         }
                         eth::Event::Receive(rx, _flags) => {
                             let len = rx.read(&mut buf);
-                            let mut ctx = ctx.lock().await;
+                            let mut ctx = ctx.lock().await; let Ctx { sync_ctx } = ctx.deref_mut();
 
                             if let Some(id) =
-                                AsRef::<Devices>::as_ref(&ctx.dispatcher).get_core_id(id)
+                                AsRef::<Devices>::as_ref(&sync_ctx.dispatcher).get_core_id(id)
                             {
-                                receive_frame(ctx.deref_mut(), id, Buf::new(&mut buf[..len], ..))
+                                receive_frame(sync_ctx, id, Buf::new(&mut buf[..len], ..))
                                     .unwrap_or_else(|e| error!("error receiving frame: {}", e))
                             } else {
                                 debug!("received ethernet frame on disabled device: {}", id);

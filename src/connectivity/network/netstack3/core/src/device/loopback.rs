@@ -12,7 +12,7 @@ use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 use crate::{
     device::{DeviceIdInner, FrameDestination},
-    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
+    BlanketCoreContext, BufferDispatcher, EventDispatcher, SyncCtx,
 };
 
 pub(super) struct LoopbackDeviceState {
@@ -32,7 +32,7 @@ pub(super) fn send_ip_frame<
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
-    ctx: &mut Ctx<D, C>,
+    ctx: &mut SyncCtx<D, C>,
     _local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
@@ -52,7 +52,7 @@ pub(super) fn send_ip_frame<
 }
 
 /// Gets the MTU associated with this device.
-pub(super) fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &Ctx<D, C>) -> u32 {
+pub(super) fn get_mtu<D: EventDispatcher, C: BlanketCoreContext>(ctx: &SyncCtx<D, C>) -> u32 {
     ctx.state.device.loopback.as_ref().unwrap().link.mtu
 }
 
@@ -66,14 +66,16 @@ mod tests {
         device::DeviceId,
         error::NotFoundError,
         ip::device::state::{AssignedAddress, IpDeviceState, IpDeviceStateIpExt},
-        testutil::{DummyCtx, DummyEventDispatcherBuilder, DummyEventDispatcherConfig, TestIpExt},
-        BlanketCoreContext, Ctx, EventDispatcher,
+        testutil::{
+            DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DummySyncCtx, TestIpExt,
+        },
+        BlanketCoreContext, Ctx, EventDispatcher, SyncCtx,
     };
 
     #[test]
     fn test_loopback_methods() {
         const MTU: u32 = 66;
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::default().build();
         let device =
             crate::add_loopback_device(&mut ctx, MTU).expect("error adding loopback device");
         crate::device::testutil::enable_device(&mut ctx, device);
@@ -86,9 +88,12 @@ mod tests {
             D: EventDispatcher,
             C: BlanketCoreContext,
         >(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
             device: DeviceId,
-            get_ip_state: for<'a> fn(&'a Ctx<D, C>, DeviceId) -> &'a IpDeviceState<C::Instant, I>,
+            get_ip_state: for<'a> fn(
+                &'a SyncCtx<D, C>,
+                DeviceId,
+            ) -> &'a IpDeviceState<C::Instant, I>,
         ) {
             assert_eq!(
                 &get_ip_state(ctx, device)
@@ -132,12 +137,12 @@ mod tests {
         test::<Ipv4, _, _>(
             &mut ctx,
             device,
-            crate::ip::device::get_ipv4_device_state::<(), DummyCtx>,
+            crate::ip::device::get_ipv4_device_state::<(), DummySyncCtx>,
         );
         test::<Ipv6, _, _>(
             &mut ctx,
             device,
-            crate::ip::device::get_ipv6_device_state::<(), DummyCtx>,
+            crate::ip::device::get_ipv6_device_state::<(), DummySyncCtx>,
         );
     }
 }

@@ -1040,7 +1040,7 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::{device::DeviceId, testutil::*, Ctx};
+    use crate::{device::DeviceId, testutil::*, Ctx, SyncCtx};
 
     enum AddressType {
         LocallyOwned,
@@ -1076,7 +1076,7 @@ mod tests {
 
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build();
+        let Ctx { sync_ctx: mut ctx } = DummyEventDispatcherBuilder::from_config(cfg).build();
         let loopback_device_id = crate::add_loopback_device(&mut ctx, u16::MAX.into())
             .expect("create the loopback interface");
         crate::device::testutil::enable_device(&mut ctx, loopback_device_id);
@@ -1085,7 +1085,7 @@ mod tests {
             test_case;
 
         #[ipv4]
-        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
+        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummySyncCtx| {
             let devices = crate::ip::device::iter_ipv4_devices(ctx)
                 .map(|(device, _state)| device)
                 .collect::<Vec<_>>();
@@ -1100,7 +1100,7 @@ mod tests {
         };
 
         #[ipv6]
-        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
+        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummySyncCtx| {
             let devices = crate::ip::device::iter_ipv6_devices(ctx)
                 .map(|(device, _state)| device)
                 .collect::<Vec<_>>();
@@ -1422,7 +1422,7 @@ mod tests {
 
         let mut builder = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
-        let mut ctx = builder.build();
+        let Ctx { sync_ctx: mut ctx } = builder.build();
         crate::device::add_ip_addr_subnet(
             &mut ctx,
             device_id,
@@ -1550,7 +1550,8 @@ mod tests {
         let DummyEventDispatcherConfig::<_> { local_mac, remote_mac, local_ip, remote_ip, subnet } =
             cfg;
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
+        let Ctx { sync_ctx: mut ctx } =
+            DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
 
         // Create a normal, routable socket.
         let sock = IpSocketHandler::<I, _>::new_ip_socket(
@@ -1607,7 +1608,7 @@ mod tests {
             None,
         )
         .unwrap();
-        let mut check_sent_frame = |ctx: &Ctx<DummyEventDispatcher, _>| {
+        let mut check_sent_frame = |ctx: &SyncCtx<DummyEventDispatcher, _>| {
             packet_count += 1;
             assert_eq!(ctx.dispatcher.frames_sent().len(), packet_count);
             let (dev, frame) = &ctx.dispatcher.frames_sent()[packet_count - 1];

@@ -59,7 +59,7 @@ use crate::{
         },
         AddrVec, Bound, BoundSocketMap, InsertError,
     },
-    BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
+    BlanketCoreContext, BufferDispatcher, EventDispatcher, SyncCtx,
 };
 
 /// A builder for UDP layer state.
@@ -851,13 +851,13 @@ pub trait UdpContext<I: IcmpIpExt> {
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv4> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv4> for SyncCtx<D, C> {
     fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv4>, err: Icmpv4ErrorCode) {
         UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv6> for Ctx<D, C> {
+impl<D: EventDispatcher, C: BlanketCoreContext> UdpContext<Ipv6> for SyncCtx<D, C> {
     fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv6>, err: Icmpv6ErrorCode) {
         UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
     }
@@ -917,7 +917,7 @@ pub trait BufferUdpContext<I: IpExt, B: BufferMut>: UdpContext<I> {
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpContext<Ipv4, B>
-    for Ctx<D, C>
+    for SyncCtx<D, C>
 {
     fn receive_udp_from_conn(
         &mut self,
@@ -949,7 +949,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpConte
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext> BufferUdpContext<Ipv6, B>
-    for Ctx<D, C>
+    for SyncCtx<D, C>
 {
     fn receive_udp_from_conn(
         &mut self,
@@ -997,7 +997,7 @@ impl<
 }
 
 impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext>
-    DualStateContext<UdpState<I, DeviceId>, C::Rng> for Ctx<D, C>
+    DualStateContext<UdpState<I, DeviceId>, C::Rng> for SyncCtx<D, C>
 {
     fn get_states_with(&self, _id0: (), _id1: ()) -> (&UdpState<I, DeviceId>, &C::Rng) {
         // Since `specialize_ip` doesn't support multiple trait bounds (ie, `I:
@@ -1007,7 +1007,7 @@ impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext>
         impl<I: IpExt> Ip for I {}
         #[specialize_ip]
         fn get<I: Ip, D: EventDispatcher, C: BlanketCoreContext>(
-            ctx: &Ctx<D, C>,
+            ctx: &SyncCtx<D, C>,
         ) -> (&UdpState<I, DeviceId>, &C::Rng) {
             #[ipv4]
             return (&ctx.state.transport.udpv4, ctx.ctx.rng());
@@ -1030,13 +1030,12 @@ impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext>
         impl<I: IpExt> Ip for I {}
         #[specialize_ip]
         fn get<I: Ip, D: EventDispatcher, C: BlanketCoreContext>(
-            ctx: &mut Ctx<D, C>,
+            ctx: &mut SyncCtx<D, C>,
         ) -> (&mut UdpState<I, DeviceId>, &mut C::Rng) {
-            let Ctx { state, dispatcher: _, ctx } = ctx;
             #[ipv4]
-            return (&mut state.transport.udpv4, ctx.rng_mut());
+            return (&mut ctx.state.transport.udpv4, ctx.ctx.rng_mut());
             #[ipv6]
-            return (&mut state.transport.udpv6, ctx.rng_mut());
+            return (&mut ctx.state.transport.udpv6, ctx.ctx.rng_mut());
         }
 
         get(self)
