@@ -15,6 +15,7 @@ use crate::mm::{
     syscalls::{sys_mmap, sys_mremap},
     MemoryManager, PAGE_SIZE,
 };
+use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
@@ -198,6 +199,56 @@ pub struct PlaceholderFsNodeOps;
 impl FsNodeOps for PlaceholderFsNodeOps {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         panic!("should not be called")
+    }
+}
+
+/// Creates a [`FileObject`] whose implementation panics on reads, writes, and ioctls.
+pub fn create_panicking_file() -> FileHandle {
+    let fs = FileSystem::new(TestFs);
+    FileObject::new_anonymous(
+        Box::new(PanicFileOps),
+        fs.create_node(Box::new(PlaceholderFsNodeOps), FileMode::from_bits(0o600)),
+        OpenFlags::RDWR,
+    )
+}
+
+/// The most basic implementation of [`FileSystemOps`] suitable for testing.
+pub struct TestFs;
+impl FileSystemOps for TestFs {}
+
+/// An implementation of [`FileOps`] that panics on any read, write, or ioctl operation.
+pub struct PanicFileOps;
+
+impl FileOps for PanicFileOps {
+    fileops_impl_nonseekable!();
+    fileops_impl_nonblocking!();
+
+    fn write(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        panic!("write called on TestFile")
+    }
+
+    fn read(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        panic!("read called on TestFile")
+    }
+
+    fn ioctl(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _request: u32,
+        _user_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        panic!("ioctl called on TestFile")
     }
 }
 

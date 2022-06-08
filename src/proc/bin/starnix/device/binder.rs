@@ -2109,7 +2109,47 @@ impl BinderDriver {
                         parent_offset,
                     }
                 }
-                SerializedBinderObject::FileArray { .. } => return error!(EOPNOTSUPP)?,
+                SerializedBinderObject::FileArray { num_fds, parent, parent_offset } => {
+                    // The parent buffer must come earlier in the object list and already be
+                    // copied into the receiver's address space. Otherwise we would be fixing
+                    // up memory in the sender's address space, which is marked const in the
+                    // userspace runtime.
+                    if parent >= offset_idx {
+                        return error!(EINVAL)?;
+                    }
+
+                    // Find the parent buffer payload. The file descriptor array is in here.
+                    let parent_buffer_payload =
+                        find_parent_buffer(transaction_data, sg_buffer, offsets[parent] as usize)?;
+
+                    // Bounds-check that the offset is within the buffer.
+                    if parent_offset >= parent_buffer_payload.len() {
+                        return error!(EINVAL)?;
+                    }
+
+                    // Verify alignment and size before reading the data as a [u32].
+                    let (layout, _) =
+                        zerocopy::LayoutVerified::<&mut [u8], [u32]>::new_slice_from_prefix(
+                            &mut parent_buffer_payload[parent_offset..],
+                            num_fds,
+                        )
+                        .ok_or_else(|| errno!(EINVAL))?;
+                    let fd_array = layout.into_mut_slice();
+
+                    // Dup each file descriptor and re-write the value of the new FD.
+                    for fd in fd_array {
+                        let (file, flags) =
+                            source_task.files.get_with_flags(FdNumber::from_raw(*fd as i32))?;
+                        let new_fd = target_task.files.add_with_flags(file, flags)?;
+
+                        // Close this FD if the transaction fails.
+                        transaction_state.push_fd(new_fd);
+
+                        *fd = new_fd.raw() as u32;
+                    }
+
+                    SerializedBinderObject::FileArray { num_fds, parent, parent_offset }
+                }
             };
 
             translated_object.write_to(&mut transaction_data[object_offset..])?;
@@ -2454,7 +2494,7 @@ pub fn create_binders(kernel: &Arc<Kernel>) -> Result<(), Errno> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fs::{fuchsia::SyslogFile, FdFlags};
+    use crate::fs::FdFlags;
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use assert_matches::assert_matches;
@@ -3038,7 +3078,7 @@ mod tests {
     }
 
     struct TranslateHandlesTestFixture {
-        kernel: Arc<Kernel>,
+        _kernel: Arc<Kernel>,
         driver: BinderDriver,
 
         sender_task: CurrentTask,
@@ -3061,7 +3101,7 @@ mod tests {
             mmap_shared_memory(&driver, &receiver_task, &receiver_proc);
 
             Self {
-                kernel,
+                _kernel: kernel,
                 driver,
                 sender_task,
                 sender_proc,
@@ -3653,6 +3693,168 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn transaction_translate_fd_array() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Open a file in the sender process that we won't be using. It is there to occupy a file
+        // descriptor so that the translation doesn't happen to use the same FDs for receiver and
+        // sender, potentially hiding a bug.
+        test.sender_task.files.add_with_flags(create_panicking_file(), FdFlags::empty()).unwrap();
+
+        // Open two files in the sender process. These will be sent in the transaction.
+        let files = [create_panicking_file(), create_panicking_file()];
+        let sender_fds = files
+            .iter()
+            .map(|file| {
+                test.sender_task
+                    .files
+                    .add_with_flags(file.clone(), FdFlags::CLOEXEC)
+                    .expect("add file")
+            })
+            .collect::<Vec<_>>();
+
+        // Ensure that the receiver task has no file descriptors.
+        assert!(test.receiver_task.files.get_all_fds().is_empty(), "receiver already has files");
+
+        // Allocate memory in the sender to hold all the buffers that will get submitted to the
+        // binder driver.
+        let sender_addr = map_memory(&test.sender_task, UserAddress::default(), *PAGE_SIZE);
+        let mut writer = UserMemoryWriter::new(&test.sender_task, sender_addr);
+
+        // Serialize a simple buffer. This will ensure that the FD array being translated is not at
+        // the beginning of the buffer, exercising the offset math.
+        let sender_padding_addr = writer.write(&[0; 8]);
+
+        // Serialize a C struct with an fd array.
+        #[repr(C)]
+        #[derive(AsBytes, FromBytes)]
+        struct Bar {
+            len: u32,
+            fds: [u32; 2],
+            _padding: u32,
+        }
+        let sender_bar_addr = writer.write_object(&Bar {
+            len: 2,
+            fds: [sender_fds[0].raw() as u32, sender_fds[1].raw() as u32],
+            _padding: 0,
+        });
+
+        // Mark the start of the transaction data.
+        let transaction_data_addr = writer.current_address();
+
+        // Write the buffer object representing the padding.
+        let sender_padding_buffer_addr = writer.write_object(&binder_buffer_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_PTR },
+            buffer: sender_padding_addr.ptr() as u64,
+            length: 8,
+            ..binder_buffer_object::default()
+        });
+
+        // Write the buffer object representing the C struct `Bar`.
+        let sender_buffer_addr = writer.write_object(&binder_buffer_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_PTR },
+            buffer: sender_bar_addr.ptr() as u64,
+            length: std::mem::size_of::<Bar>() as u64,
+            ..binder_buffer_object::default()
+        });
+
+        // Write the fd array object that tells the kernel where the file descriptors are in the
+        // `Bar` buffer.
+        let sender_fd_array_addr = writer.write_object(&binder_fd_array_object {
+            hdr: binder_object_header { type_: BINDER_TYPE_FDA },
+            pad: 0,
+            num_fds: sender_fds.len() as u64,
+            // The index in the offsets array of the parent buffer.
+            parent: 1,
+            // The location in the parent buffer where the FDs are, which need to be duped.
+            parent_offset: offset_of!(Bar, fds) as u64,
+        });
+
+        // Write the offsets array.
+        let offsets_addr = writer.current_address();
+        writer.write_object(&((sender_padding_buffer_addr - transaction_data_addr) as u64));
+        writer.write_object(&((sender_buffer_addr - transaction_data_addr) as u64));
+        writer.write_object(&((sender_fd_array_addr - transaction_data_addr) as u64));
+
+        let end_data_addr = writer.current_address();
+        drop(writer);
+
+        // Construct the input for the binder driver to process.
+        let input = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                target: binder_transaction_data__bindgen_ty_1 { handle: 1 },
+                data_size: (offsets_addr - transaction_data_addr) as u64,
+                offsets_size: (end_data_addr - offsets_addr) as u64,
+                data: binder_transaction_data__bindgen_ty_2 {
+                    ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1 {
+                        buffer: transaction_data_addr.ptr() as u64,
+                        offsets: offsets_addr.ptr() as u64,
+                    },
+                },
+                ..binder_transaction_data::new_zeroed()
+            },
+            buffers_size: std::mem::size_of::<Bar>() as u64 + 8,
+        };
+
+        // Perform the translation and copying.
+        let (data_buffer, _, transient_transaction_state) = test
+            .driver
+            .copy_transaction_buffers(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                &test.receiver_task,
+                &test.receiver_proc,
+                &input,
+            )
+            .expect("copy_transaction_buffers");
+
+        // Simulate a successful transaction by converting the transient state.
+        let _transaction_state: TransactionState = transient_transaction_state.into();
+
+        // Start reading from the receiver's memory, which holds the translated transaction.
+        let mut reader = UserMemoryCursor::new(
+            &test.receiver_task.mm,
+            data_buffer.address,
+            data_buffer.length as u64,
+        );
+
+        // Skip the first object, it was only there to pad the next one.
+        reader.read_object::<binder_buffer_object>().expect("read padding buffer");
+
+        // Read back the buffer object representing `Bar`.
+        let bar_buffer_object =
+            reader.read_object::<binder_buffer_object>().expect("read bar buffer object");
+        let translated_bar = test
+            .receiver_task
+            .mm
+            .read_object::<Bar>(UserRef::new(UserAddress::from(bar_buffer_object.buffer)))
+            .expect("read Bar");
+
+        // Verify that the fds have been translated.
+        let (receiver_file, receiver_fd_flags) = test
+            .receiver_task
+            .files
+            .get_with_flags(FdNumber::from_raw(translated_bar.fds[0] as i32))
+            .expect("FD not found in receiver");
+        assert!(
+            Arc::ptr_eq(&receiver_file, &files[0]),
+            "FD in receiver does not refer to the same file as sender"
+        );
+        assert_eq!(receiver_fd_flags, FdFlags::CLOEXEC);
+        let (receiver_file, receiver_fd_flags) = test
+            .receiver_task
+            .files
+            .get_with_flags(FdNumber::from_raw(translated_bar.fds[1] as i32))
+            .expect("FD not found in receiver");
+        assert!(
+            Arc::ptr_eq(&receiver_file, &files[1]),
+            "FD in receiver does not refer to the same file as sender"
+        );
+        assert_eq!(receiver_fd_flags, FdFlags::CLOEXEC);
+    }
+
+    #[fuchsia::test]
     fn transaction_translation_fails_on_invalid_handle() {
         let test = TranslateHandlesTestFixture::new();
         let mut receiver_shared_memory = test.lock_receiver_shared_memory();
@@ -3988,7 +4190,7 @@ mod tests {
             receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         // Open a file in the sender process.
-        let file = SyslogFile::new(&test.kernel);
+        let file = create_panicking_file();
         let sender_fd = test
             .sender_task
             .files
@@ -4064,11 +4266,10 @@ mod tests {
             receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         // Open a file in the sender process.
-        let file = SyslogFile::new(&test.kernel);
         let sender_fd = test
             .sender_task
             .files
-            .add_with_flags(file.clone(), FdFlags::CLOEXEC)
+            .add_with_flags(create_panicking_file(), FdFlags::CLOEXEC)
             .expect("add file");
 
         // Send the fd in a transaction.
