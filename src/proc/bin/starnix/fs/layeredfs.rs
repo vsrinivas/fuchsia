@@ -94,7 +94,7 @@ impl FileOps for LayeredFsRootNodeOps {
         struct DirentSinkWrapper<'a> {
             sink: &'a mut dyn DirentSink,
             offset: &'a mut off_t,
-            foo: off_t,
+            mappings_count: off_t,
         }
 
         impl<'a> DirentSink for DirentSinkWrapper<'a> {
@@ -105,8 +105,8 @@ impl FileOps for LayeredFsRootNodeOps {
                 entry_type: DirectoryEntryType,
                 name: &FsStr,
             ) -> Result<(), Errno> {
-                self.sink.add(inode_num, offset + self.foo, entry_type, name)?;
-                *self.offset = offset + self.foo;
+                self.sink.add(inode_num, offset + self.mappings_count, entry_type, name)?;
+                *self.offset = offset + self.mappings_count;
                 Ok(())
             }
             fn actual(&self) -> usize {
@@ -117,7 +117,7 @@ impl FileOps for LayeredFsRootNodeOps {
         let mut wrapper = DirentSinkWrapper {
             sink,
             offset: &mut current_offset,
-            foo: self.fs.mappings.len() as off_t,
+            mappings_count: self.fs.mappings.len() as off_t,
         };
 
         self.root_file.readdir(current_task, &mut wrapper)
