@@ -383,8 +383,18 @@ ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
   uint8_t* const ptr8 = reinterpret_cast<uint8_t*>(ptr);
   size_t done = 0;
   for (const auto& r : to_copy.regions) {
-    if ((r.ptr != nullptr) && (CopyToUser(ptr8 + done, r.ptr, r.len) != ZX_OK)) {
-      return ZX_ERR_INVALID_ARGS;
+    if (r.ptr != nullptr) {
+      zx_status_t copy_result = ZX_OK;
+      // Performing user copies whilst holding locks is not generally allowed, however in this case
+      // the entire purpose of lock_ is to serialize these operations and so is safe to be held for
+      // this copy.
+      //
+      // TOOD(fxb/101783): Determine if this should be changed to capture faults and resolve them
+      // outside the lock.
+      guard.CallUntracked([&] { copy_result = CopyToUser(ptr8 + done, r.ptr, r.len); });
+      if (copy_result != ZX_OK) {
+        return ZX_ERR_INVALID_ARGS;
+      }
     }
 
     done += r.len;
