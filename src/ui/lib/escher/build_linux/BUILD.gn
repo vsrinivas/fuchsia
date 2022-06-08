@@ -15,7 +15,7 @@ group("examples") {
 }
 
 # This is not called by the usual "build host tests" flow.  This is used by
-# //garnet/packages/experimental/tests_escher_linux in order to build only
+# //bundles/packages/experimental/tests_escher_linux in order to build only
 # for host, not for target.
 #
 # Do not mess with this unless that you verify that it does not break the

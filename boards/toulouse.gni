@@ -19,10 +19,10 @@ board_recovery_bootfs_labels = [
   "//src/security/policy/zxcrypt:null",
 ]
 
-board_system_image_deps = [ "//garnet/packages/prod:wlan_drivers" ]
+board_system_image_deps = [ "//bundles/packages/prod:wlan_drivers" ]
 
 board_driver_package_labels += [
-  "//garnet/packages/prod:drivers-system",
+  "//bundles/packages/prod:drivers-system",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
