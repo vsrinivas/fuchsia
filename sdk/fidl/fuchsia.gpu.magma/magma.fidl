@@ -213,7 +213,7 @@ type ResultFlags = strict bits {
     DISCONTINUITY = 1;
 };
 
-alias ObjectId = zx.koid;
+alias ObjectId = uint64;
 
 type BufferRange = struct {
     buffer_id ObjectId;
@@ -383,7 +383,7 @@ protocol Primary {
         pool_id PerfCountPoolId;
     });
 
-    /// Adds a set of offsets into buffers to the pool. |offsets[n].buffer_id| is the koid of a
+    /// Adds a set of offsets into buffers to the pool. |offsets[n].buffer_id| is the id of a
     /// buffer that was previously imported using ImportBuffer(). The same buffer may be added to
     /// multiple pools. The pool will hold on to a reference to the buffer even after ReleaseBuffer
     /// is called.  When dumped into this entry, counters will be written starting at
