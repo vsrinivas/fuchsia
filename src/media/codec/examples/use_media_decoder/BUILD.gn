@@ -91,6 +91,16 @@ test("use_h264_decoder_test") {
   deps = [ ":use_media_decoder_source_set" ]
 }
 
+test("use_h264_decoder_tiled_output_test") {
+  testonly = true
+
+  output_name = "use_h264_decoder_tiled_output_test"
+
+  sources = [ "test/use_h264_decoder_tiled_output_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
 test("use_h264_decoder_frame_num_gaps_test") {
   testonly = true
 
@@ -198,6 +208,16 @@ test("use_vp9_decoder_test") {
   output_name = "use_vp9_decoder_test"
 
   sources = [ "test/use_vp9_decoder_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
+test("use_vp9_decoder_tiled_output_test") {
+  testonly = true
+
+  output_name = "use_vp9_decoder_tiled_output_test"
+
+  sources = [ "test/use_vp9_decoder_tiled_output_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
 }

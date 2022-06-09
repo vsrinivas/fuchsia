@@ -234,6 +234,13 @@ struct UseVideoDecoderTestParams final {
   static constexpr bool kDefaultRequireSw = false;
   bool require_sw = kDefaultRequireSw;
 
+  // Should the decoder output in the Intel Y-tiling
+  // Since Y-tiling is currently only supported in NV12, setting this value to true will also
+  // constrain the output pixel format to NV12 and the colorspace to REC709. This option is really
+  // only applicable to VAAPI decoders
+  static constexpr bool kDefaultYTiling = false;
+  bool is_output_y_tiled = kDefaultYTiling;
+
   // Must be either nullptr, or point to a nullptr-terminated array.
   static constexpr char** kDefaultPerFrameGoldenSha256 = nullptr;
   const char** per_frame_golden_sha256 = nullptr;

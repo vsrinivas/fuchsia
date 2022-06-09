@@ -130,6 +130,7 @@ class CodecClient {
   void set_is_output_secure(bool is_output_secure) { is_output_secure_ = is_output_secure; }
   void set_is_input_secure(bool is_input_secure) { is_input_secure_ = is_input_secure; }
   void set_in_lax_mode(bool lax_mode) { in_lax_mode_ = lax_mode; }
+  void set_is_output_tiled(bool is_output_tiled) { is_output_tiled_ = is_output_tiled; }
 
   // On this thread, while the codec is being fed input data on
  private:
@@ -200,6 +201,7 @@ class CodecClient {
   uint32_t min_input_buffer_size_ = 0;
   uint32_t min_output_buffer_size_ = 0;
   uint32_t min_output_buffer_count_ = 0;
+  bool is_output_tiled_ = false;
   // This only temporarily holds the Codec request that was created during the
   // constructor.  If the caller asks for this more than once, the subsequent
   // requests give back a !is_valid() request.

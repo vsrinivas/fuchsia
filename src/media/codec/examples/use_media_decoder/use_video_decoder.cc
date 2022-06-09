@@ -4,6 +4,7 @@
 
 #include "use_video_decoder.h"
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -14,10 +15,13 @@
 #include <lib/media/test/codec_client.h>
 #include <lib/media/test/one_shot_event.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/time.h>
 
+#include <cstring>
 #include <optional>
 #include <thread>
 #include <vector>
@@ -28,7 +32,6 @@
 
 #include "in_stream_peeker.h"
 #include "input_copier.h"
-#include "lib/zx/time.h"
 #include "util.h"
 
 namespace {
@@ -324,6 +327,7 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
     if (IsSliceNalUnitType(nal_unit_type)) {
       kept_frame_ordinal++;
     }
+
     if (kept_frame_ordinal == params_.test_params->frame_count) {
       return false;
     }
@@ -528,6 +532,10 @@ uint64_t VideoDecoderRunner::QueueVp9Frames(uint64_t stream_lifetime_ordinal,
 
     ++frame_ordinal;
 
+    if (frame_ordinal == params_.test_params->frame_count) {
+      return false;
+    }
+
     // ~increment_input_pts_counter
     return true;
   };
@@ -612,6 +620,7 @@ void VideoDecoderRunner::Run() {
   codec_client_->set_is_output_secure(params_.is_secure_output);
   codec_client_->set_is_input_secure(params_.is_secure_input);
   codec_client_->set_in_lax_mode(params_.lax_mode);
+  codec_client_->set_is_output_tiled(params_.test_params->is_output_y_tiled);
 
   std::string mime_type;
   switch (format_) {
@@ -952,31 +961,76 @@ void VideoDecoderRunner::Run() {
             (kVerifySecureOutput || !params_.is_secure_output)) {
           i420_bytes = std::make_unique<uint8_t[]>(
               i420_stride * raw->primary_display_height_pixels + uv_stride * uv_height * 2);
+          std::memset(i420_bytes.get(), 0,
+                      i420_stride * raw->primary_display_height_pixels + uv_stride * uv_height * 2);
           switch (raw->fourcc) {
             case make_fourcc('N', 'V', '1', '2'): {
-              // Y
-              uint8_t* y_src = buffer.base() + packet.start_offset() + raw->primary_start_offset;
-              uint8_t* y_dst = i420_bytes.get();
-              for (uint32_t y_iter = 0; y_iter < raw->primary_display_height_pixels; y_iter++) {
-                memcpy(y_dst, y_src, raw->primary_display_width_pixels);
-                y_src += raw->primary_line_stride_bytes;
-                y_dst += i420_stride;
-              }
-              // UV
-              uint8_t* uv_src = buffer.base() + packet.start_offset() + raw->secondary_start_offset;
-              uint8_t* u_dst_line = y_dst;
-              uint8_t* v_dst_line = u_dst_line + uv_stride * uv_height;
-              for (uint32_t uv_iter = 0; uv_iter < uv_height; uv_iter++) {
-                uint8_t* u_dst = u_dst_line;
-                uint8_t* v_dst = v_dst_line;
-                for (uint32_t uv_line_iter = 0; uv_line_iter < uv_width; ++uv_line_iter) {
-                  *u_dst++ = uv_src[uv_line_iter * 2];
-                  *v_dst++ = uv_src[uv_line_iter * 2 + 1];
+              if (raw->image_format.pixel_format.has_format_modifier &&
+                  raw->image_format.pixel_format.format_modifier.value ==
+                      fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED) {
+                // Y
+                uint8_t* y_plane_src =
+                    buffer.base() + packet.start_offset() + raw->primary_start_offset;
+                uint8_t* y_plane_dst = i420_bytes.get();
+
+                for (uint32_t y_offset = 0u; y_offset < raw->primary_display_height_pixels;
+                     y_offset++) {
+                  for (uint32_t x_offset = 0u; x_offset < raw->primary_display_width_pixels;
+                       x_offset++) {
+                    uint32_t swizzled_offset = ConvertLinearToLegacyYTiled(
+                        y_offset, x_offset, raw->primary_line_stride_bytes);
+                    y_plane_dst[x_offset] = y_plane_src[swizzled_offset];
+                  }
+                  y_plane_dst += i420_stride;
                 }
-                uv_src += raw->primary_line_stride_bytes;
-                u_dst_line += uv_stride;
-                v_dst_line += uv_stride;
+
+                // UV
+                uint8_t* uv_src =
+                    buffer.base() + packet.start_offset() + raw->secondary_start_offset;
+                uint8_t* u_dst_line = y_plane_dst;
+                uint8_t* v_dst_line = u_dst_line + uv_stride * uv_height;
+
+                for (uint32_t uv_iter = 0; uv_iter < uv_height; uv_iter++) {
+                  uint8_t* u_dst = u_dst_line;
+                  uint8_t* v_dst = v_dst_line;
+                  for (uint32_t uv_line_iter = 0; uv_line_iter < uv_width; ++uv_line_iter) {
+                    uint32_t u_offset = ConvertLinearToLegacyYTiled(uv_iter, uv_line_iter * 2,
+                                                                    raw->primary_line_stride_bytes);
+                    uint32_t v_offset = ConvertLinearToLegacyYTiled(uv_iter, uv_line_iter * 2 + 1,
+                                                                    raw->primary_line_stride_bytes);
+                    *u_dst++ = uv_src[u_offset];
+                    *v_dst++ = uv_src[v_offset];
+                  }
+                  u_dst_line += uv_stride;
+                  v_dst_line += uv_stride;
+                }
+              } else {
+                // Y
+                uint8_t* y_src = buffer.base() + packet.start_offset() + raw->primary_start_offset;
+                uint8_t* y_dst = i420_bytes.get();
+                for (uint32_t y_iter = 0; y_iter < raw->primary_display_height_pixels; y_iter++) {
+                  memcpy(y_dst, y_src, raw->primary_display_width_pixels);
+                  y_src += raw->primary_line_stride_bytes;
+                  y_dst += i420_stride;
+                }
+                // UV
+                uint8_t* uv_src =
+                    buffer.base() + packet.start_offset() + raw->secondary_start_offset;
+                uint8_t* u_dst_line = y_dst;
+                uint8_t* v_dst_line = u_dst_line + uv_stride * uv_height;
+                for (uint32_t uv_iter = 0; uv_iter < uv_height; uv_iter++) {
+                  uint8_t* u_dst = u_dst_line;
+                  uint8_t* v_dst = v_dst_line;
+                  for (uint32_t uv_line_iter = 0; uv_line_iter < uv_width; ++uv_line_iter) {
+                    *u_dst++ = uv_src[uv_line_iter * 2];
+                    *v_dst++ = uv_src[uv_line_iter * 2 + 1];
+                  }
+                  uv_src += raw->primary_line_stride_bytes;
+                  u_dst_line += uv_stride;
+                  v_dst_line += uv_stride;
+                }
               }
+
               break;
             }
             case make_fourcc('Y', 'V', '1', '2'): {

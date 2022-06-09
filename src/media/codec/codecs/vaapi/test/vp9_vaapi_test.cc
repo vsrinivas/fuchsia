@@ -164,10 +164,13 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     // Wait for buffer initialization to complete to ensure all buffers are staged to be loaded.
     cond_.wait(lock, [&]() { return buffer_initialization_completed_; });
 
-    // Fake out the client setting buffer constraints on sysmem
+    // Set the codec output format to the linear format
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
     buffer_collection.settings.image_format_constraints =
         output_constraints.image_format_constraints.at(0);
+    buffer_collection.settings.has_image_format_constraints = true;
+    EXPECT_FALSE(
+        buffer_collection.settings.image_format_constraints.pixel_format.has_format_modifier);
     codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
     codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
   }

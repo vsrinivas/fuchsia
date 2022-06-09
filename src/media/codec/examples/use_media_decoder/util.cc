@@ -8,12 +8,100 @@
 #include <lib/media/test/one_shot_event.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 
 #include <fstream>
 #include <iostream>
 #include <memory>
 
 #include <fbl/auto_lock.h>
+
+// Branchless implementation of pdep
+inline void ProcessCoordinate(uint32_t tile_local_coordinate, uint32_t& mask_bit_idx,
+                              uint32_t axis_mask, uint32_t axis_mask_bit_idx,
+                              uint32_t& swizzled_offset) {
+  // This has up to one bit set, depending on whether corresponding bit position of axis_mask
+  // has that bit set. If 1 bit set, deposit currently-corresponding bit of mask in swizzled offset.
+  // If no bits set, save currently-corresponding bit of mask for next iteration.
+  uint32_t axis_bit = (1u << axis_mask_bit_idx) & axis_mask;
+
+  // Deposit a bit of (original) mask into swizzled offset, shifted cumulatively to the left by how
+  // many zeroes there have been in axis_mask so far (see pdep link for a diagram). Since we are
+  // guaranteed that there is no overlap between the different axis_masks we can directly add the
+  // output to the swizzle_offset.
+  uint32_t deposit_bit = axis_bit & (tile_local_coordinate << mask_bit_idx);
+  swizzled_offset += deposit_bit;
+
+  // If axis_bit has a bit set, we used up a bit position of mask and can leave that bit position
+  // behind by not incrementing the value of mask_bit_idx. If axis_bit has no bits set, we're
+  // bringing the mask_bit_idx bit of mask along for the next iteration (along with higher-order
+  // bits of mask), and by incrementing the value of mask_bit_idx, that bit will end up landing in
+  // the correct position within swizzled_offset. The below code is a branchless equivalent to the
+  // following:
+  //
+  // if (!axis_bit) mask_bit_idx += 1u;
+  mask_bit_idx += ~(axis_bit >> axis_mask_bit_idx) & 0x1u;
+}
+
+uint32_t ConvertLinearToLegacyYTiled(uint32_t y_offset, uint32_t x_offset, uint32_t pitch) {
+  static constexpr uint32_t kXMask = 0x0E0Fu;
+  static constexpr uint32_t kXBits = 7u;
+  static constexpr uint32_t kYMask = 0x01F0u;
+  static constexpr uint32_t kYBits = 5u;
+  static constexpr uint32_t kTotalBits = kXBits + kYBits;
+
+  // Ensure the masks are not malformed
+  static_assert((kXMask + kYMask) == (kXMask | kYMask), "X and/or Y mask is malformed");
+  static_assert((kXMask | kYMask) < (1 << 16), "Mask can only contain 16 bits");
+
+  // Ensure pitch is a multiple of 2^kXBits
+  ZX_ASSERT(pitch == ((pitch >> kXBits) << kXBits));
+
+  // Figure out the amount of tiles per row
+  uint32_t tiles_per_row = (pitch >> kXBits);
+
+  // First calculate the row and col (in terms of tiles) of where the address is
+  uint32_t row = (y_offset >> kYBits);
+  uint32_t col = (x_offset >> kXBits);
+
+  // Next calculate the tile-local coordinates
+  uint32_t y_coordinate = (y_offset & ((1 << kYBits) - 1));
+  uint32_t x_coordinate = (x_offset & ((1 << kXBits) - 1));
+
+  // First calculate the surface offset give the tile numbers
+  uint32_t swizzled_offset = ((row * tiles_per_row) + col) << kTotalBits;
+
+  // Would be nice if _pdep_u32 was supported but currently Fuchsia only supports x86-64. The
+  // BMI2 extension, which _pdep_u32 is a part of, is supported in x86-64-v3. Currently requiring
+  // processors to support BMI2 should exclude too many older generation architectures as outlined
+  // in https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0073_x86_64_platform_requirement.
+  // If Fuchsia ever upgrades to x86-64-v3 the below code can be upgraded to use the _pdep_u32
+  // intrinsic like so:
+  //
+  // swizzled_offset += _pdep_u32(x, kXMask);
+  // swizzled_offset += _pdep_u32(y, kYMask);
+  //
+  // For a more detailed explanation of pedp please read the following:
+  // https://www.felixcloutier.com/x86/pdep
+
+  uint32_t axis_bit_idx = 0u, x_bit_idx = 0u, y_bit_idx = 0u;
+
+  while (axis_bit_idx < kTotalBits) {
+    // Process the x and y coordinates; due to no bits shared between kXMask and kYMask, and
+    // the fact that every bit mask has a corresponding 1 in exactly one of kXMask or kYMask but not
+    // both, we know that we'll be depositing a bit from x or from y into swizzled_offset, but not
+    // from both.  Also, we know we'll be consuming a bit from (not shifting) exactly one of x or y
+    // (whichever deposited a bit into swizzled_offset).
+    ProcessCoordinate(x_coordinate, x_bit_idx, kXMask, axis_bit_idx, swizzled_offset);
+    ProcessCoordinate(y_coordinate, y_bit_idx, kYMask, axis_bit_idx, swizzled_offset);
+
+    // Increment the axis_bit_idx by one. Loop again to process the next bit index with the
+    // corresponding bit mask
+    axis_bit_idx += 1u;
+  }
+
+  return swizzled_offset;
+}
 
 void Exit(const char* format, ...) {
   // Let's not have a buffer on the stack, not because it couldn't be done

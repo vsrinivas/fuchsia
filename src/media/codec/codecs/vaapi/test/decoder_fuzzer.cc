@@ -102,6 +102,16 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
       fuchsia::media::StreamBufferPartialSettings());
   EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
+  // Set the codec output format to the linear format
+  auto output_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
+      CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
+      fuchsia::media::StreamBufferPartialSettings());
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+  buffer_collection.settings.has_image_format_constraints = true;
+  buffer_collection.settings.image_format_constraints =
+      output_constraints.image_format_constraints.at(0);
+  decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
+
   decoder_->CoreCodecStartStream();
   decoder_->CoreCodecQueueInputFormatDetails(format_details);
 }

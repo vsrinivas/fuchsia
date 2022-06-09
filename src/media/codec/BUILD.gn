@@ -32,6 +32,9 @@ group("tests") {
     "//src/media/codec/examples:use_h264_decoder_secure_output_tests",
     "//src/media/codec/examples:use_h264_decoder_stream_switching_tests",
     "//src/media/codec/examples:use_h264_decoder_tests",
+    "//src/media/codec/examples:use_h264_decoder_tests_x86",  # decode to
+                                                              # HW-specific
+                                                              # tiled format
     "//src/media/codec/examples:use_h264_sw_decoder_tests",
     "//src/media/codec/examples:use_media_decoder",
     "//src/media/codec/examples:use_vp9_decoder_24_output_frames_tests",
@@ -40,6 +43,9 @@ group("tests") {
     "//src/media/codec/examples:use_vp9_decoder_skip_first_frame_tests",
     "//src/media/codec/examples:use_vp9_decoder_stream_switching_tests",
     "//src/media/codec/examples:use_vp9_decoder_tests",
+    "//src/media/codec/examples:use_vp9_decoder_tests_x86",  # decode to
+                                                             # HW-specific tiled
+                                                             # format
     "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
     "//src/media/codec/examples:vp9_decoder_fuzzer_tests",
     "//src/media/codec/factory:codec_detect_hw_decode_test",

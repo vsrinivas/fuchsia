@@ -86,13 +86,13 @@ CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread,
     // We treat event setup as much as possible like a hidden part of creating the
     // CodecPtr.  If NewBinding() has !is_valid(), we rely on the Codec server to
     // close the Codec channel async.
-    codec_.events().OnStreamFailed = fit::bind_member(this, &CodecClient::OnStreamFailed);
-    codec_.events().OnInputConstraints = fit::bind_member(this, &CodecClient::OnInputConstraints);
-    codec_.events().OnFreeInputPacket = fit::bind_member(this, &CodecClient::OnFreeInputPacket);
-    codec_.events().OnOutputConstraints = fit::bind_member(this, &CodecClient::OnOutputConstraints);
-    codec_.events().OnOutputFormat = fit::bind_member(this, &CodecClient::OnOutputFormat);
-    codec_.events().OnOutputPacket = fit::bind_member(this, &CodecClient::OnOutputPacket);
-    codec_.events().OnOutputEndOfStream = fit::bind_member(this, &CodecClient::OnOutputEndOfStream);
+    codec_.events().OnStreamFailed = fit::bind_member<&CodecClient::OnStreamFailed>(this);
+    codec_.events().OnInputConstraints = fit::bind_member<&CodecClient::OnInputConstraints>(this);
+    codec_.events().OnFreeInputPacket = fit::bind_member<&CodecClient::OnFreeInputPacket>(this);
+    codec_.events().OnOutputConstraints = fit::bind_member<&CodecClient::OnOutputConstraints>(this);
+    codec_.events().OnOutputFormat = fit::bind_member<&CodecClient::OnOutputFormat>(this);
+    codec_.events().OnOutputPacket = fit::bind_member<&CodecClient::OnOutputPacket>(this);
+    codec_.events().OnOutputEndOfStream = fit::bind_member<&CodecClient::OnOutputEndOfStream>(this);
   });
 }
 
@@ -844,12 +844,23 @@ bool CodecClient::ConfigurePortBufferCollection(
 
   ZX_DEBUG_ASSERT(!constraints.buffer_memory_constraints.ram_domain_supported);
 
-  // Despite being a consumer of output uncompressed video frames (when decoding
-  // video and is_output), for now we intentionally don't constrain to the
-  // PixelFormatType(s) that we can consume, and instead fail later if we get
-  // something unexpected on output. That's just easier than plumbing
-  // PixelFormatType(s) to here for now.
-  ZX_DEBUG_ASSERT(constraints.image_format_constraints_count == 0);
+  if (is_output_tiled_) {
+    constraints.image_format_constraints_count = 1;
+    auto& image_format = constraints.image_format_constraints[0];
+    image_format.color_spaces_count = 1;
+    image_format.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+    image_format.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    image_format.pixel_format.has_format_modifier = true;
+    image_format.pixel_format.format_modifier.value =
+        fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+  } else {
+    // Despite being a consumer of output uncompressed video frames (when decoding
+    // video and is_output), for now we intentionally don't constrain to the
+    // PixelFormatType(s) that we can consume, and instead fail later if we get
+    // something unexpected on output. That's just easier than plumbing
+    // PixelFormatType(s) to here for now.
+    ZX_DEBUG_ASSERT(constraints.image_format_constraints_count == 0);
+  }
 
   PostToFidlThread([this, is_output, settings = std::move(settings)]() mutable {
     if (!codec_) {

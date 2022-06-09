@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_CODEC_CODECS_VAAPI_CODEC_ADAPTER_VAAPI_DECODER_H_
 #define SRC_MEDIA_CODEC_CODECS_VAAPI_CODEC_ADAPTER_VAAPI_DECODER_H_
 
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -253,6 +255,14 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     gfx::Size pic_size = media_decoder_->GetPicSize();
     gfx::Rect visible_rect = media_decoder_->GetVisibleRect();
     image_format.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+
+    bool is_output_tiled = IsOutputTiled();
+    image_format.pixel_format.has_format_modifier = is_output_tiled;
+    if (is_output_tiled) {
+      image_format.pixel_format.format_modifier.value =
+          fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled;
+    }
+
     image_format.coded_width = pic_size.width();
     image_format.coded_height = pic_size.height();
     image_format.bytes_per_row = GetOutputStride();
@@ -296,42 +306,65 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       constraints.has_buffer_memory_constraints = true;
       // TODO(fxbug.dev/94140): Add RAM domain support.
       constraints.buffer_memory_constraints.cpu_domain_supported = true;
-      constraints.image_format_constraints_count = 1;
-      fuchsia::sysmem::ImageFormatConstraints& image_constraints =
-          constraints.image_format_constraints[0];
-      image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+
+      // Two image format constraints
+      // 1) Linear format
+      // 2) Y-Tiled format
+      constraints.image_format_constraints_count = 2;
+
+      // Linear Format
+      auto& linear_constraints = constraints.image_format_constraints[0];
+      linear_constraints.pixel_format.has_format_modifier = false;
+      linear_constraints.bytes_per_row_divisor = 16;
+
+      // Y-Tiled format
+      auto& tiled_constraints = constraints.image_format_constraints[1];
+      tiled_constraints.pixel_format.has_format_modifier = true;
+      tiled_constraints.pixel_format.format_modifier.value =
+          fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+      tiled_constraints.bytes_per_row_divisor = 0;
+
+      // Common Settings
+      linear_constraints.pixel_format.type = tiled_constraints.pixel_format.type =
+          fuchsia::sysmem::PixelFormatType::NV12;
+
       // TODO(fix)
-      image_constraints.color_spaces_count = 1;
-      image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+      linear_constraints.color_spaces_count = tiled_constraints.color_spaces_count = 1;
+      linear_constraints.color_space[0].type = tiled_constraints.color_space[0].type =
+          fuchsia::sysmem::ColorSpaceType::REC709;
 
       // The non-"required_" fields indicate the decoder's ability to potentially
       // output frames at various dimensions as coded in the stream.  Aside from
       // the current stream being somewhere in these bounds, these have nothing to
       // do with the current stream in particular.
-      image_constraints.min_coded_width = 16;
-      image_constraints.max_coded_width = max_picture_width_;
-      image_constraints.min_coded_height = 16;
-      image_constraints.max_coded_height = max_picture_height_;
+      linear_constraints.min_coded_width = tiled_constraints.min_coded_width = 16;
+      linear_constraints.max_coded_width = tiled_constraints.max_coded_width = max_picture_width_;
+      linear_constraints.min_coded_height = tiled_constraints.min_coded_height = 16;
+      linear_constraints.max_coded_height = tiled_constraints.max_coded_height =
+          max_picture_height_;
+
       // This intentionally isn't the height of a 4k frame.  See
       // max_coded_width_times_coded_height.  We intentionally constrain the max
       // dimension in width or height to the width of a 4k frame.  While the HW
       // might be able to go bigger than that as long as the other dimension is
       // smaller to compensate, we don't really need to enable any larger than
       // 4k's width in either dimension, so we don't.
-      image_constraints.min_bytes_per_row = 16;
+      linear_constraints.min_bytes_per_row = tiled_constraints.min_bytes_per_row = 16;
+
       // no hard-coded max stride, at least for now
-      image_constraints.max_bytes_per_row = 0xFFFFFFFF;
-      image_constraints.max_coded_width_times_coded_height = 3840 * 2160;
-      image_constraints.layers = 1;
-      image_constraints.coded_width_divisor = 16;
-      image_constraints.coded_height_divisor = 16;
-      image_constraints.bytes_per_row_divisor = 16;
-      image_constraints.start_offset_divisor = 1;
+      linear_constraints.max_bytes_per_row = tiled_constraints.max_bytes_per_row = 0xFFFFFFFF;
+      linear_constraints.max_coded_width_times_coded_height =
+          tiled_constraints.max_coded_width_times_coded_height = 3840 * 2160;
+      linear_constraints.layers = tiled_constraints.layers = 1;
+      linear_constraints.coded_width_divisor = tiled_constraints.coded_width_divisor = 16;
+      linear_constraints.coded_height_divisor = tiled_constraints.coded_height_divisor = 16;
+      linear_constraints.start_offset_divisor = tiled_constraints.start_offset_divisor = 1;
+
       // Odd display dimensions are permitted, but these don't imply odd YV12
       // dimensions - those are constrainted by coded_width_divisor and
       // coded_height_divisor which are both 16.
-      image_constraints.display_width_divisor = 1;
-      image_constraints.display_height_divisor = 1;
+      linear_constraints.display_width_divisor = tiled_constraints.display_width_divisor = 1;
+      linear_constraints.display_height_divisor = tiled_constraints.display_height_divisor = 1;
 
       // The decoder is producing frames and the decoder has no choice but to
       // produce frames at their coded size.  The decoder wants to potentially be
@@ -345,12 +378,18 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // here (via a-priori knowledge of the potential stream dimensions), an
       // initiator is free to do so.
       gfx::Size pic_size = media_decoder_->GetPicSize();
-      image_constraints.required_min_coded_width = pic_size.width();
-      image_constraints.required_max_coded_width = pic_size.width();
-      image_constraints.required_min_coded_height = pic_size.height();
-      image_constraints.required_max_coded_height = pic_size.height();
+      linear_constraints.required_min_coded_width = tiled_constraints.required_min_coded_width =
+          pic_size.width();
+      linear_constraints.required_max_coded_width = tiled_constraints.required_max_coded_width =
+          pic_size.width();
+      linear_constraints.required_min_coded_height = tiled_constraints.required_min_coded_height =
+          pic_size.height();
+      linear_constraints.required_max_coded_height = tiled_constraints.required_max_coded_height =
+          pic_size.height();
+
       return constraints;
     }
+
     return fuchsia::sysmem::BufferCollectionConstraints{};
   }
 
@@ -422,6 +461,17 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     }
   }
 
+  bool IsOutputTiled() const {
+    ZX_ASSERT(buffer_settings_[kOutputPort]);
+    ZX_ASSERT(buffer_settings_[kOutputPort]->has_image_format_constraints);
+
+    auto& format_constraints = buffer_settings_[kOutputPort]->image_format_constraints;
+
+    return (format_constraints.pixel_format.has_format_modifier) &&
+           (format_constraints.pixel_format.format_modifier.value !=
+            fuchsia_sysmem::wire::kFormatModifierLinear);
+  }
+
   // Processes input in a loop. Should only execute on input_processing_thread_.
   // Loops for the lifetime of a stream.
   void ProcessInputLoop();
@@ -432,46 +482,79 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   void DecodeAnnexBBuffer(media::DecoderBuffer buffer);
 
   uint32_t GetOutputStride() {
-    // bytes_per_row_divisor must be a multiple of the size from in the output constraints.
-    ZX_ASSERT(buffer_settings_[kOutputPort]);
-    ZX_ASSERT(buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor >= 16);
-    return fbl::round_up(
-        static_cast<uint32_t>(media_decoder_->GetPicSize().width()),
-        buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor);
+    auto pic_size = media_decoder_->GetPicSize();
+
+    uint32_t alignment;
+    if (IsOutputTiled()) {
+      alignment = kTileWidthAlignment;
+    } else {
+      // bytes_per_row_divisor must be a multiple of the size from in the output constraints.
+      auto& bytes_per_row_divisor =
+          buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor;
+      ZX_ASSERT(bytes_per_row_divisor >= 16);
+      alignment = bytes_per_row_divisor;
+    }
+
+    uint64_t stride = fbl::round_up(static_cast<uint64_t>(pic_size.width()), alignment);
+    auto checked_stride = safemath::MakeCheckedNum(stride).Cast<uint32_t>();
+
+    if (!checked_stride.IsValid()) {
+      FX_LOGS(ERROR) << "Stride could not be represented as a 32 bit integer";
+    }
+
+    return checked_stride.ValueOrDie();
   }
 
-  static fuchsia::media::VideoUncompressedFormat GetUncompressedFormat(
+  fuchsia::media::VideoUncompressedFormat GetUncompressedFormat(
       const fuchsia::sysmem::ImageFormat_2& image_format) {
     ZX_DEBUG_ASSERT(image_format.pixel_format.type == fuchsia::sysmem::PixelFormatType::NV12);
+
     fuchsia::media::VideoUncompressedFormat video_uncompressed;
+
+    // Common Settings
     video_uncompressed.image_format = image_format;
     video_uncompressed.fourcc = make_fourcc('N', 'V', '1', '2');
     video_uncompressed.primary_width_pixels = image_format.coded_width;
     video_uncompressed.primary_height_pixels = image_format.coded_height;
-    video_uncompressed.secondary_width_pixels = image_format.coded_width / 2;
-    video_uncompressed.secondary_height_pixels = image_format.coded_height / 2;
-    video_uncompressed.primary_display_width_pixels = image_format.display_width;
-    video_uncompressed.primary_display_height_pixels = image_format.display_height;
-
     video_uncompressed.planar = true;
-    ZX_DEBUG_ASSERT(!image_format.pixel_format.has_format_modifier);
-    video_uncompressed.swizzled = false;
     video_uncompressed.primary_line_stride_bytes = image_format.bytes_per_row;
     video_uncompressed.secondary_line_stride_bytes = image_format.bytes_per_row;
     video_uncompressed.primary_start_offset = 0;
-    video_uncompressed.secondary_start_offset =
-        image_format.bytes_per_row * image_format.coded_height;
-    video_uncompressed.tertiary_start_offset = video_uncompressed.secondary_start_offset + 1;
     video_uncompressed.primary_pixel_stride = 1;
     video_uncompressed.secondary_pixel_stride = 2;
     video_uncompressed.has_pixel_aspect_ratio = image_format.has_pixel_aspect_ratio;
     video_uncompressed.pixel_aspect_ratio_height = image_format.pixel_aspect_ratio_height;
     video_uncompressed.pixel_aspect_ratio_width = image_format.pixel_aspect_ratio_width;
+    video_uncompressed.primary_display_width_pixels = image_format.display_width;
+    video_uncompressed.primary_display_height_pixels = image_format.display_height;
+
+    video_uncompressed.secondary_width_pixels = image_format.coded_width / 2;
+    video_uncompressed.secondary_height_pixels = image_format.coded_height / 2;
+
+    // Tile dependant settings
+    if (IsOutputTiled()) {
+      video_uncompressed.swizzled = true;
+      video_uncompressed.secondary_start_offset =
+          image_format.bytes_per_row *
+          fbl::round_up(image_format.coded_height, kTileHeightAlignment);
+      video_uncompressed.tertiary_start_offset = video_uncompressed.secondary_start_offset + 1;
+
+    } else {
+      video_uncompressed.swizzled = false;
+      video_uncompressed.secondary_start_offset =
+          image_format.bytes_per_row * image_format.coded_height;
+      video_uncompressed.tertiary_start_offset = video_uncompressed.secondary_start_offset + 1;
+    }
+
     return video_uncompressed;
   }
 
   // Allow up to 240 frames (8 seconds @ 30 fps) between keyframes.
   static constexpr uint32_t kMaxDecoderFailures = 240u;
+
+  // Intel Y-Tiling alignment
+  static constexpr uint32_t kTileWidthAlignment = 128u;
+  static constexpr uint32_t kTileHeightAlignment = 32u;
 
   BlockingMpscQueue<CodecInputItem> input_queue_{};
   BlockingMpscQueue<CodecPacket*> free_output_packets_{};

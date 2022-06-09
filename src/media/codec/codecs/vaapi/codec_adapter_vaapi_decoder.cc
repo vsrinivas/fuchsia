@@ -14,6 +14,7 @@
 #include <mutex>
 #include <optional>
 
+#include <fbl/algorithm.h>
 #include <va/va_drmcommon.h>
 
 #include "h264_accelerator.h"
@@ -22,9 +23,6 @@
 #include "vp9_accelerator.h"
 
 #define LOG(x, ...) fprintf(stderr, __VA_ARGS__)
-
-#define DRM_FORMAT_MOD_LINEAR 0
-#define DRM_FORMAT_NV12 'NV12'
 
 void CodecAdapterVaApiDecoder::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
@@ -163,6 +161,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
 
     if (result == media::AcceleratedVideoDecoder::kConfigChange) {
       events_->onCoreCodecMidStreamOutputConstraintsChange(true);
+
       gfx::Size pic_size = media_decoder_->GetPicSize();
       VAContextID context_id;
       VAStatus va_res = vaCreateContext(VADisplayWrapper::GetSingleton()->display(), config_->id(),
@@ -375,50 +374,73 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
   gfx::Size pic_size = va_surface->size();
 
   // NV12 texture
-  auto main_plane_size = safemath::CheckMul(GetOutputStride(), pic_size.height());
-  auto uv_plane_size = main_plane_size / 2;
-  auto pic_size_checked = main_plane_size + uv_plane_size;
+  // Depending on if the output is tiled or not we have to align our planes on tile boundaries for
+  // both width and height
+  uint32_t aligned_stride = GetOutputStride();
+  uint32_t aligned_y_height = static_cast<uint32_t>(pic_size.height());
+  uint32_t aligned_uv_height = static_cast<uint32_t>(pic_size.height()) / 2u;
+
+  if (IsOutputTiled()) {
+    aligned_y_height = fbl::round_up(aligned_y_height, kTileHeightAlignment);
+    aligned_uv_height = fbl::round_up(aligned_uv_height, kTileHeightAlignment);
+  }
+
+  auto y_plane_size = safemath::CheckMul(aligned_stride, aligned_y_height);
+  auto uv_plane_size = safemath::CheckMul(aligned_stride, aligned_uv_height);
+
+  auto pic_size_checked = (y_plane_size + uv_plane_size).Cast<uint32_t>();
   if (!pic_size_checked.IsValid()) {
     FX_LOGS(WARNING) << "Output picture size overflowed";
     return false;
   }
-  size_t pic_size_bytes = pic_size_checked.ValueOrDie();
+  size_t pic_size_bytes = static_cast<size_t>(pic_size_checked.ValueOrDie());
   ZX_ASSERT(buffer->size() >= pic_size_bytes);
 
-  // For the moment we use DRM_PRIME_2 to represent VMOs.
-  // To specify the destination VMO, we need two VASurfaceAttrib, one for the
-  // DRM_PRIME_2 and one for the ext_attrib.
-  VASurfaceAttrib attrib[2];
-  attrib[0].type = VASurfaceAttribMemoryType;
-  attrib[0].flags = VA_SURFACE_ATTRIB_SETTABLE;
-  attrib[0].value.type = VAGenericValueTypeInteger;
-  attrib[0].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2;
-  VADRMPRIMESurfaceDescriptor ext_attrib{};
-  ext_attrib.width = pic_size.width();
-  ext_attrib.height = pic_size.height();
-  ext_attrib.fourcc = VA_FOURCC_NV12;
-
-  attrib[1].type = VASurfaceAttribExternalBufferDescriptor;
-  attrib[1].flags = VA_SURFACE_ATTRIB_SETTABLE;
-  attrib[1].value.type = VAGenericValueTypePointer;
-  attrib[1].value.value.p = &ext_attrib;
   zx::vmo vmo_dup;
   zx_status_t zx_status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
   if (zx_status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to duplicate vmo " << zx_status_get_string(zx_status);
     return false;
   }
+
+  // For the moment we use DRM_PRIME_2 to represent VMOs.
+  // To specify the destination VMO, we need two VASurfaceAttrib, one to set the
+  // VASurfaceAttribMemoryType to VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2 and one for the
+  // VADRMPRIMESurfaceDescriptor.
+  VADRMPRIMESurfaceDescriptor ext_attrib{};
+  VASurfaceAttrib attrib[2] = {
+      {.type = VASurfaceAttribMemoryType,
+       .flags = VA_SURFACE_ATTRIB_SETTABLE,
+       .value = {.type = VAGenericValueTypeInteger,
+                 .value = {.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2}}},
+      {.type = VASurfaceAttribExternalBufferDescriptor,
+       .flags = VA_SURFACE_ATTRIB_SETTABLE,
+       .value = {.type = VAGenericValueTypePointer, .value = {.p = &ext_attrib}}},
+  };
+
+  // VADRMPRIMESurfaceDescriptor
+  ext_attrib.width = pic_size.width();
+  ext_attrib.height = pic_size.height();
+  ext_attrib.fourcc = VA_FOURCC_NV12;  // 2 plane YCbCr
   ext_attrib.num_objects = 1;
   ext_attrib.objects[0].fd = vmo_dup.release();
-  ext_attrib.objects[0].drm_format_modifier = DRM_FORMAT_MOD_LINEAR;
+  ext_attrib.objects[0].drm_format_modifier =
+      IsOutputTiled() ? fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED
+                      : fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+  ext_attrib.objects[0].size = pic_size_checked.ValueOrDie();
   ext_attrib.num_layers = 1;
-  ext_attrib.layers[0].drm_format = DRM_FORMAT_NV12;
+  ext_attrib.layers[0].drm_format = make_fourcc('N', 'V', '1', '2');
   ext_attrib.layers[0].num_planes = 2;
+
+  // Y plane, [7:0]
   ext_attrib.layers[0].object_index[0] = 0;
-  ext_attrib.layers[0].object_index[1] = 0;
   ext_attrib.layers[0].pitch[0] = GetOutputStride();
+  ext_attrib.layers[0].offset[0] = 0;
+
+  // Cr:Cb plane, [15:0] Cr:Cb little endian
+  ext_attrib.layers[0].object_index[1] = 0;
   ext_attrib.layers[0].pitch[1] = GetOutputStride();
-  ext_attrib.layers[0].offset[1] = GetOutputStride() * pic_size.height();
+  ext_attrib.layers[0].offset[1] = aligned_stride * aligned_y_height;
 
   VASurfaceID processed_surface_id;
   // Create one surface backed by the destination VMO.
@@ -430,14 +452,16 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
     return false;
   }
   ScopedSurfaceID processed_surface(processed_surface_id);
-  VAImage image;
+
   // Set up a VAImage for the destination VMO.
+  VAImage image;
   status =
       vaDeriveImage(VADisplayWrapper::GetSingleton()->display(), processed_surface.id(), &image);
   if (status != VA_STATUS_SUCCESS) {
     FX_LOGS(WARNING) << "DeriveImage failed: " << vaErrorStr(status);
     return false;
   }
+
   ScopedImageID scoped_image(image.image_id);
 
   // Copy from potentially-tiled surface to output surface. Intel decoders only

@@ -90,6 +90,28 @@ fuchsia_test_package("use_h264_decoder_tests") {
   }
 }
 
+fuchsia_test_component("use_h264_decoder_tiled_output_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_tiled_output_test.cml"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_tiled_output_test",
+  ]
+}
+
+# Test x86 H264 decoder on target x86 hardware (excluding emulator)
+fuchsia_test_package("use_h264_decoder_tests_x86") {
+  test_components = [ ":use_h264_decoder_tiled_output_test_v2" ]
+  test_specs = {
+    # Enable these once media-driver rolls
+    # TODO(fxbug.dev/99091): Re-enable.
+    environments = [
+      #atlas_env,
+      #nuc_env,
+    ]
+  }
+}
+
 # Gaps in frame_num are often handled specially.  We need to at least verify this doesn't get stuck
 # or crash.  At the moment we also verify that the decoder outputs at least a few output frames
 # beyond the first missing input frame.
@@ -373,8 +395,18 @@ fuchsia_test_package("vp9_decoder_fuzzer_tests") {
 fuchsia_unittest_component("use_vp9_decoder_test_v2") {
   manifest = "use_media_decoder/meta/use_vp9_decoder_test.cml"
   deps = [
+    ":bear_vp9",
     "//src/media/codec:codec_factory",
     "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test",
+  ]
+}
+
+fuchsia_unittest_component("use_vp9_decoder_tiled_output_test_v2") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_tiled_output_test.cml"
+  deps = [
+    ":bear_vp9",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_tiled_output_test",
   ]
 }
 
@@ -405,6 +437,19 @@ fuchsia_test_package("use_vp9_decoder_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
+    ]
+  }
+}
+
+# Test x86 vp9 decoder on target x86 hardware (excluding emulator)
+fuchsia_test_package("use_vp9_decoder_tests_x86") {
+  test_components = [ ":use_vp9_decoder_tiled_output_test_v2" ]
+  test_specs = {
+    # Enable these once media-driver rolls
+    # TODO(fxbug.dev/99091): Re-enable.
+    environments = [
+      #atlas_env,
+      #nuc_env,
     ]
   }
 }

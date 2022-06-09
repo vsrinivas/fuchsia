@@ -42,6 +42,11 @@ void Exit(const char* format, ...);
 
 std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size);
 
+// Converts a linear address into a y tiled address. The Tile-Y Legacy Format is defined in
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf on
+// page 13.
+uint32_t ConvertLinearToLegacyYTiled(uint32_t x_offset, uint32_t y_offset, uint32_t pitch);
+
 // Post to dispatcher in a way that's guaranteed to run the posted work in the
 // same order as the posting order (is the intent - if async::PostTask ever
 // changes to not guarantee order, we'll need to work around that here).

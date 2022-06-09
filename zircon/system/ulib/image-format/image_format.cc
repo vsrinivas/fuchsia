@@ -121,7 +121,8 @@ class IntelTiledFormats : public ImageFormatSet {
     if (!pixel_format.has_format_modifier_value())
       return false;
     if (pixel_format.type() != PixelFormatType::kR8G8B8A8 &&
-        pixel_format.type() != PixelFormatType::kBgra32) {
+        pixel_format.type() != PixelFormatType::kBgra32 &&
+        pixel_format.type() != PixelFormatType::kNv12) {
       return false;
     }
     switch (pixel_format.format_modifier_value()) {
@@ -136,60 +137,85 @@ class IntelTiledFormats : public ImageFormatSet {
         return false;
     }
   }
+
   uint64_t ImageFormatImageSize(const ImageFormat& image_format) const override {
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
 
     uint32_t width_in_tiles, height_in_tiles;
-    GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
-    uint64_t size = width_in_tiles * height_in_tiles * kIntelTileByteSize;
+    uint32_t num_of_planes = FormatNumOfPlanes(image_format.pixel_format());
+    uint64_t size = 0u;
+
+    for (uint32_t plane_idx = 0; plane_idx < num_of_planes; plane_idx += 1) {
+      GetSizeInTiles(image_format, plane_idx, &width_in_tiles, &height_in_tiles);
+      size += (width_in_tiles * height_in_tiles * kIntelTileByteSize);
+    }
+
     if (FormatHasCcs(image_format.pixel_format())) {
       size += CcsSize(width_in_tiles, height_in_tiles);
     }
+
     return size;
   }
 
   bool ImageFormatPlaneByteOffset(const ImageFormat& image_format, uint32_t plane,
                                   uint64_t* offset_out) const override {
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
-    if (plane == 0) {
-      *offset_out = 0;
-      return true;
+
+    uint32_t num_of_planes = FormatNumOfPlanes(image_format.pixel_format());
+
+    uint32_t end_plane;
+
+    // For image data planes, calculate the size of all previous the image data planes
+    if (plane < num_of_planes) {
+      end_plane = plane;
+    } else if (plane == kCcsPlane) {  // If requesting the CCS Aux plane, calculate the size of all
+                                      // the image data planes
+      end_plane = num_of_planes;
+    } else {  // Plane is out of bounds, return false
+      return false;
     }
-    if (plane == kCcsPlane && FormatHasCcs(image_format.pixel_format())) {
+
+    uint64_t offset = 0u;
+    for (uint32_t plane_idx = 0u; plane_idx < end_plane; plane_idx += 1u) {
       uint32_t width_in_tiles, height_in_tiles;
-      GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
-      *offset_out = width_in_tiles * height_in_tiles * kIntelTileByteSize;
-      // Start of CCS must be aligned by 4k.
-      ZX_DEBUG_ASSERT(*offset_out % 4096 == 0);
-      return true;
+      GetSizeInTiles(image_format, plane_idx, &width_in_tiles, &height_in_tiles);
+      offset += (width_in_tiles * height_in_tiles * kIntelTileByteSize);
     }
-    return false;
+    ZX_DEBUG_ASSERT(offset % kIntelTileByteSize == 0);
+    *offset_out = offset;
+    return true;
   }
+
   bool ImageFormatPlaneRowBytes(const ImageFormat& image_format, uint32_t plane,
                                 uint32_t* row_bytes_out) const override {
-    if (plane == 0) {
+    ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
+
+    uint32_t num_of_planes = FormatNumOfPlanes(image_format.pixel_format());
+
+    if (plane < num_of_planes) {
       uint32_t width_in_tiles, height_in_tiles;
-      GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
+      GetSizeInTiles(image_format, plane, &width_in_tiles, &height_in_tiles);
       const auto& tiling_data =
           GetTilingData(GetTilingTypeForPixelFormat(image_format.pixel_format()));
       *row_bytes_out = width_in_tiles * tiling_data.bytes_per_row_per_tile;
       return true;
-    } else if (plane == kCcsPlane && FormatHasCcs(image_format.pixel_format())) {
+    }
+
+    if (plane == kCcsPlane && FormatHasCcs(image_format.pixel_format())) {
       uint32_t width_in_tiles, height_in_tiles;
-      GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
+      // Since we only care about the width, just use the first plane
+      GetSizeInTiles(image_format, 0, &width_in_tiles, &height_in_tiles);
       *row_bytes_out =
           CcsWidthInTiles(width_in_tiles) * GetTilingData(TilingType::kY).bytes_per_row_per_tile;
       return true;
-    } else {
-      return false;
     }
+
+    return false;
   }
 
  private:
   struct TilingData {
-    // Assuming a 4-byte-per-component format.
-    uint32_t tile_pixel_width;
-    uint32_t tile_pixel_height;
+    uint32_t tile_rows;
     uint32_t bytes_per_row_per_tile;
   };
 
@@ -198,34 +224,29 @@ class IntelTiledFormats : public ImageFormatSet {
 
   // See
   // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
-  static constexpr uint32_t kIntelXTilePixelWidth = 128;
-  static constexpr uint32_t kIntelYTilePixelWidth = 32;
-  static constexpr uint32_t kIntelYFTilePixelWidth = 32;  // For a 4 byte per component format
+  static constexpr uint32_t kIntelTileByteSize = 4096;
   static constexpr TilingData kTilingData[] = {
       {
           // kX
-          .tile_pixel_width = kIntelXTilePixelWidth,
-          .tile_pixel_height = 4096 / (kIntelXTilePixelWidth * 4),
+          .tile_rows = 8,
           .bytes_per_row_per_tile = 512,
       },
       {
           // kY
-          .tile_pixel_width = kIntelYTilePixelWidth,
-          .tile_pixel_height = 4096 / (kIntelYTilePixelWidth * 4),
+          .tile_rows = 32,
           .bytes_per_row_per_tile = 128,
       },
       {
           // kYf
-          .tile_pixel_width = kIntelYFTilePixelWidth,
-          .tile_pixel_height = 4096 / (kIntelYFTilePixelWidth * 4),
+          .tile_rows = 32,
           .bytes_per_row_per_tile = 128,
       },
   };
 
-  static constexpr uint32_t kIntelTileByteSize = 4096;
   // For simplicity CCS plane is always 3, leaving room for Y, U, and V planes if the format is I420
   // or similar.
   static constexpr uint32_t kCcsPlane = 3;
+
   // See https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol12-display.pdf
   // for a description of the color control surface. The CCS is always Y-tiled. A CCS cache-line
   // (64 bytes, so 2 fit horizontally in a tile) represents 16 horizontal cache line pairs (so 16
@@ -256,26 +277,77 @@ class IntelTiledFormats : public ImageFormatSet {
     return kTilingData[static_cast<uint32_t>(type)];
   }
 
-  static void GetSizeInTiles(const ImageFormat& image_format, uint32_t* width_out,
+  // Gets the total size (in tiles) of image data for non-aux planes
+  static void GetSizeInTiles(const ImageFormat& image_format, uint32_t plane, uint32_t* width_out,
                              uint32_t* height_out) {
-    uint32_t tile_width;
-    uint32_t tile_height;
-
     const auto& tiling_data =
         GetTilingData(GetTilingTypeForPixelFormat(image_format.pixel_format()));
-    // These calculations are only correct for 4-byte-per-pixel formats.
-    tile_width = tiling_data.tile_pixel_width;
-    tile_height = tiling_data.tile_pixel_height;
 
-    uint32_t width_in_tiles = fbl::round_up(image_format.coded_width(), tile_width) / tile_width;
-    uint32_t height_in_tiles =
-        fbl::round_up(image_format.coded_height(), tile_height) / tile_height;
-    *width_out = width_in_tiles;
-    *height_out = height_in_tiles;
+    const auto& bytes_per_row_per_tile = tiling_data.bytes_per_row_per_tile;
+    const auto& tile_rows = tiling_data.tile_rows;
+
+    switch (image_format.pixel_format().type()) {
+      case PixelFormatType::kR8G8B8A8:
+      case PixelFormatType::kBgra32: {
+        // Format only has one plane
+        ZX_DEBUG_ASSERT(plane == 0);
+
+        // Both are 32bpp formats
+        uint32_t tile_pixel_width = (bytes_per_row_per_tile / 4u);
+
+        *width_out = fbl::round_up(image_format.coded_width(), tile_pixel_width) / tile_pixel_width;
+        *height_out = fbl::round_up(image_format.coded_height(), tile_rows) / tile_rows;
+      } break;
+      // Since NV12 is a biplanar format we must handle the size for each plane separately. From
+      // https://github.com/intel/gmmlib/blob/e1f634c5d5a41ac48756b25697ea499605711747/Source/GmmLib/Texture/GmmTextureAlloc.cpp#L1192:
+      // "For Tiled Planar surfaces, the planes must be tile-boundary aligned." Meaning that each
+      // plane must be separately tiled aligned.
+      case PixelFormatType::kNv12:
+        if (plane == 0) {
+          // Calculate the Y plane size (8 bpp)
+          uint32_t tile_pixel_width = bytes_per_row_per_tile;
+
+          *width_out =
+              fbl::round_up(image_format.coded_width(), tile_pixel_width) / tile_pixel_width;
+          *height_out = fbl::round_up(image_format.coded_height(), tile_rows) / tile_rows;
+        } else if (plane == 1) {
+          // Calculate the UV plane size (4 bpp)
+          // We effectively have 1/2 the height of our original image since we are subsampled at
+          // 4:2:0. Since width of the Y plane must match the width of the UV plane we divide the
+          // height of the Y plane by 2 to calculate the height of the UV plane (aligned on tile
+          // height boundaries). Ensure the height is aligned 2 before dividing.
+          uint32_t adjusted_height = fbl::round_up(image_format.coded_height(), 2u) / 2u;
+
+          *width_out = fbl::round_up(image_format.coded_width(), bytes_per_row_per_tile) /
+                       bytes_per_row_per_tile;
+          *height_out = fbl::round_up(adjusted_height, tile_rows) / tile_rows;
+        } else {
+          ZX_DEBUG_ASSERT(false);
+        }
+        break;
+      default:
+        ZX_DEBUG_ASSERT(false);
+        return;
+    }
   }
 
   static bool FormatHasCcs(const fuchsia_sysmem2::wire::PixelFormat& pixel_format) {
     return pixel_format.format_modifier_value() & fuchsia_sysmem2::wire::kFormatModifierIntelCcsBit;
+  }
+
+  // Does not include aux planes
+  static uint32_t FormatNumOfPlanes(const PixelFormat& pixel_format) {
+    ZX_DEBUG_ASSERT(pixel_format.has_type());
+    switch (pixel_format.type()) {
+      case PixelFormatType::kR8G8B8A8:
+      case PixelFormatType::kBgra32:
+        return 1u;
+      case PixelFormatType::kNv12:
+        return 2u;
+      default:
+        ZX_DEBUG_ASSERT(false);
+        return 0u;
+    }
   }
 
   static uint64_t CcsWidthInTiles(uint32_t main_plane_width_in_tiles) {
