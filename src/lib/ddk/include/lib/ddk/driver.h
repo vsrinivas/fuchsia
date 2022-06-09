@@ -343,6 +343,50 @@ typedef struct device_fragment {
   const device_fragment_part_t* parts;
 } device_fragment_t;
 
+typedef enum {
+  ZX_DEVICE_PROPERTY_VALUE_UNDEFINED = 0,
+  ZX_DEVICE_PROPERTY_VALUE_INT = 1,
+  ZX_DEVICE_PROPERTY_VALUE_STRING = 2,
+  ZX_DEVICE_PROPERTY_VALUE_BOOL = 3,
+  ZX_DEVICE_PROPERTY_VALUE_ENUM = 4
+} zx_device_str_prop_val_type;
+
+// The value type in zx_device_str_prop_val must match what's
+// in the union. To ensure that it is set properly, the struct
+// should only be constructed with the supporting macros.
+typedef struct zx_device_str_prop_val {
+  uint8_t value_type;
+  union {
+    uint32_t int_val;
+    const char* str_val;
+    bool bool_val;
+    const char* enum_val;
+  } value;
+} zx_device_str_prop_val_t;
+
+// Supporting macros to construct zx_device_str_prop_val_t.
+#define str_prop_int_val(val)                                                \
+  zx_device_str_prop_val {                                                   \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_INT, .value = {.int_val = (val) } \
+  }
+#define str_prop_str_val(val)                                                   \
+  zx_device_str_prop_val {                                                      \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_STRING, .value = {.str_val = (val) } \
+  }
+#define str_prop_bool_val(val)                                                 \
+  zx_device_str_prop_val {                                                     \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_BOOL, .value = {.bool_val = (val) } \
+  }
+#define str_prop_enum_val(val)                                                 \
+  zx_device_str_prop_val {                                                     \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_ENUM, .value = {.enum_val = (val) } \
+  }
+
+typedef struct zx_device_str_prop {
+  const char* key;
+  zx_device_str_prop_val_t property_value;
+} zx_device_str_prop_t;
+
 // A description of the composite device with properties |props| and made of
 // |fragments| devices. If |spawn_colocated| is true, the composite device will
 // reside in the same driver host as the driver which adds the |primary_fragment|,

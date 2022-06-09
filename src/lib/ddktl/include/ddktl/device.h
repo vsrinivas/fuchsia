@@ -545,6 +545,189 @@ class DeviceAddArgs {
   device_add_args_t args_ = {};
 };
 
+class DeviceGroupProperty {
+ public:
+  // Factory function to create a property with that accepts only one value.
+  static DeviceGroupProperty AcceptValue(device_group_prop_key_t key,
+                                         zx_device_str_prop_val_t value) {
+    DeviceGroupProperty property;
+    property.values_.push_back(value);
+    property.property_ = device_group_prop_t{
+        .key = key,
+        .condition = DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT,
+        .values = property.values_.data(),
+        .values_count = std::size(property.values_),
+    };
+
+    return property;
+  }
+
+  // Factory function to create a property with that rejects only one value.
+  static DeviceGroupProperty RejectValue(device_group_prop_key_t key,
+                                         zx_device_str_prop_val_t value) {
+    DeviceGroupProperty property;
+    property.values_.push_back(value);
+    property.property_ = device_group_prop_t{
+        .key = key,
+        .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
+        .values = property.values_.data(),
+        .values_count = std::size(property.values_),
+    };
+
+    return property;
+  }
+
+  // Factory function to create a property with that accepts a list of values.
+  static DeviceGroupProperty AcceptList(device_group_prop_key_t key,
+                                        cpp20::span<const zx_device_str_prop_val_t> values) {
+    DeviceGroupProperty property;
+    property.values_.insert(property.values_.end(), values.begin(), values.end());
+    property.property_ = device_group_prop_t{
+        .key = key,
+        .condition = DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT,
+        .values = property.values_.data(),
+        .values_count = std::size(property.values_),
+    };
+    return property;
+  }
+
+  // Factory function to create a property with that rejects a list of values.
+  static DeviceGroupProperty RejectList(device_group_prop_key_t key,
+                                        cpp20::span<const zx_device_str_prop_val_t> values) {
+    DeviceGroupProperty property;
+    property.values_.insert(property.values_.end(), values.begin(), values.end());
+    property.property_ = device_group_prop_t{
+        .key = key,
+        .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
+        .values = property.values_.data(),
+        .values_count = std::size(property.values_),
+    };
+    return property;
+  }
+
+  DeviceGroupProperty& operator=(const DeviceGroupProperty& other) {
+    values_.clear();
+    for (size_t i = 0; i < other.values_.size(); ++i) {
+      values_.push_back(other.values_[i]);
+    }
+    return *this;
+  }
+
+  DeviceGroupProperty(const DeviceGroupProperty& other) { *this = other; }
+
+  const device_group_prop_t& get() const { return property_; }
+
+ private:
+  DeviceGroupProperty() = default;
+
+  std::vector<zx_device_str_prop_val_t> values_;
+
+  device_group_prop_t property_;
+};
+
+class DeviceGroupDesc {
+ public:
+  DeviceGroupDesc(std::string_view primary_fragment_name,
+                  cpp20::span<const DeviceGroupProperty> primary_fragment_properties) {
+    AddFragment(primary_fragment_name, primary_fragment_properties);
+    desc_.fragments = fragments_.data();
+  }
+
+  DeviceGroupDesc& operator=(const DeviceGroupDesc& other) {
+    desc_ = other.desc_;
+
+    metadata_list_ = other.metadata_list_;
+    desc_.metadata_list = metadata_list_.data();
+    desc_.metadata_count = metadata_list_.count();
+
+    fragments_.clear();
+    prop_data_.clear();
+    for (size_t i = 0; i < other.fragments_.size(); ++i) {
+      AddFragment(other.fragments_[i]);
+    }
+
+    desc_.fragments = fragments_.data();
+    return *this;
+  }
+
+  DeviceGroupDesc(const DeviceGroupDesc& other) { *this = other; }
+
+  // Add a fragment to |fragments_| and store the property data in |prop_data_|.
+  DeviceGroupDesc& AddFragment(std::string_view name,
+                               cpp20::span<const DeviceGroupProperty> properties) {
+    auto props_count = properties.size();
+    auto props = std::vector<device_group_prop_t>(props_count);
+    for (size_t i = 0; i < props_count; i++) {
+      props[i] = properties[i].get();
+    }
+
+    fragments_.push_back(device_group_fragment_t{
+        .name = std::string_view(name.data(), name.size()).data(),
+        .props = props.data(),
+        .props_count = props_count,
+    });
+    desc_.fragments_count = std::size(fragments_);
+
+    prop_data_.push_back(std::move(props));
+    return *this;
+  }
+
+  DeviceGroupDesc& ForwardMetadata(zx_device_t* dev, uint32_t type) {
+    if (metadata_list_.AddMetadata(dev, type) == ZX_OK) {
+      desc_.metadata_list = metadata_list_.data();
+      desc_.metadata_count = metadata_list_.count();
+    }
+    return *this;
+  }
+
+  DeviceGroupDesc& set_props(cpp20::span<const zx_device_prop_t> props) {
+    desc_.props = props.data();
+    desc_.props_count = static_cast<uint32_t>(props.size());
+    return *this;
+  }
+
+  DeviceGroupDesc& set_str_props(cpp20::span<const zx_device_str_prop_t> props) {
+    desc_.str_props = props.data();
+    desc_.str_props_count = static_cast<uint32_t>(props.size());
+    return *this;
+  }
+
+  DeviceGroupDesc& set_spawn_colocated(bool spawn_colocated) {
+    desc_.spawn_colocated = spawn_colocated;
+    return *this;
+  }
+
+  const device_group_desc_t& get() const { return desc_; }
+
+ private:
+  // Add a fragment to |fragments_| and store the property data in |prop_data_|.
+  void AddFragment(const device_group_fragment_t& fragment) {
+    auto props_count = fragment.props_count;
+    auto props = std::vector<device_group_prop_t>(props_count);
+    for (size_t i = 0; i < props_count; i++) {
+      props[i] = fragment.props[i];
+    }
+
+    fragments_.push_back(device_group_fragment_t{
+        .name = fragment.name,
+        .props = props.data(),
+        .props_count = props_count,
+    });
+    desc_.fragments_count = std::size(fragments_);
+
+    prop_data_.push_back(std::move(props));
+  }
+
+  MetadataList metadata_list_;
+
+  std::vector<device_group_fragment_t> fragments_;
+
+  // Stores all the properties data in |fragments_|.
+  std::vector<std::vector<device_group_prop_t>> prop_data_;
+
+  device_group_desc_t desc_ = {};
+};
+
 // Device is templated on the list of mixins that define which DDK device
 // methods are implemented. Note that internal::base_device *must* be the
 // left-most base class in order to ensure that its constructor runs before the
@@ -583,8 +766,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_add_composite(this->parent_, name, comp_desc);
   }
 
-  zx_status_t DdkAddDeviceGroup(const char* name, const device_group_desc_t* group_desc) {
-    return device_add_group(this->parent_, name, group_desc);
+  zx_status_t DdkAddDeviceGroup(const char* name, DeviceGroupDesc group_desc) {
+    return device_add_group(this->parent_, name, &group_desc.get());
   }
 
   // Schedules the removal of the device and its descendents.

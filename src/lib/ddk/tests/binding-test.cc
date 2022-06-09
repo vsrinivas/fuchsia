@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/binding.h>
+#include <lib/ddk/driver.h>
 #include <zircon/assert.h>
 
 #include <zxtest/zxtest.h>

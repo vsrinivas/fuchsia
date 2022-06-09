@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
 #include <stdint.h>
 
