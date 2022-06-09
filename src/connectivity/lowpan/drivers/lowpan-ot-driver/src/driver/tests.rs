@@ -271,6 +271,15 @@ async fn test_get_thread_rloc16() {
 }
 
 #[fasync::run(10, test)]
+async fn test_get_thread_router_id() {
+    test_harness(|driver| async move {
+        let thread_router_id = driver.get_thread_router_id().await;
+        assert_eq!(thread_router_id.map(|_| ()), Ok(()));
+    })
+    .await;
+}
+
+#[fasync::run(10, test)]
 async fn test_get_neighbor_table_offline() {
     test_harness(|driver| async move {
         let thread_neighbor_table = driver.get_neighbor_table().await;
@@ -551,6 +560,10 @@ async fn test_grind_lowpan_ot_driver() {
             let thread_rloc16 = driver.get_thread_rloc16().await;
             fx_log_debug!("app_task: thread_rloc16: {:?}", thread_rloc16);
             assert_eq!(thread_rloc16.map(|_| ()), Ok(()));
+
+            let thread_router_id = driver.get_thread_router_id().await;
+            fx_log_debug!("app_task: thread_router_id: {:?}", thread_router_id);
+            assert_eq!(thread_router_id.map(|_| ()), Ok(()));
 
             let thread_neighbor_table = driver.get_neighbor_table().await;
             fx_log_debug!("app_task: thread_neighbor_table: {:?}", thread_neighbor_table);

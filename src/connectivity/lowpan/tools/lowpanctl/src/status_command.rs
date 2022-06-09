@@ -135,8 +135,12 @@ async fn print_device_status(
         println!("\trssi: {}", rssi);
     }
 
-    if let Some(x) = device_test.get_thread_rloc16().await.ok() {
-        println!("\trloc16: 0x{:04x?}", x);
+    if let Some(rloc16) = device_test.get_thread_rloc16().await.ok() {
+        println!("\trloc16: 0x{:04x?}", rloc16);
+    }
+
+    if let Some(router_id) = device_test.get_thread_router_id().await.ok() {
+        println!("\trouter-id: 0x{:04x?}", router_id);
     }
 
     Ok(())

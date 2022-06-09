@@ -491,7 +491,8 @@ where
     }
 
     async fn get_thread_router_id(&self) -> ZxResult<u8> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        let rloc16 = self.driver_state.lock().ot_instance.get_rloc16();
+        Ok(self.driver_state.lock().ot_instance.get_router_info(rloc16)?.get_router_id())
     }
 
     async fn send_mfg_command(&self, command: &str) -> ZxResult<String> {
