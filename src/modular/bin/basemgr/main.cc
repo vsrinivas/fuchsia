@@ -171,9 +171,6 @@ std::string GetUsage() {
 int main(int argc, const char** argv) {
   syslog::SetTags({"basemgr"});
 
-  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
-  auto config_writer = modular::ModularConfigWriter::CreateFromNamespace();
-
   // Process command line arguments.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
@@ -184,12 +181,7 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  // Read configuration.
-  auto config_result = config_reader.ReadAndMaybePersistConfig(&config_writer);
-  if (config_result.is_error()) {
-    std::cerr << config_result.take_error() << std::endl;
-    return EXIT_FAILURE;
-  }
+  auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
@@ -234,7 +226,7 @@ int main(int argc, const char** argv) {
   }
 
   auto basemgr_impl =
-      CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()), children,
+      CreateBasemgrImpl(modular::ModularConfigAccessor(config_reader.GetConfig()), children,
                         backoff_base, component_context.get(), inspector.get(), &loop);
 
   LifecycleHandler lifecycle_handler{basemgr_impl.get(), &loop};

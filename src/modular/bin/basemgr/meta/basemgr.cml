@@ -33,10 +33,6 @@
             from: "parent",
         },
         {
-            storage: "cache",
-            path: "/cache",
-        },
-        {
             storage: "data",
             path: "/data",
         },

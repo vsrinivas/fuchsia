@@ -14,17 +14,13 @@ constexpr char kSessionmgrUrl[] = "fuchsia-pkg://fuchsia.com/sessionmgr#meta/ses
 constexpr char kConfigDataDir[] = "/config/data";
 constexpr char kPackageDataDir[] = "/pkg/data";
 constexpr char kOverriddenConfigDir[] = "/config_override/data";
-constexpr char kPersistentConfigDir[] = "/cache";
 
 static constexpr auto kServicesForV1Sessionmgr = "svc_for_v1_sessionmgr";
 static constexpr auto kServicesFromV1Sessionmgr = "svc_from_v1_sessionmgr";
 
-// This file path is rooted at |kDefaultConfigDir|
-constexpr char kAllowPersistentConfigOverrideFilePath[] = "allow_persistent_config_override";
-
 // This file path is rooted at either:
-//    |kPersistentConfigDir|
 //    |kOverriddenConfigDir|
+//    |kPackageDataDir|
 //    |kDefaultConfigDir|
 constexpr char kStartupConfigFilePath[] = "startup.config";
 

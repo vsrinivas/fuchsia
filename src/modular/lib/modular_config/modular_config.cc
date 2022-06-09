@@ -97,8 +97,6 @@ ModularConfigReader::ModularConfigReader(fbl::unique_fd root_dir) : root_dir_(st
   std::string config_path = GetConfigDataConfigPath();
   if (OverriddenConfigExists()) {
     config_path = GetOverriddenConfigPath();
-  } else if (PersistentConfigOverrideAllowed() && PersistentConfigExists()) {
-    config_path = GetPersistentConfigPath();
   } else if (PackagedConfigExists()) {
     config_path = GetPackagedConfigPath();
   }
@@ -135,37 +133,17 @@ std::string ModularConfigReader::GetOverriddenConfigPath() {
 }
 
 // static
-std::string ModularConfigReader::GetPersistentConfigPath() {
-  return files::JoinPath(StripLeadingSlash(modular_config::kPersistentConfigDir),
-                         modular_config::kStartupConfigFilePath);
-}
-
-// static
 std::string ModularConfigReader::GetPackagedConfigPath() {
   return files::JoinPath(StripLeadingSlash(modular_config::kPackageDataDir),
                          modular_config::kStartupConfigFilePath);
-}
-
-// static
-std::string ModularConfigReader::GetAllowPersistentConfigOverridePath() {
-  return files::JoinPath(StripLeadingSlash(modular_config::kConfigDataDir),
-                         modular_config::kAllowPersistentConfigOverrideFilePath);
 }
 
 bool ModularConfigReader::OverriddenConfigExists() {
   return files::IsFileAt(root_dir_.get(), GetOverriddenConfigPath());
 }
 
-bool ModularConfigReader::PersistentConfigExists() {
-  return files::IsFileAt(root_dir_.get(), GetPersistentConfigPath());
-}
-
 bool ModularConfigReader::PackagedConfigExists() {
   return files::IsFileAt(root_dir_.get(), GetPackagedConfigPath());
-}
-
-bool ModularConfigReader::PersistentConfigOverrideAllowed() {
-  return files::IsFileAt(root_dir_.get(), GetAllowPersistentConfigOverridePath());
 }
 
 void ModularConfigReader::ParseConfig(const std::string& config, const std::string& config_path) {
@@ -232,56 +210,6 @@ std::string ModularConfigReader::GetConfigAsString(
     })",
                          modular_config::kBasemgrConfigName, basemgr_json,
                          modular_config::kSessionmgrConfigName, sessionmgr_json);
-}
-
-fpromise::result<fuchsia::modular::session::ModularConfig, std::string>
-ModularConfigReader::ReadAndMaybePersistConfig(ModularConfigWriter* config_writer) {
-  FX_DCHECK(config_writer);
-
-  auto config = GetConfig();
-
-  // Persist |config| if allowed and if the config was read from /config_override.
-  if (modular::ModularConfigReader::PersistentConfigOverrideAllowed() &&
-      modular::ModularConfigReader::OverriddenConfigExists()) {
-    if (auto result = config_writer->Write(config); result.is_error()) {
-      return fpromise::error("Failed to persist config_override: " + result.take_error());
-    }
-    FX_LOGS(INFO) << "Configuration from config_override has been persisted.";
-  }
-
-  return fpromise::ok(std::move(config));
-}
-
-ModularConfigWriter::ModularConfigWriter(fbl::unique_fd root_dir) : root_dir_(std::move(root_dir)) {
-  FX_CHECK(root_dir_.is_valid());
-}
-
-ModularConfigWriter ModularConfigWriter::CreateFromNamespace() {
-  return ModularConfigWriter(fbl::unique_fd(open(modular_config::kPersistentConfigDir, O_RDONLY)));
-}
-
-fpromise::result<void, std::string> ModularConfigWriter::Write(
-    const fuchsia::modular::session::ModularConfig& config) {
-  auto config_json = ConfigToJsonString(config);
-  if (!files::WriteFileAt(root_dir_.get(), modular_config::kStartupConfigFilePath,
-                          config_json.data(), config_json.size())) {
-    return fpromise::error("could not write config file");
-  }
-
-  return fpromise::ok();
-}
-
-fpromise::result<void, std::string> ModularConfigWriter::Delete() {
-  if (!files::IsFileAt(root_dir_.get(), modular_config::kStartupConfigFilePath)) {
-    return fpromise::ok();
-  }
-
-  if (!files::DeletePathAt(root_dir_.get(), modular_config::kStartupConfigFilePath,
-                           /*recursive=*/false)) {
-    return fpromise::error("could not delete config file");
-  }
-
-  return fpromise::ok();
 }
 
 }  // namespace modular

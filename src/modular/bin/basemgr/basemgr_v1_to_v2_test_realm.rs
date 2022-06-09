@@ -121,7 +121,6 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
             Route::new()
                 .capability(Capability::protocol::<fidl_fuchsia_logger::LogSinkMarker>())
                 .capability(Capability::protocol::<fsys::LauncherMarker>())
-                .capability(Capability::storage("cache"))
                 .capability(Capability::storage("data"))
                 .from(Ref::parent())
                 .to(&basemgr),
