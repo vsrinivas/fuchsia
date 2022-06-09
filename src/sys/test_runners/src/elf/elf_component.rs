@@ -294,7 +294,7 @@ fn get_pkg_and_lib_proxy<'a>(
         .find(|(p, _)| p.as_str() == PKG_PATH)
         .ok_or_else(|| ComponentError::MissingPkg(url.clone()))?;
 
-    let lib_proxy = io_util::open_directory(
+    let lib_proxy = fuchsia_fs::open_directory(
         pkg_proxy,
         &Path::new("lib"),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -531,7 +531,7 @@ mod tests {
     ) -> Result<ComponentNamespace, ComponentNamespaceError> {
         let mut ns = vec![];
         for (path, permission) in dir_paths {
-            let chan = io_util::open_directory_in_namespace(path, permission)
+            let chan = fuchsia_fs::open_directory_in_namespace(path, permission)
                 .unwrap()
                 .into_channel()
                 .unwrap()

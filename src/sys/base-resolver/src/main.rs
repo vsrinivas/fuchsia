@@ -36,7 +36,7 @@ enum ResolverError {
     ComponentNotFound(#[source] mem_util::FileError),
 
     #[error("package not found")]
-    PackageNotFound(#[source] io_util::node::OpenError),
+    PackageNotFound(#[source] fuchsia_fs::node::OpenError),
 
     #[error("couldn't parse component manifest")]
     ParsingManifest(#[source] fidl::Error),

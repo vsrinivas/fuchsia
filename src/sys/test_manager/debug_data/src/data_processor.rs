@@ -20,7 +20,7 @@ pub async fn process_debug_data_vmos<S: Stream<Item = VmoMessage> + std::marker:
     processor_proxy: ftest_debug::DebugDataProcessorProxy,
     event_receiver: S,
 ) -> Result<(), Error> {
-    let directory_proxy = io_util::open_directory_in_namespace(
+    let directory_proxy = fuchsia_fs::open_directory_in_namespace(
         dir_path,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )?;
@@ -76,13 +76,13 @@ mod test {
         };
 
         // check dir is writable
-        let file = io_util::open_file(
+        let file = fuchsia_fs::open_file(
             &dir,
             "file".as_ref(),
             fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
         )
         .expect("create file");
-        io_util::write_file(&file, "file content").await.expect("write to file");
+        fuchsia_fs::write_file(&file, "file content").await.expect("write to file");
         drop(file);
 
         let mut collected_vmos = vec![];
@@ -102,13 +102,13 @@ mod test {
                 }
                 ftest_debug::DebugDataProcessorRequest::Finish { responder, .. } => {
                     // check dir is still writable (resources have not been torn down prematurely).
-                    let file = io_util::open_file(
+                    let file = fuchsia_fs::open_file(
                         &dir,
                         "file_2".as_ref(),
                         fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
                     )
                     .expect("create file");
-                    io_util::write_file(&file, "file content").await.expect("write to file");
+                    fuchsia_fs::write_file(&file, "file content").await.expect("write to file");
                     drop(file);
 
                     finish_called = true;

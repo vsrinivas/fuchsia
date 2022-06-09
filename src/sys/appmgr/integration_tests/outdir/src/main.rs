@@ -10,10 +10,10 @@ use {
     fdio,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys_internal as fsys_internal, fuchsia_async as fasync,
+    fidl_fuchsia_sys_internal as fsys_internal, fuchsia_async as fasync, fuchsia_fs,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::HandleBased,
-    io_util, scoped_task,
+    scoped_task,
     std::{ffi::CString, path::Path},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -54,9 +54,9 @@ async fn main() -> Result<(), Error> {
         appmgr_out_dir_server_end.into_channel().into_handle(),
     ));
 
-    let pkg_dir = io_util::open_directory_in_namespace(
+    let pkg_dir = fuchsia_fs::open_directory_in_namespace(
         "/pkg",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
     )
     .expect("failed to open /pkg");
     let pkg_c_str = CString::new("/pkg").unwrap();
@@ -65,9 +65,9 @@ async fn main() -> Result<(), Error> {
         pkg_dir.into_channel().unwrap().into_zx_channel().into_handle(),
     ));
 
-    let svc_dir = io_util::open_directory_in_namespace(
+    let svc_dir = fuchsia_fs::open_directory_in_namespace(
         "/svc",
-        io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_WRITABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )
     .expect("failed to open /svc");
     let svc_c_str = CString::new("/svc").unwrap();
@@ -78,12 +78,12 @@ async fn main() -> Result<(), Error> {
 
     let (pkgfs_client_end, pkgfs_server_end) = create_endpoints::<fio::NodeMarker>()?;
     fasync::Task::spawn(async move {
-        let pkg_dir = io_util::open_directory_in_namespace(
+        let pkg_dir = fuchsia_fs::open_directory_in_namespace(
             "/pkg",
-            fio::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+            fio::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
         )
         .expect("failed to open /pkg");
-        let pkg_dir_2 = io_util::clone_directory(&pkg_dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
+        let pkg_dir_2 = fuchsia_fs::clone_directory(&pkg_dir, fio::OpenFlags::CLONE_SAME_RIGHTS)
             .expect("failed to clone /pkg handle");
         let fake_pkgfs = pseudo_directory! {
             "packages" => pseudo_directory! {
@@ -162,7 +162,7 @@ async fn main() -> Result<(), Error> {
     )
     .map_err(|(status, msg)| format_err!("failed to spawn appmgr ({}): {:?}", status, msg))?;
 
-    let log_connector_node = io_util::open_node(
+    let log_connector_node = fuchsia_fs::open_node(
         &appmgr_out_dir_proxy,
         &Path::new("appmgr_svc/fuchsia.sys.internal.LogConnector"),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -173,7 +173,7 @@ async fn main() -> Result<(), Error> {
     let log_connector = fsys_internal::LogConnectorProxy::from_channel(log_connector_node_chan);
     assert_matches!(log_connector.take_log_connection_listener().await, Ok(Some(_)));
 
-    let echo_service_node = io_util::open_node(
+    let echo_service_node = fuchsia_fs::open_node(
         &appmgr_out_dir_proxy,
         &Path::new("svc/fidl.examples.echo.Echo"),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

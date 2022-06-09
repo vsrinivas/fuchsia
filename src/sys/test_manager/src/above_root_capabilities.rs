@@ -10,7 +10,7 @@ use {
     fuchsia_component_test::{
         error::Error as RealmBuilderError, Capability, RealmBuilder, Ref, Route, SubRealmBuilder,
     },
-    io_util,
+    fuchsia_fs,
     std::collections::HashMap,
 };
 
@@ -22,8 +22,8 @@ impl AboveRootCapabilitiesForTest {
     pub async fn new(manifest_name: &str) -> Result<Self, Error> {
         let path = format!("/pkg/meta/{}", manifest_name);
         let file_proxy =
-            io_util::open_file_in_namespace(&path, io_util::OpenFlags::RIGHT_READABLE)?;
-        let component_decl = io_util::read_file_fidl::<fdecl::Component>(&file_proxy).await?;
+            fuchsia_fs::open_file_in_namespace(&path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
+        let component_decl = fuchsia_fs::read_file_fidl::<fdecl::Component>(&file_proxy).await?;
         let capabilities = Self::load(component_decl);
         Ok(Self { capabilities })
     }
