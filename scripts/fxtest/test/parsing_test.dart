@@ -43,8 +43,7 @@ void main() {
             'cpu': 'arm64',
             'path':
                 '/pkgfs/packages/run_test_component_test/0/test/run_test_component_test',
-            'name':
-                '//garnet/bin/run_test_component/test:run_test_component_test',
+            'name': '//src/sys/run_test_component/test:run_test_component_test',
             'os': 'fuchsia',
             'package_url':
                 'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
@@ -78,8 +77,7 @@ void main() {
             'cpu': 'arm64',
             'path':
                 '/pkgfs/packages/run_test_component_test/0/test/run_test_component_test',
-            'name':
-                '//garnet/bin/run_test_component/test:run_test_component_test',
+            'name': '//src/sys/run_test_component/test:run_test_component_test',
             'os': 'fuchsia',
             'package_url':
                 'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
@@ -112,8 +110,7 @@ void main() {
             'cpu': 'arm64',
             'path':
                 '/pkgfs/packages/run_test_component_test/0/test/run_test_component_test',
-            'name':
-                '//garnet/bin/run_test_component/test:run_test_component_test',
+            'name': '//src/sys/run_test_component/test:run_test_component_test',
             'os': 'fuchsia',
             'package_url':
                 'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
@@ -143,8 +140,7 @@ void main() {
           'environments': [],
           'test': {
             'cpu': 'arm64',
-            'name':
-                '//garnet/bin/run_test_component/test:run_test_component_test',
+            'name': '//src/sys/run_test_component/test:run_test_component_test',
             'os': 'fuchsia',
           }
         },

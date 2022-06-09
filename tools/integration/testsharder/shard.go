@@ -67,7 +67,7 @@ func (s *Shard) CreatePackageRepo() error {
 	// up and running to evaluate stability and performance. In the long
 	// term, this should be handled by the build system and passed in.
 	pkgManifests = append(pkgManifests,
-		"obj/garnet/bin/run_test_component/run-test-component-pkg/package_manifest.json",
+		"obj/src/sys/run_test_component/run-test-component-pkg/package_manifest.json",
 		"obj/src/sys/run_test_suite/run_test_suite_pkg/package_manifest.json",
 	)
 

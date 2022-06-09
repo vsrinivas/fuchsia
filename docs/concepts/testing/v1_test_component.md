@@ -191,7 +191,7 @@ Real system services cannot be accessed by test components unless explicitly
 allowlisted as shown below:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/bin/run_test_component/test_metadata.cc" region_tag="allowed_system_services" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/run_test_component/test_metadata.cc" region_tag="allowed_system_services" adjust_indentation="auto" %}
 ```
 
 [glossary.component]: /docs/glossary/README.md#component
