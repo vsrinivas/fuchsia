@@ -24,6 +24,8 @@ redirects:
   to: /docs/development/components/run.md
 - from: /docs/go/components/run-errors
   to: /docs/development/components/run.md#troubleshooting
+- from: /docs/go/components/runners
+  to: /docs/concepts/components/v2/capabilities/runners
 - from: /docs/go/components/restricted-features
   to: /docs/development/components/build.md#restricted-features
 - from: /docs/go/components/test-errors
