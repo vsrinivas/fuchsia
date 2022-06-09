@@ -273,8 +273,8 @@ contributors that a particular bug could be a great entry point in terms of
 contributions, since that particular bug does not require extensive
 experience/knowledge with the Fuchsia project.
 
-To view the current list of bugs with the `GoodFirstBug` label, go to
-https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3AGoodFirstBug.
+To view the current list of bugs with the `GoodFirstBug` label, go to the
+[Good First Bug List](https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3AGoodFirstBug).
 
 ## Report an issue
 
