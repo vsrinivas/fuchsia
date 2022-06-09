@@ -8,9 +8,9 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include "garnet/public/lib/svc/cpp/service_namespace.h"
 #include "src/lib/files/file.h"
 #include "src/modular/lib/connect/connect.h"
+#include "src/modular/lib/deprecated_svc/service_namespace.h"
 
 namespace modular {
 

@@ -38,10 +38,10 @@ source_set("app_client") {
 
   deps = [
     ":clone",
-    "//garnet/public/lib/svc/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/modular/lib/common:async_holder",
+    "//src/modular/lib/deprecated_svc",
   ]
 }
 

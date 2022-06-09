@@ -167,8 +167,8 @@ source_set("startup_agent_launcher") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/modular/lib/deprecated_svc",
   ]
 
   deps = [

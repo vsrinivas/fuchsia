@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SVC_CPP_SERVICES_H_
-#define LIB_SVC_CPP_SERVICES_H_
+#ifndef SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICES_H_
+#define SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICES_H_
 
 #include <lib/zx/channel.h>
 
@@ -107,4 +107,4 @@ class Services {
 
 }  // namespace component
 
-#endif  // LIB_SVC_CPP_SERVICES_H_
+#endif  // SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICES_H_

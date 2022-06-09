@@ -17,12 +17,12 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/public/lib/svc/cpp/service_namespace.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/modular/lib/deprecated_svc/service_namespace.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/modular_config/modular_config.h"

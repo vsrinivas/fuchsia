@@ -17,11 +17,11 @@
 #include <string>
 #include <vector>
 
-#include "garnet/public/lib/svc/cpp/service_namespace.h"
-#include "garnet/public/lib/svc/cpp/services.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/bin/sessionmgr/rate_limited_retry.h"
+#include "src/modular/lib/deprecated_svc/service_namespace.h"
+#include "src/modular/lib/deprecated_svc/services.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {

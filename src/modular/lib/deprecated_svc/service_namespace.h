@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SVC_CPP_SERVICE_NAMESPACE_H_
-#define LIB_SVC_CPP_SERVICE_NAMESPACE_H_
+#ifndef SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICE_NAMESPACE_H_
+#define SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICE_NAMESPACE_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -110,4 +110,4 @@ class ServiceNamespace : public fuchsia::sys::ServiceProvider {
 
 }  // namespace component
 
-#endif  // LIB_SVC_CPP_SERVICE_NAMESPACE_H_
+#endif  // SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICE_NAMESPACE_H_

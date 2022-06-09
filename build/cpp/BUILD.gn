@@ -17,7 +17,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
   # and replace the contents of `visibility` with the script output.
   visibility = [
     "//examples/drivers/dotmatrix_display:bin2",
-    "//garnet/public/lib/svc/cpp",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/svchost",
     "//src/bringup/bin/svchost:crashsvc",
@@ -143,6 +142,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/media/audio/drivers/usb-audio/tests:usb-audio-test-bin",
     "//src/media/audio/tools/audio-driver-ctl:bin",
     "//src/media/drivers/amlogic_decoder/tests/runner:amlogic_decoder_integration_tests_bin",
+    "//src/modular/lib/deprecated_svc",
     "//src/modular/lib/fidl:environment",
     "//src/power/shutdown-shim",
     "//src/recovery/factory_reset:factory_reset_unittests",

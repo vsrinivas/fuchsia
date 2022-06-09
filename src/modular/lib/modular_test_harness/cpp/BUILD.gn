@@ -40,7 +40,6 @@ source_set("test_harness_fixture") {
   ]
 
   deps = [
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -51,6 +50,7 @@ source_set("test_harness_fixture") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr/story_runner:story_runner",
+    "//src/modular/lib/deprecated_svc",
     "//src/modular/lib/testing:session_shell_impl",
     "//third_party/googletest:gtest",
   ]
