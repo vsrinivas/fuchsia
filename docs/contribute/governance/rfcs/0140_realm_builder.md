@@ -642,12 +642,12 @@ let component_storage_proxy = builder.host_storage(
     &echo_server,
     "data",
 ).await?;
-let file_proxy = io_util::open_file(
+let file_proxy = fuchsia_fs::open_file(
     &component_storage_proxy,
     "config-file.json",
     fio::OpenFlags::RIGHT_WRITABLE|fio::OpenFlags::CREATE,
 )?;
-io_util::write_file(&file_proxy, "{ \"foo\": \"bar\"}").await?;
+fuchsia_fs::write_file(&file_proxy, "{ \"foo\": \"bar\"}").await?;
 let realm_instance = builder.create().await?;
 ```
 
@@ -952,9 +952,9 @@ let realm_instance = builder.build().await?;
 
 ```rust
 let rb_factory_proxy = connect_to_service::<RealmBuilderFactoryMarker>().await?;
-let pkg_dir_proxy = io_util::open_directory_in_namespace(
+let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
     "/pkg",
-    io_util::OpenFlags::RIGHT_READABLE | io_util::OpenFlags::RIGHT_EXECUTABLE,
+    fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
 )?;
 let pkg_dir_client_end =
     ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel());
