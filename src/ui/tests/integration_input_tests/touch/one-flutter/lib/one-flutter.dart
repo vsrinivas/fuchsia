@@ -66,6 +66,10 @@ class _MyHomePageState extends State<MyHomePage> {
           setState(() {
             _touchCounter++; // Trigger color change on DOWN event.
           });
+        }
+
+        if (data.change == ui.PointerChange.down ||
+            data.change == ui.PointerChange.move) {
           _respond(test_touch.PointerData(
               // Notify test that input was seen.
               localX: data.physicalX,
