@@ -41,7 +41,7 @@ function main {
     # In incremental workflows, these defaults have changed.
     # Keep old behavior if incremental is not enabled.
     build=true
-    build_targets=("build/images:packages" "build/images/fuchsia:update")
+    build_targets=("build/images/updates" "build/images/fuchsia:update")
   fi
   while (( $# )); do
     case "$1" in
