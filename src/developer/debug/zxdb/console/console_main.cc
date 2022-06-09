@@ -194,6 +194,10 @@ int ConsoleMain(int argc, const char* argv[]) {
       session.system().settings().SetBool(ClientSettings::System::kDebugMode, true);
     }
 
+    if (options.no_auto_attach_limbo) {
+      session.system().settings().SetBool(ClientSettings::System::kAutoAttachLimbo, false);
+    }
+
     std::unique_ptr<DebugAdapterServer> debug_adapter;
     if (options.enable_debug_adapter) {
       int port = options.debug_adapter_port;

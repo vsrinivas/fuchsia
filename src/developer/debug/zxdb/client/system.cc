@@ -49,6 +49,10 @@ static const char* kDebugModeDescription =
     R"(  Output debug information about zxdb.
   In general should only be useful for people developing zxdb.)";
 
+const char* ClientSettings::System::kAutoAttachLimbo = "auto-attach-limbo";
+static const char* kAutoAttachLimboDescription =
+    R"(  Automatically attach to processes found in Process Limbo.)";
+
 const char* ClientSettings::System::kPauseOnLaunch = "pause-on-launch";
 static const char* kPauseOnLaunchDescription =
     R"(  Whether a process launched through zxdb should be stopped on startup.
@@ -148,6 +152,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddBool(ClientSettings::System::kAutoCastToDerived, kAutoCastToDerivedDescription, true);
   schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription, false);
+  schema->AddBool(ClientSettings::System::kAutoAttachLimbo, kAutoAttachLimboDescription, true);
   schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, false);

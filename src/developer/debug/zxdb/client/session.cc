@@ -33,6 +33,7 @@
 #include "src/developer/debug/zxdb/client/minidump_remote_api.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api_impl.h"
+#include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/socket_connect.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
@@ -324,12 +325,9 @@ void Session::OnStreamReadable() {
 
     // Sanity checking on the size to prevent crashes.
     if (header.size > kMaxMessageSize) {
-      SendSessionNotification(SessionObserver::NotificationType::kError,
-                              "Bad message received of size %u.\n(type = %u, "
-                              "transaction = %u)\n",
-                              static_cast<unsigned>(header.size),
-                              static_cast<unsigned>(header.type),
-                              static_cast<unsigned>(header.transaction_id));
+      LOGS(Error) << "Bad message received of size " << static_cast<uint32_t>(header.size) << "."
+                  << "(type = " << static_cast<unsigned>(header.type)
+                  << ", transaction = " << static_cast<unsigned>(header.transaction_id) << ")";
       // TODO(brettw) close the stream due to this fatal error.
       return;
     }
@@ -352,10 +350,9 @@ void Session::OnStreamReadable() {
     // Find the transaction.
     auto found = pending_.find(header.transaction_id);
     if (found == pending_.end()) {
-      SendSessionNotification(SessionObserver::NotificationType::kError,
-                              "Received reply for unexpected transaction %u (type = %u).\n",
-                              static_cast<unsigned>(header.transaction_id),
-                              static_cast<unsigned>(header.type));
+      LOGS(Error) << "Received reply for unexpected transaction "
+                  << static_cast<unsigned>(header.transaction_id)
+                  << " (type = " << static_cast<unsigned>(header.type) << ".";
       // Just ignore this bad message.
       continue;
     }
@@ -369,11 +366,10 @@ void Session::OnStreamReadable() {
 
 void Session::OnStreamError() {
   if (ClearConnectionData()) {
-    SendSessionNotification(SessionObserver::NotificationType::kError,
-                            "The debug agent has disconnected.\n"
-                            "The system may have halted, or this may be a bug. "
-                            "If you believe it is a bug, please file a report, "
-                            "adding the system crash log (fx syslog) if possible.");
+    LOGS(Error) << "The debug agent has disconnected.\n"
+                   "The system may have halted, or this may be a bug. "
+                   "If you believe it is a bug, please file a report, "
+                   "adding the system crash log (fx syslog) if possible.";
   }
 }
 
@@ -527,10 +523,9 @@ bool Session::ClearConnectionData() {
 void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.id.process);
   if (!process) {
-    SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Received thread starting notification for an "
-                            "unexpected process %" PRIu64 ".\n",
-                            notify.record.id.process);
+    LOGS(Warn) << "Received thread starting notification for an "
+                  "unexpected process "
+               << notify.record.id.process << ".";
     return;
   }
 
@@ -561,10 +556,9 @@ void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify
 void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.id.process);
   if (!process) {
-    SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Received thread exiting notification for an "
-                            "unexpected process %" PRIu64 ".\n",
-                            notify.record.id.process);
+    LOGS(Warn) << "Received thread exiting notification for an "
+                  "unexpected process "
+               << notify.record.id.process << ".";
     return;
   }
 
@@ -575,8 +569,7 @@ void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify)
 void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata) {
   ThreadImpl* thread = ThreadImplFromKoid(notify.thread.id);
   if (!thread) {
-    SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Received thread exception for an unknown thread.\n");
+    LOGS(Warn) << "Received thread exception for an unknown thread.";
     return;
   }
 
@@ -638,19 +631,21 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   if (process) {
     process->OnModules(std::move(notify.modules), notify.stopped_threads);
   } else {
-    SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Received modules notification for an unexpected process %" PRIu64 ".",
-                            notify.process_koid);
+    LOGS(Warn) << "Received modules notification for an unexpected process: "
+               << notify.process_koid;
   }
 }
 
 void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& notify) {
   if (notify.type == debug_ipc::NotifyProcessStarting::Type::kLimbo) {
-    SendSessionNotification(
-        SessionObserver::NotificationType::kProcessEnteredLimbo,
-        fxl::StringPrintf("Process %s (%" PRIu64 ") crashed and is waiting to be attached.\n"
-                          "Type \"status\" for more information.",
-                          notify.name.c_str(), notify.koid));
+    if (auto_attach_limbo_) {
+      AttachToLimboProcessAndNotify(notify.koid, notify.name);
+    } else {
+      LOGS(Warn) << "Process " << notify.name << "(" << notify.koid
+                 << ") crashed and is waiting to be attached.\n"
+                    "Not automatically attached due to user override.\n"
+                    "Type \"status\" for more information.";
+    }
     return;
   }
 
@@ -685,9 +680,7 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
 void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
   if (!process) {
-    SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Received io notification for an unexpected process %" PRIu64 ".",
-                            notify.process_koid);
+    LOGS(Warn) << "Received io notification for an unexpected process" << notify.process_koid;
     return;
   }
 
@@ -695,10 +688,11 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
 
   switch (notify.type) {
     case debug_ipc::NotifyIO::Type::kStdout:
+      [[fallthrough]];
     case debug_ipc::NotifyIO::Type::kStderr: {
-      auto notification_type = HandleProcessIO(process, notify);
-      if (notification_type != SessionObserver::NotificationType::kNone)
-        SendSessionNotification(notification_type, notify.data);
+      if (process->HandleIO(notify)) {
+        LOGS(Info) << notify.data;
+      }
       break;
     }
     case debug_ipc::NotifyIO::Type::kLast:
@@ -835,8 +829,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
           return;
 
         if (err.has_error()) {
-          SendSessionNotification(SessionObserver::NotificationType::kError,
-                                  "Could not get debug agent status: %s", err.msg().c_str());
+          LOGS(Error) << "Could not get debug agent status: " << err.msg();
           return;
         }
 
@@ -851,6 +844,14 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
         if (!reply.limbo.empty()) {
           for (auto& observer : observers_) {
             observer.HandleProcessesInLimbo(reply.limbo);
+          }
+
+          if (auto_attach_limbo_) {
+            for (auto& process : reply.limbo) {
+              AttachToLimboProcessAndNotify(process.process_koid, process.process_name);
+            }
+          } else {
+            LOGS(Info) << "Not auto connecting to all processes in Limbo due to user override.";
           }
         }
       });
@@ -882,33 +883,6 @@ void Session::AddDownloadObserver(DownloadObserver* observer) {
 
 void Session::RemoveDownloadObserver(DownloadObserver* observer) {
   download_observers_.RemoveObserver(observer);
-}
-
-void Session::SendSessionNotification(SessionObserver::NotificationType type, const char* fmt,
-                                      ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  std::string msg = fxl::StringPrintf(fmt, ap);
-  va_end(ap);
-
-  SendSessionNotification(type, msg);
-}
-
-void Session::SendSessionNotification(SessionObserver::NotificationType type,
-                                      const std::string& msg) {
-  for (auto& observer : observers_)
-    observer.HandleNotification(type, msg);
-}
-
-SessionObserver::NotificationType Session::HandleProcessIO(ProcessImpl* process,
-                                                           const debug_ipc::NotifyIO& notify) {
-  if (!process->HandleIO(notify)) {
-    return SessionObserver::NotificationType::kNone;
-  }
-
-  return notify.type == debug_ipc::NotifyIO::Type::kStdout
-             ? SessionObserver::NotificationType::kProcessStdout
-             : SessionObserver::NotificationType::kProcessStderr;
 }
 
 void Session::ExpectComponent(uint32_t component_id) {
@@ -948,14 +922,37 @@ void Session::QuitAgent(fit::callback<void(const Err&)> cb) {
 void Session::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
   if (setting_name == ClientSettings::System::kQuitAgentOnExit) {
     SendAgentConfiguration();
+  } else if (setting_name == ClientSettings::System::kAutoAttachLimbo) {
+    auto_attach_limbo_ = system().settings().GetBool(ClientSettings::System::kAutoAttachLimbo);
   } else {
-    SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Session handling invalid setting %s", setting_name.c_str());
+    LOGS(Warn) << "Session handling invalid setting " << setting_name;
   }
 }
 
 void Session::ListenForSystemSettings() {
   system_.settings().AddObserver(ClientSettings::System::kQuitAgentOnExit, this);
+  system_.settings().AddObserver(ClientSettings::System::kAutoAttachLimbo, this);
+}
+
+void Session::AttachToLimboProcessAndNotify(uint64_t koid, const std::string& process_name) {
+  if (koid_seen_in_limbo_.insert(koid).second) {
+    LOGS(Info) << "Process \"" << process_name << "\" (" << koid
+               << ") crashed and has been automatically attached.\n"
+                  "Type \"status\" for more information.";
+
+    system().AttachToProcess(koid,
+                             [](fxl::WeakPtr<Target> target, const Err&, uint64_t timestamp) {});
+
+  } else {
+    // We've already seen this koid in limbo during this session, alert the user and do not
+    // automatically attach.
+    LOGS(Info) << "Process " << process_name << " (" << koid
+               << ") crashed and is waiting to be attached.\n"
+                  "Not automatically attached because "
+               << koid
+               << " has already been seen this session.\n"
+                  "Type \"status\" for more information.";
+  }
 }
 
 void Session::SendAgentConfiguration() {
@@ -981,10 +978,8 @@ void Session::SendAgentConfiguration() {
         continue;
 
       auto& action = request.actions[i];
-      session->SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                                       "Agent configuration for %s failed with result: %s",
-                                       debug_ipc::ConfigAction::TypeToString(action.type),
-                                       status.message().c_str());
+      LOGS(Warn) << "Agent configuration for " << debug_ipc::ConfigAction::TypeToString(action.type)
+                 << " failed with result: " << status.message();
     }
   });
 }

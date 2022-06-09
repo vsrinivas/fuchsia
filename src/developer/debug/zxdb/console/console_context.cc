@@ -505,12 +505,17 @@ void ConsoleContext::HandlePreviousConnectedProcesses(
 
 void ConsoleContext::HandleProcessesInLimbo(
     const std::vector<debug_ipc::ProcessRecord>& processes) {
-  OutputBuffer out(OutputBuffer{Syntax::kHeading, "Processes waiting on exception:\n"});
+  OutputBuffer out(OutputBuffer{Syntax::kHeading, "Processes attached from limbo:\n"});
   for (auto& process : processes) {
     out.Append(fxl::StringPrintf("  %" PRIu64 ": %s\n", process.process_koid,
                                  process.process_name.c_str()));
   }
-  out.Append(OutputBuffer{Syntax::kComment, "Type \"attach <pid>\" to reconnect.\n"});
+  out.Append(OutputBuffer{
+      Syntax::kComment,
+      "Type \"detach <pid>\" to send back to Process Limbo if attached,\n"
+      "type \"detach <pid>\" again to terminate the process if not attached, or\n"
+      "type \"process <process context #> kill\" to terminate the process if attached.\n"
+      "See \"help jitd\" for more information on Just-In-Time-Debugging.\n"});
 
   Console::get()->Output(std::move(out));
 }

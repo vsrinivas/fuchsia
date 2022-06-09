@@ -8,11 +8,15 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/job.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
@@ -44,6 +48,10 @@ class SessionSink : public RemoteAPI {
   }
 
   void AppendProcessRecord(const debug_ipc::ProcessRecord& record) { records_.push_back(record); }
+
+  void AppendLimboProcessRecord(const debug_ipc::ProcessRecord& record) {
+    limbo_records_.push_back(record);
+  }
 
   // Adds all current system breakpoints to the exception notification. The calling code doesn't
   // have easy access to the backend IDs so this is where they come from. We assume the breakpoints
@@ -83,7 +91,21 @@ class SessionSink : public RemoteAPI {
   }
 
   void Attach(const debug_ipc::AttachRequest& request,
-              fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {}
+              fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {
+    Err e;
+    debug_ipc::AttachReply reply;
+    reply.koid = request.koid;
+
+    cb(e, reply);
+  }
+
+  void Detach(const debug_ipc::DetachRequest& request,
+              fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) override {
+    Err e;
+    debug_ipc::DetachReply reply;
+
+    cb(e, reply);
+  }
 
   void JobFilter(const debug_ipc::JobFilterRequest& request,
                  fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
@@ -98,6 +120,7 @@ class SessionSink : public RemoteAPI {
   std::set<uint32_t> set_breakpoint_ids_;
 
   std::vector<debug_ipc::ProcessRecord> records_;
+  std::vector<debug_ipc::ProcessRecord> limbo_records_;
 };
 
 class SessionThreadObserver : public ThreadObserver {
@@ -173,6 +196,7 @@ void SessionSink::Status(const debug_ipc::StatusRequest& request,
                          fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) {
   debug_ipc::StatusReply reply = {};
   reply.processes = records_;
+  reply.limbo = limbo_records_;
   cb(Err(), std::move(reply));
 }
 
@@ -407,6 +431,95 @@ TEST_F(SessionTest, StatusRequest) {
   EXPECT_EQ(status.processes[0].process_name, kProcessName1);
   EXPECT_EQ(status.processes[1].process_koid, kProcessKoid2);
   EXPECT_EQ(status.processes[1].process_name, kProcessName2);
+}
+
+// When a process crashes *after* zxdb is already launched and connected, we should automatically
+// attach to it via |DispatchProcessStarting|.
+TEST_F(SessionTest, AutoAttachToLimboProcess) {
+  constexpr uint64_t kProcessKoid = 0xc001cafe;
+  const std::string kProcessName = "process-1";
+
+  debug_ipc::ProcessRecord record;
+  record.process_koid = kProcessKoid;
+  record.process_name = kProcessName;
+
+  sink()->AppendLimboProcessRecord(record);
+
+  debug_ipc::NotifyProcessStarting notify;
+  notify.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
+  notify.koid = kProcessKoid;
+  notify.name = kProcessName;
+
+  session().DispatchProcessStarting(notify);
+
+  debug_ipc::StatusReply status;
+  sink()->Status(
+      {}, [&status](const Err& err, debug_ipc::StatusReply reply) { status = std::move(reply); });
+
+  // Check the processes are in limbo like we expect.
+  ASSERT_EQ(status.limbo.size(), 1u);
+  EXPECT_EQ(status.limbo[0].process_koid, kProcessKoid);
+  EXPECT_EQ(status.limbo[0].process_name, kProcessName);
+
+  // Verify that we're actually attached to that process.
+  std::vector<Target*> targets = session().system().GetTargets();
+
+  ASSERT_EQ(targets.size(), 1u);
+  EXPECT_EQ(targets[0]->GetState(), Target::State::kRunning);
+  EXPECT_EQ(targets[0]->GetProcess()->GetKoid(), kProcessKoid);
+
+  // Detach, reset the test vector, and then try attaching again.
+  targets[0]->Detach([](fxl::WeakPtr<Target> t, const Err& err) {});
+  targets.clear();
+
+  // Re-register process.
+  session().DispatchProcessStarting(notify);
+  sink()->Status(
+      {}, [&status](const Err& err, debug_ipc::StatusReply reply) { status = std::move(reply); });
+
+  targets = session().system().GetTargets();
+
+  // Not automatically attached because the koid was already seen during this session instance.
+  ASSERT_EQ(targets.size(), 1u);
+  EXPECT_EQ(targets[0]->GetState(), Target::State::kNone);
+}
+
+// This test verifies that the user is able to disable automatically attaching to processes found in
+// limbo via command line flag or by overriding the setting at the [zxdb] prompt.
+TEST_F(SessionTest, DisableAutoAttachToLimbo) {
+  constexpr uint64_t kProcessKoid = 0xc001cafe;
+  const std::string kProcessName = "process-1";
+
+  // Override the default.
+  session().system().settings().SetBool(ClientSettings::System::kAutoAttachLimbo, false);
+
+  debug_ipc::ProcessRecord record;
+  record.process_koid = kProcessKoid;
+  record.process_name = kProcessName;
+
+  sink()->AppendLimboProcessRecord(record);
+
+  debug_ipc::NotifyProcessStarting notify;
+  notify.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
+  notify.koid = kProcessKoid;
+  notify.name = kProcessName;
+
+  session().DispatchProcessStarting(notify);
+
+  debug_ipc::StatusReply status;
+  sink()->Status(
+      {}, [&status](const Err& err, debug_ipc::StatusReply reply) { status = std::move(reply); });
+
+  // Check the processes are in limbo like we expect.
+  ASSERT_EQ(status.limbo.size(), 1u);
+  EXPECT_EQ(status.limbo[0].process_koid, kProcessKoid);
+  EXPECT_EQ(status.limbo[0].process_name, kProcessName);
+
+  std::vector<Target*> targets = session().system().GetTargets();
+
+  // Not automatically attached because |kAutoAttachLimbo| was explicitly set to false.
+  ASSERT_EQ(targets.size(), 1u);
+  EXPECT_EQ(targets[0]->GetState(), Target::State::kNone);
 }
 
 }  // namespace zxdb

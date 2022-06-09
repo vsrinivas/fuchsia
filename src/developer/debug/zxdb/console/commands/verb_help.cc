@@ -169,7 +169,7 @@ Pretty printers
     42
 
   Smart pointer, optional, and variant object can be dereferenced with "*" and
-  "-> operators.
+  "->" operators.
 
     [zxdb] print some_optional
     std::optional({x = 5, y = 1})
@@ -212,15 +212,14 @@ constexpr char kJitdHelp[] = R"(Just In Time Debugging
 
   Just In Time Debugging is a way for the system to suspend processes that have
   crashed without any exception handlers. The system will keep those processes
-  in a place called "Process Limbo". Later, zxdb is able to connect to Process
-  Limbo and attach to process waiting to be debugged.
+  in a place called "Process Limbo". Later, zxdb will automatically connect to
+  Process Limbo and attach to all processes waiting to be debugged.
 
 Enabling process limbo in the system
 
-  To enable catching exceptions in newly crashed processes, type in a Fuchsia
-  shell:
+  To enable catching exceptions in newly crashed processes, use:
 
-    run limbo.cmx enable
+    ffx debug limbo enable
 
   For full documentation on enabling and configuring Limbo, including enabling
   on system startup, see the full documentation at:
@@ -233,40 +232,69 @@ Listing Processes
   will be listed like this:
 
     👉 To get started, try "status" or "help".
-    Processes waiting on exception:
-    2780309: process-that-crashed
-    2783544: some-other-process-that-crashed
-    Type "attach <pid>" to reconnect.
+    Processes auto attached from limbo:
+      4938729: process-that-crashed
+      4940432: some-other-process-that-crashed
+    Type "detach <pid>" to send back to Process Limbo (unattached) or type
+    "process <process context #> kill" to exit the process.
+    ...
     [zxdb]
 
-  You call also run the "status" command and get the same information:
+
+  You can also run the "status" command to see the currently attached processes:
 
     [zxdb] status
-    ...
-    Processes waiting on exception
-    2 process(es) waiting on exception.
-      Run "attach <KOID>" to load them into zxdb or "detach <KOID>" to
-      terminate them. See "help jitd" for more information on Just-In-Time
-      Debugging.
+    Connection
+      Connected to '/tmp/debug_agent_ZdPZdx.socket' on port 0.
 
-     2780309 process-that-crashed
-     2783544 some-other-process-that-crashed
+    Jobs
+      Attached to 1 job(s) (jobs are nodes in the Zircon process tree). Processes
+      launched in attached jobs can be caught and debugged via "attach" filters.
+      See "help job" and "help attach". The debugger has these:
+        # State    Koid Name
+      ▶ 1 Attached 1033 root
+
+    Process name filters
+      Filters match the names of processes launched in attached jobs and
+      automatically attaches to them.
+
+      There are no filters. Use "attach <process-name>" to create one.
+
+    Processes
+      Attached to 2 process(es). The debugger has these:
+        # State      Koid Name
+        1 Running 4938729 process-that-crashed
+      ▶ 2 Running 4940432 some-other-process-that-crashed
+
+    Processes waiting on exception
+      No processes waiting on exception.
 
 Attaching/Removing Processes
 
-  From the point of view of zxdb, the processes within the limbo behave very
-  similar to what a normal running process does. In order to start debugging
-  one, simply do "attach <KOID>" and zxdb will retrieve the process from limbo
-  and start debugging it. Once attached, you can manipulate the process as
-  normal, and even detach or kill it.
+  From the point of view of zxdb, processes in limbo behave very similar to what
+  a normal running process does. In order to start debugging one, simply start
+  zxdb like normal and zxdb will retrieve the process from limbo and start
+  debugging it. Once attached, you can manipulate the process as normal, and
+  even detach or kill it.
 
   Note that if you detach from a crashing process, the exception will be
-  re-triggered and it will caught by the Process Limbo. Killing it will
-  terminate the process as usual.
+  re-triggered and it will caught by Process Limbo. Killing it will terminate
+  the process as usual. A notice will be displayed to communicate when a process
+  that has previously crashed crashes again. Such a process found to crash
+  multiple times will not automatically attach, but can still be attached with
+  the regular attach command i.e. "attach <KOID>".
 
-  The only difference comes when attempting to release a process from the
-  Process Limbo, without attaching from it. In that case, you need to instruct
-  the debugger to "detach" from it by issuing a "detach <KOID>" command.
+  The only difference comes when attempting to release a process from Process
+  Limbo, without attaching to it. In that case, you need to instruct the
+  debugger to "detach" from it by issuing a "detach <KOID>" command. You can
+  also explicitly kill such a process with "pr <process context #> kill". Using
+  the example above, use "pr 2 kill" to kill the process named
+  "some-other-process-that-crashed".
+
+  The default setting to automatically attach to all processes in Process Limbo
+  can be overridden via the -n switch or --no-auto-attach-limbo when invoking
+  "ffx debug connect" or interactively with "set auto-attach-limbo" at the
+  [zxdb] prompt.
 )";
 
 const char kHelpShortHelp[] = R"(help / h: Help.)";

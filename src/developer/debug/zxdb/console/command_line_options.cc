@@ -125,6 +125,11 @@ const char kDebugAdapterPortHelp[] = R"(  --debug-adapter-port=<port>
       Uses this port number to serve debug adapter protocol.
       By default 15678 is used.)";
 
+const char kNoAutoAttachLimboHelp[] = R"(  --no-auto-attach-limbo
+  -n
+      Disables automatically attaching to all processes found in Process Limbo
+      upon successful connection.)";
+
 }  // namespace
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
@@ -157,6 +162,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                    &CommandLineOptions::enable_debug_adapter);
   parser.AddSwitch("debug-adapter-port", 0, kDebugAdapterPortHelp,
                    &CommandLineOptions::debug_adapter_port);
+  parser.AddSwitch("no-auto-attach-limbo", 'n', kNoAutoAttachLimboHelp,
+                   &CommandLineOptions::no_auto_attach_limbo);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;

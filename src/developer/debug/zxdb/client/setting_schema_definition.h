@@ -27,6 +27,7 @@ struct ClientSettings {
   struct System {
     static const char* kAutoCastToDerived;
     static const char* kDebugMode;
+    static const char* kAutoAttachLimbo;
     static const char* kPauseOnLaunch;
     static const char* kPauseOnAttach;
     static const char* kQuitAgentOnExit;

@@ -40,6 +40,7 @@ struct CommandLineOptions {
   bool requested_version = false;
   bool enable_debug_adapter = false;
   uint16_t debug_adapter_port = 15678;
+  bool no_auto_attach_limbo = false;
 };
 
 // Parses the given command line into options and params.

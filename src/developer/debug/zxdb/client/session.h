@@ -204,17 +204,13 @@ class Session : public SettingStoreObserver {
                           std::unique_ptr<debug::BufferedFD> buffer,
                           fit::callback<void(const Err&)> callback);
 
-  // Sends a notification to all the UI observers.
-  [[gnu::format(printf, 3, 4)]] void SendSessionNotification(SessionObserver::NotificationType,
-                                                             const char* fmt, ...);
-  void SendSessionNotification(SessionObserver::NotificationType, const std::string& msg);
-
-  SessionObserver::NotificationType HandleProcessIO(ProcessImpl*, const debug_ipc::NotifyIO&);
   void ListenForSystemSettings();
+
+  void AttachToLimboProcessAndNotify(uint64_t koid, const std::string& process_name);
 
   // Configurations --------------------------------------------------------------------------------
 
-  // Upon connection, the sessino will tell the agent of all the configurations it should know
+  // Upon connection, the session will tell the agent of all the configurations it should know
   // about.
   void SendAgentConfiguration();
 
@@ -223,6 +219,18 @@ class Session : public SettingStoreObserver {
 
   // Whether we have opened a core dump. Makes much of the connection-related stuff obsolete.
   bool is_minidump_ = false;
+
+  // Whether to automatically attach to processes found in Process Limbo upon a
+  // successful connection.
+  bool auto_attach_limbo_ = true;
+
+  // Cache of koids that have been automatically attached from limbo during this session. If a koid
+  // that has been cached crashes again, it will not be automatically attached to.
+  //
+  // This behavior could be seen when a user detaches from a process in limbo (rather than
+  // explicitly killing it) and it immediately crashes again and ends back up in limbo and would
+  // otherwise attach automatically again.
+  std::set<uint64_t> koid_seen_in_limbo_;
 
   // Observers.
   fxl::ObserverList<TargetObserver> target_observers_;
