@@ -314,6 +314,123 @@
             "metric_id": 70,
             "metric_type": "IntHistogram",
             "selector": "bootstrap/fshost/blobfs:root/blobfs/fs.opstats/write:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                1
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/append:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                2
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/close:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                3
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/create:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                4
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/get_attr:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                5
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/link:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                6
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/lookup:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                7
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/read:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                8
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/read_dir:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                9
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/set_attr:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                10
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/sync:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                11
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/truncate:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                12
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/unlink:latency"
+        },
+        {
+            "event_codes": [
+                3,
+                13
+            ],
+            "metric_id": 70,
+            "metric_type": "IntHistogram",
+            "selector": "bootstrap/fshost:root/minfs/fs.opstats/write:latency"
         }
     ],
     "poll_rate_sec": 600,
