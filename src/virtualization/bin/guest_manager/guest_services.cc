@@ -8,16 +8,14 @@
 #include <lib/zx/channel.h>
 
 GuestServices::GuestServices(fuchsia::virtualization::GuestConfig cfg) : cfg_(std::move(cfg)) {
-  services_.AddService<fuchsia::virtualization::GuestConfigProvider>(
-      [this](fidl::InterfaceRequest<fuchsia::virtualization::GuestConfigProvider> request) {
-        binding_.Bind(std::move(request));
-      });
+  services_.AddPublicService<fuchsia::virtualization::GuestConfigProvider>(
+      bindings_.GetHandler(this));
 }
 
 fuchsia::sys::ServiceListPtr GuestServices::ServeDirectory() {
   auto services = std::make_unique<fuchsia::sys::ServiceList>();
   services->names.emplace_back(fuchsia::virtualization::GuestConfigProvider::Name_);
-  services->provider = services_.AddBinding();
+  services_.Serve(services->provider.NewRequest().TakeChannel());
   return services;
 }
 
