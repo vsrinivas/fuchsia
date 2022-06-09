@@ -50,15 +50,15 @@ func (_m *{{ .Name }}) reset() {
 	switch _m.{{ .TagName }} {
 	{{- range .Members }}
 	case {{ .Ordinal }}:
-    var _zeroed {{ .Type }}
+		var _zeroed {{ .Type }}
 		_m.{{ .Name }} = _zeroed
 	{{- end }}
-  {{- if .IsFlexible }}
+	{{- if .IsFlexible }}
 	default:
-    var _zeroed interface{}
+		var _zeroed interface{}
 		_m.I_unknownData = _zeroed
 	{{- end }}
-  }
+	}
 }
 
 func (_m *{{ .Name }}) Which() {{ .TagName }} {
@@ -83,7 +83,7 @@ func (_m *{{ .Name }}) Ordinal() uint64 {
 {{- range .Members }}
 
 func (_m *{{ $.Name }}) Set{{ .Name }}({{ .PrivateName }} {{ .Type }}) {
-  _m.reset()
+	_m.reset()
 	_m.{{ $.TagName }} = {{ $.Name }}{{ .Name }}
 	_m.{{ .Name }} = {{ .PrivateName }}
 }
@@ -105,4 +105,3 @@ func (_m *{{ .Name }}) GetUnknownData() {{ .UnknownDataType }} {
 	 field (e.g. for testing), use Go's reflect package. */}}
 
 {{- end -}}
-

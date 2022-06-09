@@ -7,18 +7,18 @@ include <test/foreigntypeinresponseusedthroughcompose/c/fidl.h>
 
 
 test_foreigntypeinresponseusedthroughcompose_TopGetFooRequest {
-       hdr fidl_message_header[4619180266423108403]
+    hdr fidl_message_header[4619180266423108403]
 } [packed]
 test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestHandles {
-       void void
+    void void
 } [packed]
 test_foreigntypeinresponseusedthroughcompose_TopGetFooResponse {
-       hdr fidl_message_header[4619180266423108403]
-       fooInLine test_bottom_FooInLine
-       fooOutOfLine test_bottom_FooOutOfLine
+    hdr fidl_message_header[4619180266423108403]
+    fooInLine test_bottom_FooInLine
+    fooOutOfLine test_bottom_FooOutOfLine
 } [packed]
 test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseHandles {
-       foo test_bottom_FooHandles
+    foo test_bottom_FooHandles
 } [packed]
 
 resource zx_chan_test_foreigntypeinresponseusedthroughcompose_Top_client[zx_chan]

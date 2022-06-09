@@ -16,4 +16,3 @@
 
 static_assert(::fuzzing::{{ range .Library }}{{ . }}_{{ end }}decoder_encoders.size() == {{ CountDecoderEncoders .Decls }});
 {{ end }}
-

@@ -18,7 +18,7 @@ namespace {
 {{ range .Benchmarks }}
 {{- if .HandleDefs }}
 std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
-	return {{ .HandleDefs }};
+  return {{ .HandleDefs }};
 }
 
 {{ .Type }} BuildFromHandles{{ .Name }}(fidl::AnyArena& allocator, const std::vector<zx_handle_t>& handle_defs) {
@@ -40,19 +40,19 @@ std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
 {{- end }}
 
 bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
-	return driver_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+  return driver_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 
 bool BenchmarkEchoCallSync{{ .Name }}(perftest::RepeatState* state) {
-	return driver_benchmarks::EchoCallSyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+  return driver_benchmarks::EchoCallSyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 
 void RegisterTests() {
-	{{ range .Benchmarks }}
-	perftest::RegisterTest("DriverLLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
-	perftest::RegisterTest("DriverLLCPP/EchoCallSync/{{ .Path }}/Steps", BenchmarkEchoCallSync{{ .Name }});
-	{{ end }}
+  {{ range .Benchmarks }}
+  perftest::RegisterTest("DriverLLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
+  perftest::RegisterTest("DriverLLCPP/EchoCallSync/{{ .Path }}/Steps", BenchmarkEchoCallSync{{ .Name }});
+  {{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
 

@@ -15,44 +15,44 @@ fdio_service_connect$test_protocolrequest_Child(path ptr[in, string["/svc/"]], h
 
 
 test_protocolrequest_ParentGetChildRequest {
-       hdr fidl_message_header[881818649151440699]
+    hdr fidl_message_header[881818649151440699]
 } [packed]
 test_protocolrequest_ParentGetChildRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolrequest_ParentGetChildResponse {
-       hdr fidl_message_header[881818649151440699]
-       c flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[881818649151440699]
+    c flags[fidl_handle_presence, int32]
 } [packed]
 test_protocolrequest_ParentGetChildResponseHandles {
-       c zx_chan_test_protocolrequest_Child_client
+    c zx_chan_test_protocolrequest_Child_client
 } [packed]
 test_protocolrequest_ParentGetChildRequestRequest {
-       hdr fidl_message_header[1096855814967598201]
+    hdr fidl_message_header[1096855814967598201]
 } [packed]
 test_protocolrequest_ParentGetChildRequestRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolrequest_ParentGetChildRequestResponse {
-       hdr fidl_message_header[1096855814967598201]
-       r flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[1096855814967598201]
+    r flags[fidl_handle_presence, int32]
 } [packed]
 test_protocolrequest_ParentGetChildRequestResponseHandles {
-       r zx_chan_test_protocolrequest_Child_server
+    r zx_chan_test_protocolrequest_Child_server
 } [packed]
 test_protocolrequest_ParentTakeChildRequest {
-       hdr fidl_message_header[4470101341872267920]
-       c flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[4470101341872267920]
+    c flags[fidl_handle_presence, int32]
 } [packed]
 test_protocolrequest_ParentTakeChildRequestHandles {
-       c zx_chan_test_protocolrequest_Child_client
+    c zx_chan_test_protocolrequest_Child_client
 } [packed]
 test_protocolrequest_ParentTakeChildRequestRequest {
-       hdr fidl_message_header[2333981071306416007]
-       r flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[2333981071306416007]
+    r flags[fidl_handle_presence, int32]
 } [packed]
 test_protocolrequest_ParentTakeChildRequestRequestHandles {
-       r zx_chan_test_protocolrequest_Child_server
+    r zx_chan_test_protocolrequest_Child_server
 } [packed]
 
 resource zx_chan_test_protocolrequest_Parent_client[zx_chan]

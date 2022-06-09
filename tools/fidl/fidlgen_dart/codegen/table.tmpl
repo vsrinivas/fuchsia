@@ -52,8 +52,8 @@ class {{ .Name }} extends $fidl.Table {
   dynamic $field(int index) {
     switch (index) {
       {{- range .Members }}
-          case {{ .Index }}:
-            return {{ .Name }};
+      case {{ .Index }}:
+        return {{ .Name }};
       {{- end }}
     }
     return null;
@@ -77,4 +77,3 @@ class {{ .Name }} extends $fidl.Table {
 // ignore: recursive_compile_time_constant
 const $fidl.TableType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 {{ end }}
-

@@ -5,103 +5,103 @@
 
 include <test/nullable/c/fidl.h>
 test_nullable_Int32WrapperInLine {
-       val int32
+    val int32
 } [packed]
 test_nullable_Int32WrapperOutOfLine {
-       void void
+    void void
 } [packed]
 test_nullable_Int32WrapperHandles {
-       void void
+    void void
 } [packed]
 test_nullable_StructWithNullableHandleInLine {
-       val flags[fidl_handle_presence, int32]
+    val flags[fidl_handle_presence, int32]
 } [packed]
 test_nullable_StructWithNullableHandleOutOfLine {
-       void void
+    void void
 } [packed]
 test_nullable_StructWithNullableHandleHandles {
-       val zx_vmo
+    val zx_vmo
 } [packed]
 test_nullable_StructWithNullableProtocolInLine {
-       val flags[fidl_handle_presence, int32]
+    val flags[fidl_handle_presence, int32]
 } [packed]
 test_nullable_StructWithNullableProtocolOutOfLine {
-       void void
+    void void
 } [packed]
 test_nullable_StructWithNullableProtocolHandles {
-       val zx_chan_test_nullable_SimpleProtocol_client
+    val zx_chan_test_nullable_SimpleProtocol_client
 } [packed]
 test_nullable_StructWithNullableRequestInLine {
-       val flags[fidl_handle_presence, int32]
+    val flags[fidl_handle_presence, int32]
 } [packed]
 test_nullable_StructWithNullableRequestOutOfLine {
-       void void
+    void void
 } [packed]
 test_nullable_StructWithNullableRequestHandles {
-       val zx_chan_test_nullable_SimpleProtocol_server
+    val zx_chan_test_nullable_SimpleProtocol_server
 } [packed]
 test_nullable_StructWithNullableStringInLine {
-       valInLine fidl_string
+    valInLine fidl_string
 } [packed]
 test_nullable_StructWithNullableStringOutOfLine {
-       valOutOfLine fidl_aligned[stringnoz]
+    valOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_nullable_StructWithNullableStringHandles {
-       void void
+    void void
 } [packed]
 test_nullable_StructWithNullableStructInLine {
-       valInLine test_nullable_Int32WrapperInLine
+    valInLine test_nullable_Int32WrapperInLine
 } [packed]
 test_nullable_StructWithNullableStructOutOfLine {
-       valOutOfLine test_nullable_Int32WrapperOutOfLine
+    valOutOfLine test_nullable_Int32WrapperOutOfLine
 } [packed]
 test_nullable_StructWithNullableStructHandles {
-       val test_nullable_Int32WrapperHandles
+    val test_nullable_Int32WrapperHandles
 } [packed]
 test_nullable_StructWithNullableUnionInLine {
-       valInLine test_nullable_SimpleUnionInLine
+    valInLine test_nullable_SimpleUnionInLine
 } [packed]
 test_nullable_StructWithNullableUnionOutOfLine {
-       void void
+    void void
 } [packed]
 test_nullable_StructWithNullableUnionHandles {
-       void void
+    void void
 } [packed]
 test_nullable_StructWithNullableVectorInLine {
-       valInLine fidl_vector
+    valInLine fidl_vector
 } [packed]
 test_nullable_StructWithNullableVectorOutOfLine {
-       valOutOfLine array[int32]
+    valOutOfLine array[int32]
 } [packed]
 test_nullable_StructWithNullableVectorHandles {
-       void void
+    void void
 } [packed]
 test_nullable_SimpleUnionInLine [
-       a fidl_union_member[1, int32]
-       b fidl_union_member[2, int32]
+    a fidl_union_member[1, int32]
+    b fidl_union_member[2, int32]
 ]
 test_nullable_SimpleUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_nullable_SimpleUnionHandles [
-       void void
+    void void
 ][varlen]
 
 
 test_nullable_SimpleProtocolAddRequest {
-       hdr fidl_message_header[9142761280038437494]
-       a int32
-       b int32
+    hdr fidl_message_header[9142761280038437494]
+    a int32
+    b int32
 } [packed]
 test_nullable_SimpleProtocolAddRequestHandles {
-       void void
+    void void
 } [packed]
 test_nullable_SimpleProtocolAddResponse {
-       hdr fidl_message_header[9142761280038437494]
-       sum int32
+    hdr fidl_message_header[9142761280038437494]
+    sum int32
 } [packed]
 test_nullable_SimpleProtocolAddResponseHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_nullable_SimpleProtocol_client[zx_chan]

@@ -19,7 +19,7 @@ fidl/{{ .LibraryDots }}/cpp/driver/fidl.h
 #include <{{ .Library | Filename "NaturalTypesHeader" }}>
 #include <{{ .Library | Filename "driver/NaturalMessagingHeader" }}>
 {{ range .Dependencies -}}
-	#include <{{ . | Filename "driver/UnifiedHeader" }}>
+#include <{{ . | Filename "driver/UnifiedHeader" }}>
 {{ end -}}
 
 {{ "" }}

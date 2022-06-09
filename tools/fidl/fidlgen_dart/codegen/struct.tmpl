@@ -17,13 +17,13 @@ class {{ .Name }} extends $fidl.Struct {
   });
   {{ .Name }}.clone({{ .Name }} $orig, {
 {{- range .Members }}
-  {{ .Type.OptionalDecl }} {{ .Name }},
+    {{ .Type.OptionalDecl }} {{ .Name }},
 {{- end }}
   }) : this(
-    {{- range .Members }}
-      {{ .Name }}: {{ .Name }} ?? $orig.{{ .Name }},
-    {{- end }}
-    );
+      {{- range .Members }}
+        {{ .Name }}: {{ .Name }} ?? $orig.{{ .Name }},
+      {{- end }}
+      );
 
 
   {{ if .HasNullableField }}
@@ -83,7 +83,7 @@ class {{ .Name }} extends $fidl.Struct {
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
     {{- range $index, $member := .Members }}
     $fieldType{{ $index }}.encode(
-      $encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV2 }}, $depth);
+        $encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV2 }}, $depth);
     {{- end }}
   }
 
@@ -99,8 +99,8 @@ class {{ .Name }} extends $fidl.Struct {
         return {{ .Name }}(
         {{ range $index, $member := .Members }}
         {{- if ne $index 0 }},{{ end }}
-        {{ $member.Name }}: $fieldType{{ $index }}.decode(
-          $decoder, $offset + {{ $member.OffsetV2 }}, $depth)
+          {{ $member.Name }}: $fieldType{{ $index }}.decode(
+              $decoder, $offset + {{ $member.OffsetV2 }}, $depth)
         {{- end -}}
         );
       default:
@@ -113,4 +113,3 @@ class {{ .Name }} extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 {{ end }}
-

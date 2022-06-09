@@ -5,12 +5,12 @@
 
 include <test/importedconstvalues/c/fidl.h>
 test_importedconstvalues_MyStructInLine {
-       padding int8
+    padding int8
 } [packed]
 test_importedconstvalues_MyStructOutOfLine {
-       void void
+    void void
 } [packed]
 test_importedconstvalues_MyStructHandles {
-       void void
+    void void
 } [packed]
 

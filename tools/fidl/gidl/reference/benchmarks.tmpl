@@ -10,9 +10,9 @@ namespace benchmark_suite {
 
 {{ range .Benchmarks }}
 [[maybe_unused]] {{ .Type }} Build_{{ .Name }}(fidl::AnyArena& allocator) {
-	{{ .ValueBuild }}
-	auto obj = {{ .ValueVar }};
-	return obj;
+  {{ .ValueBuild }}
+  auto obj = {{ .ValueVar }};
+  return obj;
 }
 {{ end }}
 

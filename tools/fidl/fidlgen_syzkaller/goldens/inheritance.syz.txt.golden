@@ -7,19 +7,19 @@ include <test/inheritance/c/fidl.h>
 
 
 test_inheritance_subfooRequest {
-       hdr fidl_message_header[7540745593380780216]
-       sInLine fidl_string
-       sOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[7540745593380780216]
+    sInLine fidl_string
+    sOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_inheritance_subfooRequestHandles {
-       void void
+    void void
 } [packed]
 test_inheritance_subfooResponse {
-       hdr fidl_message_header[7540745593380780216]
-       y int64
+    hdr fidl_message_header[7540745593380780216]
+    y int64
 } [packed]
 test_inheritance_subfooResponseHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_inheritance_sub_client[zx_chan]
@@ -31,19 +31,19 @@ zx_channel_call$test_inheritance_subfoo(handle zx_chan_test_inheritance_sub_clie
 
 
 test_inheritance_superfooRequest {
-       hdr fidl_message_header[7540745593380780216]
-       sInLine fidl_string
-       sOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[7540745593380780216]
+    sInLine fidl_string
+    sOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_inheritance_superfooRequestHandles {
-       void void
+    void void
 } [packed]
 test_inheritance_superfooResponse {
-       hdr fidl_message_header[7540745593380780216]
-       y int64
+    hdr fidl_message_header[7540745593380780216]
+    y int64
 } [packed]
 test_inheritance_superfooResponseHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_inheritance_super_client[zx_chan]

@@ -5,312 +5,312 @@
 
 include <test/union/c/fidl.h>
 test_union_EmptyInLine {
-       padding int8
+    padding int8
 } [packed]
 test_union_EmptyOutOfLine {
-       void void
+    void void
 } [packed]
 test_union_EmptyHandles {
-       void void
+    void void
 } [packed]
 test_union_NullableUnionStructInLine {
-       the_unionInLine test_union_UnionInLine
+    the_unionInLine test_union_UnionInLine
 } [packed]
 test_union_NullableUnionStructOutOfLine {
-       void void
+    void void
 } [packed]
 test_union_NullableUnionStructHandles {
-       void void
+    void void
 } [packed]
 test_union_PastaInLine {
-       sauceInLine fidl_string
+    sauceInLine fidl_string
 } [packed]
 test_union_PastaOutOfLine {
-       sauceOutOfLine fidl_aligned[stringnoz]
+    sauceOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_union_PastaHandles {
-       void void
+    void void
 } [packed]
 test_union_PizzaInLine {
-       toppingsInLine fidl_vector
+    toppingsInLine fidl_vector
 } [packed]
 test_union_PizzaOutOfLine {
-       toppingsOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
+    toppingsOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
 } [packed]
 test_union_PizzaHandles {
-       void void
+    void void
 } [packed]
 test_union_StructWithNullableXUnionInLine {
-       x1InLine test_union_OlderSimpleUnionInLine
+    x1InLine test_union_OlderSimpleUnionInLine
 } [packed]
 test_union_StructWithNullableXUnionOutOfLine {
-       void void
+    void void
 } [packed]
 test_union_StructWithNullableXUnionHandles {
-       void void
+    void void
 } [packed]
 test_union_UnionSandwichInLine {
-       a int32
-       uInLine test_union_ExplicitXUnionInLine
-       b int32
+    a int32
+    uInLine test_union_ExplicitXUnionInLine
+    b int32
 } [packed]
 test_union_UnionSandwichOutOfLine {
-       void void
+    void void
 } [packed]
 test_union_UnionSandwichHandles {
-       void void
+    void void
 } [packed]
 test_union_ExplicitFooInLine [
-       sInLine fidl_union_member[2, fidl_string]
-       i fidl_union_member[1, int32]
+    sInLine fidl_union_member[2, fidl_string]
+    i fidl_union_member[1, int32]
 ]
 test_union_ExplicitFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
+    sOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_union_ExplicitFooHandles [
-       void void
+    void void
 ][varlen]
 test_union_ExplicitPizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
-       pastaInLine fidl_union_member[4, test_union_PastaInLine]
+    pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
+    pastaInLine fidl_union_member[4, test_union_PastaInLine]
 ]
 test_union_ExplicitPizzaOrPastaOutOfLine [
-       pizzaOutOfLine test_union_PizzaOutOfLine
-       pastaOutOfLine test_union_PastaOutOfLine
+    pizzaOutOfLine test_union_PizzaOutOfLine
+    pastaOutOfLine test_union_PastaOutOfLine
 ][varlen]
 test_union_ExplicitPizzaOrPastaHandles [
-       pizza test_union_PizzaHandles
-       pasta test_union_PastaHandles
+    pizza test_union_PizzaHandles
+    pasta test_union_PastaHandles
 ][varlen]
 test_union_ExplicitStrictFooInLine [
-       sInLine fidl_union_member[3, fidl_string]
-       i fidl_union_member[2, int32]
+    sInLine fidl_union_member[3, fidl_string]
+    i fidl_union_member[2, int32]
 ]
 test_union_ExplicitStrictFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
+    sOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_union_ExplicitStrictFooHandles [
-       void void
+    void void
 ][varlen]
 test_union_ExplicitUnionInLine [
-       primitive fidl_union_member[1, int32]
-       string_needs_constructorInLine fidl_union_member[3, fidl_string]
+    primitive fidl_union_member[1, int32]
+    string_needs_constructorInLine fidl_union_member[3, fidl_string]
 ]
 test_union_ExplicitUnionOutOfLine [
-       string_needs_constructorOutOfLine fidl_aligned[stringnoz]
+    string_needs_constructorOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_union_ExplicitUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_ExplicitXUnionInLine [
-       i fidl_union_member[1, int64]
-       f fidl_union_member[4, int32]
+    i fidl_union_member[1, int64]
+    f fidl_union_member[4, int32]
 ]
 test_union_ExplicitXUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_union_ExplicitXUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_FieldCollisionInLine [
-       field_collision_tag fidl_union_member[1, int32]
+    field_collision_tag fidl_union_member[1, int32]
 ]
 test_union_FieldCollisionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_union_FieldCollisionHandles [
-       void void
+    void void
 ][varlen]
 test_union_FlexibleFooInLine [
-       sInLine fidl_union_member[1, fidl_string]
-       i fidl_union_member[2, int32]
+    sInLine fidl_union_member[1, fidl_string]
+    i fidl_union_member[2, int32]
 ]
 test_union_FlexibleFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
+    sOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_union_FlexibleFooHandles [
-       void void
+    void void
 ][varlen]
 test_union_FlexiblePizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
-       pastaInLine fidl_union_member[2, test_union_PastaInLine]
+    pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
+    pastaInLine fidl_union_member[2, test_union_PastaInLine]
 ]
 test_union_FlexiblePizzaOrPastaOutOfLine [
-       pizzaOutOfLine test_union_PizzaOutOfLine
-       pastaOutOfLine test_union_PastaOutOfLine
+    pizzaOutOfLine test_union_PizzaOutOfLine
+    pastaOutOfLine test_union_PastaOutOfLine
 ][varlen]
 test_union_FlexiblePizzaOrPastaHandles [
-       pizza test_union_PizzaHandles
-       pasta test_union_PastaHandles
+    pizza test_union_PizzaHandles
+    pasta test_union_PastaHandles
 ][varlen]
 test_union_FlexibleUnionInLine [
-       primitive fidl_union_member[1, int32]
-       string_needs_constructorInLine fidl_union_member[2, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
+    primitive fidl_union_member[1, int32]
+    string_needs_constructorInLine fidl_union_member[2, fidl_string]
+    vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
 ]
 test_union_FlexibleUnionOutOfLine [
-       string_needs_constructorOutOfLine fidl_aligned[stringnoz]
-       vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
+    string_needs_constructorOutOfLine fidl_aligned[stringnoz]
+    vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
 ][varlen]
 test_union_FlexibleUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_NewerSimpleUnionInLine [
-       i fidl_union_member[1, int64]
-       sInLine fidl_union_member[2, fidl_string]
-       vInLine fidl_union_member[3, fidl_vector]
+    i fidl_union_member[1, int64]
+    sInLine fidl_union_member[2, fidl_string]
+    vInLine fidl_union_member[3, fidl_vector]
 ]
 test_union_NewerSimpleUnionOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
-       vOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
+    sOutOfLine fidl_aligned[stringnoz]
+    vOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
 ][varlen]
 test_union_NewerSimpleUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_OlderSimpleUnionInLine [
-       i fidl_union_member[1, int64]
-       f fidl_union_member[2, int32]
+    i fidl_union_member[1, int64]
+    f fidl_union_member[2, int32]
 ]
 test_union_OlderSimpleUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_union_OlderSimpleUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_PizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
-       pastaInLine fidl_union_member[2, test_union_PastaInLine]
+    pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
+    pastaInLine fidl_union_member[2, test_union_PastaInLine]
 ]
 test_union_PizzaOrPastaOutOfLine [
-       pizzaOutOfLine test_union_PizzaOutOfLine
-       pastaOutOfLine test_union_PastaOutOfLine
+    pizzaOutOfLine test_union_PizzaOutOfLine
+    pastaOutOfLine test_union_PastaOutOfLine
 ][varlen]
 test_union_PizzaOrPastaHandles [
-       pizza test_union_PizzaHandles
-       pasta test_union_PastaHandles
+    pizza test_union_PizzaHandles
+    pasta test_union_PastaHandles
 ][varlen]
 test_union_ReverseOrdinalUnionInLine [
-       second fidl_union_member[2, int32]
-       first fidl_union_member[1, int32]
+    second fidl_union_member[2, int32]
+    first fidl_union_member[1, int32]
 ]
 test_union_ReverseOrdinalUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_union_ReverseOrdinalUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_StrictBoundedXUnionInLine [
-       vInLine fidl_union_member[1, fidl_vector]
+    vInLine fidl_union_member[1, fidl_vector]
 ]
 test_union_StrictBoundedXUnionOutOfLine [
-       vOutOfLine array[int8]
+    vOutOfLine array[int8]
 ][varlen]
 test_union_StrictBoundedXUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_StrictFooInLine [
-       sInLine fidl_union_member[1, fidl_string]
-       i fidl_union_member[2, int32]
+    sInLine fidl_union_member[1, fidl_string]
+    i fidl_union_member[2, int32]
 ]
 test_union_StrictFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
+    sOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_union_StrictFooHandles [
-       void void
+    void void
 ][varlen]
 test_union_StrictPizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
-       pastaInLine fidl_union_member[2, test_union_PastaInLine]
+    pizzaInLine fidl_union_member[1, test_union_PizzaInLine]
+    pastaInLine fidl_union_member[2, test_union_PastaInLine]
 ]
 test_union_StrictPizzaOrPastaOutOfLine [
-       pizzaOutOfLine test_union_PizzaOutOfLine
-       pastaOutOfLine test_union_PastaOutOfLine
+    pizzaOutOfLine test_union_PizzaOutOfLine
+    pastaOutOfLine test_union_PastaOutOfLine
 ][varlen]
 test_union_StrictPizzaOrPastaHandles [
-       pizza test_union_PizzaHandles
-       pasta test_union_PastaHandles
+    pizza test_union_PizzaHandles
+    pasta test_union_PastaHandles
 ][varlen]
 test_union_StrictSimpleXUnionInLine [
-       i fidl_union_member[1, int32]
-       f fidl_union_member[2, int32]
-       sInLine fidl_union_member[3, fidl_string]
+    i fidl_union_member[1, int32]
+    f fidl_union_member[2, int32]
+    sInLine fidl_union_member[3, fidl_string]
 ]
 test_union_StrictSimpleXUnionOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
+    sOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_union_StrictSimpleXUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_StrictUnionInLine [
-       primitive fidl_union_member[1, int32]
-       string_needs_constructorInLine fidl_union_member[2, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
+    primitive fidl_union_member[1, int32]
+    string_needs_constructorInLine fidl_union_member[2, fidl_string]
+    vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
 ]
 test_union_StrictUnionOutOfLine [
-       string_needs_constructorOutOfLine fidl_aligned[stringnoz]
-       vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
+    string_needs_constructorOutOfLine fidl_aligned[stringnoz]
+    vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
 ][varlen]
 test_union_StrictUnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_UnionInLine [
-       primitive fidl_union_member[1, int32]
-       string_needs_constructorInLine fidl_union_member[2, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
+    primitive fidl_union_member[1, int32]
+    string_needs_constructorInLine fidl_union_member[2, fidl_string]
+    vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
 ]
 test_union_UnionOutOfLine [
-       string_needs_constructorOutOfLine fidl_aligned[stringnoz]
-       vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
+    string_needs_constructorOutOfLine fidl_aligned[stringnoz]
+    vector_string_also_needs_constructorOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
 ][varlen]
 test_union_UnionHandles [
-       void void
+    void void
 ][varlen]
 test_union_UnionWithAttributesInLine [
-       x fidl_union_member[1, int64]
+    x fidl_union_member[1, int64]
 ]
 test_union_UnionWithAttributesOutOfLine [
-       void void
+    void void
 ][varlen]
 test_union_UnionWithAttributesHandles [
-       void void
+    void void
 ][varlen]
 test_union_XUnionContainingEmptyStructInLine [
-       emptyInLine fidl_union_member[1, test_union_EmptyInLine]
+    emptyInLine fidl_union_member[1, test_union_EmptyInLine]
 ]
 test_union_XUnionContainingEmptyStructOutOfLine [
-       emptyOutOfLine test_union_EmptyOutOfLine
+    emptyOutOfLine test_union_EmptyOutOfLine
 ][varlen]
 test_union_XUnionContainingEmptyStructHandles [
-       empty test_union_EmptyHandles
+    empty test_union_EmptyHandles
 ][varlen]
 
 
 test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest {
-       hdr fidl_message_header[582913180652179677]
+    hdr fidl_message_header[582913180652179677]
 } [packed]
 test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestHandles {
-       void void
+    void void
 } [packed]
 test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse {
-       hdr fidl_message_header[582913180652179677]
-       xuInLine test_union_StrictBoundedXUnionInLine
-       xuOutOfLine test_union_StrictBoundedXUnionOutOfLine
+    hdr fidl_message_header[582913180652179677]
+    xuInLine test_union_StrictBoundedXUnionInLine
+    xuOutOfLine test_union_StrictBoundedXUnionOutOfLine
 } [packed]
 test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseHandles {
-       void void
+    void void
 } [packed]
 test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest {
-       hdr fidl_message_header[7698084639218919941]
+    hdr fidl_message_header[7698084639218919941]
 } [packed]
 test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestHandles {
-       void void
+    void void
 } [packed]
 test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse {
-       hdr fidl_message_header[7698084639218919941]
-       xuInLine test_union_OlderSimpleUnionInLine
+    hdr fidl_message_header[7698084639218919941]
+    xuInLine test_union_OlderSimpleUnionInLine
 } [packed]
 test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_union_TestProtocol_client[zx_chan]

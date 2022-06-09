@@ -27,12 +27,12 @@ class {{ .Name }} extends $fidl.Union {
 {{- range .Members }}
 
   const {{ $.Name }}.with{{ .CtorName }}({{ .Type.Decl }} value)
-    : _ordinal = {{ .Ordinal }}, _data = value;
+      : _ordinal = {{ .Ordinal }}, _data = value;
 {{- end }}
 
 {{- if .IsFlexible }}
   const {{ $.Name }}.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
-    : _data = data;
+      : _data = data;
 {{- end }}
 
   {{ .Name }}._(int ordinal, Object data) : _ordinal = ordinal, _data = data;
@@ -45,7 +45,7 @@ class {{ .Name }} extends $fidl.Union {
   {{ .TagName }} get $tag => _{{ .TagName }}_map[_ordinal]!;
 {{- end }}
 
-{{range .Members }}
+{{ range .Members }}
   {{ .Type.OptionalDecl }} get {{ .Name }} {
     if (_ordinal != {{ .Ordinal }}) {
       return null;
@@ -58,11 +58,11 @@ class {{ .Name }} extends $fidl.Union {
   $fidl.UnknownRawData? get $unknownData {
     switch (_ordinal) {
 {{- range .Members }}
-    case {{ .Ordinal }}:
+      case {{ .Ordinal }}:
 {{- end }}
-      return null;
-    default:
-      return _data;
+        return null;
+      default:
+        return _data;
     }
   }
 
@@ -84,4 +84,3 @@ const $fidl.UnionType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<{{ .Name }}> {{ .OptTypeSymbol }} = {{ .OptTypeExpr }};
 {{ end }}
-

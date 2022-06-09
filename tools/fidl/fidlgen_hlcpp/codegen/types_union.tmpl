@@ -19,7 +19,7 @@ class {{ .Name }};
 {{- .Docs }}
 class {{ .Name }} final {
  public:
- static const fidl_type_t* FidlType;
+  static const fidl_type_t* FidlType;
 
   {{ .Name }}();
   ~{{ .Name }}();
@@ -330,7 +330,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
     }
     {{- end }}
     default:
-       break;
+      break;
   }
 }
 
@@ -546,4 +546,3 @@ struct Equality<{{ . }}> {
 {{ end }}
 
 {{- end }}
-

@@ -22,7 +22,7 @@ namespace {
 {{ range .Benchmarks }}
 {{- if .HandleDefs }}
 std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
-	return {{ .HandleDefs }};
+  return {{ .HandleDefs }};
 }
 
 {{ .Type }} BuildFromHandles{{ .Name }}(fidl::AnyArena& allocator, const std::vector<zx_handle_t>& handle_defs) {
@@ -36,13 +36,13 @@ std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
 }
 {{- else }}
 std::tuple<> BuildEmptyContext{{ .Name }}() {
-	return std::make_tuple();
+  return std::make_tuple();
 }
 
 {{ .Type }} BuildFromEmptyContext{{ .Name }}(fidl::AnyArena& allocator, std::tuple<> _context) {
-	{{ .ValueBuild }}
-	auto result = {{ .ValueVar }};
-	return result;
+  {{ .ValueBuild }}
+  auto result = {{ .ValueVar }};
+  return result;
 }
 
 {{ .Type }} Build{{ .Name }}(fidl::AnyArena& allocator) {
@@ -61,39 +61,39 @@ bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
 }
 
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
+  return llcpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
 }
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
+  return llcpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
 }
 {{ if .EnableSendEventBenchmark }}
 bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
+  return llcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ if .EnableEchoCallBenchmark }}
 bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+  return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 bool BenchmarkEchoCallSync{{ .Name }}(perftest::RepeatState* state) {
-	return llcpp_benchmarks::EchoCallSyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+  return llcpp_benchmarks::EchoCallSyncBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ end }}
 
 void RegisterTests() {
-	{{ range .Benchmarks }}
-	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
-	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
-	perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
-	{{ if .EnableSendEventBenchmark }}
-	perftest::RegisterTest("LLCPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
-	{{- end -}}
-	{{ if .EnableEchoCallBenchmark }}
-	perftest::RegisterTest("LLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
-	perftest::RegisterTest("LLCPP/EchoCallSync/{{ .Path }}/Steps", BenchmarkEchoCallSync{{ .Name }});
-	{{- end -}}
-	{{ end }}
+  {{ range .Benchmarks }}
+  perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
+  perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
+  perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
+  {{ if .EnableSendEventBenchmark }}
+  perftest::RegisterTest("LLCPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
+  {{- end -}}
+  {{ if .EnableEchoCallBenchmark }}
+  perftest::RegisterTest("LLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
+  perftest::RegisterTest("LLCPP/EchoCallSync/{{ .Path }}/Steps", BenchmarkEchoCallSync{{ .Name }});
+  {{- end -}}
+  {{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
 

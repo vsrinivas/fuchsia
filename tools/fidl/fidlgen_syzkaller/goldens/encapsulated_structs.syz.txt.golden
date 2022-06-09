@@ -5,70 +5,70 @@
 
 include <test/encapsulatedstructs/c/fidl.h>
 test_encapsulatedstructs_ArrayInt16Int8InLine {
-       arrInLine array[test_encapsulatedstructs_Int16Int8InLine, 3]
+    arrInLine array[test_encapsulatedstructs_Int16Int8InLine, 3]
 } [packed]
 test_encapsulatedstructs_ArrayInt16Int8OutOfLine {
-       arrOutOfLine array[test_encapsulatedstructs_Int16Int8OutOfLine, 3]
+    arrOutOfLine array[test_encapsulatedstructs_Int16Int8OutOfLine, 3]
 } [packed]
 test_encapsulatedstructs_ArrayInt16Int8Handles {
-       arrHandles array[test_encapsulatedstructs_Int16Int8Handles, 3]
+    arrHandles array[test_encapsulatedstructs_Int16Int8Handles, 3]
 } [packed]
 test_encapsulatedstructs_Int16Int8InLine {
-       a int16
-       b int8
+    a int16
+    b int8
 } [packed]
 test_encapsulatedstructs_Int16Int8OutOfLine {
-       void void
+    void void
 } [packed]
 test_encapsulatedstructs_Int16Int8Handles {
-       void void
+    void void
 } [packed]
 test_encapsulatedstructs_Int8Int32InLine {
-       a int8
-       b int32
+    a int8
+    b int32
 } [packed]
 test_encapsulatedstructs_Int8Int32OutOfLine {
-       void void
+    void void
 } [packed]
 test_encapsulatedstructs_Int8Int32Handles {
-       void void
+    void void
 } [packed]
 test_encapsulatedstructs_NonInlineStructTestStructInLine {
-       elementInLine test_encapsulatedstructs_Int16Int8InLine
-       h flags[fidl_handle_presence, int32]
+    elementInLine test_encapsulatedstructs_Int16Int8InLine
+    h flags[fidl_handle_presence, int32]
 } [packed]
 test_encapsulatedstructs_NonInlineStructTestStructOutOfLine {
-       elementOutOfLine test_encapsulatedstructs_Int16Int8OutOfLine
+    elementOutOfLine test_encapsulatedstructs_Int16Int8OutOfLine
 } [packed]
 test_encapsulatedstructs_NonInlineStructTestStructHandles {
-       element test_encapsulatedstructs_Int16Int8Handles
-       h zx_handle
+    element test_encapsulatedstructs_Int16Int8Handles
+    h zx_handle
 } [packed]
 test_encapsulatedstructs_StructPaddingTestStructInLine {
-       trailingInLine test_encapsulatedstructs_Int16Int8InLine
-       innerInLine test_encapsulatedstructs_Int8Int32InLine
-       arrayInLine test_encapsulatedstructs_ArrayInt16Int8InLine
+    trailingInLine test_encapsulatedstructs_Int16Int8InLine
+    innerInLine test_encapsulatedstructs_Int8Int32InLine
+    arrayInLine test_encapsulatedstructs_ArrayInt16Int8InLine
 } [packed]
 test_encapsulatedstructs_StructPaddingTestStructOutOfLine {
-       trailingOutOfLine test_encapsulatedstructs_Int16Int8OutOfLine
-       innerOutOfLine test_encapsulatedstructs_Int8Int32OutOfLine
-       arrayOutOfLine test_encapsulatedstructs_ArrayInt16Int8OutOfLine
+    trailingOutOfLine test_encapsulatedstructs_Int16Int8OutOfLine
+    innerOutOfLine test_encapsulatedstructs_Int8Int32OutOfLine
+    arrayOutOfLine test_encapsulatedstructs_ArrayInt16Int8OutOfLine
 } [packed]
 test_encapsulatedstructs_StructPaddingTestStructHandles {
-       trailing test_encapsulatedstructs_Int16Int8Handles
-       inner test_encapsulatedstructs_Int8Int32Handles
-       array_ test_encapsulatedstructs_ArrayInt16Int8Handles
+    trailing test_encapsulatedstructs_Int16Int8Handles
+    inner test_encapsulatedstructs_Int8Int32Handles
+    array_ test_encapsulatedstructs_ArrayInt16Int8Handles
 } [packed]
 test_encapsulatedstructs_TopLevelStructInLine {
-       aInLine test_encapsulatedstructs_StructPaddingTestStructInLine
-       bInLine test_encapsulatedstructs_NonInlineStructTestStructInLine
+    aInLine test_encapsulatedstructs_StructPaddingTestStructInLine
+    bInLine test_encapsulatedstructs_NonInlineStructTestStructInLine
 } [packed]
 test_encapsulatedstructs_TopLevelStructOutOfLine {
-       aOutOfLine test_encapsulatedstructs_StructPaddingTestStructOutOfLine
-       bOutOfLine test_encapsulatedstructs_NonInlineStructTestStructOutOfLine
+    aOutOfLine test_encapsulatedstructs_StructPaddingTestStructOutOfLine
+    bOutOfLine test_encapsulatedstructs_NonInlineStructTestStructOutOfLine
 } [packed]
 test_encapsulatedstructs_TopLevelStructHandles {
-       a test_encapsulatedstructs_StructPaddingTestStructHandles
-       b test_encapsulatedstructs_NonInlineStructTestStructHandles
+    a test_encapsulatedstructs_StructPaddingTestStructHandles
+    b test_encapsulatedstructs_NonInlineStructTestStructHandles
 } [packed]
 

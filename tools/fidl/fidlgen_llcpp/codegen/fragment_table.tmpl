@@ -212,7 +212,8 @@ class ::fidl::internal::WireTableBaseBuilder<{{ . }}, BuilderImpl> {
 
 template<>
 class {{ .WireTableBuilder }} final : public ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableBuilder }}> {
- using Base = ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableBuilder }}>;
+  using Base = ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableBuilder }}>;
+
  public:
   {{- range .Members }}
     {{- if not .Type.InlineInEnvelope }}
@@ -237,7 +238,8 @@ class {{ .WireTableBuilder }} final : public ::fidl::internal::WireTableBaseBuil
 
 template<>
 class {{ .WireTableExternalBuilder }} final : public ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableExternalBuilder }}>  {
- using Base = ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableExternalBuilder }}>;
+  using Base = ::fidl::internal::WireTableBaseBuilder<{{ . }}, {{ .WireTableExternalBuilder }}>;
+
  private:
   friend class {{ . }};
   using Base::Base;
@@ -414,4 +416,3 @@ struct ::fidl::internal::WireCodingTraits<{{ . }}, ::fidl::internal::WireCodingC
 {{- EndifFuchsia -}}
 {{- end }}
 {{- end }}
-

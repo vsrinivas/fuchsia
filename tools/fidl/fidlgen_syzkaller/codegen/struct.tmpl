@@ -7,10 +7,9 @@
 {{- define "StructDefinition" -}}
 
 {{ .Name }} {
-       {{- range .Members }}
-       {{ .Name }} {{ .Type }}
-       {{- end }}
+    {{- range .Members }}
+    {{ .Name }} {{ .Type }}
+    {{- end }}
 } [packed]
 
 {{- end -}}
-

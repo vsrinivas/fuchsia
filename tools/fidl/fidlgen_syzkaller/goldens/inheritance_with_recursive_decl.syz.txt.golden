@@ -7,18 +7,18 @@ include <test/inheritancewithrecursivedecl/c/fidl.h>
 
 
 test_inheritancewithrecursivedecl_ChildFirstRequest {
-       hdr fidl_message_header[3973163707930985819]
-       request flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[3973163707930985819]
+    request flags[fidl_handle_presence, int32]
 } [packed]
 test_inheritancewithrecursivedecl_ChildFirstRequestHandles {
-       request zx_chan_test_inheritancewithrecursivedecl_Parent_server
+    request zx_chan_test_inheritancewithrecursivedecl_Parent_server
 } [packed]
 test_inheritancewithrecursivedecl_ChildSecondRequest {
-       hdr fidl_message_header[2545123272820824165]
-       request flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[2545123272820824165]
+    request flags[fidl_handle_presence, int32]
 } [packed]
 test_inheritancewithrecursivedecl_ChildSecondRequestHandles {
-       request zx_chan_test_inheritancewithrecursivedecl_Parent_server
+    request zx_chan_test_inheritancewithrecursivedecl_Parent_server
 } [packed]
 
 resource zx_chan_test_inheritancewithrecursivedecl_Child_client[zx_chan]
@@ -31,11 +31,11 @@ zx_channel_write$test_inheritancewithrecursivedecl_ChildSecond(handle zx_chan_te
 
 
 test_inheritancewithrecursivedecl_ParentFirstRequest {
-       hdr fidl_message_header[3973163707930985819]
-       request flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[3973163707930985819]
+    request flags[fidl_handle_presence, int32]
 } [packed]
 test_inheritancewithrecursivedecl_ParentFirstRequestHandles {
-       request zx_chan_test_inheritancewithrecursivedecl_Parent_server
+    request zx_chan_test_inheritancewithrecursivedecl_Parent_server
 } [packed]
 
 resource zx_chan_test_inheritancewithrecursivedecl_Parent_client[zx_chan]

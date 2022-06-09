@@ -9,16 +9,16 @@ test_constants_EnumType = test_constants_EnumType_VALUE, test_constants_EnumType
 test_constants_Bits = test_constants_Bits_B
 test_constants_BitsType = test_constants_BitsType_VALUE, test_constants_BitsType_SECOND_VALUE, test_constants_BitsType_THIRD_VALUE
 test_constants_StructInLine {
-       int64_with_default int64
-       string_with_defaultInLine fidl_string
-       bool_with_default int8
-       enum_with_default flags[test_constants_Enum, int32]
-       bits_with_default flags[test_constants_Bits, int32]
+    int64_with_default int64
+    string_with_defaultInLine fidl_string
+    bool_with_default int8
+    enum_with_default flags[test_constants_Enum, int32]
+    bits_with_default flags[test_constants_Bits, int32]
 } [packed]
 test_constants_StructOutOfLine {
-       string_with_defaultOutOfLine fidl_aligned[stringnoz]
+    string_with_defaultOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_constants_StructHandles {
-       void void
+    void void
 } [packed]
 

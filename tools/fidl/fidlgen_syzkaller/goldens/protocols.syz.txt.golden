@@ -6,166 +6,166 @@
 include <test/protocols/c/fidl.h>
 test_protocols_ErrorEnum = test_protocols_ErrorEnum_ERR_FOO, test_protocols_ErrorEnum_ERR_BAR
 test_protocols_ProtocolEndsInLine {
-       client flags[fidl_handle_presence, int32]
-       server flags[fidl_handle_presence, int32]
-       client_opt flags[fidl_handle_presence, int32]
-       server_opt flags[fidl_handle_presence, int32]
+    client flags[fidl_handle_presence, int32]
+    server flags[fidl_handle_presence, int32]
+    client_opt flags[fidl_handle_presence, int32]
+    server_opt flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_ProtocolEndsOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocols_ProtocolEndsHandles {
-       client zx_chan_test_protocols_DiscoverableProtocol_client
-       server zx_chan_test_protocols_DiscoverableProtocol_server
-       client_opt zx_chan_test_protocols_DiscoverableProtocol_client
-       server_opt zx_chan_test_protocols_DiscoverableProtocol_server
+    client zx_chan_test_protocols_DiscoverableProtocol_client
+    server zx_chan_test_protocols_DiscoverableProtocol_server
+    client_opt zx_chan_test_protocols_DiscoverableProtocol_client
+    server_opt zx_chan_test_protocols_DiscoverableProtocol_server
 } [packed]
 test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseInLine {
-       padding int8
+    padding int8
 } [packed]
 test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine {
-       padding int8
+    padding int8
 } [packed]
 test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntax_HandleInResult_ResponseInLine {
-       h flags[fidl_handle_presence, int32]
+    h flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_WithErrorSyntax_HandleInResult_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntax_HandleInResult_ResponseHandles {
-       h zx_handle
+    h zx_handle
 } [packed]
 test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseInLine {
-       a int64
-       b int64
-       c int64
+    a int64
+    b int64
+    c int64
 } [packed]
 test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_TheUnionInLine [
-       v fidl_union_member[1, int32]
+    v fidl_union_member[1, int32]
 ]
 test_protocols_TheUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_protocols_TheUnionHandles [
-       void void
+    void void
 ][varlen]
 test_protocols_WithErrorSyntax_ErrorAsEnum_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseInLine]
-       err fidl_union_member[2, flags[test_protocols_ErrorEnum, int32]]
+    responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseInLine]
+    err fidl_union_member[2, flags[test_protocols_ErrorEnum, int32]]
 ]
 test_protocols_WithErrorSyntax_ErrorAsEnum_ResultOutOfLine [
-       responseOutOfLine test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine
+    responseOutOfLine test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine
 ][varlen]
 test_protocols_WithErrorSyntax_ErrorAsEnum_ResultHandles [
-       response test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseHandles
+    response test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseHandles
 ][varlen]
 test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultOutOfLine [
-       responseOutOfLine test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseOutOfLine
+    responseOutOfLine test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseOutOfLine
 ][varlen]
 test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultHandles [
-       response test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseHandles
+    response test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseHandles
 ][varlen]
 test_protocols_WithErrorSyntax_HandleInResult_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_HandleInResult_ResponseInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_HandleInResult_ResponseInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocols_WithErrorSyntax_HandleInResult_ResultOutOfLine [
-       responseOutOfLine test_protocols_WithErrorSyntax_HandleInResult_ResponseOutOfLine
+    responseOutOfLine test_protocols_WithErrorSyntax_HandleInResult_ResponseOutOfLine
 ][varlen]
 test_protocols_WithErrorSyntax_HandleInResult_ResultHandles [
-       response test_protocols_WithErrorSyntax_HandleInResult_ResponseHandles
+    response test_protocols_WithErrorSyntax_HandleInResult_ResponseHandles
 ][varlen]
 test_protocols_WithErrorSyntax_ResponseAsStruct_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocols_WithErrorSyntax_ResponseAsStruct_ResultOutOfLine [
-       responseOutOfLine test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseOutOfLine
+    responseOutOfLine test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseOutOfLine
 ][varlen]
 test_protocols_WithErrorSyntax_ResponseAsStruct_ResultHandles [
-       response test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseHandles
+    response test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseHandles
 ][varlen]
 
 
 test_protocols_ChannelProtocolMethodARequest {
-       hdr fidl_message_header[3155008840945527714]
-       a int64
-       b int64
+    hdr fidl_message_header[3155008840945527714]
+    a int64
+    b int64
 } [packed]
 test_protocols_ChannelProtocolMethodARequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_ChannelProtocolEventAEvent {
-       hdr fidl_message_header[2220452875311597006]
-       a int64
-       b int64
+    hdr fidl_message_header[2220452875311597006]
+    a int64
+    b int64
 } [packed]
 test_protocols_ChannelProtocolEventAEventHandles {
-       void void
+    void void
 } [packed]
 test_protocols_ChannelProtocolMethodBRequest {
-       hdr fidl_message_header[8903004957800778182]
-       a int64
-       b int64
+    hdr fidl_message_header[8903004957800778182]
+    a int64
+    b int64
 } [packed]
 test_protocols_ChannelProtocolMethodBRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_ChannelProtocolMethodBResponse {
-       hdr fidl_message_header[8903004957800778182]
-       result int64
+    hdr fidl_message_header[8903004957800778182]
+    result int64
 } [packed]
 test_protocols_ChannelProtocolMethodBResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_ChannelProtocolTakeHandleRequest {
-       hdr fidl_message_header[591935489944717925]
-       h flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[591935489944717925]
+    h flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_ChannelProtocolTakeHandleRequestHandles {
-       h zx_handle
+    h zx_handle
 } [packed]
 test_protocols_ChannelProtocolTakeHandleResponse {
-       hdr fidl_message_header[591935489944717925]
+    hdr fidl_message_header[591935489944717925]
 } [packed]
 test_protocols_ChannelProtocolTakeHandleResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_ChannelProtocolMutateSocketRequest {
-       hdr fidl_message_header[7411742788430590287]
-       a flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[7411742788430590287]
+    a flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_ChannelProtocolMutateSocketRequestHandles {
-       a zx_socket
+    a zx_socket
 } [packed]
 test_protocols_ChannelProtocolMutateSocketResponse {
-       hdr fidl_message_header[7411742788430590287]
-       b flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[7411742788430590287]
+    b flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_ChannelProtocolMutateSocketResponseHandles {
-       b zx_socket
+    b zx_socket
 } [packed]
 
 resource zx_chan_test_protocols_ChannelProtocol_client[zx_chan]
@@ -181,10 +181,10 @@ zx_channel_call$test_protocols_ChannelProtocolMutateSocket(handle zx_chan_test_p
 
 
 test_protocols_DiscoverableProtocolMethodRequest {
-       hdr fidl_message_header[3455873048082739435]
+    hdr fidl_message_header[3455873048082739435]
 } [packed]
 test_protocols_DiscoverableProtocolMethodRequestHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_protocols_DiscoverableProtocol_client[zx_chan]
@@ -196,32 +196,32 @@ zx_channel_write$test_protocols_DiscoverableProtocolMethod(handle zx_chan_test_p
 
 
 test_protocols_HandleRightsProtocolNoResponseMethodRequest {
-       hdr fidl_message_header[1155044649514904573]
-       h flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[1155044649514904573]
+    h flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_HandleRightsProtocolNoResponseMethodRequestHandles {
-       h zx_socket
+    h zx_socket
 } [packed]
 test_protocols_HandleRightsProtocolResponseMethodRequest {
-       hdr fidl_message_header[5956276128041940295]
-       h flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[5956276128041940295]
+    h flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_HandleRightsProtocolResponseMethodRequestHandles {
-       h zx_socket
+    h zx_socket
 } [packed]
 test_protocols_HandleRightsProtocolResponseMethodResponse {
-       hdr fidl_message_header[5956276128041940295]
-       h flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[5956276128041940295]
+    h flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_HandleRightsProtocolResponseMethodResponseHandles {
-       h zx_socket
+    h zx_socket
 } [packed]
 test_protocols_HandleRightsProtocolAnEventEvent {
-       hdr fidl_message_header[476727631355490611]
-       h flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[476727631355490611]
+    h flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_HandleRightsProtocolAnEventEventHandles {
-       h zx_socket
+    h zx_socket
 } [packed]
 
 resource zx_chan_test_protocols_HandleRightsProtocol_client[zx_chan]
@@ -235,25 +235,25 @@ zx_channel_read$test_protocols_HandleRightsProtocolAnEvent(handle zx_chan_test_p
 
 
 test_protocols_ManyParametersFifteenRequest {
-       hdr fidl_message_header[6423043252952467815]
-       p1 int8
-       p2 int8
-       p3 int8
-       p4 int8
-       p5 int8
-       p6 int8
-       p7 int8
-       p8 int8
-       p9 int8
-       p10 int8
-       p11 int8
-       p12 int8
-       p13 int8
-       p14 int8
-       p15 int8
+    hdr fidl_message_header[6423043252952467815]
+    p1 int8
+    p2 int8
+    p3 int8
+    p4 int8
+    p5 int8
+    p6 int8
+    p7 int8
+    p8 int8
+    p9 int8
+    p10 int8
+    p11 int8
+    p12 int8
+    p13 int8
+    p14 int8
+    p15 int8
 } [packed]
 test_protocols_ManyParametersFifteenRequestHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_protocols_ManyParameters_client[zx_chan]
@@ -265,18 +265,18 @@ zx_channel_write$test_protocols_ManyParametersFifteen(handle zx_chan_test_protoc
 
 
 test_protocols_MethodWithUnionUnionMethodRequest {
-       hdr fidl_message_header[4124874338266649112]
-       uInLine test_protocols_TheUnionInLine
+    hdr fidl_message_header[4124874338266649112]
+    uInLine test_protocols_TheUnionInLine
 } [packed]
 test_protocols_MethodWithUnionUnionMethodRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_MethodWithUnionUnionMethodResponse {
-       hdr fidl_message_header[4124874338266649112]
-       uInLine test_protocols_TheUnionInLine
+    hdr fidl_message_header[4124874338266649112]
+    uInLine test_protocols_TheUnionInLine
 } [packed]
 test_protocols_MethodWithUnionUnionMethodResponseHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_protocols_MethodWithUnion_client[zx_chan]
@@ -288,12 +288,12 @@ zx_channel_call$test_protocols_MethodWithUnionUnionMethod(handle zx_chan_test_pr
 
 
 test_protocols_SyscallProtocolMethodCRequest {
-       hdr fidl_message_header[1468025868259603279]
-       a int64
-       b int64
+    hdr fidl_message_header[1468025868259603279]
+    a int64
+    b int64
 } [packed]
 test_protocols_SyscallProtocolMethodCRequestHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_protocols_SyscallProtocol_client[zx_chan]
@@ -305,32 +305,32 @@ zx_channel_write$test_protocols_SyscallProtocolMethodC(handle zx_chan_test_proto
 
 
 test_protocols_TransitionalRequestRequest {
-       hdr fidl_message_header[5849263021838298888]
-       x int64
+    hdr fidl_message_header[5849263021838298888]
+    x int64
 } [packed]
 test_protocols_TransitionalRequestRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_TransitionalRequestResponse {
-       hdr fidl_message_header[5849263021838298888]
-       y int64
+    hdr fidl_message_header[5849263021838298888]
+    y int64
 } [packed]
 test_protocols_TransitionalRequestResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_TransitionalOneWayRequest {
-       hdr fidl_message_header[4336658926562441191]
-       x int64
+    hdr fidl_message_header[4336658926562441191]
+    x int64
 } [packed]
 test_protocols_TransitionalOneWayRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_TransitionalEventEvent {
-       hdr fidl_message_header[8507647465196374081]
-       x int64
+    hdr fidl_message_header[8507647465196374081]
+    x int64
 } [packed]
 test_protocols_TransitionalEventEventHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_protocols_Transitional_client[zx_chan]
@@ -344,88 +344,88 @@ zx_channel_read$test_protocols_TransitionalEvent(handle zx_chan_test_protocols_T
 
 
 test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequest {
-       hdr fidl_message_header[5413654872775949227]
+    hdr fidl_message_header[5413654872775949227]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest {
-       hdr fidl_message_header[1631193469798418024]
+    hdr fidl_message_header[1631193469798418024]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse {
-       hdr fidl_message_header[1631193469798418024]
+    hdr fidl_message_header[1631193469798418024]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequest {
-       hdr fidl_message_header[9037369643591427517]
+    hdr fidl_message_header[9037369643591427517]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponse {
-       hdr fidl_message_header[9037369643591427517]
-       retInLine fidl_string
-       retOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[9037369643591427517]
+    retInLine fidl_string
+    retOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequest {
-       hdr fidl_message_header[7326057319832554103]
-       argInLine fidl_string
-       argOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[7326057319832554103]
+    argInLine fidl_string
+    argOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
-       hdr fidl_message_header[2877322062572412767]
-       argInLine fidl_string
-       argOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[2877322062572412767]
+    argInLine fidl_string
+    argOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse {
-       hdr fidl_message_header[2877322062572412767]
+    hdr fidl_message_header[2877322062572412767]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequest {
-       hdr fidl_message_header[6417226585456833969]
-       argInLine fidl_string
-       argOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[6417226585456833969]
+    argInLine fidl_string
+    argOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponse {
-       hdr fidl_message_header[6417226585456833969]
-       retInLine fidl_string
-       retOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[6417226585456833969]
+    retInLine fidl_string
+    retOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEvent {
-       hdr fidl_message_header[5397663296507358806]
+    hdr fidl_message_header[5397663296507358806]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithAndWithoutRequestResponseOnWithResponseEvent {
-       hdr fidl_message_header[5811598563493228968]
-       retInLine fidl_string
-       retOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[5811598563493228968]
+    retInLine fidl_string
+    retOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_protocols_WithAndWithoutRequestResponseOnWithResponseEventHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_protocols_WithAndWithoutRequestResponse_client[zx_chan]
@@ -444,60 +444,60 @@ zx_channel_read$test_protocols_WithAndWithoutRequestResponseOnWithResponse(handl
 
 
 test_protocols_WithErrorSyntaxResponseAsStructRequest {
-       hdr fidl_message_header[268248568430741139]
+    hdr fidl_message_header[268248568430741139]
 } [packed]
 test_protocols_WithErrorSyntaxResponseAsStructRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntaxResponseAsStructResponse {
-       hdr fidl_message_header[268248568430741139]
-       resultInLine test_protocols_WithErrorSyntax_ResponseAsStruct_ResultInLine
-       resultOutOfLine test_protocols_WithErrorSyntax_ResponseAsStruct_ResultOutOfLine
+    hdr fidl_message_header[268248568430741139]
+    resultInLine test_protocols_WithErrorSyntax_ResponseAsStruct_ResultInLine
+    resultOutOfLine test_protocols_WithErrorSyntax_ResponseAsStruct_ResultOutOfLine
 } [packed]
 test_protocols_WithErrorSyntaxResponseAsStructResponseHandles {
-       result test_protocols_WithErrorSyntax_ResponseAsStruct_ResultHandles
+    result test_protocols_WithErrorSyntax_ResponseAsStruct_ResultHandles
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsPrimitiveRequest {
-       hdr fidl_message_header[6930994461233198567]
+    hdr fidl_message_header[6930994461233198567]
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsPrimitiveResponse {
-       hdr fidl_message_header[6930994461233198567]
-       resultInLine test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultInLine
-       resultOutOfLine test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultOutOfLine
+    hdr fidl_message_header[6930994461233198567]
+    resultInLine test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultInLine
+    resultOutOfLine test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultOutOfLine
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseHandles {
-       result test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultHandles
+    result test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultHandles
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsEnumRequest {
-       hdr fidl_message_header[5491891352371277635]
+    hdr fidl_message_header[5491891352371277635]
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsEnumRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsEnumResponse {
-       hdr fidl_message_header[5491891352371277635]
-       resultInLine test_protocols_WithErrorSyntax_ErrorAsEnum_ResultInLine
-       resultOutOfLine test_protocols_WithErrorSyntax_ErrorAsEnum_ResultOutOfLine
+    hdr fidl_message_header[5491891352371277635]
+    resultInLine test_protocols_WithErrorSyntax_ErrorAsEnum_ResultInLine
+    resultOutOfLine test_protocols_WithErrorSyntax_ErrorAsEnum_ResultOutOfLine
 } [packed]
 test_protocols_WithErrorSyntaxErrorAsEnumResponseHandles {
-       result test_protocols_WithErrorSyntax_ErrorAsEnum_ResultHandles
+    result test_protocols_WithErrorSyntax_ErrorAsEnum_ResultHandles
 } [packed]
 test_protocols_WithErrorSyntaxHandleInResultRequest {
-       hdr fidl_message_header[1371676333068455103]
+    hdr fidl_message_header[1371676333068455103]
 } [packed]
 test_protocols_WithErrorSyntaxHandleInResultRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocols_WithErrorSyntaxHandleInResultResponse {
-       hdr fidl_message_header[1371676333068455103]
-       resultInLine test_protocols_WithErrorSyntax_HandleInResult_ResultInLine
-       resultOutOfLine test_protocols_WithErrorSyntax_HandleInResult_ResultOutOfLine
+    hdr fidl_message_header[1371676333068455103]
+    resultInLine test_protocols_WithErrorSyntax_HandleInResult_ResultInLine
+    resultOutOfLine test_protocols_WithErrorSyntax_HandleInResult_ResultOutOfLine
 } [packed]
 test_protocols_WithErrorSyntaxHandleInResultResponseHandles {
-       result test_protocols_WithErrorSyntax_HandleInResult_ResultHandles
+    result test_protocols_WithErrorSyntax_HandleInResult_ResultHandles
 } [packed]
 
 resource zx_chan_test_protocols_WithErrorSyntax_client[zx_chan]
@@ -512,48 +512,48 @@ zx_channel_call$test_protocols_WithErrorSyntaxHandleInResult(handle zx_chan_test
 
 
 test_protocols_WithProtocolEndsClientEndsRequest {
-       hdr fidl_message_header[5870448041025163330]
-       in_ flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[5870448041025163330]
+    in_ flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_WithProtocolEndsClientEndsRequestHandles {
-       in_ zx_chan_test_protocols_DiscoverableProtocol_client
+    in_ zx_chan_test_protocols_DiscoverableProtocol_client
 } [packed]
 test_protocols_WithProtocolEndsClientEndsResponse {
-       hdr fidl_message_header[5870448041025163330]
-       out_ flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[5870448041025163330]
+    out_ flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_WithProtocolEndsClientEndsResponseHandles {
-       out_ zx_chan_test_protocols_DiscoverableProtocol_client
+    out_ zx_chan_test_protocols_DiscoverableProtocol_client
 } [packed]
 test_protocols_WithProtocolEndsServerEndsRequest {
-       hdr fidl_message_header[8115535094437022259]
-       in_ flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[8115535094437022259]
+    in_ flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_WithProtocolEndsServerEndsRequestHandles {
-       in_ zx_chan_test_protocols_DiscoverableProtocol_server
+    in_ zx_chan_test_protocols_DiscoverableProtocol_server
 } [packed]
 test_protocols_WithProtocolEndsServerEndsResponse {
-       hdr fidl_message_header[8115535094437022259]
-       out_ flags[fidl_handle_presence, int32]
+    hdr fidl_message_header[8115535094437022259]
+    out_ flags[fidl_handle_presence, int32]
 } [packed]
 test_protocols_WithProtocolEndsServerEndsResponseHandles {
-       out_ zx_chan_test_protocols_DiscoverableProtocol_server
+    out_ zx_chan_test_protocols_DiscoverableProtocol_server
 } [packed]
 test_protocols_WithProtocolEndsStructContainingEndsRequest {
-       hdr fidl_message_header[4076866772260025813]
-       inInLine test_protocols_ProtocolEndsInLine
-       inOutOfLine test_protocols_ProtocolEndsOutOfLine
+    hdr fidl_message_header[4076866772260025813]
+    inInLine test_protocols_ProtocolEndsInLine
+    inOutOfLine test_protocols_ProtocolEndsOutOfLine
 } [packed]
 test_protocols_WithProtocolEndsStructContainingEndsRequestHandles {
-       in_ test_protocols_ProtocolEndsHandles
+    in_ test_protocols_ProtocolEndsHandles
 } [packed]
 test_protocols_WithProtocolEndsStructContainingEndsResponse {
-       hdr fidl_message_header[4076866772260025813]
-       outInLine test_protocols_ProtocolEndsInLine
-       outOutOfLine test_protocols_ProtocolEndsOutOfLine
+    hdr fidl_message_header[4076866772260025813]
+    outInLine test_protocols_ProtocolEndsInLine
+    outOutOfLine test_protocols_ProtocolEndsOutOfLine
 } [packed]
 test_protocols_WithProtocolEndsStructContainingEndsResponseHandles {
-       out_ test_protocols_ProtocolEndsHandles
+    out_ test_protocols_ProtocolEndsHandles
 } [packed]
 
 resource zx_chan_test_protocols_WithProtocolEnds_client[zx_chan]

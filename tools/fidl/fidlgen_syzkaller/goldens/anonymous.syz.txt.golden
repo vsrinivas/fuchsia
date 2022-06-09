@@ -9,81 +9,81 @@ test_anonymous_SomeProtocol_SomeMethod_Error = test_anonymous_SomeProtocol_SomeM
 test_anonymous_BitsMember = test_anonymous_BitsMember_BIT_ONE, test_anonymous_BitsMember_BIT_TWO
 test_anonymous_Flags = test_anonymous_Flags_INLINE
 test_anonymous_OverrideTestInLine {
-       op flags[test_anonymous_Op, int32]
-       leftInLine test_anonymous_ExpressionInLine
-       rightInLine test_anonymous_ExpressionInLine
+    op flags[test_anonymous_Op, int32]
+    leftInLine test_anonymous_ExpressionInLine
+    rightInLine test_anonymous_ExpressionInLine
 } [packed]
 test_anonymous_OverrideTestOutOfLine {
-       void void
+    void void
 } [packed]
 test_anonymous_OverrideTestHandles {
-       void void
+    void void
 } [packed]
 test_anonymous_SomeProtocol_SomeMethod_ResponseInLine {
-       bits_member flags[test_anonymous_BitsMember, int32]
+    bits_member flags[test_anonymous_BitsMember, int32]
 } [packed]
 test_anonymous_SomeProtocol_SomeMethod_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_anonymous_SomeProtocol_SomeMethod_ResponseHandles {
-       void void
+    void void
 } [packed]
 test_anonymous_TableDataInLine {
-       data int8
+    data int8
 } [packed]
 test_anonymous_TableDataOutOfLine {
-       void void
+    void void
 } [packed]
 test_anonymous_TableDataHandles {
-       void void
+    void void
 } [packed]
 test_anonymous_ExpressionInLine [
-       value fidl_union_member[1, int64]
-       bin_opInLine fidl_union_member[2, test_anonymous_OverrideTestInLine]
-        fidl_union_member[3, ]
+    value fidl_union_member[1, int64]
+    bin_opInLine fidl_union_member[2, test_anonymous_OverrideTestInLine]
+     fidl_union_member[3, ]
 ]
 test_anonymous_ExpressionOutOfLine [
-       bin_opOutOfLine test_anonymous_OverrideTestOutOfLine
+    bin_opOutOfLine test_anonymous_OverrideTestOutOfLine
 ][varlen]
 test_anonymous_ExpressionHandles [
-       bin_op test_anonymous_OverrideTestHandles
+    bin_op test_anonymous_OverrideTestHandles
 ][varlen]
 test_anonymous_SomeProtocol_SomeMethod_ResultInLine [
-       responseInLine fidl_union_member[1, test_anonymous_SomeProtocol_SomeMethod_ResponseInLine]
-       err fidl_union_member[2, flags[test_anonymous_SomeProtocol_SomeMethod_Error, int32]]
+    responseInLine fidl_union_member[1, test_anonymous_SomeProtocol_SomeMethod_ResponseInLine]
+    err fidl_union_member[2, flags[test_anonymous_SomeProtocol_SomeMethod_Error, int32]]
 ]
 test_anonymous_SomeProtocol_SomeMethod_ResultOutOfLine [
-       responseOutOfLine test_anonymous_SomeProtocol_SomeMethod_ResponseOutOfLine
+    responseOutOfLine test_anonymous_SomeProtocol_SomeMethod_ResponseOutOfLine
 ][varlen]
 test_anonymous_SomeProtocol_SomeMethod_ResultHandles [
-       response test_anonymous_SomeProtocol_SomeMethod_ResponseHandles
+    response test_anonymous_SomeProtocol_SomeMethod_ResponseHandles
 ][varlen]
 test_anonymous_UnionMemberInLine [
-       union_data fidl_union_member[2, int8]
+    union_data fidl_union_member[2, int8]
 ]
 test_anonymous_UnionMemberOutOfLine [
-       void void
+    void void
 ][varlen]
 test_anonymous_UnionMemberHandles [
-       void void
+    void void
 ][varlen]
 
 
 test_anonymous_SomeProtocolSomeMethodRequest {
-       hdr fidl_message_header[2515914517457749720]
-       union_memberInLine test_anonymous_UnionMemberInLine
-        
+    hdr fidl_message_header[2515914517457749720]
+    union_memberInLine test_anonymous_UnionMemberInLine
+     
 } [packed]
 test_anonymous_SomeProtocolSomeMethodRequestHandles {
-       void void
+    void void
 } [packed]
 test_anonymous_SomeProtocolSomeMethodResponse {
-       hdr fidl_message_header[2515914517457749720]
-       resultInLine test_anonymous_SomeProtocol_SomeMethod_ResultInLine
-       resultOutOfLine test_anonymous_SomeProtocol_SomeMethod_ResultOutOfLine
+    hdr fidl_message_header[2515914517457749720]
+    resultInLine test_anonymous_SomeProtocol_SomeMethod_ResultInLine
+    resultOutOfLine test_anonymous_SomeProtocol_SomeMethod_ResultOutOfLine
 } [packed]
 test_anonymous_SomeProtocolSomeMethodResponseHandles {
-       result test_anonymous_SomeProtocol_SomeMethod_ResultHandles
+    result test_anonymous_SomeProtocol_SomeMethod_ResultHandles
 } [packed]
 
 resource zx_chan_test_anonymous_SomeProtocol_client[zx_chan]

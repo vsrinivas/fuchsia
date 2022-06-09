@@ -5,12 +5,12 @@
 
 include <test/transitivedependencies/c/fidl.h>
 test_transitivedependencies_BazInLine {
-       gInLine test_middle_BarInLine
+    gInLine test_middle_BarInLine
 } [packed]
 test_transitivedependencies_BazOutOfLine {
-       gOutOfLine test_middle_BarOutOfLine
+    gOutOfLine test_middle_BarOutOfLine
 } [packed]
 test_transitivedependencies_BazHandles {
-       g test_middle_BarHandles
+    g test_middle_BarHandles
 } [packed]
 

@@ -5,12 +5,12 @@
 
 include <test/escaping/c/fidl.h>
 test_escaping_DocCommentWithQuotesInLine {
-       padding int8
+    padding int8
 } [packed]
 test_escaping_DocCommentWithQuotesOutOfLine {
-       void void
+    void void
 } [packed]
 test_escaping_DocCommentWithQuotesHandles {
-       void void
+    void void
 } [packed]
 

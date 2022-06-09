@@ -9,45 +9,45 @@ test_doccomments_MyStrictEnum = test_doccomments_MyStrictEnum_FOO, test_doccomme
 test_doccomments_MyFlexibleBits = test_doccomments_MyFlexibleBits_MY_FIRST_BIT, test_doccomments_MyFlexibleBits_MY_OTHER_BIT
 test_doccomments_MyStrictBits = test_doccomments_MyStrictBits_MY_FIRST_BIT, test_doccomments_MyStrictBits_MY_OTHER_BIT
 test_doccomments_StructInLine {
-       field int32
+    field int32
 } [packed]
 test_doccomments_StructOutOfLine {
-       void void
+    void void
 } [packed]
 test_doccomments_StructHandles {
-       void void
+    void void
 } [packed]
 test_doccomments_FlexibleUnionInLine [
-       field fidl_union_member[1, int32]
+    field fidl_union_member[1, int32]
 ]
 test_doccomments_FlexibleUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_doccomments_FlexibleUnionHandles [
-       void void
+    void void
 ][varlen]
 test_doccomments_StrictUnionInLine [
-       field fidl_union_member[1, int32]
+    field fidl_union_member[1, int32]
 ]
 test_doccomments_StrictUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_doccomments_StrictUnionHandles [
-       void void
+    void void
 ][varlen]
 
 
 test_doccomments_InterfaceMethodRequest {
-       hdr fidl_message_header[5017051197196532121]
+    hdr fidl_message_header[5017051197196532121]
 } [packed]
 test_doccomments_InterfaceMethodRequestHandles {
-       void void
+    void void
 } [packed]
 test_doccomments_InterfaceOnEventEvent {
-       hdr fidl_message_header[28780186509098736]
+    hdr fidl_message_header[28780186509098736]
 } [packed]
 test_doccomments_InterfaceOnEventEventHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_doccomments_Interface_client[zx_chan]

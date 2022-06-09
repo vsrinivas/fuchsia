@@ -5,58 +5,58 @@
 
 include <test/requestflexibleenvelope/c/fidl.h>
 test_requestflexibleenvelope_FlexibleFooInLine [
-       sInLine fidl_union_member[1, fidl_string]
-       i fidl_union_member[2, int32]
+    sInLine fidl_union_member[1, fidl_string]
+    i fidl_union_member[2, int32]
 ]
 test_requestflexibleenvelope_FlexibleFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
+    sOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_requestflexibleenvelope_FlexibleFooHandles [
-       void void
+    void void
 ][varlen]
 test_requestflexibleenvelope_StrictFooInLine [
-       sInLine fidl_union_member[1, fidl_string]
-       i fidl_union_member[2, int32]
+    sInLine fidl_union_member[1, fidl_string]
+    i fidl_union_member[2, int32]
 ]
 test_requestflexibleenvelope_StrictFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
+    sOutOfLine fidl_aligned[stringnoz]
 ][varlen]
 test_requestflexibleenvelope_StrictFooHandles [
-       void void
+    void void
 ][varlen]
 
 
 test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequest {
-       hdr fidl_message_header[700529454616207123]
-       sInLine test_requestflexibleenvelope_StrictFooInLine
-       sOutOfLine test_requestflexibleenvelope_StrictFooOutOfLine
+    hdr fidl_message_header[700529454616207123]
+    sInLine test_requestflexibleenvelope_StrictFooInLine
+    sOutOfLine test_requestflexibleenvelope_StrictFooOutOfLine
 } [packed]
 test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestHandles {
-       void void
+    void void
 } [packed]
 test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponse {
-       hdr fidl_message_header[700529454616207123]
-       fInLine test_requestflexibleenvelope_FlexibleFooInLine
-       fOutOfLine test_requestflexibleenvelope_FlexibleFooOutOfLine
+    hdr fidl_message_header[700529454616207123]
+    fInLine test_requestflexibleenvelope_FlexibleFooInLine
+    fOutOfLine test_requestflexibleenvelope_FlexibleFooOutOfLine
 } [packed]
 test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseHandles {
-       void void
+    void void
 } [packed]
 test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequest {
-       hdr fidl_message_header[5191655763393883319]
-       sInLine test_requestflexibleenvelope_FlexibleFooInLine
-       sOutOfLine test_requestflexibleenvelope_FlexibleFooOutOfLine
+    hdr fidl_message_header[5191655763393883319]
+    sInLine test_requestflexibleenvelope_FlexibleFooInLine
+    sOutOfLine test_requestflexibleenvelope_FlexibleFooOutOfLine
 } [packed]
 test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestHandles {
-       void void
+    void void
 } [packed]
 test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponse {
-       hdr fidl_message_header[5191655763393883319]
-       fInLine test_requestflexibleenvelope_StrictFooInLine
-       fOutOfLine test_requestflexibleenvelope_StrictFooOutOfLine
+    hdr fidl_message_header[5191655763393883319]
+    fInLine test_requestflexibleenvelope_StrictFooInLine
+    fOutOfLine test_requestflexibleenvelope_StrictFooOutOfLine
 } [packed]
 test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_requestflexibleenvelope_Protocol_client[zx_chan]

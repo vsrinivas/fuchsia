@@ -62,10 +62,10 @@ class {{ .Name }} final {
     {{- end }}
 
    private:
-   {{- with .Members }}
+    {{- with .Members }}
     ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
-   {{- end }}
+    {{- end }}
   };
 
   // Facilitates member protocol registration for servers.
@@ -94,10 +94,9 @@ class {{ .Name }} final {
     {{- end }}
 
    private:
-   {{- with .Members }}
+    {{- with .Members }}
     ::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
-   {{- end }}
+    {{- end }}
   };
 };
 {{- end }}
-

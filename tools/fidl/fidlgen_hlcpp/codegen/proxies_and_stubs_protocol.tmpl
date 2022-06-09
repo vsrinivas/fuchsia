@@ -280,8 +280,7 @@ zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
     {{- range .Methods }}
       {{- if not .HasRequest }}
         {{- if .HasResponse }}
-    case {{ .OrdinalName }}:
-    {
+    case {{ .OrdinalName }}: {
       if (!{{ .Name }}) {
         status = ZX_OK;
         break;
@@ -538,4 +537,3 @@ zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }
 
 {{- EndifFuchsia -}}
 {{ end }}
-

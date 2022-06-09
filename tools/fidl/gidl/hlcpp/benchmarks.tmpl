@@ -19,7 +19,7 @@ namespace {
 {{ range .Benchmarks }}
 {{- if .HandleDefs }}
 std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
-	return {{ .HandleDefs }};
+  return {{ .HandleDefs }};
 }
 
 {{ .Type }} BuildFromHandles{{ .Name }}(const std::vector<zx_handle_t>& handle_defs) {
@@ -33,13 +33,13 @@ std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
 }
 {{- else }}
 std::tuple<> BuildEmptyContext{{ .Name }}() {
-	return std::make_tuple();
+  return std::make_tuple();
 }
 
 {{ .Type }} BuildFromEmptyContext{{ .Name }}(std::tuple<> _context) {
-	{{ .ValueBuild }}
-	auto result = {{ .ValueVar }};
-	return result;
+  {{ .ValueBuild }}
+  auto result = {{ .ValueVar }};
+  return result;
 }
 
 {{ .Type }} Build{{ .Name }}() {
@@ -65,12 +65,12 @@ bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
 }
 {{ if .EnableSendEventBenchmark }}
 bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
-	return hlcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
+  return hlcpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ if .EnableEchoCallBenchmark }}
 bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
-	return hlcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+  return hlcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ end }}

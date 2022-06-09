@@ -5,23 +5,23 @@
 
 include <test/driveroneway/c/fidl.h>
 test_driveroneway_PayloadInLine {
-       value int32
+    value int32
 } [packed]
 test_driveroneway_PayloadOutOfLine {
-       void void
+    void void
 } [packed]
 test_driveroneway_PayloadHandles {
-       void void
+    void void
 } [packed]
 
 
 test_driveroneway_OneWaySendRequest {
-       hdr fidl_message_header[7942965975761529343]
-       payloadInLine test_driveroneway_PayloadInLine
-       payloadOutOfLine test_driveroneway_PayloadOutOfLine
+    hdr fidl_message_header[7942965975761529343]
+    payloadInLine test_driveroneway_PayloadInLine
+    payloadOutOfLine test_driveroneway_PayloadOutOfLine
 } [packed]
 test_driveroneway_OneWaySendRequestHandles {
-       payload test_driveroneway_PayloadHandles
+    payload test_driveroneway_PayloadHandles
 } [packed]
 
 resource zx_chan_test_driveroneway_OneWay_client[zx_chan]

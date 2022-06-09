@@ -7,10 +7,10 @@ include <test/service/c/fidl.h>
 
 
 test_service_FirstProtocolMethodOnFirstRequest {
-       hdr fidl_message_header[6352548393671797041]
+    hdr fidl_message_header[6352548393671797041]
 } [packed]
 test_service_FirstProtocolMethodOnFirstRequestHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_service_FirstProtocol_client[zx_chan]
@@ -22,10 +22,10 @@ zx_channel_write$test_service_FirstProtocolMethodOnFirst(handle zx_chan_test_ser
 
 
 test_service_SecondProtocolMethodOnSecondRequest {
-       hdr fidl_message_header[8121179205110225988]
+    hdr fidl_message_header[8121179205110225988]
 } [packed]
 test_service_SecondProtocolMethodOnSecondRequestHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_service_SecondProtocol_client[zx_chan]

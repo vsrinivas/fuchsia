@@ -7,22 +7,22 @@ include <test/versions/c/fidl.h>
 test_versions_Enum = test_versions_Enum_A, test_versions_Enum__UNKNOWN
 test_versions_Bits = test_versions_Bits_A
 test_versions_StructInLine {
-       x int32
+    x int32
 } [packed]
 test_versions_StructOutOfLine {
-       void void
+    void void
 } [packed]
 test_versions_StructHandles {
-       void void
+    void void
 } [packed]
 test_versions_UnionInLine [
-       x fidl_union_member[1, int32]
+    x fidl_union_member[1, int32]
 ]
 test_versions_UnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_versions_UnionHandles [
-       void void
+    void void
 ][varlen]
 
 
@@ -35,10 +35,10 @@ fdio_service_connect$test_versions_OtherProtocol(path ptr[in, string["/svc/"]], 
 
 
 test_versions_ProtocolFooRequest {
-       hdr fidl_message_header[6231434419097198905]
+    hdr fidl_message_header[6231434419097198905]
 } [packed]
 test_versions_ProtocolFooRequestHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_versions_Protocol_client[zx_chan]

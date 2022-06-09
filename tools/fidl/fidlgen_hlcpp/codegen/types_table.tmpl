@@ -302,10 +302,10 @@ struct Equality<{{ . }}> {
     {{- range .Members }}
     if (_lhs.{{ .MethodHasName }}()) {
       if (!_rhs.{{ .MethodHasName }}()) {
-	return false;
+        return false;
       }
       if (!::fidl::Equals(_lhs.{{ .Name }}(), _rhs.{{ .Name }}())) {
-	return false;
+        return false;
       }
     } else if (_rhs.{{ .MethodHasName }}()) {
       return false;
@@ -319,4 +319,3 @@ struct Equality<{{ . }}> {
 {{ end }}
 
 {{- end }}
-

@@ -6,16 +6,16 @@
 
 {{- define "ResultDeclaration" }}
 {{ if .ErrType -}}
-pub type {{ .Name }} = Result< (
-  {{- if gt (len .Ok) 1 }}
+pub type {{ .Name }} = Result<(
+{{- if gt (len .Ok) 1 }}
     {{- range $ok := .Ok }}
-      {{ $ok.Type }},
+    {{ $ok.Type }},
     {{- end }}
-  {{- else }}
+{{- else }}
     {{- range $ok := .Ok }}
-      {{ $ok.Type }}
+    {{ $ok.Type }}
     {{- end }}
-  {{- end }}
+{{- end }}
 ), {{ .ErrType }} >;
 
 /// Handle-type validating wrapper for {{ .Name }} responses, used internally by
@@ -24,13 +24,13 @@ pub type {{ .Name }} = Result< (
 /// because it is shared with composed protocols.
 #[doc(hidden)]
 pub type {{ .Name }}HandleWrapper = Result< (
-  {{- range $ok := .Ok }}
+{{- range $ok := .Ok }}
     {{ if $ok.HasHandleMetadata }}
     {{ $ok.HandleWrapperName }}<{{ $ok.Type }}>,
     {{ else }}
     {{ $ok.Type }},
     {{ end }}
-  {{- end }}
+{{- end }}
 ), {{ .ErrType }} >;
 {{- end }}
 
@@ -41,14 +41,13 @@ pub type {{ .Name }}HandleWrapper = Result< (
 /// public because it is shared with composed protocols.
 #[doc(hidden)]
 pub type {{ .Name }}WireHandleWrapper = fidl::encoding::OpenResult< (
-  {{- range $ok := .Ok }}
+{{- range $ok := .Ok }}
     {{ if $ok.HasHandleMetadata }}
     {{ $ok.HandleWrapperName }}<{{ $ok.Type }}>,
     {{ else }}
     {{ $ok.Type }},
     {{ end }}
-  {{- end }}
+{{- end }}
 ), {{ if .ErrType }}{{ .ErrType }}{{ else }}(){{ end }} >;
 {{- end }}
 {{- end }}
-

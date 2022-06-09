@@ -21,7 +21,7 @@ namespace {
 {{ range .Benchmarks }}
 {{- if .HandleDefs }}
 std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
-	return {{ .HandleDefs }};
+  return {{ .HandleDefs }};
 }
 
 {{ .Type }} BuildFromHandles{{ .Name }}(const std::vector<zx_handle_t>& handle_defs) {
@@ -35,13 +35,13 @@ std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
 }
 {{- else }}
 std::tuple<> BuildEmptyContext{{ .Name }}() {
-	return std::make_tuple();
+  return std::make_tuple();
 }
 
 {{ .Type }} BuildFromEmptyContext{{ .Name }}(std::tuple<> _context) {
-	{{ .ValueBuild }}
-	auto result = {{ .ValueVar }};
-	return result;
+  {{ .ValueBuild }}
+  auto result = {{ .ValueVar }};
+  return result;
 }
 
 {{ .Type }} Build{{ .Name }}() {
@@ -60,35 +60,35 @@ bool BenchmarkBuilder{{ .Name }}(perftest::RepeatState* state) {
 }
 
 bool BenchmarkEncode{{ .Name }}(perftest::RepeatState* state) {
-	return cpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
+  return cpp_benchmarks::EncodeBenchmark(state, Build{{ .Name }});
 }
 bool BenchmarkDecode{{ .Name }}(perftest::RepeatState* state) {
-	return cpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
+  return cpp_benchmarks::DecodeBenchmark(state, Build{{ .Name }});
 }
 {{ if .EnableSendEventBenchmark }}
 bool BenchmarkSendEvent{{ .Name }}(perftest::RepeatState* state) {
-	return cpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
+  return cpp_benchmarks::SendEventBenchmark<{{ .EventProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ if .EnableEchoCallBenchmark }}
 bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
-	return cpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
+  return cpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }});
 }
 {{- end -}}
 {{ end }}
 
 void RegisterTests() {
-	{{ range .Benchmarks }}
-	perftest::RegisterTest("CPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
-	perftest::RegisterTest("CPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
-	perftest::RegisterTest("CPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
-	{{ if .EnableSendEventBenchmark }}
-	perftest::RegisterTest("CPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
-	{{- end -}}
-	{{ if .EnableEchoCallBenchmark }}
-	perftest::RegisterTest("CPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
-	{{- end -}}
-	{{ end }}
+  {{ range .Benchmarks }}
+  perftest::RegisterTest("CPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }});
+  perftest::RegisterTest("CPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
+  perftest::RegisterTest("CPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
+  {{ if .EnableSendEventBenchmark }}
+  perftest::RegisterTest("CPP/SendEvent/{{ .Path }}/Steps", BenchmarkSendEvent{{ .Name }});
+  {{- end -}}
+  {{ if .EnableEchoCallBenchmark }}
+  perftest::RegisterTest("CPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
+  {{- end -}}
+  {{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
 

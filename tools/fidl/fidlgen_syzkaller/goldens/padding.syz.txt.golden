@@ -5,168 +5,168 @@
 
 include <test/padding/c/fidl.h>
 test_padding_Padding1ByteEndInLine {
-       a int16
-       b int8
+    a int16
+    b int8
 } [packed]
 test_padding_Padding1ByteEndOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding1ByteEndHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding1ByteMiddleInLine {
-       a int8
-       b int16
+    a int8
+    b int16
 } [packed]
 test_padding_Padding1ByteMiddleOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding1ByteMiddleHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding2ByteAlignmentLength6InLine {
-       a int8
-       b int16
-       c int8
+    a int8
+    b int16
+    c int8
 } [packed]
 test_padding_Padding2ByteAlignmentLength6OutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding2ByteAlignmentLength6Handles {
-       void void
+    void void
 } [packed]
 test_padding_Padding2ByteEndInLine {
-       a int32
-       b int16
+    a int32
+    b int16
 } [packed]
 test_padding_Padding2ByteEndOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding2ByteEndHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding2ByteMiddleInLine {
-       a int16
-       b int32
+    a int16
+    b int32
 } [packed]
 test_padding_Padding2ByteMiddleOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding2ByteMiddleHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding3ByteEndInLine {
-       a int32
-       b int8
+    a int32
+    b int8
 } [packed]
 test_padding_Padding3ByteEndOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding3ByteEndHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding3ByteMiddleInLine {
-       a int8
-       b int32
+    a int8
+    b int32
 } [packed]
 test_padding_Padding3ByteMiddleOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding3ByteMiddleHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding4ByteAlignmentLength12InLine {
-       a int32
-       b int8
-       c int16
-       d int16
+    a int32
+    b int8
+    c int16
+    d int16
 } [packed]
 test_padding_Padding4ByteAlignmentLength12OutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding4ByteAlignmentLength12Handles {
-       void void
+    void void
 } [packed]
 test_padding_Padding4ByteEndInLine {
-       a int64
-       b int32
+    a int64
+    b int32
 } [packed]
 test_padding_Padding4ByteEndOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding4ByteEndHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding4ByteMiddleInLine {
-       a int32
-       b int64
+    a int32
+    b int64
 } [packed]
 test_padding_Padding4ByteMiddleOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding4ByteMiddleHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding5ByteEndInLine {
-       a int64
-       b int16
-       c int8
+    a int64
+    b int16
+    c int8
 } [packed]
 test_padding_Padding5ByteEndOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding5ByteEndHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding5ByteMiddleInLine {
-       a int16
-       b int8
-       c int64
+    a int16
+    b int8
+    c int64
 } [packed]
 test_padding_Padding5ByteMiddleOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding5ByteMiddleHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding6ByteEndInLine {
-       a int64
-       b int16
+    a int64
+    b int16
 } [packed]
 test_padding_Padding6ByteEndOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding6ByteEndHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding6ByteMiddleInLine {
-       a int16
-       b int64
+    a int16
+    b int64
 } [packed]
 test_padding_Padding6ByteMiddleOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding6ByteMiddleHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding7ByteEndInLine {
-       a int64
-       b int8
+    a int64
+    b int8
 } [packed]
 test_padding_Padding7ByteEndOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding7ByteEndHandles {
-       void void
+    void void
 } [packed]
 test_padding_Padding7ByteMiddleInLine {
-       a int8
-       b int64
+    a int8
+    b int64
 } [packed]
 test_padding_Padding7ByteMiddleOutOfLine {
-       void void
+    void void
 } [packed]
 test_padding_Padding7ByteMiddleHandles {
-       void void
+    void void
 } [packed]
 

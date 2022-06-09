@@ -18,7 +18,7 @@ class {{ .Name }} extends $fidl.Enum {
     if (!_values.containsKey(_v)) {
 {{ if .IsStrict }}
       throw $fidl.FidlError('Invalid strict enum value: $_v',
-        $fidl.FidlErrorCode.fidlInvalidEnumValue);
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
 {{ else }}
       _values[_v] = {{ .Name }}._(_v, true);
 {{ end }}
@@ -77,4 +77,3 @@ class {{ .Name }} extends $fidl.Enum {
 
 const $fidl.EnumType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 {{ end }}
-

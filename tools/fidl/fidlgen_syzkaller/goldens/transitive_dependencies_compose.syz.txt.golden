@@ -7,18 +7,18 @@ include <test/transitivedependenciescompose/c/fidl.h>
 
 
 test_transitivedependenciescompose_TopGetFooRequest {
-       hdr fidl_message_header[2618685789258237543]
+    hdr fidl_message_header[2618685789258237543]
 } [packed]
 test_transitivedependenciescompose_TopGetFooRequestHandles {
-       void void
+    void void
 } [packed]
 test_transitivedependenciescompose_TopGetFooResponse {
-       hdr fidl_message_header[2618685789258237543]
-       fooInLine test_bottom_FooInLine
-       fooOutOfLine test_bottom_FooOutOfLine
+    hdr fidl_message_header[2618685789258237543]
+    fooInLine test_bottom_FooInLine
+    fooOutOfLine test_bottom_FooOutOfLine
 } [packed]
 test_transitivedependenciescompose_TopGetFooResponseHandles {
-       foo test_bottom_FooHandles
+    foo test_bottom_FooHandles
 } [packed]
 
 resource zx_chan_test_transitivedependenciescompose_Top_client[zx_chan]

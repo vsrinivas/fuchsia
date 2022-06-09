@@ -37,15 +37,15 @@ $async.Future<void>
   {{- else }}
     {{- if .AsyncResponseClass -}}
       $fidl.decodeMessageWithCallback<{{ .AsyncResponseClass }}>(
-				$message,
-				{{ .TypeSymbol }}.responseInlineSize($message.wireFormat),
-				($fidl.Decoder decoder) {
-					return {{ .AsyncResponseClass }}(
-						{{- range $index, $response := .Response.WireParameters }}
-							$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize, 1),
-						{{- end -}}
-					);
-				}
+        $message,
+        {{ .TypeSymbol }}.responseInlineSize($message.wireFormat),
+        ($fidl.Decoder decoder) {
+          return {{ .AsyncResponseClass }}(
+            {{- range $index, $response := .Response.WireParameters }}
+              $types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            {{- end -}}
+          );
+        }
       )
     {{- else -}}
       {{- if .Response.WireParameters -}}
@@ -70,18 +70,18 @@ $async.Future<void>
 */}}
 {{- define "EncodeResponse" -}}
   {{- if (and .AsyncResponseClass (not (or .Response.HasError .Response.HasTransportError))) -}}
-		$fidl.encodeMessageWithCallback(
-			$encoder,
-			{{ .TypeSymbol }}.responseInlineSize($encoder.wireFormat),
-			() {
-				{{- range $index, $response := .Response.WireParameters }}
-					$types[{{ $index }}].encode($encoder, $response.{{ .Name }}, $fidl.kMessageHeaderSize, 1);
-				{{- end -}}
-			}
-		);
+    $fidl.encodeMessageWithCallback(
+      $encoder,
+      {{ .TypeSymbol }}.responseInlineSize($encoder.wireFormat),
+      () {
+        {{- range $index, $response := .Response.WireParameters }}
+          $types[{{ $index }}].encode($encoder, $response.{{ .Name }}, $fidl.kMessageHeaderSize, 1);
+        {{- end -}}
+      }
+    );
   {{- else -}}
     {{- if .Response.WireParameters -}}
-			$fidl.encodeMessage(
+      $fidl.encodeMessage(
         $encoder,
         {{ .TypeSymbol }}.responseInlineSize($encoder.wireFormat),
         $types[0],
@@ -314,15 +314,15 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
       $encoder.encodeMessageHeader({{ .OrdinalName }}, 0, {{ .MessageHeaderStrictness }});
       {{- if .Request }}
         final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
-				$fidl.encodeMessageWithCallback(
-					$encoder,
-					{{ .TypeSymbol }}.requestInlineSize($encoder.wireFormat),
-					() {
-						{{- range $index, $request := .Request }}
-							$types[{{ $index }}].encode($encoder, {{ .Name }}, $fidl.kMessageHeaderSize, 1);
-						{{- end -}}
-					}
-				);
+        $fidl.encodeMessageWithCallback(
+          $encoder,
+          {{ .TypeSymbol }}.requestInlineSize($encoder.wireFormat),
+          () {
+            {{- range $index, $request := .Request }}
+              $types[{{ $index }}].encode($encoder, {{ .Name }}, $fidl.kMessageHeaderSize, 1);
+            {{- end -}}
+          }
+        );
       {{- end }}
 
       {{- if .HasResponse }}
@@ -415,19 +415,19 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .ServerName }}> {
             final String _name = {{ .TypeSymbol }}.name;
             $fidl.performWithExceptionHandling(_name, () {
               final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
-							// ignore: prefer_const_declarations
-							final _impl = impl!;
-							final {{ template "AsyncReturn" . }} $future = $fidl.decodeMessageWithCallback<{{ template "AsyncReturn" . }}>(
-								$message,
-								{{ .TypeSymbol }}.requestInlineSize($message.wireFormat),
-								($fidl.Decoder decoder) {
-									return _impl.{{ .Name }}(
-										{{- range $index, $request := .Request }}
-											$types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize, 1),
-										{{- end }}
-									);
-								}
-							);
+              // ignore: prefer_const_declarations
+              final _impl = impl!;
+              final {{ template "AsyncReturn" . }} $future = $fidl.decodeMessageWithCallback<{{ template "AsyncReturn" . }}>(
+                $message,
+                {{ .TypeSymbol }}.requestInlineSize($message.wireFormat),
+                ($fidl.Decoder decoder) {
+                  return _impl.{{ .Name }}(
+                    {{- range $index, $request := .Request }}
+                      $types[{{ $index }}].decode(decoder, $fidl.kMessageHeaderSize, 1),
+                    {{- end }}
+                  );
+                }
+              );
 
               {{- if .HasResponse }}
                 $future

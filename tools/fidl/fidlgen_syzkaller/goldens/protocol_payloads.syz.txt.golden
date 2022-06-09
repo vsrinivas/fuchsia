@@ -5,308 +5,308 @@
 
 include <test/protocolpayloads/c/fidl.h>
 test_protocolpayloads_LocalStructPayloadInLine {
-       a int32
-       b int32
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_LocalStructPayloadOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_LocalStructPayloadHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseInLine {
-       a int32
-       b int32
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseInLine {
-       a int32
-       b int32
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocol_OnAnonWithError_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocolpayloads_MainProtocol_OnAnonWithError_ResultOutOfLine [
-       responseOutOfLine test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseOutOfLine
+    responseOutOfLine test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseOutOfLine
 ][varlen]
 test_protocolpayloads_MainProtocol_OnAnonWithError_ResultHandles [
-       response test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseHandles
+    response test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseHandles
 ][varlen]
 test_protocolpayloads_MainProtocol_OnImportWithError_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocolpayloads_imported_ImportStructPayloadInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocolpayloads_imported_ImportStructPayloadInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocolpayloads_MainProtocol_OnImportWithError_ResultOutOfLine [
-       responseOutOfLine test_protocolpayloads_imported_ImportStructPayloadOutOfLine
+    responseOutOfLine test_protocolpayloads_imported_ImportStructPayloadOutOfLine
 ][varlen]
 test_protocolpayloads_MainProtocol_OnImportWithError_ResultHandles [
-       response test_protocolpayloads_imported_ImportStructPayloadHandles
+    response test_protocolpayloads_imported_ImportStructPayloadHandles
 ][varlen]
 test_protocolpayloads_MainProtocol_OnLocalWithError_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocolpayloads_LocalStructPayloadInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocolpayloads_LocalStructPayloadInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocolpayloads_MainProtocol_OnLocalWithError_ResultOutOfLine [
-       responseOutOfLine test_protocolpayloads_LocalStructPayloadOutOfLine
+    responseOutOfLine test_protocolpayloads_LocalStructPayloadOutOfLine
 ][varlen]
 test_protocolpayloads_MainProtocol_OnLocalWithError_ResultHandles [
-       response test_protocolpayloads_LocalStructPayloadHandles
+    response test_protocolpayloads_LocalStructPayloadHandles
 ][varlen]
 test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultOutOfLine [
-       responseOutOfLine test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseOutOfLine
+    responseOutOfLine test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseOutOfLine
 ][varlen]
 test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultHandles [
-       response test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseHandles
+    response test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseHandles
 ][varlen]
 test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocolpayloads_imported_ImportStructPayloadInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocolpayloads_imported_ImportStructPayloadInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultOutOfLine [
-       responseOutOfLine test_protocolpayloads_imported_ImportStructPayloadOutOfLine
+    responseOutOfLine test_protocolpayloads_imported_ImportStructPayloadOutOfLine
 ][varlen]
 test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultHandles [
-       response test_protocolpayloads_imported_ImportStructPayloadHandles
+    response test_protocolpayloads_imported_ImportStructPayloadHandles
 ][varlen]
 test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultInLine [
-       responseInLine fidl_union_member[1, test_protocolpayloads_LocalStructPayloadInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_protocolpayloads_LocalStructPayloadInLine]
+    err fidl_union_member[2, int32]
 ]
 test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultOutOfLine [
-       responseOutOfLine test_protocolpayloads_LocalStructPayloadOutOfLine
+    responseOutOfLine test_protocolpayloads_LocalStructPayloadOutOfLine
 ][varlen]
 test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultHandles [
-       response test_protocolpayloads_LocalStructPayloadHandles
+    response test_protocolpayloads_LocalStructPayloadHandles
 ][varlen]
 
 
 test_protocolpayloads_MainProtocolOneWayComposedRequest {
-       hdr fidl_message_header[2602591870026304272]
-       a int32
+    hdr fidl_message_header[2602591870026304272]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolOneWayComposedRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedRequest {
-       hdr fidl_message_header[2542459230546612144]
-       a int32
+    hdr fidl_message_header[2542459230546612144]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedResponse {
-       hdr fidl_message_header[2542459230546612144]
-       a int32
+    hdr fidl_message_header[2542459230546612144]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequest {
-       hdr fidl_message_header[7681984876526769495]
-       a int32
+    hdr fidl_message_header[7681984876526769495]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponse {
-       hdr fidl_message_header[7681984876526769495]
-       resultInLine test_protocolpayloads_imported_ComposedProtocol_TwoWayComposedWithError_ResultInLine
+    hdr fidl_message_header[7681984876526769495]
+    resultInLine test_protocolpayloads_imported_ComposedProtocol_TwoWayComposedWithError_ResultInLine
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolOnComposedEvent {
-       hdr fidl_message_header[1872339328378152762]
-       a int32
+    hdr fidl_message_header[1872339328378152762]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolOnComposedEventHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolOnComposedWithErrorEvent {
-       hdr fidl_message_header[7167282778061495960]
-       resultInLine test_protocolpayloads_imported_ComposedProtocol_OnComposedWithError_ResultInLine
+    hdr fidl_message_header[7167282778061495960]
+    resultInLine test_protocolpayloads_imported_ComposedProtocol_OnComposedWithError_ResultInLine
 } [packed]
 test_protocolpayloads_MainProtocolOnComposedWithErrorEventHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolOneWayLocalRequest {
-       hdr fidl_message_header[7755175439334311701]
-       a int32
-       b int32
+    hdr fidl_message_header[7755175439334311701]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolOneWayLocalRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalRequest {
-       hdr fidl_message_header[8374292137648566031]
-       a int32
-       b int32
+    hdr fidl_message_header[8374292137648566031]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalResponse {
-       hdr fidl_message_header[8374292137648566031]
-       a int32
-       b int32
+    hdr fidl_message_header[8374292137648566031]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequest {
-       hdr fidl_message_header[2898559119954589948]
-       a int32
-       b int32
+    hdr fidl_message_header[2898559119954589948]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponse {
-       hdr fidl_message_header[2898559119954589948]
-       resultInLine test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultInLine
-       resultOutOfLine test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultOutOfLine
+    hdr fidl_message_header[2898559119954589948]
+    resultInLine test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultInLine
+    resultOutOfLine test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultOutOfLine
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseHandles {
-       result test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultHandles
+    result test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultHandles
 } [packed]
 test_protocolpayloads_MainProtocolOnLocalEvent {
-       hdr fidl_message_header[5135782819583756313]
-       a int32
-       b int32
+    hdr fidl_message_header[5135782819583756313]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolOnLocalEventHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolOnLocalWithErrorEvent {
-       hdr fidl_message_header[5678277415565140399]
-       resultInLine test_protocolpayloads_MainProtocol_OnLocalWithError_ResultInLine
-       resultOutOfLine test_protocolpayloads_MainProtocol_OnLocalWithError_ResultOutOfLine
+    hdr fidl_message_header[5678277415565140399]
+    resultInLine test_protocolpayloads_MainProtocol_OnLocalWithError_ResultInLine
+    resultOutOfLine test_protocolpayloads_MainProtocol_OnLocalWithError_ResultOutOfLine
 } [packed]
 test_protocolpayloads_MainProtocolOnLocalWithErrorEventHandles {
-       result test_protocolpayloads_MainProtocol_OnLocalWithError_ResultHandles
+    result test_protocolpayloads_MainProtocol_OnLocalWithError_ResultHandles
 } [packed]
 test_protocolpayloads_MainProtocolOneWayImportRequest {
-       hdr fidl_message_header[3344777159365288972]
-       a int32
+    hdr fidl_message_header[3344777159365288972]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolOneWayImportRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportRequest {
-       hdr fidl_message_header[2374708679656510579]
-       a int32
+    hdr fidl_message_header[2374708679656510579]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportResponse {
-       hdr fidl_message_header[2374708679656510579]
-       a int32
+    hdr fidl_message_header[2374708679656510579]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequest {
-       hdr fidl_message_header[4286143084949642173]
-       a int32
+    hdr fidl_message_header[4286143084949642173]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponse {
-       hdr fidl_message_header[4286143084949642173]
-       resultInLine test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultInLine
-       resultOutOfLine test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultOutOfLine
+    hdr fidl_message_header[4286143084949642173]
+    resultInLine test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultInLine
+    resultOutOfLine test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultOutOfLine
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseHandles {
-       result test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultHandles
+    result test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultHandles
 } [packed]
 test_protocolpayloads_MainProtocolOnImportEvent {
-       hdr fidl_message_header[1996489653379631369]
-       a int32
+    hdr fidl_message_header[1996489653379631369]
+    a int32
 } [packed]
 test_protocolpayloads_MainProtocolOnImportEventHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolOnImportWithErrorEvent {
-       hdr fidl_message_header[7102941407914553861]
-       resultInLine test_protocolpayloads_MainProtocol_OnImportWithError_ResultInLine
-       resultOutOfLine test_protocolpayloads_MainProtocol_OnImportWithError_ResultOutOfLine
+    hdr fidl_message_header[7102941407914553861]
+    resultInLine test_protocolpayloads_MainProtocol_OnImportWithError_ResultInLine
+    resultOutOfLine test_protocolpayloads_MainProtocol_OnImportWithError_ResultOutOfLine
 } [packed]
 test_protocolpayloads_MainProtocolOnImportWithErrorEventHandles {
-       result test_protocolpayloads_MainProtocol_OnImportWithError_ResultHandles
+    result test_protocolpayloads_MainProtocol_OnImportWithError_ResultHandles
 } [packed]
 test_protocolpayloads_MainProtocolOneWayAnonRequest {
-       hdr fidl_message_header[811587311021806764]
-       a int32
-       b int32
+    hdr fidl_message_header[811587311021806764]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolOneWayAnonRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonRequest {
-       hdr fidl_message_header[629880979996923737]
-       a int32
-       b int32
+    hdr fidl_message_header[629880979996923737]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonResponse {
-       hdr fidl_message_header[629880979996923737]
-       a int32
-       b int32
+    hdr fidl_message_header[629880979996923737]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonResponseHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequest {
-       hdr fidl_message_header[6368863385719175734]
-       a int32
-       b int32
+    hdr fidl_message_header[6368863385719175734]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponse {
-       hdr fidl_message_header[6368863385719175734]
-       resultInLine test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultInLine
-       resultOutOfLine test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultOutOfLine
+    hdr fidl_message_header[6368863385719175734]
+    resultInLine test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultInLine
+    resultOutOfLine test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultOutOfLine
 } [packed]
 test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponseHandles {
-       result test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultHandles
+    result test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultHandles
 } [packed]
 test_protocolpayloads_MainProtocolOnAnonEvent {
-       hdr fidl_message_header[4815229650203439104]
-       a int32
-       b int32
+    hdr fidl_message_header[4815229650203439104]
+    a int32
+    b int32
 } [packed]
 test_protocolpayloads_MainProtocolOnAnonEventHandles {
-       void void
+    void void
 } [packed]
 test_protocolpayloads_MainProtocolOnAnonWithErrorEvent {
-       hdr fidl_message_header[5024931894357412354]
-       resultInLine test_protocolpayloads_MainProtocol_OnAnonWithError_ResultInLine
-       resultOutOfLine test_protocolpayloads_MainProtocol_OnAnonWithError_ResultOutOfLine
+    hdr fidl_message_header[5024931894357412354]
+    resultInLine test_protocolpayloads_MainProtocol_OnAnonWithError_ResultInLine
+    resultOutOfLine test_protocolpayloads_MainProtocol_OnAnonWithError_ResultOutOfLine
 } [packed]
 test_protocolpayloads_MainProtocolOnAnonWithErrorEventHandles {
-       result test_protocolpayloads_MainProtocol_OnAnonWithError_ResultHandles
+    result test_protocolpayloads_MainProtocol_OnAnonWithError_ResultHandles
 } [packed]
 
 resource zx_chan_test_protocolpayloads_MainProtocol_client[zx_chan]

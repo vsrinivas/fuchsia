@@ -7,10 +7,9 @@
 {{- define "UnionDefinition" -}}
 
 {{ .Name }} [
-       {{- range .Members }}
-       {{ .Name }} {{ .Type }}
-	   {{- end }}
+    {{- range .Members }}
+    {{ .Name }} {{ .Type }}
+    {{- end }}
 ] {{- if .VarLen -}} [varlen] {{- end -}}
 
 {{- end -}}
-

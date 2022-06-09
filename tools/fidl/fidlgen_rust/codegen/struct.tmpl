@@ -16,12 +16,12 @@
 #[repr(C)]
 {{- end }}
 pub struct {{ .Name }} {
-  {{- range .Members }}
-  {{- range .DocComments}}
-  ///{{ . }}
-  {{- end}}
-  pub {{ .Name }}: {{ .Type }},
-  {{- end }}
+    {{- range .Members }}
+    {{- range .DocComments}}
+    ///{{ . }}
+    {{- end}}
+    pub {{ .Name }}: {{ .Type }},
+    {{- end }}
 }
 
 {{ if .IsValueType }}
@@ -33,64 +33,64 @@ fidl_struct_copy! {
 {{- else -}}
 fidl_struct! {
 {{- end }}
-  name: {{ .Name }},
-  members: [
-  {{- range .Members }}
-    {{ .Name }} {
-      ty: {{ .Type }},
-      offset_v1: {{ .OffsetV1 }},
-      offset_v2: {{ .OffsetV2 }},
-{{- if and .HasHandleMetadata (not $.UseFidlStructCopy) }}
-      handle_metadata: {
-        handle_subtype: {{ .HandleSubtype }},
-        handle_rights: {{ .HandleRights }},
-      },
-{{- end }}
-    },
-  {{- end }}
-  ],
-  padding_v1: [
-  {{- if .UseFidlStructCopy -}}
-  {{- range .FlattenedPaddingMarkersV1 }}
-  {
-      ty: {{ .Type }},
-      offset: {{ .Offset }},
-      mask: {{ .Mask }},
-  },
-  {{- end }}
-  {{- else -}}
-  {{- range .PaddingMarkersV1 }}
-  {
-      ty: {{ .Type }},
-      offset: {{ .Offset }},
-      mask: {{ .Mask }},
-  },
-  {{- end }}
-  {{- end -}}
-  ],
-  padding_v2: [
-  {{- if .UseFidlStructCopy -}}
-  {{- range .FlattenedPaddingMarkersV2 }}
-  {
-      ty: {{ .Type }},
-      offset: {{ .Offset }},
-      mask: {{ .Mask }},
-  },
-  {{- end }}
-  {{- else -}}
-  {{- range .PaddingMarkersV2 }}
-  {
-      ty: {{ .Type }},
-      offset: {{ .Offset }},
-      mask: {{ .Mask }},
-  },
-  {{- end }}
-  {{- end -}}
-  ],
-  size_v1: {{ .SizeV1 }},
-  size_v2: {{ .SizeV2 }},
-  align_v1: {{ .AlignmentV1 }},
-  align_v2: {{ .AlignmentV2 }},
+    name: {{ .Name }},
+    members: [
+        {{- range .Members }}
+        {{ .Name }} {
+            ty: {{ .Type }},
+            offset_v1: {{ .OffsetV1 }},
+            offset_v2: {{ .OffsetV2 }},
+            {{- if and .HasHandleMetadata (not $.UseFidlStructCopy) }}
+            handle_metadata: {
+                handle_subtype: {{ .HandleSubtype }},
+                handle_rights: {{ .HandleRights }},
+            },
+            {{- end }}
+        },
+        {{- end }}
+    ],
+    padding_v1: [
+        {{- if .UseFidlStructCopy -}}
+        {{- range .FlattenedPaddingMarkersV1 }}
+        {
+            ty: {{ .Type }},
+            offset: {{ .Offset }},
+            mask: {{ .Mask }},
+        },
+        {{- end }}
+        {{- else -}}
+        {{- range .PaddingMarkersV1 }}
+        {
+            ty: {{ .Type }},
+            offset: {{ .Offset }},
+            mask: {{ .Mask }},
+        },
+        {{- end }}
+        {{- end -}}
+        ],
+    padding_v2: [
+        {{- if .UseFidlStructCopy -}}
+        {{- range .FlattenedPaddingMarkersV2 }}
+        {
+            ty: {{ .Type }},
+            offset: {{ .Offset }},
+            mask: {{ .Mask }},
+        },
+        {{- end }}
+        {{- else -}}
+        {{- range .PaddingMarkersV2 }}
+        {
+            ty: {{ .Type }},
+            offset: {{ .Offset }},
+            mask: {{ .Mask }},
+        },
+        {{- end }}
+        {{- end -}}
+    ],
+    size_v1: {{ .SizeV1 }},
+    size_v2: {{ .SizeV2 }},
+    align_v1: {{ .AlignmentV1 }},
+    align_v2: {{ .AlignmentV2 }},
 }
 {{- else }}
 
@@ -108,4 +108,3 @@ fidl_empty_struct!({{ .Name }});
 
 {{- end }}
 {{- end }}
-

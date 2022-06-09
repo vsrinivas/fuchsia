@@ -124,9 +124,9 @@ size_t fidl::internal::DisplayError<{{ . }}>::Format(
   const char* name = [&] () -> const char* {
     switch (static_cast<{{ .Type }}>(value)) {
       {{- range .Members }}
-     case {{ .Value }}: return "{{ .EnumMember.Name }}";
+      case {{ .Value }}: return "{{ .EnumMember.Name }}";
       {{- end }}
-     default: return nullptr;
+      default: return nullptr;
     }
   }();
   return ::fidl::internal::FormatApplicationError(

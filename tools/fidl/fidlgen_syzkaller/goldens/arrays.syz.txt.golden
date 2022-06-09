@@ -5,39 +5,39 @@
 
 include <test/arrays/c/fidl.h>
 test_arrays_StructLargeArrayInLine {
-       aInLine array[int32, 100]
+    aInLine array[int32, 100]
 } [packed]
 test_arrays_StructLargeArrayOutOfLine {
-       void void
+    void void
 } [packed]
 test_arrays_StructLargeArrayHandles {
-       void void
+    void void
 } [packed]
 test_arrays_StructSmallArrayInLine {
-       aInLine array[int32, 2]
+    aInLine array[int32, 2]
 } [packed]
 test_arrays_StructSmallArrayOutOfLine {
-       void void
+    void void
 } [packed]
 test_arrays_StructSmallArrayHandles {
-       void void
+    void void
 } [packed]
 test_arrays_UnionLargeArrayInLine [
-       aInLine fidl_union_member[1, array[int32, 100]]
+    aInLine fidl_union_member[1, array[int32, 100]]
 ]
 test_arrays_UnionLargeArrayOutOfLine [
-       void void
+    void void
 ][varlen]
 test_arrays_UnionLargeArrayHandles [
-       void void
+    void void
 ][varlen]
 test_arrays_UnionSmallArrayInLine [
-       aInLine fidl_union_member[1, array[int32, 2]]
+    aInLine fidl_union_member[1, array[int32, 2]]
 ]
 test_arrays_UnionSmallArrayOutOfLine [
-       void void
+    void void
 ][varlen]
 test_arrays_UnionSmallArrayHandles [
-       void void
+    void void
 ][varlen]
 

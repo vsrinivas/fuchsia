@@ -7,41 +7,41 @@ include <test/placementofattributes/c/fidl.h>
 test_placementofattributes_ExampleEnum = test_placementofattributes_ExampleEnum_MEMBER
 test_placementofattributes_ExampleBits = test_placementofattributes_ExampleBits_MEMBER
 test_placementofattributes_ExampleStructInLine {
-       member int32
+    member int32
 } [packed]
 test_placementofattributes_ExampleStructOutOfLine {
-       void void
+    void void
 } [packed]
 test_placementofattributes_ExampleStructHandles {
-       void void
+    void void
 } [packed]
 test_placementofattributes_ExampleUnionInLine [
-       variant fidl_union_member[1, int32]
+    variant fidl_union_member[1, int32]
 ]
 test_placementofattributes_ExampleUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_placementofattributes_ExampleUnionHandles [
-       void void
+    void void
 ][varlen]
 test_placementofattributes_ExampleXUnionInLine [
-       variant fidl_union_member[1, int32]
+    variant fidl_union_member[1, int32]
 ]
 test_placementofattributes_ExampleXUnionOutOfLine [
-       void void
+    void void
 ][varlen]
 test_placementofattributes_ExampleXUnionHandles [
-       void void
+    void void
 ][varlen]
 
 
 test_placementofattributes_ExampleProtocolMethodRequest {
-       hdr fidl_message_header[6023439637367187273]
-       argInLine test_exampleusing_EmptyInLine
-       argOutOfLine test_exampleusing_EmptyOutOfLine
+    hdr fidl_message_header[6023439637367187273]
+    argInLine test_exampleusing_EmptyInLine
+    argOutOfLine test_exampleusing_EmptyOutOfLine
 } [packed]
 test_placementofattributes_ExampleProtocolMethodRequestHandles {
-       arg test_exampleusing_EmptyHandles
+    arg test_exampleusing_EmptyHandles
 } [packed]
 
 resource zx_chan_test_placementofattributes_ExampleProtocol_client[zx_chan]

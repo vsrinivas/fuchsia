@@ -7,19 +7,19 @@ include <test/drivertwoway/c/fidl.h>
 
 
 test_drivertwoway_TwoWayAddRequest {
-       hdr fidl_message_header[989730524426044687]
-       addend1 int16
-       addend2 int16
+    hdr fidl_message_header[989730524426044687]
+    addend1 int16
+    addend2 int16
 } [packed]
 test_drivertwoway_TwoWayAddRequestHandles {
-       void void
+    void void
 } [packed]
 test_drivertwoway_TwoWayAddResponse {
-       hdr fidl_message_header[989730524426044687]
-       sum int16
+    hdr fidl_message_header[989730524426044687]
+    sum int16
 } [packed]
 test_drivertwoway_TwoWayAddResponseHandles {
-       void void
+    void void
 } [packed]
 
 resource zx_chan_test_drivertwoway_TwoWay_client[zx_chan]

@@ -134,16 +134,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
         {{- if len $method.ResponseArgs}}
           {{- if len $method.RequestArgs }}, {{ end -}}
           [signaller = fuzzer_.NewCallbackSignaller()]({{ range $paramIdx, $param := $method.ResponseArgs }}
-            {{- if $paramIdx }}, {{ end -}}
-            {{ $param.Type }} {{ $param.Name }}
+              {{- if $paramIdx }}, {{ end -}}
+              {{ $param.Type }} {{ $param.Name }}
           {{- end }}) {
-        xprintf("Invoked {{ $protocol.FuzzingName }}.{{ $method.Name }}\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
-        }
-      }
-      {{- end }});
+            xprintf("Invoked {{ $protocol.FuzzingName }}.{{ $method.Name }}\n");
+            zx_status_t status_ = signaller.SignalCallback();
+            if (status_ != ZX_OK) {
+              xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+            }
+          }
+        {{- end }});
 #endif
     }
   {{- end }}
@@ -165,4 +165,3 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 {{- end }}
 }
 {{ end }}
-

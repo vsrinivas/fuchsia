@@ -5,47 +5,47 @@
 
 include <test/emptystruct/c/fidl.h>
 test_emptystruct_EmptyInLine {
-       padding int8
+    padding int8
 } [packed]
 test_emptystruct_EmptyOutOfLine {
-       void void
+    void void
 } [packed]
 test_emptystruct_EmptyHandles {
-       void void
+    void void
 } [packed]
 
 
 test_emptystruct_EmptyProtocolSendRequest {
-       hdr fidl_message_header[1378773277029173000]
-       eInLine test_emptystruct_EmptyInLine
-       eOutOfLine test_emptystruct_EmptyOutOfLine
+    hdr fidl_message_header[1378773277029173000]
+    eInLine test_emptystruct_EmptyInLine
+    eOutOfLine test_emptystruct_EmptyOutOfLine
 } [packed]
 test_emptystruct_EmptyProtocolSendRequestHandles {
-       e test_emptystruct_EmptyHandles
+    e test_emptystruct_EmptyHandles
 } [packed]
 test_emptystruct_EmptyProtocolReceiveEvent {
-       hdr fidl_message_header[2301564782476583487]
-       eInLine test_emptystruct_EmptyInLine
-       eOutOfLine test_emptystruct_EmptyOutOfLine
+    hdr fidl_message_header[2301564782476583487]
+    eInLine test_emptystruct_EmptyInLine
+    eOutOfLine test_emptystruct_EmptyOutOfLine
 } [packed]
 test_emptystruct_EmptyProtocolReceiveEventHandles {
-       e test_emptystruct_EmptyHandles
+    e test_emptystruct_EmptyHandles
 } [packed]
 test_emptystruct_EmptyProtocolSendAndReceiveRequest {
-       hdr fidl_message_header[534401212734647530]
-       eInLine test_emptystruct_EmptyInLine
-       eOutOfLine test_emptystruct_EmptyOutOfLine
+    hdr fidl_message_header[534401212734647530]
+    eInLine test_emptystruct_EmptyInLine
+    eOutOfLine test_emptystruct_EmptyOutOfLine
 } [packed]
 test_emptystruct_EmptyProtocolSendAndReceiveRequestHandles {
-       e test_emptystruct_EmptyHandles
+    e test_emptystruct_EmptyHandles
 } [packed]
 test_emptystruct_EmptyProtocolSendAndReceiveResponse {
-       hdr fidl_message_header[534401212734647530]
-       eInLine test_emptystruct_EmptyInLine
-       eOutOfLine test_emptystruct_EmptyOutOfLine
+    hdr fidl_message_header[534401212734647530]
+    eInLine test_emptystruct_EmptyInLine
+    eOutOfLine test_emptystruct_EmptyOutOfLine
 } [packed]
 test_emptystruct_EmptyProtocolSendAndReceiveResponseHandles {
-       e test_emptystruct_EmptyHandles
+    e test_emptystruct_EmptyHandles
 } [packed]
 
 resource zx_chan_test_emptystruct_EmptyProtocol_client[zx_chan]

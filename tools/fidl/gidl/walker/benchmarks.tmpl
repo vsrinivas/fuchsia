@@ -16,22 +16,22 @@ namespace {
 
 {{ range .Benchmarks }}
 void Build{{ .Name }}(std::function<void({{.Type}})> f) {
-{{- if .HandleDefs }}
-	auto handle_defs = {{ .HandleDefs }};
-{{- end }}
-	{{ .ValueBuild }}
-	f(std::move({{ .ValueVar }}));
+  {{- if .HandleDefs }}
+  auto handle_defs = {{ .HandleDefs }};
+  {{- end }}
+  {{ .ValueBuild }}
+  f(std::move({{ .ValueVar }}));
 }
 
 bool BenchmarkWalker{{ .Name }}(perftest::RepeatState* state) {
-	return walker_benchmarks::WalkerBenchmark<{{ .Type }}>(state, Build{{ .Name }});
+  return walker_benchmarks::WalkerBenchmark<{{ .Type }}>(state, Build{{ .Name }});
 }
 {{ end }}
 
 void RegisterTests() {
-	{{ range .Benchmarks }}
-	perftest::RegisterTest("Walker/{{ .Path }}/WallTime", BenchmarkWalker{{ .Name }});
-	{{ end }}
+  {{ range .Benchmarks }}
+  perftest::RegisterTest("Walker/{{ .Path }}/WallTime", BenchmarkWalker{{ .Name }});
+  {{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
 

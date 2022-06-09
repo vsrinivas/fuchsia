@@ -5,56 +5,56 @@
 
 include <test/errorsyntax/c/fidl.h>
 test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseInLine {
-       value int64
+    value int64
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseOutOfLine {
-       void void
+    void void
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseHandles {
-       void void
+    void void
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultInLine [
-       responseInLine fidl_union_member[1, test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseInLine]
-       err fidl_union_member[2, int32]
+    responseInLine fidl_union_member[1, test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseInLine]
+    err fidl_union_member[2, int32]
 ]
 test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultOutOfLine [
-       responseOutOfLine test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseOutOfLine
+    responseOutOfLine test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseOutOfLine
 ][varlen]
 test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultHandles [
-       response test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseHandles
+    response test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseHandles
 ][varlen]
 
 
 test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequest {
-       hdr fidl_message_header[3565108794310607393]
-       sInLine fidl_string
-       sOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[3565108794310607393]
+    sInLine fidl_string
+    sOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestHandles {
-       void void
+    void void
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponse {
-       hdr fidl_message_header[3565108794310607393]
-       resultInLine test_errorsyntax_parent_ParentUsesErrorSyntax_ComposedCallWhichMayFail_ResultInLine
+    hdr fidl_message_header[3565108794310607393]
+    resultInLine test_errorsyntax_parent_ParentUsesErrorSyntax_ComposedCallWhichMayFail_ResultInLine
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseHandles {
-       void void
+    void void
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
-       hdr fidl_message_header[3757408930698888354]
-       sInLine fidl_string
-       sOutOfLine fidl_aligned[stringnoz]
+    hdr fidl_message_header[3757408930698888354]
+    sInLine fidl_string
+    sOutOfLine fidl_aligned[stringnoz]
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestHandles {
-       void void
+    void void
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
-       hdr fidl_message_header[3757408930698888354]
-       resultInLine test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultInLine
-       resultOutOfLine test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultOutOfLine
+    hdr fidl_message_header[3757408930698888354]
+    resultInLine test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultInLine
+    resultOutOfLine test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultOutOfLine
 } [packed]
 test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseHandles {
-       result test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultHandles
+    result test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultHandles
 } [packed]
 
 resource zx_chan_test_errorsyntax_ExampleUseOfErrorSyntax_client[zx_chan]
