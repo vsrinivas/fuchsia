@@ -284,7 +284,7 @@ if (is_fuchsia) {
       public_deps += [ ":copy_fvm_blob_sparse" ]
     }
     deps = []
-    if (!is_coverage) {
+    if (!is_coverage && custom_signing_script == "") {
       # TODO: `!bootfs_only` is a poor proxy for "may be bringup", which is a
       # poor proxy for "may not generate `blob.blk` (which these verifiers
       # depend on)". This predicate should be replaced with
@@ -665,66 +665,68 @@ if (is_fuchsia) {
   # See //build/scrutiny/verifier/verify_*.gni and //build/security.gni for
   # documentation.
 
-  verify_bootfs_filelist("verify_bootfs_filelist") {
-    testonly = fuchsia_base.testonly
-    zbi_is_signed = custom_signing_script != "" || use_vboot
-    image_assembler_target = ":fuchsia.image_assembler"
-    assembly_image_name = "fuchsia"
-    goldens = fuchsia_zbi_bootfs_filelist_goldens
-  }
-
-  verify_kernel_cmdline("verify_kernel_cmdline") {
-    testonly = fuchsia_base.testonly
-    zbi_is_signed = custom_signing_script != "" || use_vboot
-    image_assembler_target = ":fuchsia.image_assembler"
-    assembly_image_name = "fuchsia"
-    goldens = fuchsia_zbi_kernel_cmdline_goldens
-  }
-
-  if (fuchsia_route_sources_config != "") {
-    verify_route_sources("verify_route_sources") {
+  if (custom_signing_script == "") {
+    verify_bootfs_filelist("verify_bootfs_filelist") {
       testonly = fuchsia_base.testonly
-      update_package_target = ":update"
+      zbi_is_signed = custom_signing_script != "" || use_vboot
       image_assembler_target = ":fuchsia.image_assembler"
       assembly_image_name = "fuchsia"
-      config_path = fuchsia_route_sources_config
-    }
-  }
-
-  # TODO: `!bootfs_only` is a poor proxy for "may be bringup", which is a poor
-  # proxy for "may not generate `blob.blk` (which these verifiers depend on)".
-  # This predicate should be replaced with `use_bringup_assembly` or similar
-  # after https://fxrev.dev/680302 lands.
-  if (!bootfs_only) {
-    verify_component_resolvers("verify_component_resolvers") {
-      testonly = fuchsia_base.testonly
-      update_package_target = ":update"
-      image_assembler_target = ":fuchsia.image_assembler"
-      assembly_image_name = "fuchsia"
-      allowlist = fuchsia_verify_component_resolvers_allowlist
+      goldens = fuchsia_zbi_bootfs_filelist_goldens
     }
 
-    verify_routes("verify_capability_routes") {
+    verify_kernel_cmdline("verify_kernel_cmdline") {
       testonly = fuchsia_base.testonly
-      update_package_target = ":update"
+      zbi_is_signed = custom_signing_script != "" || use_vboot
       image_assembler_target = ":fuchsia.image_assembler"
       assembly_image_name = "fuchsia"
-      allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
-                  fuchsia_verify_routes_exceptions_allowlist_product
-      if (bootfs_only) {
-        allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
-      }
-      if (fuchsia_verify_routes_component_tree_config != "") {
-        component_tree_config = fuchsia_verify_routes_component_tree_config
+      goldens = fuchsia_zbi_kernel_cmdline_goldens
+    }
+
+    if (fuchsia_route_sources_config != "") {
+      verify_route_sources("verify_route_sources") {
+        testonly = fuchsia_base.testonly
+        update_package_target = ":update"
+        image_assembler_target = ":fuchsia.image_assembler"
+        assembly_image_name = "fuchsia"
+        config_path = fuchsia_route_sources_config
       }
     }
 
-    verify_static_pkgs("verify_static_pkgs") {
-      testonly = fuchsia_base.testonly
-      update_package_target = ":update"
-      image_assembler_target = ":fuchsia.image_assembler"
-      assembly_image_name = "fuchsia"
-      goldens = fuchsia_static_pkgs_goldens
+    # TODO: `!bootfs_only` is a poor proxy for "may be bringup", which is a poor
+    # proxy for "may not generate `blob.blk` (which these verifiers depend on)".
+    # This predicate should be replaced with `use_bringup_assembly` or similar
+    # after https://fxrev.dev/680302 lands.
+    if (!bootfs_only) {
+      verify_component_resolvers("verify_component_resolvers") {
+        testonly = fuchsia_base.testonly
+        update_package_target = ":update"
+        image_assembler_target = ":fuchsia.image_assembler"
+        assembly_image_name = "fuchsia"
+        allowlist = fuchsia_verify_component_resolvers_allowlist
+      }
+
+      verify_routes("verify_capability_routes") {
+        testonly = fuchsia_base.testonly
+        update_package_target = ":update"
+        image_assembler_target = ":fuchsia.image_assembler"
+        assembly_image_name = "fuchsia"
+        allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
+                    fuchsia_verify_routes_exceptions_allowlist_product
+        if (bootfs_only) {
+          allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
+        }
+        if (fuchsia_verify_routes_component_tree_config != "") {
+          component_tree_config = fuchsia_verify_routes_component_tree_config
+        }
+      }
+
+      verify_static_pkgs("verify_static_pkgs") {
+        testonly = fuchsia_base.testonly
+        update_package_target = ":update"
+        image_assembler_target = ":fuchsia.image_assembler"
+        assembly_image_name = "fuchsia"
+        goldens = fuchsia_static_pkgs_goldens
+      }
     }
   }
 }
