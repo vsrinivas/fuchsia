@@ -223,6 +223,9 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
 zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
   canary_.Assert();
 
+  // See the notes in ChannelDispatcher::Call about the reasoning behind the
+  // AutoPreemptDisabler.
+  AutoPreemptDisabler preempt_disabler;
   Guard<Mutex> guard{get_lock()};
 
   // Failing this test is only possible if this process has two threads racing:
@@ -240,6 +243,10 @@ zx_status_t ChannelDispatcher::Write(zx_koid_t owner, MessagePacketPtr msg) {
 
   if (peer()->TryWriteToMessageWaiter(msg)) {
     return ZX_OK;
+  }
+
+  if (peer()->GetObserverListSizeLocked() > kLongObserverListThreshold) {
+    preempt_disabler.Enable();
   }
 
   peer()->WriteSelf(ktl::move(msg));
@@ -265,6 +272,47 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
   }
 
   {
+    // Disable preemption while we hold this lock.  If our server is running
+    // with a deadline profile, (and we are not) then after we queue the message
+    // and signal the server, it is possible that the server thread:
+    //
+    // 1) Gets assigned to our core.
+    // 2) It reads the message we just sent.
+    // 3) It processes the message and responds with a write to this channel
+    //    before we get a chance to drop the lock.
+    //
+    // This will result in an undesirable thrash sequence where:
+    //
+    // 1) The server thread contests the lock we are holding.
+    // 2) It suffers through the adaptive mutex spin (but it is on our CPU, so
+    //    it will never discover that the lock is available)
+    // 3) It will then drop into a block transmitting its profile pressure, and
+    //    allowing us to run again.
+    // 4) we will run for a very short time until we finish our notifications.
+    // 5) As soon as we drop the lock, we will immediately bounce back to the
+    //    server thread which will complete its operation.
+    //
+    // Disabling preemption helps to avoid this thread, but comes with a caveat.
+    // It may be that the observer list we need to notify is Very Long and takes
+    // a significant amount of time to filter and signal.  We _really_ do not
+    // want to be running with preemption disabled for very long as it can hold
+    // off time critical tasks.  So, if our observer queue is "long" (as defined
+    // by |kLongObserverListThreshold|), we drop the APD before performing the
+    // notify. This is not great, and could result in lock thrash, but at least
+    // we will not hold off time critical tasks.
+    //
+    // TODO(johngro): This mitigation is really not great.  We would much prefer
+    // an approach where we do something like move the notification step outside
+    // of the lock, or break the locks protecting the two message and waiter
+    // queues into two locks instead of a single shared lock, so that we never
+    // have to disable preemption no matter how long the list of waiters is.
+    // This solutions get complicated however, owning to lifecycle issues for
+    // the various SignalObservers, and the common locking structure of
+    // PeeredDispatchers.  See fxb/100122.  TL;DR - someday, when we have had
+    // the time to carefully refactor the locking here, come back and remove
+    // this APD mitigation.
+    //
+    AutoPreemptDisabler preempt_disabler;
     Guard<Mutex> guard{get_lock()};
 
     // See Write() for an explanation of this test.
@@ -298,8 +346,12 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
     // waiter to the list.
     waiters_.push_back(waiter);
 
-    // (1) Write outbound message to opposing endpoint.
+    // (1) Write outbound message to opposing endpoint.  Re-enable preemption if
+    // our current wait observer queue is "long".
     AssertHeld(*peer()->get_lock());
+    if (peer()->GetObserverListSizeLocked() > kLongObserverListThreshold) {
+      preempt_disabler.Enable();
+    }
     peer()->WriteSelf(ktl::move(msg));
   }
 

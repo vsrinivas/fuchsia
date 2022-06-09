@@ -114,6 +114,8 @@ class ChannelDispatcher final
   using MessageList = fbl::SizedDoublyLinkedList<MessagePacketPtr>;
   using WaiterList = fbl::DoublyLinkedList<MessageWaiter*>;
 
+  static constexpr size_t kLongObserverListThreshold = 32;
+
   explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
 
   void RemoveWaiter(MessageWaiter* waiter);

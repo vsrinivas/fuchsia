@@ -267,6 +267,8 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // clearing (i.e. deasserting) signals.  See the comment at |signals_|.
   virtual Lock<Mutex>* get_lock() const = 0;
 
+  size_t GetObserverListSizeLocked() const TA_REQ(get_lock()) { return observers_.size(); }
+
  private:
   friend class fbl::Recyclable<Dispatcher>;
   void fbl_recycle();
@@ -319,7 +321,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   ktl::atomic<zx_signals_t> signals_;
 
   // List of observers watching for changes in signals on this dispatcher.
-  fbl::DoublyLinkedList<SignalObserver*> observers_ TA_GUARDED(get_lock());
+  fbl::SizedDoublyLinkedList<SignalObserver*> observers_ TA_GUARDED(get_lock());
 
   // Used to store this dispatcher on the dispatcher deleter list.
   fbl::SinglyLinkedListNodeState<Dispatcher*> deleter_ll_;
