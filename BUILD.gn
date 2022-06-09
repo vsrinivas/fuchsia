@@ -1193,6 +1193,15 @@ group("default") {
 # For any target in this file, but only in this file.
 #
 
+foreach(target,
+        base_driver_package_labels + base_package_labels +
+            cache_package_labels + universe_package_labels) {
+  garnet_in_args = string_replace(target, "garnet", "") != target
+  assert(
+      !garnet_in_args,
+      "//garnet has been removed, please change your 'fx set' or 'args.gn' accordingly")
+}
+
 # Base driver packages added by the developer, using `fx set` or `fx args`
 group("developer_base_driver_packages") {
   testonly = base_cache_packages_testonly
