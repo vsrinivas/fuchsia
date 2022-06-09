@@ -18,7 +18,6 @@
 #include <string>
 #include <thread>
 
-#include "garnet/public/lib/svc/cpp/services.h"
 #include "lib/sys/component/cpp/testing/scoped_child.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/lib/fxl/command_line.h"

@@ -52,7 +52,6 @@ executable("cobalt_testapp") {
     ":internal_metrics_registry_cc",
     ":prober_metrics_registry_cc",
     ":testapp_metrics_registry_cc",
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.metrics",
