@@ -168,6 +168,7 @@ Reading through the [Inspect quickstart][inspect-quickstart] would be a good fir
 like to dive deeper into Inspect, you can also follow the [Inspect codelab][inspect-codelab].
 
 To get started, first add library dependencies:
+
 ```
 source_set("lib") {
   ...
@@ -179,6 +180,7 @@ source_set("lib") {
 ```
 
 Next, initialize Inspect in `main.cc`:
+
 ```
 #include <lib/sys/inspect/cpp/component.h>
 ...
@@ -188,6 +190,7 @@ inspector->Health().Ok();
 ```
 
 Now you can view Inspect after restarting the `profile_store`:
+
 ```
 # Note that double \\ is necessary! ':' must be escaped in a "diagnostic selector."
 ffx inspect show core/ffx-laboratory\\:profile_store/profile_store
@@ -196,6 +199,7 @@ ffx inspect show core/ffx-laboratory\\:profile_store/profile_store
 You should see your component's status is "OK". Inspect is most
 useful when integrated with your class hierarchy. Arbitrary values
 are rooted on `inspect::Node`, including more Nodes! Try to modify ProfileStore such that the following compiles:
+
 ```
   // In main.cc
   std::unique_ptr<ProfileStore> profile_store =
@@ -226,6 +230,7 @@ through the [triage config guide][triage-config-guide].
 
 To get started, create a new file at `examples/diagnostics/workshop/triage/profile_store.triage`
 with the following contents:
+
 ```
 {
   select: {
