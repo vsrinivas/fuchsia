@@ -572,6 +572,15 @@ zx::status<fuchsia_mem::wire::Buffer> DataSinkImpl::ReadAsset(Configuration conf
   return zx::ok(std::move(status.value()));
 }
 
+zx::status<> DataSinkImpl::WriteOpaqueVolume(fuchsia_mem::wire::Buffer payload) {
+  PartitionSpec spec(Partition::kFuchsiaVolumeManager, kOpaqueVolumeContentType);
+  if (!partitioner_->SupportsPartition(spec)) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
+}
+
 zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
                                       fuchsia_mem::wire::Buffer payload) {
   // No assets support content types yet, use the PartitionSpec default.

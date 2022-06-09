@@ -53,6 +53,7 @@ bool LuisPartitioner::SupportsPartition(const PartitionSpec& spec) const {
       PartitionSpec(paver::Partition::kVbMetaR),
       PartitionSpec(paver::Partition::kAbrMeta),
       PartitionSpec(paver::Partition::kFuchsiaVolumeManager),
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager, kOpaqueVolumeContentType),
   };
 
   for (const auto& supported : supported_specs) {

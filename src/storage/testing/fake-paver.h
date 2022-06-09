@@ -125,6 +125,9 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
 
   void WriteAsset(WriteAssetRequestView request, WriteAssetCompleter::Sync& completer) override;
 
+  void WriteOpaqueVolume(WriteOpaqueVolumeRequestView request,
+                         WriteOpaqueVolumeCompleter::Sync& completer) override;
+
   void WriteFirmware(WriteFirmwareRequestView request,
                      WriteFirmwareCompleter::Sync& completer) override;
 

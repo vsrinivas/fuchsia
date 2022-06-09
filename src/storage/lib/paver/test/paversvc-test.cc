@@ -68,6 +68,7 @@ constexpr uint32_t kBootloaderFirstBlock = 4;
 constexpr uint32_t kBootloaderBlocks = 4;
 constexpr uint32_t kBootloaderLastBlock = kBootloaderFirstBlock + kBootloaderBlocks - 1;
 constexpr uint32_t kBl2FirstBlock = 39;
+constexpr uint32_t kFvmFirstBlock = 18;
 
 constexpr fuchsia_hardware_nand_RamNandInfo
     kNandInfo =
@@ -158,7 +159,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                             {
                                 .type_guid = GUID_FVM_VALUE,
                                 .unique_guid = {},
-                                .first_block = 18,
+                                .first_block = kFvmFirstBlock,
                                 .last_block = 38,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
@@ -2078,6 +2079,9 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
 
 class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
  public:
+  static constexpr size_t kFvmBlockStart = 0x20400;
+  static constexpr size_t kFvmBlockSize = 0x10000;
+
   PaverServiceLuisTest() { ASSERT_NO_FATAL_FAILURE(InitializeGptDevice("luis", 0x748034, 512)); }
 
   void InitializeLuisGPTPartitions() {
@@ -2085,7 +2089,7 @@ class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
                                                   0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4};
     const std::vector<PartitionDescription> kLuisStartingPartitions = {
         {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
-        {GPT_FVM_NAME, kDummyType, 0x20400, 0x10000},
+        {GPT_FVM_NAME, kDummyType, kFvmBlockStart, kFvmBlockSize},
     };
     ASSERT_NO_FATAL_FAILURE(InitializeStartingGPTPartitions(kLuisStartingPartitions));
   }
@@ -2166,6 +2170,53 @@ TEST_F(PaverServiceLuisTest, FindGPTDevicesIgnoreFvmPartitions) {
   paver::GptDevicePartitioner::FindGptDevices(devmgr_.devfs_root(), &gpt_devices);
   ASSERT_EQ(gpt_devices.size(), 1);
   ASSERT_EQ(gpt_devices[0].first, std::string("/dev/sys/platform/00:00:2d/ramctl/ramdisk-0/block"));
+}
+
+TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
+  // TODO(b/217597389): Consdier also adding an e2e test for this interface.
+  ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
+  zx::channel gpt_chan;
+  ASSERT_OK(fdio_fd_clone(gpt_dev_->fd(), gpt_chan.reset_and_get_address()));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+  ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan), std::move(remote)));
+  auto data_sink = fidl::BindSyncClient(std::move(local));
+
+  // Create a payload
+  constexpr size_t kPayloadSize = 2048;
+  std::vector<uint8_t> payload(kPayloadSize, 0x4a);
+
+  fuchsia_mem::wire::Buffer payload_wire_buffer;
+  zx::vmo payload_vmo;
+  fzl::VmoMapper payload_vmo_mapper;
+  ASSERT_OK(payload_vmo_mapper.CreateAndMap(kPayloadSize, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                            nullptr, &payload_vmo));
+  memcpy(payload_vmo_mapper.start(), payload.data(), kPayloadSize);
+  payload_wire_buffer.vmo = std::move(payload_vmo);
+  payload_wire_buffer.size = kPayloadSize;
+
+  // Write the payload as opaque volume
+  auto result = data_sink->WriteOpaqueVolume(std::move(payload_wire_buffer));
+  ASSERT_OK(result.status());
+
+  // Create a block partition client to read the written content directly.
+  fidl::ClientEnd<fuchsia_hardware_block::Block> block_service_channel;
+  ASSERT_OK(fdio_get_service_handle(gpt_dev_->fd(),
+                                    block_service_channel.channel().reset_and_get_address()));
+  std::unique_ptr<paver::BlockPartitionClient> block_client =
+      std::make_unique<paver::BlockPartitionClient>(
+          service::MaybeClone(block_service_channel, service::AssumeProtocolComposesNode));
+
+  // Read the partition directly from block and verify.
+  zx::vmo block_read_vmo;
+  fzl::VmoMapper block_read_vmo_mapper;
+  ASSERT_OK(
+      block_read_vmo_mapper.CreateAndMap(kPayloadSize, ZX_VM_PERM_READ, nullptr, &block_read_vmo));
+  ASSERT_OK(block_client->Read(block_read_vmo, kPayloadSize, kFvmBlockStart, 0));
+
+  // Verify the written data against the payload
+  ASSERT_BYTES_EQ(block_read_vmo_mapper.start(), payload.data(), kPayloadSize);
 }
 
 }  // namespace

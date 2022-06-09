@@ -208,6 +208,18 @@ protocol DataSink {
         status zx.status;
     });
 
+    /// Write a raw volume image to the device. The image will be passed as it is to the device
+    /// partitioner backend to write. Therefore the format and write logic for the image is up to
+    /// the product to define. It differs from WriteVolume(), which is specifically for writing the
+    /// FVM sparse image, in that the paver will not perform any FVM related parsing or other
+    /// operation of the image. Thus it is not dependent on the volume driver version and less
+    /// susceptible to an outdated paver.
+    ///
+    /// Returns ZX_ERR_NOT_SUPPORTED if the backend does not support opaque volume blobs.
+    WriteOpaqueVolume(resource struct {
+        payload fuchsia.mem.Buffer;
+    }) -> (struct {}) error zx.status;
+
     // TODO(fxbug.dev/45606): transition users to `WriteFirmware()` and delete this.
     /// Writes bootloader partition with data from `payload`.
     ///

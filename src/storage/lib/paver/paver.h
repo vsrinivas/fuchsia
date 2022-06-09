@@ -73,6 +73,8 @@ class DataSinkImpl {
   zx::status<> WriteAsset(fuchsia_paver::wire::Configuration configuration,
                           fuchsia_paver::wire::Asset asset, fuchsia_mem::wire::Buffer payload);
 
+  zx::status<> WriteOpaqueVolume(fuchsia_mem::wire::Buffer payload);
+
   // FIDL llcpp unions don't currently support memory ownership so we need to
   // return something that does own the underlying memory.
   //
@@ -122,6 +124,16 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
     completer.Reply(
         sink_.WriteAsset(request->configuration, request->asset, std::move(request->payload))
             .status_value());
+  }
+
+  void WriteOpaqueVolume(WriteOpaqueVolumeRequestView request,
+                         WriteOpaqueVolumeCompleter::Sync& completer) override {
+    zx::status<> res = sink_.WriteOpaqueVolume(std::move(request->payload));
+    if (res.is_ok()) {
+      completer.ReplySuccess();
+    } else {
+      completer.ReplyError(res.status_value());
+    }
   }
 
   void WriteFirmware(WriteFirmwareRequestView request,
@@ -177,6 +189,16 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
     completer.Reply(
         sink_.WriteAsset(request->configuration, request->asset, std::move(request->payload))
             .status_value());
+  }
+
+  void WriteOpaqueVolume(WriteOpaqueVolumeRequestView request,
+                         WriteOpaqueVolumeCompleter::Sync& completer) override {
+    zx::status<> res = sink_.WriteOpaqueVolume(std::move(request->payload));
+    if (res.is_ok()) {
+      completer.ReplySuccess();
+    } else {
+      completer.ReplyError(res.status_value());
+    }
   }
 
   void WriteFirmware(WriteFirmwareRequestView request,
