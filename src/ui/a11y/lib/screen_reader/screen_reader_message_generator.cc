@@ -404,8 +404,9 @@ ScreenReaderMessageGenerator::DescribeTableCell(const fuchsia::accessibility::se
       }
 
       if (table_cell_attributes.has_row_index() && table_cell_attributes.has_column_index()) {
-        auto row_index = std::to_string(table_cell_attributes.row_index());
-        auto column_index = std::to_string(table_cell_attributes.column_index());
+        // We want to announce them as 1-indexed.
+        auto row_index = std::to_string(table_cell_attributes.row_index() + 1);
+        auto column_index = std::to_string(table_cell_attributes.column_index() + 1);
         description.emplace_back(
             GenerateUtteranceByMessageId(MessageIds::CELL_SUMMARY, zx::duration(zx::msec(0)),
                                          {"row_index", "column_index"}, {row_index, column_index}));
@@ -447,7 +448,8 @@ ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
       if (table_cell_attributes.has_row_index()) {
         // Row index should only be set for a row header.
         FX_DCHECK(node->role() == fuchsia::accessibility::semantics::Role::ROW_HEADER);
-        auto row_index = std::to_string(table_cell_attributes.row_index());
+        // We want to announce it as 1-indexed.
+        auto row_index = std::to_string(table_cell_attributes.row_index() + 1);
         description.emplace_back(GenerateUtteranceByMessageId(
             MessageIds::ROW_SUMMARY, zx::duration(zx::msec(0)), {"row_index"}, {row_index}));
       }
@@ -455,7 +457,8 @@ ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
       if (table_cell_attributes.has_column_index()) {
         // Column index should only be set for a column header.
         FX_DCHECK(node->role() == fuchsia::accessibility::semantics::Role::COLUMN_HEADER);
-        auto column_index = std::to_string(table_cell_attributes.column_index());
+        // We want to announce it as 1-indexed.
+        auto column_index = std::to_string(table_cell_attributes.column_index() + 1);
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::COLUMN_SUMMARY,
                                                               zx::duration(zx::msec(0)),
                                                               {"column_index"}, {column_index}));
