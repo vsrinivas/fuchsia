@@ -173,7 +173,6 @@ group("tests") {
     ":fs-vnode-test-pkg",
     "inspect:tests",
     "journal:tests",
-    "metrics:tests",
     "transaction:tests",
   ]
 }
