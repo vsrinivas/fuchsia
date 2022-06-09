@@ -10,6 +10,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_input::{DeviceMarker as LidMarker, DeviceProxy as LidProxy};
 use fuchsia_async::OnSignals;
+use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_vfs_watcher as vfs;
@@ -19,7 +20,6 @@ use futures::{
     stream::FuturesUnordered,
     TryStreamExt,
 };
-use io_util::{open_directory_in_namespace, OpenFlags};
 use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
