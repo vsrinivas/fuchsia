@@ -22,5 +22,4 @@ executable("bin") {
 
 fuchsia_shell_package("run") {
   deps = [ ":bin" ]
-  manifest = "run.cmx"
 }
