@@ -11,7 +11,6 @@ pub mod metrics;
 pub mod node;
 pub mod pager;
 mod remote_crypt;
-mod runtime;
 pub mod vmo_data_buffer;
 mod volume;
 mod volumes_directory;
@@ -20,4 +19,3 @@ mod volumes_directory;
 mod testing;
 
 pub use remote_crypt::RemoteCrypt;
-pub use runtime::FxfsServer;

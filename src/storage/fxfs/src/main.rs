@@ -13,7 +13,7 @@ use {
     fxfs::{
         filesystem::{mkfs, FxFilesystem, OpenOptions},
         fsck,
-        platform::{component::Component, FxfsServer, RemoteCrypt},
+        platform::{component::Component, RemoteCrypt},
         serialized_types::LATEST_VERSION,
     },
     remote_block_device::RemoteBlockClient,
@@ -37,7 +37,6 @@ struct TopLevel {
 enum SubCommand {
     Component(ComponentSubCommand),
     Format(FormatSubCommand),
-    Mount(MountSubCommand),
     Fsck(FsckSubCommand),
 }
 
@@ -48,15 +47,6 @@ struct FormatSubCommand {
     /// make the default volume encrypted (using supplied crypt service)
     #[argh(switch)]
     encrypted: bool,
-}
-
-#[derive(FromArgs, PartialEq, Debug)]
-/// Mount
-#[argh(subcommand, name = "mount")]
-struct MountSubCommand {
-    /// mount the device as read-only
-    #[argh(switch)]
-    readonly: bool,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -99,7 +89,13 @@ async fn main() -> Result<(), Error> {
     let args: TopLevel = argh::from_env();
 
     if let TopLevel { nested: SubCommand::Component(_), .. } = args {
-        return Component::new().run().await;
+        return Component::new()
+            .run(
+                fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
+                    .ok_or(MissingStartupHandle)?
+                    .into(),
+            )
+            .await;
     }
 
     let client = RemoteBlockClient::new(zx::Channel::from(
@@ -119,18 +115,6 @@ async fn main() -> Result<(), Error> {
             )
             .await?;
             Ok(())
-        }
-        TopLevel { nested: SubCommand::Mount(MountSubCommand { readonly }), verbose } => {
-            let fs = FxFilesystem::open_with_options(
-                DeviceHolder::new(BlockDevice::new(Box::new(client), readonly).await?),
-                OpenOptions { trace: verbose, read_only: readonly, ..Default::default() },
-            )
-            .await?;
-            let server = FxfsServer::new(fs).await?;
-            let startup_handle =
-                fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
-                    .ok_or(MissingStartupHandle)?;
-            server.run(zx::Channel::from(startup_handle), Some(get_crypt_client()?)).await
         }
         TopLevel { nested: SubCommand::Fsck(FsckSubCommand { encrypted }), verbose } => {
             let fs = FxFilesystem::open_with_options(

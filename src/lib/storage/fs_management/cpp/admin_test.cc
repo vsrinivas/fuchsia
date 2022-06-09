@@ -233,15 +233,29 @@ TEST_P(OutgoingDirectoryTest, DataRootIsValid) {
   ASSERT_STREQ(format_str.data(), reinterpret_cast<char*>(resp.value().info->name.data()));
 }
 
+using Combinations = std::vector<std::tuple<DiskFormat, Mode>>;
+
+Combinations TestCombinations() {
+  Combinations c;
+
+  auto add = [&](DiskFormat format, std::initializer_list<Mode> modes) {
+    for (Mode mode : modes) {
+      c.push_back(std::tuple(format, mode));
+    }
+  };
+
+  // Filesystems that don't support components should be able to fall back to running the legacy
+  // way.
+  add(kDiskFormatBlobfs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
+  add(kDiskFormatMinfs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
+  add(kDiskFormatFxfs, {Mode::kDynamic, Mode::kStatic});
+  add(kDiskFormatF2fs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
+
+  return c;
+}
+
 INSTANTIATE_TEST_SUITE_P(OutgoingDirectoryTest, OutgoingDirectoryTest,
-                         testing::Combine(testing::Values(kDiskFormatBlobfs, kDiskFormatMinfs,
-                                                          kDiskFormatFxfs, kDiskFormatF2fs),
-                                          // Filesystems that don't yet support launching as
-                                          // components should be able to fall back to launching
-                                          // the old way.
-                                          testing::Values(Mode::kLegacy, Mode::kReadOnly,
-                                                          Mode::kStatic, Mode::kDynamic)),
-                         PrintTestSuffix);
+                         testing::ValuesIn(TestCombinations()), PrintTestSuffix);
 
 // Minfs-Specific Tests (can be generalized to work with any mutable filesystem by parameterizing
 // on the disk format if required).

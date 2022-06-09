@@ -5,7 +5,7 @@
 use {
     crate::{
         errors::FxfsError,
-        filesystem::SyncOptions,
+        filesystem::{self, SyncOptions},
         object_store::{
             directory::{self, Directory, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options},
@@ -17,7 +17,6 @@ use {
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
             pager::Pager,
-            runtime::{TOTAL_NODES, VFS_TYPE_FXFS},
             vmo_data_buffer::VmoDataBuffer,
         },
         serialized_types::LATEST_VERSION,
@@ -457,6 +456,42 @@ impl FxVolumeAndRoot {
     #[cfg(test)]
     pub(super) fn into_volume(self) -> Arc<FxVolume> {
         self.volume
+    }
+}
+
+// The correct number here is arguably u64::MAX - 1 (because node 0 is reserved). There's a bug
+// where inspect test cases fail if we try and use that, possibly because of a signed/unsigned bug.
+// See fxbug.dev/87152.  Until that's fixed, we'll have to use i64::MAX.
+const TOTAL_NODES: u64 = i64::MAX as u64;
+
+const VFS_TYPE_FXFS: u32 = 0x73667866;
+
+// An array used to initialize the FilesystemInfo |name| field. This just spells "fxfs" 0-padded to
+// 32 bytes.
+const FXFS_INFO_NAME_FIDL: [i8; 32] = [
+    0x66, 0x78, 0x66, 0x73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0,
+];
+
+pub fn info_to_filesystem_info(
+    info: filesystem::Info,
+    block_size: u64,
+    object_count: u64,
+    fs_id: u64,
+) -> fio::FilesystemInfo {
+    fio::FilesystemInfo {
+        total_bytes: info.total_bytes,
+        used_bytes: info.used_bytes,
+        total_nodes: TOTAL_NODES,
+        used_nodes: object_count,
+        // TODO(fxbug.dev/93770): Support free_shared_pool_bytes.
+        free_shared_pool_bytes: 0,
+        fs_id,
+        block_size: block_size as u32,
+        max_filename_size: fio::MAX_FILENAME as u32,
+        fs_type: VFS_TYPE_FXFS,
+        padding: 0,
+        name: FXFS_INFO_NAME_FIDL,
     }
 }
 

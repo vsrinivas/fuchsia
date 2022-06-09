@@ -10,27 +10,23 @@ use {
         object_store::volume::root_volume,
         platform::{
             fuchsia::{
-                errors::map_to_status, runtime::DEFAULT_VOLUME_NAME, volume::FxVolumeAndRoot,
-                volumes_directory::VolumesDirectory,
+                errors::map_to_status, volume::FxVolumeAndRoot, volumes_directory::VolumesDirectory,
             },
             RemoteCrypt,
         },
     },
     anyhow::{Context, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ServerEnd},
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream, ServerEnd},
     fidl_fuchsia_fs::{AdminMarker, AdminRequest, AdminRequestStream},
     fidl_fuchsia_fs_startup::{
         CheckOptions, FormatOptions, StartOptions, StartupMarker, StartupRequest,
         StartupRequestStream,
     },
-    fidl_fuchsia_fxfs::CryptProxy,
+    fidl_fuchsia_fxfs::{CryptProxy, VolumesMarker, VolumesRequest, VolumesRequestStream},
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_io as fio,
     fs_inspect::{FsInspect, FsInspectTree},
-    fuchsia_async as fasync,
-    fuchsia_component::server::MissingStartupHandle,
-    fuchsia_runtime::HandleType,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::TryStreamExt,
     inspect_runtime::service::{TreeServerSendPreference, TreeServerSettings},
     remote_block_device::RemoteBlockClient,
@@ -44,6 +40,8 @@ use {
         remote::remote_boxed_with_type,
     },
 };
+
+const DEFAULT_VOLUME_NAME: &str = "default";
 
 fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
     map_to_status(e).into_raw()
@@ -69,7 +67,7 @@ enum State {
 
 struct Started {
     fs: OpenFxFilesystem,
-    volumes: VolumesDirectory,
+    volumes: Arc<VolumesDirectory>,
     _inspect_tree: FsInspectTree,
 }
 
@@ -102,7 +100,7 @@ impl Component {
 
     /// Runs Fxfs as a component.
     // TODO(fxbug.dev/99591): Add support for lifecycle methods.
-    pub async fn run(self: Arc<Self>) -> Result<(), Error> {
+    pub async fn run(self: Arc<Self>, outgoing_dir: zx::Channel) -> Result<(), Error> {
         self.outgoing_dir
             .add_entry(
                 "diagnostics",
@@ -149,6 +147,18 @@ impl Component {
                 }
             }),
         )?;
+        let weak = Arc::downgrade(&self);
+        svc_dir.add_entry(
+            VolumesMarker::PROTOCOL_NAME,
+            vfs::service::host(move |requests| {
+                let weak = weak.clone();
+                async move {
+                    if let Some(me) = weak.upgrade() {
+                        me.handle_volumes_requests(requests).await;
+                    }
+                }
+            }),
+        )?;
 
         let weak = Arc::downgrade(&self);
         svc_dir.add_entry(
@@ -168,9 +178,7 @@ impl Component {
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             Path::dot(),
-            fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
-                .ok_or(MissingStartupHandle)?
-                .into(),
+            outgoing_dir.into(),
         );
 
         self.scope.wait().await;
@@ -234,7 +242,7 @@ impl Component {
             OpenOptions { read_only: options.read_only, ..Default::default() },
         )
         .await?;
-        let volumes = VolumesDirectory::new(root_volume(&fs).await?).await?;
+        let volumes = Arc::new(VolumesDirectory::new(root_volume(&fs).await?).await?);
         // TODO(fxbug.dev/99182): We should eventually not open the default volume.
         let volume = volumes
             .open_or_create_volume(DEFAULT_VOLUME_NAME, crypt, /* create_only: */ false)
@@ -340,6 +348,53 @@ impl Component {
         }
     }
 
+    async fn handle_volumes_requests(&self, mut stream: VolumesRequestStream) {
+        let volumes = if let State::Started(Started { volumes, .. }) = &*self.state.lock().unwrap()
+        {
+            volumes.clone()
+        } else {
+            let _ = stream.into_inner().0.shutdown_with_epitaph(zx::Status::BAD_STATE);
+            return;
+        };
+        while let Ok(Some(request)) = stream.try_next().await {
+            match request {
+                VolumesRequest::Create { name, crypt, outgoing_directory, responder } => {
+                    log::info!("Create volume {:?}", name);
+                    let crypt = crypt.map(|crypt| {
+                        Arc::new(RemoteCrypt::new(crypt.into_proxy().unwrap())) as Arc<dyn Crypt>
+                    });
+                    match volumes.open_or_create_volume(&name, crypt, true).await {
+                        Ok(volume) => {
+                            volume.root().clone().open(
+                                volume.volume().scope().clone(),
+                                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                                0,
+                                Path::dot(),
+                                outgoing_directory,
+                            );
+                            responder.send(&mut Ok(())).unwrap_or_else(|e| {
+                                log::warn!("Failed to send volume creation response: {}", e)
+                            });
+                        }
+                        Err(status) => {
+                            responder
+                                .send_no_shutdown_on_err(&mut Err(status.into_raw()))
+                                .unwrap_or_else(|e| {
+                                    log::warn!("Failed to send volume creation response: {}", e)
+                                });
+                        }
+                    };
+                }
+                VolumesRequest::Remove { name: _, responder } => {
+                    // TODO(fxbug.dev/99182)
+                    responder
+                        .send_no_shutdown_on_err(&mut Err(zx::Status::INTERNAL.into_raw()))
+                        .unwrap();
+                }
+            }
+        }
+    }
+
     /// Serves this volume on `outgoing_dir`.
     async fn start_serving(&self, volume: &FxVolumeAndRoot) -> Result<(), Error> {
         self.outgoing_dir.add_entry_impl(
@@ -349,5 +404,88 @@ impl Component {
         )?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::Component,
+        crate::{filesystem::FxFilesystem, object_store::volume::root_volume},
+        fidl::encoding::Decodable,
+        fidl_fuchsia_fs::AdminMarker,
+        fidl_fuchsia_fs_startup::{StartOptions, StartupMarker},
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fuchsia_component::client::connect_to_protocol_at_dir_svc,
+        futures::{future::FutureExt, pin_mut, select},
+        ramdevice_client::{wait_for_device, RamdiskClientBuilder},
+        remote_block_device::RemoteBlockClient,
+        storage_device::block_device::BlockDevice,
+        storage_device::DeviceHolder,
+    };
+
+    #[fasync::run(2, test)]
+    async fn test_lifecycle() {
+        const WAIT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+        wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
+            .expect("ramctl did not appear");
+
+        let ramdisk =
+            RamdiskClientBuilder::new(512, 16384).build().expect("Failed to build ramdisk");
+
+        {
+            let fs = FxFilesystem::new_empty(DeviceHolder::new(
+                BlockDevice::new(
+                    Box::new(
+                        RemoteBlockClient::new(ramdisk.open().expect("Unable to open ramdisk"))
+                            .await
+                            .expect("Unable to create block client"),
+                    ),
+                    false,
+                )
+                .await
+                .unwrap(),
+            ))
+            .await
+            .expect("FxFilesystem::new_empty failed");
+            {
+                let root_volume = root_volume(&fs).await.expect("Open root_volume failed");
+                root_volume.new_volume("default", None).await.expect("Create volume failed");
+            }
+            fs.close().await.expect("close failed");
+        }
+
+        let (client_end, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+
+        let task1 = async {
+            Component::new().run(server_end.into_channel()).await.expect("Failed to run component");
+        }
+        .fuse();
+
+        let task2 = async {
+            let startup_proxy = connect_to_protocol_at_dir_svc::<StartupMarker>(&client_end)
+                .expect("Unable to connect to Startup protocol");
+            startup_proxy
+                .start(
+                    ramdisk.open().expect("Unable to open ramdisk").into(),
+                    &mut StartOptions::new_empty(),
+                )
+                .await
+                .expect("Start failed (FIDL)")
+                .expect("Start failed");
+
+            let admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(&client_end)
+                .expect("Unable to connect to Admin protocol");
+            admin_proxy.shutdown().await.expect("shutdown failed");
+        }
+        .fuse();
+
+        pin_mut!(task1, task2);
+
+        select! {
+            () = task1 => panic!("Component terminated!"),
+            () = task2 => {}
+        }
     }
 }

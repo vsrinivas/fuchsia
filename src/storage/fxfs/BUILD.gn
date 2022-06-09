@@ -9,6 +9,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
 import("//src/storage/fs_test/suite.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 fxfs_deps = [
   ":fxfs_macros",
@@ -128,6 +129,7 @@ if (is_fuchsia) {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//src/lib/storage/fs_management/rust:fs_management",
+    "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:zstd",
     "//third_party/zstd",
@@ -143,7 +145,6 @@ if (is_fuchsia) {
     "src/platform/fuchsia/node.rs",
     "src/platform/fuchsia/pager.rs",
     "src/platform/fuchsia/remote_crypt.rs",
-    "src/platform/fuchsia/runtime.rs",
     "src/platform/fuchsia/testing.rs",
     "src/platform/fuchsia/vmo_data_buffer.rs",
     "src/platform/fuchsia/volume.rs",
@@ -203,7 +204,7 @@ resource("test_data") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_unittest_component("fxfs-test") {
+storage_driver_test_realm_v2_component("fxfs-test") {
   deps = [
     ":lib_test",
     ":test_data",
