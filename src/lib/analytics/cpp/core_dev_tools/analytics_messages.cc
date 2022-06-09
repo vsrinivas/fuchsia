@@ -12,8 +12,12 @@ namespace analytics::core_dev_tools::internal {
 
 namespace {
 
-constexpr char kParticipatingTools[] = R"(  • ffx
+constexpr char kParticipatingTools[] = R"(  • device_launcher
+  • ffx
   • fidlcat
+  • Fuchsia extension for VS Code
+  • Fuchsia Snapshot Viewer
+  • scrutiny verify routes
   • symbol-index
   • symbolizer
   • zxdb)";
