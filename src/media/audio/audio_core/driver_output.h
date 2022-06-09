@@ -31,7 +31,7 @@ class DriverOutput : public AudioOutput {
                DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
-               VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2);
+               EffectsLoaderV2* effects_loader_v2);
 
   ~DriverOutput();
 
@@ -101,7 +101,6 @@ class DriverOutput : public AudioOutput {
 
   State state_ = State::Uninitialized;
   zx::channel initial_stream_channel_;
-  VolumeCurve volume_curve_;
 
   int64_t frames_sent_ = 0;
   int64_t low_water_frames_ = 0;

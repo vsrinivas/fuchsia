@@ -32,6 +32,8 @@ VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
       {fuchsia::media::audio::MIN_VOLUME, fuchsia::media::audio::MUTED_GAIN_DB}};
   if (min_gain_db != fuchsia::media::audio::MUTED_GAIN_DB) {
     mappings.push_back({FLT_EPSILON, min_gain_db});
+    // Make the default volume scale more gradual at the top, so the entire range is more usable.
+    mappings.push_back({0.3f, min_gain_db / 2});
   }
   mappings.push_back({fuchsia::media::audio::MAX_VOLUME, media_audio::kUnityGainDb});
 

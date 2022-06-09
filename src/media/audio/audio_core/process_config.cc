@@ -67,9 +67,10 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddThermalConfigState(
 ProcessConfig ProcessConfigBuilder::Build() {
   FX_CHECK(default_volume_curve_) << "Missing required VolumeCurve member";
   return ProcessConfig(
-      std::move(*default_volume_curve_),
+      *default_volume_curve_,
       DeviceConfig(std::move(output_device_profiles_), std::move(default_output_device_profile_),
-                   std::move(input_device_profiles_), std::move(default_input_device_profile_)),
+                   std::move(input_device_profiles_), std::move(default_input_device_profile_),
+                   *default_volume_curve_),
       mix_profile_config_, ThermalConfig(std::move(thermal_config_states_)));
 }
 

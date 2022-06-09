@@ -578,17 +578,17 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
   fuchsia::media::audio::VolumeControlPtr volume;
   audio_core_->BindUsageVolumeControl(
       fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA), volume.NewRequest());
-  volume->SetVolume(0.5);
+  volume->SetVolume(0.3f);
 
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto num_packets = kNumPacketsInPayload;
   const auto num_frames = PacketsToFrames(num_packets, kOutputFrameRate);
   const auto frames_per_packet = num_frames / num_packets;
 
-  const int16_t kSampleFullVolume = 0x0200;
-  const int16_t kSampleHalfVolume = 0x0010;
+  const int16_t kSampleVolume100 = 0x0200;
+  const int16_t kSampleVolume30 = 0x0010;
 
-  auto input_buffer = GenerateConstantAudio(format, num_frames, kSampleFullVolume);
+  auto input_buffer = GenerateConstantAudio(format, num_frames, kSampleVolume100);
   auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
   auto start_time = renderer->PlaySynchronized(this, output_, 0);
 
@@ -610,27 +610,27 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
     }
   }
 
-  // The output should contain a sequence at half volume, followed by a ramp,
+  // The output should contain a sequence at volume 30%, followed by a ramp,
   // followed by a sequence at full volume. Verify that the length of the ramp
   // matches the expected ramp duration.
   int64_t start = ring_buffer.NumFrames() - 1;
   for (;; start--) {
-    if (ring_buffer.SampleAt(start, 0) == kSampleHalfVolume) {
+    if (ring_buffer.SampleAt(start, 0) == kSampleVolume30) {
       break;
     }
     if (start == 0) {
-      ADD_FAILURE() << "could not find half volume sample 0x" << std::hex << kSampleHalfVolume;
+      ADD_FAILURE() << "could not find 'volume 0.3' sample 0x" << std::hex << kSampleVolume30;
       ring_buffer.Display(0, 3 * kFramesPerPacketForDisplay);
       return;
     }
   }
   int64_t end = start + 1;
   for (;; end++) {
-    if (ring_buffer.SampleAt(end, 0) == kSampleFullVolume) {
+    if (ring_buffer.SampleAt(end, 0) == kSampleVolume100) {
       break;
     }
     if (end == ring_buffer.NumFrames() - 1) {
-      ADD_FAILURE() << "could not find full volume sample 0x" << std::hex << kSampleFullVolume
+      ADD_FAILURE() << "could not find 'volume 1.0' sample 0x" << std::hex << kSampleVolume100
                     << " after frame " << std::dec << start;
       ring_buffer.Display(start, kFramesPerPacketForDisplay);
       return;

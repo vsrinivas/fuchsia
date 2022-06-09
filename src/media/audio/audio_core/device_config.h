@@ -13,6 +13,7 @@
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream_usage.h"
+#include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
 
@@ -56,6 +57,11 @@ class DeviceConfig {
    public:
     OutputDeviceProfile()
         : OutputDeviceProfile(true, StreamUsageSetFromRenderUsages(kFidlRenderUsages)) {}
+
+    explicit OutputDeviceProfile(VolumeCurve volume_curve)
+        : OutputDeviceProfile(true, StreamUsageSetFromRenderUsages(kFidlRenderUsages),
+                              std::move(volume_curve), false, PipelineConfig::Default(), 0.0, 0.0) {
+    }
 
     OutputDeviceProfile(bool eligible_for_loopback, StreamUsageSet supported_usages)
         : OutputDeviceProfile(eligible_for_loopback, supported_usages,
@@ -146,10 +152,12 @@ class DeviceConfig {
                std::optional<OutputDeviceProfile> default_output_device_profile,
                std::vector<std::pair<std::vector<audio_stream_unique_id_t>, InputDeviceProfile>>
                    input_device_profiles,
-               std::optional<InputDeviceProfile> default_input_device_profile)
+               std::optional<InputDeviceProfile> default_input_device_profile,
+               VolumeCurve default_volume_curve =
+                   VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
       : output_device_profiles_(std::move(output_device_profiles)),
-        default_output_device_profile_(
-            default_output_device_profile.value_or(OutputDeviceProfile())),
+        default_output_device_profile_(default_output_device_profile.value_or(
+            OutputDeviceProfile(std::move(default_volume_curve)))),
         input_device_profiles_(std::move(input_device_profiles)),
         default_input_device_profile_(default_input_device_profile.value_or(InputDeviceProfile())) {
   }

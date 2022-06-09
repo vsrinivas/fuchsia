@@ -71,13 +71,12 @@ DriverOutput::DriverOutput(const std::string& name, const DeviceConfig& config,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix,
                            std::shared_ptr<AudioClockFactory> clock_factory,
-                           VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2)
+                           EffectsLoaderV2* effects_loader_v2)
     : AudioOutput(name, config, threading_model, registry, link_matrix, clock_factory,
                   effects_loader_v2, std::make_unique<AudioDriver>(this)),
       low_water_duration_(mix_profile_config.period),
       high_water_duration_(low_water_duration_ + mix_profile_config.period),
-      initial_stream_channel_(channel.TakeChannel()),
-      volume_curve_(volume_curve) {}
+      initial_stream_channel_(channel.TakeChannel()) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 

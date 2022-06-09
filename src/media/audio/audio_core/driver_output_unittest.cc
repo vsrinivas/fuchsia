@@ -93,12 +93,12 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
 
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
-    output_ = std::make_shared<DriverOutput>(
-        "", context().process_config().device_config(),
-        context().process_config().mix_profile_config(), &threading_model(),
-        &context().device_manager(), std::move(stream_config), &context().link_matrix(),
-        context().clock_factory(), context().process_config().default_volume_curve(),
-        nullptr);  // not using V2 effects
+    output_ = std::make_shared<DriverOutput>("", context().process_config().device_config(),
+                                             context().process_config().mix_profile_config(),
+                                             &threading_model(), &context().device_manager(),
+                                             std::move(stream_config), &context().link_matrix(),
+                                             context().clock_factory(),
+                                             nullptr);  // not using V2 effects
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(RingBufferSizeBytes());
