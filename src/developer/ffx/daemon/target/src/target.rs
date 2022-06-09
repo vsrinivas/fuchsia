@@ -10,11 +10,11 @@ use {
     addr::TargetAddr,
     anyhow::{anyhow, bail, Error, Result},
     async_trait::async_trait,
-    bridge::{TargetAddrInfo, TargetIpPort},
     chrono::{DateTime, Utc},
+    ffx::{TargetAddrInfo, TargetIpPort},
     ffx_daemon_core::events::{self, EventSynthesizer},
     ffx_daemon_events::{FastbootInterface, TargetConnectionState, TargetEvent, TargetInfo},
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_developer_ffx::TargetState,
     fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlProxy},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
@@ -467,7 +467,7 @@ impl Target {
             })
     }
 
-    pub fn ssh_address_info(&self) -> Option<bridge::TargetAddrInfo> {
+    pub fn ssh_address_info(&self) -> Option<ffx::TargetAddrInfo> {
         if let Some(addr) = self.ssh_address() {
             let ip = match addr.ip() {
                 IpAddr::V6(i) => IpAddress::Ipv6(Ipv6Address { addr: i.octets().into() }),
@@ -487,18 +487,18 @@ impl Target {
         }
     }
 
-    pub fn ssh_host_address_info(&self) -> Option<bridge::SshHostAddrInfo> {
+    pub fn ssh_host_address_info(&self) -> Option<ffx::SshHostAddrInfo> {
         self.ssh_host_address
             .borrow()
             .as_ref()
-            .map(|addr| bridge::SshHostAddrInfo { address: addr.to_string() })
+            .map(|addr| ffx::SshHostAddrInfo { address: addr.to_string() })
     }
 
-    fn rcs_state(&self) -> bridge::RemoteControlState {
+    fn rcs_state(&self) -> ffx::RemoteControlState {
         match (self.is_host_pipe_running(), self.get_connection_state()) {
-            (true, TargetConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
-            (true, _) => bridge::RemoteControlState::Down,
-            (_, _) => bridge::RemoteControlState::Unknown,
+            (true, TargetConnectionState::Rcs(_)) => ffx::RemoteControlState::Up,
+            (true, _) => ffx::RemoteControlState::Down,
+            (_, _) => ffx::RemoteControlState::Unknown,
         }
     }
 
@@ -1000,7 +1000,7 @@ impl Target {
     }
 }
 
-impl From<&Target> for bridge::TargetInfo {
+impl From<&Target> for ffx::TargetInfo {
     fn from(target: &Target) -> Self {
         let (product_config, board_config) = target
             .build_config()
@@ -1038,9 +1038,9 @@ impl From<&Target> for bridge::TargetInfo {
             }),
             ssh_address: target.ssh_address_info(),
             // TODO(awdavies): Gather more information here when possible.
-            target_type: Some(bridge::TargetType::Unknown),
+            target_type: Some(ffx::TargetType::Unknown),
             ssh_host_address: target.ssh_host_address_info(),
-            ..bridge::TargetInfo::EMPTY
+            ..ffx::TargetInfo::EMPTY
         }
     }
 }
@@ -1111,8 +1111,8 @@ mod test {
         super::*,
         anyhow::Context as _,
         assert_matches::assert_matches,
-        bridge::TargetIp,
         chrono::TimeZone,
+        ffx::TargetIp,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
         fidl_fuchsia_overnet_protocol::NodeId,
@@ -1250,7 +1250,7 @@ mod test {
     struct RcsStateTest {
         loop_started: bool,
         rcs_is_some: bool,
-        expected: bridge::RemoteControlState,
+        expected: ffx::RemoteControlState,
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1259,22 +1259,22 @@ mod test {
             RcsStateTest {
                 loop_started: true,
                 rcs_is_some: false,
-                expected: bridge::RemoteControlState::Down,
+                expected: ffx::RemoteControlState::Down,
             },
             RcsStateTest {
                 loop_started: true,
                 rcs_is_some: true,
-                expected: bridge::RemoteControlState::Up,
+                expected: ffx::RemoteControlState::Up,
             },
             RcsStateTest {
                 loop_started: false,
                 rcs_is_some: true,
-                expected: bridge::RemoteControlState::Unknown,
+                expected: ffx::RemoteControlState::Unknown,
             },
             RcsStateTest {
                 loop_started: false,
                 rcs_is_some: false,
-                expected: bridge::RemoteControlState::Unknown,
+                expected: ffx::RemoteControlState::Unknown,
             },
         ] {
             let t = Target::new_named("schlabbadoo");
@@ -1313,7 +1313,7 @@ mod test {
         t.addrs_insert((a1, 1).into());
         t.addrs_insert((a2, 1).into());
 
-        let t_conv: bridge::TargetInfo = t.as_ref().into();
+        let t_conv: ffx::TargetInfo = t.as_ref().into();
         assert_eq!(t.nodename().unwrap(), t_conv.nodename.unwrap().to_string());
         let addrs = t.addrs();
         let conv_addrs = t_conv.addresses.unwrap();

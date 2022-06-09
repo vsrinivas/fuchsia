@@ -6,7 +6,7 @@ use {
     addr::TargetAddr,
     anyhow::{anyhow, Error, Result},
     ffx_list_args::Format,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     netext::IsLocalAddr,
     serde::Serialize,
     serde_json::json,
@@ -68,7 +68,7 @@ fn nodename_to_string(index: Option<usize>, nodename: Option<String>) -> String 
     }
 }
 
-fn has_multiple_unknown_targets(targets: &Vec<bridge::TargetInfo>) -> bool {
+fn has_multiple_unknown_targets(targets: &Vec<ffx::TargetInfo>) -> bool {
     let mut unknown_count = 0;
     for target in targets.iter() {
         if target.nodename.is_none() {
@@ -86,10 +86,10 @@ pub trait TargetFormatter {
     fn lines(&self, default_nodename: Option<&str>) -> Vec<String>;
 }
 
-impl TryFrom<(Format, Vec<bridge::TargetInfo>)> for Box<dyn TargetFormatter> {
+impl TryFrom<(Format, Vec<ffx::TargetInfo>)> for Box<dyn TargetFormatter> {
     type Error = Error;
 
-    fn try_from(tup: (Format, Vec<bridge::TargetInfo>)) -> Result<Self> {
+    fn try_from(tup: (Format, Vec<ffx::TargetInfo>)) -> Result<Self> {
         let (format, targets) = tup;
         Ok(match format {
             Format::Tabular => Box::new(TabularTargetFormatter::try_from(targets)?),
@@ -103,10 +103,10 @@ impl TryFrom<(Format, Vec<bridge::TargetInfo>)> for Box<dyn TargetFormatter> {
 
 pub struct AddressesTarget(TargetAddr);
 
-impl TryFrom<bridge::TargetInfo> for AddressesTarget {
+impl TryFrom<ffx::TargetInfo> for AddressesTarget {
     type Error = Error;
 
-    fn try_from(t: bridge::TargetInfo) -> Result<Self> {
+    fn try_from(t: ffx::TargetInfo) -> Result<Self> {
         let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
         let addrs = addrs.iter().map(TargetAddr::from).collect::<Vec<_>>();
 
@@ -118,10 +118,10 @@ pub struct AddressesTargetFormatter {
     targets: Vec<AddressesTarget>,
 }
 
-impl TryFrom<Vec<bridge::TargetInfo>> for AddressesTargetFormatter {
+impl TryFrom<Vec<ffx::TargetInfo>> for AddressesTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
+    fn try_from(targets: Vec<ffx::TargetInfo>) -> Result<Self> {
         let targets = targets.into_iter().flat_map(AddressesTarget::try_from).collect::<Vec<_>>();
         Ok(Self { targets })
     }
@@ -135,10 +135,10 @@ impl TargetFormatter for AddressesTargetFormatter {
 
 pub struct NameOnlyTarget(String);
 
-impl TryFrom<(Option<usize>, bridge::TargetInfo)> for NameOnlyTarget {
+impl TryFrom<(Option<usize>, ffx::TargetInfo)> for NameOnlyTarget {
     type Error = Error;
 
-    fn try_from((index, target): (Option<usize>, bridge::TargetInfo)) -> Result<Self> {
+    fn try_from((index, target): (Option<usize>, ffx::TargetInfo)) -> Result<Self> {
         let name = nodename_to_string(index, target.nodename);
         Ok(Self(name))
     }
@@ -148,10 +148,10 @@ pub struct NameOnlyTargetFormatter {
     targets: Vec<NameOnlyTarget>,
 }
 
-impl TryFrom<Vec<bridge::TargetInfo>> for NameOnlyTargetFormatter {
+impl TryFrom<Vec<ffx::TargetInfo>> for NameOnlyTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
+    fn try_from(targets: Vec<ffx::TargetInfo>) -> Result<Self> {
         let use_index = has_multiple_unknown_targets(&targets);
         let targets = targets
             .into_iter()
@@ -175,10 +175,10 @@ pub struct SimpleTargetFormatter {
     targets: Vec<SimpleTarget>,
 }
 
-impl TryFrom<Vec<bridge::TargetInfo>> for SimpleTargetFormatter {
+impl TryFrom<Vec<ffx::TargetInfo>> for SimpleTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
+    fn try_from(targets: Vec<ffx::TargetInfo>) -> Result<Self> {
         let targets = targets.into_iter().flat_map(SimpleTarget::try_from).collect::<Vec<_>>();
         Ok(Self { targets })
     }
@@ -190,10 +190,10 @@ impl TargetFormatter for SimpleTargetFormatter {
     }
 }
 
-impl TryFrom<bridge::TargetInfo> for SimpleTarget {
+impl TryFrom<ffx::TargetInfo> for SimpleTarget {
     type Error = Error;
 
-    fn try_from(t: bridge::TargetInfo) -> Result<Self> {
+    fn try_from(t: ffx::TargetInfo) -> Result<Self> {
         let nodename = t.nodename.unwrap_or("".to_string());
         let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
         let addrs = addrs.iter().map(TargetAddr::from).collect::<Vec<_>>();
@@ -206,10 +206,10 @@ pub struct JsonTargetFormatter {
     pub(crate) targets: Vec<JsonTarget>,
 }
 
-impl TryFrom<Vec<bridge::TargetInfo>> for JsonTargetFormatter {
+impl TryFrom<Vec<ffx::TargetInfo>> for JsonTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
+    fn try_from(targets: Vec<ffx::TargetInfo>) -> Result<Self> {
         let use_index = has_multiple_unknown_targets(&targets);
         let targets = targets
             .into_iter()
@@ -392,11 +392,11 @@ impl Display for StringifyError {
 impl std::error::Error for StringifyError {}
 
 impl StringifiedTarget {
-    fn from_target_addr_info(a: bridge::TargetAddrInfo) -> String {
+    fn from_target_addr_info(a: ffx::TargetAddrInfo) -> String {
         TargetAddr::from(a).to_string()
     }
 
-    fn from_addresses(mut v: Vec<bridge::TargetAddrInfo>) -> String {
+    fn from_addresses(mut v: Vec<ffx::TargetAddrInfo>) -> String {
         format!(
             "[{}]",
             v.drain(..)
@@ -406,24 +406,22 @@ impl StringifiedTarget {
         )
     }
 
-    fn field_from_addresses(v: Vec<bridge::TargetAddrInfo>) -> StringifiedField {
+    fn field_from_addresses(v: Vec<ffx::TargetAddrInfo>) -> StringifiedField {
         let all_addresses = StringifiedTarget::from_addresses(v);
         StringifiedField::Array(all_addresses.split(';').map(String::from).collect::<Vec<_>>())
     }
 
-    fn from_rcs_state(r: bridge::RemoteControlState) -> String {
+    fn from_rcs_state(r: ffx::RemoteControlState) -> String {
         match r {
-            bridge::RemoteControlState::Down | bridge::RemoteControlState::Unknown => {
-                "N".to_string()
-            }
-            bridge::RemoteControlState::Up => "Y".to_string(),
+            ffx::RemoteControlState::Down | ffx::RemoteControlState::Unknown => "N".to_string(),
+            ffx::RemoteControlState::Up => "Y".to_string(),
         }
     }
 
     fn from_target_type(
         board_config: Option<&str>,
         product_config: Option<&str>,
-        t: bridge::TargetType,
+        t: ffx::TargetType,
     ) -> String {
         match (board_config, product_config) {
             (None, None) => format!("{:?}", t),
@@ -433,21 +431,21 @@ impl StringifiedTarget {
         }
     }
 
-    fn from_target_state(t: bridge::TargetState) -> String {
+    fn from_target_state(t: ffx::TargetState) -> String {
         match t {
-            bridge::TargetState::Unknown => "Unknown".to_string(),
-            bridge::TargetState::Disconnected => "Disconnected".to_string(),
-            bridge::TargetState::Product => "Product".to_string(),
-            bridge::TargetState::Fastboot => "Fastboot".to_string(),
-            bridge::TargetState::Zedboot => "Zedboot (R)".to_string(),
+            ffx::TargetState::Unknown => "Unknown".to_string(),
+            ffx::TargetState::Disconnected => "Disconnected".to_string(),
+            ffx::TargetState::Product => "Product".to_string(),
+            ffx::TargetState::Fastboot => "Fastboot".to_string(),
+            ffx::TargetState::Zedboot => "Zedboot (R)".to_string(),
         }
     }
 }
 
-impl TryFrom<(Option<usize>, bridge::TargetInfo)> for StringifiedTarget {
+impl TryFrom<(Option<usize>, ffx::TargetInfo)> for StringifiedTarget {
     type Error = StringifyError;
 
-    fn try_from((index, target): (Option<usize>, bridge::TargetInfo)) -> Result<Self, Self::Error> {
+    fn try_from((index, target): (Option<usize>, ffx::TargetInfo)) -> Result<Self, Self::Error> {
         let target_type = StringifiedTarget::from_target_type(
             target.board_config.as_deref(),
             target.product_config.as_deref(),
@@ -471,10 +469,10 @@ impl TryFrom<(Option<usize>, bridge::TargetInfo)> for StringifiedTarget {
     }
 }
 
-impl TryFrom<(Option<usize>, bridge::TargetInfo)> for JsonTarget {
+impl TryFrom<(Option<usize>, ffx::TargetInfo)> for JsonTarget {
     type Error = StringifyError;
 
-    fn try_from((index, target): (Option<usize>, bridge::TargetInfo)) -> Result<Self, Self::Error> {
+    fn try_from((index, target): (Option<usize>, ffx::TargetInfo)) -> Result<Self, Self::Error> {
         Ok(Self {
             nodename: json!(nodename_to_string(index, target.nodename)),
             serial: json!(target.serial_number.unwrap_or(UNKNOWN.to_string())),
@@ -514,10 +512,10 @@ impl TargetFormatter for TabularTargetFormatter {
     }
 }
 
-impl TryFrom<Vec<bridge::TargetInfo>> for TabularTargetFormatter {
+impl TryFrom<Vec<ffx::TargetInfo>> for TabularTargetFormatter {
     type Error = StringifyError;
 
-    fn try_from(mut targets: Vec<bridge::TargetInfo>) -> Result<Self, Self::Error> {
+    fn try_from(mut targets: Vec<ffx::TargetInfo>) -> Result<Self, Self::Error> {
         // First target is the table header in this case, since the formatting
         // for the table header is (for now) identical to the rest of the
         // targets
@@ -594,31 +592,31 @@ mod test {
             include_str!("../test_data/target_formatter_json_build_config_both_missing_golden");
     }
 
-    fn make_valid_target() -> bridge::TargetInfo {
-        bridge::TargetInfo {
+    fn make_valid_target() -> ffx::TargetInfo {
+        ffx::TargetInfo {
             nodename: Some("fooberdoober".to_string()),
             addresses: Some(vec![
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 198,
                 }),
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv4(Ipv4Address { addr: [122, 24, 25, 25] }),
                     scope_id: 186,
                 }),
             ]),
-            rcs_state: Some(bridge::RemoteControlState::Unknown),
-            target_type: Some(bridge::TargetType::Unknown),
-            target_state: Some(bridge::TargetState::Unknown),
-            ..bridge::TargetInfo::EMPTY
+            rcs_state: Some(ffx::RemoteControlState::Unknown),
+            target_type: Some(ffx::TargetType::Unknown),
+            target_state: Some(ffx::TargetState::Unknown),
+            ..ffx::TargetInfo::EMPTY
         }
     }
 
     #[test]
     fn test_empty_formatter() {
-        let formatter = TabularTargetFormatter::try_from(Vec::<bridge::TargetInfo>::new()).unwrap();
+        let formatter = TabularTargetFormatter::try_from(Vec::<ffx::TargetInfo>::new()).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].len(), 50); // Just some manual math.
@@ -629,18 +627,18 @@ mod test {
     async fn test_formatter_one_target() {
         let formatter = TabularTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: Some("lorberding".to_string()),
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 137,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::TargetInfo::EMPTY
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
+                ..ffx::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -657,19 +655,19 @@ mod test {
     async fn test_formatter_empty_nodename() {
         let formatter = TabularTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: None,
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 137,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
                 serial_number: Some("cereal".to_owned()),
-                ..bridge::TargetInfo::EMPTY
+                ..ffx::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -686,32 +684,32 @@ mod test {
     async fn test_formatter_multiple_empty_nodename() {
         let formatter = TabularTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: None,
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 137,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
                 serial_number: Some("cereal".to_owned()),
-                ..bridge::TargetInfo::EMPTY
+                ..ffx::TargetInfo::EMPTY
             },
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: None,
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0],
                     }),
                     scope_id: 42,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::TargetInfo::EMPTY
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
+                ..ffx::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -727,18 +725,18 @@ mod test {
     async fn test_simple_formatter() {
         let formatter = SimpleTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: None,
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 137,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::TargetInfo::EMPTY
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
+                ..ffx::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -776,18 +774,18 @@ mod test {
     async fn test_name_only_formatter() {
         let formatter = NameOnlyTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: None,
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 137,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::TargetInfo::EMPTY
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
+                ..ffx::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -804,31 +802,31 @@ mod test {
     async fn test_name_only_multiple_unknown_formatter() {
         let formatter = NameOnlyTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: None,
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 137,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::TargetInfo::EMPTY
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
+                ..ffx::TargetInfo::EMPTY
             },
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: None,
-                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1],
                     }),
                     scope_id: 42,
                 })]),
-                rcs_state: Some(bridge::RemoteControlState::Unknown),
-                target_type: Some(bridge::TargetType::Unknown),
-                target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::TargetInfo::EMPTY
+                rcs_state: Some(ffx::RemoteControlState::Unknown),
+                target_type: Some(ffx::TargetType::Unknown),
+                target_state: Some(ffx::TargetState::Unknown),
+                ..ffx::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -986,28 +984,28 @@ mod test {
     #[test]
     fn test_stringified_product_state() {
         let mut t = make_valid_target();
-        t.target_state = Some(bridge::TargetState::Product);
+        t.target_state = Some(ffx::TargetState::Product);
         assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
     fn test_stringified_fastboot_state() {
         let mut t = make_valid_target();
-        t.target_state = Some(bridge::TargetState::Fastboot);
+        t.target_state = Some(ffx::TargetState::Fastboot);
         assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
     fn test_stringified_unknown_state() {
         let mut t = make_valid_target();
-        t.target_state = Some(bridge::TargetState::Unknown);
+        t.target_state = Some(ffx::TargetState::Unknown);
         assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
     fn test_stringified_disconnected_state() {
         let mut t = make_valid_target();
-        t.target_state = Some(bridge::TargetState::Disconnected);
+        t.target_state = Some(ffx::TargetState::Disconnected);
         assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 

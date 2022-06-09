@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context as _, Result},
     fidl::prelude::*,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_developer_remotecontrol::{
         ConnectError, IdentifyHostError, RemoteControlMarker, RemoteControlProxy,
     },
@@ -113,23 +113,21 @@ pub enum KnockRcsError {
 ///
 /// This can be used to verify whether it is up and running, or as a control flow to ensure that
 /// RCS is up and running before continuing time-sensitive operations.
-pub async fn knock_rcs(
-    rcs_proxy: &RemoteControlProxy,
-) -> Result<(), bridge::TargetConnectionError> {
+pub async fn knock_rcs(rcs_proxy: &RemoteControlProxy) -> Result<(), ffx::TargetConnectionError> {
     knock_rcs_impl(rcs_proxy).await.map_err(|e| match e {
         KnockRcsError::FidlError(e) => {
             log::warn!("FIDL error: {:?}", e);
-            bridge::TargetConnectionError::FidlCommunicationError
+            ffx::TargetConnectionError::FidlCommunicationError
         }
         KnockRcsError::ChannelError(e) => {
             log::warn!("RCS connect channel err: {:?}", e);
-            bridge::TargetConnectionError::FidlCommunicationError
+            ffx::TargetConnectionError::FidlCommunicationError
         }
         KnockRcsError::RcsConnectError(c) => {
             log::warn!("RCS failed connecting to itself for knocking: {:?}", c);
-            bridge::TargetConnectionError::RcsConnectionError
+            ffx::TargetConnectionError::RcsConnectionError
         }
-        KnockRcsError::FailedToKnock => bridge::TargetConnectionError::FailedToKnockService,
+        KnockRcsError::FailedToKnock => ffx::TargetConnectionError::FailedToKnockService,
     })
 }
 

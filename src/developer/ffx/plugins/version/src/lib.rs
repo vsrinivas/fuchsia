@@ -7,7 +7,7 @@ use {
     chrono::{Local, Offset, TimeZone},
     ffx_core::ffx_plugin,
     ffx_version_args::VersionCommand,
-    fidl_fuchsia_developer_ffx::{self as bridge, VersionInfo},
+    fidl_fuchsia_developer_ffx::{self as ffx, VersionInfo},
     std::fmt::Display,
     std::io::Write,
     std::time::Duration,
@@ -59,7 +59,7 @@ fn format_version_info<O: Offset + Display>(
 
 #[ffx_plugin()]
 pub async fn version(
-    daemon_proxy: bridge::DaemonProxy,
+    daemon_proxy: ffx::DaemonProxy,
     build_info: VersionInfo,
     cmd: VersionCommand,
 ) -> Result<()> {
@@ -69,7 +69,7 @@ pub async fn version(
 pub async fn version_cmd<W: Write, O: Offset + Display>(
     version_info: &VersionInfo,
     cmd: VersionCommand,
-    proxy: bridge::DaemonProxy,
+    proxy: ffx::DaemonProxy,
     w: &mut W,
     tz: impl TimeZone<Offset = O>,
 ) -> Result<()> {
@@ -144,9 +144,9 @@ mod test {
         }
     }
 
-    fn setup_fake_daemon_server(succeed: bool, info: VersionInfo) -> bridge::DaemonProxy {
+    fn setup_fake_daemon_server(succeed: bool, info: VersionInfo) -> ffx::DaemonProxy {
         let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<bridge::DaemonMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<ffx::DaemonMarker>().unwrap();
         fuchsia_async::Task::local(async move {
             #[allow(clippy::never_loop)]
             while let Ok(Some(req)) = stream.try_next().await {
@@ -170,9 +170,9 @@ mod test {
         proxy
     }
 
-    fn setup_hanging_daemon_server(waiter: Shared<Receiver<()>>) -> bridge::DaemonProxy {
+    fn setup_hanging_daemon_server(waiter: Shared<Receiver<()>>) -> ffx::DaemonProxy {
         let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<bridge::DaemonMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<ffx::DaemonMarker>().unwrap();
         fuchsia_async::Task::local(async move {
             #[allow(clippy::never_loop)]
             while let Ok(Some(req)) = stream.try_next().await {
@@ -194,7 +194,7 @@ mod test {
 
     async fn run_version_test(
         version_info: VersionInfo,
-        daemon_proxy: bridge::DaemonProxy,
+        daemon_proxy: ffx::DaemonProxy,
         cmd: VersionCommand,
     ) -> String {
         let mut writer = Vec::new();

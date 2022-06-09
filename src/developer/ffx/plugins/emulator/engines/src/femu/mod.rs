@@ -10,7 +10,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
-use fidl_fuchsia_developer_ffx as bridge;
+use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
 use std::{env, path::PathBuf, process::Command};
 
@@ -26,7 +26,7 @@ pub struct FemuEngine {
 
 #[async_trait]
 impl EmulatorEngine for FemuEngine {
-    async fn start(&mut self, proxy: &bridge::TargetCollectionProxy) -> Result<i32> {
+    async fn start(&mut self, proxy: &ffx::TargetCollectionProxy) -> Result<i32> {
         self.emulator_configuration.guest = self
             .stage_image_files(
                 &self.emulator_configuration.runtime.name,
@@ -62,7 +62,7 @@ impl EmulatorEngine for FemuEngine {
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
-    async fn stop(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()> {
+    async fn stop(&self, proxy: &ffx::TargetCollectionProxy) -> Result<()> {
         // Extract values from the self here, since there are sharing issues with trying to call
         // shutdown_emulator from another thread.
         let target_id = &self.emulator_configuration.runtime.name;

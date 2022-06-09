@@ -8,7 +8,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_trace_args::{TraceCommand, TraceSubCommand, DEFAULT_CATEGORIES},
     ffx_writer::Writer,
-    fidl_fuchsia_developer_ffx::{self as bridge, RecordingError, TracingProxy},
+    fidl_fuchsia_developer_ffx::{self as ffx, RecordingError, TracingProxy},
     fidl_fuchsia_tracing_controller::{ControllerProxy, KnownCategory, ProviderInfo, TraceConfig},
     fuchsia_async::futures::future::{BoxFuture, FutureExt},
     serde::{Deserialize, Serialize},
@@ -177,7 +177,7 @@ pub async fn trace(
         }
         TraceSubCommand::Start(opts) => {
             let string_matcher: Option<String> = ffx_config::get("target.default").await.ok();
-            let default = bridge::TargetQuery { string_matcher, ..bridge::TargetQuery::EMPTY };
+            let default = ffx::TargetQuery { string_matcher, ..ffx::TargetQuery::EMPTY };
             let triggers = if opts.trigger.is_empty() { None } else { Some(opts.trigger) };
             if triggers.is_some() && !opts.background {
                 ffx_bail!(
@@ -196,10 +196,10 @@ pub async fn trace(
                 .start_recording(
                     default,
                     &output,
-                    bridge::TraceOptions {
+                    ffx::TraceOptions {
                         duration: opts.duration,
                         triggers,
-                        ..bridge::TraceOptions::EMPTY
+                        ..ffx::TraceOptions::EMPTY
                     },
                     trace_config,
                 )
@@ -245,8 +245,7 @@ pub async fn trace(
 }
 
 async fn status(proxy: &TracingProxy, writer: Writer) -> Result<()> {
-    let (iter_proxy, server) =
-        fidl::endpoints::create_proxy::<bridge::TracingStatusIteratorMarker>()?;
+    let (iter_proxy, server) = fidl::endpoints::create_proxy::<ffx::TracingStatusIteratorMarker>()?;
     proxy.status(server).await?;
     let mut res = Vec::new();
     loop {
@@ -326,9 +325,9 @@ async fn stop_tracing(proxy: &TracingProxy, output: String, writer: Writer) -> R
 }
 
 async fn handle_recording_result(
-    res: Result<bridge::TargetInfo, RecordingError>,
+    res: Result<ffx::TargetInfo, RecordingError>,
     output: &String,
-) -> Result<bridge::TargetInfo> {
+) -> Result<ffx::TargetInfo> {
     let default: Option<String> = ffx_config::get("target.default").await.ok();
     match res {
         Ok(t) => Ok(t),
@@ -427,7 +426,7 @@ mod tests {
         ffx_trace_args::{ListCategories, ListProviders, Start, Status, Stop},
         ffx_writer::Format,
         fidl::endpoints::{ControlHandle, Responder},
-        fidl_fuchsia_developer_ffx as bridge,
+        fidl_fuchsia_developer_ffx as ffx,
         fidl_fuchsia_tracing_controller::{self as trace, BufferingMode},
         futures::TryStreamExt,
         regex::Regex,
@@ -464,59 +463,59 @@ mod tests {
 
     fn setup_fake_service() -> TracingProxy {
         setup_fake_proxy(|req| match req {
-            bridge::TracingRequest::StartRecording { responder, .. } => responder
-                .send(&mut Ok(bridge::TargetInfo {
+            ffx::TracingRequest::StartRecording { responder, .. } => responder
+                .send(&mut Ok(ffx::TargetInfo {
                     nodename: Some("foo".to_owned()),
-                    ..bridge::TargetInfo::EMPTY
+                    ..ffx::TargetInfo::EMPTY
                 }))
                 .expect("responder err"),
-            bridge::TracingRequest::StopRecording { responder, .. } => responder
-                .send(&mut Ok(bridge::TargetInfo {
+            ffx::TracingRequest::StopRecording { responder, .. } => responder
+                .send(&mut Ok(ffx::TargetInfo {
                     nodename: Some("foo".to_owned()),
-                    ..bridge::TargetInfo::EMPTY
+                    ..ffx::TargetInfo::EMPTY
                 }))
                 .expect("responder err"),
-            bridge::TracingRequest::Status { responder, iterator } => {
+            ffx::TracingRequest::Status { responder, iterator } => {
                 let mut stream = iterator.into_stream().unwrap();
                 fuchsia_async::Task::local(async move {
-                    let bridge::TracingStatusIteratorRequest::GetNext { responder, .. } =
+                    let ffx::TracingStatusIteratorRequest::GetNext { responder, .. } =
                         stream.try_next().await.unwrap().unwrap();
                     responder
                         .send(
                             &mut vec![
-                                bridge::TraceInfo {
-                                    target: Some(bridge::TargetInfo {
+                                ffx::TraceInfo {
+                                    target: Some(ffx::TargetInfo {
                                         nodename: Some("foo".to_string()),
-                                        ..bridge::TargetInfo::EMPTY
+                                        ..ffx::TargetInfo::EMPTY
                                     }),
                                     output_file: Some("/foo/bar.fxt".to_string()),
-                                    ..bridge::TraceInfo::EMPTY
+                                    ..ffx::TraceInfo::EMPTY
                                 },
-                                bridge::TraceInfo {
+                                ffx::TraceInfo {
                                     output_file: Some("/foo/bar/baz.fxt".to_string()),
-                                    ..bridge::TraceInfo::EMPTY
+                                    ..ffx::TraceInfo::EMPTY
                                 },
-                                bridge::TraceInfo {
+                                ffx::TraceInfo {
                                     output_file: Some("/florp/o/matic.txt".to_string()),
                                     triggers: Some(vec![
-                                        bridge::Trigger {
+                                        ffx::Trigger {
                                             alert: Some("foo".to_owned()),
-                                            action: Some(bridge::Action::Terminate),
-                                            ..bridge::Trigger::EMPTY
+                                            action: Some(ffx::Action::Terminate),
+                                            ..ffx::Trigger::EMPTY
                                         },
-                                        bridge::Trigger {
+                                        ffx::Trigger {
                                             alert: Some("bar".to_owned()),
-                                            action: Some(bridge::Action::Terminate),
-                                            ..bridge::Trigger::EMPTY
+                                            action: Some(ffx::Action::Terminate),
+                                            ..ffx::Trigger::EMPTY
                                         },
                                     ]),
-                                    ..bridge::TraceInfo::EMPTY
+                                    ..ffx::TraceInfo::EMPTY
                                 },
                             ]
                             .into_iter(),
                         )
                         .unwrap();
-                    let bridge::TracingStatusIteratorRequest::GetNext { responder, .. } =
+                    let ffx::TracingStatusIteratorRequest::GetNext { responder, .. } =
                         stream.try_next().await.unwrap().unwrap();
                     responder.send(&mut vec![].into_iter()).unwrap();
                 })

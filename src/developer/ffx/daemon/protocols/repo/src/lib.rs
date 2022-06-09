@@ -11,7 +11,7 @@ use {
     ffx_daemon_events::{DaemonEvent, TargetEvent, TargetInfo},
     ffx_daemon_target::target::Target,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_developer_ffx_ext::{RepositorySpec, RepositoryTarget},
     fidl_fuchsia_net_ext::SocketAddress,
     fidl_fuchsia_pkg::RepositoryManagerMarker,
@@ -189,7 +189,7 @@ async fn start_tunnel(
 async fn repo_spec_to_backend(
     repo_spec: &RepositorySpec,
     inner: &Arc<RwLock<RepoInner>>,
-) -> Result<Box<dyn RepositoryBackend + Send + Sync>, bridge::RepositoryError> {
+) -> Result<Box<dyn RepositoryBackend + Send + Sync>, ffx::RepositoryError> {
     match repo_spec {
         RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => Ok(Box::new(
             FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()),
@@ -198,12 +198,12 @@ async fn repo_spec_to_backend(
         RepositorySpec::Http { metadata_repo_url, blob_repo_url } => {
             let metadata_repo_url = Url::parse(metadata_repo_url.as_str()).map_err(|err| {
                 log::error!("Unable to parse metadata repo url {}: {:#}", metadata_repo_url, err);
-                bridge::RepositoryError::InvalidUrl
+                ffx::RepositoryError::InvalidUrl
             })?;
 
             let blob_repo_url = Url::parse(blob_repo_url.as_str()).map_err(|err| {
                 log::error!("Unable to parse blob repo url {}: {:#}", blob_repo_url, err);
-                bridge::RepositoryError::InvalidUrl
+                ffx::RepositoryError::InvalidUrl
             })?;
 
             let https_client = inner.read().await.https_client.clone();
@@ -213,7 +213,7 @@ async fn repo_spec_to_backend(
         RepositorySpec::Gcs { .. } => {
             // FIXME(fxbug.dev/98994): Implement support for daemon-side GCS repositories.
             log::error!("Trying to register a GCS repository, but that's not supported yet");
-            Err(bridge::RepositoryError::UnknownRepositorySpec)
+            Err(ffx::RepositoryError::UnknownRepositorySpec)
         }
     }
 }
@@ -223,7 +223,7 @@ async fn add_repository(
     repo_spec: &RepositorySpec,
     save_config: SaveConfig,
     inner: Arc<RwLock<RepoInner>>,
-) -> Result<(), bridge::RepositoryError> {
+) -> Result<(), ffx::RepositoryError> {
     log::info!("Adding repository {} {:?}", repo_name, repo_spec);
 
     // Create the repository.
@@ -233,9 +233,9 @@ async fn add_repository(
 
         match err {
             repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
-                bridge::RepositoryError::ExpiredRepositoryMetadata
+                ffx::RepositoryError::ExpiredRepositoryMetadata
             }
-            _ => bridge::RepositoryError::IoError,
+            _ => ffx::RepositoryError::IoError,
         }
     })?;
 
@@ -243,7 +243,7 @@ async fn add_repository(
         // Save the filesystem configuration.
         pkg::config::set_repository(repo_name, &repo_spec).await.map_err(|err| {
             log::error!("Failed to save repository: {:#?}", err);
-            bridge::RepositoryError::IoError
+            ffx::RepositoryError::IoError
         })?;
     }
 
@@ -265,7 +265,7 @@ async fn register_target(
     mut target_info: RepositoryTarget,
     save_config: SaveConfig,
     inner: Arc<RwLock<RepoInner>>,
-) -> Result<(), bridge::RepositoryError> {
+) -> Result<(), ffx::RepositoryError> {
     log::info!(
         "Registering repository {:?} for target {:?}",
         target_info.repo_name,
@@ -277,7 +277,7 @@ async fn register_target(
         .await
         .manager
         .get(&target_info.repo_name)
-        .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
+        .ok_or_else(|| ffx::RepositoryError::NoMatchingRepository)?;
 
     let (target, proxy) = futures::select! {
         res = cx.open_target_proxy_with_info::<RepositoryManagerMarker>(
@@ -290,25 +290,25 @@ async fn register_target(
                     target_info.target_identifier,
                     err
                 );
-                bridge::RepositoryError::TargetCommunicationFailure
+                ffx::RepositoryError::TargetCommunicationFailure
             })?
         }
         _ = fasync::Timer::new(TARGET_CONNECT_TIMEOUT).fuse() => {
             log::error!("Timed out connecting to target name {:?}", target_info.target_identifier);
-            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+            return Err(ffx::RepositoryError::TargetCommunicationFailure);
         }
     };
 
     let target_nodename = target.nodename.ok_or_else(|| {
         log::error!("target {:?} does not have a nodename", target_info.target_identifier);
-        bridge::RepositoryError::InternalError
+        ffx::RepositoryError::InternalError
     })?;
 
     let listen_addr = match inner.read().await.server.listen_addr() {
         Some(listen_addr) => listen_addr,
         None => {
             log::error!("repository server is not running");
-            return Err(bridge::RepositoryError::ServerNotRunning);
+            return Err(ffx::RepositoryError::ServerNotRunning);
         }
     };
 
@@ -320,7 +320,7 @@ async fn register_target(
         listen_addr,
         target.ssh_host_address.ok_or_else(|| {
             log::error!("target {:?} does not have a host address", target_info.target_identifier);
-            bridge::RepositoryError::InternalError
+            ffx::RepositoryError::InternalError
         })?,
     );
 
@@ -332,18 +332,18 @@ async fn register_target(
         .await
         .map_err(|e| {
             log::error!("failed to get config: {}", e);
-            return bridge::RepositoryError::RepositoryManagerError;
+            return ffx::RepositoryError::RepositoryManagerError;
         })?;
 
     match proxy.add(config.into()).await {
         Ok(Ok(())) => {}
         Ok(Err(err)) => {
             log::error!("failed to add config: {:#?}", Status::from_raw(err));
-            return Err(bridge::RepositoryError::RepositoryManagerError);
+            return Err(ffx::RepositoryError::RepositoryManagerError);
         }
         Err(err) => {
             log::error!("failed to add config: {:#?}", err);
-            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+            return Err(ffx::RepositoryError::TargetCommunicationFailure);
         }
     }
 
@@ -355,7 +355,7 @@ async fn register_target(
         // Start the tunnel to the device if one isn't running already.
         start_tunnel(&cx, &inner, &target_nodename).await.map_err(|err| {
             log::error!("Failed to start tunnel to target {:?}: {:#}", target_nodename, err);
-            bridge::RepositoryError::TargetCommunicationFailure
+            ffx::RepositoryError::TargetCommunicationFailure
         })?;
     }
 
@@ -365,7 +365,7 @@ async fn register_target(
 
         pkg::config::set_registration(&target_nodename, &target_info).await.map_err(|err| {
             log::error!("Failed to save registration to config: {:#?}", err);
-            bridge::RepositoryError::InternalError
+            ffx::RepositoryError::InternalError
         })?;
     }
 
@@ -375,10 +375,7 @@ async fn register_target(
 /// Decide which repo host we should use when creating a repository config, and
 /// whether or not we need to create a tunnel in order for the device to talk to
 /// the repository.
-fn create_repo_host(
-    listen_addr: SocketAddr,
-    host_address: bridge::SshHostAddrInfo,
-) -> (bool, String) {
+fn create_repo_host(listen_addr: SocketAddr, host_address: ffx::SshHostAddrInfo) -> (bool, String) {
     // We need to decide which address the target device should use to reach the
     // repository. If the server is running on a loopback device, then we need
     // to create a tunnel for the device to access the server.
@@ -414,7 +411,7 @@ fn create_repo_host(
 fn aliases_to_rules(
     repo_name: &str,
     aliases: &[String],
-) -> Result<Vec<Rule>, bridge::RepositoryError> {
+) -> Result<Vec<Rule>, ffx::RepositoryError> {
     let rules = aliases
         .iter()
         .map(|alias| {
@@ -423,7 +420,7 @@ fn aliases_to_rules(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| {
             log::warn!("failed to construct rule: {:#?}", err);
-            bridge::RepositoryError::RewriteEngineError
+            ffx::RepositoryError::RewriteEngineError
         })?;
 
     Ok(rules)
@@ -434,7 +431,7 @@ async fn create_aliases(
     repo_name: &str,
     target_nodename: &str,
     aliases: &[String],
-) -> Result<(), bridge::RepositoryError> {
+) -> Result<(), ffx::RepositoryError> {
     let alias_rules = aliases_to_rules(repo_name, &aliases)?;
 
     let rewrite_proxy = match cx
@@ -451,7 +448,7 @@ async fn create_aliases(
                 target_nodename,
                 err
             );
-            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+            return Err(ffx::RepositoryError::TargetCommunicationFailure);
         }
     };
 
@@ -477,7 +474,7 @@ async fn create_aliases(
     .await
     .map_err(|err| {
         log::warn!("failed to create transactions: {:#?}", err);
-        bridge::RepositoryError::RewriteEngineError
+        ffx::RepositoryError::RewriteEngineError
     })?;
 
     Ok(())
@@ -594,7 +591,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         cx: &Context,
         repo_name: String,
         target_identifier: Option<String>,
-    ) -> Result<(), bridge::RepositoryError> {
+    ) -> Result<(), ffx::RepositoryError> {
         log::info!("Deregistering repository {:?} from target {:?}", repo_name, target_identifier);
 
         let target = cx.get_target_info(target_identifier.clone()).await.map_err(|err| {
@@ -603,12 +600,12 @@ impl<T: EventHandlerProvider> Repo<T> {
                 target_identifier,
                 err
             );
-            bridge::RepositoryError::TargetCommunicationFailure
+            ffx::RepositoryError::TargetCommunicationFailure
         })?;
 
         let target_nodename = target.nodename.ok_or_else(|| {
             log::warn!("Target {:?} does not have a nodename", target_identifier);
-            bridge::RepositoryError::InternalError
+            ffx::RepositoryError::InternalError
         })?;
 
         // Look up the the registration info. Error out if we don't have any registrations for this
@@ -622,14 +619,14 @@ impl<T: EventHandlerProvider> Repo<T> {
                     target_nodename,
                     err
                 );
-                bridge::RepositoryError::InternalError
+                ffx::RepositoryError::InternalError
             })?
-            .ok_or_else(|| bridge::RepositoryError::NoMatchingRegistration)?;
+            .ok_or_else(|| ffx::RepositoryError::NoMatchingRegistration)?;
 
         // Finally, remove the registration config from the ffx config.
         pkg::config::remove_registration(&repo_name, &target_nodename).await.map_err(|err| {
             log::warn!("Failed to remove registration from config: {:#?}", err);
-            bridge::RepositoryError::InternalError
+            ffx::RepositoryError::InternalError
         })?;
 
         Ok(())
@@ -638,21 +635,21 @@ impl<T: EventHandlerProvider> Repo<T> {
     async fn list_packages(
         &self,
         name: &str,
-        iterator: ServerEnd<bridge::RepositoryPackagesIteratorMarker>,
-        include_fields: bridge::ListFields,
-    ) -> Result<(), bridge::RepositoryError> {
+        iterator: ServerEnd<ffx::RepositoryPackagesIteratorMarker>,
+        include_fields: ffx::ListFields,
+    ) -> Result<(), ffx::RepositoryError> {
         let mut stream = match iterator.into_stream() {
             Ok(s) => s,
             Err(e) => {
                 log::warn!("error converting iterator to stream: {}", e);
-                return Err(bridge::RepositoryError::InternalError);
+                return Err(ffx::RepositoryError::InternalError);
             }
         };
 
         let repo = if let Some(r) = self.inner.read().await.manager.get(&name) {
             r
         } else {
-            return Err(bridge::RepositoryError::NoMatchingRepository);
+            return Err(ffx::RepositoryError::NoMatchingRepository);
         };
 
         let values = repo.list_packages(include_fields).await.map_err(|err| {
@@ -660,9 +657,9 @@ impl<T: EventHandlerProvider> Repo<T> {
 
             match err {
                 repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
-                    bridge::RepositoryError::ExpiredRepositoryMetadata
+                    ffx::RepositoryError::ExpiredRepositoryMetadata
                 }
-                _ => bridge::RepositoryError::IoError,
+                _ => ffx::RepositoryError::IoError,
             }
         })?;
 
@@ -670,7 +667,7 @@ impl<T: EventHandlerProvider> Repo<T> {
             let mut pos = 0;
             while let Some(request) = stream.next().await {
                 match request {
-                    Ok(bridge::RepositoryPackagesIteratorRequest::Next { responder }) => {
+                    Ok(ffx::RepositoryPackagesIteratorRequest::Next { responder }) => {
                         let len = values.len();
                         let chunk = &mut values[pos..]
                             [..std::cmp::min(len - pos, MAX_PACKAGES as usize)]
@@ -701,28 +698,28 @@ impl<T: EventHandlerProvider> Repo<T> {
         &self,
         repository_name: &str,
         package_name: &str,
-        iterator: ServerEnd<bridge::PackageEntryIteratorMarker>,
-    ) -> Result<(), bridge::RepositoryError> {
+        iterator: ServerEnd<ffx::PackageEntryIteratorMarker>,
+    ) -> Result<(), ffx::RepositoryError> {
         let mut stream = match iterator.into_stream() {
             Ok(s) => s,
             Err(e) => {
                 log::warn!("error converting iterator to stream: {}", e);
-                return Err(bridge::RepositoryError::InternalError);
+                return Err(ffx::RepositoryError::InternalError);
             }
         };
 
         let repo = if let Some(r) = self.inner.read().await.manager.get(&repository_name) {
             r
         } else {
-            return Err(bridge::RepositoryError::NoMatchingRepository);
+            return Err(ffx::RepositoryError::NoMatchingRepository);
         };
 
         let values = repo.show_package(package_name.to_owned()).await.map_err(|err| {
             log::error!("Unable to list package contents {:?}: {}", package_name, err);
-            bridge::RepositoryError::IoError
+            ffx::RepositoryError::IoError
         })?;
         if values.is_none() {
-            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+            return Err(ffx::RepositoryError::TargetCommunicationFailure);
         }
         let values = values.unwrap();
 
@@ -730,7 +727,7 @@ impl<T: EventHandlerProvider> Repo<T> {
             let mut pos = 0;
             while let Some(request) = stream.next().await {
                 match request {
-                    Ok(bridge::PackageEntryIteratorRequest::Next { responder }) => {
+                    Ok(ffx::PackageEntryIteratorRequest::Next { responder }) => {
                         let len = values.len();
                         let chunk = &mut values[pos..]
                             [..std::cmp::min(len - pos, MAX_PACKAGES as usize)]
@@ -766,37 +763,37 @@ impl<T: EventHandlerProvider + Default> Default for Repo<T> {
 
 #[async_trait(?Send)]
 impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<T> {
-    type Protocol = bridge::RepositoryRegistryMarker;
+    type Protocol = ffx::RepositoryRegistryMarker;
     type StreamHandler = FidlStreamHandler<Self>;
 
     async fn handle(
         &self,
         cx: &Context,
-        req: bridge::RepositoryRegistryRequest,
+        req: ffx::RepositoryRegistryRequest,
     ) -> Result<(), anyhow::Error> {
         match req {
-            bridge::RepositoryRegistryRequest::ServerStart { responder } => {
+            ffx::RepositoryRegistryRequest::ServerStart { responder } => {
                 let mut res = async {
                     pkg_config::set_repository_server_enabled(true).await.map_err(|err| {
                         log::error!("failed to save server enabled flag to config: {:#?}", err);
-                        bridge::RepositoryError::InternalError
+                        ffx::RepositoryError::InternalError
                     })?;
 
                     let mut inner = self.inner.write().await;
 
                     if matches!(inner.server, ServerState::Disabled) {
-                        return Err(bridge::RepositoryError::ServerNotRunning);
+                        return Err(ffx::RepositoryError::ServerNotRunning);
                     }
 
                     match inner.start_server().await {
                         Ok(Some(addr)) => Ok(SocketAddress(addr).into()),
                         Ok(None) => {
                             log::warn!("Not starting server because the server is disabled");
-                            Err(bridge::RepositoryError::ServerNotRunning)
+                            Err(ffx::RepositoryError::ServerNotRunning)
                         }
                         Err(err) => {
                             log::error!("Failed to start repository server: {:#?}", err);
-                            Err(bridge::RepositoryError::ServerNotRunning)
+                            Err(ffx::RepositoryError::ServerNotRunning)
                         }
                     }
                 }
@@ -812,11 +809,11 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
 
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::ServerStop { responder } => {
+            ffx::RepositoryRegistryRequest::ServerStop { responder } => {
                 let mut res = async {
                     pkg_config::set_repository_server_enabled(false).await.map_err(|err| {
                         log::error!("failed to save server disabled flag to config: {:#?}", err);
-                        bridge::RepositoryError::InternalError
+                        ffx::RepositoryError::InternalError
                     })?;
 
                     self.inner.write().await.stop_server().await;
@@ -829,7 +826,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
 
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::AddRepository { name, repository, responder } => {
+            ffx::RepositoryRegistryRequest::AddRepository { name, repository, responder } => {
                 let mut res = match repository.try_into() {
                     Ok(repo_spec) => {
                         add_repository(&name, &repo_spec, SaveConfig::Save, Arc::clone(&self.inner))
@@ -842,14 +839,14 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
 
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::RemoveRepository { name, responder } => {
+            ffx::RepositoryRegistryRequest::RemoveRepository { name, responder } => {
                 responder.send(self.remove_repository(cx, &name).await)?;
 
                 metrics::remove_repository_event().await;
 
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
+            ffx::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
                 let mut res = match RepositoryTarget::try_from(target_info) {
                     Ok(target_info) => {
                         register_target(cx, target_info, SaveConfig::Save, Arc::clone(&self.inner))
@@ -864,7 +861,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
 
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::DeregisterTarget {
+            ffx::RepositoryRegistryRequest::DeregisterTarget {
                 repository_name,
                 target_identifier,
                 responder,
@@ -877,7 +874,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
 
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::ListPackages {
+            ffx::RepositoryRegistryRequest::ListPackages {
                 name,
                 iterator,
                 include_fields,
@@ -886,7 +883,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 responder.send(&mut self.list_packages(&name, iterator, include_fields).await)?;
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::ShowPackage {
+            ffx::RepositoryRegistryRequest::ShowPackage {
                 repository_name,
                 package_name,
                 iterator,
@@ -897,7 +894,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 )?;
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
+            ffx::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
                 let mut stream = iterator.into_stream()?;
                 let mut values = {
                     let inner = self.inner.read().await;
@@ -905,7 +902,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                     inner
                         .manager
                         .repositories()
-                        .map(|x| bridge::RepositoryConfig {
+                        .map(|x| ffx::RepositoryConfig {
                             name: x.name().to_owned(),
                             spec: x.spec().into(),
                         })
@@ -916,12 +913,12 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 fasync::Task::spawn(async move {
                     while let Some(request) = stream.next().await {
                         match request {
-                            Ok(bridge::RepositoryIteratorRequest::Next { responder }) => {
+                            Ok(ffx::RepositoryIteratorRequest::Next { responder }) => {
                                 let len = values.len();
                                 let chunk = &mut values[pos..]
-                                    [..std::cmp::min(len - pos, bridge::MAX_REPOS as usize)]
+                                    [..std::cmp::min(len - pos, ffx::MAX_REPOS as usize)]
                                     .iter_mut();
-                                pos += bridge::MAX_REPOS as usize;
+                                pos += ffx::MAX_REPOS as usize;
                                 pos = std::cmp::min(pos, len);
 
                                 if let Err(err) = responder.send(chunk) {
@@ -940,7 +937,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 .detach();
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::ListRegisteredTargets { iterator, .. } => {
+            ffx::RepositoryRegistryRequest::ListRegisteredTargets { iterator, .. } => {
                 let mut stream = iterator.into_stream()?;
                 let mut values = pkg::config::get_registrations()
                     .await
@@ -957,7 +954,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 fasync::Task::spawn(async move {
                     while let Some(request) = stream.next().await {
                         match request {
-                            Ok(bridge::RepositoryTargetsIteratorRequest::Next { responder }) => {
+                            Ok(ffx::RepositoryTargetsIteratorRequest::Next { responder }) => {
                                 if let Err(err) = responder.send(&mut values.next().unwrap_or_else(Vec::new).into_iter()) {
                                     log::warn!(
                                         "Error responding to RepositoryTargetsIterator request: {:#?}",
@@ -1485,7 +1482,7 @@ mod tests {
         }
     }
 
-    async fn add_repo(proxy: &bridge::RepositoryRegistryProxy, repo_name: &str) {
+    async fn add_repo(proxy: &ffx::RepositoryRegistryProxy, repo_name: &str) {
         let spec = pm_repo_spec();
         proxy
             .add_repository(repo_name, &mut spec.into())
@@ -1494,9 +1491,7 @@ mod tests {
             .expect("adding repository to succeed");
     }
 
-    async fn get_repositories(
-        proxy: &bridge::RepositoryRegistryProxy,
-    ) -> Vec<bridge::RepositoryConfig> {
+    async fn get_repositories(proxy: &ffx::RepositoryRegistryProxy) -> Vec<ffx::RepositoryConfig> {
         let (client, server) = fidl::endpoints::create_endpoints().unwrap();
         proxy.list_repositories(server).unwrap();
         let client = client.into_proxy().unwrap();
@@ -1514,8 +1509,8 @@ mod tests {
     }
 
     async fn get_target_registrations(
-        proxy: &bridge::RepositoryRegistryProxy,
-    ) -> Vec<bridge::RepositoryTarget> {
+        proxy: &ffx::RepositoryRegistryProxy,
+    ) -> Vec<ffx::RepositoryTarget> {
         let (client, server) = fidl::endpoints::create_endpoints().unwrap();
         proxy.list_registered_targets(server).unwrap();
         let client = client.into_proxy().unwrap();
@@ -1591,7 +1586,7 @@ mod tests {
             let daemon = FakeDaemonBuilder::new()
                 .register_fidl_protocol::<Repo<TestEventHandlerProvider>>()
                 .build();
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
             assert_eq!(get_repositories(&proxy).await, vec![]);
             assert_eq!(get_target_registrations(&proxy).await, vec![]);
@@ -1646,16 +1641,14 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
             // The server should have started.
             {
@@ -1688,11 +1681,11 @@ mod tests {
             // Make sure we can read back the repositories.
             assert_eq!(
                 get_repositories(&proxy).await,
-                vec![bridge::RepositoryConfig {
+                vec![ffx::RepositoryConfig {
                     name: REPO_NAME.to_string(),
-                    spec: bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
+                    spec: ffx::RepositorySpec::Pm(ffx::PmRepositorySpec {
                         path: Some(repo_path.clone()),
-                        ..bridge::PmRepositorySpec::EMPTY
+                        ..ffx::PmRepositorySpec::EMPTY
                     }),
                 }]
             );
@@ -1700,12 +1693,12 @@ mod tests {
             // Make sure we can read back the taret registrations.
             assert_eq!(
                 get_target_registrations(&proxy).await,
-                vec![bridge::RepositoryTarget {
+                vec![ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
                     aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
-                    ..bridge::RepositoryTarget::EMPTY
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
+                    ..ffx::RepositoryTarget::EMPTY
                 }],
             );
         });
@@ -1759,16 +1752,14 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
             // The server should be stopped.
             {
@@ -1779,11 +1770,11 @@ mod tests {
             // Make sure we can read back the repositories.
             assert_eq!(
                 get_repositories(&proxy).await,
-                vec![bridge::RepositoryConfig {
+                vec![ffx::RepositoryConfig {
                     name: REPO_NAME.to_string(),
-                    spec: bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
+                    spec: ffx::RepositorySpec::Pm(ffx::PmRepositorySpec {
                         path: Some(repo_path.clone()),
-                        ..bridge::PmRepositorySpec::EMPTY
+                        ..ffx::PmRepositorySpec::EMPTY
                     }),
                 }]
             );
@@ -1791,12 +1782,12 @@ mod tests {
             // Make sure we can read back the target registrations.
             assert_eq!(
                 get_target_registrations(&proxy).await,
-                vec![bridge::RepositoryTarget {
+                vec![ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
                     aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
-                    ..bridge::RepositoryTarget::EMPTY
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
+                    ..ffx::RepositoryTarget::EMPTY
                 }],
             );
 
@@ -1843,7 +1834,7 @@ mod tests {
                 .inject_fidl_protocol(Rc::clone(&repo))
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
             let actual_address =
                 SocketAddress::from(proxy.server_start().await.unwrap().unwrap()).0;
@@ -1867,7 +1858,7 @@ mod tests {
                 .inject_fidl_protocol(Rc::clone(&repo))
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
             let actual_address =
                 SocketAddress::from(proxy.server_start().await.unwrap().unwrap()).0;
@@ -1889,10 +1880,10 @@ mod tests {
                 .inject_fidl_protocol(Rc::clone(&repo))
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-            let spec = bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
+            let spec = ffx::RepositorySpec::Pm(ffx::PmRepositorySpec {
                 path: Some(EMPTY_REPO_PATH.to_owned()),
-                ..bridge::PmRepositorySpec::EMPTY
+                ..ffx::PmRepositorySpec::EMPTY
             });
 
             // Initially no server should be running.
@@ -1910,7 +1901,7 @@ mod tests {
             // Make sure the repository was added.
             assert_eq!(
                 get_repositories(&proxy).await,
-                vec![bridge::RepositoryConfig { name: REPO_NAME.to_string(), spec }]
+                vec![ffx::RepositoryConfig { name: REPO_NAME.to_string(), spec }]
             );
 
             // Adding a repository should start the server.
@@ -1945,16 +1936,14 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
             // Make sure there is nothing in the registry.
             assert_eq!(fake_engine.take_events(), vec![]);
@@ -1969,12 +1958,12 @@ mod tests {
             assert_eq!(fake_engine.take_events(), vec![]);
 
             proxy
-                .register_target(bridge::RepositoryTarget {
+                .register_target(ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 })
                 .await
                 .expect("communicated with proxy")
@@ -2006,12 +1995,12 @@ mod tests {
             // The RepositoryRegistry should remember we set up the registrations.
             assert_eq!(
                 get_target_registrations(&proxy).await,
-                vec![bridge::RepositoryTarget {
+                vec![ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 }],
             );
 
@@ -2056,16 +2045,14 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
             // Make sure there is nothing in the registry.
             assert_eq!(fake_engine.take_events(), vec![]);
@@ -2079,12 +2066,12 @@ mod tests {
             assert_eq!(fake_engine.take_events(), vec![]);
 
             proxy
-                .register_target(bridge::RepositoryTarget {
+                .register_target(ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 })
                 .await
                 .expect("communicated with proxy")
@@ -2119,12 +2106,12 @@ mod tests {
             // The RepositoryRegistry should remember we set up the registrations.
             assert_eq!(
                 get_target_registrations(&proxy).await,
-                vec![bridge::RepositoryTarget {
+                vec![ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string(),]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 }],
             );
 
@@ -2182,14 +2169,14 @@ mod tests {
             )
             .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
             .inject_fidl_protocol(Rc::clone(&repo))
-            .target(bridge::TargetInfo {
+            .target(ffx::TargetInfo {
                 nodename: Some(TARGET_NODENAME.to_string()),
-                ssh_host_address: Some(bridge::SshHostAddrInfo { address: ssh_host_addr.clone() }),
-                ..bridge::TargetInfo::EMPTY
+                ssh_host_address: Some(ffx::SshHostAddrInfo { address: ssh_host_addr.clone() }),
+                ..ffx::TargetInfo::EMPTY
             })
             .build();
 
-        let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+        let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
 
         // Make sure there is nothing in the registry.
         assert_eq!(fake_engine.take_events(), vec![]);
@@ -2203,12 +2190,12 @@ mod tests {
         assert_eq!(fake_engine.take_events(), vec![]);
 
         proxy
-            .register_target(bridge::RepositoryTarget {
+            .register_target(ffx::RepositoryTarget {
                 repo_name: Some(REPO_NAME.to_string()),
                 target_identifier: Some(TARGET_NODENAME.to_string()),
-                storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                 aliases: None,
-                ..bridge::RepositoryTarget::EMPTY
+                ..ffx::RepositoryTarget::EMPTY
             })
             .await
             .expect("communicated with proxy")
@@ -2301,25 +2288,23 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .register_fidl_protocol::<Repo<TestEventHandlerProvider>>()
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             add_repo(&proxy, REPO_NAME).await;
 
             proxy
-                .register_target(bridge::RepositoryTarget {
+                .register_target(ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 })
                 .await
                 .expect("communicated with proxy")
@@ -2364,16 +2349,14 @@ mod tests {
                     fake_repo_manager_closure,
                 )
                 .register_fidl_protocol::<Repo<TestEventHandlerProvider>>()
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             add_repo(&proxy, REPO_NAME).await;
 
             let default_repo_name = "default-repo";
@@ -2409,24 +2392,22 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             add_repo(&proxy, REPO_NAME).await;
 
             proxy
-                .register_target(bridge::RepositoryTarget {
+                .register_target(ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: None,
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
-                    ..bridge::RepositoryTarget::EMPTY
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
+                    ..ffx::RepositoryTarget::EMPTY
                 })
                 .await
                 .expect("communicated with proxy")
@@ -2457,16 +2438,14 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             add_repo(&proxy, REPO_NAME).await;
 
             // Make sure there's no repositories or registrations on the device.
@@ -2477,12 +2456,12 @@ mod tests {
             assert_eq!(get_target_registrations(&proxy).await, vec![]);
 
             proxy
-                .register_target(bridge::RepositoryTarget {
+                .register_target(ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec![]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 })
                 .await
                 .unwrap()
@@ -2498,12 +2477,12 @@ mod tests {
             // Make sure we can query the registration.
             assert_eq!(
                 get_target_registrations(&proxy).await,
-                vec![bridge::RepositoryTarget {
+                vec![ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec![]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 }],
             );
         });
@@ -2524,25 +2503,23 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             add_repo(&proxy, REPO_NAME).await;
 
             proxy
-                .register_target(bridge::RepositoryTarget {
+                .register_target(ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: None,
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 })
                 .await
                 .unwrap()
@@ -2559,12 +2536,12 @@ mod tests {
 
             assert_eq!(
                 get_target_registrations(&proxy).await,
-                vec![bridge::RepositoryTarget {
+                vec![ffx::RepositoryTarget {
                     repo_name: Some(REPO_NAME.to_string()),
                     target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                     aliases: Some(vec![]),
-                    ..bridge::RepositoryTarget::EMPTY
+                    ..ffx::RepositoryTarget::EMPTY
                 }],
             );
         })
@@ -2584,31 +2561,29 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             add_repo(&proxy, REPO_NAME).await;
 
             assert_eq!(
                 proxy
-                    .register_target(bridge::RepositoryTarget {
+                    .register_target(ffx::RepositoryTarget {
                         repo_name: Some(REPO_NAME.to_string()),
                         target_identifier: Some(TARGET_NODENAME.to_string()),
-                        storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                        storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                         aliases: None,
-                        ..bridge::RepositoryTarget::EMPTY
+                        ..ffx::RepositoryTarget::EMPTY
                     })
                     .await
                     .unwrap()
                     .unwrap_err(),
-                bridge::RepositoryError::RepositoryManagerError
+                ffx::RepositoryError::RepositoryManagerError
             );
 
             // Make sure we tried to add the repository.
@@ -2645,29 +2620,27 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             assert_eq!(
                 proxy
-                    .register_target(bridge::RepositoryTarget {
+                    .register_target(ffx::RepositoryTarget {
                         repo_name: Some(REPO_NAME.to_string()),
                         target_identifier: Some(TARGET_NODENAME.to_string()),
-                        storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                        storage_type: Some(ffx::RepositoryStorageType::Ephemeral),
                         aliases: None,
-                        ..bridge::RepositoryTarget::EMPTY
+                        ..ffx::RepositoryTarget::EMPTY
                     })
                     .await
                     .unwrap()
                     .unwrap_err(),
-                bridge::RepositoryError::NoMatchingRepository
+                ffx::RepositoryError::NoMatchingRepository
             );
 
             // Make sure we didn't communicate with the device.
@@ -2690,23 +2663,21 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
+                .target(ffx::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
+                    ssh_host_address: Some(ffx::SshHostAddrInfo { address: HOST_ADDR.to_string() }),
+                    ..ffx::TargetInfo::EMPTY
                 })
                 .build();
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            let proxy = daemon.open_proxy::<ffx::RepositoryRegistryMarker>().await;
             assert_eq!(
                 proxy
                     .deregister_target(REPO_NAME, Some(TARGET_NODENAME))
                     .await
                     .unwrap()
                     .unwrap_err(),
-                bridge::RepositoryError::NoMatchingRegistration
+                ffx::RepositoryError::NoMatchingRegistration
             );
 
             // Make sure we didn't communicate with the device.
@@ -2771,7 +2742,7 @@ mod tests {
                 assert_eq!(
                     create_repo_host(
                         listen_addr,
-                        bridge::SshHostAddrInfo { address: host_addr.into() },
+                        ffx::SshHostAddrInfo { address: host_addr.into() },
                     ),
                     (true, expected.to_string()),
                 );
@@ -2792,7 +2763,7 @@ mod tests {
                 assert_eq!(
                     create_repo_host(
                         listen_addr,
-                        bridge::SshHostAddrInfo { address: host_addr.into() },
+                        ffx::SshHostAddrInfo { address: host_addr.into() },
                     ),
                     (false, expected.to_string()),
                 );
@@ -2857,7 +2828,7 @@ mod tests {
                     &repo
                 )
                 .await,
-                Err(bridge::RepositoryError::InvalidUrl)
+                Err(ffx::RepositoryError::InvalidUrl)
             );
 
             assert_matches!(
@@ -2869,7 +2840,7 @@ mod tests {
                     &repo
                 )
                 .await,
-                Err(bridge::RepositoryError::InvalidUrl)
+                Err(ffx::RepositoryError::InvalidUrl)
             );
         })
     }

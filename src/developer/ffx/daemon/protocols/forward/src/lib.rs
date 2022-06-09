@@ -5,7 +5,7 @@ use {
     anyhow::{Context as _, Result},
     async_net::TcpListener,
     async_trait::async_trait,
-    fidl, fidl_fuchsia_developer_ffx as bridge, fidl_fuchsia_developer_remotecontrol as rcs,
+    fidl, fidl_fuchsia_developer_ffx as ffx, fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_net::SocketAddress,
     fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
     futures::{future::join, AsyncReadExt as _, AsyncWriteExt as _, StreamExt as _},
@@ -147,19 +147,14 @@ impl Forward {
 
 #[async_trait(?Send)]
 impl FidlProtocol for Forward {
-    type Protocol = bridge::TunnelMarker;
+    type Protocol = ffx::TunnelMarker;
     type StreamHandler = FidlInstancedStreamHandler<Self>;
 
-    async fn handle(&self, cx: &Context, req: bridge::TunnelRequest) -> Result<()> {
+    async fn handle(&self, cx: &Context, req: ffx::TunnelRequest) -> Result<()> {
         let cx = cx.clone();
 
         match req {
-            bridge::TunnelRequest::ForwardPort {
-                target,
-                host_address,
-                target_address,
-                responder,
-            } => {
+            ffx::TunnelRequest::ForwardPort { target, host_address, target_address, responder } => {
                 let host_address: SocketAddressExt = host_address.into();
                 let host_address = host_address.0;
                 let target_address_cfg: SocketAddressExt = target_address.clone().into();
@@ -168,7 +163,7 @@ impl FidlProtocol for Forward {
                     Ok(t) => t,
                     Err(_) => {
                         return responder
-                            .send(&mut Err(bridge::TunnelError::CouldNotListen))
+                            .send(&mut Err(ffx::TunnelError::CouldNotListen))
                             .context("error sending response");
                     }
                 };
@@ -198,7 +193,7 @@ impl FidlProtocol for Forward {
                 responder.send(&mut Ok(())).context("error sending response")?;
                 Ok(())
             }
-            bridge::TunnelRequest::ReversePort {
+            ffx::TunnelRequest::ReversePort {
                 target,
                 host_address,
                 mut target_address,
@@ -209,7 +204,7 @@ impl FidlProtocol for Forward {
                     Err(e) => {
                         log::error!("Could not connect to proxy for TCP forwarding: {:?}", e);
                         return responder
-                            .send(&mut Err(bridge::TunnelError::TargetConnectFailed))
+                            .send(&mut Err(ffx::TunnelError::TargetConnectFailed))
                             .context("error sending response");
                     }
                 };
@@ -221,7 +216,7 @@ impl FidlProtocol for Forward {
                     Err(e) => {
                         log::error!("Could not establish reverse TCP forward: {:?}", e);
                         return responder
-                            .send(&mut Err(bridge::TunnelError::CouldNotListen))
+                            .send(&mut Err(ffx::TunnelError::CouldNotListen))
                             .context("error sending response");
                     }
                 }
@@ -380,14 +375,14 @@ mod tests {
             &self,
             _target_identifier: Option<String>,
             _protocol_selector: diagnostics::Selector,
-        ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
+        ) -> Result<(ffx::TargetInfo, fidl::Channel)> {
             unimplemented!()
         }
 
         async fn get_target_info(
             &self,
             _target_identifier: Option<String>,
-        ) -> Result<bridge::TargetInfo> {
+        ) -> Result<ffx::TargetInfo> {
             unimplemented!()
         }
     }
@@ -395,14 +390,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_forward() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Forward>().build();
-        let _proxy = daemon.open_proxy::<bridge::TunnelMarker>().await;
+        let _proxy = daemon.open_proxy::<ffx::TunnelMarker>().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_reverse() {
         let forward = Forward::default();
         let context = Context::new(TestDaemon);
-        let (client, server) = fidl::endpoints::create_endpoints::<bridge::TunnelMarker>().unwrap();
+        let (client, server) = fidl::endpoints::create_endpoints::<ffx::TunnelMarker>().unwrap();
 
         fuchsia_async::Task::local(async move {
             let mut server = server.into_stream().unwrap();

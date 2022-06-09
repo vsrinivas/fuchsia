@@ -19,7 +19,7 @@ use ffx_emulator_config::{
     ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, LogLevel,
     NetworkingMode,
 };
-use fidl_fuchsia_developer_ffx as bridge;
+use fidl_fuchsia_developer_ffx as ffx;
 use shared_child::SharedChild;
 use std::{
     fs, fs::File, io::Write, ops::Sub, path::PathBuf, process::Command, str, sync::Arc,
@@ -195,7 +195,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     async fn run(
         &mut self,
         emu_binary: &PathBuf,
-        proxy: &bridge::TargetCollectionProxy,
+        proxy: &ffx::TargetCollectionProxy,
     ) -> Result<i32> {
         if !emu_binary.exists() || !emu_binary.is_file() {
             bail!("Giving up finding emulator binary. Tried {:?}", emu_binary)
@@ -386,7 +386,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         running: bool,
         pid: u32,
         target_id: &str,
-        proxy: &bridge::TargetCollectionProxy,
+        proxy: &ffx::TargetCollectionProxy,
     ) -> Result<()> {
         if let Err(e) = remove_target(proxy, target_id).await {
             // Even if we can't remove it, still continue shutting down.
@@ -444,10 +444,10 @@ mod tests {
     }
     #[async_trait]
     impl EmulatorEngine for TestEngine {
-        async fn start(&mut self, _: &bridge::TargetCollectionProxy) -> Result<i32> {
+        async fn start(&mut self, _: &ffx::TargetCollectionProxy) -> Result<i32> {
             todo!()
         }
-        async fn stop(&self, _: &bridge::TargetCollectionProxy) -> Result<()> {
+        async fn stop(&self, _: &ffx::TargetCollectionProxy) -> Result<()> {
             todo!()
         }
         fn show(&self) {

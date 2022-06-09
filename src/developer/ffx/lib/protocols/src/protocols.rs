@@ -296,7 +296,7 @@ mod tests {
     use super::*;
     use crate::testing::FakeDaemonBuilder;
     use anyhow::anyhow;
-    use fidl_fuchsia_developer_ffx as bridge;
+    use fidl_fuchsia_developer_ffx as ffx;
     use fidl_fuchsia_ffx_test as ffx_test;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -352,9 +352,9 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_instanced_protocol_closure::<ffx_test::NoopMarker, _>(noop_protocol_closure())
             .register_fidl_protocol::<CounterProtocol>()
-            .target(bridge::TargetInfo {
+            .target(ffx::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::TargetInfo::EMPTY
+                ..ffx::TargetInfo::EMPTY
             })
             .build();
         let counter_proxy = daemon.open_proxy::<ffx_test::CounterMarker>().await;
@@ -465,9 +465,9 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_instanced_protocol_closure::<ffx_test::NoopMarker, _>(noop_protocol_closure())
             .register_fidl_protocol::<SingletonCounterProtocol>()
-            .target(bridge::TargetInfo {
+            .target(ffx::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::TargetInfo::EMPTY
+                ..ffx::TargetInfo::EMPTY
             })
             .build();
         let (counter_proxy1, counter_proxy2, counter_proxy3) = futures::join!(

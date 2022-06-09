@@ -10,25 +10,25 @@ use {
     async_trait::async_trait,
     diagnostics::{get_streaming_min_timestamp, run_diagnostics_streaming},
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fuchsia_async::{futures::FutureExt, TimeoutExt},
     protocols::prelude::*,
     std::sync::Arc,
     std::time::Duration,
 };
 
-#[ffx_protocol(bridge::TargetCollectionMarker)]
+#[ffx_protocol(ffx::TargetCollectionMarker)]
 #[derive(Default)]
 pub struct Diagnostics {}
 
 #[async_trait(?Send)]
 impl FidlProtocol for Diagnostics {
-    type Protocol = bridge::DiagnosticsMarker;
+    type Protocol = ffx::DiagnosticsMarker;
     type StreamHandler = FidlStreamHandler<Self>;
 
-    async fn handle(&self, cx: &Context, req: bridge::DiagnosticsRequest) -> Result<()> {
+    async fn handle(&self, cx: &Context, req: ffx::DiagnosticsRequest) -> Result<()> {
         match req {
-            bridge::DiagnosticsRequest::StreamDiagnostics {
+            ffx::DiagnosticsRequest::StreamDiagnostics {
                 target: target_str,
                 parameters,
                 iterator,
@@ -39,11 +39,11 @@ impl FidlProtocol for Diagnostics {
                 } else {
                     log::info!("StreamDiagnostics failed: stream mode is required");
                     return responder
-                        .send(&mut Err(bridge::DiagnosticsStreamError::MissingParameter))
+                        .send(&mut Err(ffx::DiagnosticsStreamError::MissingParameter))
                         .context("sending missing parameter response");
                 };
 
-                if stream_mode == bridge::StreamMode::SnapshotAll {
+                if stream_mode == ffx::StreamMode::SnapshotAll {
                     let target_str = if let Some(target_str) = target_str {
                         target_str
                     } else {
@@ -51,7 +51,7 @@ impl FidlProtocol for Diagnostics {
                             "StreamDiagnostics failed: Missing target string in SnapshotAll mode."
                         );
                         return responder
-                            .send(&mut Err(bridge::DiagnosticsStreamError::MissingParameter))
+                            .send(&mut Err(ffx::DiagnosticsStreamError::MissingParameter))
                             .context("sending missing parameter response");
                     };
 
@@ -62,7 +62,7 @@ impl FidlProtocol for Diagnostics {
                             "StreamDiagnostics failed: Missing session in SnapshotAll mode."
                         );
                         return responder
-                            .send(&mut Err(bridge::DiagnosticsStreamError::MissingParameter))
+                            .send(&mut Err(ffx::DiagnosticsStreamError::MissingParameter))
                             .context("sending missing parameter response");
                     };
 
@@ -70,7 +70,7 @@ impl FidlProtocol for Diagnostics {
                         DiagnosticsStreamer::list_sessions(Some(target_str.clone())).await?;
                     if streams.is_empty() {
                         responder.send(&mut Err(
-                            bridge::DiagnosticsStreamError::NoMatchingOfflineTargets,
+                            ffx::DiagnosticsStreamError::NoMatchingOfflineTargets,
                         ))?;
                         return Ok(());
                     }
@@ -81,13 +81,13 @@ impl FidlProtocol for Diagnostics {
 
                     if streams.is_empty() {
                         responder.send(&mut Err(
-                            bridge::DiagnosticsStreamError::NoMatchingOfflineTargets,
+                            ffx::DiagnosticsStreamError::NoMatchingOfflineTargets,
                         ))?;
                         return Ok(());
                     }
 
                     let (target_str, stream) = match session {
-                        bridge::SessionSpec::TimestampNanos(ref ts) => {
+                        ffx::SessionSpec::TimestampNanos(ref ts) => {
                             let mut result_stream = None;
 
                             for stream in streams.into_iter() {
@@ -102,12 +102,12 @@ impl FidlProtocol for Diagnostics {
                                 (target_str, stream)
                             } else {
                                 responder.send(&mut Err(
-                                    bridge::DiagnosticsStreamError::NoMatchingOfflineSessions,
+                                    ffx::DiagnosticsStreamError::NoMatchingOfflineSessions,
                                 ))?;
                                 return Ok(());
                             }
                         }
-                        bridge::SessionSpec::Relative(rel) => {
+                        ffx::SessionSpec::Relative(rel) => {
                             let mut sorted = vec![];
                             for stream in streams.into_iter() {
                                 let ts = stream.session_timestamp_nanos().await;
@@ -123,7 +123,7 @@ impl FidlProtocol for Diagnostics {
                             } else {
                                 return responder
                                     .send(&mut Err(
-                                        bridge::DiagnosticsStreamError::NoMatchingOfflineSessions,
+                                        ffx::DiagnosticsStreamError::NoMatchingOfflineSessions,
                                     ))
                                     .context("sending no offline sessions response");
                             }
@@ -135,7 +135,7 @@ impl FidlProtocol for Diagnostics {
                         .wait_for_setup()
                         .map(|_| Ok(()))
                         .on_timeout(Duration::from_secs(3), || {
-                            Err(bridge::DiagnosticsStreamError::NoStreamForTarget)
+                            Err(ffx::DiagnosticsStreamError::NoStreamForTarget)
                         })
                         .await
                     {
@@ -157,13 +157,13 @@ impl FidlProtocol for Diagnostics {
                     let log_iterator = stream
                         .stream_entries(parameters.stream_mode.unwrap(), min_timestamp)
                         .await?;
-                    responder.send(&mut Ok(bridge::LogSession {
+                    responder.send(&mut Ok(ffx::LogSession {
                         target_identifier: Some(target_str),
                         session_timestamp_nanos: stream
                             .session_timestamp_nanos()
                             .await
                             .map(|t| t as u64),
-                        ..bridge::LogSession::EMPTY
+                        ..ffx::LogSession::EMPTY
                     }))?;
                     run_diagnostics_streaming(log_iterator, iterator).await.map_err(|e| {
                         log::error!("Failure running diagnostics streaming: {:?}", e);
@@ -173,16 +173,16 @@ impl FidlProtocol for Diagnostics {
                 } else {
                     // TODO(fxb/90340): Add a protocols utility library for feed-forward things like this.
                     let tc_proxy = self.open_target_collection_proxy(cx).await?;
-                    // cx.open_proxy::<bridge::TargetCollectionMarker>().await?;
+                    // cx.open_proxy::<ffx::TargetCollectionMarker>().await?;
                     let (target_handle, th_server_end) =
-                        fidl::endpoints::create_proxy::<bridge::TargetMarker>()?;
+                        fidl::endpoints::create_proxy::<ffx::TargetMarker>()?;
                     // TODO(awdavies): Document that there needs to be a timeout handler on the client side, or just handle
                     // a timeout in here.
                     match tc_proxy
                         .open_target(
-                            bridge::TargetQuery {
+                            ffx::TargetQuery {
                                 string_matcher: target_str.clone(),
-                                ..bridge::TargetQuery::EMPTY
+                                ..ffx::TargetQuery::EMPTY
                             },
                             th_server_end,
                         )
@@ -195,7 +195,7 @@ impl FidlProtocol for Diagnostics {
                                 e
                             );
                             responder
-                                .send(&mut Err(bridge::DiagnosticsStreamError::NoMatchingTargets))
+                                .send(&mut Err(ffx::DiagnosticsStreamError::NoMatchingTargets))
                                 .map_err(Into::into)
                         }
                         Ok(()) => responder
@@ -221,60 +221,60 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_no_stream_mode() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Diagnostics>().build();
-        let diagnostics_proxy = daemon.open_proxy::<bridge::DiagnosticsMarker>().await;
+        let diagnostics_proxy = daemon.open_proxy::<ffx::DiagnosticsMarker>().await;
         let (_proxy, server) = fidl::endpoints::create_proxy::<ArchiveIteratorMarker>().unwrap();
         assert_eq!(
             diagnostics_proxy
                 .stream_diagnostics(
                     Some("narbacular"),
-                    bridge::DaemonDiagnosticsStreamParameters::EMPTY,
+                    ffx::DaemonDiagnosticsStreamParameters::EMPTY,
                     server
                 )
                 .await
                 .unwrap(),
-            Err(bridge::DiagnosticsStreamError::MissingParameter)
+            Err(ffx::DiagnosticsStreamError::MissingParameter)
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_no_target() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Diagnostics>().build();
-        let diagnostics_proxy = daemon.open_proxy::<bridge::DiagnosticsMarker>().await;
+        let diagnostics_proxy = daemon.open_proxy::<ffx::DiagnosticsMarker>().await;
         let (_proxy, server) = fidl::endpoints::create_proxy::<ArchiveIteratorMarker>().unwrap();
         assert_eq!(
             diagnostics_proxy
                 .stream_diagnostics(
                     None,
-                    bridge::DaemonDiagnosticsStreamParameters {
-                        stream_mode: Some(bridge::StreamMode::SnapshotAll),
-                        ..bridge::DaemonDiagnosticsStreamParameters::EMPTY
+                    ffx::DaemonDiagnosticsStreamParameters {
+                        stream_mode: Some(ffx::StreamMode::SnapshotAll),
+                        ..ffx::DaemonDiagnosticsStreamParameters::EMPTY
                     },
                     server
                 )
                 .await
                 .unwrap(),
-            Err(bridge::DiagnosticsStreamError::MissingParameter)
+            Err(ffx::DiagnosticsStreamError::MissingParameter)
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_no_session() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Diagnostics>().build();
-        let diagnostics_proxy = daemon.open_proxy::<bridge::DiagnosticsMarker>().await;
+        let diagnostics_proxy = daemon.open_proxy::<ffx::DiagnosticsMarker>().await;
         let (_proxy, server) = fidl::endpoints::create_proxy::<ArchiveIteratorMarker>().unwrap();
         assert_eq!(
             diagnostics_proxy
                 .stream_diagnostics(
                     Some("flippity-flap"),
-                    bridge::DaemonDiagnosticsStreamParameters {
-                        stream_mode: Some(bridge::StreamMode::SnapshotAll),
-                        ..bridge::DaemonDiagnosticsStreamParameters::EMPTY
+                    ffx::DaemonDiagnosticsStreamParameters {
+                        stream_mode: Some(ffx::StreamMode::SnapshotAll),
+                        ..ffx::DaemonDiagnosticsStreamParameters::EMPTY
                     },
                     server
                 )
                 .await
                 .unwrap(),
-            Err(bridge::DiagnosticsStreamError::MissingParameter)
+            Err(ffx::DiagnosticsStreamError::MissingParameter)
         );
     }
 
@@ -282,30 +282,30 @@ mod test {
     async fn test_no_targets() {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<Diagnostics>()
-            .register_instanced_protocol_closure::<bridge::TargetCollectionMarker, _>(|_cx, req| {
+            .register_instanced_protocol_closure::<ffx::TargetCollectionMarker, _>(|_cx, req| {
                 match req {
-                    bridge::TargetCollectionRequest::OpenTarget { responder, .. } => responder
-                        .send(&mut Err(bridge::OpenTargetError::TargetNotFound))
+                    ffx::TargetCollectionRequest::OpenTarget { responder, .. } => responder
+                        .send(&mut Err(ffx::OpenTargetError::TargetNotFound))
                         .map_err(Into::into),
                     _ => panic!("unsupported for this test"),
                 }
             })
             .build();
-        let diagnostics_proxy = daemon.open_proxy::<bridge::DiagnosticsMarker>().await;
+        let diagnostics_proxy = daemon.open_proxy::<ffx::DiagnosticsMarker>().await;
         let (_proxy, server) = fidl::endpoints::create_proxy::<ArchiveIteratorMarker>().unwrap();
         assert_eq!(
             diagnostics_proxy
                 .stream_diagnostics(
                     Some("flippity-flap"),
-                    bridge::DaemonDiagnosticsStreamParameters {
-                        stream_mode: Some(bridge::StreamMode::Subscribe),
-                        ..bridge::DaemonDiagnosticsStreamParameters::EMPTY
+                    ffx::DaemonDiagnosticsStreamParameters {
+                        stream_mode: Some(ffx::StreamMode::Subscribe),
+                        ..ffx::DaemonDiagnosticsStreamParameters::EMPTY
                     },
                     server
                 )
                 .await
                 .unwrap(),
-            Err(bridge::DiagnosticsStreamError::NoMatchingTargets)
+            Err(ffx::DiagnosticsStreamError::NoMatchingTargets)
         );
     }
 
@@ -313,19 +313,19 @@ mod test {
     async fn test_subscribe_returns_empty_log_session() {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<Diagnostics>()
-            .register_instanced_protocol_closure::<bridge::TargetCollectionMarker, _>(|_cx, req| {
+            .register_instanced_protocol_closure::<ffx::TargetCollectionMarker, _>(|_cx, req| {
                 match req {
-                    bridge::TargetCollectionRequest::OpenTarget { responder, target_handle, .. } => {
+                    ffx::TargetCollectionRequest::OpenTarget { responder, target_handle, .. } => {
                         use fuchsia_async::futures::TryStreamExt;
                         let mut stream = target_handle.into_stream()?;
                         // Target handle task.
                         fuchsia_async::Task::local(async move {
                             while let Ok(Some(req)) = stream.try_next().await {
                                 match req {
-                                    bridge::TargetRequest::StreamActiveDiagnostics {
+                                    ffx::TargetRequest::StreamActiveDiagnostics {
                                         responder,
                                         ..
-                                    } => responder.send(&mut Ok(bridge::LogSession::EMPTY)).unwrap(),
+                                    } => responder.send(&mut Ok(ffx::LogSession::EMPTY)).unwrap(),
                                     e => panic!("unsupported request for this target handle related test: {:?}", e),
                                 }
                             }
@@ -337,21 +337,21 @@ mod test {
                 }
             })
             .build();
-        let diagnostics_proxy = daemon.open_proxy::<bridge::DiagnosticsMarker>().await;
+        let diagnostics_proxy = daemon.open_proxy::<ffx::DiagnosticsMarker>().await;
         let (_proxy, server) = fidl::endpoints::create_proxy::<ArchiveIteratorMarker>().unwrap();
         assert_eq!(
             diagnostics_proxy
                 .stream_diagnostics(
                     Some("flippity-flap"),
-                    bridge::DaemonDiagnosticsStreamParameters {
-                        stream_mode: Some(bridge::StreamMode::Subscribe),
-                        ..bridge::DaemonDiagnosticsStreamParameters::EMPTY
+                    ffx::DaemonDiagnosticsStreamParameters {
+                        stream_mode: Some(ffx::StreamMode::Subscribe),
+                        ..ffx::DaemonDiagnosticsStreamParameters::EMPTY
                     },
                     server
                 )
                 .await
                 .unwrap(),
-            Ok(bridge::LogSession::EMPTY)
+            Ok(ffx::LogSession::EMPTY)
         );
     }
 }

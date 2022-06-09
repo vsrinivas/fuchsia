@@ -6,12 +6,12 @@ use {
     anyhow::{Context as _, Result},
     ffx_core::ffx_plugin,
     ffx_target_clear_preferred_ssh_address_args::ClearPreferredSshAddressCommand,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
 };
 
 #[ffx_plugin()]
 pub async fn clear_preferred_ssh_address(
-    target_proxy: bridge::TargetProxy,
+    target_proxy: ffx::TargetProxy,
     _cmd: ClearPreferredSshAddressCommand,
 ) -> Result<()> {
     target_proxy
@@ -25,9 +25,9 @@ pub async fn clear_preferred_ssh_address(
 mod tests {
     use super::*;
 
-    fn setup_fake_target_server() -> bridge::TargetProxy {
+    fn setup_fake_target_server() -> ffx::TargetProxy {
         setup_fake_target_proxy(move |req| match req {
-            bridge::TargetRequest::ClearPreferredSshAddress { responder } => {
+            ffx::TargetRequest::ClearPreferredSshAddress { responder } => {
                 responder.send().expect("clear_preferred_ssh_address failed");
             }
             r => panic!("got unexpected request: {:?}", r),

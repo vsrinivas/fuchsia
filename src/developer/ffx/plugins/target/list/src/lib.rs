@@ -80,7 +80,7 @@ mod test {
         super::*,
         addr::TargetAddr,
         ffx_list_args::Format,
-        fidl_fuchsia_developer_ffx as bridge,
+        fidl_fuchsia_developer_ffx as ffx,
         fidl_fuchsia_developer_ffx::{
             RemoteControlState, TargetInfo as FidlTargetInfo, TargetState, TargetType,
         },
@@ -108,7 +108,7 @@ mod test {
 
     fn setup_fake_target_collection_server(num_tests: usize) -> TargetCollectionProxy {
         setup_fake_tc_proxy(move |req| match req {
-            bridge::TargetCollectionRequest::ListTargets { query, reader, .. } => {
+            ffx::TargetCollectionRequest::ListTargets { query, reader, .. } => {
                 let reader = reader.into_proxy().unwrap();
                 let fidl_values: Vec<FidlTargetInfo> =
                     if query.string_matcher.as_deref().map(|s| s.is_empty()).unwrap_or(true) {

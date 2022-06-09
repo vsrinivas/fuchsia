@@ -6,7 +6,7 @@ use {
     async_trait::async_trait,
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fuchsia_async::Task,
     futures::TryStreamExt,
     protocols::prelude::*,
@@ -25,18 +25,18 @@ pub(crate) const MDNS_TTL: u32 = 255;
 
 #[derive(Debug)]
 struct CachedTarget {
-    target: bridge::TargetInfo,
+    target: ffx::TargetInfo,
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
     eviction_task: Option<Task<()>>,
 }
 
 impl CachedTarget {
-    fn new(target: bridge::TargetInfo) -> Self {
+    fn new(target: ffx::TargetInfo) -> Self {
         Self { target, eviction_task: None }
     }
 
-    fn new_with_task(target: bridge::TargetInfo, eviction_task: Task<()>) -> Self {
+    fn new_with_task(target: ffx::TargetInfo, eviction_task: Task<()>) -> Self {
         Self { target, eviction_task: Some(eviction_task) }
     }
 }
@@ -56,13 +56,13 @@ impl PartialEq for CachedTarget {
 impl Eq for CachedTarget {}
 
 pub(crate) struct MdnsProtocolInner {
-    events_in: async_channel::Receiver<bridge::MdnsEventType>,
-    events_out: async_channel::Sender<bridge::MdnsEventType>,
+    events_in: async_channel::Receiver<ffx::MdnsEventType>,
+    events_out: async_channel::Sender<ffx::MdnsEventType>,
     target_cache: RefCell<HashSet<CachedTarget>>,
 }
 
 impl MdnsProtocolInner {
-    async fn handle_target(self: &Rc<Self>, t: bridge::TargetInfo, ttl: u32) {
+    async fn handle_target(self: &Rc<Self>, t: ffx::TargetInfo, ttl: u32) {
         let weak = Rc::downgrade(self);
         let t_clone = t.clone();
         let eviction_task = Task::local(async move {
@@ -78,23 +78,23 @@ impl MdnsProtocolInner {
             .replace(CachedTarget::new_with_task(t.clone(), eviction_task))
             .is_none()
         {
-            self.publish_event(bridge::MdnsEventType::TargetFound(t)).await;
+            self.publish_event(ffx::MdnsEventType::TargetFound(t)).await;
         } else {
-            self.publish_event(bridge::MdnsEventType::TargetRediscovered(t)).await
+            self.publish_event(ffx::MdnsEventType::TargetRediscovered(t)).await
         }
     }
 
-    async fn evict_target(&self, t: bridge::TargetInfo) {
+    async fn evict_target(&self, t: ffx::TargetInfo) {
         if self.target_cache.borrow_mut().remove(&CachedTarget::new(t.clone())) {
-            self.publish_event(bridge::MdnsEventType::TargetExpired(t)).await
+            self.publish_event(ffx::MdnsEventType::TargetExpired(t)).await
         }
     }
 
-    async fn publish_event(&self, event: bridge::MdnsEventType) {
+    async fn publish_event(&self, event: ffx::MdnsEventType) {
         let _ = self.events_out.send(event).await;
     }
 
-    fn target_cache(&self) -> Vec<bridge::TargetInfo> {
+    fn target_cache(&self) -> Vec<ffx::TargetInfo> {
         self.target_cache.borrow().iter().map(|c| c.target.clone()).collect()
     }
 }
@@ -108,12 +108,12 @@ pub struct Mdns {
 
 #[async_trait(?Send)]
 impl FidlProtocol for Mdns {
-    type Protocol = bridge::MdnsMarker;
+    type Protocol = ffx::MdnsMarker;
     type StreamHandler = FidlStreamHandler<Self>;
 
-    async fn handle(&self, _cx: &Context, req: bridge::MdnsRequest) -> Result<()> {
+    async fn handle(&self, _cx: &Context, req: ffx::MdnsRequest) -> Result<()> {
         match req {
-            bridge::MdnsRequest::GetTargets { responder } => responder
+            ffx::MdnsRequest::GetTargets { responder } => responder
                 .send(
                     &mut self
                         .inner
@@ -123,7 +123,7 @@ impl FidlProtocol for Mdns {
                         .into_iter(),
                 )
                 .map_err(Into::into),
-            bridge::MdnsRequest::GetNextEvent { responder } => responder
+            ffx::MdnsRequest::GetNextEvent { responder } => responder
                 .send(
                     self.inner
                         .as_ref()
@@ -139,7 +139,7 @@ impl FidlProtocol for Mdns {
     }
 
     async fn start(&mut self, _cx: &Context) -> Result<()> {
-        let (sender, receiver) = async_channel::bounded::<bridge::MdnsEventType>(1);
+        let (sender, receiver) = async_channel::bounded::<ffx::MdnsEventType>(1);
         let inner = Rc::new(MdnsProtocolInner {
             events_in: receiver,
             events_out: sender,
@@ -207,10 +207,10 @@ mod tests {
         ];
     }
 
-    async fn wait_for_port_binds(proxy: &bridge::MdnsProxy) -> u16 {
+    async fn wait_for_port_binds(proxy: &ffx::MdnsProxy) -> u16 {
         while let Some(e) = proxy.get_next_event().await.unwrap() {
             match *e {
-                bridge::MdnsEventType::SocketBound(bridge::MdnsBindEvent { port, .. }) => {
+                ffx::MdnsEventType::SocketBound(ffx::MdnsBindEvent { port, .. }) => {
                     let p = port.unwrap();
                     assert_ne!(p, 0);
                     return p;
@@ -227,7 +227,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mdns_get_targets_empty() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Mdns>().build();
-        let proxy = daemon.open_proxy::<bridge::MdnsMarker>().await;
+        let proxy = daemon.open_proxy::<ffx::MdnsMarker>().await;
         let targets = proxy.get_targets().await.unwrap();
         assert_eq!(targets.len(), 0);
     }
@@ -245,9 +245,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mdns_bind_event_on_first_listen() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Mdns>().build();
-        let proxy = daemon.open_proxy::<bridge::MdnsMarker>().await;
+        let proxy = daemon.open_proxy::<ffx::MdnsMarker>().await;
         while let Some(e) = proxy.get_next_event().await.unwrap() {
-            if matches!(*e, bridge::MdnsEventType::SocketBound(_)) {
+            if matches!(*e, ffx::MdnsEventType::SocketBound(_)) {
                 break;
             }
         }
@@ -256,7 +256,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mdns_network_traffic_valid() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Mdns>().build();
-        let proxy = daemon.open_proxy::<bridge::MdnsMarker>().await;
+        let proxy = daemon.open_proxy::<ffx::MdnsMarker>().await;
         let bound_port = wait_for_port_binds(&proxy).await;
 
         // Note: this and other tests are only using IPv4 due to some issues
@@ -305,7 +305,7 @@ mod tests {
         socket.send_to(msg_bytes.as_ref(), &addr.into()).unwrap();
 
         while let Some(e) = proxy.get_next_event().await.unwrap() {
-            if matches!(*e, bridge::MdnsEventType::TargetFound(_),) {
+            if matches!(*e, ffx::MdnsEventType::TargetFound(_),) {
                 break;
             }
         }
@@ -315,7 +315,7 @@ mod tests {
         );
         socket.send_to(msg_bytes.as_ref(), &addr.into()).unwrap();
         while let Some(e) = proxy.get_next_event().await.unwrap() {
-            if matches!(*e, bridge::MdnsEventType::TargetRediscovered(_)) {
+            if matches!(*e, ffx::MdnsEventType::TargetRediscovered(_)) {
                 break;
             }
         }
@@ -328,7 +328,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mdns_network_traffic_invalid() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Mdns>().build();
-        let proxy = daemon.open_proxy::<bridge::MdnsMarker>().await;
+        let proxy = daemon.open_proxy::<ffx::MdnsMarker>().await;
         let bound_port = wait_for_port_binds(&proxy).await;
 
         let socket = socket2::Socket::new(
@@ -368,7 +368,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mdns_network_traffic_wrong_protocol() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Mdns>().build();
-        let proxy = daemon.open_proxy::<bridge::MdnsMarker>().await;
+        let proxy = daemon.open_proxy::<ffx::MdnsMarker>().await;
         let bound_port = wait_for_port_binds(&proxy).await;
         let socket = socket2::Socket::new(
             socket2::Domain::IPV4,
@@ -421,15 +421,12 @@ mod tests {
         let _ = wait_for_port_binds(&proxy).await;
         svc_inner
             .handle_target(
-                bridge::TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    ..bridge::TargetInfo::EMPTY
-                },
+                ffx::TargetInfo { nodename: Some(nodename.clone()), ..ffx::TargetInfo::EMPTY },
                 5000,
             )
             .await;
         if let Some(e) = proxy.get_next_event().await.unwrap() {
-            assert!(matches!(*e, bridge::MdnsEventType::TargetFound(_),));
+            assert!(matches!(*e, ffx::MdnsEventType::TargetFound(_),));
         }
         assert_eq!(
             proxy.get_targets().await.unwrap().into_iter().next().unwrap().nodename.unwrap(),
@@ -437,15 +434,12 @@ mod tests {
         );
         svc_inner
             .handle_target(
-                bridge::TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    ..bridge::TargetInfo::EMPTY
-                },
+                ffx::TargetInfo { nodename: Some(nodename.clone()), ..ffx::TargetInfo::EMPTY },
                 5000,
             )
             .await;
         if let Some(e) = proxy.get_next_event().await.unwrap() {
-            assert!(matches!(*e, bridge::MdnsEventType::TargetRediscovered(_),));
+            assert!(matches!(*e, ffx::MdnsEventType::TargetRediscovered(_),));
         }
         assert_eq!(
             proxy.get_targets().await.unwrap().into_iter().next().unwrap().nodename.unwrap(),
@@ -464,10 +458,7 @@ mod tests {
         let _ = wait_for_port_binds(&proxy).await;
         svc_inner
             .handle_target(
-                bridge::TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    ..bridge::TargetInfo::EMPTY
-                },
+                ffx::TargetInfo { nodename: Some(nodename.clone()), ..ffx::TargetInfo::EMPTY },
                 1,
             )
             .await;
@@ -475,10 +466,10 @@ mod tests {
         let mut new_target_found = false;
         while let Some(e) = proxy.get_next_event().await.unwrap() {
             match *e {
-                bridge::MdnsEventType::TargetExpired(_) => {
+                ffx::MdnsEventType::TargetExpired(_) => {
                     break;
                 }
-                bridge::MdnsEventType::TargetFound(t) => {
+                ffx::MdnsEventType::TargetFound(t) => {
                     assert_eq!(t.nodename.unwrap(), nodename);
                     new_target_found = true;
                 }
@@ -500,16 +491,13 @@ mod tests {
         let _ = wait_for_port_binds(&proxy).await;
         svc_inner
             .handle_target(
-                bridge::TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    ..bridge::TargetInfo::EMPTY
-                },
+                ffx::TargetInfo { nodename: Some(nodename.clone()), ..ffx::TargetInfo::EMPTY },
                 50000,
             )
             .await;
         while let Some(e) = proxy.get_next_event().await.unwrap() {
             match *e {
-                bridge::MdnsEventType::TargetFound(t) => {
+                ffx::MdnsEventType::TargetFound(t) => {
                     assert_eq!(t.nodename.unwrap(), nodename);
                     break;
                 }
@@ -518,15 +506,12 @@ mod tests {
         }
         svc_inner
             .handle_target(
-                bridge::TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    ..bridge::TargetInfo::EMPTY
-                },
+                ffx::TargetInfo { nodename: Some(nodename.clone()), ..ffx::TargetInfo::EMPTY },
                 1,
             )
             .await;
         while let Some(e) = proxy.get_next_event().await.unwrap() {
-            if matches!(*e, bridge::MdnsEventType::TargetExpired(_)) {
+            if matches!(*e, ffx::MdnsEventType::TargetExpired(_)) {
                 break;
             }
         }

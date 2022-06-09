@@ -7,11 +7,11 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_target_forward_tcp_args::TcpCommand,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
 };
 
-#[ffx_plugin(bridge::TunnelProxy = "daemon::protocol")]
-pub async fn forward_tcp(forward_port: bridge::TunnelProxy, cmd: TcpCommand) -> Result<()> {
+#[ffx_plugin(ffx::TunnelProxy = "daemon::protocol")]
+pub async fn forward_tcp(forward_port: ffx::TunnelProxy, cmd: TcpCommand) -> Result<()> {
     let target: Option<String> =
         ffx_config::get("target.default").await.context("getting default target from config")?;
     let target = if let Some(target) = target {
@@ -25,12 +25,12 @@ pub async fn forward_tcp(forward_port: bridge::TunnelProxy, cmd: TcpCommand) -> 
 
 pub async fn forward_tcp_impl(
     target: &str,
-    forward_port: bridge::TunnelProxy,
+    forward_port: ffx::TunnelProxy,
     mut cmd: TcpCommand,
 ) -> Result<()> {
     match forward_port.forward_port(target, &mut cmd.host_address, &mut cmd.target_address).await? {
         Ok(()) => Ok(()),
-        Err(bridge::TunnelError::CouldNotListen) => {
+        Err(ffx::TunnelError::CouldNotListen) => {
             ffx_bail!("Could not listen on address {:?}", cmd.host_address)
         }
         Err(e) => Err(anyhow::anyhow!("Unexpected error: {:?}", e)),
@@ -57,7 +57,7 @@ mod test {
             let host_address_test = host_address_test.clone();
             let target_address_test = target_address_test.clone();
             move |req| match req {
-                bridge::TunnelRequest::ForwardPort {
+                ffx::TunnelRequest::ForwardPort {
                     target,
                     host_address,
                     target_address,

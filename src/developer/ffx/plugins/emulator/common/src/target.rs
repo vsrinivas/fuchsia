@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Result;
-use fidl_fuchsia_developer_ffx as bridge;
+use fidl_fuchsia_developer_ffx as ffx;
 use fidl_fuchsia_net as net;
 use std::time::Duration;
 use timeout::timeout;
@@ -23,8 +23,8 @@ const TARGET_LIFETIME: Duration = Duration::from_secs(120);
 /// Equivalent to a call to `ffx target add`. This adds a target at `127.0.0.1:ssh_port`.
 /// At this time, this is restricted to IPV4 only, as QEMU's DHCP server gets in the way of port
 /// mapping on IPV6.
-pub async fn add_target(proxy: &bridge::TargetCollectionProxy, ssh_port: u16) -> Result<()> {
-    let mut addr = bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+pub async fn add_target(proxy: &ffx::TargetCollectionProxy, ssh_port: u16) -> Result<()> {
+    let mut addr = ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
         ip: net::IpAddress::Ipv4(net::Ipv4Address {
             addr: "127.0.0.1".parse::<std::net::Ipv4Addr>().unwrap().octets().into(),
         }),
@@ -40,7 +40,7 @@ pub async fn add_target(proxy: &bridge::TargetCollectionProxy, ssh_port: u16) ->
 /// Equivalent to a call to `ffx target remove`. This removes the emulator with the name which
 /// matches the target_id parameter from the target list. If no such target exists, the function
 /// logs a warning.
-pub async fn remove_target(proxy: &bridge::TargetCollectionProxy, target_id: &str) -> Result<()> {
+pub async fn remove_target(proxy: &ffx::TargetCollectionProxy, target_id: &str) -> Result<()> {
     if proxy.remove_target(target_id).await? {
         log::debug!("[emulator] Removed target {:?}", target_id);
     } else {
@@ -57,13 +57,13 @@ pub async fn remove_target(proxy: &bridge::TargetCollectionProxy, target_id: &st
 /// responds, possibly indefinitely. We wrap the call in a timeout of 1 second, so this function
 /// will not hang indefinitely. If the caller expects the response to take longer (such as during
 /// Fuchsia bootup), it's safe to call the function repeatedly with a longer local timeout.
-pub async fn is_active(collection_proxy: &bridge::TargetCollectionProxy, name: &str) -> bool {
-    let (_proxy, handle) = fidl::endpoints::create_proxy::<bridge::TargetMarker>().unwrap();
+pub async fn is_active(collection_proxy: &ffx::TargetCollectionProxy, name: &str) -> bool {
+    let (_proxy, handle) = fidl::endpoints::create_proxy::<ffx::TargetMarker>().unwrap();
     let target = Some(name.to_string());
     let res = timeout(Duration::from_secs(1), async {
         collection_proxy
             .open_target(
-                bridge::TargetQuery { string_matcher: target, ..bridge::TargetQuery::EMPTY },
+                ffx::TargetQuery { string_matcher: target, ..ffx::TargetQuery::EMPTY },
                 handle,
             )
             .await
@@ -99,7 +99,7 @@ mod test {
         proxy
     }
 
-    fn setup_fake_target_server_add<T: 'static + Fn(bridge::TargetAddrInfo) + Send>(
+    fn setup_fake_target_server_add<T: 'static + Fn(ffx::TargetAddrInfo) + Send>(
         test: T,
     ) -> TargetCollectionProxy {
         setup_fake_target_proxy(move |req| match req {
@@ -135,9 +135,7 @@ mod test {
             TargetCollectionRequest::OpenTarget { query, responder, .. } => {
                 assert!(query.string_matcher.is_some());
                 if !test(query.string_matcher.unwrap()) {
-                    assert!(responder
-                        .send(&mut Err(bridge::OpenTargetError::TargetNotFound))
-                        .is_ok());
+                    assert!(responder.send(&mut Err(ffx::OpenTargetError::TargetNotFound)).is_ok());
                 } else {
                     assert!(responder.send(&mut Ok(())).is_ok());
                 }
@@ -168,7 +166,7 @@ mod test {
         let server = setup_fake_target_server_add(move |addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
                     ip: net::IpAddress::Ipv4(net::Ipv4Address {
                         addr: "127.0.0.1".parse::<std::net::Ipv4Addr>().unwrap().octets().into(),
                     }),

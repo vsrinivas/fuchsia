@@ -8,7 +8,7 @@ use {
     ffx_daemon_target::{fastboot::find_devices, FASTBOOT_CHECK_INTERVAL},
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fuchsia_async::Task,
     futures::TryStreamExt,
     protocols::prelude::*,
@@ -16,8 +16,8 @@ use {
 };
 
 struct Inner {
-    events_in: async_channel::Receiver<bridge::FastbootTarget>,
-    events_out: async_channel::Sender<bridge::FastbootTarget>,
+    events_in: async_channel::Receiver<ffx::FastbootTarget>,
+    events_out: async_channel::Sender<ffx::FastbootTarget>,
 }
 
 #[ffx_protocol]
@@ -29,12 +29,12 @@ pub struct FastbootTargetStreamProtocol {
 
 #[async_trait(?Send)]
 impl FidlProtocol for FastbootTargetStreamProtocol {
-    type Protocol = bridge::FastbootTargetStreamMarker;
+    type Protocol = ffx::FastbootTargetStreamMarker;
     type StreamHandler = FidlStreamHandler<Self>;
 
-    async fn handle(&self, _cx: &Context, req: bridge::FastbootTargetStreamRequest) -> Result<()> {
+    async fn handle(&self, _cx: &Context, req: ffx::FastbootTargetStreamRequest) -> Result<()> {
         match req {
-            bridge::FastbootTargetStreamRequest::GetNext { responder } => responder
+            ffx::FastbootTargetStreamRequest::GetNext { responder } => responder
                 .send(
                     self.inner
                         .as_ref()
@@ -48,7 +48,7 @@ impl FidlProtocol for FastbootTargetStreamProtocol {
     }
 
     async fn start(&mut self, _cx: &Context) -> Result<()> {
-        let (sender, receiver) = async_channel::bounded::<bridge::FastbootTarget>(1);
+        let (sender, receiver) = async_channel::bounded::<ffx::FastbootTarget>(1);
         let inner = Rc::new(Inner { events_in: receiver, events_out: sender });
         self.inner.replace(inner.clone());
         let inner = Rc::downgrade(&inner);
@@ -59,9 +59,9 @@ impl FidlProtocol for FastbootTargetStreamProtocol {
                     for dev in fastboot_devices {
                         let _ = inner
                             .events_out
-                            .send(bridge::FastbootTarget {
+                            .send(ffx::FastbootTarget {
                                 serial: Some(dev.serial),
-                                ..bridge::FastbootTarget::EMPTY
+                                ..ffx::FastbootTarget::EMPTY
                             })
                             .await;
                     }

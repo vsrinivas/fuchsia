@@ -9,7 +9,7 @@ use {
     ffx_daemon_events::{DaemonEvent, TargetEvent},
     ffx_daemon_target::{target::Target, target_collection::TargetCollection},
     fidl::endpoints::Proxy,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_diagnostics as diagnostics,
     selectors::{self, VerboseError},
@@ -39,12 +39,9 @@ pub trait DaemonProtocolProvider {
         &self,
         target_identifier: Option<String>,
         protocol_selector: diagnostics::Selector,
-    ) -> Result<(bridge::TargetInfo, fidl::Channel)>;
+    ) -> Result<(ffx::TargetInfo, fidl::Channel)>;
 
-    async fn get_target_info(
-        &self,
-        target_identifier: Option<String>,
-    ) -> Result<bridge::TargetInfo>;
+    async fn get_target_info(&self, target_identifier: Option<String>) -> Result<ffx::TargetInfo>;
 
     async fn get_target_event_queue(
         &self,
@@ -92,7 +89,7 @@ impl Context {
         &self,
         target_identifier: Option<String>,
         selector: &'static str,
-    ) -> Result<(bridge::TargetInfo, P::Proxy)>
+    ) -> Result<(ffx::TargetInfo, P::Proxy)>
     where
         P: fidl::endpoints::DiscoverableProtocolMarker,
     {
@@ -112,7 +109,7 @@ impl Context {
     pub async fn get_target_info(
         &self,
         target_identifier: Option<String>,
-    ) -> Result<bridge::TargetInfo> {
+    ) -> Result<ffx::TargetInfo> {
         self.inner.get_target_info(target_identifier).await
     }
 

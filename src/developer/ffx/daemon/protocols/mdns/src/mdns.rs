@@ -12,7 +12,7 @@ use {
     async_lock::Mutex,
     async_net::UdpSocket,
     ffx_config::get,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     fuchsia_async::{Task, Timer},
     futures::FutureExt,
@@ -50,9 +50,9 @@ async fn propagate_bind_event(sock: &UdpSocket, svc: &Weak<MdnsProtocolInner>) -
         SocketAddr::V6(s) => s.port(),
     };
     if let Some(svc) = svc.upgrade() {
-        svc.publish_event(bridge::MdnsEventType::SocketBound(bridge::MdnsBindEvent {
+        svc.publish_event(ffx::MdnsEventType::SocketBound(ffx::MdnsBindEvent {
             port: Some(port),
-            ..bridge::MdnsBindEvent::EMPTY
+            ..ffx::MdnsBindEvent::EMPTY
         }))
         .await;
     }
@@ -218,10 +218,10 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
 fn make_target<B: ByteSlice + Clone>(
     src: SocketAddr,
     msg: dns::Message<B>,
-) -> Option<(bridge::TargetInfo, u32)> {
+) -> Option<(ffx::TargetInfo, u32)> {
     let mut nodename = String::new();
     let mut ttl = 0u32;
-    let src = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+    let src = ffx::TargetAddrInfo::Ip(ffx::TargetIp {
         ip: match &src {
             SocketAddr::V6(s) => IpAddress::Ipv6(Ipv6Address { addr: s.ip().octets().into() }),
             SocketAddr::V4(s) => IpAddress::Ipv4(Ipv4Address { addr: s.ip().octets().into() }),
@@ -249,12 +249,12 @@ fn make_target<B: ByteSlice + Clone>(
         return None;
     }
     Some((
-        bridge::TargetInfo {
+        ffx::TargetInfo {
             nodename: Some(nodename),
             addresses: Some(vec![src]),
-            target_state: fastboot_interface.map(|_| bridge::TargetState::Fastboot),
+            target_state: fastboot_interface.map(|_| ffx::TargetState::Fastboot),
             fastboot_interface,
-            ..bridge::TargetInfo::EMPTY
+            ..ffx::TargetInfo::EMPTY
         },
         ttl,
     ))
@@ -431,13 +431,13 @@ fn is_fuchsia_response<B: zerocopy::ByteSlice + Clone>(m: &dns::Message<B>) -> b
 
 fn is_fastboot_response<B: zerocopy::ByteSlice + Clone>(
     m: &dns::Message<B>,
-) -> Option<bridge::FastbootInterface> {
+) -> Option<ffx::FastbootInterface> {
     if m.answers.len() < 1 {
         None
     } else if m.answers[0].domain == "_fastboot._udp.local" {
-        Some(bridge::FastbootInterface::Udp)
+        Some(ffx::FastbootInterface::Udp)
     } else if m.answers[0].domain == "_fastboot._tcp.local" {
-        Some(bridge::FastbootInterface::Tcp)
+        Some(ffx::FastbootInterface::Tcp)
     } else {
         None
     }
@@ -552,7 +552,7 @@ mod tests {
         assert_eq!(ttl, 4500);
         assert_eq!(
             t.addresses.as_ref().unwrap()[0],
-            bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+            ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                 ip: IpAddress::Ipv4(Ipv4Address { addr: MDNS_MCAST_V4.octets().into() }),
                 scope_id: 0
             })

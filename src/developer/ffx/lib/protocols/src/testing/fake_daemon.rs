@@ -14,7 +14,7 @@ use {
     ffx_daemon_target::target_collection::TargetCollection,
     fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy, Request, RequestStream},
     fidl::server::ServeInner,
-    fidl_fuchsia_developer_ffx as bridge, fidl_fuchsia_developer_remotecontrol as rcs,
+    fidl_fuchsia_developer_ffx as ffx, fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_diagnostics as diagnostics,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
@@ -198,7 +198,7 @@ impl DaemonProtocolProvider for FakeDaemon {
         &self,
         target_identifier: Option<String>,
         protocol_selector: diagnostics::Selector,
-    ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
+    ) -> Result<(ffx::TargetInfo, fidl::Channel)> {
         // TODO(awdavies): This is likely very fragile. Explore more edge cases
         // to make sure tests don't panic unnecessarily.
         let protocol_name: String =
@@ -221,11 +221,8 @@ impl DaemonProtocolProvider for FakeDaemon {
         ))
     }
 
-    async fn get_target_info(
-        &self,
-        target_identifier: Option<String>,
-    ) -> Result<bridge::TargetInfo> {
-        Ok(bridge::TargetInfo::from(
+    async fn get_target_info(&self, target_identifier: Option<String>) -> Result<ffx::TargetInfo> {
+        Ok(ffx::TargetInfo::from(
             &*self
                 .target_collection
                 .get(target_identifier.clone())
@@ -249,7 +246,7 @@ impl FakeDaemonBuilder {
         Self::default()
     }
 
-    pub fn target(self, target: bridge::TargetInfo) -> Self {
+    pub fn target(self, target: ffx::TargetInfo) -> Self {
         let t = TargetInfo {
             nodename: target.nodename,
             addresses: target

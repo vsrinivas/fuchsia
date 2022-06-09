@@ -226,7 +226,7 @@ mod test {
     use crate::{DaemonProtocolProvider, FidlProtocol, FidlStreamHandler};
     use async_trait::async_trait;
     use fidl::endpoints::DiscoverableProtocolMarker;
-    use fidl_fuchsia_developer_ffx as bridge;
+    use fidl_fuchsia_developer_ffx as ffx;
     use fidl_fuchsia_diagnostics as diagnostics;
     use fidl_fuchsia_ffx_test as ffx_test;
 
@@ -251,14 +251,14 @@ mod test {
             &self,
             _target_identifier: Option<String>,
             _protocol_selector: diagnostics::Selector,
-        ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
+        ) -> Result<(ffx::TargetInfo, fidl::Channel)> {
             unimplemented!()
         }
 
         async fn get_target_info(
             &self,
             _target_identifier: Option<String>,
-        ) -> Result<bridge::TargetInfo> {
+        ) -> Result<ffx::TargetInfo> {
             unimplemented!()
         }
     }

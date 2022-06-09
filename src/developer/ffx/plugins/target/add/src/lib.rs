@@ -7,7 +7,7 @@ use {
     errors::{ffx_error, FfxError},
     ffx_core::ffx_plugin,
     ffx_target_add_args::AddCommand,
-    fidl_fuchsia_developer_ffx::{self as bridge, TargetCollectionProxy},
+    fidl_fuchsia_developer_ffx::{self as ffx, TargetCollectionProxy},
     fidl_fuchsia_net as net,
     netext::parse_address_parts,
     std::net::IpAddr,
@@ -39,17 +39,17 @@ pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand
         IpAddr::V4(i) => net::IpAddress::Ipv4(net::Ipv4Address { addr: i.octets().into() }),
     };
     let mut addr = if let Some(port) = port {
-        bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort { ip, port, scope_id })
+        ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort { ip, port, scope_id })
     } else {
-        bridge::TargetAddrInfo::Ip(bridge::TargetIp { ip, scope_id })
+        ffx::TargetAddrInfo::Ip(ffx::TargetIp { ip, scope_id })
     };
 
     target_collection_proxy
         .add_target(
             &mut addr,
-            bridge::AddTargetConfig {
+            ffx::AddTargetConfig {
                 verify_connection: Some(cmd.wait),
-                ..bridge::AddTargetConfig::EMPTY
+                ..ffx::AddTargetConfig::EMPTY
             },
         )
         .await?
@@ -71,11 +71,11 @@ pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand
 mod test {
     use super::*;
 
-    fn setup_fake_target_collection<T: 'static + Fn(bridge::TargetAddrInfo) + Send>(
+    fn setup_fake_target_collection<T: 'static + Fn(ffx::TargetAddrInfo) + Send>(
         test: T,
     ) -> TargetCollectionProxy {
         setup_fake_target_collection_proxy(move |req| match req {
-            bridge::TargetCollectionRequest::AddTarget { ip, config: _, responder, .. } => {
+            ffx::TargetCollectionRequest::AddTarget { ip, config: _, responder, .. } => {
                 test(ip);
                 responder.send(&mut Ok(())).unwrap();
             }
@@ -88,7 +88,7 @@ mod test {
         let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: net::IpAddress::Ipv4(net::Ipv4Address {
                         addr: "123.210.123.210"
                             .parse::<std::net::Ipv4Addr>()
@@ -108,7 +108,7 @@ mod test {
         let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
                     ip: net::IpAddress::Ipv4(net::Ipv4Address {
                         addr: "123.210.123.210"
                             .parse::<std::net::Ipv4Addr>()
@@ -131,7 +131,7 @@ mod test {
         let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: "f000::1".parse::<std::net::Ipv6Addr>().unwrap().octets().into()
                     }),
@@ -147,7 +147,7 @@ mod test {
         let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
                     ip: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: "f000::1".parse::<std::net::Ipv6Addr>().unwrap().octets().into()
                     }),
@@ -164,7 +164,7 @@ mod test {
         let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                ffx::TargetAddrInfo::Ip(ffx::TargetIp {
                     ip: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: "f000::1".parse::<std::net::Ipv6Addr>().unwrap().octets().into()
                     }),
@@ -180,7 +180,7 @@ mod test {
         let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
                     ip: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: "f000::1".parse::<std::net::Ipv6Addr>().unwrap().octets().into()
                     }),

@@ -4,16 +4,16 @@
 
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_daemon_stop_args::StopCommand,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
 };
 
 #[ffx_plugin()]
-async fn stop(daemon_proxy: bridge::DaemonProxy, cmd: StopCommand) -> Result<()> {
+async fn stop(daemon_proxy: ffx::DaemonProxy, cmd: StopCommand) -> Result<()> {
     stop_impl(daemon_proxy, cmd, &mut std::io::stdout()).await
 }
 
 async fn stop_impl<W: std::io::Write>(
-    daemon_proxy: bridge::DaemonProxy,
+    daemon_proxy: ffx::DaemonProxy,
     _cmd: StopCommand,
     writer: &mut W,
 ) -> Result<()> {
@@ -29,7 +29,7 @@ async fn stop_impl<W: std::io::Write>(
 mod test {
     use {super::*, anyhow::Context, fidl_fuchsia_developer_ffx::DaemonRequest};
 
-    fn setup_fake_daemon_server() -> bridge::DaemonProxy {
+    fn setup_fake_daemon_server() -> ffx::DaemonProxy {
         setup_fake_daemon_proxy(|req| match req {
             DaemonRequest::Quit { responder } => {
                 responder.send(true).context("error sending response").expect("should send");

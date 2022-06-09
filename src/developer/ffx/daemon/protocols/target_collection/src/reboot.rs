@@ -12,7 +12,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl::Error,
     fidl_fuchsia_developer_ffx::{
-        self as bridge, RebootListenerRequest, TargetRebootError, TargetRebootResponder,
+        self as ffx, RebootListenerRequest, TargetRebootError, TargetRebootResponder,
         TargetRebootState,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -29,7 +29,7 @@ const ADMIN_SELECTOR: &'static str = "core/appmgr:out:fuchsia.hardware.power.sta
 pub(crate) struct RebootController {
     target: Rc<Target>,
     remote_proxy: Once<RemoteControlProxy>,
-    fastboot_proxy: Once<bridge::FastbootProxy>,
+    fastboot_proxy: Once<ffx::FastbootProxy>,
     admin_proxy: Once<AdminProxy>,
     tasks: TaskManager,
 }
@@ -55,7 +55,7 @@ impl RebootController {
             .map(|proxy| proxy.clone())
     }
 
-    async fn get_fastboot_proxy(&self) -> Result<bridge::FastbootProxy> {
+    async fn get_fastboot_proxy(&self) -> Result<ffx::FastbootProxy> {
         self.fastboot_proxy.get_or_try_init(self.fastboot_init()).await.map(|p| p.clone())
     }
 
@@ -75,15 +75,15 @@ impl RebootController {
             .map_err(|_| anyhow!("could not get admin proxy"))
     }
 
-    async fn fastboot_init(&self) -> Result<bridge::FastbootProxy> {
-        let (proxy, fastboot) = fidl::endpoints::create_proxy::<bridge::FastbootMarker>()?;
+    async fn fastboot_init(&self) -> Result<ffx::FastbootProxy> {
+        let (proxy, fastboot) = fidl::endpoints::create_proxy::<ffx::FastbootMarker>()?;
         self.spawn_fastboot(fastboot).await?;
         Ok(proxy)
     }
 
     pub(crate) async fn spawn_fastboot(
         &self,
-        fastboot: ServerEnd<bridge::FastbootMarker>,
+        fastboot: ServerEnd<ffx::FastbootMarker>,
     ) -> Result<()> {
         let mut fastboot_manager = Fastboot::new(self.target.clone());
         let stream = fastboot.into_stream()?;
@@ -116,7 +116,7 @@ impl RebootController {
                 }
                 TargetRebootState::Bootloader => {
                     let (reboot_client, reboot_server) =
-                        fidl::endpoints::create_endpoints::<bridge::RebootListenerMarker>()?;
+                        fidl::endpoints::create_endpoints::<ffx::RebootListenerMarker>()?;
                     let mut stream = reboot_server.into_stream()?;
                     match try_join!(
                         self.get_fastboot_proxy().await?.reboot_bootloader(reboot_client).map_err(

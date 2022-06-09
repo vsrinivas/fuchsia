@@ -32,13 +32,13 @@ pub async fn remove_impl<W: std::io::Write>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl_fuchsia_developer_ffx as bridge;
+    use fidl_fuchsia_developer_ffx as ffx;
 
     fn setup_fake_target_collection_proxy<T: 'static + Fn(String) -> bool + Send>(
         test: T,
     ) -> TargetCollectionProxy {
         setup_fake_target_collection(move |req| match req {
-            bridge::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
+            ffx::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
                 let result = test(target_id);
                 responder.send(result).unwrap();
             }

@@ -11,7 +11,7 @@ use {
     ffx_daemon_target::target::Target,
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_developer_ffx::{self as bridge},
+    fidl_fuchsia_developer_ffx::{self as ffx},
     fuchsia_async::{
         futures::{FutureExt, TryStreamExt},
         TimeoutExt,
@@ -35,7 +35,7 @@ impl TargetHandle {
     pub(crate) fn new(
         target: Rc<Target>,
         cx: Context,
-        handle: ServerEnd<bridge::TargetMarker>,
+        handle: ServerEnd<ffx::TargetMarker>,
     ) -> Result<Pin<Box<dyn Future<Output = ()>>>> {
         let reboot_controller = reboot::RebootController::new(target.clone());
         let inner = TargetHandleInner { target, reboot_controller, tasks: TaskManager::default() };
@@ -57,13 +57,13 @@ struct TargetHandleInner {
 }
 
 impl TargetHandleInner {
-    async fn handle(&self, _cx: &Context, req: bridge::TargetRequest) -> Result<()> {
+    async fn handle(&self, _cx: &Context, req: ffx::TargetRequest) -> Result<()> {
         match req {
-            bridge::TargetRequest::GetSshLogs { responder } => {
+            ffx::TargetRequest::GetSshLogs { responder } => {
                 let logs = self.target.host_pipe_log_buffer().lines();
                 responder.send(&logs.join("\n")).map_err(Into::into)
             }
-            bridge::TargetRequest::GetSshAddress { responder } => {
+            ffx::TargetRequest::GetSshAddress { responder } => {
                 // Product state and manual state are the two states where an
                 // address is guaranteed. If the target is not in that state,
                 // then wait for its state to change.
@@ -94,22 +94,22 @@ impl TargetHandleInner {
                     fuchsia_async::Timer::new(poll_duration).await;
                 }
             }
-            bridge::TargetRequest::SetPreferredSshAddress { ip, responder } => {
+            ffx::TargetRequest::SetPreferredSshAddress { ip, responder } => {
                 let mut result = self
                     .target
                     .set_preferred_ssh_address(ip.into())
                     .then(|| ())
-                    .ok_or(bridge::TargetError::AddressNotFound)
+                    .ok_or(ffx::TargetError::AddressNotFound)
                     .map(|_| self.target.maybe_reconnect());
 
                 responder.send(&mut result).map_err(Into::into)
             }
-            bridge::TargetRequest::ClearPreferredSshAddress { responder } => {
+            ffx::TargetRequest::ClearPreferredSshAddress { responder } => {
                 self.target.clear_preferred_ssh_address();
                 self.target.maybe_reconnect();
                 responder.send().map_err(Into::into)
             }
-            bridge::TargetRequest::OpenRemoteControl { remote_control, responder } => {
+            ffx::TargetRequest::OpenRemoteControl { remote_control, responder } => {
                 self.target.run_host_pipe();
                 let rcs = wait_for_rcs(&self.target).await?;
                 match rcs {
@@ -125,24 +125,24 @@ impl TargetHandleInner {
                         .map_err(Into::into),
                 }
             }
-            bridge::TargetRequest::OpenFastboot { fastboot, .. } => {
+            ffx::TargetRequest::OpenFastboot { fastboot, .. } => {
                 self.reboot_controller.spawn_fastboot(fastboot).await.map_err(Into::into)
             }
-            bridge::TargetRequest::Reboot { state, responder } => {
+            ffx::TargetRequest::Reboot { state, responder } => {
                 self.reboot_controller.reboot(state, responder).await
             }
-            bridge::TargetRequest::Identity { responder } => {
-                let target_info = bridge::TargetInfo::from(&*self.target);
+            ffx::TargetRequest::Identity { responder } => {
+                let target_info = ffx::TargetInfo::from(&*self.target);
                 responder.send(target_info).map_err(Into::into)
             }
-            bridge::TargetRequest::StreamActiveDiagnostics { parameters, iterator, responder } => {
+            ffx::TargetRequest::StreamActiveDiagnostics { parameters, iterator, responder } => {
                 let target_identifier = self.target.nodename();
                 let stream = self.target.stream_info();
                 match stream
                     .wait_for_setup()
                     .map(|_| Ok(()))
                     .on_timeout(Duration::from_secs(3), || {
-                        Err(bridge::DiagnosticsStreamError::NoStreamForTarget)
+                        Err(ffx::DiagnosticsStreamError::NoStreamForTarget)
                     })
                     .await
                 {
@@ -166,13 +166,13 @@ impl TargetHandleInner {
                     });
                 });
                 responder
-                    .send(&mut Ok(bridge::LogSession {
+                    .send(&mut Ok(ffx::LogSession {
                         target_identifier,
                         session_timestamp_nanos: stream
                             .session_timestamp_nanos()
                             .await
                             .map(|t| t as u64),
-                        ..bridge::LogSession::EMPTY
+                        ..ffx::LogSession::EMPTY
                     }))
                     .map_err(Into::into)
             }
@@ -182,7 +182,7 @@ impl TargetHandleInner {
 
 pub(crate) async fn wait_for_rcs(
     t: &Rc<Target>,
-) -> Result<Result<rcs::RcsConnection, bridge::TargetConnectionError>> {
+) -> Result<Result<rcs::RcsConnection, ffx::TargetConnectionError>> {
     Ok(loop {
         // This setup here is due to the events not having a proper streaming implementation. The
         // closure is intended to have a static lifetime, which forces this to happen to extract an
@@ -210,22 +210,20 @@ pub(crate) async fn wait_for_rcs(
     })
 }
 
-fn host_pipe_err_to_fidl(h: HostPipeErr) -> bridge::TargetConnectionError {
+fn host_pipe_err_to_fidl(h: HostPipeErr) -> ffx::TargetConnectionError {
     match h {
         HostPipeErr::Unknown(s) => {
             log::warn!("Unknown host-pipe error received: '{}'", s);
-            bridge::TargetConnectionError::UnknownError
+            ffx::TargetConnectionError::UnknownError
         }
-        HostPipeErr::NetworkUnreachable => bridge::TargetConnectionError::NetworkUnreachable,
-        HostPipeErr::PermissionDenied => bridge::TargetConnectionError::PermissionDenied,
-        HostPipeErr::ConnectionRefused => bridge::TargetConnectionError::ConnectionRefused,
-        HostPipeErr::UnknownNameOrService => bridge::TargetConnectionError::UnknownNameOrService,
-        HostPipeErr::Timeout => bridge::TargetConnectionError::Timeout,
-        HostPipeErr::KeyVerificationFailure => {
-            bridge::TargetConnectionError::KeyVerificationFailure
-        }
-        HostPipeErr::NoRouteToHost => bridge::TargetConnectionError::NoRouteToHost,
-        HostPipeErr::InvalidArgument => bridge::TargetConnectionError::InvalidArgument,
+        HostPipeErr::NetworkUnreachable => ffx::TargetConnectionError::NetworkUnreachable,
+        HostPipeErr::PermissionDenied => ffx::TargetConnectionError::PermissionDenied,
+        HostPipeErr::ConnectionRefused => ffx::TargetConnectionError::ConnectionRefused,
+        HostPipeErr::UnknownNameOrService => ffx::TargetConnectionError::UnknownNameOrService,
+        HostPipeErr::Timeout => ffx::TargetConnectionError::Timeout,
+        HostPipeErr::KeyVerificationFailure => ffx::TargetConnectionError::KeyVerificationFailure,
+        HostPipeErr::NoRouteToHost => ffx::TargetConnectionError::NoRouteToHost,
+        HostPipeErr::InvalidArgument => ffx::TargetConnectionError::InvalidArgument,
     }
 }
 
@@ -248,39 +246,39 @@ mod tests {
     fn test_host_pipe_err_to_fidl_conversion() {
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::Unknown(String::from("foobar"))),
-            bridge::TargetConnectionError::UnknownError
+            ffx::TargetConnectionError::UnknownError
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::InvalidArgument),
-            bridge::TargetConnectionError::InvalidArgument
+            ffx::TargetConnectionError::InvalidArgument
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::NoRouteToHost),
-            bridge::TargetConnectionError::NoRouteToHost
+            ffx::TargetConnectionError::NoRouteToHost
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::KeyVerificationFailure),
-            bridge::TargetConnectionError::KeyVerificationFailure
+            ffx::TargetConnectionError::KeyVerificationFailure
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::Timeout),
-            bridge::TargetConnectionError::Timeout
+            ffx::TargetConnectionError::Timeout
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::UnknownNameOrService),
-            bridge::TargetConnectionError::UnknownNameOrService
+            ffx::TargetConnectionError::UnknownNameOrService
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::ConnectionRefused),
-            bridge::TargetConnectionError::ConnectionRefused
+            ffx::TargetConnectionError::ConnectionRefused
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::PermissionDenied),
-            bridge::TargetConnectionError::PermissionDenied
+            ffx::TargetConnectionError::PermissionDenied
         );
         assert_eq!(
             host_pipe_err_to_fidl(HostPipeErr::NetworkUnreachable),
-            bridge::TargetConnectionError::NetworkUnreachable
+            ffx::TargetConnectionError::NetworkUnreachable
         );
     }
 
@@ -299,10 +297,10 @@ mod tests {
             .into_iter(),
         );
         target.update_connection_state(|_| TargetConnectionState::Mdns(std::time::Instant::now()));
-        let (proxy, server) = fidl::endpoints::create_proxy::<bridge::TargetMarker>().unwrap();
+        let (proxy, server) = fidl::endpoints::create_proxy::<ffx::TargetMarker>().unwrap();
         let _handle = Task::local(TargetHandle::new(target, cx, server).unwrap());
         let result = proxy.get_ssh_address().await.unwrap();
-        if let bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+        if let ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
             ip: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }),
             ..
         }) = result
@@ -434,8 +432,7 @@ mod tests {
         ))
         .await
         .unwrap();
-        let (target_proxy, server) =
-            fidl::endpoints::create_proxy::<bridge::TargetMarker>().unwrap();
+        let (target_proxy, server) = fidl::endpoints::create_proxy::<ffx::TargetMarker>().unwrap();
         let _handle = Task::local(TargetHandle::new(target, cx, server).unwrap());
         let (rcs, rcs_server) =
             fidl::endpoints::create_proxy::<fidl_rcs::RemoteControlMarker>().unwrap();

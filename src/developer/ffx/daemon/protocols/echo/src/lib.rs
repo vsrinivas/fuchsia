@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::Result, async_trait::async_trait, fidl_fuchsia_developer_ffx as bridge,
+    anyhow::Result, async_trait::async_trait, fidl_fuchsia_developer_ffx as ffx,
     protocols::prelude::*,
 };
 
@@ -12,12 +12,12 @@ pub struct Echo;
 
 #[async_trait(?Send)]
 impl FidlProtocol for Echo {
-    type Protocol = bridge::EchoMarker;
+    type Protocol = ffx::EchoMarker;
     type StreamHandler = FidlInstancedStreamHandler<Self>;
 
-    async fn handle(&self, _cx: &Context, req: bridge::EchoRequest) -> Result<()> {
+    async fn handle(&self, _cx: &Context, req: ffx::EchoRequest) -> Result<()> {
         match req {
-            bridge::EchoRequest::EchoString { value, responder } => {
+            ffx::EchoRequest::EchoString { value, responder } => {
                 responder.send(&mut String::from(value)).map_err(Into::into)
             }
         }
@@ -42,7 +42,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_echo() {
         let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<Echo>().build();
-        let proxy = daemon.open_proxy::<bridge::EchoMarker>().await;
+        let proxy = daemon.open_proxy::<ffx::EchoMarker>().await;
         let string = "check-it-out".to_owned();
         assert_eq!(string, proxy.echo_string(string.clone().as_ref()).await.unwrap());
     }

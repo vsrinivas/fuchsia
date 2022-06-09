@@ -20,7 +20,7 @@ use {
     ffx_stream_util::TryStreamUtilExt,
     fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_developer_ffx::{
-        self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
+        self as ffx, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
         RepositoryRegistryMarker, TargetCollectionMarker,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
@@ -170,7 +170,7 @@ impl DaemonProtocolProvider for Daemon {
         &self,
         target_identifier: Option<String>,
         protocol_selector: fidl_fuchsia_diagnostics::Selector,
-    ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
+    ) -> Result<(ffx::TargetInfo, fidl::Channel)> {
         let target = self.get_rcs_ready_target(target_identifier).await?;
         let rcs = target
             .rcs()
@@ -188,10 +188,7 @@ impl DaemonProtocolProvider for Daemon {
         Ok((target.as_ref().into(), client))
     }
 
-    async fn get_target_info(
-        &self,
-        target_identifier: Option<String>,
-    ) -> Result<bridge::TargetInfo> {
+    async fn get_target_info(&self, target_identifier: Option<String>) -> Result<ffx::TargetInfo> {
         let target = self
             .get_target(target_identifier)
             .await

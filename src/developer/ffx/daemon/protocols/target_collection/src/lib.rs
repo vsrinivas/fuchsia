@@ -15,7 +15,7 @@ use {
     ffx_daemon_target::target_collection::TargetCollection,
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fuchsia_async::futures::TryStreamExt,
     protocols::prelude::*,
@@ -28,7 +28,7 @@ use {
 mod reboot;
 mod target_handle;
 
-#[ffx_protocol(bridge::MdnsMarker, bridge::FastbootTargetStreamMarker)]
+#[ffx_protocol(ffx::MdnsMarker, ffx::FastbootTargetStreamMarker)]
 pub struct TargetCollectionProtocol {
     tasks: TaskManager,
 
@@ -138,13 +138,13 @@ impl TargetCollectionProtocol {
 
 #[async_trait(?Send)]
 impl FidlProtocol for TargetCollectionProtocol {
-    type Protocol = bridge::TargetCollectionMarker;
+    type Protocol = ffx::TargetCollectionMarker;
     type StreamHandler = FidlStreamHandler<Self>;
 
-    async fn handle(&self, cx: &Context, req: bridge::TargetCollectionRequest) -> Result<()> {
+    async fn handle(&self, cx: &Context, req: ffx::TargetCollectionRequest) -> Result<()> {
         let target_collection = cx.get_target_collection().await?;
         match req {
-            bridge::TargetCollectionRequest::ListTargets { reader, query, .. } => {
+            ffx::TargetCollectionRequest::ListTargets { reader, query, .. } => {
                 let reader = reader.into_proxy()?;
                 let targets = match query.string_matcher.as_deref() {
                     None | Some("") => target_collection
@@ -153,7 +153,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                         .filter_map(
                             |t| if t.is_connected() { Some(t.as_ref().into()) } else { None },
                         )
-                        .collect::<Vec<bridge::TargetInfo>>(),
+                        .collect::<Vec<ffx::TargetInfo>>(),
                     q => match target_collection.get_connected(q) {
                         Some(t) => vec![t.as_ref().into()],
                         None => vec![],
@@ -173,23 +173,23 @@ impl FidlProtocol for TargetCollectionProtocol {
                 }
                 Ok(())
             }
-            bridge::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
+            ffx::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
                 let target = match target_collection.wait_for_match(query.string_matcher).await {
                     Ok(t) => t,
                     Err(e) => {
                         return responder
                             .send(&mut match e {
-                                bridge::DaemonError::TargetAmbiguous => {
-                                    Err(bridge::OpenTargetError::QueryAmbiguous)
+                                ffx::DaemonError::TargetAmbiguous => {
+                                    Err(ffx::OpenTargetError::QueryAmbiguous)
                                 }
-                                bridge::DaemonError::TargetNotFound => {
-                                    Err(bridge::OpenTargetError::TargetNotFound)
+                                ffx::DaemonError::TargetNotFound => {
+                                    Err(ffx::OpenTargetError::TargetNotFound)
                                 }
                                 e => {
                                     // This, so far, will only happen if encountering
                                     // TargetCacheError, which is highly unlikely.
                                     log::warn!("encountered unhandled error: {:?}", e);
-                                    Err(bridge::OpenTargetError::TargetNotFound)
+                                    Err(ffx::OpenTargetError::TargetNotFound)
                                 }
                             })
                             .map_err(Into::into);
@@ -198,7 +198,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                 self.tasks.spawn(TargetHandle::new(target, cx.clone(), target_handle)?);
                 responder.send(&mut Ok(())).map_err(Into::into)
             }
-            bridge::TargetCollectionRequest::AddTarget { ip, config, responder } => {
+            ffx::TargetCollectionRequest::AddTarget { ip, config, responder } => {
                 let addr = target_addr_info_to_socketaddr(ip);
                 match config.verify_connection {
                     Some(true) => {}
@@ -269,7 +269,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                 }
                 responder.send(&mut Ok(())).map_err(Into::into)
             }
-            bridge::TargetCollectionRequest::AddEphemeralTarget {
+            ffx::TargetCollectionRequest::AddEphemeralTarget {
                 ip,
                 connect_timeout_seconds,
                 responder,
@@ -284,7 +284,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                 .await;
                 responder.send().map_err(Into::into)
             }
-            bridge::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
+            ffx::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
                 let result = remove_manual_target(
                     self.manual_targets.clone(),
                     &target_collection,
@@ -324,8 +324,8 @@ impl FidlProtocol for TargetCollectionProtocol {
         self.tasks.spawn(async move {
             while let Ok(Some(e)) = mdns.get_next_event().await {
                 match *e {
-                    bridge::MdnsEventType::TargetFound(t)
-                    | bridge::MdnsEventType::TargetRediscovered(t) => {
+                    ffx::MdnsEventType::TargetFound(t)
+                    | ffx::MdnsEventType::TargetRediscovered(t) => {
                         handle_mdns_event(&tc_clone, t);
                     }
                     _ => {}
@@ -341,7 +341,7 @@ impl FidlProtocol for TargetCollectionProtocol {
     }
 }
 
-fn handle_fastboot_target(tc: &Rc<TargetCollection>, target: bridge::FastbootTarget) {
+fn handle_fastboot_target(tc: &Rc<TargetCollection>, target: ffx::FastbootTarget) {
     if let Some(ref serial) = target.serial {
         log::trace!("Found new target via fastboot: {}", serial);
     } else {
@@ -358,18 +358,18 @@ fn handle_fastboot_target(tc: &Rc<TargetCollection>, target: bridge::FastbootTar
     });
 }
 
-fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::TargetInfo) {
+fn handle_mdns_event(tc: &Rc<TargetCollection>, t: ffx::TargetInfo) {
     let t = TargetInfo {
         nodename: t.nodename,
         addresses: t
             .addresses
             .map(|a| a.into_iter().map(Into::into).collect())
             .unwrap_or(Vec::new()),
-        fastboot_interface: if t.target_state == Some(bridge::TargetState::Fastboot) {
+        fastboot_interface: if t.target_state == Some(ffx::TargetState::Fastboot) {
             t.fastboot_interface.map(|v| match v {
-                bridge::FastbootInterface::Usb => FastbootInterface::Usb,
-                bridge::FastbootInterface::Udp => FastbootInterface::Udp,
-                bridge::FastbootInterface::Tcp => FastbootInterface::Tcp,
+                ffx::FastbootInterface::Usb => FastbootInterface::Usb,
+                ffx::FastbootInterface::Udp => FastbootInterface::Udp,
+                ffx::FastbootInterface::Tcp => FastbootInterface::Tcp,
             })
         } else {
             None
@@ -426,10 +426,7 @@ mod tests {
 
         handle_mdns_event(
             &tc,
-            bridge::TargetInfo {
-                nodename: Some(t.nodename().unwrap()),
-                ..bridge::TargetInfo::EMPTY
-            },
+            ffx::TargetInfo { nodename: Some(t.nodename().unwrap()), ..ffx::TargetInfo::EMPTY },
         );
         assert!(t.is_host_pipe_running());
         assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_update);
@@ -444,11 +441,11 @@ mod tests {
 
         handle_mdns_event(
             &tc,
-            bridge::TargetInfo {
+            ffx::TargetInfo {
                 nodename: Some(t.nodename().unwrap()),
-                target_state: Some(bridge::TargetState::Fastboot),
-                fastboot_interface: Some(bridge::FastbootInterface::Tcp),
-                ..bridge::TargetInfo::EMPTY
+                target_state: Some(ffx::TargetState::Fastboot),
+                fastboot_interface: Some(ffx::FastbootInterface::Tcp),
+                ..ffx::TargetInfo::EMPTY
             },
         );
         assert!(!t.is_host_pipe_running());
@@ -460,7 +457,7 @@ mod tests {
         /// is just a hack to avoid using timers for races. This is dependent
         /// on the executor running in a single thread.
         call_started: Sender<()>,
-        next_event: Receiver<bridge::MdnsEventType>,
+        next_event: Receiver<ffx::MdnsEventType>,
     }
 
     impl Default for TestMdns {
@@ -471,12 +468,12 @@ mod tests {
 
     #[async_trait(?Send)]
     impl FidlProtocol for TestMdns {
-        type Protocol = bridge::MdnsMarker;
+        type Protocol = ffx::MdnsMarker;
         type StreamHandler = FidlStreamHandler<Self>;
 
-        async fn handle(&self, _cx: &Context, req: bridge::MdnsRequest) -> Result<()> {
+        async fn handle(&self, _cx: &Context, req: ffx::MdnsRequest) -> Result<()> {
             match req {
-                bridge::MdnsRequest::GetNextEvent { responder } => {
+                ffx::MdnsRequest::GetNextEvent { responder } => {
                     self.call_started.send(()).await.unwrap();
                     responder.send(self.next_event.recv().await.ok().as_mut()).map_err(Into::into)
                 }
@@ -487,21 +484,21 @@ mod tests {
 
     async fn list_targets(
         query: Option<&str>,
-        tc: &bridge::TargetCollectionProxy,
-    ) -> Vec<bridge::TargetInfo> {
+        tc: &ffx::TargetCollectionProxy,
+    ) -> Vec<ffx::TargetInfo> {
         let (reader, server) =
-            fidl::endpoints::create_endpoints::<bridge::TargetCollectionReaderMarker>().unwrap();
+            fidl::endpoints::create_endpoints::<ffx::TargetCollectionReaderMarker>().unwrap();
         tc.list_targets(
-            bridge::TargetQuery {
+            ffx::TargetQuery {
                 string_matcher: query.map(|s| s.to_owned()),
-                ..bridge::TargetQuery::EMPTY
+                ..ffx::TargetQuery::EMPTY
             },
             reader,
         )
         .unwrap();
         let mut res = Vec::new();
         let mut stream = server.into_stream().unwrap();
-        while let Ok(Some(bridge::TargetCollectionReaderRequest::Next { entry, responder })) =
+        while let Ok(Some(ffx::TargetCollectionReaderRequest::Next { entry, responder })) =
             stream.try_next().await
         {
             responder.send().unwrap();
@@ -519,13 +516,13 @@ mod tests {
 
     #[async_trait(?Send)]
     impl FidlProtocol for FakeFastboot {
-        type Protocol = bridge::FastbootTargetStreamMarker;
+        type Protocol = ffx::FastbootTargetStreamMarker;
         type StreamHandler = FidlStreamHandler<Self>;
 
         async fn handle(
             &self,
             _cx: &Context,
-            _req: bridge::FastbootTargetStreamRequest,
+            _req: ffx::FastbootTargetStreamRequest,
         ) -> Result<()> {
             fuchsia_async::futures::future::pending::<()>().await;
             Ok(())
@@ -540,7 +537,7 @@ mod tests {
         const NON_MATCHING_NAME: &'static str = "mlorp";
         const PARTIAL_NAME_MATCH: &'static str = "ba";
         let (call_started_sender, call_started_receiver) = async_channel::unbounded::<()>();
-        let (target_sender, r) = async_channel::unbounded::<bridge::MdnsEventType>();
+        let (target_sender, r) = async_channel::unbounded::<ffx::MdnsEventType>();
         let mdns_protocol =
             Rc::new(RefCell::new(TestMdns { call_started: call_started_sender, next_event: r }));
         let fake_daemon = FakeDaemonBuilder::new()
@@ -548,28 +545,28 @@ mod tests {
             .register_fidl_protocol::<FakeFastboot>()
             .register_fidl_protocol::<TargetCollectionProtocol>()
             .build();
-        let tc = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let tc = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         let res = list_targets(None, &tc).await;
         assert_eq!(res.len(), 0);
         call_started_receiver.recv().await.unwrap();
         target_sender
-            .send(bridge::MdnsEventType::TargetFound(bridge::TargetInfo {
+            .send(ffx::MdnsEventType::TargetFound(ffx::TargetInfo {
                 nodename: Some(NAME.to_owned()),
-                ..bridge::TargetInfo::EMPTY
+                ..ffx::TargetInfo::EMPTY
             }))
             .await
             .unwrap();
         target_sender
-            .send(bridge::MdnsEventType::TargetFound(bridge::TargetInfo {
+            .send(ffx::MdnsEventType::TargetFound(ffx::TargetInfo {
                 nodename: Some(NAME2.to_owned()),
-                ..bridge::TargetInfo::EMPTY
+                ..ffx::TargetInfo::EMPTY
             }))
             .await
             .unwrap();
         target_sender
-            .send(bridge::MdnsEventType::TargetFound(bridge::TargetInfo {
+            .send(ffx::MdnsEventType::TargetFound(ffx::TargetInfo {
                 nodename: Some(NAME3.to_owned()),
-                ..bridge::TargetInfo::EMPTY
+                ..ffx::TargetInfo::EMPTY
             }))
             .await
             .unwrap();
@@ -609,7 +606,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_handle_fastboot_target_no_serial() {
         let tc = Rc::new(TargetCollection::new());
-        handle_fastboot_target(&tc, bridge::FastbootTarget::EMPTY);
+        handle_fastboot_target(&tc, ffx::FastbootTarget::EMPTY);
         assert_eq!(tc.targets().len(), 0, "target collection should remain empty");
     }
 
@@ -618,10 +615,7 @@ mod tests {
         let tc = Rc::new(TargetCollection::new());
         handle_fastboot_target(
             &tc,
-            bridge::FastbootTarget {
-                serial: Some("12345".to_string()),
-                ..bridge::FastbootTarget::EMPTY
-            },
+            ffx::FastbootTarget { serial: Some("12345".to_string()), ..ffx::FastbootTarget::EMPTY },
         );
         assert_eq!(tc.targets()[0].serial().as_deref(), Some("12345"));
     }
@@ -631,10 +625,10 @@ mod tests {
 
     #[async_trait(?Send)]
     impl FidlProtocol for FakeMdns {
-        type Protocol = bridge::MdnsMarker;
+        type Protocol = ffx::MdnsMarker;
         type StreamHandler = FidlStreamHandler<Self>;
 
-        async fn handle(&self, _cx: &Context, _req: bridge::MdnsRequest) -> Result<()> {
+        async fn handle(&self, _cx: &Context, _req: ffx::MdnsRequest) -> Result<()> {
             fuchsia_async::futures::future::pending::<()>().await;
             Ok(())
         }
@@ -663,7 +657,7 @@ mod tests {
         let target_collection =
             Context::new(fake_daemon.clone()).get_target_collection().await.unwrap();
         tc_impl.borrow().load_manual_targets(&target_collection).await;
-        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         let res = list_targets(None, &proxy).await;
         assert_eq!(2, res.len());
         assert!(proxy.remove_target("127.0.0.1:8022").await.unwrap());
@@ -683,9 +677,9 @@ mod tests {
             .register_fidl_protocol::<TargetCollectionProtocol>()
             .build();
         let target_addr = TargetAddr::new("[::1]:0").unwrap();
-        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         proxy
-            .add_target(&mut target_addr.into(), bridge::AddTargetConfig::EMPTY)
+            .add_target(&mut target_addr.into(), ffx::AddTargetConfig::EMPTY)
             .await
             .unwrap()
             .unwrap();
@@ -703,7 +697,7 @@ mod tests {
             .register_fidl_protocol::<TargetCollectionProtocol>()
             .build();
         let target_addr = TargetAddr::new("[::1]:0").unwrap();
-        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         proxy.add_ephemeral_target(&mut target_addr.into(), 3600).await.unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         let target = target_collection.get(target_addr.to_string()).unwrap();
@@ -719,9 +713,9 @@ mod tests {
             .register_fidl_protocol::<TargetCollectionProtocol>()
             .build();
         let target_addr = TargetAddr::new("[::1]:8022").unwrap();
-        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         proxy
-            .add_target(&mut target_addr.into(), bridge::AddTargetConfig::EMPTY)
+            .add_target(&mut target_addr.into(), ffx::AddTargetConfig::EMPTY)
             .await
             .unwrap()
             .unwrap();
@@ -739,7 +733,7 @@ mod tests {
             .register_fidl_protocol::<TargetCollectionProtocol>()
             .build();
         let target_addr = TargetAddr::new("[::1]:8022").unwrap();
-        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         proxy.add_ephemeral_target(&mut target_addr.into(), 3600).await.unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         let target = target_collection.get(target_addr.to_string()).unwrap();
@@ -755,17 +749,17 @@ mod tests {
             .register_fidl_protocol::<FakeFastboot>()
             .inject_fidl_protocol(tc_impl.clone())
             .build();
-        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         proxy
             .add_target(
-                &mut bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                &mut ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
                     }),
                     port: 8022,
                     scope_id: 1,
                 }),
-                bridge::AddTargetConfig::EMPTY,
+                ffx::AddTargetConfig::EMPTY,
             )
             .await
             .unwrap()
@@ -785,10 +779,10 @@ mod tests {
             .register_fidl_protocol::<FakeFastboot>()
             .inject_fidl_protocol(tc_impl.clone())
             .build();
-        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         proxy
             .add_ephemeral_target(
-                &mut bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                &mut ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
                     }),

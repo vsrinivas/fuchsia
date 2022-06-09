@@ -17,7 +17,7 @@ use ffx_emulator_common::{
 use ffx_emulator_config::{
     CpuArchitecture, EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice,
 };
-use fidl_fuchsia_developer_ffx as bridge;
+use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
@@ -73,7 +73,7 @@ impl QemuEngine {
 
 #[async_trait]
 impl EmulatorEngine for QemuEngine {
-    async fn start(&mut self, proxy: &bridge::TargetCollectionProxy) -> Result<i32> {
+    async fn start(&mut self, proxy: &ffx::TargetCollectionProxy) -> Result<i32> {
         self.emulator_configuration.guest = self
             .stage_image_files(
                 &self.emulator_configuration.runtime.name,
@@ -93,7 +93,7 @@ impl EmulatorEngine for QemuEngine {
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
-    async fn stop(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()> {
+    async fn stop(&self, proxy: &ffx::TargetCollectionProxy) -> Result<()> {
         // Extract values from the self here, since there are sharing issues with trying to call
         // shutdown_emulator from another thread.
         let target_id = &self.emulator_configuration.runtime.name;
