@@ -81,7 +81,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         match *state_lock {
             StorageManagerState::Uninitialized => {
                 self.store_correct_key(key).await?;
-                io_util::create_sub_directories(&self.managed_dir, &Path::new(CLIENT_ROOT_PATH))
+                fuchsia_fs::create_sub_directories(&self.managed_dir, &Path::new(CLIENT_ROOT_PATH))
                     .map_err(|e| {
                         AccountManagerError::new(ApiError::Resource).with_cause(format_err!(
                             "Failed to create client root directory: {:?}",
@@ -171,7 +171,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
     async fn get_root_dir(&self) -> Result<fio::DirectoryProxy, AccountManagerError> {
         let state_lock = self.state.lock().await;
         match *state_lock {
-            StorageManagerState::Available => io_util::open_directory(
+            StorageManagerState::Available => fuchsia_fs::open_directory(
                 &self.managed_dir,
                 Path::new(CLIENT_ROOT_PATH),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -213,7 +213,7 @@ impl InsecureKeyDirectoryStorageManager {
             AccountManagerError::new(ApiError::Internal)
                 .with_cause(format_err!("Failed to serialize correct key: {:?}", e))
         })?;
-        let key_file = io_util::open_file(
+        let key_file = fuchsia_fs::open_file(
             &self.managed_dir,
             &Path::new(KEY_FILE_PATH),
             fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -222,7 +222,7 @@ impl InsecureKeyDirectoryStorageManager {
             AccountManagerError::new(ApiError::Resource)
                 .with_cause(format_err!("Failed to open keyfile while saving key: {:?}", e))
         })?;
-        io_util::write_file(&key_file, &serialized_key).await.map_err(|e| {
+        fuchsia_fs::write_file(&key_file, &serialized_key).await.map_err(|e| {
             AccountManagerError::new(ApiError::Resource)
                 .with_cause(format_err!("Failed to write key to keyfile: {:?}", e))
         })
@@ -230,7 +230,7 @@ impl InsecureKeyDirectoryStorageManager {
 
     /// Verify if the given key is the correct key needed for unlock.
     async fn check_unlock_key(&self, key: &Key) -> Result<(), AccountManagerError> {
-        let file_proxy = io_util::open_file(
+        let file_proxy = fuchsia_fs::open_file(
             &self.managed_dir,
             &Path::new(KEY_FILE_PATH),
             fio::OpenFlags::RIGHT_READABLE,
@@ -239,7 +239,7 @@ impl InsecureKeyDirectoryStorageManager {
             AccountManagerError::new(ApiError::Resource)
                 .with_cause(format_err!("Failed to open keyfile: {:?}", e))
         })?;
-        let serialized_correct_key = io_util::read_file(&file_proxy).await.map_err(|e| {
+        let serialized_correct_key = fuchsia_fs::read_file(&file_proxy).await.map_err(|e| {
             AccountManagerError::new(ApiError::Resource)
                 .with_cause(format_err!("Failed to read keyfile: {:?}", e))
         })?;
@@ -271,7 +271,7 @@ mod test {
     /// be kept in scope for the duration that DirectoryProxy is used.
     fn create_temp_directory() -> (TempDir, fio::DirectoryProxy) {
         let temp_dir = TempDir::new().unwrap();
-        let dir_proxy = io_util::open_directory_in_namespace(
+        let dir_proxy = fuchsia_fs::open_directory_in_namespace(
             temp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -280,13 +280,13 @@ mod test {
     }
 
     async fn create_file_with_content(dir: &fio::DirectoryProxy, path: &str, content: &str) {
-        let file = io_util::open_file(
+        let file = fuchsia_fs::open_file(
             dir,
             Path::new(path),
             fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
         )
         .unwrap();
-        io_util::write_file(&file, content).await.unwrap();
+        fuchsia_fs::write_file(&file, content).await.unwrap();
     }
 
     async fn assert_directory_empty(dir: &fio::DirectoryProxy) {
@@ -296,8 +296,8 @@ mod test {
 
     async fn assert_file_contents(dir: &fio::DirectoryProxy, path: &str, content: &str) {
         let file =
-            io_util::open_file(dir, Path::new(path), fio::OpenFlags::RIGHT_READABLE).unwrap();
-        let file_content = io_util::read_file(&file).await.unwrap();
+            fuchsia_fs::open_file(dir, Path::new(path), fio::OpenFlags::RIGHT_READABLE).unwrap();
+        let file_content = fuchsia_fs::read_file(&file).await.unwrap();
         assert_eq!(content, &file_content);
     }
 
@@ -371,7 +371,7 @@ mod test {
             std::mem::drop(manager);
 
             // Create a new manager with the same directory.
-            let new_dir_proxy = io_util::open_directory_in_namespace(
+            let new_dir_proxy = fuchsia_fs::open_directory_in_namespace(
                 dir.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )

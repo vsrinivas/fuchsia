@@ -164,7 +164,7 @@ async fn deprecated_provision_new_account_formats_directory() {
             .await
             .expect("get_data_directory FIDL")
             .expect("get_data_directory");
-        let file = io_util::directory::open_file(
+        let file = fuchsia_fs::directory::open_file(
             &root,
             "test",
             fio::OpenFlags::CREATE
@@ -196,11 +196,11 @@ async fn deprecated_provision_new_account_formats_directory() {
         .await
         .expect("get_data_directory FIDL")
         .expect("get_data_directory");
-    let file = io_util::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
+    let file = fuchsia_fs::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
         .await
         .expect("create file");
 
-    let actual_contents = io_util::file::read(&file).await.expect("read file");
+    let actual_contents = fuchsia_fs::file::read(&file).await.expect("read file");
     assert_eq!(&actual_contents, expected_content);
 }
 
@@ -231,7 +231,7 @@ async fn locked_account_can_be_unlocked_again() {
             .expect("get_data_directory");
 
         // Write a file to the data directory.
-        let file = io_util::directory::open_file(
+        let file = fuchsia_fs::directory::open_file(
             &root,
             "test",
             fio::OpenFlags::CREATE
@@ -255,7 +255,7 @@ async fn locked_account_can_be_unlocked_again() {
     account_proxy.lock().await.expect("lock FIDL").expect("locked");
 
     // The data directory should be closed.
-    io_util::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
+    fuchsia_fs::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
         .await
         .expect_err("failed to open file");
 
@@ -287,11 +287,11 @@ async fn locked_account_can_be_unlocked_again() {
         .await
         .expect("get_data_directory FIDL")
         .expect("get_data_directory");
-    let file = io_util::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
+    let file = fuchsia_fs::directory::open_file(&root, "test", fio::OpenFlags::RIGHT_READABLE)
         .await
         .expect("create file");
 
-    let actual_contents = io_util::file::read(&file).await.expect("read file");
+    let actual_contents = fuchsia_fs::file::read(&file).await.expect("read file");
     assert_eq!(&actual_contents, expected_content);
 }
 

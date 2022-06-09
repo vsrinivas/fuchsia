@@ -280,8 +280,8 @@ mod test {
         },
         async_trait::async_trait,
         fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
+        fuchsia_fs::{directory, file, node::OpenError},
         fuchsia_zircon::Status,
-        io_util::{directory, file, node::OpenError},
         vfs::execution_scope::ExecutionScope,
     };
 

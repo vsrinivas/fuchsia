@@ -15,8 +15,8 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_tpm_cr50::PinWeaverMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
+use fuchsia_fs::directory::open_in_namespace;
 use futures::StreamExt;
-use io_util::directory::open_in_namespace;
 use log::info;
 use std::sync::Arc;
 
