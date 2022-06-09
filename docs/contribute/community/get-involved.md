@@ -268,6 +268,14 @@ anyone who wants to contribute to Fuchsia, not just from Googlers.
 To learn more about how to contribute a code change to Fuchsia,
 see [Contribute changes](/docs/development/source_code/contribute_changes.md).
 
+In Monorail, the `GoodFirstBug` label exists. This label signals to potential
+contributors that a particular bug could be a great entry point in terms of
+contributions, since that particular bug does not require extensive
+experience/knowledge with the Fuchsia project.
+
+To view the current list of bugs with the `GoodFirstBug` label, go to
+https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3AGoodFirstBug.
+
 ## Report an issue
 
 Did you see a line of documentation or code that you think needs to be improved?
