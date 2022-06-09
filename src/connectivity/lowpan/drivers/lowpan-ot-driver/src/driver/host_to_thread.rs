@@ -179,7 +179,7 @@ where
 
     async fn on_netstack_packet_for_thread(&self, packet: Vec<u8>) -> Result<(), Error> {
         if !self.intercept_from_host(packet.as_slice()).await {
-            fx_log_debug!("Outbound packet handled internally, dropping.");
+            fx_log_trace!("Outbound packet handled internally, dropping.");
             return Ok(());
         }
 
@@ -261,8 +261,8 @@ where
                 std::str::from_utf8(&vec).unwrap().to_string()
             }
 
-            debug!(
-                "Dropping mDNS traffic destined for thread network: {}",
+            trace!(
+                "Dropping unwanted mDNS traffic incorrectly destined for thread network: {}",
                 ascii_dump(packet_bytes)
             );
             return false;
