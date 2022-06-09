@@ -67,6 +67,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   class Port : public PortAdapterParent, public fidl::WireServer<fuchsia_net_tun::Port> {
    public:
     Port(Port&&) = delete;
+    ~Port() override;
 
     static zx::status<std::unique_ptr<Port>> Create(TunDevice* parent,
                                                     const DevicePortConfig& config);
@@ -83,6 +84,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
     void WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) override;
     void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
     void GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) override;
+    void Remove(RemoveRequestView request, RemoveCompleter::Sync& _completer) override;
 
     void SetOnline(bool online);
     PortAdapter& adapter() { return *adapter_; }

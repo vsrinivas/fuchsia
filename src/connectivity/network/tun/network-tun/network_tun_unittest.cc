@@ -13,6 +13,7 @@
 
 #include <gmock/gmock.h>
 
+#include "lib/fidl/llcpp/channel.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
 #include "tun_ctl.h"
@@ -1704,14 +1705,17 @@ TEST_F(TunTest, AddRemovePorts) {
     const char* name;
     fuchsia_hardware_network::wire::PortId id;
     fidl::ClientEnd<fuchsia_net_tun::Port> client_end;
+    bool sync;
   } ports[] = {
       {
           .name = "port 2",
           .id = {.base = 2},
+          .sync = false,
       },
       {
           .name = "port 5",
           .id = {.base = 5},
+          .sync = true,
       },
   };
 
@@ -1752,7 +1756,13 @@ TEST_F(TunTest, AddRemovePorts) {
 
   for (auto& port : ports) {
     SCOPED_TRACE(port.name);
-    port.client_end.reset();
+    if (port.sync) {
+      ASSERT_OK(fidl::WireCall(port.client_end)->Remove().status());
+      ASSERT_OK(port.client_end.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                   nullptr));
+    } else {
+      port.client_end.reset();
+    }
 
     zx::status event = WatchPorts(port_watcher);
     ASSERT_OK(event.status_value());

@@ -207,6 +207,13 @@ protocol Port {
     GetPort(resource struct {
         port server_end:fuchsia.hardware.network.Port;
     });
+    /// Triggers port removal.
+    ///
+    /// The client end will be closed once the server has completely cleaned up
+    /// all resources related to the port. This is equivalent to simply dropping
+    /// the client end, but provides callers with a signal of when removal is
+    /// complete, allowing port identifiers to be reused, for example.
+    Remove();
 };
 
 /// Provides control over the created device.

@@ -319,6 +319,7 @@ void TunDevice::AddPort(AddPortRequestView request, AddPortCompleter::Sync& _com
     DevicePortConfig& port_config = maybe_port_config.value();
     std::unique_ptr<Port>& port_slot = ports_[port_config.port_id];
     if (port_slot) {
+      FX_LOGF(WARNING, "tun", "port %d already exists", port_config.port_id);
       return ZX_ERR_ALREADY_EXISTS;
     }
 
@@ -367,6 +368,12 @@ zx::status<std::unique_ptr<TunDevice::Port>> TunDevice::Port::Create(
   parent->device_->AddPort(port->adapter());
   port->SetOnline(config.online);
   return zx::ok(std::move(port));
+}
+
+TunDevice::Port::~Port() {
+  if (binding_.has_value()) {
+    binding_->Unbind();
+  }
 }
 
 void TunDevice::Port::OnHasSessionsChanged(PortAdapter& port) { PostRunStateChange(); }
@@ -431,12 +438,22 @@ void TunDevice::Port::GetPort(GetPortRequestView request, GetPortCompleter::Sync
   }
 }
 
+void TunDevice::Port::Remove(RemoveRequestView request, RemoveCompleter::Sync& _completer) {
+  parent_->device_->RemovePort(adapter().id());
+}
+
 void TunDevice::Port::Bind(fidl::ServerEnd<fuchsia_net_tun::Port> req) {
-  binding_ = fidl::BindServer(parent_->loop_.dispatcher(), std::move(req), this,
-                              [parent = parent_, id = adapter().id()](
-                                  Port*, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_net_tun::Port>) {
-                                parent->device_->RemovePort(id);
-                              });
+  binding_ =
+      fidl::BindServer(parent_->loop_.dispatcher(), std::move(req), this,
+                       [parent = parent_, id = adapter().id()](
+                           Port*, fidl::UnbindInfo info, fidl::ServerEnd<fuchsia_net_tun::Port>) {
+                         // User initiated unbinds are only triggered by the
+                         // destructor, which means the port was already
+                         // removed.
+                         if (!info.is_user_initiated()) {
+                           parent->device_->RemovePort(id);
+                         }
+                       });
 }
 
 }  // namespace tun
