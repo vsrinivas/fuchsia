@@ -14,11 +14,11 @@ rustc_binary("reporter_bin") {
   testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
   ]
 
   sources = [ "reporter.rs" ]

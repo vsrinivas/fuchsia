@@ -43,13 +43,13 @@ fn new_data_user_mock<T: Into<String>, U: Into<String>>(
             let data_handle =
                 mock_handles.clone_from_namespace("data").expect("data directory not available");
 
-            let file = io_util::open_file(
+            let file = fuchsia_fs::open_file(
                 &data_handle,
                 filename_clone.as_ref(),
                 fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
             )
             .expect("failed to open file");
-            io_util::write_file(&file, &contents_clone).await.expect("write file failed");
+            fuchsia_fs::write_file(&file, &contents_clone).await.expect("write file failed");
             send_clone.send(()).await.unwrap();
             Ok(())
         }
@@ -121,7 +121,7 @@ async fn single_storage_user() {
     done_signal.await;
 
     let (node_proxy, node_server) = create_proxy::<fio::NodeMarker>().expect("create node proxy");
-    let dir_proxy = io_util::node_to_directory(node_proxy).unwrap();
+    let dir_proxy = fuchsia_fs::node_to_directory(node_proxy).unwrap();
     let storage_user_moniker_with_instances = storage_users.into_iter().next().unwrap();
     storage_admin
         .open_component_storage(
@@ -138,8 +138,8 @@ async fn single_storage_user() {
         .expect("Error reading directory");
     assert_eq!(filenames, hashset! {"file".to_string()});
     let file =
-        io_util::open_file(&dir_proxy, "file".as_ref(), fio::OpenFlags::RIGHT_READABLE).unwrap();
-    assert_eq!(io_util::file::read_to_string(&file).await.unwrap(), "data".to_string());
+        fuchsia_fs::open_file(&dir_proxy, "file".as_ref(), fio::OpenFlags::RIGHT_READABLE).unwrap();
+    assert_eq!(fuchsia_fs::file::read_to_string(&file).await.unwrap(), "data".to_string());
 }
 
 #[fasync::run_singlethreaded(test)]

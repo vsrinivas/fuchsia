@@ -385,7 +385,7 @@ mod tests {
             ]
         );
         let svc_dir =
-            io_util::directory::open_directory(&ns_dir, "svc", fio::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_directory(&ns_dir, "svc", fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .unwrap();
         let entries = files_async::readdir(&svc_dir).await.unwrap();

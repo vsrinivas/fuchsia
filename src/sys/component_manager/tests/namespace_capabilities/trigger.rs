@@ -37,12 +37,12 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
         let out = out.expect("empty echo result");
 
         // Attempt to open test-pkg (a component manager namespace capability)
-        let file = io_util::open_file_in_namespace(
+        let file = fuchsia_fs::open_file_in_namespace(
             "/test-pkg/data/testdata",
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .expect("could not open testdata");
-        let contents = io_util::read_file(&file).await.expect("could not read file");
+        let contents = fuchsia_fs::read_file(&file).await.expect("could not read file");
         assert_eq!(contents, "Hello world!\n");
 
         responder.send(&out).expect("failed to send trigger response");

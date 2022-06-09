@@ -1130,7 +1130,7 @@ impl BuiltinEnvironment {
                 let hub_proxy = self.bind_service_fs_for_hub().await?;
                 self.model.start().await;
                 // List the services exposed by the root component.
-                let expose_dir_proxy = io_util::open_directory(
+                let expose_dir_proxy = fuchsia_fs::open_directory(
                     &hub_proxy,
                     &PathBuf::from("exec/expose"),
                     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,

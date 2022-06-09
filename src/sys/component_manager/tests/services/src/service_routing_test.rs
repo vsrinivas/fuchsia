@@ -39,10 +39,10 @@ async fn list_instances_test() {
     start_provider(&branch, PROVIDER_B_NAME).await.expect("failed to start provider b");
 
     // List the instances in the BankAccount service.
-    let service_dir = io_util::directory::open_directory(
+    let service_dir = fuchsia_fs::directory::open_directory(
         branch.get_exposed_dir(),
         fexamples::BankAccountMarker::SERVICE_NAME,
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .expect("failed to open service dir");
@@ -65,10 +65,10 @@ async fn connect_to_instances_test() {
     start_provider(&branch, PROVIDER_B_NAME).await.expect("failed to start provider b");
 
     // List the instances in the BankAccount service.
-    let service_dir = io_util::directory::open_directory(
+    let service_dir = fuchsia_fs::directory::open_directory(
         branch.get_exposed_dir(),
         fexamples::BankAccountMarker::SERVICE_NAME,
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )
     .await
     .expect("failed to open service dir");
@@ -106,7 +106,7 @@ async fn create_destroy_instance_test() {
     start_provider(&branch, PROVIDER_B_NAME).await.expect("failed to start provider b");
 
     // List the instances in the BankAccount service.
-    let service_dir = io_util::directory::open_directory(
+    let service_dir = fuchsia_fs::directory::open_directory(
         branch.get_exposed_dir(),
         fexamples::BankAccountMarker::SERVICE_NAME,
         fio::OpenFlags::RIGHT_READABLE,

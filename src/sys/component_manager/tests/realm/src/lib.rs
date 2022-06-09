@@ -108,10 +108,13 @@ pub async fn query_echo_server_child() {
         ]
     );
 
-    let svc_dir =
-        io_util::directory::open_directory(&ns_dir, "svc", io_util::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
+    let svc_dir = fuchsia_fs::directory::open_directory(
+        &ns_dir,
+        "svc",
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .unwrap();
     let entries = files_async::readdir(&svc_dir).await.unwrap();
     assert_eq!(
         entries,
@@ -131,10 +134,13 @@ pub async fn query_echo_server_child() {
 
     let runtime_dir = started.runtime_dir.unwrap();
     let runtime_dir = runtime_dir.into_proxy().unwrap();
-    let elf_dir =
-        io_util::directory::open_directory(&runtime_dir, "elf", io_util::OpenFlags::RIGHT_READABLE)
-            .await
-            .unwrap();
+    let elf_dir = fuchsia_fs::directory::open_directory(
+        &runtime_dir,
+        "elf",
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .unwrap();
     let mut entries = files_async::readdir(&elf_dir).await.unwrap();
 
     // TODO(http://fxbug.dev/99823): The existence of "process_start_time_utc_estimate" is flaky.

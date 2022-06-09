@@ -8,8 +8,8 @@ use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client,
+    fuchsia_fs::{self, OpenFlags},
     fuchsia_zircon as zx,
-    io_util::{self, OpenFlags},
     std::path::PathBuf,
     tracing::*,
 };
@@ -109,7 +109,7 @@ async fn main() {
 }
 
 fn open_trigger_svc(dir: &fio::DirectoryProxy) -> Result<ftest::TriggerProxy, Error> {
-    let node_proxy = io_util::open_node(
+    let node_proxy = fuchsia_fs::open_node(
         dir,
         &PathBuf::from("fidl.test.components.Trigger"),
         OpenFlags::RIGHT_READABLE,

@@ -247,7 +247,7 @@ impl Clone for ComponentNamespace {
             // simpler than generating some handle to put in the namespace that we'd need to then
             // later close.
             if let Ok(client_proxy) =
-                io_util::clone_directory(proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
+                fuchsia_fs::clone_directory(proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
             {
                 ns.items.push((path.clone(), client_proxy));
             }
@@ -371,7 +371,7 @@ pub async fn configure_launcher(
             // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
             // scope is potentially a security vulnerability, as it could make it trivial for parts of
             // applications to get handles to things the application author didn't intend.
-            let lib_proxy = io_util::open_directory(
+            let lib_proxy = fuchsia_fs::open_directory(
                 pkg_proxy,
                 &Path::new("lib"),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -693,7 +693,7 @@ mod tests {
             let mut ns = Vec::<fcrunner::ComponentNamespaceEntry>::new();
             if include_pkg {
                 let pkg_path = "/pkg".to_string();
-                let pkg_chan = io_util::open_directory_in_namespace(
+                let pkg_chan = fuchsia_fs::open_directory_in_namespace(
                     "/pkg",
                     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
                 )

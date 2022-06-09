@@ -183,7 +183,7 @@ async fn open_storage_root(
         let path = full_backing_directory_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(full_backing_directory_path.clone()))?;
-        io_util::connect_in_namespace(path, local_server_end, FLAGS).map_err(|e| {
+        fuchsia_fs::connect_in_namespace(path, local_server_end, FLAGS).map_err(|e| {
             ModelError::from(StorageError::open_root(
                 None,
                 storage_source_info.backing_directory_path.clone(),
@@ -192,16 +192,17 @@ async fn open_storage_root(
         })?;
     }
     if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
-        dir_proxy = io_util::create_sub_directories(&dir_proxy, subdir.as_path()).map_err(|e| {
-            ModelError::from(StorageError::open_root(
-                storage_source_info
-                    .storage_provider
-                    .as_ref()
-                    .map(|r| r.instanced_moniker().clone()),
-                storage_source_info.backing_directory_path.clone(),
-                e,
-            ))
-        })?;
+        dir_proxy =
+            fuchsia_fs::create_sub_directories(&dir_proxy, subdir.as_path()).map_err(|e| {
+                ModelError::from(StorageError::open_root(
+                    storage_source_info
+                        .storage_provider
+                        .as_ref()
+                        .map(|r| r.instanced_moniker().clone()),
+                    storage_source_info.backing_directory_path.clone(),
+                    e,
+                ))
+            })?;
     }
     Ok(dir_proxy)
 }
@@ -233,7 +234,7 @@ pub async fn open_isolated_storage(
         }
     };
 
-    io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
+    fuchsia_fs::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
         ModelError::from(StorageError::open(
             storage_source_info.storage_provider.as_ref().map(|r| r.instanced_moniker().clone()),
             storage_source_info.backing_directory_path.clone(),
@@ -255,7 +256,7 @@ pub async fn open_isolated_storage_by_id(
         open_storage_root(&storage_source_info, fio::MODE_TYPE_DIRECTORY, start_reason).await?;
     let storage_path = generate_instance_id_based_storage_path(&instance_id);
 
-    io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
+    fuchsia_fs::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
         ModelError::from(StorageError::open_by_id(
             storage_source_info.storage_provider.as_ref().map(|r| r.instanced_moniker().clone()),
             storage_source_info.backing_directory_path.clone(),
@@ -304,7 +305,7 @@ pub async fn delete_isolated_storage(
         {
             root_dir
         } else {
-            io_util::open_directory(&root_dir, parent_path, FLAGS).map_err(|e| {
+            fuchsia_fs::open_directory(&root_dir, parent_path, FLAGS).map_err(|e| {
                 StorageError::open(
                     storage_source_info
                         .storage_provider
@@ -339,7 +340,7 @@ pub async fn delete_isolated_storage(
         let dir = if dir_path.parent().is_none() {
             root_dir
         } else {
-            io_util::open_directory(&root_dir, &dir_path, FLAGS).map_err(|e| {
+            fuchsia_fs::open_directory(&root_dir, &dir_path, FLAGS).map_err(|e| {
                 StorageError::open(
                     storage_source_info
                         .storage_provider
