@@ -171,7 +171,7 @@ fuchsia_unittest_package("timezone-flutter-test") {
     "//src/ui/a11y/bin/a11y_manager:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/text:text_manager_comp_v2",
-    "//src/ui/scenic:component_v2",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
 
   test_specs = {

@@ -22,7 +22,7 @@ fuchsia_unittest_component("root_presenter_unittests") {
     ":root_presenter_unittests_bin",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/scenic:component_v2",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
   manifest = "meta/root_presenter_unittests.cml"
 }

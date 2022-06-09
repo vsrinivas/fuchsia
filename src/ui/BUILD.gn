@@ -111,6 +111,7 @@ group("runtime_with_scene_manager") {
   deps = [
     ":runtime",
     "bin/scene_manager",
+    "scenic:configs",
   ]
 }
 

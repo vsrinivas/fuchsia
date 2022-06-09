@@ -11,10 +11,7 @@ import("//src/ui/scenic/build_args.gni")
 import("//src/ui/scenic/lib/gfx/build_args.gni")
 
 group("scenic") {
-  public_deps = [
-    ":configs",
-    ":scenic_pkg",
-  ]
+  public_deps = [ ":scenic_pkg" ]
 }
 
 group("configs") {
@@ -304,6 +301,25 @@ fuchsia_component("component") {
 fuchsia_component("component_v2") {
   component_name = "scenic"
   manifest = "bin/meta/scenic.cml"
+  deps = [ "bin" ]
+
+  if (escher_use_runtime_glsl) {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
+  } else {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
+  }
+
+  if (scenic_enable_vulkan_validation) {
+    deps += [ "//src/lib/vulkan:vulkan_validation_layers" ]
+  }
+}
+
+# Scenic V2 component where |fuchsia.hardware.display.Provider| is a required
+# capability. This should be used in test environments where a fake hardware
+# display controller provider is provided.
+fuchsia_component("component_v2_with_supplied_display_provider") {
+  component_name = "scenic"
+  manifest = "bin/meta/scenic_with_supplied_display_provider.cml"
   deps = [ "bin" ]
 
   if (escher_use_runtime_glsl) {

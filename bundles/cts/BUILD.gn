@@ -16,6 +16,6 @@ group("cts-support") {
   testonly = true
   public_deps = [
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/scenic:component_v2",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
 }

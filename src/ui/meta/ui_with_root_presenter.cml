@@ -16,6 +16,10 @@
             name: "root_presenter",
             url: "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cm",
         },
+        {
+            name: "scenic",
+            url: "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cm",
+        },
     ],
     offer: [
         {
@@ -31,6 +35,17 @@
             subdir: "input_pipeline",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            to: "#scenic",
+            subdir: "scenic",
+        },
+        {
+            directory: "dev-display-controller",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
             directory: "dev-input-report",
             from: "parent",
             to: [ "#input_pipeline" ],
@@ -41,18 +56,21 @@
             to: [ "#root_presenter" ],
         },
         {
+            storage: "tmp",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
             ],
             from: "parent",
             to: [
                 "#a11y_manager",
                 "#input_pipeline",
                 "#root_presenter",
+                "#scenic",
             ],
         },
         {
@@ -60,9 +78,6 @@
                 "fuchsia.feedback.LastRebootInfoProvider",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.settings.Accessibility",
-                "fuchsia.ui.annotation.Registry",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.input.accessibility.PointerEventRegistry",
             ],
             from: "parent",
             to: [ "#a11y_manager" ],
@@ -88,6 +103,18 @@
         },
         {
             protocol: [
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.stash.Store",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
                 "fuchsia.accessibility.ColorTransform",
                 "fuchsia.accessibility.Magnifier",
             ],
@@ -104,6 +131,30 @@
             protocol: [ "fuchsia.ui.pointerinjector.configuration.Setup" ],
             from: "#root_presenter",
             to: "#input_pipeline",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.annotation.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.accessibility.PointerEventRegistry",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: "#a11y_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: [
+                "#input_pipeline",
+                "#root_presenter",
+            ],
         },
     ],
     expose: [
@@ -136,6 +187,24 @@
                 "fuchsia.ui.policy.Presenter",
             ],
             from: "#root_presenter",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.display.internal.DisplayPower",
+                "fuchsia.ui.display.singleton.Info",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.PointerCaptureListenerRegistry",
+                "fuchsia.ui.lifecycle.LifecycleController",
+                "fuchsia.ui.observation.test.Registry",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#scenic",
         },
     ],
 }

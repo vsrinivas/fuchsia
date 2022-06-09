@@ -120,7 +120,7 @@ fuchsia_test_package("text-input-test") {
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/scene_manager:scene_manager_component",
     "//src/ui/bin/text:text_manager_comp_v2",
-    "//src/ui/scenic:component_v2",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
   test_specs = {
     log_settings = {

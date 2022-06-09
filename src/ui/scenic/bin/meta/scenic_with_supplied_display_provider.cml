@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 {
     include: [ "//src/ui/scenic/bin/meta/scenic.shard.cml" ],
+
+    // In test environments, this is a required capability to ensure we can
+    // override with a fake hardware display controller.
     use: [
         {
-            directory: "dev-display-controller",
-            rights: [ "rw*" ],
-            path: "/dev/class/display-controller",
+            protocol: [ "fuchsia.hardware.display.Provider" ],
         },
     ],
 }
