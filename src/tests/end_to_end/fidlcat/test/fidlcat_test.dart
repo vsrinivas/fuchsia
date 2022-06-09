@@ -6,7 +6,8 @@
 // @dart=2.9
 
 import 'dart:async' show Completer;
-import 'dart:io' show Directory, File, Platform, Process, ProcessSignal;
+import 'dart:io'
+    show Directory, File, Platform, Process, ProcessSignal, stdout, stderr;
 
 import 'package:sl4f/sl4f.dart' show Sl4f;
 import 'package:test/test.dart';
@@ -48,14 +49,14 @@ class RunFidlcat {
         await Process.start(ffxPath, arguments, environment: environment);
     final Completer<String> connected = Completer();
     _ffxProcess.stdout.listen((s) {
-      // To debug, uncomment the following line:
-      // stdout.write(String.fromCharCodes(s));
+      // For debugging.
+      stdout.write(String.fromCharCodes(s));
       if (!connected.isCompleted) {
         connected.complete(String.fromCharCodes(s).trim());
       }
     });
-    // To debug, uncomment the following line:
-    // stderr.addStream(_ffxProcess.stderr);
+    // For debugging.
+    stderr.addStream(_ffxProcess.stderr);
     _socketPath = await connected.future;
     assert(await File(_socketPath).exists());
   }
