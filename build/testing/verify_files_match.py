@@ -19,6 +19,10 @@ def main():
         '--diff-on-failure',
         help='Run diff on the files if they differ',
         action="store_true")
+    parser.add_argument(
+        '--custom-error-message',
+        help='Error to print if the files differ',
+        default=None)
     parser.add_argument('first')
     parser.add_argument('second')
     args = parser.parse_args()
@@ -29,6 +33,8 @@ def main():
         print(
             f'Error: file contents differ:\n  {args.first}\n  {args.second}',
             flush=True)
+        if args.custom_error_message:
+            print(args.custom_error_message, flush=True)
         if args.diff_on_failure:
             subprocess.call(
                 ['diff', '-u', args.first, args.second], stderr=sys.stdout)

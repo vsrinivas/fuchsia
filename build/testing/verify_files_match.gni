@@ -21,6 +21,9 @@
 #     If true, this displays the results of a diff on the files to show what the
 #     difference is.  Defaults to false.
 #
+#   custom_error_message (optional)
+#     A custom error message to display to the user.
+#
 #   Usual meanings (all invoker vars are forwarded)
 #     deps
 #     testonly
@@ -56,6 +59,12 @@ template("verify_files_match") {
     if (display_text_diff_on_failure) {
       args += [ "--diff-on-failure" ]
     }
+
+    if (defined(custom_error_message)) {
+      args += [ "--custom-error-message" ]
+      args += [ custom_error_message ]
+    }
+
     args += [
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
