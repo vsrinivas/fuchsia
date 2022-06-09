@@ -118,6 +118,10 @@ pub trait Thread {
     /// [`otsys::otThreadGetMeshLocalPrefix`](crate::otsys::otThreadGetMeshLocalPrefix).
     fn get_mesh_local_prefix(&self) -> &MeshLocalPrefix;
 
+    /// Fucntional equivalent of
+    /// [`otsys::otThreadGetRouterInfo`](crate::otsys::otThreadGetRouterInfo).
+    fn get_router_info(&self, router_id: u16) -> Result<RouterInfo>;
+
     /// Functional equivalent of
     /// [`otsys::otThreadGetNextNeighborInfo`](crate::otsys::otThreadGetNextNeighborInfo).
     // TODO: Determine if the underlying implementation of
@@ -219,6 +223,10 @@ impl<T: Thread + Boxable> Thread for ot::Box<T> {
 
     fn get_mesh_local_prefix(&self) -> &MeshLocalPrefix {
         self.as_ref().get_mesh_local_prefix()
+    }
+
+    fn get_router_info(&self, router_id: u16) -> Result<RouterInfo> {
+        self.as_ref().get_router_info(router_id)
     }
 
     fn iter_next_neighbor_info(
@@ -343,6 +351,15 @@ impl Thread for Instance {
     fn get_mesh_local_prefix(&self) -> &MeshLocalPrefix {
         unsafe { MeshLocalPrefix::ref_from_ot_ptr(otThreadGetMeshLocalPrefix(self.as_ot_ptr())) }
             .unwrap()
+    }
+
+    fn get_router_info(&self, router_id: u16) -> Result<RouterInfo> {
+        let mut ret = RouterInfo::default();
+        Error::from(unsafe {
+            otThreadGetRouterInfo(self.as_ot_ptr(), router_id, ret.as_ot_mut_ptr())
+        })
+        .into_result()?;
+        Ok(ret)
     }
 
     fn iter_next_neighbor_info(
