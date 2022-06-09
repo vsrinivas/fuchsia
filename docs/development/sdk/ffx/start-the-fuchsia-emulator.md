@@ -1,7 +1,7 @@
 # Start the Fuchsia emulator
 
-The `ffx emu` commands launch and manage the Fuchsia emulator on your host
-machine.
+The [`ffx emu`][ffx-emu] commands launch and manage the Fuchsia emulator on
+your host machine.
 
 ## Concepts
 
@@ -669,6 +669,7 @@ alice@alice:~$
 
 <!-- Reference links -->
 
+[ffx-emu]: https://fuchsia.dev/reference/tools/sdk/ffx#emu
 [qemu]: https://www.qemu.org/
 [aemu]: https://developer.android.com/studio/run/emulator
 [tun-tap]: https://en.wikipedia.org/wiki/TUN/TAP
