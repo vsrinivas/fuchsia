@@ -9,9 +9,10 @@ target devices and managing [Fuchsia components][fuchsia-components] and
 
 * Devices
 
-  * [View device information][view-device-info]
+  * [Start the Fuchsia emulator][start-femu]
   * [Flash a Fuchsia image on a device][flash-device]
   * [Create SSH keys for Fuchsia devices][create-ssh-keys]
+  * [View device information][view-device-info]
   * [View device logs][view-device-logs]
 
 * Components
@@ -41,6 +42,7 @@ target devices and managing [Fuchsia components][fuchsia-components] and
 [ffx-reference]: https://fuchsia.dev/reference/tools/sdk/ffx
 [fuchsia-components]: /docs/concepts/components/v2/README.md
 [fuchsia-packages]: /docs/concepts/packages/package.md
+[start-femu]: start-the-fuchsia-emulator.md
 [view-device-info]: view-device-information.md
 [flash-device]: flash-a-device.md
 [create-ssh-keys]: create-ssh-keys-for-devices.md

@@ -11,12 +11,14 @@ toc:
   path: /docs/development/sdk/ffx/index.md
 - title: Devices
   section:
-  - title: View device information
-    path: /docs/development/sdk/ffx/view-device-information.md
+  - title: Start the Fuchsia emulator
+    path: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md
   - title: Flash a Fuchsia image on a device
     path: /docs/development/sdk/ffx/flash-a-device.md
   - title: Create SSH keys for Fuchsia devices
     path: /docs/development/sdk/ffx/create-ssh-keys-for-devices.md
+  - title: View device information
+    path: /docs/development/sdk/ffx/view-device-information.md
   - title: View device logs
     path: /docs/development/sdk/ffx/view-device-logs.md
 - title: Components
