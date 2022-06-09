@@ -56,9 +56,9 @@ fuchsia_unittest_component("tcp-stream-ext_test-component") {
   component_name = "tcp-stream-ext_test"
   deps = [
     ":tcp-stream-ext_test",
-    "//src/connectivity/network/netstack:component-debug-legacy",
+    "//src/connectivity/network/netstack:component-debug",
   ]
-  manifest = "meta/tcp_stream_ext_lib_test.cmx"
+  manifest = "meta/tcp_stream_ext_lib_test.cml"
 }
 
 fuchsia_test_package("tcp-stream-ext-tests") {

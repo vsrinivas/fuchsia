@@ -57,13 +57,6 @@ fuchsia_component("component-with-fast-udp-debug") {
   deps = [ ":bin_with_deadlock_detection" ]
 }
 
-fuchsia_component("component-debug-legacy") {
-  testonly = true
-  component_name = "netstack-debug"
-  manifest = "meta/netstack_debug.cmx"
-  deps = [ ":bin_with_deadlock_detection" ]
-}
-
 fuchsia_component("component-conformance") {
   component_name = "netstack-conformance"
   manifest = "meta/netstack_conformance.cml"
