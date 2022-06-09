@@ -67,11 +67,15 @@ zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
 
   if ((status = bus->Initialize()) != ZX_OK) {
     zxlogf(ERROR, "failed to initialize driver: %s", zx_status_get_string(status));
-    bus->DdkAsyncRemove();
+    if (bus->zxdev() != nullptr) {
+      bus->DdkAsyncRemove();
+    } else {
+      zxlogf(INFO, "initialization never assigned device, skipping removal");
+    }
     return status;
   }
 
-  // The DDK owns the object if we've mae it this far.
+  // The DDK owns the object if we've made it this far.
   (void)bus.release();
   return ZX_OK;
 }
@@ -384,11 +388,13 @@ Bus::~Bus() {
     root_->DisableDownstream();
     root_->UnplugDownstream();
   }
-  zx_status_t status = StopIrqWorker();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to stop the irq thread: %s", zx_status_get_string(status));
+  if (irq_thread_) {
+    zx_status_t status = StopIrqWorker();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "failed to stop the irq thread: %s", zx_status_get_string(status));
+    }
+    irq_thread_->join();
   }
-  irq_thread_.join();
 }
 
 void Bus::StartIrqWorker() {

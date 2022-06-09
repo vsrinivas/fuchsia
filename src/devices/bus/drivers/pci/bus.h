@@ -148,7 +148,7 @@ class Bus : public PciBusType,
   fbl::Mutex devices_lock_;
   // A port all legacy IRQs are bound to.
   zx::port legacy_irq_port_;
-  std::thread irq_thread_;
+  std::optional<std::thread> irq_thread_;
 
   // All devices downstream of this bus are held here. Devices are keyed by
   // BDF so they will not experience any collisions.
