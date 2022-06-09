@@ -19,7 +19,7 @@
 
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/manager.h"
-#include "src/devices/lib/iommu/iommu.h"
+#include "src/devices/lib/iommu/iommu-x86.h"
 
 namespace x86 {
 

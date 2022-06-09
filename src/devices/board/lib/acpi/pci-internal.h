@@ -56,6 +56,7 @@ class AcpiPciroot : public PcirootBase {
     std::vector<zx::resource> irq_resources;
     std::vector<pci_irq_routing_entry_t> routing;
     struct pci_platform_info info;
+    iommu::IommuManagerInterface* iommu;
   };
 
   static zx_status_t Create(PciRootHost* root_host, AcpiPciroot::Context ctx, zx_device_t* parent,

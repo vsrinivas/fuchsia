@@ -126,7 +126,7 @@ fuchsia_driver("platform-bus-x86-driver") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/board/lib/acpi",
     "//src/devices/lib/driver",
-    "//src/devices/lib/iommu",
+    "//src/devices/lib/iommu:iommu-x86",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
 

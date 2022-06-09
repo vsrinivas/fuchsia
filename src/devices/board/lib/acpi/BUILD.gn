@@ -15,6 +15,7 @@ shared_public_deps = [
   "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_llcpp",
   "//sdk/fidl/fuchsia.hardware.spi.businfo:fuchsia.hardware.spi.businfo_llcpp",
   "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_cpp",
+  "//src/devices/lib/iommu",
   "//src/lib/ddk:ddk-deprecated-binding-headers",
   "//third_party/acpica",
 ]
@@ -35,7 +36,6 @@ shared_fuchsia_deps = [
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
   "//src/devices/lib/acpi",
-  "//src/devices/lib/iommu",
   "//src/devices/pci/lib/pci",
   "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   "//zircon/system/ulib/zircon-internal",

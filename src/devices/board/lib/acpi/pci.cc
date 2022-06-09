@@ -446,6 +446,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object,
   dev_ctx.platform_bus = parent;
   dev_ctx.acpi_object = object;
   dev_ctx.acpi_device_info = std::move(info);
+  dev_ctx.iommu = manager->iommu_manager();
   // ACPI names are stored as 4 bytes in a u32
   memcpy(dev_ctx.name, &dev_ctx.acpi_device_info->Name, ACPI_NAMESEG_SIZE);
   dev_ctx.name[sizeof(dev_ctx.name) - 1] = '\0';

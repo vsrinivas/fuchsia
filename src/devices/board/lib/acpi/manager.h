@@ -13,6 +13,7 @@
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/bus-type.h"
 #include "src/devices/board/lib/acpi/device-builder.h"
+#include "src/devices/lib/iommu/iommu.h"
 
 namespace async {
 class Executor;
@@ -27,7 +28,15 @@ namespace acpi {
 // Class that manages ACPI device discovery and publishing.
 class Manager {
  public:
-  explicit Manager(Acpi* acpi, zx_device_t* acpi_root) : acpi_(acpi), acpi_root_(acpi_root) {}
+  // Construct a new manager.
+  // |acpi| should be a pointer to the ACPI implementation to use. The caller keeps ownership and
+  // must ensure it outlives the manager.
+  // |iommu| should be a pointer to the IOMMU manager implementation. The caller keeps ownership and
+  // must ensure it outlives the manager.
+  // |acpi_root| is a pointer to the device that will be the parent of all other ACPI devices. It
+  // should be owned by the DDK, and must outlive the manager.
+  explicit Manager(Acpi* acpi, iommu::IommuManagerInterface* iommu, zx_device_t* acpi_root)
+      : acpi_(acpi), iommu_manager_(iommu), acpi_root_(acpi_root) {}
 
   virtual ~Manager() = default;
 
@@ -47,6 +56,7 @@ class Manager {
 
   Acpi* acpi() { return acpi_; }
   zx_device_t* acpi_root() { return acpi_root_; }
+  iommu::IommuManagerInterface* iommu_manager() { return iommu_manager_; }
 
   virtual async_dispatcher_t* fidl_dispatcher() = 0;
   virtual async::Executor& executor() = 0;
@@ -61,6 +71,7 @@ class Manager {
   acpi::status<> PublishPciBus(zx_device_t* platform_bus, DeviceBuilder* device);
 
   Acpi* acpi_;
+  iommu::IommuManagerInterface* iommu_manager_;
   zx_device_t* acpi_root_;
   std::unordered_map<ACPI_HANDLE, DeviceBuilder> devices_;
   std::unordered_map<ACPI_HANDLE, zx_device_t*> zx_devices_;

@@ -15,6 +15,7 @@
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/board/lib/acpi/test/device.h"
 #include "src/devices/board/lib/acpi/test/mock-acpi.h"
+#include "src/devices/board/lib/acpi/test/null-iommu-manager.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 class NotifyHandlerServer : public fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
@@ -131,7 +132,8 @@ class AddressSpaceHandlerServer
 
 class AcpiDeviceTest : public zxtest::Test {
  public:
-  AcpiDeviceTest() : mock_root_(MockDevice::FakeRootParent()), manager_(&acpi_, mock_root_.get()) {}
+  AcpiDeviceTest()
+      : mock_root_(MockDevice::FakeRootParent()), manager_(&acpi_, &iommu_, mock_root_.get()) {}
 
   void SetUp() override {
     acpi_.SetDeviceRoot(std::make_unique<acpi::test::Device>("\\"));
@@ -173,6 +175,7 @@ class AcpiDeviceTest : public zxtest::Test {
   std::shared_ptr<MockDevice> mock_root_;
   acpi::FuchsiaManager manager_;
   acpi::test::MockAcpi acpi_;
+  NullIommuManager iommu_;
   fidl::WireSyncClient<fuchsia_hardware_acpi::Device> fidl_client_;
 };
 

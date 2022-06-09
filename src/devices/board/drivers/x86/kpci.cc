@@ -19,7 +19,7 @@
 #include "src/devices/board/lib/acpi/device.h"
 #include "src/devices/board/lib/acpi/resources.h"
 #include "src/devices/board/lib/acpi/status.h"
-#include "src/devices/lib/iommu/iommu.h"
+#include "src/devices/lib/iommu/iommu-x86.h"
 
 #define PCI_HID ((char*)"PNP0A03")
 #define PCIE_HID ((char*)"PNP0A08")

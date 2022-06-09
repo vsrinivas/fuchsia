@@ -180,7 +180,7 @@ zx_status_t X86::Bind() {
   }
 
   // Create the ACPI manager.
-  acpi_manager_ = std::make_unique<acpi::FuchsiaManager>(acpi_.get(), zxdev());
+  acpi_manager_ = std::make_unique<acpi::FuchsiaManager>(acpi_.get(), &iommu_manager_, zxdev());
 
   // Start up our protocol helpers and platform devices.
   return Start();

@@ -44,7 +44,7 @@ zx_status_t AcpiArm64::Create(void* ctx, zx_device_t* parent) {
 }
 
 void AcpiArm64::DdkInit(ddk::InitTxn txn) {
-  manager_.emplace(&acpi_, zxdev_);
+  manager_.emplace(&acpi_, &null_iommu_, zxdev_);
 
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   root_resource_handle = get_root_resource();

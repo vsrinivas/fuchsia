@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/lib/iommu/iommu.h"
+#include "src/devices/lib/iommu/iommu-x86.h"
 
 #include <lib/ddk/driver.h>
 #include <zircon/status.h>
@@ -498,7 +498,7 @@ zx_status_t IommuManager::InitDesc(const ACPI_TABLE_DMAR* dmar) {
   return ZX_OK;
 }
 
-zx::unowned_iommu IommuManager::IommuForBdf(uint32_t bdf) {
+zx::unowned_iommu IommuManager::IommuForPciDevice(uint32_t bdf) {
   fbl::AutoLock guard{&lock_};
 
   uint8_t bus = (uint8_t)(bdf >> 8);
@@ -547,7 +547,7 @@ void IommuManager::Logf(fx_log_severity_t severity, const char* file, int line, 
 
 zx_status_t iommu_manager_iommu_for_bdf(uint32_t bdf, zx_handle_t* iommu) {
   ZX_DEBUG_ASSERT(iommu_mgr);
-  *iommu = iommu_mgr->IommuForBdf(bdf)->get();
+  *iommu = iommu_mgr->IommuForPciDevice(bdf)->get();
   return ZX_OK;
 }
 

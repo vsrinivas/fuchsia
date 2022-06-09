@@ -15,8 +15,8 @@ namespace acpi {
 // Specialisation of ACPI manager for Fuchsia.
 class FuchsiaManager : public Manager {
  public:
-  FuchsiaManager(acpi::Acpi* acpi, zx_device_t* acpi_root)
-      : Manager(acpi, acpi_root),
+  FuchsiaManager(acpi::Acpi* acpi, iommu::IommuManagerInterface* iommu, zx_device_t* acpi_root)
+      : Manager(acpi, iommu, acpi_root),
         loop_(&kAsyncLoopConfigNeverAttachToThread),
         executor_(loop_.dispatcher()) {}
 

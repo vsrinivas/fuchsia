@@ -274,13 +274,14 @@ void Device::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer)
   // because it is a pure ACPI device.
   //
   // TODO(fxbug.dev/92140): check the DMAR for ACPI entries.
-  zx_handle_t iommu_handle;
-  zx_status_t status = iommu_manager_dummy_iommu(&iommu_handle);
-  if (status != ZX_OK) {
-    completer.ReplyError(status);
+  auto path = acpi_->GetPath(acpi_handle_);
+  if (path.is_error()) {
+    completer.ReplyError(path.zx_status_value());
+    return;
   }
+  auto iommu_handle = manager_->iommu_manager()->IommuForAcpiDevice(path->data());
   zx::bti bti;
-  zx::bti::create(*zx::unowned_iommu{iommu_handle}, 0, bti_id_, &bti);
+  zx::bti::create(*iommu_handle, 0, bti_id_, &bti);
 
   completer.ReplySuccess(std::move(bti));
 }

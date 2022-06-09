@@ -16,6 +16,7 @@
 #include "src/devices/board/lib/acpi/manager-fuchsia.h"
 #include "src/devices/board/lib/acpi/test/mock-acpi.h"
 #include "src/devices/board/lib/acpi/test/mock-pci.h"
+#include "src/devices/board/lib/acpi/test/null-iommu-manager.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 using acpi::test::Device;
@@ -76,7 +77,7 @@ static void ExpectProps(acpi::DeviceBuilder* b, std::vector<zx_device_prop_t> ex
 class AcpiManagerTest : public zxtest::Test {
  public:
   AcpiManagerTest()
-      : mock_root_(MockDevice::FakeRootParent()), manager_(&acpi_, mock_root_.get()) {}
+      : mock_root_(MockDevice::FakeRootParent()), manager_(&acpi_, &iommu_, mock_root_.get()) {}
   void SetUp() override { acpi_.SetDeviceRoot(std::make_unique<Device>("\\")); }
 
   void InsertDeviceBelow(std::string path, std::unique_ptr<Device> d) {
@@ -100,6 +101,7 @@ class AcpiManagerTest : public zxtest::Test {
   std::shared_ptr<MockDevice> mock_root_;
   acpi::test::MockAcpi acpi_;
   acpi::FuchsiaManager manager_;
+  NullIommuManager iommu_;
 };
 
 TEST_F(AcpiManagerTest, TestEnumerateEmptyTables) {

@@ -9,6 +9,7 @@
 
 #include "src/devices/board/lib/acpi/acpi-impl.h"
 #include "src/devices/board/lib/acpi/manager-fuchsia.h"
+#include "src/devices/board/lib/acpi/test/null-iommu-manager.h"
 
 namespace acpi_arm64 {
 
@@ -27,6 +28,8 @@ class AcpiArm64 : public DeviceType {
  private:
   std::optional<acpi::FuchsiaManager> manager_;
   acpi::AcpiImpl acpi_;
+  // TODO(fxbug.dev/97084): remove this when we have an ARM IOMMU manager.
+  NullIommuManager null_iommu_;
 
   std::thread init_thread_;
 };
