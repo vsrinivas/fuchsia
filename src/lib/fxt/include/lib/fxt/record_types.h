@@ -137,6 +137,7 @@ using ArgumentHeader = uint64_t;
 using RecordHeader = uint64_t;
 
 enum class BlobType { kData = 1, kLastBranch = 2 };
+enum class LargeBlobFormat { kMetadata = 0, kNoMetadata = 1 };
 
 }  // namespace fxt
 

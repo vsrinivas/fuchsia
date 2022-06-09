@@ -83,6 +83,12 @@ inline constexpr uint64_t MakeHeader(RecordType type, WordSize size_words) {
          RecordFields::RecordSize::Make(size_words.SizeInWords());
 }
 
+inline constexpr uint64_t MakeLargeHeader(LargeRecordType type, WordSize words) {
+  return LargeRecordFields::Type::Make(15) |
+         LargeRecordFields::RecordSize::Make(words.SizeInWords()) |
+         LargeRecordFields::LargeType::Make(ToUnderlyingType(type));
+}
+
 // Represents an FXT Thread Reference which is either inline in the record
 // body, or an index included in the record header
 //
@@ -420,6 +426,92 @@ Argument(StringRef<RefType::kInline>, StringRef<RefType::kInline>)
 Argument(StringRef<RefType::kId>, StringRef<RefType::kInline>)
     ->Argument<ArgumentType::kString, RefType::kId, RefType::kInline>;
 #endif
+
+// Create a Provider Info Metadata Record using a given Writer
+//
+// This metadata identifies a trace provider that has contributed information
+// to the trace.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#format_3
+template <typename Writer, internal::EnableIfWriter<Writer> = 0>
+zx_status_t WriteProviderInfoMetadataRecord(Writer* writer, uint32_t provider_id, const char* name,
+                                            size_t name_length) {
+  const WordSize record_size = WordSize(1) /* header*/ + WordSize::FromBytes(name_length);
+  uint64_t header =
+      MakeHeader(RecordType::kMetadata, record_size) |
+      MetadataRecordFields::MetadataType::Make(ToUnderlyingType(MetadataType::kProviderInfo)) |
+      ProviderInfoMetadataRecordFields::Id::Make(provider_id) |
+      ProviderInfoMetadataRecordFields::NameLength::Make(name_length);
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteBytes(name, name_length);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Create a Provider Section Metadata Record using a given Writer
+//
+// This metadata delimits sections of the trace that have been obtained from
+// different providers. All data that follows until the next provider section
+// metadata or provider info metadata is encountered is assumed to have been
+// collected from the same provider.
+//
+// See also:
+// https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#provider-section-metadata
+template <typename Writer, internal::EnableIfWriter<Writer> = 0>
+zx_status_t WriteProviderSectionMetadataRecord(Writer* writer, uint32_t provider_id) {
+  const WordSize record_size(1);
+  uint64_t header =
+      MakeHeader(RecordType::kMetadata, record_size) |
+      MetadataRecordFields::MetadataType::Make(ToUnderlyingType(MetadataType::kProviderSection)) |
+      ProviderSectionMetadataRecordFields::Id::Make(provider_id);
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Create a Provider Section Metadata Record using Writer
+//
+// This metadata delimits sections of the trace that have been obtained from
+// different providers. All data that follows until the next provider section
+// metadata or provider info metadata is encountered is assumed to have been
+// collected from the same provider.
+//
+// See also:
+// https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#provider-section-metadata
+template <typename Writer, internal::EnableIfWriter<Writer> = 0>
+zx_status_t WriteProviderEventMetadataRecord(Writer* writer, uint32_t provider_id,
+                                             uint8_t event_id) {
+  const WordSize record_size(1);
+  uint64_t header =
+      MakeHeader(RecordType::kMetadata, record_size) |
+      MetadataRecordFields::MetadataType::Make(ToUnderlyingType(MetadataType::kProviderEvent)) |
+      ProviderEventMetadataRecordFields::Id::Make(provider_id) |
+      ProviderEventMetadataRecordFields::Event::Make(event_id);
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Create a Magic Number Record using Writer
+//
+// This record serves as an indicator that the binary data is in the Fuchsia tracing format.
+//
+// See also: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#magic-number-record
+template <typename Writer, internal::EnableIfWriter<Writer> = 0>
+zx_status_t WriteMagicNumberRecord(Writer* writer) {
+  uint64_t header = 0x0016547846040010;
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->Commit();
+  }
+  return res.status_value();
+}
 
 // Write an Initialization Record using Writer
 //
@@ -927,6 +1019,93 @@ zx_status_t WriteLogRecord(Writer* writer, uint64_t event_time,
     res->WriteWord(event_time);
     thread_arg.Write(*res);
     res->WriteBytes(log_message, log_message_length);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write a Large BLOB Record with Metadata using the given Writer
+//
+// This type contains the blob data and metadata within the record itself. The
+// metadata includes a timestamp, thread/process information, and arguments, in
+// addition to a category and name. The name should be sufficient to identify
+// the type of data contained within the blob.
+//
+// https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#in_band_large_blob_record_with_metadata_blob_format_0
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType category_type,
+          RefType name_type, RefType thread_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteLargeBlobRecordWithMetadata(Writer* writer, uint64_t timestamp,
+                                             const StringRef<category_type>& category_ref,
+                                             const StringRef<name_type>& name_ref,
+                                             const ThreadRef<thread_type>& thread_ref,
+                                             const void* data, size_t num_bytes,
+                                             const Argument<arg_types, ref_types>&... args) {
+  WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*metadata word*/ +
+                         WordSize(1) /*timestamp*/ + category_ref.PayloadSize() +
+                         name_ref.PayloadSize() + thread_ref.PayloadSize() +
+                         /*blob size*/ WordSize(1) + WordSize::FromBytes(num_bytes);
+
+  WordSize arg_sizes[] = {args.PayloadSize()...};
+  for (auto i : arg_sizes) {
+    record_size += i;
+  }
+  uint64_t header =
+      MakeLargeHeader(LargeRecordType::kBlob, record_size) |
+      fxt::LargeBlobFields::BlobFormat::Make(ToUnderlyingType(LargeBlobFormat::kMetadata));
+  uint64_t blob_header =
+      BlobFormatEventFields::CategoryStringRef::Make(category_ref.HeaderEntry()) |
+      BlobFormatEventFields::NameStringRef::Make(name_ref.HeaderEntry()) |
+      BlobFormatEventFields::ArgumentCount::Make(sizeof...(args)) |
+      BlobFormatEventFields::ThreadRef::Make(thread_ref.HeaderEntry());
+
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteWord(blob_header);
+    category_ref.Write(*res);
+    name_ref.Write(*res);
+    res->WriteWord(timestamp);
+    thread_ref.Write(*res);
+    bool array[] = {(args.Write(*res), false)...};
+    (void)array;
+    res->WriteWord(num_bytes);
+    res->WriteBytes(data, num_bytes);
+    res->Commit();
+  }
+  return res.status_value();
+}
+
+// Write a Large BLOB Record without Metadata using the given Writer
+//
+// This type contains the blob data within the record itself, but does not
+// include metadata. The record only contains a category and name.
+// The name should be sufficient to identify the type of data contained within the blob.
+//
+// https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#in_band_large_blob_record_no_metadata_blob_format_1
+template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType category_type,
+          RefType name_type, ArgumentType... arg_types, RefType... ref_types>
+zx_status_t WriteLargeBlobRecordWithNoMetadata(Writer* writer,
+                                               const StringRef<category_type>& category_ref,
+                                               const StringRef<name_type>& name_ref,
+                                               const void* data, size_t num_bytes) {
+  WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*metadata word*/ +
+                         WordSize(1) /*timestamp*/ + category_ref.PayloadSize() +
+                         name_ref.PayloadSize() + /*blob size*/ WordSize(1) +
+                         WordSize::FromBytes(num_bytes);
+
+  uint64_t header =
+      MakeLargeHeader(LargeRecordType::kBlob, record_size) |
+      fxt::LargeBlobFields::BlobFormat::Make(ToUnderlyingType(LargeBlobFormat::kMetadata));
+  uint64_t blob_header =
+      BlobFormatAttachmentFields::CategoryStringRef::Make(category_ref.HeaderEntry()) |
+      BlobFormatAttachmentFields::NameStringRef::Make(name_ref.HeaderEntry());
+
+  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  if (res.is_ok()) {
+    res->WriteWord(blob_header);
+    category_ref.Write(*res);
+    name_ref.Write(*res);
+    res->WriteWord(num_bytes);
+    res->WriteBytes(data, num_bytes);
     res->Commit();
   }
   return res.status_value();

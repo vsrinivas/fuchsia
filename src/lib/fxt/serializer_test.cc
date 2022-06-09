@@ -54,6 +54,100 @@ struct FakeNoMemWriter {
   zx::status<FakeRecord> Reserve(uint64_t header) { return zx::error(ZX_ERR_NO_MEMORY); }
 };
 
+TEST(Serializer, NoMemWriter) {
+  FakeNoMemWriter writer_no_mem;
+  EXPECT_EQ(ZX_ERR_NO_MEMORY, fxt::WriteInitializationRecord(&writer_no_mem, 0xABCD));
+}
+
+TEST(Serializer, ProviderInfoMetadataRecord) {
+  FakeWriter writer_success;
+  uint32_t provider_id = 0xAABBCCDD;
+  const char* provider_name = "test_provider";
+  size_t provider_name_length = strlen(provider_name);
+  EXPECT_EQ(ZX_OK, fxt::WriteProviderInfoMetadataRecord(&writer_success, provider_id, provider_name,
+                                                        provider_name_length));
+  // 1 word header, 2 words name stream
+  EXPECT_EQ(writer_success.bytes.size(), fxt::WordSize(3).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer_success.bytes.data());
+
+  uint64_t header = bytes[0];
+  // Record type of 0
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0000});
+  // 3 words in size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0030});
+  // Metadata type 1
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0001'0000});
+  // Provider id
+  EXPECT_EQ(header & 0x000F'FFFF'FFF0'0000, uint64_t{0x000A'ABBC'CDD0'0000});
+  // Name length
+  EXPECT_EQ(header & 0x0FF0'0000'0000'0000, uint64_t{0x00D0'0000'0000'0000});
+  EXPECT_EQ(std::memcmp(bytes + 1, "test_pro", 8), 0);
+  EXPECT_EQ(std::memcmp(bytes + 2, "vider\0\0\0", 8), 0);
+}
+
+TEST(Serializer, ProviderSectionMetadataRecord) {
+  FakeWriter writer_success;
+  uint32_t provider_id = 0xAABBCCDD;
+  EXPECT_EQ(ZX_OK, fxt::WriteProviderSectionMetadataRecord(&writer_success, provider_id));
+  // 1 word header
+  EXPECT_EQ(writer_success.bytes.size(), fxt::WordSize(1).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer_success.bytes.data());
+
+  uint64_t header = bytes[0];
+  // Record type of 0
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0000});
+  // 1 words in size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0010});
+  // Metadata type 2
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0002'0000});
+  // Provider id
+  EXPECT_EQ(header & 0x000F'FFFF'FFF0'0000, uint64_t{0x000A'ABBC'CDD0'0000});
+}
+
+TEST(Serializer, ProviderEventMetadataRecord) {
+  FakeWriter writer_success;
+  uint32_t provider_id = 0xAABBCCDD;
+  uint8_t event_id = 0x7;
+  EXPECT_EQ(ZX_OK, fxt::WriteProviderEventMetadataRecord(&writer_success, provider_id, event_id));
+  // 1 word header
+  EXPECT_EQ(writer_success.bytes.size(), fxt::WordSize(1).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer_success.bytes.data());
+
+  uint64_t header = bytes[0];
+  // Record type of 0
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0000});
+  // 1 words in size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0010});
+  // Metadata type 3
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0003'0000});
+  // Provider id
+  EXPECT_EQ(header & 0x000F'FFFF'FFF0'0000, uint64_t{0x000A'ABBC'CDD0'0000});
+  // Event Id
+  EXPECT_EQ(header & 0x00F0'0000'0000'0000, uint64_t{0x0070'0000'0000'0000});
+}
+
+TEST(Serializer, MagicNumberMetadataRecord) {
+  FakeWriter writer_success;
+  EXPECT_EQ(ZX_OK, fxt::WriteMagicNumberRecord(&writer_success));
+  // 1 word header
+  EXPECT_EQ(writer_success.bytes.size(), fxt::WordSize(1).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer_success.bytes.data());
+
+  uint64_t header = bytes[0];
+  // Record type of 0
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0000});
+  // 1 words in size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0010});
+  // Metadata type 4
+  EXPECT_EQ(header & 0x0000'0000'000F'0000, uint64_t{0x0000'0000'0004'0000});
+  // Trace type info 0
+  EXPECT_EQ(header & 0x0000'0000'00F0'0000, uint64_t{0x0000'0000'0000'0000});
+  // FxT\16 in little endian
+  EXPECT_EQ(header & 0x00FF'FFFF'FF00'0000, uint64_t{0x0016'5478'4600'0000});
+  // Remainder is 0
+  EXPECT_EQ(header & 0xFF00'0000'0000'0000, uint64_t{0x0000'0000'0000'0000});
+}
+
 TEST(Serializer, InitRecord) {
   FakeWriter writer_success;
   EXPECT_EQ(ZX_OK, fxt::WriteInitializationRecord(&writer_success, 0xABCD));
@@ -69,9 +163,6 @@ TEST(Serializer, InitRecord) {
   // The number of ticks per second
   EXPECT_EQ(bytes[0], uint64_t{0x0000'0000'0000'0021});
   EXPECT_EQ(bytes[1], uint64_t{0x0000'0000'0000'ABCD});
-
-  FakeNoMemWriter writer_no_mem;
-  EXPECT_EQ(ZX_ERR_NO_MEMORY, fxt::WriteInitializationRecord(&writer_no_mem, 0xABCD));
 }
 
 TEST(Serializer, IndexedStringReferences) {
@@ -637,6 +728,88 @@ TEST(Serializer, LogRecord) {
   EXPECT_EQ(std::memcmp(bytes + 2, "This is ", 8), 0);
   EXPECT_EQ(std::memcmp(bytes + 3, "a log me", 8), 0);
   EXPECT_EQ(std::memcmp(bytes + 4, "ssage\0\0\0", 8), 0);
+}
+
+TEST(Serializer, LargeBlobWithMetadataRecord) {
+  uint64_t event_time = 0xAABB'CCDD'EEFF'0011;
+  fxt::StringRef category_ref(0x7AAA);
+  fxt::StringRef name_ref(0x7BBB);
+  fxt::ThreadRef thread_ref(0xCC);
+  fxt::StringRef arg_name(0x2345);
+  const char* data = "Some data to write into the buffer";
+  size_t blob_size_bytes = strlen(data);  // 34
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteLargeBlobRecordWithMetadata(
+                       &writer, event_time, category_ref, name_ref, thread_ref, data,
+                       blob_size_bytes, fxt::Argument(arg_name, true)));
+
+  // 1 word for the large header, 1 for the blob header, 1 for timestamp, 1 for
+  // the argument header, 1 for blob size, 5 for payload.
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(10).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  // Record type is 15
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'000F});
+  // Size
+  EXPECT_EQ(header & 0x0000'000F'FFFF'FFF0, uint64_t{0x0000'0000'0000'00A0});
+  // large record type (0)
+  EXPECT_EQ(header & 0x0000'00F0'0000'0000, uint64_t{0x0000'0000'0000'0000});
+  // blob format type (0)
+  EXPECT_EQ(header & 0x0000'0F00'0000'0000, uint64_t{0x0000'0000'0000'0000});
+  uint64_t blob_header = words[1];
+  // Category Ref
+  EXPECT_EQ(blob_header & 0x0000'0000'0000'FFFF, uint64_t{0x0000'0000'0000'7AAA});
+  // Name Ref
+  EXPECT_EQ(blob_header & 0x0000'0000'FFFF'0000, uint64_t{0x0000'0000'7BBB'0000});
+  // thread
+  EXPECT_EQ(blob_header & 0x0000'0FF0'0000'0000, uint64_t{0x0000'0CC0'0000'0000});
+
+  EXPECT_EQ(words[2], event_time);
+  // Argument
+  EXPECT_EQ(words[3], uint64_t{0x0000'0001'2345'0019});
+  EXPECT_EQ(words[4], blob_size_bytes);
+  EXPECT_EQ(std::memcmp(words + 5, "Some dat", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 6, "a to wri", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 7, "te into ", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 8, "the buff", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 9, "er\0\0\0\0\0\0", 8), 0);
+}
+
+TEST(Serializer, LargeBlobWithNoMetadataRecord) {
+  fxt::StringRef category_ref(0x7AAA);
+  fxt::StringRef name_ref(0x7BBB);
+  const char* data = "Some data to write into the buffer";
+  size_t blob_size_bytes = strlen(data);  // 34
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteLargeBlobRecordWithNoMetadata(&writer, category_ref, name_ref, data,
+                                                           blob_size_bytes));
+  // 1 word for the large header, 1 for the blob header, 1 for
+  // blob size, 5 for payload.
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(8).SizeInBytes());
+  uint64_t* words = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = words[0];
+  // Record type is 15
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'000F});
+  // Size
+  EXPECT_EQ(header & 0x0000'000F'FFFF'FFF0, uint64_t{0x0000'0000'0000'0090});
+  // large record type (0)
+  EXPECT_EQ(header & 0x0000'00F0'0000'0000, uint64_t{0x0000'0000'0000'0000});
+  // blob format type (0)
+  EXPECT_EQ(header & 0x0000'0F00'0000'0000, uint64_t{0x0000'0000'0000'0000});
+  uint64_t blob_header = words[1];
+  // Category Ref
+  EXPECT_EQ(blob_header & 0x0000'0000'0000'FFFF, uint64_t{0x0000'0000'0000'7AAA});
+  // Name Ref
+  EXPECT_EQ(blob_header & 0x0000'0000'FFFF'0000, uint64_t{0x0000'0000'7BBB'0000});
+
+  EXPECT_EQ(words[2], blob_size_bytes);
+  EXPECT_EQ(std::memcmp(words + 3, "Some dat", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 4, "a to wri", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 5, "te into ", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 6, "the buff", 8), 0);
+  EXPECT_EQ(std::memcmp(words + 7, "er\0\0\0\0\0\0", 8), 0);
 }
 
 }  // namespace
