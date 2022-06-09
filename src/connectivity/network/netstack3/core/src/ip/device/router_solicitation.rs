@@ -186,7 +186,7 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyTimerCtxExt as _},
+            testutil::{DummyCtx, DummySyncCtx, DummyTimerCtxExt as _},
             FrameContext as _, InstantContext as _,
         },
         ip::DummyDeviceId,
@@ -204,7 +204,7 @@ mod tests {
     }
 
     type MockCtx<'a> =
-        DummyCtx<MockRsContext<'a>, RsTimerId<DummyDeviceId>, RsMessageMeta, (), DummyDeviceId>;
+        DummySyncCtx<MockRsContext<'a>, RsTimerId<DummyDeviceId>, RsMessageMeta, (), DummyDeviceId>;
 
     impl<'a> Ipv6DeviceRsContext<()> for MockCtx<'a> {
         fn get_max_router_solicitations(&self, DummyDeviceId: DummyDeviceId) -> Option<NonZeroU8> {
@@ -254,11 +254,12 @@ mod tests {
 
     #[test]
     fn stop_router_solicitation() {
-        let mut ctx = MockCtx::with_state(MockRsContext {
-            max_router_solicitations: NonZeroU8::new(1),
-            router_soliciations_remaining: None,
-            link_layer_bytes: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
+                max_router_solicitations: NonZeroU8::new(1),
+                router_soliciations_remaining: None,
+                link_layer_bytes: None,
+            }));
         RsHandler::start_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
 
         let now = ctx.now();
@@ -285,11 +286,12 @@ mod tests {
         let (link_layer_bytes, expected_pad_bytes) =
             link_layer_bytes.map_or((None, 0), |(a, b)| (Some(a), b));
 
-        let mut ctx = MockCtx::with_state(MockRsContext {
-            max_router_solicitations: NonZeroU8::new(max_router_solicitations),
-            router_soliciations_remaining: None,
-            link_layer_bytes,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
+                max_router_solicitations: NonZeroU8::new(max_router_solicitations),
+                router_soliciations_remaining: None,
+                link_layer_bytes,
+            }));
         RsHandler::start_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
 
         assert_eq!(ctx.frames(), &[][..]);

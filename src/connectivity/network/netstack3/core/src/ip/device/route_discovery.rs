@@ -226,7 +226,9 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyCtx, DummyEventCtx, DummyInstant, DummyTimerCtxExt as _},
+        context::testutil::{
+            DummyCtx, DummyEventCtx, DummyInstant, DummySyncCtx, DummyTimerCtxExt as _,
+        },
         device::FrameDestination,
         ip::{device::Ipv6DeviceTimerId, receive_ipv6_packet, DummyDeviceId, IPV6_DEFAULT_SUBNET},
         testutil::{DummyEventDispatcherConfig, TestIpExt as _},
@@ -238,7 +240,7 @@ mod tests {
         state: Ipv6RouteDiscoveryState,
     }
 
-    type MockCtx = DummyCtx<
+    type MockCtx = DummySyncCtx<
         MockIpv6RouteDiscoveryContext,
         Ipv6DiscoveredRouteTimerId<DummyDeviceId>,
         (),
@@ -272,7 +274,7 @@ mod tests {
 
     #[test]
     fn new_route_no_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         RouteDiscoveryHandler::update_route(&mut ctx, &mut (), DummyDeviceId, ROUTE1, None);
         assert_eq!(ctx.take_events(), []);
@@ -324,7 +326,7 @@ mod tests {
 
     #[test]
     fn new_route_with_infinite_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
         ctx.timer_ctx().assert_no_timers_installed();
@@ -332,7 +334,7 @@ mod tests {
 
     #[test]
     fn update_route_from_infinite_to_finite_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
         ctx.timer_ctx().assert_no_timers_installed();
@@ -367,7 +369,7 @@ mod tests {
 
     #[test]
     fn invalidate_route_with_infinite_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
         ctx.timer_ctx().assert_no_timers_installed();
@@ -376,7 +378,7 @@ mod tests {
     }
     #[test]
     fn new_route_with_finite_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
         assert_single_invalidation_timer(&mut ctx, ROUTE1);
@@ -384,7 +386,7 @@ mod tests {
 
     #[test]
     fn update_route_from_finite_to_infinite_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
 
@@ -401,7 +403,7 @@ mod tests {
 
     #[test]
     fn update_route_from_finite_to_finite_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
 
@@ -423,7 +425,7 @@ mod tests {
 
     #[test]
     fn invalidate_route_with_finite_lifetime() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
 
@@ -432,7 +434,7 @@ mod tests {
 
     #[test]
     fn invalidate_all_routes() {
-        let mut ctx = MockCtx::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
         discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
         discover_new_route(&mut ctx, ROUTE2, NonZeroNdpLifetime::Finite(TWO_SECONDS));
 

@@ -496,7 +496,7 @@ mod tests {
         }
     }
 
-    type DummyCtx = crate::context::testutil::DummyCtx<
+    type DummyCtx = crate::context::testutil::DummySyncCtx<
         DummyMldCtx,
         MldDelayedReportTimerId<DummyDeviceId>,
         MldFrameMetadata<DummyDeviceId>,
@@ -684,7 +684,8 @@ mod tests {
     #[test]
     fn test_mld_simple_integration() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             assert_eq!(
@@ -710,7 +711,8 @@ mod tests {
     #[test]
     fn test_mld_immediate_query() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             assert_eq!(
@@ -735,7 +737,8 @@ mod tests {
     #[test]
     fn test_mld_integration_fallback_from_idle() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             assert_eq!(
@@ -771,7 +774,8 @@ mod tests {
     #[test]
     fn test_mld_integration_immediate_query_wont_fallback() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             assert_eq!(
@@ -807,7 +811,8 @@ mod tests {
 
     #[test]
     fn test_mld_integration_delay_reset_timer() {
-        let mut ctx = DummyCtx::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
         // This seed was carefully chosen to produce a substantial duration
         // value below.
         ctx.seed_rng(123456);
@@ -845,7 +850,8 @@ mod tests {
     #[test]
     fn test_mld_integration_last_send_leave() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             assert_eq!(
@@ -888,7 +894,8 @@ mod tests {
     #[test]
     fn test_mld_integration_not_last_does_not_send_leave() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             assert_eq!(
@@ -923,7 +930,8 @@ mod tests {
     #[test]
     fn test_mld_with_link_local() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
@@ -982,7 +990,8 @@ mod tests {
             };
 
             let new_ctx = || {
-                let mut ctx = DummyCtx::default();
+                let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                    crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
                 ctx.seed_rng(seed);
                 ctx
             };
@@ -1013,7 +1022,8 @@ mod tests {
         run_with_many_seeds(|seed| {
             // Simple MLD integration test to check that when we call top-level
             // multicast join and leave functions, MLD is performed.
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
 
             assert_eq!(
@@ -1060,7 +1070,8 @@ mod tests {
     #[test]
     fn test_mld_enable_disable() {
         run_with_many_seeds(|seed| {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
             assert_eq!(ctx.take_frames(), []);
 

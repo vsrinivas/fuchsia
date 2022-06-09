@@ -1905,7 +1905,7 @@ mod tests {
         }
     }
 
-    type DummyDeviceCtx<I, D> = crate::context::testutil::DummyCtx<
+    type DummyDeviceCtx<I, D> = crate::context::testutil::DummySyncCtx<
         DummyUdpCtx<I, D>,
         (),
         SendIpPacketMeta<I, D, SpecifiedAddr<<I as Ip>::Addr>>,
@@ -2150,7 +2150,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
         let unbound = create_udp_unbound(&mut ctx);
@@ -2234,7 +2235,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
 
@@ -2262,7 +2264,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
         let unbound = create_udp_unbound(&mut ctx);
@@ -2328,7 +2331,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         // Set dummy context callback to treat all addresses as unroutable.
         let local_ip = local_ip::<I>();
         let remote_ip = I::get_other_ip_address(127);
@@ -2361,7 +2365,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
 
         // Cse remote address to trigger IpSockCreationError::LocalAddrNotAssigned.
         let local_ip = remote_ip::<I>();
@@ -2395,7 +2400,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
 
         let local_ip = local_ip::<I>();
         // Exhaust local ports to trigger FailedToAllocateLocalPort error.
@@ -2432,7 +2438,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
 
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
@@ -2475,7 +2482,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
 
         fn connect_unbound<I: Ip + TestIpExt>(
             ctx: &mut impl UdpStateContext<I, ()>,
@@ -2518,7 +2526,8 @@ mod tests {
     {
         set_logger_for_test();
 
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
 
@@ -2576,7 +2585,8 @@ mod tests {
     {
         set_logger_for_test();
 
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
 
         // Use invalid local IP to force a CannotBindToAddress error.
         let local_ip = remote_ip::<I>();
@@ -2611,7 +2621,8 @@ mod tests {
     {
         set_logger_for_test();
 
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
 
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
@@ -2660,7 +2671,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
         // Create a UDP connection with a specified local port and local IP.
@@ -2704,10 +2716,13 @@ mod tests {
         let local_port_d = NonZeroU16::new(103).unwrap();
         let remote_port_a = NonZeroU16::new(200).unwrap();
 
-        let mut ctx = DummyCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
-            vec![local_ip],
-            vec![remote_ip_a, remote_ip_b],
-        ));
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::with_state(
+                DummyUdpCtx::with_local_remote_ip_addrs(
+                    vec![local_ip],
+                    vec![remote_ip_a, remote_ip_b],
+                ),
+            ));
 
         // Create some UDP connections and listeners:
         let unbound = create_udp_unbound(&mut ctx);
@@ -2839,7 +2854,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip_a = I::get_other_ip_address(1);
         let local_ip_b = I::get_other_ip_address(2);
         let remote_ip_a = I::get_other_ip_address(70);
@@ -2902,10 +2918,10 @@ mod tests {
         let multicast_addr = I::get_multicast_addr(0);
         let multicast_addr_other = I::get_multicast_addr(1);
 
-        let mut ctx = DummyCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
-            vec![local_ip],
-            vec![remote_ip],
-        ));
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::with_state(
+                DummyUdpCtx::with_local_remote_ip_addrs(vec![local_ip], vec![remote_ip]),
+            ));
 
         // Create 3 sockets: one listener for all IPs, two listeners on the same
         // local address.
@@ -3032,7 +3048,8 @@ mod tests {
         MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
     {
         set_logger_for_test();
-        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(MultiDeviceDummyCtx::<I>::default());
         let ctx = &mut ctx;
         let bound_first_device = {
             let unbound = create_udp_unbound(ctx);
@@ -3100,7 +3117,8 @@ mod tests {
         MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
     {
         set_logger_for_test();
-        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(MultiDeviceDummyCtx::<I>::default());
         let ctx = &mut ctx;
         let bound_on_devices = MultipleDevicesId::all().map(|device| {
             let unbound = create_udp_unbound(ctx);
@@ -3174,7 +3192,8 @@ mod tests {
         MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
     {
         set_logger_for_test();
-        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(MultiDeviceDummyCtx::<I>::default());
         let ctx = &mut ctx;
 
         // Start with `socket` bound to a device on all IPs.
@@ -3206,7 +3225,8 @@ mod tests {
         MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
     {
         set_logger_for_test();
-        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(MultiDeviceDummyCtx::<I>::default());
         let ctx = &mut ctx;
 
         let bound_on_devices = MultipleDevicesId::all().map(|device| {
@@ -3237,7 +3257,8 @@ mod tests {
         let remote_port = NonZeroU16::new(200).unwrap();
         let multicast_addr = I::get_multicast_addr(0);
 
-        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(MultiDeviceDummyCtx::<I>::default());
 
         // Create 3 sockets: one listener bound on each device and one not bound
         // to a device.
@@ -3298,7 +3319,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
         let unbound = create_udp_unbound(&mut ctx);
@@ -3347,10 +3369,10 @@ mod tests {
         let ip_a = I::get_other_ip_address(100);
         let ip_b = I::get_other_ip_address(200);
 
-        let mut ctx = DummyCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
-            vec![local_ip],
-            vec![ip_a, ip_b],
-        ));
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::with_state(
+                DummyUdpCtx::with_local_remote_ip_addrs(vec![local_ip], vec![ip_a, ip_b]),
+            ));
 
         let unbound = create_udp_unbound(&mut ctx);
         let conn_a = connect_udp::<I, _, _>(
@@ -3427,10 +3449,13 @@ mod tests {
         let local_ip = local_ip::<I>();
         let local_ip_2 = I::get_other_ip_address(10);
 
-        let mut ctx = DummyCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
-            vec![local_ip, local_ip_2],
-            vec![remote_ip::<I>()],
-        ));
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::with_state(
+                DummyUdpCtx::with_local_remote_ip_addrs(
+                    vec![local_ip, local_ip_2],
+                    vec![remote_ip::<I>()],
+                ),
+            ));
 
         let remote_ip = remote_ip::<I>();
         ctx.get_mut().extra_local_addrs.push(local_ip_2.get());
@@ -3527,7 +3552,8 @@ mod tests {
         DummyCtx<I>: DummyCtxBound<I>,
     {
         set_logger_for_test();
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
 
         fn listen_unbound<I: Ip + TestIpExt>(
             ctx: &mut impl UdpStateContext<I, ()>,
@@ -3567,7 +3593,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
 
         let unbound = create_udp_unbound(&mut ctx);
@@ -3604,7 +3631,8 @@ mod tests {
     {
         let local_port = NonZeroU16::new(100).unwrap();
 
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let listeners = [(), ()].map(|()| {
             let unbound = create_udp_unbound(&mut ctx);
             set_udp_posix_reuse_port(&mut ctx, &mut (), unbound, true);
@@ -3631,7 +3659,8 @@ mod tests {
     {
         let local_port = NonZeroU16::new(100).unwrap();
 
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let _listener = {
             let unbound = create_udp_unbound(&mut ctx);
             set_udp_posix_reuse_port(&mut ctx, &mut (), unbound, true);
@@ -3657,7 +3686,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
         let local_port = NonZeroU16::new(100).unwrap();
@@ -3697,7 +3727,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let local_port = NonZeroU16::new(100).unwrap();
 
@@ -3738,7 +3769,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
         // Create a UDP connection with a specified local port and local IP.
@@ -3765,7 +3797,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let local_ip = local_ip::<I>();
 
         // Check getting info on specified listener.
@@ -3791,7 +3824,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let unbound = create_udp_unbound(&mut ctx);
         assert_eq!(get_udp_posix_reuse_port(&ctx, &mut (), unbound.into()), false,);
 
@@ -3818,7 +3852,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let unbound = create_udp_unbound(&mut ctx);
 
         assert_eq!(get_udp_bound_device(&ctx, &mut (), unbound.into()), None);
@@ -3832,7 +3867,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let unbound = create_udp_unbound(&mut ctx);
 
         set_unbound_udp_device(&mut ctx, &mut (), unbound, Some(DummyDeviceId));
@@ -3855,7 +3891,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let unbound = create_udp_unbound(&mut ctx);
 
         set_unbound_udp_device(&mut ctx, &mut (), unbound, Some(DummyDeviceId));
@@ -3879,7 +3916,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let remote_ip = remote_ip::<I>();
 
         // Check listening to a non-local IP fails.
@@ -3909,7 +3947,8 @@ mod tests {
     where
         DummyCtx<I>: DummyCtxBound<I>,
     {
-        let mut ctx = DummyCtx::<I>::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::<I>::default());
         let unbound = create_udp_unbound(&mut ctx);
         remove_udp_unbound(&mut ctx, unbound);
 
@@ -3936,7 +3975,8 @@ mod tests {
         where
             DummyCtx<I>: DummyCtxBound<I>,
         {
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             let unbound = create_udp_unbound(&mut ctx);
             assert_eq!(
                 listen_udp(&mut ctx, &mut (), unbound, None, Some(NonZeroU16::new(1).unwrap()))

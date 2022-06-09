@@ -328,7 +328,7 @@ pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
 
     let mut ctx = Ctx::with_default_state(
         DummyEventDispatcher::default(),
-        crate::context::testutil::DummyCtx::default(),
+        crate::context::testutil::DummySyncCtx::default(),
     );
     let FuzzInput { actions } = input;
 

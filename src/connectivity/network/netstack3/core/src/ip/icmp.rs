@@ -2875,7 +2875,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyCtx, DummyInstant},
+        context::testutil::{DummyCtx, DummyInstant, DummySyncCtx},
         device::{DeviceId, FrameDestination},
         ip::{
             device::{
@@ -3824,8 +3824,16 @@ mod tests {
     /// Implement a number of traits and methods for the `$inner` and `$outer`
     /// context types.
     macro_rules! impl_context_traits {
-        ($ip:ident, $inner:ident, $outer:ident, $state:ident) => {
-            type $outer = DummyCtx<
+        ($ip:ident, $inner:ident, $outer_ctx:ident, $outer_sync_ctx:ident, $state:ident) => {
+            type $outer_ctx = DummyCtx<
+                $inner,
+                (),
+                SendIpPacketMeta<$ip, DummyDeviceId, SpecifiedAddr<<$ip as Ip>::Addr>>,
+                (),
+                DummyDeviceId,
+            >;
+
+            type $outer_sync_ctx = DummySyncCtx<
                 $inner,
                 (),
                 SendIpPacketMeta<$ip, DummyDeviceId, SpecifiedAddr<<$ip as Ip>::Addr>>,
@@ -3841,9 +3849,9 @@ mod tests {
                 }
             }
 
-            impl_pmtu_handler!($outer, (), $ip);
+            impl_pmtu_handler!($outer_sync_ctx, (), $ip);
 
-            impl AsMut<DummyPmtuState<<$ip as Ip>::Addr>> for $outer {
+            impl AsMut<DummyPmtuState<<$ip as Ip>::Addr>> for $outer_sync_ctx {
                 fn as_mut(&mut self) -> &mut DummyPmtuState<<$ip as Ip>::Addr> {
                     &mut self.get_mut().inner.pmtu_state
                 }
@@ -3861,7 +3869,7 @@ mod tests {
                 }
             }
 
-            impl StateContext<$state<DummyInstant, IpSock<$ip, DummyDeviceId>>> for $outer {
+            impl StateContext<$state<DummyInstant, IpSock<$ip, DummyDeviceId>>> for $outer_sync_ctx {
                 fn get_state_with(
                     &self,
                     _id: (),
@@ -3877,7 +3885,7 @@ mod tests {
                 }
             }
 
-            impl IcmpContext<$ip> for $outer {
+            impl IcmpContext<$ip> for $outer_sync_ctx {
                 fn receive_icmp_error(
                     &mut self,
                     conn: IcmpConnId<$ip>,
@@ -3892,7 +3900,7 @@ mod tests {
                 }
             }
 
-            impl<B: BufferMut> BufferIcmpContext<$ip, B> for $outer {
+            impl<B: BufferMut> BufferIcmpContext<$ip, B> for $outer_sync_ctx {
                 fn receive_icmp_echo_reply(
                     &mut self,
                     conn: IcmpConnId<$ip>,
@@ -3913,7 +3921,7 @@ mod tests {
                 }
             }
 
-            impl InnerIcmpContext<$ip, ()> for $outer {
+            impl InnerIcmpContext<$ip, ()> for $outer_sync_ctx {
                 fn receive_icmp_error(
                     &mut self,
                     _ctx: &mut (),
@@ -3942,10 +3950,10 @@ mod tests {
         };
     }
 
-    impl_context_traits!(Ipv4, DummyIcmpv4Ctx, Dummyv4Ctx, Icmpv4State);
-    impl_context_traits!(Ipv6, DummyIcmpv6Ctx, Dummyv6Ctx, Icmpv6State);
+    impl_context_traits!(Ipv4, DummyIcmpv4Ctx, Dummyv4Ctx, Dummyv4SyncCtx, Icmpv4State);
+    impl_context_traits!(Ipv6, DummyIcmpv6Ctx, Dummyv6Ctx, Dummyv6SyncCtx, Icmpv6State);
 
-    impl NdpPacketHandler<(), DummyDeviceId> for Dummyv6Ctx {
+    impl NdpPacketHandler<(), DummyDeviceId> for Dummyv6SyncCtx {
         fn receive_ndp_packet<B: ByteSlice>(
             &mut self,
             _ctx: &mut (),
@@ -3958,7 +3966,7 @@ mod tests {
         }
     }
 
-    impl MldPacketHandler<(), DummyDeviceId> for Dummyv6Ctx {
+    impl MldPacketHandler<(), DummyDeviceId> for Dummyv6SyncCtx {
         fn receive_mld_packet<B: ByteSlice>(
             &mut self,
             _ctx: &mut (),
@@ -3971,7 +3979,7 @@ mod tests {
         }
     }
 
-    impl RouteDiscoveryHandler<()> for Dummyv6Ctx {
+    impl RouteDiscoveryHandler<()> for Dummyv6SyncCtx {
         fn update_route(
             &mut self,
             _ctx: &mut (),
@@ -3987,7 +3995,7 @@ mod tests {
         }
     }
 
-    impl SlaacHandler<()> for Dummyv6Ctx {
+    impl SlaacHandler<()> for Dummyv6SyncCtx {
         fn apply_slaac_update(
             &mut self,
             _ctx: &mut (),
@@ -4015,13 +4023,13 @@ mod tests {
         }
     }
 
-    impl IpDeviceHandler<Ipv6, ()> for Dummyv6Ctx {
+    impl IpDeviceHandler<Ipv6, ()> for Dummyv6SyncCtx {
         fn is_router_device(&self, _device_id: Self::DeviceId) -> bool {
             unimplemented!()
         }
     }
 
-    impl Ipv6DeviceHandler<()> for Dummyv6Ctx {
+    impl Ipv6DeviceHandler<()> for Dummyv6SyncCtx {
         fn get_link_layer_addr_bytes(&self, _device_id: Self::DeviceId) -> Option<&[u8]> {
             unimplemented!()
         }
@@ -4045,7 +4053,7 @@ mod tests {
         }
     }
 
-    impl<B: BufferMut> BufferIpLayerHandler<Ipv6, (), B> for Dummyv6Ctx {
+    impl<B: BufferMut> BufferIpLayerHandler<Ipv6, (), B> for Dummyv6SyncCtx {
         fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
             &mut self,
             _ctx: &mut (),
@@ -4080,7 +4088,7 @@ mod tests {
         fn test_receive_icmpv4_error_helper<
             C: Debug,
             M: for<'a> IcmpMessage<Ipv4, &'a [u8], Code = C> + Debug,
-            F: Fn(&Dummyv4Ctx),
+            F: Fn(&Dummyv4SyncCtx),
         >(
             original_packet: &mut [u8],
             code: C,
@@ -4090,7 +4098,7 @@ mod tests {
         ) {
             crate::testutil::set_logger_for_test();
 
-            let mut ctx = Dummyv4Ctx::default();
+            let mut ctx = Dummyv4SyncCtx::default();
             // NOTE: This assertion is not a correctness requirement. It's just
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
@@ -4395,7 +4403,7 @@ mod tests {
         fn test_receive_icmpv6_error_helper<
             C: Debug,
             M: for<'a> IcmpMessage<Ipv6, &'a [u8], Code = C> + Debug,
-            F: Fn(&Dummyv6Ctx),
+            F: Fn(&Dummyv6SyncCtx),
         >(
             original_packet: &mut [u8],
             code: C,
@@ -4405,7 +4413,7 @@ mod tests {
         ) {
             crate::testutil::set_logger_for_test();
 
-            let mut ctx = Dummyv6Ctx::default();
+            let mut ctx = Dummyv6SyncCtx::default();
             let unbound = create_icmpv6_unbound_inner(&mut ctx);
             // NOTE: This assertion is not a correctness requirement. It's just
             // that the rest of this test assumes that the new connection has ID
@@ -4685,9 +4693,9 @@ mod tests {
         crate::testutil::set_logger_for_test();
 
         /// Call `send_icmpv4_ttl_expired` with dummy values.
-        fn send_icmpv4_ttl_expired_helper(ctx: &mut Dummyv4Ctx) {
+        fn send_icmpv4_ttl_expired_helper(DummyCtx { sync_ctx }: &mut Dummyv4Ctx) {
             send_icmpv4_ttl_expired(
-                ctx,
+                sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
@@ -4701,9 +4709,9 @@ mod tests {
         }
 
         /// Call `send_icmpv4_parameter_problem` with dummy values.
-        fn send_icmpv4_parameter_problem_helper(ctx: &mut Dummyv4Ctx) {
+        fn send_icmpv4_parameter_problem_helper(DummyCtx { sync_ctx }: &mut Dummyv4Ctx) {
             send_icmpv4_parameter_problem(
-                ctx,
+                sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
@@ -4718,9 +4726,9 @@ mod tests {
         }
 
         /// Call `send_icmpv4_dest_unreachable` with dummy values.
-        fn send_icmpv4_dest_unreachable_helper(ctx: &mut Dummyv4Ctx) {
+        fn send_icmpv4_dest_unreachable_helper(DummyCtx { sync_ctx }: &mut Dummyv4Ctx) {
             send_icmpv4_dest_unreachable(
-                ctx,
+                sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
@@ -4734,9 +4742,9 @@ mod tests {
         }
 
         /// Call `send_icmpv6_ttl_expired` with dummy values.
-        fn send_icmpv6_ttl_expired_helper(ctx: &mut Dummyv6Ctx) {
+        fn send_icmpv6_ttl_expired_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
             send_icmpv6_ttl_expired(
-                ctx,
+                sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
@@ -4749,9 +4757,9 @@ mod tests {
         }
 
         /// Call `send_icmpv6_packet_too_big` with dummy values.
-        fn send_icmpv6_packet_too_big_helper(ctx: &mut Dummyv6Ctx) {
+        fn send_icmpv6_packet_too_big_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
             send_icmpv6_packet_too_big(
-                ctx,
+                sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
@@ -4765,9 +4773,9 @@ mod tests {
         }
 
         /// Call `send_icmpv6_parameter_problem` with dummy values.
-        fn send_icmpv6_parameter_problem_helper(ctx: &mut Dummyv6Ctx) {
+        fn send_icmpv6_parameter_problem_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
             send_icmpv6_parameter_problem(
-                ctx,
+                sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
@@ -4781,9 +4789,9 @@ mod tests {
         }
 
         /// Call `send_icmpv6_dest_unreachable` with dummy values.
-        fn send_icmpv6_dest_unreachable_helper(ctx: &mut Dummyv6Ctx) {
+        fn send_icmpv6_dest_unreachable_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
             send_icmpv6_dest_unreachable(
-                ctx,
+                sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 FrameDestination::Unicast,
@@ -4842,25 +4850,25 @@ mod tests {
 
             for i in 0..ERRORS_PER_SECOND {
                 send(&mut ctx);
-                assert_eq!(ctx.get_counter(counter_str), i as usize + 1);
+                assert_eq!(ctx.sync_ctx.get_counter(counter_str), i as usize + 1);
             }
 
-            assert_eq!(ctx.get_counter(counter_str), ERRORS_PER_SECOND as usize);
+            assert_eq!(ctx.sync_ctx.get_counter(counter_str), ERRORS_PER_SECOND as usize);
             send(&mut ctx);
-            assert_eq!(ctx.get_counter(counter_str), ERRORS_PER_SECOND as usize);
+            assert_eq!(ctx.sync_ctx.get_counter(counter_str), ERRORS_PER_SECOND as usize);
 
             // Test that, if we set a rate of 0, we are not able to send any
             // error messages regardless of how much time has elapsed.
 
             let mut ctx = with_errors_per_second(0);
             send(&mut ctx);
-            assert_eq!(ctx.get_counter(counter_str), 0);
-            ctx.sleep_skip_timers(Duration::from_secs(1));
+            assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
+            ctx.sync_ctx.sleep_skip_timers(Duration::from_secs(1));
             send(&mut ctx);
-            assert_eq!(ctx.get_counter(counter_str), 0);
-            ctx.sleep_skip_timers(Duration::from_secs(1));
+            assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
+            ctx.sync_ctx.sleep_skip_timers(Duration::from_secs(1));
             send(&mut ctx);
-            assert_eq!(ctx.get_counter(counter_str), 0);
+            assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
         }
 
         fn with_errors_per_second_v4(errors_per_second: u64) -> Dummyv4Ctx {

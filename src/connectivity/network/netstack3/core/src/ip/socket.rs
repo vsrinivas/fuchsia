@@ -821,7 +821,7 @@ pub(crate) mod testutil {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyInstant},
+            testutil::{DummyInstant, DummySyncCtx},
             FrameContext,
         },
         ip::{
@@ -847,7 +847,7 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId: IpDeviceId + 'static,
-        > IpSocketContext<I, ()> for DummyCtx<S, Id, Meta, Event, DeviceId>
+        > IpSocketContext<I, ()> for DummySyncCtx<S, Id, Meta, Event, DeviceId>
     {
         fn lookup_route(
             &self,
@@ -902,9 +902,9 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId,
-        > BufferIpSocketContext<I, C, B> for DummyCtx<S, Id, Meta, Event, DeviceId>
+        > BufferIpSocketContext<I, C, B> for DummySyncCtx<S, Id, Meta, Event, DeviceId>
     where
-        DummyCtx<S, Id, Meta, Event, DeviceId>: FrameContext<(), B, SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>>
+        DummySyncCtx<S, Id, Meta, Event, DeviceId>: FrameContext<(), B, SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>>
             + IpSocketContext<I, C>
             + InstantContext<Instant = DummyInstant>,
     {

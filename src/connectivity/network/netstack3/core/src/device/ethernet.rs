@@ -972,7 +972,7 @@ mod tests {
         }
     }
 
-    type DummyCtx = crate::context::testutil::DummyCtx<
+    type DummyCtx = crate::context::testutil::DummySyncCtx<
         DummyEthernetCtx,
         EthernetTimerId<DummyDeviceId>,
         DummyDeviceId,
@@ -1078,10 +1078,10 @@ mod tests {
         // and that we don't send an Ethernet frame whose size is greater than
         // the MTU.
         fn test(size: usize, expect_frames_sent: usize) {
-            let mut ctx = DummyCtx::with_state(DummyEthernetCtx::new(
-                DUMMY_CONFIG_V4.local_mac,
-                Ipv6::MINIMUM_LINK_MTU.into(),
-            ));
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::with_state(
+                    DummyEthernetCtx::new(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
+                ));
             <DummyCtx as ArpHandler<_, _, _>>::insert_static_neighbor(
                 &mut ctx,
                 &mut (),

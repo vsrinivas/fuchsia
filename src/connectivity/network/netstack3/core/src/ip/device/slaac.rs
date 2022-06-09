@@ -1445,7 +1445,7 @@ mod tests {
     use super::*;
     use crate::{
         context::testutil::{
-            DummyCtx, DummyInstant, DummyInstantRange as _v, DummyTimerCtxExt as _,
+            DummyCtx, DummyInstant, DummyInstantRange as _v, DummySyncCtx, DummyTimerCtxExt as _,
         },
         device::FrameDestination,
         ip::{
@@ -1467,7 +1467,8 @@ mod tests {
         non_slaac_addr: Option<UnicastAddr<Ipv6Addr>>,
     }
 
-    type MockCtx = DummyCtx<MockSlaacContext, SlaacTimerId<DummyDeviceId>, (), (), DummyDeviceId>;
+    type MockCtx =
+        DummySyncCtx<MockSlaacContext, SlaacTimerId<DummyDeviceId>, (), (), DummyDeviceId>;
 
     impl SlaacStateContext<()> for MockCtx {
         fn get_config(&self, _ctx: &mut (), DummyDeviceId: Self::DeviceId) -> SlaacConfiguration {
@@ -1632,14 +1633,15 @@ mod tests {
         valid_lifetime_secs: u32,
         enable_stable_addresses: bool,
     ) {
-        let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration { enable_stable_addresses, ..Default::default() },
-            dad_transmits: None,
-            retrans_timer: DEFAULT_RETRANS_TIMER,
-            iid: IID,
-            slaac_addrs: Default::default(),
-            non_slaac_addr: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+                config: SlaacConfiguration { enable_stable_addresses, ..Default::default() },
+                dad_transmits: None,
+                retrans_timer: DEFAULT_RETRANS_TIMER,
+                iid: IID,
+                slaac_addrs: Default::default(),
+                non_slaac_addr: None,
+            }));
 
         SlaacHandler::apply_slaac_update(
             &mut ctx,
@@ -1665,14 +1667,15 @@ mod tests {
     #[test_case(0; "deprecated")]
     #[test_case(1; "preferred")]
     fn generate_stable_address(preferred_lifetime_secs: u32) {
-        let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
-            dad_transmits: None,
-            retrans_timer: DEFAULT_RETRANS_TIMER,
-            iid: IID,
-            slaac_addrs: Default::default(),
-            non_slaac_addr: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+                config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
+                dad_transmits: None,
+                retrans_timer: DEFAULT_RETRANS_TIMER,
+                iid: IID,
+                slaac_addrs: Default::default(),
+                non_slaac_addr: None,
+            }));
 
         let valid_lifetime_secs = preferred_lifetime_secs + 1;
         let addr_sub = calculate_addr_sub(SUBNET, IID);
@@ -1727,16 +1730,17 @@ mod tests {
     fn stable_address_conflict() {
         let addr_sub = calculate_addr_sub(SUBNET, IID);
 
-        let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
-            dad_transmits: None,
-            retrans_timer: DEFAULT_RETRANS_TIMER,
-            iid: IID,
-            slaac_addrs: Default::default(),
-            // Consider the address we will generate as already assigned without
-            // SLAAC.
-            non_slaac_addr: Some(addr_sub.addr()),
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+                config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
+                dad_transmits: None,
+                retrans_timer: DEFAULT_RETRANS_TIMER,
+                iid: IID,
+                slaac_addrs: Default::default(),
+                // Consider the address we will generate as already assigned without
+                // SLAAC.
+                non_slaac_addr: Some(addr_sub.addr()),
+            }));
 
         const LIFETIME_SECS: u32 = 1;
 
@@ -1758,14 +1762,15 @@ mod tests {
     fn remove_stable_address(reason: DelIpv6AddrReason) {
         let addr_sub = calculate_addr_sub(SUBNET, IID);
 
-        let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
-            dad_transmits: None,
-            retrans_timer: DEFAULT_RETRANS_TIMER,
-            iid: IID,
-            slaac_addrs: Default::default(),
-            non_slaac_addr: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+                config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
+                dad_transmits: None,
+                retrans_timer: DEFAULT_RETRANS_TIMER,
+                iid: IID,
+                slaac_addrs: Default::default(),
+                non_slaac_addr: None,
+            }));
 
         const LIFETIME_SECS: u32 = 1;
 
@@ -1928,14 +1933,15 @@ mod tests {
             effective_new_vl_secs,
         }: RefreshStableAddressTimersTest,
     ) {
-        let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
-            dad_transmits: None,
-            retrans_timer: DEFAULT_RETRANS_TIMER,
-            iid: IID,
-            slaac_addrs: Default::default(),
-            non_slaac_addr: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+                config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
+                dad_transmits: None,
+                retrans_timer: DEFAULT_RETRANS_TIMER,
+                iid: IID,
+                slaac_addrs: Default::default(),
+                non_slaac_addr: None,
+            }));
 
         let addr_sub = calculate_addr_sub(SUBNET, IID);
         let deprecate_timer_id =
@@ -2126,27 +2132,28 @@ mod tests {
             enable,
         }: DontGenerateTemporaryAddressTest,
     ) {
-        let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration {
-                temporary_address_configuration: enable.then(|| {
-                    TemporarySlaacAddressConfiguration {
-                        temp_valid_lifetime: NonZeroDuration::new(Duration::from_secs(
-                            ONE_HOUR_AS_SECS.into(),
-                        ))
-                        .unwrap(),
-                        temp_preferred_lifetime: preferred_lifetime_config,
-                        temp_idgen_retries,
-                        secret_key: SECRET_KEY,
-                    }
-                }),
-                ..Default::default()
-            },
-            dad_transmits: NonZeroU8::new(dad_transmits),
-            retrans_timer,
-            iid: IID,
-            slaac_addrs: Default::default(),
-            non_slaac_addr: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+                config: SlaacConfiguration {
+                    temporary_address_configuration: enable.then(|| {
+                        TemporarySlaacAddressConfiguration {
+                            temp_valid_lifetime: NonZeroDuration::new(Duration::from_secs(
+                                ONE_HOUR_AS_SECS.into(),
+                            ))
+                            .unwrap(),
+                            temp_preferred_lifetime: preferred_lifetime_config,
+                            temp_idgen_retries,
+                            secret_key: SECRET_KEY,
+                        }
+                    }),
+                    ..Default::default()
+                },
+                dad_transmits: NonZeroU8::new(dad_transmits),
+                retrans_timer,
+                iid: IID,
+                slaac_addrs: Default::default(),
+                non_slaac_addr: None,
+            }));
 
         SlaacHandler::apply_slaac_update(
             &mut ctx,
@@ -2264,25 +2271,26 @@ mod tests {
         let pl_config = Duration::from_secs(pl_config.into());
         let regen_advance = regen_advance(temp_idgen_retries, retrans_timer, dad_transmits);
 
-        let mut ctx = MockCtx::with_state(MockSlaacContext {
-            config: SlaacConfiguration {
-                temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
-                    temp_valid_lifetime: NonZeroDuration::new(Duration::from_secs(
-                        vl_config.into(),
-                    ))
-                    .unwrap(),
-                    temp_preferred_lifetime: NonZeroDuration::new(pl_config).unwrap(),
-                    temp_idgen_retries,
-                    secret_key: SECRET_KEY,
-                }),
-                ..Default::default()
-            },
-            dad_transmits: NonZeroU8::new(dad_transmits),
-            retrans_timer,
-            iid: IID,
-            slaac_addrs: Default::default(),
-            non_slaac_addr: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+                config: SlaacConfiguration {
+                    temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
+                        temp_valid_lifetime: NonZeroDuration::new(Duration::from_secs(
+                            vl_config.into(),
+                        ))
+                        .unwrap(),
+                        temp_preferred_lifetime: NonZeroDuration::new(pl_config).unwrap(),
+                        temp_idgen_retries,
+                        secret_key: SECRET_KEY,
+                    }),
+                    ..Default::default()
+                },
+                dad_transmits: NonZeroU8::new(dad_transmits),
+                retrans_timer,
+                iid: IID,
+                slaac_addrs: Default::default(),
+                non_slaac_addr: None,
+            }));
         let ctx = &mut ctx;
 
         let mut dup_rng = ctx.rng().clone();

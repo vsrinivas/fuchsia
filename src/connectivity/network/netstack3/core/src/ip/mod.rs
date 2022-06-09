@@ -828,7 +828,7 @@ impl IpDeviceId for DummyDeviceId {
 
 #[cfg(test)]
 impl<I: Ip, S, Id, Meta, Event: Debug, D: IpDeviceId + 'static> IpDeviceIdContext<I>
-    for crate::context::testutil::DummyCtx<S, Id, Meta, Event, D>
+    for crate::context::testutil::DummySyncCtx<S, Id, Meta, Event, D>
 {
     type DeviceId = D;
 

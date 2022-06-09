@@ -215,7 +215,7 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyTimerCtxExt as _},
+            testutil::{DummyCtx, DummySyncCtx, DummyTimerCtxExt as _},
             FrameContext as _, InstantContext as _,
         },
         ip::DummyDeviceId,
@@ -234,7 +234,7 @@ mod tests {
         message: NeighborSolicitation,
     }
 
-    type MockCtx<'a> = DummyCtx<
+    type MockCtx<'a> = DummySyncCtx<
         MockDadContext<'a>,
         DadTimerId<DummyDeviceId>,
         DadMessageMeta,
@@ -292,35 +292,38 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected address to exist")]
     fn panic_unknown_address() {
-        let mut ctx = MockCtx::with_state(MockDadContext {
-            addr: DAD_ADDRESS,
-            state: AddressState::Tentative { dad_transmits_remaining: None },
-            retrans_timer: Duration::default(),
-            link_layer_bytes: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+                addr: DAD_ADDRESS,
+                state: AddressState::Tentative { dad_transmits_remaining: None },
+                retrans_timer: Duration::default(),
+                link_layer_bytes: None,
+            }));
         DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, OTHER_ADDRESS);
     }
 
     #[test]
     #[should_panic(expected = "expected address to be tentative")]
     fn panic_non_tentative_address() {
-        let mut ctx = MockCtx::with_state(MockDadContext {
-            addr: DAD_ADDRESS,
-            state: AddressState::Assigned,
-            retrans_timer: Duration::default(),
-            link_layer_bytes: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+                addr: DAD_ADDRESS,
+                state: AddressState::Assigned,
+                retrans_timer: Duration::default(),
+                link_layer_bytes: None,
+            }));
         DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
     }
 
     #[test]
     fn dad_disabled() {
-        let mut ctx = MockCtx::with_state(MockDadContext {
-            addr: DAD_ADDRESS,
-            state: AddressState::Tentative { dad_transmits_remaining: None },
-            retrans_timer: Duration::default(),
-            link_layer_bytes: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+                addr: DAD_ADDRESS,
+                state: AddressState::Tentative { dad_transmits_remaining: None },
+                retrans_timer: Duration::default(),
+                link_layer_bytes: None,
+            }));
         DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
         let MockDadContext { addr: _, state, retrans_timer: _, link_layer_bytes: _ } =
             ctx.get_ref();
@@ -370,14 +373,15 @@ mod tests {
         let (link_layer_bytes, expected_sll_bytes) =
             link_layer_bytes.map_or((None, None), |(a, b)| (Some(a), Some(b)));
 
-        let mut ctx = MockCtx::with_state(MockDadContext {
-            addr: DAD_ADDRESS,
-            state: AddressState::Tentative {
-                dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
-            },
-            retrans_timer: RETRANS_TIMER,
-            link_layer_bytes,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+                addr: DAD_ADDRESS,
+                state: AddressState::Tentative {
+                    dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
+                },
+                retrans_timer: RETRANS_TIMER,
+                link_layer_bytes,
+            }));
         DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
 
         for count in 0..=1u8 {
@@ -404,14 +408,15 @@ mod tests {
         const DAD_TRANSMITS_REQUIRED: u8 = 2;
         const RETRANS_TIMER: Duration = Duration::from_secs(2);
 
-        let mut ctx = MockCtx::with_state(MockDadContext {
-            addr: DAD_ADDRESS,
-            state: AddressState::Tentative {
-                dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
-            },
-            retrans_timer: RETRANS_TIMER,
-            link_layer_bytes: None,
-        });
+        let DummyCtx { sync_ctx: mut ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+                addr: DAD_ADDRESS,
+                state: AddressState::Tentative {
+                    dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
+                },
+                retrans_timer: RETRANS_TIMER,
+                link_layer_bytes: None,
+            }));
         DadHandler::do_duplicate_address_detection(&mut ctx, &mut (), DummyDeviceId, DAD_ADDRESS);
         check_dad(&ctx, 1, NonZeroU8::new(DAD_TRANSMITS_REQUIRED - 1), RETRANS_TIMER, None);
 

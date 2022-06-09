@@ -1314,7 +1314,7 @@ mod tests {
             generate_opaque_interface_identifier, OpaqueIidNonce, STABLE_IID_SECRET_KEY_BYTES,
         },
         context::{
-            testutil::{DummyCtx, DummyInstant, DummyTimerCtxExt as _, StepResult},
+            testutil::{DummyInstant, DummySyncCtx, DummyTimerCtxExt as _, StepResult},
             InstantContext as _,
         },
         device::{
@@ -1713,10 +1713,14 @@ mod tests {
             local.build_with(
                 stack_builder.clone(),
                 DummyEventDispatcher::default(),
-                DummyCtx::default(),
+                DummySyncCtx::default(),
             ),
             "remote",
-            remote.build_with(stack_builder, DummyEventDispatcher::default(), DummyCtx::default()),
+            remote.build_with(
+                stack_builder,
+                DummyEventDispatcher::default(),
+                DummySyncCtx::default(),
+            ),
         );
 
         // Create the devices (will start DAD at the same time).

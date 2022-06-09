@@ -401,7 +401,7 @@ mod tests {
 
     use crate::{
         context::{
-            testutil::{DummyInstant, DummyTimerCtxExt},
+            testutil::{DummyCtx, DummyInstant, DummySyncCtx, DummyTimerCtxExt},
             InstantContext,
         },
         testutil::{assert_empty, TestIpExt},
@@ -412,10 +412,9 @@ mod tests {
         cache: PmtuCache<I, DummyInstant>,
     }
 
-    type DummyCtx<I> =
-        crate::context::testutil::DummyCtx<DummyPmtuContext<I>, PmtuTimerId<I>, (), (), ()>;
+    type MockCtx<I> = DummySyncCtx<DummyPmtuContext<I>, PmtuTimerId<I>, (), (), ()>;
 
-    impl<I: Ip> PmtuStateContext<I, DummyInstant> for DummyCtx<I> {
+    impl<I: Ip> PmtuStateContext<I, DummyInstant> for MockCtx<I> {
         fn get_state_mut(&mut self) -> &mut PmtuCache<I, DummyInstant> {
             &mut self.get_mut().cache
         }
@@ -453,12 +452,12 @@ mod tests {
         assert_eq!(next_lower_pmtu_plateau(0), None);
     }
 
-    fn get_pmtu<I: Ip>(ctx: &DummyCtx<I>, src_ip: I::Addr, dst_ip: I::Addr) -> Option<u32> {
+    fn get_pmtu<I: Ip>(ctx: &MockCtx<I>, src_ip: I::Addr, dst_ip: I::Addr) -> Option<u32> {
         ctx.get_ref().cache.get_pmtu(src_ip, dst_ip)
     }
 
     fn get_last_updated<I: Ip>(
-        ctx: &DummyCtx<I>,
+        ctx: &MockCtx<I>,
         src_ip: I::Addr,
         dst_ip: I::Addr,
     ) -> Option<DummyInstant> {
@@ -468,7 +467,7 @@ mod tests {
     #[ip_test]
     fn test_ip_path_mtu_cache_ctx<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyCtx::<I>::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
 
         // Nothing in the cache yet
         assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()), None);
@@ -638,7 +637,7 @@ mod tests {
     #[ip_test]
     fn test_ip_pmtu_task<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyCtx::<I>::default();
+        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
 
         // Make sure there are no timers.
         ctx.timer_ctx().assert_no_timers_installed();

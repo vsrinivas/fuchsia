@@ -110,13 +110,13 @@ pub(crate) mod benchmarks {
 // compile).
 pub(crate) type DummyCtx = Ctx<
     DummyEventDispatcher,
-    crate::context::testutil::DummyCtx<(), TimerId, Never, (), DummyDeviceId>,
+    crate::context::testutil::DummySyncCtx<(), TimerId, Never, (), DummyDeviceId>,
     (),
 >;
 
 pub(crate) type DummySyncCtx = SyncCtx<
     DummyEventDispatcher,
-    crate::context::testutil::DummyCtx<(), TimerId, Never, (), DummyDeviceId>,
+    crate::context::testutil::DummySyncCtx<(), TimerId, Never, (), DummyDeviceId>,
     (),
 >;
 

@@ -584,7 +584,7 @@ mod tests {
         }
     }
 
-    type DummyCtx = crate::context::testutil::DummyCtx<
+    type DummyCtx = crate::context::testutil::DummySyncCtx<
         DummyIgmpCtx,
         IgmpTimerId<DummyDeviceId>,
         IgmpPacketMetadata<DummyDeviceId>,
@@ -741,7 +741,8 @@ mod tests {
         seed: u128,
         a: Option<AddrSubnet<Ipv4Addr>>,
     ) -> DummyCtx {
-        let mut ctx = DummyCtx::default();
+        let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
         ctx.seed_rng(seed);
         ctx.get_mut().addr_subnet = a;
         ctx
@@ -1076,7 +1077,8 @@ mod tests {
         run_with_many_seeds(|seed| {
             // Test that we do not perform IGMP when IGMP is disabled.
 
-            let mut ctx = DummyCtx::default();
+            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+                crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::default());
             ctx.seed_rng(seed);
             ctx.get_mut().igmp_enabled = false;
 
