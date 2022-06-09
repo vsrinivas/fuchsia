@@ -23,6 +23,15 @@ source_set("iommu-x86") {
   ]
 }
 
+source_set("iommu-arm") {
+  sources = [
+    "iommu-arm.cc",
+    "iommu-arm.h",
+  ]
+  public_deps = [ ":iommu" ]
+  deps = [ "//zircon/system/ulib/zx" ]
+}
+
 source_set("iommu") {
   sources = [ "iommu.h" ]
 

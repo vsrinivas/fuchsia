@@ -25,6 +25,7 @@ fuchsia_driver("acpi-arm64-driver") {
     "//src/devices/board/lib/acpi",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
+    "//src/devices/lib/iommu:iommu-arm",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//third_party/acpica",
