@@ -127,7 +127,7 @@ if (is_fuchsia) {
   fxfs_test_deps += [
     ":fxfs-test-manifest",
     "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
+    "//src/lib/fuchsia-fs",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
     "//src/sys/pkg/lib/fuchsia-merkle",

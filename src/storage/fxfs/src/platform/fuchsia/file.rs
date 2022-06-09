@@ -535,9 +535,9 @@ mod tests {
         },
         anyhow::format_err,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fuchsia_fs::{read_file_bytes, write_file_bytes},
         fuchsia_zircon::Status,
         futures::join,
-        io_util::{read_file_bytes, write_file_bytes},
         std::sync::{
             atomic::{self, AtomicBool},
             Arc,

@@ -11,10 +11,9 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{MountVmoResult, Server_Marker, ServiceMarker, Success},
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_fs,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum},
-    io_util,
     maplit::hashmap,
     ramdevice_client::RamdiskClient,
     remote_block_device::{BlockClient, RemoteBlockClient},
@@ -107,13 +106,13 @@ async fn ext4_server_mounts_block_device(
     .unwrap();
 
     for (file_path, expected_hash) in &file_hashes {
-        let file = io_util::open_file(
+        let file = fuchsia_fs::open_file(
             &dir_proxy,
             &PathBuf::from(file_path),
-            io_util::OpenFlags::RIGHT_READABLE,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
         let mut hasher = Sha256::new();
-        hasher.update(&io_util::read_file_bytes(&file).await?);
+        hasher.update(&fuchsia_fs::read_file_bytes(&file).await?);
         assert_eq!(*expected_hash, hex::encode(hasher.finalize()));
     }
 
@@ -178,12 +177,12 @@ async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
     let result = ext4.mount_vmo(&mut buf, fio::OpenFlags::RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
-    let file = io_util::open_file(
+    let file = fuchsia_fs::open_file(
         &dir_proxy,
         &PathBuf::from("file1"),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
-    assert_eq!("file1 contents.\n".to_string(), io_util::read_file(&file).await?);
+    assert_eq!("file1 contents.\n".to_string(), fuchsia_fs::read_file(&file).await?);
     Ok(())
 }
 
@@ -207,19 +206,19 @@ async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
     let result = ext4.mount_vmo(&mut buf, fio::OpenFlags::RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
-    let file1 = io_util::open_file(
+    let file1 = fuchsia_fs::open_file(
         &dir_proxy,
         &PathBuf::from("file1"),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
-    assert_eq!("file1 contents.\n".to_string(), io_util::read_file(&file1).await?);
+    assert_eq!("file1 contents.\n".to_string(), fuchsia_fs::read_file(&file1).await?);
 
-    let file2 = io_util::open_file(
+    let file2 = fuchsia_fs::open_file(
         &dir_proxy,
         &PathBuf::from("inner/file2"),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
-    assert_eq!("file2 contents.\n".to_string(), io_util::read_file(&file2).await?);
+    assert_eq!("file2 contents.\n".to_string(), fuchsia_fs::read_file(&file2).await?);
     Ok(())
 }
 
@@ -244,18 +243,18 @@ async fn ext4_unified_service_mounts_vmo() -> Result<(), Error> {
     let result = ext4.mount_vmo(&mut buf, fio::OpenFlags::RIGHT_READABLE, dir_server).await;
     assert_matches!(result, Ok(MountVmoResult::Success(Success {})));
 
-    let file1 = io_util::open_file(
+    let file1 = fuchsia_fs::open_file(
         &dir_proxy,
         &PathBuf::from("file1"),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
-    assert_eq!("file1 contents.\n".to_string(), io_util::read_file(&file1).await?);
+    assert_eq!("file1 contents.\n".to_string(), fuchsia_fs::read_file(&file1).await?);
 
-    let file2 = io_util::open_file(
+    let file2 = fuchsia_fs::open_file(
         &dir_proxy,
         &PathBuf::from("inner/file2"),
-        io_util::OpenFlags::RIGHT_READABLE,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
-    assert_eq!("file2 contents.\n".to_string(), io_util::read_file(&file2).await?);
+    assert_eq!("file2 contents.\n".to_string(), fuchsia_fs::read_file(&file2).await?);
     Ok(())
 }
