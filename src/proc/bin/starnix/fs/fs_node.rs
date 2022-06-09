@@ -58,6 +58,7 @@ pub struct FsNode {
 
 pub type FsNodeHandle = Arc<FsNode>;
 
+#[derive(Default)]
 pub struct FsNodeInfo {
     pub mode: FileMode,
     pub size: usize,
@@ -75,25 +76,6 @@ pub struct FsNodeInfo {
 
 /// st_blksize is measured in units of 512 bytes.
 const DEFAULT_BYTES_PER_BLOCK: i64 = 512;
-
-impl Default for FsNodeInfo {
-    fn default() -> Self {
-        FsNodeInfo {
-            mode: Default::default(),
-            size: Default::default(),
-            storage_size: Default::default(),
-            blksize: DEFAULT_BYTES_PER_BLOCK,
-            uid: Default::default(),
-            gid: Default::default(),
-            link_count: Default::default(),
-            time_create: Default::default(),
-            time_access: Default::default(),
-            time_modify: Default::default(),
-            dev: Default::default(),
-            rdev: Default::default(),
-        }
-    }
-}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UnlinkKind {
@@ -305,6 +287,7 @@ impl FsNode {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
             mode,
+            blksize: DEFAULT_BYTES_PER_BLOCK,
             link_count: if mode.is_dir() { 2 } else { 1 },
             time_create: now,
             time_access: now,
