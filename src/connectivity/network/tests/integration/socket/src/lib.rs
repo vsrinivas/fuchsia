@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use anyhow::Context as _;
 use assert_matches::assert_matches;
@@ -13,6 +13,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_netemul_network as fnetemul_network;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{
@@ -1163,4 +1164,87 @@ async fn send_from_bound_to_device<N: Netstack + TestNetstackExt>(name: &str) {
             .await;
     })
     .await
+}
+
+#[variants_test]
+async fn get_bound_device_errors_after_device_deleted<
+    N: Netstack + TestNetstackExt,
+    E: netemul::Endpoint,
+>(
+    name: &str,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
+
+    let host = sandbox.create_netstack_realm::<N, _>(format!("{name}_host")).expect("create realm");
+
+    let bound_interface = join_network::<E, N, _>(
+        &host,
+        &net,
+        "bound-device",
+        fidl_ip_v4_with_prefix!("192.168.0.1/16"),
+    )
+    .await
+    .expect("install interface in netstack");
+
+    let host_sock =
+        fasync::net::UdpSocket::bind_in_realm(&host, (std::net::Ipv4Addr::UNSPECIFIED, 0).into())
+            .await
+            .expect("failed to create host socket");
+
+    host_sock
+        .bind_device(Some(N::bindtodevice_name(&bound_interface).await.as_bytes()))
+        .expect("set SO_BINDTODEVICE");
+
+    let id = bound_interface.id();
+
+    let interface_state = host
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+
+    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        .expect("error getting interface state event stream");
+    futures::pin_mut!(stream);
+    let mut state = HashMap::new();
+
+    // Wait for the interface to be present.
+    fnet_interfaces_ext::wait_interface(stream.by_ref(), &mut state, |interfaces| {
+        interfaces.get(&id).map(|_| ())
+    })
+    .await
+    .expect("waiting for interface addition");
+
+    // Now that the socket has been bound to an interface, remove the interface.
+    // This needs to be done manually for Ethertap interfaces since Netstack3
+    // doesn't get notified on drop.
+    // TODO(https://fxbug.dev/102064): Remove this once Ethernet devices are no
+    // longer supported.
+    match N::VERSION {
+        NetstackVersion::Netstack3 => match E::NETEMUL_BACKING {
+            fnetemul_network::EndpointBacking::Ethertap => bound_interface
+                .stack()
+                .del_ethernet_interface(id)
+                .await
+                .expect("FIDL call failed")
+                .expect("del ethernet failed"),
+            fnetemul_network::EndpointBacking::NetworkDevice => (),
+        },
+        NetstackVersion::Netstack2
+        | NetstackVersion::ProdNetstack2
+        | NetstackVersion::Netstack2WithFastUdp => (),
+    }
+    drop(bound_interface);
+
+    // Wait for the interface to be removed.
+    fnet_interfaces_ext::wait_interface(stream, &mut state, |interfaces| {
+        interfaces.get(&id).is_none().then(|| ())
+    })
+    .await
+    .expect("waiting interface removal");
+
+    println!("Interface has been removed, checking socket");
+
+    let bound_device =
+        host_sock.device().map_err(|e| e.raw_os_error().and_then(fposix::Errno::from_primitive));
+    assert_eq!(bound_device, Err(Some(fposix::Errno::Enodev)));
 }
