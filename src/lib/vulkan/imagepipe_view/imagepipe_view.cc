@@ -4,7 +4,7 @@
 
 #include "imagepipe_view.h"
 
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 enum {
@@ -50,7 +50,8 @@ bool ImagePipeView::Init(sys::ComponentContext* context, fuchsia::ui::views::Vie
   zx::channel remote_endpoint;
   zx_status_t status = zx::channel::create(0, &image_pipe_endpoint_, &remote_endpoint);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "ImagePipeView", "Init: failed to create channel (%d)", status);
+    FX_SLOG(ERROR, "Init: failed to create channel", KV("tag", "ImagePipeView"),
+            KV("status", status));
     return false;
   }
 
@@ -128,7 +129,7 @@ void ImagePipeView::OnViewPropertiesChanged(fuchsia::ui::gfx::ViewProperties vp)
 
 // |fuchsia::ui::scenic::SessionListener|
 void ImagePipeView::OnScenicError(std::string error) {
-  FX_LOGF(ERROR, "ImagePipeView", "OnScenicError: %s", error.c_str());
+  FX_SLOG(ERROR, "OnScenicError", KV("tag", "ImagePipeView"), KV("error", error.c_str()));
 }
 
 ImagePipeViewProviderService::ImagePipeViewProviderService(sys::ComponentContext* context,

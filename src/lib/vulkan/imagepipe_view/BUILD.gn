@@ -13,8 +13,8 @@ source_set("imagepipe_view") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
-    "//zircon/system/ulib/syslog",
   ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

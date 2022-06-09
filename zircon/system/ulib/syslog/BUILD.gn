@@ -60,7 +60,6 @@ syslog_visibility_allowlist = [
   "//src/diagnostics/archivist/tests/logs/cpp:*",
   "//src/lib/chunked-compression:*",
   "//src/lib/syslog/rust:*",
-  "//src/lib/vulkan/imagepipe_view:*",
   "//src/media/drivers/amlogic_decoder:*",
   "//src/media/lib/codec_impl:*",
   "//src/storage/extractor/cpp:*",
