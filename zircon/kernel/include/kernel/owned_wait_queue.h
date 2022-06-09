@@ -108,7 +108,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // Note, if the new owner exists, but is dead or dying, it will not be
   // permitted to become the new owner of the wait_queue.  Any existing owner
   // will be replaced with no owner in this situation.
-  void AssignOwner(Thread* new_owner) TA_REQ(thread_lock) {
+  void AssignOwner(Thread* new_owner) TA_REQ(thread_lock, preempt_disabled_token) {
     DEBUG_ASSERT(magic() == kOwnedMagic);
     if (new_owner != owner()) {
       UpdateBookkeeping(new_owner, BlockedPriority());
@@ -123,12 +123,13 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // will be replaced with no owner in this situation.
   zx_status_t BlockAndAssignOwner(const Deadline& deadline, Thread* new_owner,
                                   ResourceOwnership resource_ownership, Interruptible interruptible)
-      TA_REQ(thread_lock);
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // Wake the up to specified number of threads from the wait queue and then
   // handle the ownership bookkeeping based on what the Hook told us to do.
   // See |Hook::Action| for details.
-  void WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook = {}) TA_REQ(thread_lock);
+  void WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook = {})
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // A specialization of WakeThreads which will...
   //
@@ -150,7 +151,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // owner will be replaced with no owner in this situation.
   void WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue_target, uint32_t requeue_count,
                       Thread* requeue_owner, Hook on_thread_wake_hook = {},
-                      Hook on_thread_requeue_hook = {}) TA_REQ(thread_lock);
+                      Hook on_thread_requeue_hook = {}) TA_REQ(thread_lock, preempt_disabled_token);
 
  private:
   // Give permission to the WaitQueue thunk to call the
@@ -162,11 +163,12 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   //
   // It is an error to call this function if |old_prio| == |new_prio|.  Be
   // sure to check inline before calling.
-  static void QueuePressureChanged(Thread* t, int old_prio, int new_prio) TA_REQ(thread_lock);
+  static void QueuePressureChanged(Thread* t, int old_prio, int new_prio)
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // A hook called by the WaitQueue level when the maximum priority across all
   // current waiters has changed.
-  void WaitersPriorityChanged(int old_prio) TA_REQ(thread_lock);
+  void WaitersPriorityChanged(int old_prio) TA_REQ(thread_lock, preempt_disabled_token);
 
   // Updates ownership bookkeeping and deals with priority inheritance side
   // effects.  Called by internal code, typically after changes to the
@@ -180,7 +182,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // |old_prio|
   //   The priority of this wait queue as recorded by the caller before
   //   they started to make changes to the queue's contents.
-  void UpdateBookkeeping(Thread* new_owner, int old_prio) TA_REQ(thread_lock);
+  void UpdateBookkeeping(Thread* new_owner, int old_prio)
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // Wake the specified number of threads from the wait queue, and return the
   // new owner (first thread woken) via the |out_new_owner| out param, or
@@ -189,7 +192,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // to defer the PI pressure recalculations until the point at which all of
   // the queue manipulations have taken place.
   void WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner, zx_time_t now,
-                           Hook on_thread_wake_hook) TA_REQ(thread_lock);
+                           Hook on_thread_wake_hook) TA_REQ(thread_lock, preempt_disabled_token);
 
   Thread* owner_ TA_GUARDED(thread_lock) = nullptr;
 };

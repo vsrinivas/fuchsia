@@ -12,6 +12,7 @@
 #include <trace.h>
 #include <zircon/errors.h>
 
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/scheduler.h>
 #include <kernel/thread.h>
@@ -62,14 +63,14 @@ void WaitQueue::TimeoutHandler(Timer* timer, zx_time_t now, void* arg) {
     return;
   }
 
+  AnnotatedAutoPreemptDisabler aapd;
   UnblockThread(thread, ZX_ERR_TIMED_OUT);
-
   thread_lock.Release();
 }
 
 // Deal with the consequences of a change of maximum priority across the set of
 // waiters in a wait queue.
-void WaitQueue::UpdatePriority(int old_prio) TA_REQ(thread_lock) {
+void WaitQueue::UpdatePriority(int old_prio) TA_REQ(thread_lock, preempt_disabled_token) {
   // If this is an owned wait queue, and the maximum priority of its set of
   // waiters has changed, make sure to apply any needed priority inheritance.
   if ((magic_ == OwnedWaitQueue::kOwnedMagic) && (old_prio != BlockedPriority())) {

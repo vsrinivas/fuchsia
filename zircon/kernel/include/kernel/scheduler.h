@@ -169,16 +169,16 @@ class Scheduler {
   static void TimerTick(SchedTime now);
 
   // Set the inherited priority of a thread.
-  static void InheritPriority(Thread* t, int priority) TA_REQ(thread_lock);
+  static void InheritPriority(Thread* t, int priority) TA_REQ(thread_lock, preempt_disabled_token);
 
   // Set the priority of a thread and reset the boost value. This function might reschedule.
   // pri should be 0 <= to <= MAX_PRIORITY.
-  static void ChangePriority(Thread* t, int pri) TA_REQ(thread_lock);
+  static void ChangePriority(Thread* t, int pri) TA_REQ(thread_lock, preempt_disabled_token);
 
   // Set the deadline of a thread. This function might reschedule.
   // This requires: 0 < capacity <= relative_deadline <= period.
   static void ChangeDeadline(Thread* t, const zx_sched_deadline_params_t& params)
-      TA_REQ(thread_lock);
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // Return the time at which the current thread should be preempted.
   //
@@ -223,11 +223,12 @@ class Scheduler {
   static inline void RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) TA_REQ(thread_lock);
 
   static void ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
-      TA_REQ(thread_lock);
+      TA_REQ(thread_lock, preempt_disabled_token);
   static void ChangeDeadline(Thread* thread, const SchedDeadlineParams& params,
-                             cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
+                             cpu_mask_t* cpus_to_reschedule_mask)
+      TA_REQ(thread_lock, preempt_disabled_token);
   static void InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
-      TA_REQ(thread_lock);
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // Specifies how to associate a thread with a Scheduler instance, update
   // metadata, and whether/where to place the thread in a run queue.
@@ -272,13 +273,13 @@ class Scheduler {
   // Updates the thread's weight and updates state-dependent bookkeeping.
   static void UpdateWeightCommon(Thread* thread, int original_priority, SchedWeight weight,
                                  cpu_mask_t* cpus_to_reschedule_mask, PropagatePI propagate)
-      TA_REQ(thread_lock);
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // Updates the thread's deadline and updates state-dependent bookkeeping.
   static void UpdateDeadlineCommon(Thread* thread, int original_priority,
                                    const SchedDeadlineParams& params,
                                    cpu_mask_t* cpus_to_reschedule_mask, PropagatePI propagate)
-      TA_REQ(thread_lock);
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   using EndTraceCallback = fit::inline_function<void(), sizeof(void*)>;
 

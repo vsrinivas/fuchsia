@@ -396,7 +396,7 @@ void Mutex::Release() {
     // WakeThreads() if it is assigned to this CPU. If the woken thread is
     // assigned to a different CPU, the thread lock prevents it from observing
     // the inconsistent owner before the correct owner is recorded.
-    AutoPreemptDisabler preempt_disable;
+    AnnotatedAutoPreemptDisabler preempt_disable;
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     ReleaseContendedMutex(current_thread, old_mutex_state);
   }
@@ -406,7 +406,7 @@ void Mutex::ReleaseThreadLocked() {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(!Thread::Current::Get()->preemption_state().PreemptIsEnabled());
+  preempt_disabled_token.AssertHeld();
   thread_lock.AssertHeld();
   Thread* current_thread = Thread::Current::Get();
 

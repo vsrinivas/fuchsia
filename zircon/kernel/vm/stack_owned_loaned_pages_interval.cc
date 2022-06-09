@@ -84,6 +84,7 @@ void StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(vm_page
   }
   // Acquire thread_lock since that's required to ensure ~StackOwnedLoanedPagesInterval doesn't
   // miss that this thread is blocked waiting, along with kObjectOrStackOwnerHasWaiter.
+  AnnotatedAutoPreemptDisabler aapd;
   Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
   // Holding the thread_lock doesn't guarantee that the stack_owner won't be cleared, but holding
   // thread_lock and successfully ensuring that kObjectOrStackOwnerHasWaiter is set does guarantee
@@ -130,6 +131,7 @@ void StackOwnedLoanedPagesInterval::WakeWaitersAndClearOwner(Thread* current_thr
   auto hook = [](Thread* woken, void* ctx) -> OwnedWaitQueue::Hook::Action {
     return OwnedWaitQueue::Hook::Action::SelectAndKeepGoing;
   };
+  AnnotatedAutoPreemptDisabler aapd;
   Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
   DEBUG_ASSERT(owned_wait_queue_->owner() == current_thread);
   owned_wait_queue_->WakeThreads(ktl::numeric_limits<uint32_t>::max(), {hook, nullptr});

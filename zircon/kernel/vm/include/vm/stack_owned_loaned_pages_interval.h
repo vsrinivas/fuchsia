@@ -77,7 +77,7 @@ class StackOwnedLoanedPagesInterval {
  private:
   // This sets up to permit a waiter, and asserts that the calling thread is not the constructing
   // thread, since waiting by the constructing/destructing thread would block (or maybe fail).
-  void PrepareForWaiter() TA_REQ(thread_lock);
+  void PrepareForWaiter() TA_REQ(thread_lock, preempt_disabled_token);
 
   void WakeWaitersAndClearOwner(Thread* current_thread) TA_EXCL(thread_lock);
 

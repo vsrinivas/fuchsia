@@ -80,7 +80,8 @@ class TA_CAP("mutex") Mutex {
   //
   // This function is deliberately moved out of line from |Release| to keep the
   // stack set up, tear down in the |Release| fastpath small.
-  void ReleaseContendedMutex(Thread* current_thread, uintptr_t old_mutex_state) TA_REQ(thread_lock);
+  void ReleaseContendedMutex(Thread* current_thread, uintptr_t old_mutex_state)
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   void RecordInitialAssignedCpu() {
     maybe_acquired_on_cpu_.store(arch_curr_cpu_num(), ktl::memory_order_relaxed);

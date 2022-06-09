@@ -172,8 +172,8 @@ class TA_CAP("mutex") BrwLock {
   void ContendedWriteAcquire();
   void ContendedReadUpgrade();
   void ReleaseWakeup();
-  void Block(bool write) TA_REQ(thread_lock);
-  ResourceOwnership Wake() TA_REQ(thread_lock);
+  void Block(bool write) TA_REQ(thread_lock, preempt_disabled_token);
+  ResourceOwnership Wake() TA_REQ(thread_lock, preempt_disabled_token);
 
   template <typename F>
   void CommonWriteAcquire(uint64_t expected_state_bits, F contended)

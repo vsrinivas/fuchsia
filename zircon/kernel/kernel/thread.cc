@@ -355,7 +355,7 @@ zx_status_t Thread::Suspend() {
   DEBUG_ASSERT(!IsIdle());
 
   // Disable preemption to defer rescheduling until the end of this scope.
-  AutoPreemptDisabler preempt_disable;
+  AnnotatedAutoPreemptDisabler preempt_disable;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   if (state() == THREAD_DEATH) {
@@ -623,7 +623,7 @@ void Thread::Kill() {
   canary_.Assert();
 
   // Disable preemption to defer rescheduling until the end of this scope.
-  AutoPreemptDisabler preempt_disable;
+  AnnotatedAutoPreemptDisabler preempt_disable;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   // deliver a signal to the thread.
@@ -1310,7 +1310,7 @@ void Thread::SetPriority(int priority) {
   // scheduler might result in another thread needing to run, but at least we
   // will have have deferred that until we are finished interacting with our
   // queue and have dropped the thread lock.
-  AutoPreemptDisabler apd;
+  AnnotatedAutoPreemptDisabler apd;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   Scheduler::ChangePriority(this, priority);
 }
@@ -1330,7 +1330,7 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
          params.relative_deadline <= params.period);
 
   // See the comment in Thread::SetPriority
-  AutoPreemptDisabler apd;
+  AnnotatedAutoPreemptDisabler apd;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   Scheduler::ChangeDeadline(this, params);
 }

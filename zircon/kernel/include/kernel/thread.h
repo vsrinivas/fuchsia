@@ -236,13 +236,14 @@ class WaitQueueCollection {
 
     void Block(Interruptible interruptible, zx_status_t status) TA_REQ(thread_lock);
 
-    void UnblockIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+    void UnblockIfInterruptible(Thread* thread, zx_status_t status)
+        TA_REQ(thread_lock, preempt_disabled_token);
 
     void Unsleep(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
     void UnsleepIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
 
     void UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate)
-        TA_REQ(thread_lock);
+        TA_REQ(thread_lock, preempt_disabled_token);
 
     void AssertNoOwnedWaitQueues() const TA_REQ(thread_lock) {
       DEBUG_ASSERT(owned_wait_queues_.is_empty());
@@ -351,7 +352,8 @@ class WaitQueue {
   WaitQueue& operator=(WaitQueue&&) = delete;
 
   // Remove a specific thread out of a wait queue it's blocked on.
-  static zx_status_t UnblockThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
+  static zx_status_t UnblockThread(Thread* t, zx_status_t wait_queue_error)
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // Block on a wait queue.
   // The returned status is whatever the caller of WaitQueue::Wake_*() specifies.
@@ -412,7 +414,8 @@ class WaitQueue {
   //
   // If |propagate| is PropagatePI::No, do not attempt to propagate the PI change.
   // This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
-  void PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
+  void PriorityChanged(Thread* t, int old_prio, PropagatePI propagate)
+      TA_REQ(thread_lock, preempt_disabled_token);
 
   // OwnedWaitQueue needs to be able to call this on WaitQueues to
   // determine if they are base WaitQueues or the OwnedWaitQueue

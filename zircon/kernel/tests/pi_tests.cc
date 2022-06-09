@@ -15,6 +15,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/macros.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/scheduler.h>
 #include <kernel/thread.h>
@@ -193,11 +194,13 @@ class LockedOwnedWaitQueue : public OwnedWaitQueue {
   DISALLOW_COPY_ASSIGN_AND_MOVE(LockedOwnedWaitQueue);
 
   void ReleaseAllThreads() TA_EXCL(thread_lock) {
+    AnnotatedAutoPreemptDisabler aapd;
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     OwnedWaitQueue::WakeThreads(ktl::numeric_limits<uint32_t>::max());
   }
 
   void ReleaseOneThread() TA_EXCL(thread_lock) {
+    AnnotatedAutoPreemptDisabler aapd;
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     auto hook = [](Thread*, void*) { return Hook::Action::SelectAndAssignOwner; };
     OwnedWaitQueue::WakeThreads(1u, {hook, nullptr});
@@ -410,6 +413,7 @@ bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, 
   ASSERT_FALSE(static_cast<bool>(op_));
 
   op_ = [owned_wq, owner_thrd = owner ? owner->thread_ : nullptr, timeout]() {
+    AnnotatedAutoPreemptDisabler aapd;
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     owned_wq->BlockAndAssignOwner(timeout, owner_thrd, ResourceOwnership::Normal,
                                   Interruptible::Yes);
@@ -534,6 +538,7 @@ bool TestThread::WaitFor() {
 }
 
 void LockedOwnedWaitQueue::AssignOwner(TestThread* thread) {
+  AnnotatedAutoPreemptDisabler aapd;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   OwnedWaitQueue::AssignOwner(thread ? thread->thread_ : nullptr);
 }

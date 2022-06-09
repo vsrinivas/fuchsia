@@ -335,7 +335,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
     // TODO: Make this a IRQ-disable spin lock once there is a way to manage IRQ
     // state between this and the thread_lock acquisition.
     while (1) {
-      AutoPreemptDisabler preempt_disabler;
+      AnnotatedAutoPreemptDisabler preempt_disabler;
       Guard<Mutex> guard{&futex_ref->lock_};
 
       // Sanity check, bookkeeping should not indicate that we are blocked on
@@ -474,6 +474,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
   // explicitly update ownership as it joins the queue once it has made it
   // inside of the thread lock.
   {
+    AnnotatedAutoPreemptDisabler preempt_disabler;
     Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
     if (futex_ref->waiters_.IsEmpty()) {
       futex_ref->waiters_.AssignOwner(nullptr);
@@ -512,7 +513,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
   {
     // Optimize lock contention by delaying local/remote reschedules until the
     // mutex is released.
-    AutoEagerReschedDisabler eager_resched_disabler;
+    AnnotatedAutoEagerReschedDisabler eager_resched_disabler;
     Guard<Mutex> guard{&futex_ref->lock_};
 
     // Now, enter the thread lock and actually wake up the threads.
@@ -640,7 +641,7 @@ zx_status_t FutexContext::FutexRequeueInternal(
   ResetBlockingFutexIdState wake_op;
   SetBlockingFutexIdState requeue_op(requeue_id);
   while (1) {
-    AutoEagerReschedDisabler eager_resched_disabler;
+    AnnotatedAutoEagerReschedDisabler eager_resched_disabler;
     GuardMultiple<2, Mutex> futex_guards{&wake_futex_ref->lock_, &requeue_futex_ref->lock_};
 
     // Validate the futex storage state.
