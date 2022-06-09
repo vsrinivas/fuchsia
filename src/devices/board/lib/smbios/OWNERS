@@ -1,0 +1,3 @@
+include /src/devices/board/lib/acpi/OWNERS
+
+# Component: Workstation>platform

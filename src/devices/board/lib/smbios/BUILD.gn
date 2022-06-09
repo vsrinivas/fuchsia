@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/bootfs_test.gni")
+
+source_set("smbios") {
+  sources = [ "smbios.cc" ]
+  deps = [
+    "//src/lib/ddk",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/smbios",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+test("smbios-test") {
+  sources = [ "smbios-test.cc" ]
+  deps = [
+    ":smbios",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+bootfs_test("smbios-bootfs-test") {
+  name = "smbios-test"
+  deps = [ ":smbios-test" ]
+}

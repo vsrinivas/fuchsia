@@ -20,10 +20,10 @@
 #include <fbl/vector.h>
 
 #include "src/devices/board/drivers/x86/include/acpi.h"
-#include "src/devices/board/drivers/x86/include/smbios.h"
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/board/drivers/x86/x64-bind.h"
 #include "src/devices/board/lib/acpi/manager-fuchsia.h"
+#include "src/devices/board/lib/smbios/smbios.h"
 
 using fuchsia_hardware_acpi::wire::kMaxAcpiTableEntries;
 using fuchsia_hardware_acpi::wire::TableInfo;
@@ -148,7 +148,7 @@ zx_status_t X86::Bind() {
   pbus_bootloader_info_t bootloader_info{.vendor = "<unknown>"};
 
   // Load SMBIOS information.
-  SmbiosInfo smbios;
+  smbios::SmbiosInfo smbios;
   status = smbios.Load();
   if (status == ZX_OK) {
     SetField("board name", smbios.board_name(), board_info.board_name);

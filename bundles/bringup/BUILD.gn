@@ -15,14 +15,15 @@ group("tests") {
     "//src/bringup/bin/sysinfo:sysinfo-bootfs-test",
     "//src/bringup/tests/bootfs_test:running-on-bootfs-test",
     "//src/devices/block/bin/biotime:biotime-test-bootfs-test",
+    "//src/devices/board/lib/smbios:smbios-bootfs-test",
     "//src/devices/sysmem/tests/sysmem:sysmem-bootfs-test",
-    "//src/tests/drivers_serial_log:bringup_tests",
-    "//src/tests/reboot/dm_reboot_bringup_test:tests",
 
     # The devcoordinator-namespace-test assumes the root filesystem and can't be
     # migrated as packages are given their own local filesystem.
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
     "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
+    "//src/tests/drivers_serial_log:bringup_tests",
+    "//src/tests/reboot/dm_reboot_bringup_test:tests",
     "//src/zircon/tests/entropy:entropy-bootfs-test",
     "//src/zircon/tests/exception:exception-bootfs-test",
     "//src/zircon/tests/futex-ownership:futex-ownership-bootfs-test",
@@ -106,7 +107,6 @@ group("tests") {
   if (target_cpu == "x64") {
     deps += [
       "//src/devices/bin/acpidump:acpidump-test-bootfs-test",
-      "//src/devices/board/drivers/x86:x86-board-bootfs-test",
       "//src/devices/board/drivers/x86:x86-lid-bootfs-test",
       "//src/devices/board/drivers/x86/test:x86-board-bootfs-test",
       "//src/devices/lib/iommu:iommu-bootfs-test",

@@ -6,6 +6,8 @@
 
 #include <zxtest/zxtest.h>
 
+namespace smbios {
+
 TEST(SmbiosTestCase, ProductNameAllSpaces) {
   char buf[32] = {};
   memset(buf, ' ', sizeof(buf) - 1);
@@ -26,3 +28,5 @@ TEST(SmbiosTestCase, ProductNameValid) {
   ASSERT_TRUE(smbios_product_name_is_valid("NUC6i3SYB"));
   ASSERT_TRUE(smbios_product_name_is_valid("Test Name"));
 }
+
+}  // namespace smbios

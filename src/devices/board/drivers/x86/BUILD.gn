@@ -35,22 +35,6 @@ config("config") {
   cflags_c = [ "-fno-strict-aliasing" ]
 }
 
-source_set("smbios") {
-  visibility = [ ":*" ]
-
-  sources = [ "smbios.cc" ]
-
-  configs += [ ":config" ]
-
-  deps = [
-    "//src/lib/ddk",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/smbios",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 driver_bind_rules("x64-bind") {
   rules = "x64.bind"
   header_output = "x64-bind.h"
@@ -111,7 +95,6 @@ fuchsia_driver("platform-bus-x86-driver") {
   configs += [ ":config" ]
   deps = [
     ":goldfish_control_2_bind_header",
-    ":smbios",
     ":x64-bind",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
@@ -125,6 +108,7 @@ fuchsia_driver("platform-bus-x86-driver") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/board/lib/acpi",
+    "//src/devices/board/lib/smbios",
     "//src/devices/lib/driver",
     "//src/devices/lib/iommu:iommu-x86",
     "//src/devices/pci/lib/pci",
@@ -187,21 +171,6 @@ test("x86-lid-test") {
 bootfs_test("x86-lid-bootfs-test") {
   name = "x86-lid-test"
   deps = [ ":x86-lid-test" ]
-}
-
-test("x86-board-test") {
-  sources = [ "smbios-test.cc" ]
-  configs += [ ":config" ]
-  deps = [
-    ":smbios",
-    "//src/devices/testing/fake_ddk",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-bootfs_test("x86-board-bootfs-test") {
-  name = "x86-board-test"
-  deps = [ ":x86-board-test" ]
 }
 
 test("x86-ec-test-bin") {

@@ -13,7 +13,7 @@
 #include <limits.h>
 
 #include <fbl/algorithm.h>
-
+namespace smbios {
 namespace {
 
 // Map the structure with the given physical address and length.  Neither needs
@@ -27,6 +27,10 @@ zx_status_t MapStructure(const zx::resource& resource, zx_paddr_t paddr, size_t 
   size_t mapping_size =
       fbl::round_up<size_t>(length + page_offset, static_cast<size_t>(zx_system_get_page_size()));
   zx_status_t status = zx::vmo::create_physical(resource, base_paddr, mapping_size, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED);
   if (status != ZX_OK) {
     return status;
   }
@@ -179,3 +183,4 @@ zx_status_t SmbiosInfo::Load() {
   };
   return smbios.entry_point()->WalkStructs(smbios.struct_table_start(), callback);
 }
+}  // namespace smbios

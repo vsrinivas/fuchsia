@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SMBIOS_H_
-#define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SMBIOS_H_
+#ifndef SRC_DEVICES_BOARD_LIB_SMBIOS_SMBIOS_H_
+#define SRC_DEVICES_BOARD_LIB_SMBIOS_SMBIOS_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <string>
+
+namespace smbios {
 
 class SmbiosInfo {
  public:
@@ -25,4 +27,6 @@ class SmbiosInfo {
 // Check if we consider the given product name to be valid.
 bool smbios_product_name_is_valid(const char* product_name);
 
-#endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_SMBIOS_H_
+}  // namespace smbios
+
+#endif  // SRC_DEVICES_BOARD_LIB_SMBIOS_SMBIOS_H_
