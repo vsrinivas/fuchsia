@@ -448,5 +448,4 @@ third_party_rust_crate_log_visibility = [
   "//tools/fvdl/common:*",
   "//tools/lib/cm_fidl_analyzer:*",
   "//tools/pretty_serial:*",
-  "//tools/shush:*",
 ]
