@@ -5,13 +5,12 @@
 group("bin") {
   testonly = true
   deps = [
-    "cpuperf_provider",
-
     # TODO(fxbug.dev/49942): temporarily disable while flake is investigated.
     # "fidl_compatibility_test",
-    "ktrace_provider",
     "//src/developer/sched",
     "//src/developer/trace2json",
+    "//src/performance/bin/cpuperf_provider",
+    "//src/performance/bin/ktrace_provider",
     "//src/ui/benchmarks",
   ]
 }
