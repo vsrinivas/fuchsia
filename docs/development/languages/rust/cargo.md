@@ -29,11 +29,11 @@ build the `Cargo.toml` files.
 
 Most editors require the `Cargo.toml` file to be in a location that is adjacent to
 the `src/` directory. Symlinks to these files can be generated using the following
-commands, where `//garnet/foo/path/to/target:label` is the GN target that you want
+commands, where `//foo/path/to/target:some_label` is the GN target that you want
 to work on:
 
 ```sh
-fx gen-cargo garnet/foo/path/to/target:some_label
+fx gen-cargo foo/path/to/target:some_label
 ```
 
 **Note:** The above will not work for `rustc_staticlib` targets, e.g. Rust
@@ -41,7 +41,7 @@ crates used to generate C bindings generally use the `rustc_staticlib` target
 template. For `rustc_staticlib` targets, you should use the following command instead.
 
 ```sh
-fx gen-cargo garnet/foo/path/to/target:_some_label_rustc_static
+fx gen-cargo foo/path/to/target:_some_label_rustc_static
 ```
 
 Note that this label must point to a [`rustc_...` GN template](README.md#build)

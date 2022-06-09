@@ -25,8 +25,10 @@ When running against a target that supports SSH, botanist streams syslogs from
 the target for the duration of the subprocess that it starts.
 
 The syslog is streamed from the target device by running the
-`log_listener` command (see //garnet/bin/log_listener/README.md) over SSH, and
-writing it to the local file specified by `-syslog`.
+`log_listener` command over SSH, and writing it to the local file specified by
+`-syslog`.
+
+See: [`//src/diagnostics/log_listener/README.md`](/src/diagnostics/log_listener/README.md)
 
 ### Serial log
 

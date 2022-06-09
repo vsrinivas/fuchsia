@@ -24,7 +24,7 @@ encodings implement special privacy-preserving algorithms.
 
 ## FIDL Protocol
 Fuchsia code uses Cobalt through its FIDL protocol.
-See `//garnet/public/lib/cobalt/fidl/cobalt.fidl`.
+See [`//sdk/fidl/fuchsia.cobalt/cobalt.fidl`](/sdk/fidl/fuchsia.cobalt/cobalt.fidl).
 
 ### Cobalt Test App
 

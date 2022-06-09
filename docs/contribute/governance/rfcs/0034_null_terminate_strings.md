@@ -89,6 +89,9 @@ compile.
 
 ## Implementation Strategy
 
+Note: this section lists paths to source code that have changed since this
+document was written. The references were correct at the time of writing.
+
 This is a breaking wire-format change. Its deployment will need to be carefully
 coordinated across all uses of FIDL.
 
