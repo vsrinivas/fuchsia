@@ -13,7 +13,7 @@ use {
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect as inspect,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info},
+    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
@@ -166,7 +166,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
-            fx_log_err!("failed to open /data: {:#}", anyhow!(e));
+            fx_log_warn!("failed to open /data: {:#}", anyhow!(e));
             None
         }
     };
@@ -182,7 +182,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
-            fx_log_err!("failed to open /config/data: {:#}", anyhow!(e));
+            fx_log_warn!("failed to open /config/data: {:#}", anyhow!(e));
             None
         }
     };
