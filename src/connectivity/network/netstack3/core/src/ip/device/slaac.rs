@@ -2512,33 +2512,44 @@ mod tests {
             const_unwrap::const_unwrap_option(NonZeroU64::new(TWO_HOURS_AS_SECS as u64)),
         );
 
-        let Ctx { mut sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::ip::device::update_ipv6_configuration(&mut sync_ctx, &mut (), device_id, |config| {
-            config.slaac_config = SlaacConfiguration {
-                enable_stable_addresses: true,
-                temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
-                    temp_valid_lifetime: ONE_HOUR,
-                    temp_preferred_lifetime: ONE_HOUR,
-                    temp_idgen_retries: 0,
-                    secret_key: SECRET_KEY,
-                }),
-            };
-        });
+        crate::ip::device::update_ipv6_configuration(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device_id,
+            |config| {
+                config.slaac_config = SlaacConfiguration {
+                    enable_stable_addresses: true,
+                    temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
+                        temp_valid_lifetime: ONE_HOUR,
+                        temp_preferred_lifetime: ONE_HOUR,
+                        temp_idgen_retries: 0,
+                        secret_key: SECRET_KEY,
+                    }),
+                };
+            },
+        );
 
-        let set_ip_enabled = |sync_ctx: &mut crate::testutil::DummySyncCtx, enabled| {
-            crate::ip::device::update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
-                config.ip_config.ip_enabled = enabled;
-            })
-        };
-        set_ip_enabled(&mut sync_ctx, true /* enabled */);
+        let set_ip_enabled =
+            |sync_ctx: &mut crate::testutil::DummySyncCtx, non_sync_ctx: &mut (), enabled| {
+                crate::ip::device::update_ipv6_configuration(
+                    sync_ctx,
+                    non_sync_ctx,
+                    device_id,
+                    |config| {
+                        config.ip_config.ip_enabled = enabled;
+                    },
+                )
+            };
+        set_ip_enabled(&mut sync_ctx, &mut non_sync_ctx, true /* enabled */);
         sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
 
         // Generate stable and temporary SLAAC addresses.
         receive_ipv6_packet(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             device_id,
             FrameDestination::Multicast,
             build_slaac_ra_packet(
@@ -2625,7 +2636,7 @@ mod tests {
         ]);
 
         // Disabling IP should remove all the SLAAC addresses.
-        set_ip_enabled(&mut sync_ctx, false /* enabled */);
+        set_ip_enabled(&mut sync_ctx, &mut non_sync_ctx, false /* enabled */);
         let addrs = get_assigned_ipv6_addr_subnets(&sync_ctx, device_id)
             .filter(|a| !a.addr().is_link_local())
             .collect::<Vec<_>>();

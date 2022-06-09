@@ -1259,7 +1259,7 @@ mod tests {
             subnet: _,
         } = Ipv4::DUMMY_CONFIG;
 
-        let crate::testutil::DummyCtx { mut sync_ctx } = Ctx::new(
+        let crate::testutil::DummyCtx { mut sync_ctx, mut non_sync_ctx } = Ctx::new(
             StackStateBuilder::default().build(),
             DummyEventDispatcher::default(),
             Default::default(),
@@ -1268,7 +1268,7 @@ mod tests {
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv4::MINIMUM_LINK_MTU.into());
         crate::ip::device::add_ipv4_addr_subnet(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             device_id,
             AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
         )
@@ -1290,11 +1290,17 @@ mod tests {
         }
 
         let set_config = |sync_ctx: &mut crate::testutil::DummySyncCtx,
+                          non_sync_ctx: &mut (),
                           TestConfig { ip_enabled, gmp_enabled }| {
-            crate::ip::device::update_ipv4_configuration(sync_ctx, &mut (), device_id, |config| {
-                config.ip_config.ip_enabled = ip_enabled;
-                config.ip_config.gmp_enabled = gmp_enabled;
-            });
+            crate::ip::device::update_ipv4_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                device_id,
+                |config| {
+                    config.ip_config.ip_enabled = ip_enabled;
+                    config.ip_config.gmp_enabled = gmp_enabled;
+                },
+            );
         };
         let check_sent_report = |sync_ctx: &mut crate::testutil::DummySyncCtx| {
             assert_matches::assert_matches!(
@@ -1347,41 +1353,69 @@ mod tests {
         //
         // Should send report for the all-systems multicast group that all
         // interfaces join.
-        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
+        set_config(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            TestConfig { ip_enabled: true, gmp_enabled: true },
+        );
         sync_ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
         check_sent_report(&mut sync_ctx);
 
         // Disable IGMP.
-        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: false });
+        set_config(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            TestConfig { ip_enabled: true, gmp_enabled: false },
+        );
         sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
         check_sent_leave(&mut sync_ctx);
 
         // Enable IGMP but disable IPv4.
         //
         // Should do nothing.
-        set_config(&mut sync_ctx, TestConfig { ip_enabled: false, gmp_enabled: true });
+        set_config(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            TestConfig { ip_enabled: false, gmp_enabled: true },
+        );
         sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
         assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Disable IGMP but enable IPv4.
         //
         // Should do nothing.
-        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: false });
+        set_config(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            TestConfig { ip_enabled: true, gmp_enabled: false },
+        );
         sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
         assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Enable IGMP.
-        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
+        set_config(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            TestConfig { ip_enabled: true, gmp_enabled: true },
+        );
         sync_ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
         check_sent_report(&mut sync_ctx);
 
         // Disable IPv4.
-        set_config(&mut sync_ctx, TestConfig { ip_enabled: false, gmp_enabled: true });
+        set_config(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            TestConfig { ip_enabled: false, gmp_enabled: true },
+        );
         sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
         check_sent_leave(&mut sync_ctx);
 
         // Enable IPv4.
-        set_config(&mut sync_ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
+        set_config(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            TestConfig { ip_enabled: true, gmp_enabled: true },
+        );
         sync_ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
         check_sent_report(&mut sync_ctx);
     }

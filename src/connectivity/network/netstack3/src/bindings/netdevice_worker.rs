@@ -107,16 +107,16 @@ impl NetdeviceWorker {
             })?;
 
             let mut ctx = ctx.lock().await;
-            let Ctx { sync_ctx } = ctx.deref_mut();
-            netstack3_core::receive_frame(sync_ctx, id, packet::Buf::new(&mut buff[..], ..len))
-                .unwrap_or_else(|e| {
-                    log::error!(
-                        "failed to receive frame {:?} on port {:?} {:?}",
-                        &buff[..len],
-                        port,
-                        e
-                    )
-                });
+            let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+            netstack3_core::receive_frame(
+                sync_ctx,
+                non_sync_ctx,
+                id,
+                packet::Buf::new(&mut buff[..], ..len),
+            )
+            .unwrap_or_else(|e| {
+                log::error!("failed to receive frame {:?} on port {:?} {:?}", &buff[..len], port, e)
+            });
         }
     }
 }
@@ -214,8 +214,8 @@ impl DeviceHandler {
             netdevice_client::port_slab::Entry::Vacant(e) => e,
         };
         let ctx = &mut ns.ctx.lock().await;
-        let Ctx { sync_ctx } = ctx.deref_mut();
-        let core_id = netstack3_core::add_ethernet_device(sync_ctx, mac_addr, mtu);
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        let core_id = netstack3_core::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
         state_entry.insert(core_id);
         let make_info = |id| {
             let name = name.unwrap_or_else(|| format!("eth{}", id));

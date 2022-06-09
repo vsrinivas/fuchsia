@@ -155,15 +155,15 @@ impl TimerContext<TimerId> for BenchmarkCoreContext {
 // IPv4 packet frame which we expect will be parsed and forwarded without
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
-    let Ctx { mut sync_ctx } = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-        .build_with(
+    let Ctx { mut sync_ctx, mut non_sync_ctx } =
+        DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build_with::<_, _, ()>(
             StackStateBuilder::default(),
             BenchmarkEventDispatcher::default(),
             BenchmarkCoreContext::default(),
         );
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut sync_ctx,
-        &mut (),
+        &mut non_sync_ctx,
         DeviceId::new_ethernet(0),
         true,
     )
@@ -214,6 +214,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
         black_box(
             receive_frame(
                 black_box(&mut sync_ctx),
+                black_box(&mut non_sync_ctx),
                 black_box(device),
                 black_box(Buf::new(&mut buf[..], range.clone())),
             )

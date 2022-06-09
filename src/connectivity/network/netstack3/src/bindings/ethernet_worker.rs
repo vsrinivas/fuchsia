@@ -141,12 +141,12 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                         }
                         eth::Event::Receive(rx, _flags) => {
                             let len = rx.read(&mut buf);
-                            let mut ctx = ctx.lock().await; let Ctx { sync_ctx } = ctx.deref_mut();
+                            let mut ctx = ctx.lock().await; let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
 
                             if let Some(id) =
                                 AsRef::<Devices>::as_ref(&sync_ctx.dispatcher).get_core_id(id)
                             {
-                                receive_frame(sync_ctx, id, Buf::new(&mut buf[..len], ..))
+                                receive_frame(sync_ctx, non_sync_ctx,id, Buf::new(&mut buf[..len], ..))
                                     .unwrap_or_else(|e| error!("error receiving frame: {}", e))
                             } else {
                                 debug!("received ethernet frame on disabled device: {}", id);

@@ -39,9 +39,9 @@ use netstack3_core::{
     set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BlanketCoreContext,
     BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
     IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError,
-    LocalAddressError, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
-    UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
-    UdpSocketId, UdpStateContext, UdpUnboundId,
+    LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId,
+    UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
+    UdpSockCreationError, UdpSocketId, UdpStateContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -624,32 +624,47 @@ impl IntoErrno for IcmpSendError {
 
 /// An extension trait that allows generic access to IP-specific ICMP functionality in the Core.
 pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
-    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self>;
 
-    fn remove_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn remove_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     );
 
-    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Self>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<<IcmpEcho as TransportState<Self, (), SyncCtx<D, C>>>::LocalIdentifier>,
+        local_id: Option<
+            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>>>::LocalIdentifier,
+        >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError>;
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn send_icmp_echo_request<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
     ) -> Result<(), (B, IcmpSendError)>;
 
-    fn send_conn<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn send_conn<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         mut body: B,
     ) -> Result<(), (B, IcmpSendError)>
@@ -659,7 +674,7 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
         use net_types::Witness as _;
 
         let (src_ip, _id, dst_ip, IcmpRemoteIdentifier {}) =
-            IcmpEcho::get_conn_info(ctx, &mut (), conn);
+            IcmpEcho::get_conn_info(sync_ctx, ctx, conn);
         let packet = {
             // This cruft (putting this logic inside a block, assigning to the
             // temporary variable `res` rather than inlining this expression
@@ -693,76 +708,124 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
         // packet's body. This is fragile; we should perhaps expose a mutable
         // getter instead.
         std::mem::drop(packet);
-        Self::send_icmp_echo_request(ctx, conn, seq, body)
+        Self::send_icmp_echo_request(sync_ctx, ctx, conn, seq, body)
     }
 }
 
 impl IcmpEchoIpExt for Ipv4 {
-    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self> {
-        icmp::create_icmpv4_unbound(ctx)
+        icmp::create_icmpv4_unbound(sync_ctx)
     }
 
-    fn remove_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn remove_icmp_unbound<
+        D: EventDispatcher,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     ) {
-        icmp::remove_icmpv4_unbound(ctx, unbound)
+        icmp::remove_icmpv4_unbound(sync_ctx, unbound)
     }
 
-    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn new_icmp_connection<
+        D: EventDispatcher,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv4>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<<IcmpEcho as TransportState<Self, (), SyncCtx<D, C>>>::LocalIdentifier>,
+        local_id: Option<
+            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>>>::LocalIdentifier,
+        >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
-        icmp::connect_icmpv4(ctx, unbound, local_addr, remote_addr, local_id.unwrap_or_default())
+        icmp::connect_icmpv4(
+            sync_ctx,
+            ctx,
+            unbound,
+            local_addr,
+            remote_addr,
+            local_id.unwrap_or_default(),
+        )
     }
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn send_icmp_echo_request<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
     ) -> Result<(), (B, IcmpSendError)> {
-        icmp::send_icmpv4_echo_request(ctx, conn, seq, body)
+        icmp::send_icmpv4_echo_request(sync_ctx, ctx, conn, seq, body)
             .map_err(|(body, err)| (body, err.into()))
     }
 }
 
 impl IcmpEchoIpExt for Ipv6 {
-    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self> {
-        icmp::create_icmpv6_unbound(ctx)
+        icmp::create_icmpv6_unbound(sync_ctx)
     }
 
-    fn remove_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn remove_icmp_unbound<
+        D: EventDispatcher,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     ) {
-        icmp::remove_icmpv6_unbound(ctx, unbound)
+        icmp::remove_icmpv6_unbound(sync_ctx, unbound)
     }
 
-    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn new_icmp_connection<
+        D: EventDispatcher,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv6>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<<IcmpEcho as TransportState<Self, (), SyncCtx<D, C>>>::LocalIdentifier>,
+        local_id: Option<
+            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>>>::LocalIdentifier,
+        >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
-        icmp::connect_icmpv6(ctx, unbound, local_addr, remote_addr, local_id.unwrap_or_default())
+        icmp::connect_icmpv6(
+            sync_ctx,
+            ctx,
+            unbound,
+            local_addr,
+            remote_addr,
+            local_id.unwrap_or_default(),
+        )
     }
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>(
-        ctx: &mut SyncCtx<D, C>,
+    fn send_icmp_echo_request<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    >(
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
     ) -> Result<(), (B, IcmpSendError)> {
-        icmp::send_icmpv6_echo_request(ctx, conn, seq, body)
+        icmp::send_icmpv6_echo_request(sync_ctx, ctx, conn, seq, body)
             .map_err(|(body, err)| (body, err.into()))
     }
 }
@@ -773,8 +836,8 @@ impl OptionFromU16 for u16 {
     }
 }
 
-impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext>
-    TransportState<I, (), SyncCtx<D, C>> for IcmpEcho
+impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
+    TransportState<I, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>> for IcmpEcho
 {
     type CreateConnError = icmp::IcmpSockCreationError;
     type CreateListenerError = icmp::IcmpSockCreationError;
@@ -782,13 +845,13 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext>
     type LocalIdentifier = u16;
     type RemoteIdentifier = IcmpRemoteIdentifier;
 
-    fn create_unbound(ctx: &mut SyncCtx<D, C>) -> Self::UnboundId {
-        I::new_icmp_unbound(ctx)
+    fn create_unbound(sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>) -> Self::UnboundId {
+        I::new_icmp_unbound(sync_ctx)
     }
 
     fn connect_unbound(
-        sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         id: Self::UnboundId,
         local_addr: Option<SpecifiedAddr<I::Addr>>,
         local_id: Option<Self::LocalIdentifier>,
@@ -796,12 +859,12 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext>
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError> {
         let IcmpRemoteIdentifier {} = remote_id;
-        I::new_icmp_connection(sync_ctx, id, local_addr, local_id, remote_addr)
+        I::new_icmp_connection(sync_ctx, ctx, id, local_addr, local_id, remote_addr)
     }
 
     fn listen_on_unbound(
-        _sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: Self::UnboundId,
         _addr: Option<SpecifiedAddr<I::Addr>>,
         _stream_id: Option<Self::LocalIdentifier>,
@@ -810,8 +873,8 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext>
     }
 
     fn get_conn_info(
-        _sync_ctx: &SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> (
         SpecifiedAddr<I::Addr>,
@@ -823,16 +886,16 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext>
     }
 
     fn get_listener_info(
-        _sync_ctx: &SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn remove_conn(
-        _sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> (
         SpecifiedAddr<I::Addr>,
@@ -844,50 +907,59 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext>
     }
 
     fn remove_listener(
-        _sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
-    fn remove_unbound(sync_ctx: &mut SyncCtx<D, C>, id: Self::UnboundId) {
+    fn remove_unbound(sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>, id: Self::UnboundId) {
         I::remove_icmp_unbound(sync_ctx, id)
     }
 
     fn set_socket_device(
-        _sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
-        _device: Option<<SyncCtx<D, C> as IpDeviceIdContext<I>>::DeviceId>,
+        _device: Option<<SyncCtx<D, C, NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn get_bound_device(
-        _sync_ctx: &SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
-    ) -> Option<<SyncCtx<D, C> as IpDeviceIdContext<I>>::DeviceId> {
+    ) -> Option<<SyncCtx<D, C, NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn set_reuse_port(
-        _sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _id: Self::UnboundId,
         _reuse_port: bool,
     ) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
-    fn get_reuse_port(_sync_ctx: &SyncCtx<D, C>, _ctx: &mut (), _id: SocketId<I, Self>) -> bool {
+    fn get_reuse_port(
+        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _id: SocketId<I, Self>,
+    ) -> bool {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
 
-impl<I: IcmpEchoIpExt, B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext>
-    BufferTransportState<I, B, (), SyncCtx<D, C>> for IcmpEcho
+impl<
+        I: IcmpEchoIpExt,
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext,
+    > BufferTransportState<I, B, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>> for IcmpEcho
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
@@ -896,8 +968,8 @@ where
     type SendListenerError = IcmpSendError;
 
     fn send(
-        _sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
         _local_id: Option<Self::LocalIdentifier>,
         _remote_ip: SpecifiedAddr<I::Addr>,
@@ -908,17 +980,17 @@ where
     }
 
     fn send_conn(
-        sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        ctx: &mut NonSyncCtx,
         conn: Self::ConnId,
         body: B,
     ) -> Result<(), (B, Self::SendConnError)> {
-        I::send_conn(sync_ctx, conn, body)
+        I::send_conn(sync_ctx, ctx, conn, body)
     }
 
     fn send_listener(
-        _sync_ctx: &mut SyncCtx<D, C>,
-        _ctx: &mut (),
+        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
         _listener: Self::ListenerId,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
         _remote_ip: SpecifiedAddr<I::Addr>,
@@ -1136,19 +1208,21 @@ where
     T: Transport<Ipv6>,
     T: TransportState<
         I,
-        (),
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
             <SC as RequestHandlerContext<I, T>>::Context,
+            <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
     T: BufferTransportState<
         I,
         Buf<Vec<u8>>,
-        (),
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
             <SC as RequestHandlerContext<I, T>>::Context,
+            <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
     SC: RequestHandlerContext<I, T>,
@@ -1157,10 +1231,12 @@ where
     SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
         <SC as RequestHandlerContext<I, T>>::Context,
-    >: TransportIpContext<I, ()>,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
+    >: TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
     <SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
         <SC as RequestHandlerContext<I, T>>::Context,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
         + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
         + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
@@ -1169,6 +1245,7 @@ where
             <SyncCtx<
                 <SC as RequestHandlerContext<I, T>>::Dispatcher,
                 <SC as RequestHandlerContext<I, T>>::Context,
+                <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
             > as IpDeviceIdContext<I>>::DeviceId,
         >,
     >,
@@ -1193,9 +1270,9 @@ where
             async move {
                 let id = {
                     let mut guard = ctx.lock().await;
-                    let Ctx { sync_ctx } = guard.deref_mut();
+                    let Ctx { sync_ctx, non_sync_ctx: _ } = guard.deref_mut();
                     let unbound_id = T::create_unbound(sync_ctx);
-                    let SyncCtx { state: _, dispatcher, ctx: _ } = sync_ctx;
+                    let SyncCtx { state: _, dispatcher, ctx: _, non_sync_ctx_marker: _ } = sync_ctx;
                     let SocketCollection { binding_data, conns: _, listeners: _ } =
                         I::get_collection_mut(dispatcher);
                     binding_data.push(BindingData::new(
@@ -1861,6 +1938,7 @@ trait RequestHandlerContext<I, T>:
     LockableContext<
     Dispatcher = <Self as RequestHandlerContext<I, T>>::Dispatcher,
     Context = <Self as RequestHandlerContext<I, T>>::Context,
+    NonSyncCtx = <Self as RequestHandlerContext<I, T>>::NonSyncCtx,
 >
 where
     I: IpExt,
@@ -1870,6 +1948,7 @@ where
 {
     type Dispatcher: RequestHandlerDispatcher<I, T>;
     type Context: BlanketCoreContext;
+    type NonSyncCtx: NonSyncContext;
 }
 
 impl<I, T, C> RequestHandlerContext<I, T> for C
@@ -1883,10 +1962,11 @@ where
 {
     type Dispatcher = C::Dispatcher;
     type Context = C::Context;
+    type NonSyncCtx = C::NonSyncCtx;
 }
 
 struct RequestHandler<'a, I, T, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context>>>::Guard,
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context, C::NonSyncCtx>>>::Guard,
     binding_id: usize,
     rights: fio::OpenFlags,
     _marker: PhantomData<(I, T)>,
@@ -1913,12 +1993,12 @@ where
     }
 
     fn get_state(&self) -> &BindingData<I, T> {
-        let Ctx { sync_ctx } = self.ctx.deref();
+        let Ctx { sync_ctx, non_sync_ctx: _ } = self.ctx.deref();
         I::get_collection(&sync_ctx.dispatcher).binding_data.get(self.binding_id).unwrap()
     }
 
     fn get_state_mut(&mut self) -> &mut BindingData<I, T> {
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx: _ } = self.ctx.deref_mut();
         I::get_collection_mut(&mut sync_ctx.dispatcher)
             .binding_data
             .get_mut(self.binding_id)
@@ -1933,17 +2013,19 @@ where
     T: Transport<Ipv6>,
     T: TransportState<
         I,
-        (),
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
             <SC as RequestHandlerContext<I, T>>::Context,
+            <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
     SC: RequestHandlerContext<I, T>,
     SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
         <SC as RequestHandlerContext<I, T>>::Context,
-    >: TransportIpContext<I, ()>,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
+    >: TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
 {
     /// Handles a [POSIX socket connect request].
     ///
@@ -1964,8 +2046,9 @@ where
             SocketState::BoundListen { listener_id } => {
                 // if we're bound to a listen mode, we need to remove the
                 // listener, and retrieve the bound local addr and port.
-                let Ctx { sync_ctx } = self.ctx.deref_mut();
-                let (local_ip, local_port) = T::remove_listener(sync_ctx, &mut (), listener_id);
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+                let (local_ip, local_port) =
+                    T::remove_listener(sync_ctx, non_sync_ctx, listener_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
                     I::get_collection_mut(&mut sync_ctx.dispatcher).listeners.remove(&listener_id),
@@ -1977,13 +2060,13 @@ where
             SocketState::BoundConnect { conn_id, .. } => {
                 // if we're bound to a connect mode, we need to remove the
                 // connection, and retrieve the bound local addr and port.
-                let Ctx { sync_ctx } = self.ctx.deref_mut();
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (local_ip, local_port, _, _): (
                     _,
                     _,
                     SpecifiedAddr<I::Addr>,
                     T::RemoteIdentifier,
-                ) = T::remove_conn(sync_ctx, &mut (), conn_id);
+                ) = T::remove_conn(sync_ctx, non_sync_ctx, conn_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
                     I::get_collection_mut(&mut sync_ctx.dispatcher).conns.remove(&conn_id),
@@ -1993,10 +2076,10 @@ where
             }
         };
 
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
         let conn_id = T::connect_unbound(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             unbound_id,
             local_addr,
             local_port,
@@ -2045,17 +2128,18 @@ where
         local_port: Option<
             <T as TransportState<
                 I,
-                (),
+                <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
                 SyncCtx<
                     <SC as RequestHandlerContext<I, T>>::Dispatcher,
                     <SC as LockableContext>::Context,
+                    <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
                 >,
             >>::LocalIdentifier,
         >,
     ) -> Result<<T as Transport<I>>::ListenerId, fposix::Errno> {
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
         let listener_id =
-            T::listen_on_unbound(sync_ctx, &mut (), unbound_id, local_addr, local_port)
+            T::listen_on_unbound(sync_ctx, non_sync_ctx, unbound_id, local_addr, local_port)
                 .map_err(IntoErrno::into_errno)?;
         self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
         assert_eq!(
@@ -2070,24 +2154,25 @@ where
     /// Handles a [POSIX socket get_sock_name request].
     ///
     /// [POSIX socket get_sock_name request]: fposix_socket::SynchronousDatagramSocketRequest::GetSockName
-    fn get_sock_name(self) -> Result<fnet::SocketAddress, fposix::Errno> {
+    fn get_sock_name(mut self) -> Result<fnet::SocketAddress, fposix::Errno> {
         match self.get_state().info.state {
             SocketState::Unbound { .. } => {
                 return Err(fposix::Errno::Enotsock);
             }
             SocketState::BoundConnect { conn_id, .. } => {
-                let Ctx { sync_ctx } = self.ctx.deref();
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (local_ip, local_port, _, _): (
                     _,
                     _,
                     SpecifiedAddr<I::Addr>,
                     T::RemoteIdentifier,
-                ) = T::get_conn_info(sync_ctx, &mut (), conn_id);
+                ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
                 Ok(I::SocketAddress::new(*local_ip, local_port.into()).into_sock_addr())
             }
             SocketState::BoundListen { listener_id } => {
-                let Ctx { sync_ctx } = self.ctx.deref();
-                let (local_ip, local_port) = T::get_listener_info(sync_ctx, &mut (), listener_id);
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+                let (local_ip, local_port) =
+                    T::get_listener_info(sync_ctx, non_sync_ctx, listener_id);
                 let local_ip = local_ip.map_or(I::UNSPECIFIED_ADDRESS, |local_ip| *local_ip);
                 Ok(I::SocketAddress::new(local_ip, local_port.into()).into_sock_addr())
             }
@@ -2115,7 +2200,7 @@ where
     /// Handles a [POSIX socket get_peer_name request].
     ///
     /// [POSIX socket get_peer_name request]: fposix_socket::SynchronousDatagramSocketRequest::GetPeerName
-    fn get_peer_name(self) -> Result<fnet::SocketAddress, fposix::Errno> {
+    fn get_peer_name(mut self) -> Result<fnet::SocketAddress, fposix::Errno> {
         match self.get_state().info.state {
             SocketState::Unbound { .. } => {
                 return Err(fposix::Errno::Enotsock);
@@ -2124,13 +2209,13 @@ where
                 return Err(fposix::Errno::Enotconn);
             }
             SocketState::BoundConnect { conn_id, .. } => {
-                let Ctx { sync_ctx } = self.ctx.deref();
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (_, _, remote_ip, remote_port): (
                     SpecifiedAddr<I::Addr>,
                     T::LocalIdentifier,
                     _,
                     _,
-                ) = T::get_conn_info(sync_ctx, &mut (), conn_id);
+                ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
                 Ok(I::SocketAddress::new(*remote_ip, remote_port.into()).into_sock_addr())
             }
         }
@@ -2141,7 +2226,9 @@ where
         sync_ctx: &mut SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
             <SC as RequestHandlerContext<I, T>>::Context,
+            <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
+        ctx: &mut <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     ) {
         let SocketControlInfo { _properties, state } = info;
         match state {
@@ -2154,7 +2241,7 @@ where
                 );
                 // remove from core:
                 let _: (Option<SpecifiedAddr<I::Addr>>, T::LocalIdentifier) =
-                    T::remove_listener(sync_ctx, &mut (), listener_id);
+                    T::remove_listener(sync_ctx, ctx, listener_id);
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 // remove from bindings:
@@ -2168,7 +2255,7 @@ where
                     T::LocalIdentifier,
                     SpecifiedAddr<I::Addr>,
                     T::RemoteIdentifier,
-                ) = T::remove_conn(sync_ctx, &mut (), conn_id);
+                ) = T::remove_conn(sync_ctx, ctx, conn_id);
             }
         }
     }
@@ -2188,8 +2275,8 @@ where
                     available_data: _,
                 }) => info);
             // always make sure the socket is closed with core.
-            let Ctx { sync_ctx } = self.ctx.deref_mut();
-            Self::close_core(info, sync_ctx);
+            let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+            Self::close_core(info, sync_ctx, non_sync_ctx);
         } else {
             inner.ref_count -= 1;
         }
@@ -2268,29 +2355,33 @@ where
     T: Transport<Ipv6>,
     T: TransportState<
         I,
-        (),
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
             <SC as RequestHandlerContext<I, T>>::Context,
+            <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
     T: BufferTransportState<
         I,
         Buf<Vec<u8>>,
-        (),
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
             <SC as RequestHandlerContext<I, T>>::Context,
+            <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
     SC: RequestHandlerContext<I, T>,
     SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
         <SC as RequestHandlerContext<I, T>>::Context,
-    >: TransportIpContext<I, ()>,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
+    >: TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
     <SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
         <SC as RequestHandlerContext<I, T>>::Context,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
         + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
         + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
@@ -2299,6 +2390,7 @@ where
             <SyncCtx<
                 <SC as RequestHandlerContext<I, T>>::Dispatcher,
                 <SC as RequestHandlerContext<I, T>>::Context,
+                <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
             > as IpDeviceIdContext<I>>::DeviceId,
         >,
     >,
@@ -2328,9 +2420,17 @@ where
                     // sending from that socket. Emulate that here by binding
                     // with an unspecified IP and port.
                     self.bind_inner(unbound_id, None, None).and_then(|listener_id| {
-                        let Ctx { sync_ctx } = self.ctx.deref_mut();
-                        T::send_listener(sync_ctx, &mut (), listener_id, None, addr, port, body)
-                            .map_err(|(_body, err)| err.into_errno())
+                        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+                        T::send_listener(
+                            sync_ctx,
+                            non_sync_ctx,
+                            listener_id,
+                            None,
+                            addr,
+                            port,
+                            body,
+                        )
+                        .map_err(|(_body, err)| err.into_errno())
                     })
                 }
                 None => Err(fposix::Errno::Edestaddrreq),
@@ -2339,7 +2439,7 @@ where
                 if shutdown_write {
                     return Err(fposix::Errno::Epipe);
                 }
-                let Ctx { sync_ctx } = self.ctx.deref_mut();
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 match remote {
                     Some((addr, port)) => {
                         // Caller specified a remote socket address; use
@@ -2350,10 +2450,10 @@ where
                             _,
                             SpecifiedAddr<I::Addr>,
                             T::RemoteIdentifier,
-                        ) = T::get_conn_info(sync_ctx, &mut (), conn_id);
+                        ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
                         T::send(
                             sync_ctx,
-                            &mut (),
+                            non_sync_ctx,
                             Some(local_ip),
                             Some(local_port),
                             addr,
@@ -2365,15 +2465,15 @@ where
                     None => {
                         // Caller did not specify a remote socket address; just
                         // use the existing conn.
-                        T::send_conn(sync_ctx, &mut (), conn_id, body)
+                        T::send_conn(sync_ctx, non_sync_ctx, conn_id, body)
                             .map_err(|(_body, err)| err.into_errno())
                     }
                 }
             }
             SocketState::BoundListen { listener_id } => match remote {
                 Some((addr, port)) => {
-                    let Ctx { sync_ctx } = self.ctx.deref_mut();
-                    T::send_listener(sync_ctx, &mut (), listener_id, None, addr, port, body)
+                    let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+                    T::send_listener(sync_ctx, non_sync_ctx, listener_id, None, addr, port, body)
                         .map_err(|(_body, err)| err.into_errno())
                 }
                 None => Err(fposix::Errno::Edestaddrreq),
@@ -2392,16 +2492,16 @@ where
         let state: &SocketState<_, _> = &self.get_state_mut().info.state;
         let id = state.into();
 
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
-        T::set_socket_device(sync_ctx, &mut (), id, device).map_err(IntoErrno::into_errno)
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        T::set_socket_device(sync_ctx, non_sync_ctx, id, device).map_err(IntoErrno::into_errno)
     }
 
     fn get_bound_device(mut self) -> Result<Option<String>, fposix::Errno> {
         let state: &SocketState<_, _> = &self.get_state_mut().info.state;
         let id = state.into();
 
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
-        let device = match T::get_bound_device(sync_ctx, &mut (), id) {
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let device = match T::get_bound_device(sync_ctx, non_sync_ctx, id) {
             None => return Ok(None),
             Some(d) => d,
         };
@@ -2418,8 +2518,8 @@ where
     fn set_reuse_port(mut self, reuse_port: bool) -> Result<(), fposix::Errno> {
         match self.get_state_mut().info.state {
             SocketState::Unbound { unbound_id } => {
-                let Ctx { sync_ctx } = self.ctx.deref_mut();
-                T::set_reuse_port(sync_ctx, &mut (), unbound_id, reuse_port);
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+                T::set_reuse_port(sync_ctx, non_sync_ctx, unbound_id, reuse_port);
                 Ok(())
             }
             SocketState::BoundListen { .. } | SocketState::BoundConnect { .. } => {
@@ -2429,12 +2529,12 @@ where
         }
     }
 
-    fn get_reuse_port(self) -> bool {
+    fn get_reuse_port(mut self) -> bool {
         let state = &self.get_state().info.state;
         let id = state.into();
 
-        let Ctx { sync_ctx } = self.ctx.deref();
-        T::get_reuse_port(sync_ctx, &mut (), id)
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        T::get_reuse_port(sync_ctx, non_sync_ctx, id)
     }
 
     fn shutdown(mut self, how: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {

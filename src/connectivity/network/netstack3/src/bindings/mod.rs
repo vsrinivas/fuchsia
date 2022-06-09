@@ -61,8 +61,8 @@ use netstack3_core::{
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
     BlanketCoreContext, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher,
     EventDispatcher, IpDeviceConfiguration, IpExt, Ipv4DeviceConfiguration,
-    Ipv6DeviceConfiguration, SlaacConfiguration, SyncCtx, TimerId, UdpBoundId, UdpConnId,
-    UdpContext, UdpListenerId,
+    Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, SyncCtx, TimerId, UdpBoundId,
+    UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -77,10 +77,11 @@ use netstack3_core::{
 const DEFAULT_LOOPBACK_MTU: u32 = 65536;
 
 pub(crate) trait LockableContext:
-    for<'a> Lockable<'a, Ctx<Self::Dispatcher, Self::Context>>
+    for<'a> Lockable<'a, Ctx<Self::Dispatcher, Self::Context, Self::NonSyncCtx>>
 {
     type Dispatcher: EventDispatcher;
     type Context: BlanketCoreContext + Send;
+    type NonSyncCtx: NonSyncContext + Send;
 }
 
 pub(crate) trait DeviceStatusNotifier {
@@ -160,9 +161,9 @@ impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsContextImpl {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsContextImpl>> for Netstack {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher, BindingsContextImpl>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher, BindingsContextImpl>>;
+impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsContextImpl, ()>> for Netstack {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher, BindingsContextImpl, ()>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher, BindingsContextImpl, ()>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -192,14 +193,15 @@ impl AsMut<UdpSockets> for BindingsDispatcher {
     }
 }
 
-impl<D, C> timers::TimerHandler<TimerId> for Ctx<D, C>
+impl<D, C, NonSyncCtx> timers::TimerHandler<TimerId> for Ctx<D, C, NonSyncCtx>
 where
     D: EventDispatcher + Send + Sync + 'static,
     C: BlanketCoreContext + AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
+    NonSyncCtx: NonSyncContext + Send + Sync + 'static,
 {
     fn handle_expired_timer(&mut self, timer: TimerId) {
-        let Ctx { sync_ctx } = self;
-        handle_timer(sync_ctx, &mut (), timer)
+        let Ctx { sync_ctx, non_sync_ctx } = self;
+        handle_timer(sync_ctx, non_sync_ctx, timer)
     }
 
     fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {
@@ -212,8 +214,9 @@ where
     C: LockableContext + Clone + Send + Sync + 'static,
     C::Dispatcher: Send + Sync + 'static,
     C::Context: AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
+    C::NonSyncCtx: Send + Sync + 'static,
 {
-    type Handler = Ctx<C::Dispatcher, C::Context>;
+    type Handler = Ctx<C::Dispatcher, C::Context, C::NonSyncCtx>;
 }
 
 impl<D> ConversionContext for D
@@ -496,10 +499,11 @@ trait MutableDeviceState {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
 }
 
-impl<D, C> MutableDeviceState for Ctx<D, C>
+impl<D, C, NonSyncCtx> MutableDeviceState for Ctx<D, C, NonSyncCtx>
 where
     D: EventDispatcher + AsMut<Devices> + DeviceStatusNotifier,
     C: BlanketCoreContext,
+    NonSyncCtx: NonSyncContext,
 {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
         if let Some(device_info) = self.sync_ctx.dispatcher.as_mut().get_device_mut(id) {
@@ -525,8 +529,9 @@ trait InterfaceControl {
 fn set_interface_enabled<
     D: EventDispatcher + AsRef<Devices> + AsMut<Devices>,
     C: BlanketCoreContext,
+    NonSyncCtx: NonSyncContext,
 >(
-    Ctx { sync_ctx }: &mut Ctx<D, C>,
+    Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<D, C, NonSyncCtx>,
     id: u64,
     should_enable: bool,
 ) -> Result<(), fidl_net_stack::Error> {
@@ -570,20 +575,21 @@ fn set_interface_enabled<
         .notify(InterfaceUpdate::OnlineChanged(should_enable))
         .expect("interfaces worker not running");
 
-    update_ipv4_configuration(sync_ctx, core_id, |config| {
+    update_ipv4_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
         config.ip_config.ip_enabled = should_enable;
     });
-    update_ipv6_configuration(sync_ctx, core_id, |config| {
+    update_ipv6_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
         config.ip_config.ip_enabled = should_enable;
     });
 
     Ok(())
 }
 
-impl<D, C> InterfaceControl for Ctx<D, C>
+impl<D, C, NonSyncCtx> InterfaceControl for Ctx<D, C, NonSyncCtx>
 where
     D: EventDispatcher + AsRef<Devices> + AsMut<Devices>,
     C: BlanketCoreContext,
+    NonSyncCtx: NonSyncContext,
 {
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         set_interface_enabled(self, id, true /* should_enable */)
@@ -594,7 +600,7 @@ where
     }
 }
 
-type NetstackContext = Arc<Mutex<Ctx<BindingsDispatcher, BindingsContextImpl>>>;
+type NetstackContext = Arc<Mutex<Ctx<BindingsDispatcher, BindingsContextImpl, ()>>>;
 
 /// The netstack.
 ///
@@ -628,6 +634,7 @@ impl Default for NetstackSeed {
 impl LockableContext for Netstack {
     type Dispatcher = BindingsDispatcher;
     type Context = BindingsContextImpl;
+    type NonSyncCtx = ();
 }
 
 impl InterfaceEventProducerFactory for Netstack {
@@ -686,7 +693,7 @@ impl NetstackSeed {
 
         {
             let mut ctx = netstack.lock().await;
-            let Ctx { sync_ctx } = ctx.deref_mut();
+            let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
 
             // Add and initialize the loopback interface with the IPv4 and IPv6
             // loopback addresses and on-link routes to the loopback subnets.
@@ -719,12 +726,12 @@ impl NetstackSeed {
                 })
                 .expect("error adding loopback device");
             // Don't need DAD and IGMP/MLD on loopback.
-            update_ipv4_configuration(sync_ctx, loopback, |config| {
+            update_ipv4_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
                 *config = Ipv4DeviceConfiguration {
                     ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
                 };
             });
-            update_ipv6_configuration(sync_ctx, loopback, |config| {
+            update_ipv6_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
                 *config = Ipv6DeviceConfiguration {
                     dad_transmits: None,
                     max_router_solicitations: None,
@@ -737,6 +744,7 @@ impl NetstackSeed {
             });
             add_ip_addr_subnet(
                 sync_ctx,
+                non_sync_ctx,
                 loopback,
                 AddrSubnetEither::V4(
                     AddrSubnet::from_witness(
@@ -749,12 +757,14 @@ impl NetstackSeed {
             .expect("error adding IPv4 loopback address");
             add_route(
                 sync_ctx,
+                non_sync_ctx,
                 AddableEntryEither::new(Ipv4::LOOPBACK_SUBNET.into(), Some(loopback), None)
                     .expect("error creating IPv4 route entry"),
             )
             .expect("error adding IPv4 loopback on-link subnet route");
             add_ip_addr_subnet(
                 sync_ctx,
+                non_sync_ctx,
                 loopback,
                 AddrSubnetEither::V6(
                     AddrSubnet::from_witness(
@@ -767,6 +777,7 @@ impl NetstackSeed {
             .expect("error adding IPv6 loopback address");
             add_route(
                 sync_ctx,
+                non_sync_ctx,
                 AddableEntryEither::new(Ipv6::LOOPBACK_SUBNET.into(), Some(loopback), None)
                     .expect("error creating IPv6 route entry"),
             )
@@ -777,6 +788,7 @@ impl NetstackSeed {
                 state: _,
                 dispatcher: BindingsDispatcher { devices: _, icmp_echo_sockets: _, udp_sockets: _ },
                 ctx: BindingsContextImpl { rng: _, timers },
+                non_sync_ctx_marker: _,
             } = sync_ctx;
             timers.spawn(netstack.clone());
         }

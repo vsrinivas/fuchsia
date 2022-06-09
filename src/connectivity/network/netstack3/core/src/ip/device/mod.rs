@@ -1095,7 +1095,7 @@ mod tests {
 
     #[test]
     fn enable_disable_ipv6() {
-        let DummyCtx { mut sync_ctx } = Ctx::new(
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } = Ctx::new(
             StackStateBuilder::default().build(),
             DummyEventDispatcher::default(),
             Default::default(),
@@ -1104,7 +1104,7 @@ mod tests {
         let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        update_ipv6_configuration(&mut sync_ctx, &mut (), device_id, |config| {
+        update_ipv6_configuration(&mut sync_ctx, &mut non_sync_ctx, device_id, |config| {
             config.ip_config.gmp_enabled = true;
 
             // Doesn't matter as long as we perform DAD and router
@@ -1119,8 +1119,10 @@ mod tests {
         // Enable the device and observe an auto-generated link-local address,
         // router solicitation and DAD for the auto-generated address.
         let test_enable_device =
-            |sync_ctx: &mut DummySyncCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
-                update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
+            |sync_ctx: &mut DummySyncCtx,
+             non_sync_ctx: &mut (),
+             extra_group: Option<MulticastAddr<Ipv6Addr>>| {
+                update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
                     config.ip_config.ip_enabled = true;
                 });
                 assert_eq!(
@@ -1176,15 +1178,15 @@ mod tests {
                 }
                 sync_ctx.ctx.timer_ctx().assert_timers_installed(timers);
             };
-        test_enable_device(&mut sync_ctx, None);
+        test_enable_device(&mut sync_ctx, &mut non_sync_ctx, None);
 
-        let test_disable_device = |sync_ctx: &mut DummySyncCtx| {
-            update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
+        let test_disable_device = |sync_ctx: &mut DummySyncCtx, non_sync_ctx: &mut ()| {
+            update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
                 config.ip_config.ip_enabled = false;
             });
             sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
         };
-        test_disable_device(&mut sync_ctx);
+        test_disable_device(&mut sync_ctx, &mut non_sync_ctx);
         assert_empty(
             IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
                 .ip_state
@@ -1192,10 +1194,15 @@ mod tests {
         );
 
         let multicast_addr = Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS;
-        join_ip_multicast::<Ipv6, _, _>(&mut sync_ctx, &mut (), device_id, multicast_addr);
+        join_ip_multicast::<Ipv6, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device_id,
+            multicast_addr,
+        );
         add_ipv6_addr_subnet(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             device_id,
             ll_addr.to_witness(),
             AddrConfig::Manual,
@@ -1212,8 +1219,8 @@ mod tests {
             HashSet::from([ll_addr.ipv6_unicast_addr()])
         );
 
-        test_enable_device(&mut sync_ctx, Some(multicast_addr));
-        test_disable_device(&mut sync_ctx);
+        test_enable_device(&mut sync_ctx, &mut non_sync_ctx, Some(multicast_addr));
+        test_disable_device(&mut sync_ctx, &mut non_sync_ctx);
         assert_eq!(
             IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
                 .ip_state
@@ -1226,7 +1233,12 @@ mod tests {
             "manual addresses should not be removed on device disable"
         );
 
-        leave_ip_multicast::<Ipv6, _, _>(&mut sync_ctx, &mut (), device_id, multicast_addr);
-        test_enable_device(&mut sync_ctx, None);
+        leave_ip_multicast::<Ipv6, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device_id,
+            multicast_addr,
+        );
+        test_enable_device(&mut sync_ctx, &mut non_sync_ctx, None);
     }
 }

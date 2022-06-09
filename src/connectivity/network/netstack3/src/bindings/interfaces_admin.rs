@@ -360,13 +360,13 @@ async fn run_interface_control<
 
     let device_info = {
         let mut ctx = ctx.lock().await;
-        let Ctx { sync_ctx } = ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
         let info = sync_ctx
             .dispatcher
             .devices
             .remove_device(id)
             .expect("device lifetime should be tied to channel lifetime");
-        netstack3_core::remove_device(sync_ctx, info.core_id());
+        netstack3_core::remove_device(sync_ctx, non_sync_ctx, info.core_id());
         info
     };
     let handler = match device_info.into_info() {

@@ -37,7 +37,7 @@ use crate::{
         AddableEntryEither, DummyDeviceId, IpLayerEvent, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, SyncCtx, TimerId,
+    BlanketCoreContext, Ctx, EventDispatcher, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
 };
 
 /// Asserts that an iterable object produces zero items.
@@ -111,11 +111,13 @@ pub(crate) mod benchmarks {
 pub(crate) type DummyCtx = Ctx<
     DummyEventDispatcher,
     crate::context::testutil::DummyCtx<(), TimerId, Never, (), DummyDeviceId>,
+    (),
 >;
 
 pub(crate) type DummySyncCtx = SyncCtx<
     DummyEventDispatcher,
     crate::context::testutil::DummyCtx<(), TimerId, Never, (), DummyDeviceId>,
+    (),
 >;
 
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
@@ -511,14 +513,18 @@ impl DummyEventDispatcherBuilder {
 
     /// Build a `Ctx` from the present configuration with a caller-provided
     /// dispatcher and `StackStateBuilder`.
-    pub(crate) fn build_with<D: EventDispatcher, C: BlanketCoreContext>(
+    pub(crate) fn build_with<
+        D: EventDispatcher,
+        C: BlanketCoreContext,
+        NonSyncCtx: NonSyncContext + Default,
+    >(
         self,
         state_builder: StackStateBuilder,
         dispatcher: D,
         ctx: C,
-    ) -> Ctx<D, C> {
+    ) -> Ctx<D, C, NonSyncCtx> {
         let mut ctx = Ctx::new(state_builder.build(), dispatcher, ctx);
-        let Ctx { sync_ctx } = &mut ctx;
+        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let DummyEventDispatcherBuilder {
             devices,
@@ -531,16 +537,23 @@ impl DummyEventDispatcherBuilder {
             .into_iter()
             .enumerate()
             .map(|(idx, (mac, ip_subnet))| {
-                let id = crate::add_ethernet_device(sync_ctx, mac, Ipv6::MINIMUM_LINK_MTU.into());
-                crate::device::testutil::enable_device(sync_ctx, id);
+                let id = crate::add_ethernet_device(
+                    sync_ctx,
+                    non_sync_ctx,
+                    mac,
+                    Ipv6::MINIMUM_LINK_MTU.into(),
+                );
+                crate::device::testutil::enable_device(sync_ctx, non_sync_ctx, id);
                 match ip_subnet {
                     Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
                         let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                        crate::device::add_ip_addr_subnet(sync_ctx, id, addr_sub).unwrap();
+                        crate::device::add_ip_addr_subnet(sync_ctx, non_sync_ctx, id, addr_sub)
+                            .unwrap();
                     }
                     Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
                         let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                        crate::device::add_ip_addr_subnet(sync_ctx, id, addr_sub).unwrap();
+                        crate::device::add_ip_addr_subnet(sync_ctx, non_sync_ctx, id, addr_sub)
+                            .unwrap();
                     }
                     None => {}
                     _ => unreachable!(),
@@ -550,18 +563,19 @@ impl DummyEventDispatcherBuilder {
             .collect();
         for (idx, ip, mac) in arp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_static_arp_table_entry(sync_ctx, device, ip, mac)
+            crate::device::insert_static_arp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac)
                 .expect("error inserting static ARP entry");
         }
         for (idx, ip, mac) in ndp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_ndp_table_entry(sync_ctx, device, ip, mac.get())
+            crate::device::insert_ndp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac.get())
                 .expect("error inserting static NDP entry");
         }
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
             crate::add_route(
                 sync_ctx,
+                non_sync_ctx,
                 AddableEntryEither::new(subnet, Some(device), None)
                     .expect("valid forwarding table entry"),
             )
@@ -570,6 +584,7 @@ impl DummyEventDispatcherBuilder {
         for (subnet, next_hop) in routes {
             crate::add_route(
                 sync_ctx,
+                non_sync_ctx,
                 AddableEntryEither::new(subnet, None, Some(next_hop.into()))
                     .expect("valid forwarding table entry"),
             )
@@ -773,8 +788,12 @@ impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyEventDispatcher {
     }
 }
 
-pub(crate) fn handle_timer(DummyCtx { sync_ctx }: &mut DummyCtx, ctx: &mut (), id: TimerId) {
-    crate::handle_timer(sync_ctx, ctx, id)
+pub(crate) fn handle_timer(
+    DummyCtx { sync_ctx, non_sync_ctx }: &mut DummyCtx,
+    _ctx: &mut (),
+    id: TimerId,
+) {
+    crate::handle_timer(sync_ctx, non_sync_ctx, id)
 }
 
 #[cfg(test)]
@@ -793,10 +812,6 @@ mod tests {
         ip::socket::BufferIpSocketHandler,
         TimerIdInner,
     };
-
-    fn handle_timer(Ctx { sync_ctx }: &mut crate::testutil::DummyCtx, ctx: &mut (), id: TimerId) {
-        crate::handle_timer(sync_ctx, ctx, id)
-    }
 
     #[test]
     fn test_dummy_network_transmits_packets() {

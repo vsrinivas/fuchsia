@@ -306,14 +306,15 @@ fn arbitrary_packet<B: NestedPacketBuilder + core::fmt::Debug>(
 }
 
 fn dispatch(
-    Ctx { sync_ctx }: &mut crate::testutil::DummyCtx,
+    Ctx { sync_ctx, non_sync_ctx }: &mut crate::testutil::DummyCtx,
     device_id: DeviceId,
     action: FuzzAction,
 ) {
     use FuzzAction::*;
     match action {
         ReceiveFrame(ArbitraryFrame { frame_type: _, buf, description: _ }) => {
-            crate::receive_frame(sync_ctx, device_id, buf).expect("error receiving frame")
+            crate::receive_frame(sync_ctx, non_sync_ctx, device_id, buf)
+                .expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
             let _: Vec<TimerId> = sync_ctx.trigger_timers_for(duration, crate::handle_timer);
@@ -331,13 +332,14 @@ pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     );
     let FuzzInput { actions } = input;
 
-    let Ctx { sync_ctx } = &mut ctx;
+    let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
     let device_id = crate::add_ethernet_device(
         sync_ctx,
+        non_sync_ctx,
         UnicastAddr::new(net_mac!("10:20:30:40:50:60")).unwrap(),
         1500,
     );
-    crate::device::testutil::enable_device(sync_ctx, device_id);
+    crate::device::testutil::enable_device(sync_ctx, non_sync_ctx, device_id);
 
     log::info!("Processing {} actions", actions.len());
     for action in actions {

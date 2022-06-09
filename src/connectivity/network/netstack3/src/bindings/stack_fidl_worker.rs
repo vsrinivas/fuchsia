@@ -31,7 +31,7 @@ pub(crate) struct StackFidlWorker<C> {
 }
 
 struct LockedFidlWorker<'a, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context>>>::Guard,
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context, C::NonSyncCtx>>>::Guard,
     worker: &'a StackFidlWorker<C>,
 }
 
@@ -178,8 +178,8 @@ where
             UnicastAddr::new(Mac::new(mac_octets)).ok_or(fidl_net_stack::Error::NotSupported)?;
 
         let id = {
-            let Ctx { sync_ctx } = &mut *ctx;
-            let eth_id = netstack3_core::add_ethernet_device(sync_ctx, mac_addr, mtu);
+            let Ctx { sync_ctx, non_sync_ctx } = &mut *ctx;
+            let eth_id = netstack3_core::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
 
             let devices: &mut Devices = sync_ctx.dispatcher.as_mut();
             devices
@@ -261,14 +261,19 @@ where
         id: u64,
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
         let device_info =
             sync_ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         let device_id = device_info.core_id();
 
-        add_ip_addr_subnet(sync_ctx, device_id, addr.try_into_core().map_err(IntoFidl::into_fidl)?)
-            .map_err(IntoFidl::into_fidl)
+        add_ip_addr_subnet(
+            sync_ctx,
+            non_sync_ctx,
+            device_id,
+            addr.try_into_core().map_err(IntoFidl::into_fidl)?,
+        )
+        .map_err(IntoFidl::into_fidl)
     }
 
     fn fidl_del_interface_address(
@@ -276,18 +281,18 @@ where
         id: u64,
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
         let device_info =
             sync_ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         let device_id = device_info.core_id();
         let addr: SpecifiedAddr<_> = addr.addr.try_into_core().map_err(IntoFidl::into_fidl)?;
 
-        del_ip_addr(sync_ctx, device_id, addr.into()).map_err(IntoFidl::into_fidl)
+        del_ip_addr(sync_ctx, non_sync_ctx, device_id, addr.into()).map_err(IntoFidl::into_fidl)
     }
 
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
-        let Ctx { sync_ctx } = self.ctx.deref();
+        let Ctx { sync_ctx, non_sync_ctx: _ } = self.ctx.deref();
 
         get_all_routes(sync_ctx)
             .filter_map(|entry| match entry.try_into_fidl_with_ctx(&sync_ctx.dispatcher) {
@@ -304,13 +309,13 @@ where
         mut self,
         entry: ForwardingEntry,
     ) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
         let entry = match AddableEntryEither::try_from_fidl_with_ctx(&sync_ctx.dispatcher, entry) {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
         };
-        add_route(sync_ctx, entry).map_err(IntoFidl::into_fidl)
+        add_route(sync_ctx, non_sync_ctx, entry).map_err(IntoFidl::into_fidl)
     }
 }
 
@@ -322,10 +327,10 @@ where
         mut self,
         subnet: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
-        let Ctx { sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
         if let Ok(subnet) = subnet.try_into_core() {
-            del_route(sync_ctx, subnet).map_err(IntoFidl::into_fidl)
+            del_route(sync_ctx, non_sync_ctx, subnet).map_err(IntoFidl::into_fidl)
         } else {
             Err(fidl_net_stack::Error::InvalidArgs)
         }

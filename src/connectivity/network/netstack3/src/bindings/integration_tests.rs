@@ -26,7 +26,7 @@ use netstack3_core::{
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BlanketCoreContext,
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt,
-    UdpBoundId, UdpContext,
+    NonSyncContext, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -206,7 +206,7 @@ impl<T: 'static + Send> EventContext<T> for TestDispatcher {
 #[derive(Clone)]
 /// A netstack context for testing.
 pub(crate) struct TestContext {
-    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsContextImpl>>>,
+    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsContextImpl, ()>>>,
     _interfaces_worker: Arc<super::interfaces_watcher::Worker>,
     interfaces_sink: super::interfaces_watcher::WorkerInterfaceSink,
 }
@@ -232,9 +232,9 @@ impl super::InterfaceEventProducerFactory for TestContext {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl>> for TestContext {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher, BindingsContextImpl>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher, BindingsContextImpl>>;
+impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl, ()>> for TestContext {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher, BindingsContextImpl, ()>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher, BindingsContextImpl, ()>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -243,6 +243,7 @@ impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl>> for TestContext 
 impl LockableContext for TestContext {
     type Dispatcher = TestDispatcher;
     type Context = BindingsContextImpl;
+    type NonSyncCtx = ();
 }
 
 /// A holder for a [`TestContext`].
@@ -363,7 +364,7 @@ impl TestStack {
     /// [`Ctx<TestDispatcher, BindingsContext>`] provided by this `TestStack`.
     pub(crate) async fn with_ctx<
         R,
-        F: FnOnce(&mut Ctx<TestDispatcher, BindingsContextImpl>) -> R,
+        F: FnOnce(&mut Ctx<TestDispatcher, BindingsContextImpl, ()>) -> R,
     >(
         &mut self,
         f: F,
@@ -375,13 +376,13 @@ impl TestStack {
     /// Acquire a lock on this `TestStack`'s context.
     pub(crate) async fn ctx(
         &self,
-    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl>>>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl, ()>>>::Guard {
         self.ctx.lock().await
     }
 
     async fn get_interface_info(&self, id: u64) -> InterfaceInfo {
         let ctx = self.ctx().await;
-        let Ctx { sync_ctx } = ctx.deref();
+        let Ctx { sync_ctx, non_sync_ctx: _ } = ctx.deref();
         let device = sync_ctx.dispatcher.get_device_info(id).expect("device");
         let addresses = get_all_ip_addr_subnets(sync_ctx, device.core_id())
             .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
@@ -426,7 +427,7 @@ impl TestSetup {
     pub(crate) async fn ctx(
         &mut self,
         i: usize,
-    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl>>>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl, ()>>>::Guard {
         self.get(i).ctx.lock().await
     }
 
@@ -565,14 +566,14 @@ impl TestSetupBuilder {
             println!("Adding stack: {:?}", stack_cfg);
             let mut stack = TestStack::new();
             stack
-                .with_ctx(|Ctx { sync_ctx }| {
+                .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
                     let loopback =
                         netstack3_core::add_loopback_device(sync_ctx, DEFAULT_LOOPBACK_MTU)
                             .expect("add loopback device");
-                    update_ipv4_configuration(sync_ctx, loopback, |config| {
+                    update_ipv4_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
                         config.ip_config.ip_enabled = true;
                     });
-                    update_ipv6_configuration(sync_ctx, loopback, |config| {
+                    update_ipv6_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
                         config.ip_config.ip_enabled = true;
                     });
                 })
@@ -811,13 +812,13 @@ async fn test_ethernet_link_up_down() {
     // initialized (core will panic if we try to use the device and initialize
     // hasn't been called)
     let mut ctx = t.ctx(0).await;
-    let Ctx { sync_ctx } = ctx.deref_mut();
-    netstack3_core::receive_frame(sync_ctx, core_id, Buf::new(&mut [], ..))
+    let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+    netstack3_core::receive_frame(sync_ctx, non_sync_ctx, core_id, Buf::new(&mut [], ..))
         .expect("error receiving frame");
 }
 
-fn check_ip_enabled<D: EventDispatcher, C: BlanketCoreContext>(
-    Ctx { sync_ctx }: &mut Ctx<D, C>,
+fn check_ip_enabled<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
+    Ctx { sync_ctx, non_sync_ctx: _ }: &mut Ctx<D, C, NonSyncCtx>,
     core_id: DeviceId,
     expected: bool,
 ) {
@@ -1181,11 +1182,11 @@ async fn test_list_del_routes() {
     let route3 = AddableEntryEither::new(sub10, None, sub10_gateway).unwrap();
 
     let () = test_stack
-        .with_ctx(|Ctx { sync_ctx }| {
+        .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
             // add a couple of routes directly into core:
-            netstack3_core::add_route(sync_ctx, route1).unwrap();
-            netstack3_core::add_route(sync_ctx, route2).unwrap();
-            netstack3_core::add_route(sync_ctx, route3).unwrap();
+            netstack3_core::add_route(sync_ctx, non_sync_ctx, route1).unwrap();
+            netstack3_core::add_route(sync_ctx, non_sync_ctx, route2).unwrap();
+            netstack3_core::add_route(sync_ctx, non_sync_ctx, route3).unwrap();
         })
         .await;
 

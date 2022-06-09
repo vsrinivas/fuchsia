@@ -509,10 +509,10 @@ mod tests {
         } = Ipv6::DUMMY_CONFIG;
 
         let mut ctx = crate::testutil::DummyCtx::default();
-        let Ctx { sync_ctx } = &mut ctx;
+        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::ip::device::update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
+        crate::ip::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
             config.ip_config.ip_enabled = true;
         });
 
@@ -544,7 +544,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let Ctx { sync_ctx } = &mut ctx;
+        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
 
@@ -575,7 +575,7 @@ mod tests {
         // yet and prefix does not make on-link determination.
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, false, as_secs(ONE_SECOND).into()),
@@ -587,7 +587,7 @@ mod tests {
         // lifetime.
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(as_secs(ONE_SECOND), true, 0),
@@ -611,7 +611,7 @@ mod tests {
         // router.
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(as_secs(TWO_SECONDS), true, as_secs(ONE_SECOND).into()),
@@ -634,7 +634,7 @@ mod tests {
         // prefix.
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, true, as_secs(TWO_SECONDS).into()),
@@ -656,7 +656,7 @@ mod tests {
         // with valid lifetime is not discovered.
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, false, 0),
@@ -670,7 +670,7 @@ mod tests {
         // Invalidate on-link prefix.
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(0, true, 0),
@@ -699,7 +699,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let Ctx { sync_ctx } = &mut ctx;
+        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
 
@@ -725,7 +725,7 @@ mod tests {
         let prefix_lifetime_secs = u32::MAX;
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -757,7 +757,7 @@ mod tests {
         let prefix_lifetime_secs = u32::MAX - 1;
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -779,7 +779,7 @@ mod tests {
         let prefix_lifetime_secs = u32::MAX;
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -794,7 +794,7 @@ mod tests {
         let prefix_lifetime_secs = 0;
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
@@ -832,7 +832,7 @@ mod tests {
                 subnet,
             },
         ) = setup();
-        let Ctx { sync_ctx } = &mut ctx;
+        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let src_ip = remote_mac.to_ipv6_link_local().addr();
         let gateway_route =
@@ -844,7 +844,7 @@ mod tests {
         // Discover both an on-link prefix and default router.
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             device_id,
             FrameDestination::Unicast,
             router_advertisement_buf(
@@ -878,7 +878,7 @@ mod tests {
         ]);
 
         // Disable the interface.
-        crate::ip::device::update_ipv6_configuration(sync_ctx, &mut (), device_id, |config| {
+        crate::ip::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
             config.ip_config.ip_enabled = false;
         });
         assert_eq!(
