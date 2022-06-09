@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.hardware.ethertap/cpp/wire.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
-#include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
@@ -47,7 +46,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
                   public ddk::EthernetImplProtocol<TapDevice, ddk::base_protocol> {
  public:
   TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap::wire::Config& config,
-            fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> server);
+            fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> server_end);
 
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
@@ -62,9 +61,9 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
   // No DMA capability, so return invalid handle for get_bti
   void EthernetImplGetBti(zx::bti* bti);
   int Thread();
-  zx_status_t Reply(zx_txid_t, const fidl_outgoing_msg_t* msg);
+  zx_status_t Reply(zx_txid_t, fidl::OutgoingMessage* msg);
 
-  zx_status_t Recv(const uint8_t* buffer, uint32_t length);
+  zx_status_t Recv(const uint8_t* buffer, size_t length);
   void UpdateLinkStatus(bool online);
 
  private:
@@ -83,7 +82,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
 
   // Only accessed from Thread, so not locked.
   bool online_ = false;
-  zx::channel channel_;
+  fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> server_end_;
 
   thrd_t thread_;
 };

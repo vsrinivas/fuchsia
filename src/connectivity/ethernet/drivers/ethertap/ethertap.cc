@@ -90,29 +90,15 @@ int tap_device_thread(void* arg) {
 
 #define TAP_SHUTDOWN ZX_USER_SIGNAL_7
 
-static zx_status_t fidl_tap_device_write_frame(void* ctx, const uint8_t* data_data,
-                                               size_t data_count) {
-  static_cast<TapDevice*>(ctx)->Recv(data_data, static_cast<uint32_t>(data_count));
-  return ZX_OK;
-}
-
-static zx_status_t fidl_tap_device_set_online(void* ctx, bool online) {
-  static_cast<TapDevice*>(ctx)->UpdateLinkStatus(online);
-  return ZX_OK;
-}
-
-static const fuchsia_hardware_ethertap_TapDevice_ops_t tap_device_ops_ = {
-    .WriteFrame = fidl_tap_device_write_frame, .SetOnline = fidl_tap_device_set_online};
-
 TapDevice::TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap::wire::Config& config,
-                     fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> server)
+                     fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> server_end)
     : ddk::Device<TapDevice, ddk::Unbindable>(device),
       options_(config.options),
       features_(config.features | ETHERNET_FEATURE_SYNTH),
       mtu_(config.mtu),
       online_((config.options & ETHERTAP_OPT_ONLINE) != 0),
-      channel_(server.TakeChannel()) {
-  ZX_DEBUG_ASSERT(channel_.is_valid());
+      server_end_(std::move(server_end)) {
+  ZX_DEBUG_ASSERT(server_end_.is_valid());
   memcpy(mac_, config.mac.octets.data(), 6);
 
   int ret = thrd_create_with_name(&thread_, tap_device_thread, reinterpret_cast<void*>(this),
@@ -136,7 +122,7 @@ void TapDevice::DdkUnbind(ddk::UnbindTxn txn) {
     return;
   }
   unbind_txn_ = std::move(txn);
-  zx_status_t status = channel_.signal(0, TAP_SHUTDOWN);
+  zx_status_t status = server_end_.channel().signal(0, TAP_SHUTDOWN);
   ZX_DEBUG_ASSERT(status == ZX_OK);
   // When the thread exits after the channel is closed, it will reply to the unbind txn.
 }
@@ -184,36 +170,20 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   size_t length = op.operation()->data_size;
   ZX_DEBUG_ASSERT(length <= mtu_);
 
-  FIDL_ALIGNDECL uint8_t temp_buff[sizeof(fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessage) +
-                                   FIDL_ALIGN(fuchsia_hardware_ethertap_MAX_MTU)];
-  fidl::Builder builder(temp_buff, sizeof(temp_buff));
-  auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessage>();
-  fidl::InitTxnHeader(&event->hdr, FIDL_TXID_NO_RESPONSE,
-                      fuchsia_hardware_ethertap_TapDeviceOnFrameOrdinal,
-                      fidl::MessageDynamicFlags::kStrictMethod);
-  event->data.count = length;
-  auto* data = builder.NewArray<uint8_t>(static_cast<uint32_t>(length));
-  event->data.data = data;
-  memcpy(data, op.operation()->data_buffer, length);
+  if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
+    ethertap_trace("sending %zu bytes\n", length);
+    hexdump8_ex(op.operation()->data_buffer, length, 0);
+  }
 
-  const char* err = nullptr;
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnFrameEventMessageTable, &err);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "ethertap: EthernetImplQueueTx error encoding: %d %s", status, err);
-  } else {
-    if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
-      ethertap_trace("sending %zu bytes\n", length);
-      hexdump8_ex(op.operation()->data_buffer, length, 0);
-    }
-    status = msg.Write(channel_.get(), 0);
-
-    if (status != ZX_OK) {
-      zxlogf(WARNING, "ethertap: EthernetImplQueueTx error writing: %d", status);
-    }
+  // TODO(fxbug.dev/101890): Remove the const-cast.
+  auto result = fidl::WireSendEvent(server_end_)
+                    ->OnFrame(fidl::VectorView<uint8_t>::FromExternal(
+                        const_cast<uint8_t*>(op.operation()->data_buffer), length));
+  if (result.status() != ZX_OK) {
+    zxlogf(WARNING, "ethertap: EthernetImplQueueTx error writing: %d", result.status());
   }
   // returning ZX_ERR_SHOULD_WAIT indicates that we will call complete_tx(), which we will not
-  op.Complete(status == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : status);
+  op.Complete(result.status() == ZX_ERR_SHOULD_WAIT ? ZX_ERR_UNAVAILABLE : result.status());
 }
 
 zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const uint8_t* data,
@@ -223,19 +193,8 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  FIDL_ALIGNDECL uint8_t
-      temp_buff[sizeof(fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessage) +
-                FIDL_ALIGN(fuchsia_hardware_ethertap_MAX_PARAM_DATA)];
-  fidl::Builder builder(temp_buff, sizeof(temp_buff));
-  auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessage>();
-  fidl::InitTxnHeader(&event->hdr, FIDL_TXID_NO_RESPONSE,
-                      fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal,
-                      fidl::MessageDynamicFlags::kStrictMethod);
-
-  event->param = param;
-  event->value = value;
-  event->data.data = nullptr;
-  event->data.count = 0;
+  fidl::Arena arena;
+  fidl::VectorView<uint8_t> event_data;
 
   switch (param) {
     case ETHERNET_SETPARAM_MULTICAST_FILTER:
@@ -243,18 +202,16 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
         break;
       } else {
         // Send the final byte of each address, sorted lowest-to-highest.
-        auto size = static_cast<uint32_t>(value) < fuchsia_hardware_ethertap_MAX_PARAM_DATA
+        auto size = static_cast<uint32_t>(value) < fuchsia_hardware_ethertap::wire::kMaxParamData
                         ? static_cast<uint32_t>(value)
-                        : fuchsia_hardware_ethertap_MAX_PARAM_DATA;
-        auto* report = builder.NewArray<uint8_t>(size);
-        event->data.data = report;
-        event->data.count = size;
+                        : fuchsia_hardware_ethertap::wire::kMaxParamData;
+        event_data = fidl::VectorView<uint8_t>(arena, size);
 
         uint32_t i;
         for (i = 0; i < size; i++) {
-          report[i] = static_cast<const uint8_t*>(data)[i * ETH_MAC_SIZE + 5];
+          event_data[i] = static_cast<const uint8_t*>(data)[i * ETH_MAC_SIZE + 5];
         }
-        qsort(report, size, 1, [](const void* ap, const void* bp) {
+        qsort(event_data.begin(), size, 1, [](const void* ap, const void* bp) {
           int a = *static_cast<const uint8_t*>(ap);
           int b = *static_cast<const uint8_t*>(bp);
           return a < b ? -1 : (a > 1 ? 1 : 0);
@@ -265,17 +222,13 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
       break;
   }
 
-  // A failure of sending the event data is not a simulated failure of hardware under test,
-  // so log it but don't report failure on the SetParam attempt.
+  auto result = fidl::WireSendEvent(server_end_)->OnReportParams(param, value, event_data);
+  if (!result.ok() && !result.is_peer_closed()) {
+    // A failure of sending the event data is not a simulated failure of hardware under test,
+    // so log it but don't report failure on the SetParam attempt.
 
-  const char* err = nullptr;
-  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandleDispositionPart());
-  auto status =
-      msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventMessageTable, &err);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "ethertap: EthernetImplSetParam error encoding: %d %s", status, err);
-  } else {
-    msg.Write(channel_.get(), 0);
+    zxlogf(ERROR, "ethertap: TapDevice sending OnReportParams failed: %s",
+           result.FormatDescription().c_str());
   }
 
   return ZX_OK;
@@ -303,7 +256,7 @@ void TapDevice::UpdateLinkStatus(bool online) {
   }
 }
 
-zx_status_t TapDevice::Recv(const uint8_t* buffer, uint32_t length) {
+zx_status_t TapDevice::Recv(const uint8_t* buffer, size_t length) {
   fbl::AutoLock lock(&lock_);
 
   if (!online_) {
@@ -312,7 +265,7 @@ zx_status_t TapDevice::Recv(const uint8_t* buffer, uint32_t length) {
   }
 
   if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
-    ethertap_trace("received %u bytes\n", length);
+    ethertap_trace("received %lu bytes\n", length);
     hexdump8_ex(buffer, length, 0);
   }
 
@@ -322,24 +275,45 @@ zx_status_t TapDevice::Recv(const uint8_t* buffer, uint32_t length) {
   return ZX_OK;
 }
 
-typedef struct tap_device_txn {
-  fidl_txn_t txn;
-  zx_txid_t txid;
-  TapDevice* device;
-} tap_device_txn_t;
+class TapDeviceTransaction : public fidl::Transaction {
+ public:
+  TapDeviceTransaction(TapDevice* device, zx_txid_t txid) : device_(device), txid_(txid) {}
 
-static zx_status_t tap_device_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
-  static_assert(offsetof(tap_device_txn_t, txn) == 0, "FidlConnection must be convertable to txn");
-  auto* ptr = reinterpret_cast<tap_device_txn_t*>(txn);
-  return ptr->device->Reply(ptr->txid, msg);
+  std::unique_ptr<Transaction> TakeOwnership() override { ZX_PANIC("unimplemented"); }
+
+  zx_status_t Reply(fidl::OutgoingMessage* message,
+                    fidl::WriteOptions write_options = {}) override {
+    return device_->Reply(txid_, message);
+  }
+
+  void Close(zx_status_t epitaph) override { ZX_PANIC("unimplemented"); }
+
+ private:
+  TapDevice* device_;
+  zx_txid_t txid_;
+};
+
+zx_status_t TapDevice::Reply(zx_txid_t txid, fidl::OutgoingMessage* msg) {
+  msg->set_txid(txid);
+  msg->Write(server_end_.channel());
+  return msg->status();
 }
 
-zx_status_t TapDevice::Reply(zx_txid_t txid, const fidl_outgoing_msg_t* msg) {
-  auto message = fidl::OutgoingMessage::FromEncodedCMessage(msg);
-  message.set_txid(txid);
-  message.Write(channel_);
-  return message.status();
-}
+class TapDeviceServer : public fidl::WireServer<fuchsia_hardware_ethertap::TapDevice> {
+ public:
+  TapDeviceServer(TapDevice* tap_device) : tap_device_(tap_device) {}
+
+  void WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::Sync& completer) override {
+    tap_device_->Recv(request->data.data(), request->data.count());
+  }
+
+  void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override {
+    tap_device_->UpdateLinkStatus(request->online);
+  }
+
+ private:
+  TapDevice* tap_device_;
+};
 
 int TapDevice::Thread() {
   ethertap_trace("starting main thread\n");
@@ -358,16 +332,12 @@ int TapDevice::Thread() {
       .num_handles = handle_count,
   };
 
-  tap_device_txn_t txn = {
-      .txn = {.reply = tap_device_reply},
-      .txid = 0,
-      .device = this,
-  };
+  TapDeviceServer server(this);
 
   zx_status_t status = ZX_OK;
   const zx_signals_t wait = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED | TAP_SHUTDOWN;
   while (true) {
-    status = channel_.wait_one(wait, zx::time::infinite(), &pending);
+    status = server_end_.channel().wait_one(wait, zx::time::infinite(), &pending);
     if (status != ZX_OK) {
       ethertap_trace("error waiting on channel: %d\n", status);
       break;
@@ -375,8 +345,8 @@ int TapDevice::Thread() {
 
     if (pending & ZX_CHANNEL_READABLE) {
       zx_handle_info_t handle_infos[handle_count];
-      status = channel_.read_etc(0, msg.bytes, handle_infos, buff_size, handle_count,
-                                 &msg.num_bytes, &msg.num_handles);
+      status = server_end_.channel().read_etc(0, msg.bytes, handle_infos, buff_size, handle_count,
+                                              &msg.num_bytes, &msg.num_handles);
       if (status != ZX_OK) {
         ethertap_trace("message read failed: %d\n", status);
         break;
@@ -389,13 +359,9 @@ int TapDevice::Thread() {
         };
       }
 
-      txn.txid = reinterpret_cast<const fidl_message_header_t*>(msg.bytes)->txid;
-
-      status = fuchsia_hardware_ethertap_TapDevice_dispatch(this, &txn.txn, &msg, &tap_device_ops_);
-      if (status != ZX_OK) {
-        ethertap_trace("failed to dispatch ethertap message: %d\n", status);
-        break;
-      }
+      TapDeviceTransaction txn(this,
+                               reinterpret_cast<const fidl_message_header_t*>(msg.bytes)->txid);
+      fidl::WireDispatch(&server, fidl::IncomingMessage::FromEncodedCMessage(&msg), &txn);
     }
     if (pending & ZX_CHANNEL_PEER_CLOSED) {
       ethertap_trace("channel closed (peer)\n");
@@ -410,7 +376,7 @@ int TapDevice::Thread() {
     fbl::AutoLock lock(&lock_);
     dead_ = true;
     zxlogf(INFO, "ethertap: device '%s' destroyed", name());
-    channel_.reset();
+    server_end_.channel().reset();
     // Check if the unbind hook is expecting a response.
     if (unbind_txn_) {
       unbind_txn_->Reply();

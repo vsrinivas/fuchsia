@@ -24,8 +24,6 @@ fuchsia_driver("ethertap-driver") {
   deps = [
     ":ethertap_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
-    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_c",
     "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_llcpp",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/devices/lib/dev-operation",
@@ -37,10 +35,6 @@ fuchsia_driver("ethertap-driver") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("ethertap") {
@@ -60,8 +54,6 @@ test("ethertap-unittest") {
   deps = [
     ":ethertap_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
-    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_c",
     "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_llcpp",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/devices/lib/dev-operation",
@@ -75,10 +67,6 @@ test("ethertap-unittest") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("ethertap-unittest-package") {
