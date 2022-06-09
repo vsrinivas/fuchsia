@@ -8,14 +8,12 @@ use {
         write_needed_blobs, TestEnv,
     },
     assert_matches::assert_matches,
-    blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     fuchsia_zircon as zx,
     futures::TryFutureExt,
-    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -42,19 +40,15 @@ async fn cached_packages_are_retained() {
             .unwrap(),
     ];
 
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    for pkg in packages.iter().chain(garbage_packages.iter()) {
-        pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    }
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(
+            &system_image_package,
+            &packages.iter().chain(garbage_packages.iter()).collect::<Vec<_>>(),
+        )
+        .build()
+        .await;
 
     let blob_ids =
         packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root())).collect::<Vec<_>>();
@@ -66,11 +60,11 @@ async fn cached_packages_are_retained() {
 
     // Verify no retained package blobs are deleted, directly from blobfs.
     for pkg in packages.iter() {
-        assert!(env.blobfs().client().has_blob(pkg.meta_far_merkle_root()).await);
+        assert!(env.blobfs.client().has_blob(pkg.meta_far_merkle_root()).await);
     }
 
     for pkg in garbage_packages.iter() {
-        assert_eq!(env.blobfs().client().has_blob(pkg.meta_far_merkle_root()).await, false);
+        assert_eq!(env.blobfs.client().has_blob(pkg.meta_far_merkle_root()).await, false);
     }
 
     // Verify no retained package blobs are deleted, using PackageCache API.
@@ -112,7 +106,7 @@ async fn packages_are_retained_gc_mid_process() {
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
 
     // Verify the package’s meta far is not deleted.
-    assert!(env.blobfs().client().has_blob(package.meta_far_merkle_root()).await);
+    assert!(env.blobfs.client().has_blob(package.meta_far_merkle_root()).await);
 
     write_needed_blobs(&needed_blobs, contents).await;
 
@@ -147,7 +141,7 @@ async fn cached_and_released_packages_are_removed() {
 
     // Verify no retained package blobs are deleted, directly from blobfs.
     for pkg in packages.iter() {
-        assert!(env.blobfs().client().has_blob(pkg.meta_far_merkle_root()).await);
+        assert!(env.blobfs.client().has_blob(pkg.meta_far_merkle_root()).await);
     }
 
     // Verify no retained package blobs are deleted, using PackageCache API.

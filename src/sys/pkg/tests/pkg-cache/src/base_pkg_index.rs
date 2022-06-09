@@ -11,25 +11,16 @@ use {
     fuchsia_hash::Hash,
     fuchsia_pkg::PackagePath,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
-    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
 /// Sets up the test environment and writes the packages out to base.
 async fn setup_test_env(static_packages: &[&Package]) -> TestEnv {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    let system_image_package = SystemImageBuilder::new().static_packages(static_packages);
-    let system_image_package = system_image_package.build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    for pkg in static_packages {
-        pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    }
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let system_image_package =
+        SystemImageBuilder::new().static_packages(static_packages).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image_package, static_packages)
+        .build()
+        .await;
     env.block_until_started().await;
     env
 }
@@ -88,9 +79,10 @@ async fn verify_base_packages_iterator(
 /// Verifies that no base packages does not start package cache.
 #[fasync::run_singlethreaded(test)]
 async fn no_base_package_error() {
-    let pkgfs = PkgfsRamdisk::builder().start().unwrap();
-    let env =
-        TestEnv::builder().pkgfs(pkgfs).system_image_hash_override([0u8; 32].into()).build().await;
+    let env = TestEnv::builder()
+        .blobfs_and_system_image_hash(BlobfsRamdisk::start().unwrap(), Some([0u8; 32].into()))
+        .build()
+        .await;
     let res = env.proxies.package_cache.sync().await;
     assert_eq!(res.is_err(), true);
 }
@@ -105,8 +97,7 @@ async fn base_pkg_index_with_one_package() {
         .unwrap();
     let env = setup_test_env(&[&pkg]).await;
     let pkg_iterator = get_pkg_iterator(&env).await;
-    assert_base_packages_match(pkg_iterator, &[&pkg], env.pkgfs.system_image_merkle().unwrap())
-        .await;
+    assert_base_packages_match(pkg_iterator, &[&pkg], env.system_image.unwrap()).await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -128,12 +119,8 @@ async fn base_pkg_index_sorted_by_url() {
         .unwrap();
     let env = setup_test_env(&[&pkg_0, &pkg_1, &pkg_2]).await;
     let pkg_iterator = get_pkg_iterator(&env).await;
-    assert_base_packages_match(
-        pkg_iterator,
-        &[&pkg_1, &pkg_2, &pkg_0],
-        env.pkgfs.system_image_merkle().unwrap(),
-    )
-    .await;
+    assert_base_packages_match(pkg_iterator, &[&pkg_1, &pkg_2, &pkg_0], env.system_image.unwrap())
+        .await;
 }
 
 /// Verifies that the package index can be split across multiple chunks.
@@ -163,25 +150,17 @@ async fn base_pkg_index_verify_multiple_chunks() {
         system_image = system_image.static_package(path, hash);
     }
 
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image = system_image.build().await;
 
-    system_image.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    pkg_0.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image, &[&pkg_0])
+        .build()
+        .await;
 
     // We always expect the system_image package to be in the list of base packages.
     let expected_entries_and_system_image = expected_entries.into_iter().chain(std::iter::once((
         String::from("fuchsia-pkg://fuchsia.com/system_image"),
-        env.pkgfs.system_image_merkle().unwrap(),
+        env.system_image.unwrap(),
     )));
 
     let pkg_iterator = get_pkg_iterator(&env).await;

@@ -15,7 +15,6 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::TryFutureExt,
     mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
-    pkgfs_ramdisk::PkgfsRamdisk,
     rand::prelude::*,
     std::collections::{BTreeSet, HashMap},
     std::io::Read,
@@ -68,17 +67,9 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
 async fn gc_error_pending_commit() {
     let (throttle_hook, throttler) = mphooks::throttle();
 
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
     let env = TestEnv::builder()
-        .pkgfs(pkgfs)
+        .blobfs_from_system_image(&system_image_package)
         .paver_service_builder(
             MockPaverServiceBuilder::new()
                 .insert_hook(throttle_hook)
@@ -116,19 +107,17 @@ async fn setup_test_env(
         Some(fs) => fs,
         None => BlobfsRamdisk::start().unwrap(),
     };
-    let system_image_package = SystemImageBuilder::new().static_packages(static_packages);
-    let system_image_package = system_image_package.build().await;
+    let system_image_package =
+        SystemImageBuilder::new().static_packages(static_packages).build().await;
     system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     for pkg in static_packages {
         pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     }
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_and_system_image_hash(blobfs, Some(*system_image_package.meta_far_merkle_root()))
+        .build()
+        .await;
     env.block_until_started().await;
     (env, system_image_package)
 }
@@ -143,10 +132,10 @@ async fn gc_noop_system_image() {
         .await
         .unwrap();
     let (env, _) = setup_test_env(None, &[&static_package]).await;
-    let original_blobs = env.blobfs().list_blobs().expect("to get an initial list of blobs");
+    let original_blobs = env.blobfs.list_blobs().expect("to get an initial list of blobs");
 
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
-    assert_eq!(env.blobfs().list_blobs().expect("to get new blobs"), original_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("to get new blobs"), original_blobs);
 }
 
 /// Assert that any blobs protected by the dynamic index are ineligible for garbage collection.
@@ -165,10 +154,10 @@ async fn gc_dynamic_index_protected() {
     do_fetch(&env.proxies.package_cache, &pkg).await;
 
     // Ensure that the just-fetched blobs are not reaped by a GC cycle.
-    let mut test_blobs = env.blobfs().list_blobs().expect("to get an initial list of blobs");
+    let mut test_blobs = env.blobfs.list_blobs().expect("to get an initial list of blobs");
 
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
-    assert_eq!(env.blobfs().list_blobs().expect("to get new blobs"), test_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("to get new blobs"), test_blobs);
 
     // Fetch an updated package, skipping both its content blobs to guarantee that there are
     // missing blobs. This helps us ensure that the meta.far is not lost.
@@ -180,10 +169,10 @@ async fn gc_dynamic_index_protected() {
         .await
         .unwrap();
 
-    // We can't call do_fetch here because pkg-cache differs from pkgfs in that the NeededBlobs
-    // protocol can be "canceled". This means that if the channel is closed before the protocol is
-    // completed, the blobs mentioned in the meta far are no longer protected by the dynamic index.
-    // That's WAI, but complicating that interface further isn't worth it.
+    // We can't call do_fetch here because the NeededBlobs protocol can be "canceled". This means
+    // that if the channel is closed before the protocol is completed, the blobs mentioned in the
+    // meta.far are no longer protected by the dynamic index.
+    // That's WAI, but complicating the do_fetch interface further isn't worth it.
     //
     // Here, we persist the meta.far
     let mut meta_blob_info =
@@ -213,7 +202,7 @@ async fn gc_dynamic_index_protected() {
     // are not removed.
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
     test_blobs.insert(*pkgprime.meta_far_merkle_root());
-    assert_eq!(env.blobfs().list_blobs().expect("to get new blobs"), test_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("to get new blobs"), test_blobs);
 
     // Fully fetch pkgprime, and ensure that blobs from the old package are not persisted past GC.
     let missing_blobs = get_missing_blobs(&needed_blobs).await;
@@ -247,7 +236,7 @@ async fn gc_dynamic_index_protected() {
         .cloned()
         .collect::<BTreeSet<_>>();
 
-    assert_eq!(env.blobfs().list_blobs().expect("all blobs"), expected_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("all blobs"), expected_blobs);
 }
 
 /// Test that a blobfs with blobs not belonging to a known package will lose those blobs on GC.
@@ -269,11 +258,11 @@ async fn gc_random_blobs() {
         .next()
         .expect("to get initial blob");
     let (env, _) = setup_test_env(Some(blobfs), &[&static_package]).await;
-    let mut original_blobs = env.blobfs().list_blobs().expect("to get an initial list of blobs");
+    let mut original_blobs = env.blobfs.list_blobs().expect("to get an initial list of blobs");
 
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
     assert!(original_blobs.remove(&gced_blob));
-    assert_eq!(env.blobfs().list_blobs().expect("to read current blobfs state"), original_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("to read current blobfs state"), original_blobs);
 }
 
 /// Effectively the same as gc_dynamic_index_protected, except that the updated package also
@@ -288,7 +277,7 @@ async fn gc_updated_static_package() {
         .unwrap();
 
     let (env, _) = setup_test_env(None, &[&static_package]).await;
-    let initial_blobs = env.blobfs().list_blobs().expect("to get initial blob list");
+    let initial_blobs = env.blobfs.list_blobs().expect("to get initial blob list");
 
     let pkg = PackageBuilder::new("gc_updated_static_package_pkg_cache")
         .add_resource_at("bin/x", "bin-x-version-1".as_bytes())
@@ -299,10 +288,10 @@ async fn gc_updated_static_package() {
     do_fetch(&env.proxies.package_cache, &pkg).await;
 
     // Ensure that the just-fetched blobs are not reaped by a GC cycle.
-    let mut test_blobs = env.blobfs().list_blobs().expect("to get an initial list of blobs");
+    let mut test_blobs = env.blobfs.list_blobs().expect("to get an initial list of blobs");
 
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
-    assert_eq!(env.blobfs().list_blobs().expect("to get new blobs"), test_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("to get new blobs"), test_blobs);
 
     let pkgprime = PackageBuilder::new("gc_updated_static_package_pkg_cache")
         .add_resource_at("bin/x", "bin-x-version-2".as_bytes())
@@ -311,10 +300,10 @@ async fn gc_updated_static_package() {
         .build()
         .await
         .unwrap();
-    // We can't call do_fetch here because pkg-cache differs from pkgfs in that the NeededBlobs
-    // protocol can be "canceled". This means that if the channel is closed before the protocol is
-    // completed, the blobs mentioned in the meta far are no longer protected by the dynamic index.
-    // That's WAI, but complicating that interface further isn't worth it.
+    // We can't call do_fetch here because the NeededBlobs protocol can be "canceled". This means
+    // that if the channel is closed before the protocol is completed, the blobs mentioned in the
+    // meta.far are no longer protected by the dynamic index.
+    // That's WAI, but complicating the do_fetch interface further isn't worth it.
     //
     // Here, we persist the meta.far
     let mut meta_blob_info =
@@ -344,7 +333,7 @@ async fn gc_updated_static_package() {
     // are not removed.
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
     test_blobs.insert(*pkgprime.meta_far_merkle_root());
-    assert_eq!(env.blobfs().list_blobs().expect("to get new blobs"), test_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("to get new blobs"), test_blobs);
 
     // Fully fetch pkgprime, and ensure that blobs from the old package are not persisted past GC.
     let missing_blobs = get_missing_blobs(&needed_blobs).await;
@@ -374,7 +363,7 @@ async fn gc_updated_static_package() {
     let expected_blobs =
         initial_blobs.union(&pkgprime.list_blobs().unwrap()).cloned().collect::<BTreeSet<_>>();
 
-    assert_eq!(env.blobfs().list_blobs().expect("all blobs"), expected_blobs);
+    assert_eq!(env.blobfs.list_blobs().expect("all blobs"), expected_blobs);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -393,12 +382,6 @@ async fn blob_write_fails_when_out_of_space() {
         .expect("started blobfs");
     system_image_package
         .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote system image to blobfs"));
-
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(very_small_blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .expect("started pkgfs");
 
     // A very large version of the same package, to put in the repo.
     // Critically, this package contains an incompressible 4MB asset in the meta.far,
@@ -426,7 +409,13 @@ async fn blob_write_fails_when_out_of_space() {
         LARGE_ASSET_FILE_SIZE + 4096 + 4096 + 4096
     );
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_and_system_image_hash(
+            very_small_blobfs,
+            Some(*system_image_package.meta_far_merkle_root()),
+        )
+        .build()
+        .await;
 
     let mut meta_blob_info =
         BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };

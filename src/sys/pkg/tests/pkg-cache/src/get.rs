@@ -5,7 +5,6 @@
 use {
     crate::{do_fetch, get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv},
     assert_matches::assert_matches,
-    blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
@@ -13,7 +12,6 @@ use {
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     futures::prelude::*,
-    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -43,7 +41,7 @@ async fn get_multiple_packages_with_no_content_blobs() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn get_single_package_with_no_content_blobs() {
     let env = TestEnv::builder().build().await;
-    let mut initial_blobfs_blobs = env.blobfs().list_blobs().unwrap();
+    let mut initial_blobfs_blobs = env.blobfs.list_blobs().unwrap();
 
     let pkg = PackageBuilder::new("single-blob").build().await.unwrap();
 
@@ -75,7 +73,7 @@ async fn get_single_package_with_no_content_blobs() {
     // All blobs in the package should now be present in blobfs.
     let mut expected_blobs = pkg.list_blobs().unwrap();
     expected_blobs.append(&mut initial_blobfs_blobs);
-    assert_eq!(env.blobfs().list_blobs().unwrap(), expected_blobs);
+    assert_eq!(env.blobfs.list_blobs().unwrap(), expected_blobs);
 
     let () = env.stop().await;
 }
@@ -182,10 +180,9 @@ async fn unavailable_when_client_drops_needed_blobs_channel() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn recovers_from_inconsistent_pkgfs_state() {
+async fn handles_partially_written_pkg() {
     let env = TestEnv::builder().build().await;
-    let pkgfs_root = env.pkgfs.root_dir_proxy().unwrap();
-    let pkgfs_install = pkgfs::install::Client::open_from_pkgfs_root(&pkgfs_root).unwrap();
+    let blobfs = blobfs::Client::new(env.blobfs.root_dir_proxy().unwrap());
 
     let pkg = PackageBuilder::new("partially-written")
         .add_resource_at("written-1", &b"some contents"[..])
@@ -205,35 +202,39 @@ async fn recovers_from_inconsistent_pkgfs_state() {
 
     let meta_blob_info = BlobInfo { blob_id: BlobId::from(meta_far_hash).into(), length: 0 };
 
-    // Write the meta far through pkgfs.
-    {
-        let (blob, closer) = pkgfs_install
-            .create_blob(meta_far_hash.into(), pkgfs::install::BlobKind::Package)
-            .await
-            .unwrap();
+    // Write the meta far to blobfs.
+    let _ = blobfs
+        .open_blob_for_write(&meta_far_hash)
+        .await
+        .unwrap()
+        .truncate(meta_far_data.len() as u64)
+        .await
+        .unwrap()
+        .unwrap_needs_data()
+        .write(&meta_far_data)
+        .await
+        .unwrap()
+        .unwrap_done();
 
-        let blob = blob.truncate(meta_far_data.len() as u64).await.unwrap();
-        assert_matches!(
-            blob.write(&meta_far_data).await.unwrap(),
-            pkgfs::install::BlobWriteSuccess::Done
-        );
-        closer.close().await;
-    }
-
-    // Write a content blob through pkgfs.
+    // Write a content blob to blobfs.
     {
         let data = &b"some contents"[..];
         let hash = MerkleTree::from_reader(data).unwrap().root();
-        let (blob, closer) =
-            pkgfs_install.create_blob(hash, pkgfs::install::BlobKind::Data).await.unwrap();
-
-        let blob = blob.truncate(data.len() as u64).await.unwrap();
-        assert_matches!(blob.write(data).await.unwrap(), pkgfs::install::BlobWriteSuccess::Done);
-        closer.close().await;
+        let _ = blobfs
+            .open_blob_for_write(&hash)
+            .await
+            .unwrap()
+            .truncate(data.len() as u64)
+            .await
+            .unwrap()
+            .unwrap_needs_data()
+            .write(data)
+            .await
+            .unwrap()
+            .unwrap_done();
     }
 
-    // Perform a Get(), expecting to only write the 1 remaining content blob and for the package to
-    // activate in pkgfs as expected.
+    // Perform a Get(), expecting to only write the 1 remaining content blob.
     let dir = {
         let data = &b"different contents"[..];
         let hash = MerkleTree::from_reader(data).unwrap().root();
@@ -272,21 +273,11 @@ async fn get_package_already_present_on_fs() {
         .build()
         .await
         .unwrap();
-    let blobfs = BlobfsRamdisk::start().unwrap();
-
-    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]);
-    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    let system_image_package = system_image_package.build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image_package, &[&pkg])
+        .build()
+        .await;
 
     let mut meta_blob_info =
         BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
@@ -337,17 +328,10 @@ async fn get_package_already_present_on_fs_with_pre_closed_needed_blobs() {
         .await
         .unwrap();
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image_package, &[&pkg])
+        .build()
+        .await;
 
     let mut meta_blob_info =
         BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };

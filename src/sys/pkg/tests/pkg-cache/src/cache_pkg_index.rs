@@ -4,13 +4,11 @@
 
 use {
     crate::TestEnv,
-    blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_pkg::PackageIndexIteratorMarker,
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
     fuchsia_hash::Hash,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
-    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
 async fn verify_cache_packages(
@@ -39,16 +37,11 @@ async fn verify_cache_packages(
 
 #[fasync::run_singlethreaded(test)]
 async fn missing_cache_package_manifest_empty_iterator() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image_package, &[])
+        .build()
+        .await;
     env.block_until_started().await;
 
     verify_cache_packages(&env, vec![].into_iter()).await;
@@ -58,16 +51,10 @@ async fn missing_cache_package_manifest_empty_iterator() {
 async fn present_cache_package_manifest() {
     let pkg = PackageBuilder::new("some-cache-package").build().await.unwrap();
     let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image_package, &[&pkg])
+        .build()
+        .await;
     env.block_until_started().await;
 
     verify_cache_packages(

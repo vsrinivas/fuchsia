@@ -5,10 +5,10 @@
 #![cfg(test)]
 
 use {
-    anyhow::{anyhow, Error},
+    anyhow::anyhow,
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _},
+    fidl::endpoints::DiscoverableProtocolMarker as _,
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
@@ -21,28 +21,16 @@ use {
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
-    fuchsia_fs::file::*,
     fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_merkle::Hash,
-    fuchsia_pkg::{MetaContents, PackagePath},
-    fuchsia_pkg_testing::{get_inspect_hierarchy, BlobContents, Package, SystemImageBuilder},
+    fuchsia_pkg_testing::{get_inspect_hierarchy, BlobContents, Package},
     fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
-    maplit::hashmap,
     mock_boot_arguments::MockBootArgumentsService,
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
-    pkgfs_ramdisk::PkgfsRamdisk,
-    std::{
-        collections::HashMap,
-        fs::{create_dir, create_dir_all, File},
-        io::Write as _,
-        sync::Arc,
-        time::Duration,
-    },
-    system_image::StaticPackages,
-    tempfile::TempDir,
+    std::{collections::HashMap, sync::Arc, time::Duration},
     vfs::directory::{entry::DirectoryEntry as _, helper::DirectlyMutable as _},
 };
 
@@ -63,7 +51,7 @@ async fn write_blob(contents: &[u8], file: fio::FileProxy) -> Result<(), zx::Sta
         file.resize(contents.len() as u64).await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
     fuchsia_fs::file::write(&file, contents).await.map_err(|e| match e {
-        WriteError::WriteError(s) => s,
+        fuchsia_fs::file::WriteError::WriteError(s) => s,
         _ => zx::Status::INTERNAL,
     })?;
 
@@ -234,85 +222,93 @@ async fn verify_packages_cached(proxy: &PackageCacheProxy, packages: &[Package])
         .await;
 }
 
-trait PkgFs {
-    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error>;
-
-    fn blobfs_root_proxy(&self) -> Result<fio::DirectoryProxy, Error>;
-
-    fn system_image_hash(&self) -> Option<Hash>;
+trait Blobfs {
+    fn root_proxy(&self) -> fio::DirectoryProxy;
 }
 
-impl PkgFs for PkgfsRamdisk {
-    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
-        PkgfsRamdisk::root_dir_handle(self)
-    }
-
-    fn blobfs_root_proxy(&self) -> Result<fio::DirectoryProxy, Error> {
-        self.blobfs().root_dir_proxy()
-    }
-
-    fn system_image_hash(&self) -> Option<Hash> {
-        self.system_image_merkle()
+impl Blobfs for BlobfsRamdisk {
+    fn root_proxy(&self) -> fio::DirectoryProxy {
+        self.root_dir_proxy().unwrap()
     }
 }
 
-struct TestEnvBuilder<PkgFsFn, PkgFsFut>
-where
-    PkgFsFn: FnOnce() -> PkgFsFut,
-    PkgFsFut: Future,
-    PkgFsFut::Output: PkgFs,
-{
+struct TestEnvBuilder<BlobfsAndSystemImageFut> {
     paver_service_builder: Option<MockPaverServiceBuilder>,
-    pkgfs: PkgFsFn,
+    blobfs_and_system_image: BlobfsAndSystemImageFut,
     ignore_system_image: bool,
-    system_image_hash_override: Option<Hash>,
 }
 
-async fn make_default_pkgfs_ramdisk() -> PkgfsRamdisk {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap()
-}
-
-impl TestEnvBuilder<fn() -> BoxFuture<'static, PkgfsRamdisk>, BoxFuture<'static, PkgfsRamdisk>> {
+impl TestEnvBuilder<BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>> {
     fn new() -> Self {
         Self {
-            pkgfs: || make_default_pkgfs_ramdisk().boxed(),
+            blobfs_and_system_image: async {
+                let system_image_package =
+                    fuchsia_pkg_testing::SystemImageBuilder::new().build().await;
+                let blobfs = BlobfsRamdisk::start().unwrap();
+                let () = system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+                (blobfs, Some(*system_image_package.meta_far_merkle_root()))
+            }
+            .boxed(),
             paver_service_builder: None,
             ignore_system_image: false,
-            system_image_hash_override: None,
         }
     }
 }
 
-impl<PkgFsFn, PkgFsFut> TestEnvBuilder<PkgFsFn, PkgFsFut>
+impl<BlobfsAndSystemImageFut, ConcreteBlobfs> TestEnvBuilder<BlobfsAndSystemImageFut>
 where
-    PkgFsFn: FnOnce() -> PkgFsFut,
-    PkgFsFut: Future,
-    PkgFsFut::Output: PkgFs,
+    BlobfsAndSystemImageFut: Future<Output = (ConcreteBlobfs, Option<Hash>)>,
+    ConcreteBlobfs: Blobfs,
 {
     fn paver_service_builder(self, paver_service_builder: MockPaverServiceBuilder) -> Self {
         Self { paver_service_builder: Some(paver_service_builder), ..self }
     }
 
-    fn pkgfs<Pother>(
+    fn blobfs_and_system_image_hash<OtherBlobfs>(
         self,
-        pkgfs: Pother,
-    ) -> TestEnvBuilder<impl FnOnce() -> future::Ready<Pother>, future::Ready<Pother>>
+        blobfs: OtherBlobfs,
+        system_image: Option<Hash>,
+    ) -> TestEnvBuilder<future::Ready<(OtherBlobfs, Option<Hash>)>>
     where
-        Pother: PkgFs + 'static,
+        OtherBlobfs: Blobfs,
     {
         TestEnvBuilder {
-            pkgfs: || future::ready(pkgfs),
+            blobfs_and_system_image: future::ready((blobfs, system_image)),
             paver_service_builder: self.paver_service_builder,
             ignore_system_image: self.ignore_system_image,
-            system_image_hash_override: self.system_image_hash_override,
+        }
+    }
+
+    /// Creates a BlobfsRamdisk loaded with, and configures pkg-cache to use, the supplied
+    /// `system_image` package.
+    fn blobfs_from_system_image(
+        self,
+        system_image: &Package,
+    ) -> TestEnvBuilder<future::Ready<(BlobfsRamdisk, Option<Hash>)>> {
+        self.blobfs_from_system_image_and_extra_packages(system_image, &[])
+    }
+
+    /// Creates a BlobfsRamdisk loaded with the supplied packages and configures the system to use
+    /// the supplied `system_image` package.
+    fn blobfs_from_system_image_and_extra_packages(
+        self,
+        system_image: &Package,
+        extra_packages: &[&Package],
+    ) -> TestEnvBuilder<future::Ready<(BlobfsRamdisk, Option<Hash>)>> {
+        let blobfs = BlobfsRamdisk::start().unwrap();
+        let root_dir = blobfs.root_dir().unwrap();
+        let () = system_image.write_to_blobfs_dir(&root_dir);
+        for pkg in extra_packages {
+            let () = pkg.write_to_blobfs_dir(&root_dir);
+        }
+
+        TestEnvBuilder::<_> {
+            blobfs_and_system_image: future::ready((
+                blobfs,
+                Some(*system_image.meta_far_merkle_root()),
+            )),
+            paver_service_builder: self.paver_service_builder,
+            ignore_system_image: self.ignore_system_image,
         }
     }
 
@@ -321,13 +317,8 @@ where
         Self { ignore_system_image: true, ..self }
     }
 
-    fn system_image_hash_override(self, system_image: Hash) -> Self {
-        assert_eq!(self.system_image_hash_override, None);
-        Self { system_image_hash_override: Some(system_image), ..self }
-    }
-
-    async fn build(self) -> TestEnv<PkgFsFut::Output> {
-        let pkgfs = (self.pkgfs)().await;
+    async fn build(self) -> TestEnv<ConcreteBlobfs> {
+        let (blobfs, system_image) = self.blobfs_and_system_image.await;
         let local_child_svc_dir = vfs::pseudo_directory! {};
 
         // Cobalt mocks so we can assert that we emit the correct events
@@ -374,11 +365,7 @@ where
 
         // fuchsia.boot/Arguments service to supply the hash of the system_image package.
         let mut arguments_service = MockBootArgumentsService::new(HashMap::new());
-        if let Some(hash) = self.system_image_hash_override {
-            arguments_service.insert_pkgfs_boot_arg(hash);
-        } else {
-            pkgfs.system_image_hash().map(|hash| arguments_service.insert_pkgfs_boot_arg(hash));
-        }
+        system_image.map(|hash| arguments_service.insert_pkgfs_boot_arg(hash));
         let arguments_service = Arc::new(arguments_service);
         let arguments_service_clone = Arc::clone(&arguments_service);
         local_child_svc_dir
@@ -391,10 +378,7 @@ where
             .unwrap();
 
         let local_child_out_dir = vfs::pseudo_directory! {
-            "pkgfs" => vfs::remote::remote_dir(
-                pkgfs.root_dir_handle().unwrap().into_proxy().unwrap()
-            ),
-            "blob" => vfs::remote::remote_dir(pkgfs.blobfs_root_proxy().unwrap()),
+            "blob" => vfs::remote::remote_dir(blobfs.root_proxy()),
             "svc" => local_child_svc_dir,
         };
 
@@ -452,9 +436,6 @@ where
                     .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
-                    .capability(
-                        Capability::directory("pkgfs").path("/pkgfs").rights(fio::RW_STAR_DIR),
-                    )
                     .capability(
                         Capability::directory("blob-exec")
                             .path("/blob")
@@ -547,7 +528,8 @@ where
 
         TestEnv {
             apps: Apps { realm_instance },
-            pkgfs,
+            blobfs,
+            system_image,
             proxies,
             mocks: Mocks {
                 logger_factory,
@@ -578,36 +560,31 @@ struct Apps {
     realm_instance: RealmInstance,
 }
 
-struct TestEnv<P = PkgfsRamdisk> {
+struct TestEnv<B = BlobfsRamdisk> {
     apps: Apps,
-    pkgfs: P,
+    blobfs: B,
+    system_image: Option<Hash>,
     proxies: Proxies,
     pub mocks: Mocks,
 }
 
-impl TestEnv<PkgfsRamdisk> {
+impl TestEnv<BlobfsRamdisk> {
     // workaround for fxbug.dev/38162
     async fn stop(self) {
         // Tear down the environment in reverse order, ending with the storage.
         drop(self.proxies);
         drop(self.apps);
-        self.pkgfs.stop().await.unwrap();
+        self.blobfs.stop().await.unwrap();
     }
 }
 
-impl TestEnv<PkgfsRamdisk> {
-    fn builder(
-    ) -> TestEnvBuilder<fn() -> BoxFuture<'static, PkgfsRamdisk>, BoxFuture<'static, PkgfsRamdisk>>
-    {
+impl TestEnv<BlobfsRamdisk> {
+    fn builder() -> TestEnvBuilder<BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>> {
         TestEnvBuilder::new()
     }
-
-    fn blobfs(&self) -> &BlobfsRamdisk {
-        self.pkgfs.blobfs()
-    }
 }
 
-impl<P: PkgFs> TestEnv<P> {
+impl<B: Blobfs> TestEnv<B> {
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         let nested_environment_label = format!(
             "pkg_cache_integration_test/realm_builder\\:{}",
@@ -757,92 +734,5 @@ impl MockLoggerFactory {
             }
             fasync::Timer::new(Duration::from_millis(10)).await;
         }
-    }
-}
-
-struct TempDirPkgFs {
-    root: TempDir,
-    disable_blobfs: bool,
-}
-
-impl TempDirPkgFs {
-    fn new() -> Self {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let fake_package_hash: Hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
-        let static_packages = StaticPackages::from_entries(vec![(
-            PackagePath::from_name_and_variant(
-                "fake-package".parse().unwrap(),
-                "0".parse().unwrap(),
-            ),
-            fake_package_hash,
-        )]);
-        let versions_contents = hashmap! {
-            system_image_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "some-blob".to_string() =>
-                        "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
-                }
-            ).unwrap(),
-            fake_package_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "other-blob".to_string() =>
-                        "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap()
-                }
-            ).unwrap()
-        };
-        let root = tempfile::tempdir().unwrap();
-
-        create_dir(root.path().join("ctl")).unwrap();
-
-        create_dir(root.path().join("system")).unwrap();
-        File::create(root.path().join("system/meta"))
-            .unwrap()
-            .write_all(system_image_hash.to_string().as_bytes())
-            .unwrap();
-        create_dir(root.path().join("system/data")).unwrap();
-        static_packages
-            .serialize(File::create(root.path().join("system/data/static_packages")).unwrap())
-            .unwrap();
-
-        create_dir(root.path().join("versions")).unwrap();
-        for (hash, contents) in versions_contents.iter() {
-            let meta_path = root.path().join(format!("versions/{}/meta", hash));
-            create_dir_all(&meta_path).unwrap();
-            contents.serialize(&mut File::create(meta_path.join("contents")).unwrap()).unwrap();
-        }
-
-        create_dir(root.path().join("blobfs")).unwrap();
-
-        Self { root, disable_blobfs: false }
-    }
-
-    fn disable_blobfs(&mut self) {
-        assert_eq!(self.disable_blobfs, false);
-        self.disable_blobfs = true;
-    }
-}
-
-impl PkgFs for TempDirPkgFs {
-    fn root_dir_handle(&self) -> Result<ClientEnd<fio::DirectoryMarker>, Error> {
-        Ok(fdio::transfer_fd(File::open(self.root.path()).unwrap()).unwrap().into())
-    }
-
-    fn blobfs_root_proxy(&self) -> Result<fio::DirectoryProxy, Error> {
-        if self.disable_blobfs {
-            let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-            Ok(proxy)
-        } else {
-            let dir_handle: ClientEnd<fio::DirectoryMarker> =
-                fdio::transfer_fd(File::open(self.root.path().join("blobfs")).unwrap())
-                    .unwrap()
-                    .into();
-            Ok(dir_handle.into_proxy().unwrap())
-        }
-    }
-
-    fn system_image_hash(&self) -> Option<Hash> {
-        Some("0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap())
     }
 }

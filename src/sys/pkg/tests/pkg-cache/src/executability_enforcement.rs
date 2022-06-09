@@ -5,11 +5,9 @@
 use {
     crate::TestEnv,
     assert_matches::assert_matches,
-    blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io as fio,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
-    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
 /// Test executability enforcement of fuchsia.pkg/PackageCache.{Get|Open}, i.e. whether the
@@ -48,16 +46,11 @@ async fn verify_package_executability(
     is_retained: IsRetained,
     expected_flags: fio::OpenFlags,
 ) {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     let system_image = system_image.build().await;
-    system_image.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image.meta_far_merkle_root())
-        .start()
-        .unwrap();
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image, &[&pkg])
+        .build()
+        .await;
 
     if let IsRetained::True = is_retained {
         let () = crate::replace_retained_packages(

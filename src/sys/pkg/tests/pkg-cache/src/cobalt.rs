@@ -6,14 +6,12 @@
 use {
     crate::TestEnv,
     assert_matches::assert_matches,
-    blobfs_ramdisk::BlobfsRamdisk,
     cobalt_client::traits::AsEventCodes,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::SystemImageBuilder,
     fuchsia_zircon as zx,
-    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
 async fn assert_count_events(
@@ -71,24 +69,16 @@ async fn pkg_cache_open_failure() {
 
 #[fasync::run_singlethreaded(test)]
 async fn pkg_cache_open_success() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    let system_image_package = SystemImageBuilder::new();
-    let system_image_package = system_image_package.build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
+    let system_image_package = SystemImageBuilder::new().build().await;
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
+
     assert_eq!(
         env.open_package(&system_image_package.meta_far_merkle_root().clone().to_string())
             .await
             .map(|_| ()),
         Ok(())
     );
-
     assert_count_events(
         &env,
         metrics::PKG_CACHE_OPEN_METRIC_ID,

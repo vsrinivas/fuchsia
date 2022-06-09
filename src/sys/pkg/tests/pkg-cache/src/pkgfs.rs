@@ -7,7 +7,6 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io as fio,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
-    pkgfs_ramdisk::PkgfsRamdisk,
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -35,12 +34,10 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
         assert!(missing_blob.is_none());
         missing_blob = Some(hash);
     }
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_and_system_image_hash(blobfs, Some(*system_image_package.meta_far_merkle_root()))
+        .build()
+        .await;
 
     let missing = fuchsia_fs::directory::open_file(
         &env.proxies.pkgfs,
@@ -60,15 +57,8 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn expose_system_image_package_as_system_directory() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
 
     system_image_package.verify_contents(&env.system_dir().await).await.unwrap();
 
@@ -77,15 +67,8 @@ async fn expose_system_image_package_as_system_directory() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn expose_pkgfs_packages_directory() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
 
     assert_eq!(
         files_async::readdir(&env.proxies.pkgfs_packages).await.unwrap(),
@@ -100,15 +83,8 @@ async fn expose_pkgfs_packages_directory() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn expose_pkgfs_versions_directory() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
 
     assert_eq!(
         files_async::readdir(&env.proxies.pkgfs_versions).await.unwrap(),

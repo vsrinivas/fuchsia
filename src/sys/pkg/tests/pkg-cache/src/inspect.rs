@@ -8,7 +8,6 @@ use {
         write_meta_far, write_needed_blobs, TestEnv,
     },
     assert_matches::assert_matches,
-    blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheMarker},
     fidl_fuchsia_pkg_ext::BlobId,
@@ -20,22 +19,13 @@ use {
     fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::prelude::*,
-    pkgfs_ramdisk::PkgfsRamdisk,
     std::collections::HashMap,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn system_image_hash_present() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -65,19 +55,11 @@ async fn system_image_hash_ignored() {
 
 #[fasync::run_singlethreaded(test)]
 async fn non_static_allow_list() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new()
         .pkgfs_non_static_packages_allowlist(&["a-package-name", "another-name"])
         .build()
         .await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -98,26 +80,22 @@ async fn assert_base_blob_count(
     cache_packages: Option<&[&Package]>,
     count: u64,
 ) {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let mut system_image_package = SystemImageBuilder::new().static_packages(static_packages);
     if let Some(cache_packages) = cache_packages {
         system_image_package = system_image_package.cache_packages(cache_packages);
-        for pkg in cache_packages {
-            pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-        }
     }
     let system_image_package = system_image_package.build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    for pkg in static_packages {
-        pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    }
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(
+            &system_image_package,
+            &static_packages
+                .iter()
+                .cloned()
+                .chain(cache_packages.unwrap_or(&[]).iter().cloned())
+                .collect::<Vec<_>>(),
+        )
+        .build()
+        .await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -183,65 +161,44 @@ async fn base_blob_count_ignores_cache_packages() {
     assert_base_blob_count(&[], Some(&[&pkg]), 3).await;
 }
 
-async fn pkgfs_with_restrictions_enabled(restrictions_enabled: bool) -> PkgfsRamdisk {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    let mut system_image_package = SystemImageBuilder::new();
-    if !restrictions_enabled {
-        system_image_package = system_image_package.pkgfs_disable_executability_restrictions();
-    }
-    let system_image_package = system_image_package.build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap()
-}
-
-async fn assert_executability_restrictions(pkgfs: PkgfsRamdisk, expected_state: String) {
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+#[fasync::run_singlethreaded(test)]
+async fn executability_restrictions_enabled() {
+    let env = TestEnv::builder().build().await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
+
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "executability-restrictions": expected_state
+            "executability-restrictions": "Enforce".to_string(),
         }
     );
     env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn executability_restrictions_enabled() {
-    assert_executability_restrictions(
-        pkgfs_with_restrictions_enabled(true).await,
-        "Enforce".to_string(),
-    )
-    .await;
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn executability_restrictions_disabled() {
-    assert_executability_restrictions(
-        pkgfs_with_restrictions_enabled(false).await,
-        "DoNotEnforce".to_string(),
-    )
-    .await;
+    let system_image_package =
+        SystemImageBuilder::new().pkgfs_disable_executability_restrictions().build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
+    env.block_until_started().await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "executability-restrictions": "DoNotEnforce".to_string(),
+        }
+    );
+    env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn dynamic_index_inital_state() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
     let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -259,26 +216,19 @@ async fn dynamic_index_inital_state() {
 
 #[fasync::run_singlethreaded(test)]
 async fn dynamic_index_with_cache_packages() {
-    let blobfs = BlobfsRamdisk::start().unwrap();
-    let mut system_image_package = SystemImageBuilder::new();
     let cache_package = PackageBuilder::new("a-cache-package")
         .add_resource_at("some-cached-blob", &b"unique contents"[..])
         .build()
         .await
         .unwrap();
 
-    system_image_package = system_image_package.cache_packages(&[&cache_package]);
-    cache_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let system_image_package =
+        SystemImageBuilder::new().cache_packages(&[&cache_package]).build().await;
 
-    let system_image_package = system_image_package.build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .unwrap();
-
-    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    let env = TestEnv::builder()
+        .blobfs_from_system_image_and_extra_packages(&system_image_package, &[&cache_package])
+        .build()
+        .await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
