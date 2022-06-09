@@ -35,6 +35,7 @@ AnnotationMap BuildDefaultAnnotations(const feedback::Annotations& startup_annot
   AnnotationMap default_annotations;
   default_annotations.Set(feedback::kOSNameKey, "Fuchsia")
       .Set(feedback::kOSVersionKey, GetFromStartup(feedback::kBuildVersionKey))
+      .Set(feedback::kOSChannelKey, GetFromStartup(feedback::kSystemUpdateChannelCurrentKey))
       .Set(feedback::kBuildVersionKey, GetFromStartup(feedback::kBuildVersionKey))
       .Set(feedback::kBuildBoardKey, GetFromStartup(feedback::kBuildBoardKey))
       .Set(feedback::kBuildProductKey, GetFromStartup(feedback::kBuildProductKey))

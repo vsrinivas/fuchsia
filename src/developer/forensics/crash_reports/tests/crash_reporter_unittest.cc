@@ -236,6 +236,7 @@ class CrashReporterTest : public UnitTestFixture {
         {"ptype", testing::StartsWith("crashing_program")},
         {feedback::kOSNameKey, "Fuchsia"},
         {feedback::kOSVersionKey, kBuildVersion},
+        {feedback::kOSChannelKey, kDefaultChannel},
         {feedback::kBuildVersionKey, kBuildVersion},
         {feedback::kBuildBoardKey, kBuildBoard},
         {feedback::kBuildProductKey, kBuildProduct},

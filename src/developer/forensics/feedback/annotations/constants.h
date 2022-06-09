@@ -39,6 +39,7 @@ constexpr const char kHardwareProductRegulatoryDomainKey[] = "hardware.product.r
 constexpr const char kHardwareProductSKUKey[] = "hardware.product.sku";
 constexpr const char kOSNameKey[] = "osName";
 constexpr const char kOSVersionKey[] = "osVersion";
+constexpr const char kOSChannelKey[] = "osChannel";
 constexpr const char kSystemBootIdCurrentKey[] = "system.boot-id.current";
 constexpr const char kSystemBootIdPreviousKey[] = "system.boot-id.previous";
 constexpr const char kSystemLastRebootReasonKey[] = "system.last-reboot.reason";

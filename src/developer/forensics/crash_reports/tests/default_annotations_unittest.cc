@@ -22,6 +22,8 @@ TEST(DefaultAnnotationsTest, BuildDefaultAnnotations_EmptyStartupAnnotations) {
                   Pair(feedback::kOSNameKey, "Fuchsia"),
                   Pair(feedback::kOSVersionKey, "unknown"),
                   Pair("debug.osVersion.error", "missing"),
+                  Pair(feedback::kOSChannelKey, "unknown"),
+                  Pair("debug.osChannel.error", "missing"),
                   Pair(feedback::kBuildVersionKey, "unknown"),
                   Pair("debug.build.version.error", "missing"),
                   Pair(feedback::kBuildBoardKey, "unknown"),
@@ -37,6 +39,7 @@ TEST(DefaultAnnotationsTest, BuildDefaultAnnotations) {
   EXPECT_THAT(
       BuildDefaultAnnotations({
                                   {feedback::kBuildVersionKey, "version"},
+                                  {feedback::kSystemUpdateChannelCurrentKey, "channel"},
                                   {feedback::kBuildBoardKey, "board"},
                                   {feedback::kBuildProductKey, Error::kTimeout},
                                   {feedback::kBuildLatestCommitDateKey, Error::kFileReadFailure},
@@ -45,6 +48,7 @@ TEST(DefaultAnnotationsTest, BuildDefaultAnnotations) {
       UnorderedElementsAreArray({
           Pair(feedback::kOSNameKey, "Fuchsia"),
           Pair(feedback::kOSVersionKey, "version"),
+          Pair(feedback::kOSChannelKey, "channel"),
           Pair(feedback::kBuildVersionKey, "version"),
           Pair(feedback::kBuildBoardKey, "board"),
           Pair(feedback::kBuildProductKey, "unknown"),
