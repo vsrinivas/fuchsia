@@ -115,7 +115,7 @@ impl AssetLoader for AssetLoaderImpl {
             cause,
         };
 
-        let file_proxy = io_util::open_file(
+        let file_proxy = fuchsia_fs::open_file(
             &directory_proxy,
             Path::new(&file_name),
             io::OpenFlags::RIGHT_READABLE,
