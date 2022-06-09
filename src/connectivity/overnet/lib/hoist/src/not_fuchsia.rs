@@ -28,7 +28,11 @@ use {
     stream_link::run_stream_link,
 };
 
-pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
+pub fn default_ascendd_path() -> String {
+    let mut path = std::env::temp_dir();
+    path.push("ascendd");
+    format!("{}", path.as_os_str().to_str().unwrap())
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings

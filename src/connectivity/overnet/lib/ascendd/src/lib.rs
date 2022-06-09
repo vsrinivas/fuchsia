@@ -18,7 +18,7 @@ use std::{io::ErrorKind::TimedOut, pin::Pin, time::Duration};
 use stream_link::run_stream_link;
 
 #[cfg(not(target_os = "fuchsia"))]
-pub use hoist::DEFAULT_ASCENDD_PATH;
+pub use hoist::default_ascendd_path;
 
 #[derive(FromArgs, Default)]
 /// daemon to lift a non-Fuchsia device into Overnet.
@@ -84,7 +84,7 @@ pub fn run_stream<'a>(
 async fn bind_listener(opt: Opt) -> Result<(String, String, UnixListener), Error> {
     let Opt { sockpath, serial } = opt;
 
-    let sockpath = sockpath.unwrap_or(DEFAULT_ASCENDD_PATH.to_string());
+    let sockpath = sockpath.unwrap_or(default_ascendd_path());
     let serial = serial.unwrap_or("none".to_string());
 
     log::info!("starting ascendd on {} with node id {:?}", sockpath, hoist().node().node_id());

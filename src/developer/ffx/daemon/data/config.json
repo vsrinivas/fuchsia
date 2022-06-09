@@ -13,9 +13,6 @@
             "timeout_rate": 5
         }
     },
-    "overnet": {
-        "socket": "/tmp/ascendd"
-    },
     "proactive_log": {
         "cache_directory": "$DATA/target_logs",
         "enabled": true,

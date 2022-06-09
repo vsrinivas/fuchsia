@@ -5,7 +5,7 @@
 #[cfg(not(target_os = "fuchsia"))]
 mod not_fuchsia;
 #[cfg(not(target_os = "fuchsia"))]
-pub use not_fuchsia::{hard_coded_security_context, Hoist, HostOvernet, DEFAULT_ASCENDD_PATH};
+pub use not_fuchsia::{default_ascendd_path, hard_coded_security_context, Hoist, HostOvernet};
 
 #[cfg(target_os = "fuchsia")]
 mod fuchsia;

@@ -10,7 +10,7 @@ pub async fn get_socket() -> String {
     } else if let Ok(sock_path) = ffx_config::get("overnet.socket").await {
         sock_path
     } else {
-        String::from(hoist::DEFAULT_ASCENDD_PATH)
+        hoist::default_ascendd_path()
     }
 }
 
