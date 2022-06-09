@@ -141,6 +141,11 @@ struct LogBuffer {
     syslog_backend::WriteKeyValue(this, value.key, value.value);
   }
 
+  // Encodes a NULL-terminated C-string.
+  void Encode(KeyValue<const char*, char*> value) {
+    syslog_backend::WriteKeyValue(this, value.key, value.value);
+  }
+
   // Encodes a double floating point value
   void Encode(KeyValue<const char*, double> value) {
     syslog_backend::WriteKeyValue(this, value.key, value.value);

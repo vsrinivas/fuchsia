@@ -30,8 +30,8 @@ source_set("lib") {
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
     "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver:driver_runtime",
-    "//src/devices/lib/log",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/inspect",
@@ -133,11 +133,11 @@ executable("bin") {
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_llcpp",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//sdk/lib/inspect/service/cpp",
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/syslog",
   ]
 }
 

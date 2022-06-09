@@ -13,9 +13,9 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/dlfcn.h>
 
-#include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
 // The driver runtime libraries use the fdf namespace, but we would also like to use fdf
@@ -35,8 +35,8 @@ class FileEventHandler : public fidl::AsyncEventHandler<fio::File> {
   explicit FileEventHandler(std::string url) : url_(std::move(url)) {}
 
   void on_fidl_error(fidl::UnbindInfo info) override {
-    LOGF(ERROR, "Failed to start driver '%s', could not open library: %s", url_.data(),
-         info.FormatDescription().data());
+    FX_SLOG(ERROR, "Failed to start driver; could not open library", KV("url", url_.data()),
+            KV("status_str", info.FormatDescription().data()));
   }
 
  private:
@@ -70,17 +70,18 @@ zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
 zx::status<fbl::RefPtr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
   void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
-    LOGF(ERROR, "Failed to start driver '%s', could not load library: %s", url.data(), dlerror());
+    FX_SLOG(ERROR, "Failed to start driver; could not load library", KV("url", url.data()),
+            KV("status_str", dlerror()));
     return zx::error(ZX_ERR_INTERNAL);
   }
   auto record = static_cast<const DriverRecordV1*>(dlsym(library, "__fuchsia_driver_record__"));
   if (record == nullptr) {
-    LOGF(ERROR, "Failed to start driver '%s', driver record not found", url.data());
+    FX_SLOG(ERROR, "Failed to start driver; driver record not found", KV("url", url.data()));
     return zx::error(ZX_ERR_NOT_FOUND);
   }
   if (record->version != 1) {
-    LOGF(ERROR, "Failed to start driver '%s', unknown driver record version: %lu", url.data(),
-         record->version);
+    FX_SLOG(ERROR, "Failed to start driver; unknown driver record version", KV("url", url.data()),
+            KV("version", record->version));
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
   return zx::ok(fbl::MakeRefCounted<Driver>(std::move(url), library, record));
@@ -93,7 +94,8 @@ Driver::~Driver() {
   if (opaque_.has_value()) {
     zx_status_t status = record_->stop(*opaque_);
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to stop driver '%s': %s", url_.data(), zx_status_get_string(status));
+      FX_SLOG(ERROR, "Failed to stop driver", KV("url", url_.data()),
+              KV("status_str", zx_status_get_string(status)));
     }
   }
   dlclose(library_);
@@ -111,8 +113,8 @@ zx::status<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
 
   fidl::OwnedEncodeResult encoded = fidl::Encode(std::move(start_args));
   if (!encoded.message().ok()) {
-    LOGF(ERROR, "Failed to start driver, could not encode start args: %s",
-         encoded.message().FormatDescription().data());
+    FX_SLOG(ERROR, "Failed to start driver, could not encode start args",
+            KV("status_str", encoded.message().FormatDescription().data()));
     return zx::error(encoded.message().status());
   }
   fidl_opaque_wire_format_metadata_t wire_format_metadata =
@@ -122,8 +124,8 @@ zx::status<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
   // driver on start.
   fidl::OutgoingToIncomingMessage converted_message{encoded.message()};
   if (!converted_message.ok()) {
-    LOGF(ERROR, "Failed to start driver, could not convert start args: %s",
-         converted_message.FormatDescription().data());
+    FX_SLOG(ERROR, "Failed to start driver, could not convert start args",
+            KV("status_str", converted_message.FormatDescription().data()));
     return zx::error(converted_message.status());
   }
 
@@ -167,8 +169,9 @@ zx::status<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoin
   };
   auto status = outgoing_directory.AddProtocol<fdh::DriverHost>(std::move(service));
   if (status.is_error()) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s",
-         fidl::DiscoverableProtocolName<fdh::DriverHost>, status.status_string());
+    FX_SLOG(ERROR, "Failed to add directory entry",
+            KV("name", fidl::DiscoverableProtocolName<fdh::DriverHost>),
+            KV("status_str", status.status_string()));
   }
 
   return status;
@@ -183,7 +186,7 @@ uint32_t DriverHost::ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dict
       if (opt == "allow_sync_calls") {
         opts |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
       } else {
-        LOGF(WARNING, "Ignoring unknown default_dispatcher_opt: %s", opt.c_str());
+        FX_SLOG(WARNING, "Ignoring unknown default_dispatcher_opt", KV("opt", opt.data()));
       }
     }
   }
@@ -192,7 +195,7 @@ uint32_t DriverHost::ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dict
 
 void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
   if (!request.start_args().url()) {
-    LOGF(ERROR, "Failed to start driver, missing 'url' argument");
+    FX_SLOG(ERROR, "Failed to start driver, missing 'url' argument");
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -200,8 +203,8 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
   const auto& ns = request.start_args().ns();
   auto pkg = ns ? NsValue(*ns, "/pkg") : zx::error(ZX_ERR_INVALID_ARGS);
   if (pkg.is_error()) {
-    LOGF(ERROR, "Failed to start driver, missing '/pkg' directory: %s",
-         zx_status_get_string(pkg.error_value()));
+    FX_SLOG(ERROR, "Failed to start driver, missing '/pkg' directory",
+            KV("status_str", zx_status_get_string(pkg.error_value())));
     completer.Close(pkg.error_value());
     return;
   }
@@ -214,8 +217,8 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
     binary = driver::ProgramValue(wire_program, "binary");
   }
   if (binary.is_error()) {
-    LOGF(ERROR, "Failed to start driver, missing 'binary' argument: %s",
-         zx_status_get_string(binary.error_value()));
+    FX_SLOG(ERROR, "Failed to start driver, missing 'binary' argument",
+            KV("status_str", zx_status_get_string(binary.error_value())));
     completer.Close(binary.error_value());
     return;
   }
@@ -230,8 +233,8 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       static_cast<uint32_t>(fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightExecutable),
       endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to start driver '%s', could not open library: %s", url.data(),
-         zx_status_get_string(status));
+    FX_SLOG(ERROR, "Failed to start driver; could not open library", KV("url", url.data()),
+            KV("status_str", zx_status_get_string(status)));
     completer.Close(status);
     return;
   }
@@ -249,8 +252,8 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
                    _ = file.Clone()](fidl::Result<fio::File::GetBackingMemory>& result) mutable {
     const std::string& url = *start_args.url();
     if (!result.is_ok()) {
-      LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
-           result.error_value().FormatDescription().c_str());
+      FX_SLOG(ERROR, "Failed to start driver, could not get library VMO", KV("url", url.data()),
+              KV("status_str", result.error_value().FormatDescription().data()));
       zx_status_t status = result.error_value().is_application_error()
                                ? result.error_value().application_error()
                                : result.error_value().transport_error().status();
@@ -264,8 +267,8 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
     auto manifest = GetManifest(url);
     zx_status_t status = vmo.set_property(ZX_PROP_NAME, manifest.data(), manifest.size());
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to start driver '%s', could not name library VMO: %s", url.data(),
-           zx_status_get_string(status));
+      FX_SLOG(ERROR, "Failed to start driver, could not name library VMO", KV("url", url.data()),
+              KV("status_str", zx_status_get_string(status)));
       completer.Close(status);
       return;
     }
@@ -334,7 +337,8 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       fdf::UnownedDispatcher unowned_dispatcher = driver_dispatcher.borrow();
       auto start = driver->Start(std::move(start_args), std::move(driver_dispatcher));
       if (start.is_error()) {
-        LOGF(ERROR, "Failed to start driver '%s': %s", driver->url().data(), start.status_string());
+        FX_SLOG(ERROR, "Failed to start driver", KV("url", driver->url().data()),
+                KV("status_str", start.status_string()));
         completer.Close(start.error_value());
         // If we fail to start the driver, we need to initiate shutting down the dispatcher.
         unowned_dispatcher->ShutdownAsync();
@@ -342,13 +346,13 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
         // is released.
         return;
       }
-      LOGF(INFO, "Started '%s'", driver->url().data());
+      FX_SLOG(INFO, "Started driver", KV("url", driver->url().data()));
 
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info,
                                     fidl::ServerEnd<fdh::Driver> server) {
         if (!info.is_user_initiated()) {
-          LOGF(WARNING, "Unexpected stop of driver '%s': %s", driver->url().data(),
-               info.FormatDescription().data());
+          FX_SLOG(WARNING, "Unexpected stop of driver", KV("url", driver->url().data()),
+                  KV("status_str", info.FormatDescription()).data());
         }
 
         // Request the driver runtime shutdown all dispatchers owned by the driver.
@@ -395,7 +399,8 @@ void DriverHost::GetProcessKoid(GetProcessKoidRequest& request,
   zx_status_t status =
       zx::process::self()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to get info about process handle: %s", zx_status_get_string(status));
+    FX_SLOG(ERROR, "Failed to get info about process handle",
+            KV("status_str", zx_status_get_string(status)));
     completer.Reply(zx::error(status));
   }
   completer.Reply(zx::ok(info.koid));

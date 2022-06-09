@@ -9,13 +9,12 @@
 #include <lib/fdf/internal.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <zircon/status.h>
 
 #include "driver_host.h"
-#include "src/devices/lib/log/log.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace fdf {
@@ -30,7 +29,8 @@ int main(int argc, char** argv) {
   // TODO(fxbug.dev/33183): Lock down job.
   zx_status_t status = StdoutToDebuglog::Init();
   if (status != ZX_OK) {
-    LOGF(INFO, "Failed to redirect stdout to debuglog, assuming test environment and continuing");
+    FX_SLOG(INFO,
+            "Failed to redirect stdout to debuglog, assuming test environment and continuing");
   }
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -39,14 +39,14 @@ int main(int argc, char** argv) {
 
   auto serve = outgoing.ServeFromStartupInfo();
   if (serve.is_error()) {
-    LOGF(ERROR, "Failed to serve outgoing directory: %s", serve.status_string());
+    FX_SLOG(ERROR, "Failed to serve outgoing directory", KV("status", serve.status_string()));
     return serve.status_value();
   }
 
   // Setup inspect.
   inspect::Inspector inspector;
   if (!inspector) {
-    LOGF(ERROR, "Failed to allocate VMO for inspector");
+    FX_SLOG(ERROR, "Failed to allocate VMO for inspector");
     return ZX_ERR_NO_MEMORY;
   }
   auto tree_handler = inspect::MakeTreeHandler(&inspector, loop.dispatcher());
@@ -54,8 +54,8 @@ int main(int argc, char** argv) {
   vfs::PseudoDir diagnostics_dir;
   status = diagnostics_dir.AddEntry(fi::Tree::Name_, std::move(tree_service));
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s", fi::Tree::Name_,
-         zx_status_get_string(status));
+    FX_SLOG(ERROR, "Failed to add directory entry", KV("name", fi::Tree::Name_),
+            KV("status_str", zx_status_get_string(status)));
     return status;
   }
 
@@ -66,8 +66,8 @@ int main(int argc, char** argv) {
       endpoints->server.TakeChannel(), loop.dispatcher());
   zx::status<> status_result = outgoing.AddDirectory(std::move(endpoints->client), kDiagnosticsDir);
   if (status_result.is_error()) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s", kDiagnosticsDir,
-         status_result.status_string());
+    FX_SLOG(ERROR, "Failed to add directory entry", KV("name", kDiagnosticsDir),
+            KV("status_str", status_result.status_string()));
     return status_result.status_value();
   }
 

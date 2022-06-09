@@ -54,7 +54,6 @@ syslog_visibility_allowlist = [
   "//src/connectivity/telephony/tests/component-integration/fake-at-query:*",
   "//src/connectivity/telephony/tests/component-integration/fake-qmi-query:*",
   "//src/connectivity/telephony/tests/component-integration/snooper:*",
-  "//src/devices/bin/driver_host2:*",
   "//src/devices/lib/log:*",
   "//src/devices/tests/fx-logger:*",
   "//src/diagnostics/archivist:*",
