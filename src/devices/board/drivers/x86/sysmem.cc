@@ -28,6 +28,8 @@ static const sysmem_metadata_t sysmem_metadata = {
     // no protected pool
     .protected_memory_size = 0,
     // -5 means 5% of physical RAM
+    // we allocate a small amount of contiguous RAM to keep the sysmem tests from flaking,
+    // see https://fxbug.dev/67703.
     .contiguous_memory_size = -5,
 };
 

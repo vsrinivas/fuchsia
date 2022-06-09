@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_ACPI_ARM64_ACPI_ARM64_H_
 #define SRC_DEVICES_BOARD_DRIVERS_ACPI_ARM64_ACPI_ARM64_H_
 
+#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+
 #include <ddktl/device.h>
 
 #include "src/devices/board/lib/acpi/acpi-impl.h"
@@ -18,17 +20,20 @@ using DeviceType = ddk::Device<AcpiArm64, ddk::Initializable>;
 
 class AcpiArm64 : public DeviceType {
  public:
-  explicit AcpiArm64(zx_device_t* parent) : DeviceType(parent) {}
+  explicit AcpiArm64(zx_device_t* parent) : DeviceType(parent), pbus_(parent) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
 
+  zx::status<> SysmemInit();
+
  private:
   std::optional<acpi::FuchsiaManager> manager_;
   acpi::AcpiImpl acpi_;
   iommu::ArmIommuManager iommu_manager_;
+  ddk::PBusProtocolClient pbus_;
 
   std::thread init_thread_;
 };

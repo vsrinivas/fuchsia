@@ -59,6 +59,13 @@ void AcpiArm64::DdkInit(ddk::InitTxn txn) {
 
   auto dispatcher = fdf::Dispatcher::GetCurrent();
   async::PostTask(dispatcher->async_dispatcher(), [txn = std::move(txn), this]() mutable {
+    zx::status<> zx_status = SysmemInit();
+    if (zx_status.is_error()) {
+      zxlogf(ERROR, "Sysmem init failed: %s", zx_status.status_string());
+      txn.Reply(zx_status.status_value());
+      return;
+    }
+
     acpi::status<> status = manager_->acpi()->InitializeAcpi();
     if (status.is_error()) {
       txn.Reply(status.zx_status_value());

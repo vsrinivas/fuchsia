@@ -17,10 +17,15 @@ driver_bind_rules("acpi-arm64-bind") {
 
 fuchsia_driver("acpi-arm64-driver") {
   output_name = "acpi-arm64"
-  sources = [ "acpi-arm64.cc" ]
+  sources = [
+    "acpi-arm64.cc",
+    "sysmem.cc",
+  ]
   deps = [
     ":acpi-arm64-bind",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/board/lib/acpi",
     "//src/devices/lib/driver",
