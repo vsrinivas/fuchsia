@@ -91,6 +91,18 @@ constexpr AudioDataFormat kFormatI2S0Bus = {
     .sample_type = SampleType::INT_MSB,
     .reserved = 0,
 };
+// Format used for I2S1 bus input/output.
+constexpr AudioDataFormat kFormatI2S1Bus = {
+    .sampling_frequency = SamplingFrequency::FS_48000HZ,
+    .bit_depth = BitDepth::DEPTH_32BIT,
+    .channel_map = 0xFFFFFF10,
+    .channel_config = ChannelConfig::CONFIG_STEREO,
+    .interleaving_style = InterleavingStyle::PER_CHANNEL,
+    .number_of_channels = 2,
+    .valid_bit_depth = 24,
+    .sample_type = SampleType::INT_MSB,
+    .reserved = 0,
+};
 
 constexpr uint32_t AudioBytesPerSec(const AudioDataFormat& format) {
   return static_cast<uint32_t>(format.sampling_frequency) *
@@ -416,6 +428,15 @@ StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
     return PrependMessage("Could not set up route to Max98373 codec", speakers_id.status());
   }
 
+  // Create output pipeline to DA7219 codec.
+  constexpr AudioDataFormat kFormatDa7219 = kFormatI2S1Bus;
+  StatusOr<DspPipelineId> headphones_id = ConnectHostToI2S(
+      nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 1),
+      I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S1_BUS, 0), I2S1_BUS, kFormatDa7219);
+  if (!headphones_id.ok()) {
+    return PrependMessage("Could not set up route to DA7219 codec", headphones_id.status());
+  }
+
   // Create input pipeline from DMICs.
   // PDM bus must be zero, only one PDM link from SW/FW point of view.
   constexpr uint8_t kDmicBus = 0;
@@ -444,6 +465,14 @@ StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
                      .is_input = true,
                      .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
                      .name = "Builtin Microphones"});
+  streams.push_back({.id = headphones_id.ValueOrDie(),
+                     .host_format = kHostI2sFormat,
+                     .dai_format = kFormatI2S1Bus,
+                     .is_i2s = true,
+                     .stream_id = 3,
+                     .is_input = false,
+                     .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
+                     .name = "Builtin Headphone Jack"});
   return streams;
 }
 
