@@ -1,0 +1,104 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.composition.internal;
+
+using fuchsia.ui.composition;
+using fuchsia.math;
+using zx;
+
+/// Possible errors of the ScreenCapture protocol.
+type ScreenCaptureError = flexible enum {
+    /// One or more of the arguments was missing.
+    MISSING_ARGS = 1;
+    /// One or more of the arguments was not valid.
+    INVALID_ARGS = 2;
+    /// Indicates that the client has sent an overwritten hanging get.
+    BAD_HANGING_GET = 3;
+};
+
+/// Rotation applied to the image.
+/// For example, if the display is rotated 90 degrees according to its
+/// `display_info` config file, the image can be captured as if the display
+/// is not rotated (0 degrees) by applying CW_270_DEGREES.
+type ScreenCaptureRotation = strict enum {
+    CW_0_DEGREES = 0;
+    CW_90_DEGREES = 1;
+    CW_180_DEGREES = 2;
+    CW_270_DEGREES = 3;
+};
+
+/// Fields required to set up a ScreenCapture protocol in the [`Configure`]
+/// call. Notice some fields are optional.
+type ScreenCaptureConfig = resource table {
+    /// The import token referencing a BufferCollection registered with the
+    /// Allocator.
+    /// Required.
+    1: import_token fuchsia.ui.composition.BufferCollectionImportToken;
+
+    /// The size of the image in pixels: width and height.
+    /// This should be the width and height calculated after the
+    /// rotation that will be applied.
+    /// Required.
+    2: image_size fuchsia.math.SizeU;
+
+    /// The rotation applied to the stream of images.
+    /// Defaults to CW_0_DEGREES (no rotation).
+    /// Optional.
+    3: image_rotation ScreenCaptureRotation;
+};
+
+/// Return fields of the [`GetNextFrame`] call. These fields hold the
+/// frame’s information on buffer location, timing, and a way to release
+/// after using it. All fields will be returned by the server.
+type FrameInfo = resource table {
+    /// The index of the VMO where the requested frame has been rendered
+    /// in the buffer collection.
+    1: buffer_index uint32;
+
+    /// The time that the buffer was populated with the frame.
+    2: capture_timestamp zx.time;
+
+    /// The release token for |buffer_index|. The client drops the eventpair
+    /// to signal to the server that |buffer_index| is free for writing.
+    /// If the eventpair is not dropped, then in the future calls to
+    /// [`GetNextFrame`], if there are no available buffers, the server will
+    /// wait until the client frees up a past buffer. If the client was holding
+    /// on to all buffers in the buffer collection and then
+    /// releases a buffer while hanging, the server will immediately return the
+    /// latest frame.
+    3: buffer_release_token zx.handle:EVENTPAIR;
+};
+
+/// Provides a low-level streaming API for clients to use.
+/// ScreenCapture clients should familiarize themselves with the
+/// [`fuchsia.sysmem/BufferCollection`] and
+/// [`fuchsia.ui.composition/Allocator`] protocols as those are necessary to
+/// create the BufferCollections and images ScreenCapture uses.
+@discoverable
+protocol ScreenCapture {
+    /// Clients should first use the ['fuchsia.ui.composition/Allocator']
+    /// protocol to register a BufferCollection.
+    ///
+    /// Similarly, the clients are responsible for specifying a buffer big
+    /// enough for the image. If the buffer is too small, an
+    /// attempt will be made to render the image, however, it will not be
+    /// guaranteed to contain the complete image.
+    Configure(ScreenCaptureConfig) -> (struct {}) error ScreenCaptureError;
+
+    /// [`GetNextFrame`] returns the latest unseen-by-the-client frame as soon
+    /// as possible. On the first call to [`GetNextFrame`] and any subsequent
+    /// calls that have not recieved the previous expected requested frame,
+    /// [`GetNextFrame`] will return immediately with the last frame to be
+    /// rendered. If the client had requested the previous frame, the server
+    /// will wait until the next frame is produced to return.
+    ///
+    /// After the client finishes processing the returned buffer, they should
+    /// drop the eventpair to signal to the server that the buffer can be
+    /// re-used.
+    ///
+    /// It is invalid to call [`GetNextFrame`] while a previous call is still
+    /// pending. Doing so will return a BAD_HANGING_GET error and cause the
+    /// channel to close.
+    GetNextFrame() -> (FrameInfo) error ScreenCaptureError;
+};
