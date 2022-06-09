@@ -5,10 +5,13 @@
 #ifndef EXAMPLES_DIAGNOSTICS_WORKSHOP_FILE_UTILS_H_
 #define EXAMPLES_DIAGNOSTICS_WORKSHOP_FILE_UTILS_H_
 
-std::string FilepathForKey(std::string& key);
+#include <cstdint>
+#include <string>
 
-bool LoadFromFile(std::string& filepath, std::string* name, int64_t* balance);
+std::string FilepathForKey(const std::string& key);
 
-bool SaveToFile(std::string& filepath, std::string& name, int64_t balance);
+bool LoadFromFile(const std::string& filepath, std::string* name, int64_t* balance);
+
+bool SaveToFile(const std::string& filepath, const std::string& name, int64_t balance);
 
 #endif  // EXAMPLES_DIAGNOSTICS_WORKSHOP_FILE_UTILS_H_

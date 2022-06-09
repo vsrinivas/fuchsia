@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdint>
+#include <string>
+
 #include <rapidjson/document.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
@@ -11,9 +14,9 @@
 #include "src/lib/files/path.h"
 #include "src/lib/json_parser/json_parser.h"
 
-std::string FilepathForKey(std::string& key) { return files::JoinPath("/data", key); }
+std::string FilepathForKey(const std::string& key) { return files::JoinPath("/data", key); }
 
-bool LoadFromFile(std::string& filepath, std::string* name, int64_t* balance) {
+bool LoadFromFile(const std::string& filepath, std::string* name, int64_t* balance) {
   json::JSONParser json_parser;
   rapidjson::Document document = json_parser.ParseFromFile(filepath);
   if (json_parser.HasError()) {
@@ -24,7 +27,7 @@ bool LoadFromFile(std::string& filepath, std::string* name, int64_t* balance) {
   return true;
 }
 
-bool SaveToFile(std::string& filepath, std::string& name, int64_t balance) {
+bool SaveToFile(const std::string& filepath, const std::string& name, int64_t balance) {
   rapidjson::Document document;
   document.SetObject();
   document.AddMember("name", name, document.GetAllocator());
