@@ -28,7 +28,6 @@
 #include <string_view>
 #include <utility>
 
-#include <cobalt-client/cpp/collector.h>
 #include <fbl/ref_ptr.h>
 #include <safemath/safe_conversions.h>
 
@@ -105,6 +104,14 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
   return CheckSuperblock(superblock, blocks, /*quiet=*/false);
 }
 
+std::shared_ptr<BlobfsMetrics> CreateBlobfsMetrics(inspect::Inspector inspector) {
+  bool enable_page_in_metrics = false;
+#ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
+  enable_page_in_metrics = true;
+#endif
+  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics, std::move(inspector));
+}
+
 }  // namespace
 
 zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatcher,
@@ -144,8 +151,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(
       dispatcher, std::move(device), vfs, superblock, options.writability,
-      options.compression_settings, std::move(vmex_resource), options.pager_backed_cache_policy,
-      options.collector_factory, options.metrics_flush_time));
+      options.compression_settings, std::move(vmex_resource), options.pager_backed_cache_policy));
   fs->block_info_ = block_info;
 
   DecompressorCreatorConnector* decompression_connector = nullptr;
@@ -182,8 +188,6 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   }
   fs->page_loader_ = std::move(page_loader_or).value();
   FX_LOGS(INFO) << "Initialized user pager";
-
-  fs->metrics_->Collect();
 
   JournalSuperblock journal_superblock;
   if (options.writability != blobfs::Writability::ReadOnlyDisk) {
@@ -833,9 +837,7 @@ bool Blobfs::StreamingWritesEnabled() {
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                fs::PagedVfs* vfs, const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
-               std::optional<CachePolicy> pager_backed_cache_policy,
-               std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
-               zx::duration metrics_flush_time)
+               std::optional<CachePolicy> pager_backed_cache_policy)
     : vfs_(vfs),
       info_(*info),
       dispatcher_(dispatcher),
@@ -844,8 +846,7 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)),
       inspect_tree_(),
-      metrics_(CreateMetrics(inspect_tree_.inspector(), std::move(collector_factory),
-                             metrics_flush_time)),
+      metrics_(CreateBlobfsMetrics(inspect_tree_.inspector())),
       pager_backed_cache_policy_(pager_backed_cache_policy) {
   ZX_ASSERT(vfs_);
 
@@ -1142,18 +1143,6 @@ zx_status_t Blobfs::MigrateToRev4() {
 zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& operations) {
   std::shared_lock lock(fsck_at_end_of_transaction_mutex_);
   return TransactionManager::RunRequests(operations);
-}
-
-std::shared_ptr<BlobfsMetrics> Blobfs::CreateMetrics(
-    inspect::Inspector inspector,
-    std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
-    zx::duration metrics_flush_time) {
-  bool enable_page_in_metrics = false;
-#ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
-  enable_page_in_metrics = true;
-#endif
-  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics, std::move(inspector),
-                                         collector_factory, metrics_flush_time);
 }
 
 zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {

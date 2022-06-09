@@ -62,8 +62,7 @@ OperationTracker::TrackerEvent::~TrackerEvent() {
     tracker_->OnError();
   } else if (status_.value() == ZX_OK) {
     // Operation succeeded, record latency and increment ok/total operation counts.
-    uint64_t latency = static_cast<uint64_t>((GetCurrentTime() - start_).to_nsecs());
-    tracker_->OnSuccess(latency);
+    tracker_->OnSuccess(GetCurrentTime() - start_);
   } else {
     // Operation failed with a specific error code, record it and increment the error/total counts.
     tracker_->OnError(status_.value());

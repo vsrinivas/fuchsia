@@ -26,7 +26,6 @@
 #include <shared_mutex>
 
 #include <bitmap/raw-bitmap.h>
-#include <cobalt-client/cpp/collector.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
@@ -237,9 +236,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, fs::PagedVfs* vfs,
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
-         std::optional<CachePolicy> pager_backed_cache_policy,
-         std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
-         zx::duration metrics_flush_time);
+         std::optional<CachePolicy> pager_backed_cache_policy);
 
   static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
@@ -300,11 +297,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   void ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
                                 FragmentationMetrics& fragmentation_metrics,
                                 FragmentationStats* out_stats);
-
-  static std::shared_ptr<BlobfsMetrics> CreateMetrics(
-      inspect::Inspector inspector,
-      std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
-      zx::duration metrics_flush_time);
 
   DecompressorCreatorConnectorImpl default_decompression_connector_;
 

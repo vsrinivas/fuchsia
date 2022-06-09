@@ -14,8 +14,6 @@
 
 #include <optional>
 
-#include <cobalt-client/cpp/collector.h>
-
 #include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/blobfs/cache_policy.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
@@ -34,11 +32,6 @@ enum class Writability {
   // Permit all operations.
   Writable,
 };
-
-// Time between each Cobalt flush. Flushing data too frequently leads to collecting large amount of
-// data in cobalt.
-constexpr uint32_t kMetricsFlushTimeMinutes = 5;
-constexpr zx::duration kMetricsFlushTime = zx::min(kMetricsFlushTimeMinutes);
 
 // Toggles that may be set on blobfs during initialization.
 struct MountOptions {
@@ -65,12 +58,6 @@ struct MountOptions {
 #ifndef NDEBUG
   bool fsck_at_end_of_every_transaction = false;
 #endif
-
-  // Custom function to help install custom logger. Used during unit testing.
-  std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory;
-
-  // Time between two metrics flushes.
-  zx::duration metrics_flush_time = kMetricsFlushTime;
 };
 
 // Begins serving requests to the filesystem by parsing the on-disk format using |device|.

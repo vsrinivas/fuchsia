@@ -14,12 +14,6 @@
 
 #include <mutex>
 
-#include <cobalt-client/cpp/collector.h>
-
-#include "src/lib/storage/vfs/cpp/metrics/cobalt_metrics.h"
-#include "src/lib/storage/vfs/cpp/metrics/composite_latency_event.h"
-#include "src/lib/storage/vfs/cpp/metrics/events.h"
-#include "src/lib/storage/vfs/cpp/metrics/histograms.h"
 #include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/format.h"
@@ -29,40 +23,22 @@
 
 namespace blobfs {
 
-// Alias for the LatencyEvent used in blobfs.
-using LatencyEvent = fs_metrics::CompositeLatencyEvent;
-
 // This struct holds the inspect node for a blob and a map from block index to page-in frequency.
 struct BlobPageInFrequencies {
   inspect::Node blob_root_node;
   std::map<uint32_t, inspect::UintProperty> offset_map;
 };
 
-// This class is not thread-safe except for the read_metrics() and verification_metrics()
-// accessors, as well as calls to IncrementPageIn(). Everything else is only accessed from the main
-// serving thread which is currently single-threaded.
+// Encapsulates Blobfs-specific metrics available via Inspect.
 //
-// TODO(fxbug.dev/80285): Make this properly thread-safe.
+// TODO(fxbug.dev/80285): Make this properly thread-safe.  IncrementPageIn(), paged_read_metrics(),
+// unpaged_read_metrics(), and verification_metrics() are not thread safe.
 // TODO(fxbug.dev/80285): Make this class encapsulate all Blobfs-specific metrics, and have
 // BlobfsInspectTree take ownership of it.
 class BlobfsMetrics final {
  public:
-  explicit BlobfsMetrics(
-      bool should_record_page_in, inspect::Inspector inspector = {},
-      const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory = {},
-      zx::duration cobalt_flush_time = kMetricsFlushTime);
-  ~BlobfsMetrics();
-
-  // Print information about metrics to stdout.
-  //
-  // TODO(fxbug.dev/31862): This is a stop-gap solution; long-term, this information should be
-  // extracted from devices.
-  void Dump();
-
-  // Begin collecting blobfs metrics. Metrics collection is not implicitly enabled with the creation
-  // of a "BlobfsMetrics" object.
-  void Collect();
-  bool Collecting() const { return cobalt_metrics_.IsEnabled(); }
+  explicit BlobfsMetrics(bool should_record_page_in, inspect::Inspector inspector = {});
+  ~BlobfsMetrics() = default;
 
   // Updates aggregate information about the total number of created blobs since mounting.
   void UpdateAllocation(uint64_t size_data, const fs::Duration& duration);
@@ -74,17 +50,6 @@ class BlobfsMetrics final {
   void UpdateClientWrite(uint64_t data_size, uint64_t merkle_size,
                          const fs::Duration& enqueue_duration,
                          const fs::Duration& generate_duration);
-
-  // Returns a new Latency event for the given event. This requires the event to be backed up by
-  // an histogram in both cobalt metrics and Inspect.
-  // TODO(fxbug.dev/80285): Replace with data already in BlobfsInspectTree via Lapis.
-  fs_metrics::CompositeLatencyEvent NewLatencyEvent(fs_metrics::Event event) {
-    return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_fs_common_metrics());
-  }
-
-  // Increments a read of Merkle Tree data from disk.
-  // This method must only be called from the blobfs main thread.
-  void IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration);
 
   // Increments the frequency count for blocks in the range [|offset|, |offset| + |length|). This
   // method must only be called from the pager thread.
@@ -106,12 +71,7 @@ class BlobfsMetrics final {
   // Accessor for BlobFS Inspector. This Inspector serves the BlobFS inspect tree.
   inspect::Inspector* inspector() { return &inspector_; }
 
-  fs_metrics::Metrics& cobalt_metrics() { return cobalt_metrics_; }
-
  private:
-  // Flushes the metrics to the cobalt client and schedules itself to flush again.
-  void ScheduleMetricFlush();
-
   // Inspect instrumentation data.
   inspect::Inspector inspector_;
   inspect::Node& root_ = inspector_.GetRoot();
@@ -171,31 +131,15 @@ class BlobfsMetrics final {
   // READ STATS
   ReadMetrics paged_read_metrics_{&paged_read_stats_};
   ReadMetrics unpaged_read_metrics_{&unpaged_read_stats_};
-  zx::ticks total_read_merkle_time_ticks_ = {};
-  uint64_t bytes_merkle_read_from_disk_ = 0;
 
   // PAGE-IN FREQUENCY STATS
-  bool should_record_page_in_ = false;
+  const bool should_record_page_in_ = false;
   std::mutex frequencies_lock_;
   std::map<fbl::String, BlobPageInFrequencies> all_page_in_frequencies_
       __TA_GUARDED(frequencies_lock_);
 
   // VERIFICATION STATS
   VerificationMetrics verification_metrics_;
-
-  // FVM STATS
-  // TODO(smklein)
-
-  fs_metrics::Histograms histograms_ = fs_metrics::Histograms(&root_);
-
-  // Cobalt metrics.
-  fs_metrics::Metrics cobalt_metrics_;
-
-  // Loop for flushing the collector periodically.
-  async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-  // Time between each Cobalt flush.
-  zx::duration cobalt_flush_time_ = kMetricsFlushTime;
 };
 
 }  // namespace blobfs

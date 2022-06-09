@@ -108,7 +108,7 @@ zx_status_t VerifyTailZeroed(const void* data, size_t data_size, size_t buffer_s
 
 zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buffer_size) {
   TRACE_DURATION("blobfs", "BlobVerifier::Verify", "data_size", data_size);
-  fs::Ticker ticker(metrics_->Collecting());
+  fs::Ticker ticker;
 
   zx_status_t status;
   {
@@ -137,7 +137,7 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buff
 zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t data_offset,
                                         size_t buffer_size) {
   TRACE_DURATION("blobfs", "BlobVerifier::VerifyPartial", "length", length, "offset", data_offset);
-  fs::Ticker ticker(metrics_->Collecting());
+  fs::Ticker ticker;
 
   zx_status_t status;
   {

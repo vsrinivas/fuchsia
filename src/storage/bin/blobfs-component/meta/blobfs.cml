@@ -46,7 +46,6 @@
         {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.scheduler.ProfileProvider",

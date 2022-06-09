@@ -11,10 +11,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.feedback.CrashReporter",
-            ],
+            protocol: [ "fuchsia.feedback.CrashReporter" ],
         },
         {
             protocol: "fuchsia.fs.startup.Startup",
@@ -35,7 +32,6 @@
         {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",

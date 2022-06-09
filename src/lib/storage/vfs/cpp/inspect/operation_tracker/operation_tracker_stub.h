@@ -15,7 +15,7 @@ class OperationTrackerStub final : public OperationTracker {
   OperationTrackerStub() = default;
 
  private:
-  void OnSuccess(uint64_t latency_ns) override {}
+  void OnSuccess(zx::duration latency) override {}
   void OnError(zx_status_t error) override {}
   void OnError() override {}
 };

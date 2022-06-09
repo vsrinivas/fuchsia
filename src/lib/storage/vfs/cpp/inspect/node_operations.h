@@ -26,20 +26,21 @@ struct NodeOperations {
   internal::OperationTrackerType unlink;
 
 #ifdef __Fuchsia__
-  explicit NodeOperations(inspect::Node& root_node)
-      : close(OperationTrackerFuchsia(root_node, "close")),
-        read(OperationTrackerFuchsia(root_node, "read")),
-        write(OperationTrackerFuchsia(root_node, "write")),
-        append(OperationTrackerFuchsia(root_node, "append")),
-        truncate(OperationTrackerFuchsia(root_node, "truncate")),
-        set_attr(OperationTrackerFuchsia(root_node, "set_attr")),
-        get_attr(OperationTrackerFuchsia(root_node, "get_attr")),
-        sync(OperationTrackerFuchsia(root_node, "sync")),
-        read_dir(OperationTrackerFuchsia(root_node, "read_dir")),
-        lookup(OperationTrackerFuchsia(root_node, "lookup")),
-        create(OperationTrackerFuchsia(root_node, "create")),
-        link(OperationTrackerFuchsia(root_node, "link")),
-        unlink(OperationTrackerFuchsia(root_node, "unlink")) {}
+  // **WARNING**: The latency histogram settings must match their metric definitions in Cobalt.
+  explicit NodeOperations(inspect::Node& node)
+      : close(node, "close", kNodeOperationHistogramSettings),
+        read(node, "read", kNodeOperationHistogramSettings),
+        write(node, "write", kNodeOperationHistogramSettings),
+        append(node, "append", kNodeOperationHistogramSettings),
+        truncate(node, "truncate", kNodeOperationHistogramSettings),
+        set_attr(node, "set_attr", kNodeOperationHistogramSettings),
+        get_attr(node, "get_attr", kNodeOperationHistogramSettings),
+        sync(node, "sync", kNodeOperationHistogramSettings),
+        read_dir(node, "read_dir", kNodeOperationHistogramSettings),
+        lookup(node, "lookup", kNodeOperationHistogramSettings),
+        create(node, "create", kNodeOperationHistogramSettings),
+        link(node, "link", kNodeOperationHistogramSettings),
+        unlink(node, "unlink", kNodeOperationHistogramSettings) {}
 #else
   // Stub implementation for host builds.
   NodeOperations() = default;

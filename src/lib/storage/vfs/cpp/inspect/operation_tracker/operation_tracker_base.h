@@ -31,7 +31,7 @@ class OperationTracker {
   TrackerEvent NewEvent();
 
  protected:
-  virtual void OnSuccess(uint64_t latency_ns) = 0;
+  virtual void OnSuccess(zx::duration latency_ns) = 0;
   virtual void OnError(zx_status_t error) = 0;
   virtual void OnError() = 0;
 };

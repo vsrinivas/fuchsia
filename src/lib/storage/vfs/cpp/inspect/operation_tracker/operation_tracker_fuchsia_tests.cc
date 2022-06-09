@@ -32,12 +32,20 @@ inspect::Hierarchy TakeSnapshot(inspect::Inspector& inspector) {
   return std::move(snapshot.value());
 }
 
+constexpr LatencyHistogramSettings kHistogramSettings{
+    .time_base = zx::usec(1),
+    .floor = 0,
+    .initial_step = 5,
+    .step_multiplier = 2,
+    .buckets = 16,
+};
+
 }  // namespace
 
 // Validate basic usage of OperationTracker using `OperationTracker::Track`.
 TEST(VfsInspectOperationTracker, ValidateLayout) {
   inspect::Inspector inspector;
-  OperationTrackerFuchsia tracker(inspector.GetRoot(), kOperationName);
+  OperationTrackerFuchsia tracker(inspector.GetRoot(), kOperationName, kHistogramSettings);
   // There should now be a node called "my_operation" with some properties.
   inspect::Hierarchy snapshot = TakeSnapshot(inspector);
   const inspect::Hierarchy* my_operation = snapshot.GetByPath({kOperationName});
@@ -87,7 +95,7 @@ TEST(VfsInspectOperationTracker, ValidateLayout) {
 // Validate behavior `OperationTracker::NewEvent` in a single-threaded context.
 TEST(VfsInspectOperationTracker, LatencyEvent) {
   inspect::Inspector inspector;
-  OperationTrackerFuchsia tracker(inspector.GetRoot(), kOperationName);
+  OperationTrackerFuchsia tracker(inspector.GetRoot(), kOperationName, kHistogramSettings);
 
   {
     // No events should be recorded until they go out of scope. We also check that we can move an
@@ -128,7 +136,7 @@ TEST(VfsInspectOperationTracker, LatencyEvent) {
 
 TEST(VfsInspectOperationTracker, LatencyEventThreaded) {
   inspect::Inspector inspector;
-  OperationTrackerFuchsia tracker(inspector.GetRoot(), kOperationName);
+  OperationTrackerFuchsia tracker(inspector.GetRoot(), kOperationName, kHistogramSettings);
 
   // Record an event from a different thread by passing a callback we create in this thread.
   std::mutex mutex;

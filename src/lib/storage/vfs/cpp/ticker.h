@@ -27,26 +27,10 @@ using Duration = zx::ticks;
 
 class Ticker {
  public:
-  explicit Ticker(bool collecting_metrics)
-      : ticks_(collecting_metrics ? zx::ticks::now() : zx::ticks()) {}
+  explicit Ticker() : ticks_(zx::ticks::now()) {}
 
-  void Reset() {
-    if (ticks_.get() == 0) {
-      return;
-    }
-    ticks_ = zx::ticks::now();
-  }
-
-  // Returns '0' for duration if collecting_metrics is false, preventing an unnecessary syscall.
-  //
-  // Otherwise, returns the time since either the constructor or the last call to reset (whichever
-  // was more recent).
-  Duration End() const {
-    if (ticks_.get() == 0) {
-      return zx::ticks();
-    }
-    return zx::ticks::now() - ticks_;
-  }
+  // Returns the time since the Ticker was constructed.
+  Duration End() const { return zx::ticks::now() - ticks_; }
 
  private:
   zx::ticks ticks_;
@@ -60,7 +44,6 @@ class Duration {};
 class Ticker {
  public:
   Ticker(bool) {}
-  void Reset();
   Duration End() const { return Duration(); }
 };
 

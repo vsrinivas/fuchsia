@@ -21,6 +21,8 @@ namespace blobfs {
 // related to disk reads and decompression.
 //
 // This class is thread-safe.
+//
+// TODO(fxbug.dev/80285): Move this and other Blobfs-specific metrics to new directory metrics/.
 class ReadMetrics {
  public:
   explicit ReadMetrics(inspect::Node* read_metrics_node);
@@ -75,7 +77,7 @@ class ReadMetrics {
       __TA_REQUIRES(lock_);
   ReadMetrics::PerCompressionInspect* GetInspect(CompressionAlgorithm algorithm);
 
-  // Guards all locally tracked metrics that get flushed to cobalt. The inspect metrics are all
+  // Guards all locally tracked metrics used for unit tests. The inspect metrics are all
   // thread-safe to increment and decrement.
   mutable std::mutex lock_;
   PerCompressionMetrics uncompressed_metrics_ __TA_GUARDED(lock_);

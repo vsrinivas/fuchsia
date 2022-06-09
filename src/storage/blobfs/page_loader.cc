@@ -413,7 +413,7 @@ PagerErrorStatus PageLoader::Worker::TransferChunkedPages(PageLoader::PageSuppli
     }
     auto unmap_decompression = fit::defer([&]() { decompressed_mapper.Unmap(); });
 
-    fs::Ticker ticker(metrics_->Collecting());
+    fs::Ticker ticker;
     size_t decompressed_size = mapping.decompressed_length;
     zx_status_t decompress_status;
     if (decompressor_client_) {

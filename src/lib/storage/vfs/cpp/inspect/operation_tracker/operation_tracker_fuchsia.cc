@@ -13,12 +13,13 @@ OperationTrackerFuchsia::OperationTrackerFuchsia(inspect::Node& root_node,
       ok_counter_(operation_node_.CreateUint(kOkCountName, 0u)),
       fail_counter_(operation_node_.CreateUint(kFailCountName, 0u)),
       total_counter_(operation_node_.CreateUint(kTotalCountName, 0u)),
+      latency_base_unit_(histogram_settings.time_base),
       latency_histogram_(operation_node_.CreateExponentialUintHistogram(
           kLatencyHistogramName, histogram_settings.floor, histogram_settings.initial_step,
           histogram_settings.step_multiplier, histogram_settings.buckets)) {}
 
-void OperationTrackerFuchsia::OnSuccess(uint64_t latency_ns) {
-  latency_histogram_.Insert(latency_ns);
+void OperationTrackerFuchsia::OnSuccess(zx::duration latency) {
+  latency_histogram_.Insert(latency / latency_base_unit_);
   ok_counter_.Add(1u);
   total_counter_.Add(1u);
 }

@@ -341,7 +341,6 @@ template("fshost_integration_test") {
       "//src/lib/fxl/test:gtest_main",
       "//src/lib/storage/fs_management",
       "//src/lib/storage/ramdevice_client/cpp",
-      "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
       "//src/lib/testing/predicates",
       "//src/storage/blobfs",
       "//src/storage/fxfs:fxfs_component",
@@ -351,7 +350,6 @@ template("fshost_integration_test") {
       "//src/storage/testing:storage_driver_test_support",
       "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
       "//third_party/googletest:gmock",
-      "//zircon/system/ulib/cobalt-client:in-memory-logger",
       "//zircon/system/ulib/fidl-async",
       "//zircon/system/ulib/service:service-llcpp",
     ]

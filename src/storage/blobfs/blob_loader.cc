@@ -228,15 +228,12 @@ zx_status_t BlobLoader::InitForDecompression(
 
 zx_status_t BlobLoader::LoadMerkleBlocks(uint32_t node_index, const BlobLayout& blob_layout,
                                          const zx::vmo& merkle_blocks_vmo) const {
-  fs::Ticker ticker(metrics_->Collecting());
   auto bytes_read = LoadBlocks(node_index, blob_layout.MerkleTreeBlockOffset(),
                                blob_layout.MerkleTreeBlockCount(), merkle_blocks_vmo);
   if (bytes_read.is_error()) {
     FX_LOGS(ERROR) << "Failed to load Merkle tree: " << bytes_read.status_string();
     return bytes_read.error_value();
   }
-
-  metrics_->IncrementMerkleDiskRead(bytes_read.value(), ticker.End());
   return ZX_OK;
 }
 

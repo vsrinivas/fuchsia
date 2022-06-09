@@ -54,7 +54,7 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
   // These should always match.
   ZX_ASSERT(info.layout->blobfs_block_size() == kBlobfsBlockSize);
 
-  fs::Ticker ticker(metrics_->Collecting());
+  fs::Ticker ticker;
   if (offset % kBlobfsBlockSize != 0) {
     // The block math below relies on the offset being block-aligned.
     return zx::error(ZX_ERR_INVALID_ARGS);
