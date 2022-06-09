@@ -15,12 +15,74 @@
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 
+#include <future>
+#include <latch>
+
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "util.h"
 
 namespace {
+
+std::pair<sockaddr_storage, socklen_t> InitLoopbackAddr(const SocketDomain& domain) {
+  sockaddr_storage ss;
+  switch (domain.which()) {
+    case SocketDomain::Which::IPv4:
+      *(reinterpret_cast<sockaddr_in*>(&ss)) = LoopbackSockaddrV4(0);
+      return {ss, sizeof(sockaddr_in)};
+    case SocketDomain::Which::IPv6:
+      *(reinterpret_cast<sockaddr_in6*>(&ss)) = LoopbackSockaddrV6(0);
+      return {ss, sizeof(sockaddr_in6)};
+  }
+}
+
+void ConnectSocketsOverLoopback(const SocketDomain& domain, const SocketType& socket_type,
+                                fbl::unique_fd& sendfd, fbl::unique_fd& recvfd) {
+  auto [addr, addrlen] = InitLoopbackAddr(domain);
+
+  ASSERT_TRUE(sendfd = fbl::unique_fd(socket(domain.Get(), socket_type.Get(), 0)))
+      << strerror(errno);
+  switch (socket_type.which()) {
+    case SocketType::Which::Stream: {
+      fbl::unique_fd acptfd;
+      ASSERT_TRUE(acptfd = fbl::unique_fd(socket(domain.Get(), socket_type.Get(), 0)))
+          << strerror(errno);
+      EXPECT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+          << strerror(errno);
+      socklen_t found_len = addrlen;
+      EXPECT_EQ(getsockname(acptfd.get(), reinterpret_cast<sockaddr*>(&addr), &found_len), 0)
+          << strerror(errno);
+      EXPECT_EQ(found_len, addrlen);
+      EXPECT_EQ(listen(acptfd.get(), 0), 0) << strerror(errno);
+      EXPECT_EQ(connect(sendfd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+          << strerror(errno);
+      ASSERT_TRUE(recvfd = fbl::unique_fd(accept(acptfd.get(), nullptr, nullptr)))
+          << strerror(errno);
+      EXPECT_EQ(close(acptfd.release()), 0) << strerror(errno);
+      break;
+    }
+    case SocketType::Which::Dgram: {
+      ASSERT_TRUE(recvfd = fbl::unique_fd(socket(domain.Get(), socket_type.Get(), 0)))
+          << strerror(errno);
+      EXPECT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+          << strerror(errno);
+      socklen_t found_len = addrlen;
+      EXPECT_EQ(getsockname(recvfd.get(), reinterpret_cast<sockaddr*>(&addr), &found_len), 0)
+          << strerror(errno);
+      EXPECT_EQ(found_len, addrlen);
+      EXPECT_EQ(connect(sendfd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+          << strerror(errno);
+
+      EXPECT_EQ(getsockname(sendfd.get(), reinterpret_cast<sockaddr*>(&addr), &found_len), 0)
+          << strerror(errno);
+      EXPECT_EQ(found_len, addrlen);
+      EXPECT_EQ(connect(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+          << strerror(errno);
+      break;
+    }
+  }
+}
 
 // Test the error when a client's sandbox does not have access raw/packet sockets.
 TEST(LocalhostTest, RawSocketsNotAvailable) {
@@ -49,15 +111,6 @@ struct SockOption {
 
 constexpr int INET_ECN_MASK = 3;
 
-constexpr std::string_view socketTypeToString(const SocketType& type) {
-  switch (type.which()) {
-    case SocketType::Which::Dgram:
-      return "Datagram";
-    case SocketType::Which::Stream:
-      return "Stream";
-  }
-}
-
 using SocketKind = std::tuple<SocketDomain, SocketType>;
 
 std::string SocketKindToString(const testing::TestParamInfo<SocketKind>& info) {
@@ -76,19 +129,9 @@ class SocketKindTest : public testing::TestWithParam<SocketKind> {
     return fbl::unique_fd(socket(domain.Get(), type.Get(), 0));
   }
 
-  static void LoopbackAddr(sockaddr_storage* ss, socklen_t* len) {
+  static std::pair<sockaddr_storage, socklen_t> LoopbackAddr() {
     auto const& [domain, protocol] = GetParam();
-
-    switch (domain.which()) {
-      case SocketDomain::Which::IPv4:
-        *(reinterpret_cast<sockaddr_in*>(ss)) = LoopbackSockaddrV4(0);
-        *len = sizeof(sockaddr_in);
-        break;
-      case SocketDomain::Which::IPv6:
-        *(reinterpret_cast<sockaddr_in6*>(ss)) = LoopbackSockaddrV6(0);
-        *len = sizeof(sockaddr_in6);
-        break;
-    }
+    return InitLoopbackAddr(domain);
   }
 };
 
@@ -1306,6 +1349,215 @@ INSTANTIATE_TEST_SUITE_P(AnyAddrSocketTestDatagram, AnyAddrDatagramSocketTest,
                                          AddrKind::Kind::V4MAPPEDV6),
                          [](const auto info) { return info.param.AddrKindToString(); });
 
+enum class ShutdownEnd {
+  Local,
+  Remote,
+};
+
+enum class ExpectedPostShutdownReadResult {
+  Success,
+  Eagain,
+};
+
+enum class ReadType {
+  Blocking,
+  NonBlocking,
+};
+
+enum class ReadSocketState {
+  WithPendingData,
+  NoPendingData,
+};
+
+using ReadAfterShutdownTestCase =
+    std::tuple<SocketDomain, SocketType, ShutdownEnd, ShutdownType, ReadType, ReadSocketState>;
+
+ExpectedPostShutdownReadResult GetExpectedPostShutdownReadResult(
+    const ReadAfterShutdownTestCase& test_case) {
+  const auto& [domain, socket_type, which_end, shutdown_type, read_type, read_socket_state] =
+      test_case;
+
+  if (read_socket_state == ReadSocketState::WithPendingData) {
+    // Post-shutdown reads always return pending data if it is present.
+    return ExpectedPostShutdownReadResult::Success;
+  }
+
+  switch (socket_type.which()) {
+    case SocketType::Which::Stream:
+      if ((which_end == ShutdownEnd::Local && shutdown_type.which() == ShutdownType::Which::Read) ||
+          (which_end == ShutdownEnd::Remote &&
+           shutdown_type.which() == ShutdownType::Which::Write)) {
+        return ExpectedPostShutdownReadResult::Success;
+      }
+      return ExpectedPostShutdownReadResult::Eagain;
+    case SocketType::Which::Dgram:
+      if (which_end == ShutdownEnd::Local && shutdown_type.which() == ShutdownType::Which::Read &&
+          read_type == ReadType::Blocking) {
+        return ExpectedPostShutdownReadResult::Success;
+      }
+      return ExpectedPostShutdownReadResult::Eagain;
+      break;
+  }
+}
+
+class ReadAfterShutdownTest : public testing::TestWithParam<ReadAfterShutdownTestCase> {};
+
+TEST_P(ReadAfterShutdownTest, Success) {
+  const auto& [domain, socket_type, which_end, shutdown_type, read_type, read_socket_state] =
+      GetParam();
+
+#ifdef __Fuchsia__
+  if (socket_type.which() == SocketType::Which::Dgram && read_type == ReadType::Blocking &&
+      shutdown_type.which() == ShutdownType::Which::Read && which_end == ShutdownEnd::Local &&
+      read_socket_state == ReadSocketState::NoPendingData) {
+    // TODO(https://fxbug.dev/42041): Support blocking reads after shutdown for dgram sockets.
+    GTEST_SKIP() << "Blocking dgram reads with no pending data hang on Fuchsia when the socket "
+                    "is shutdown with SHUT_RD";
+  }
+#endif
+
+  fbl::unique_fd remote;
+  fbl::unique_fd local;
+  ASSERT_NO_FATAL_FAILURE(ConnectSocketsOverLoopback(domain, socket_type, remote, local));
+
+  char buf[] = "abc";
+  if (read_socket_state == ReadSocketState::WithPendingData) {
+    ASSERT_EQ(write(remote.get(), &buf, sizeof(buf)), ssize_t(sizeof(buf))) << strerror(errno);
+    pollfd pfd = {
+        .fd = local.get(),
+        .events = POLLIN,
+    };
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLIN);
+  }
+
+  int shutdown_fd = [&, which_end = which_end]() {
+    switch (which_end) {
+      case ShutdownEnd::Local:
+        return local.get();
+      case ShutdownEnd::Remote:
+        return remote.get();
+    }
+  }();
+
+  EXPECT_EQ(shutdown(shutdown_fd, shutdown_type.Get()), 0) << strerror(errno);
+
+  if (socket_type.which() == SocketType::Which::Stream && which_end == ShutdownEnd::Remote &&
+      shutdown_type.which() == ShutdownType::Which::Write) {
+    // Give the TCP FIN time to propagate from `remote` to `local`.
+    pollfd pfd = {
+        .fd = local.get(),
+        .events = POLLRDHUP,
+    };
+    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents, POLLRDHUP);
+  }
+
+  char recv_buf[sizeof(buf) + 1];
+  const int flags = read_type == ReadType::Blocking ? 0 : MSG_DONTWAIT;
+  switch (GetExpectedPostShutdownReadResult(GetParam())) {
+    case ExpectedPostShutdownReadResult::Success: {
+      switch (read_socket_state) {
+        case ReadSocketState::WithPendingData:
+          EXPECT_EQ(recv(local.get(), &recv_buf, sizeof(recv_buf), flags), ssize_t(sizeof(buf)))
+              << strerror(errno);
+          EXPECT_EQ(std::string_view(recv_buf, sizeof(buf)), std::string_view(buf, sizeof(buf)));
+          break;
+        case ReadSocketState::NoPendingData:
+          EXPECT_EQ(recv(local.get(), &recv_buf, sizeof(recv_buf), flags), 0) << strerror(errno);
+          break;
+      }
+    } break;
+    case ExpectedPostShutdownReadResult::Eagain: {
+      switch (read_type) {
+        case ReadType::Blocking: {
+          timeval tv = {
+              .tv_sec = 1,
+          };
+          EXPECT_EQ(setsockopt(local.get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0)
+              << strerror(errno);
+
+          std::latch fut_started(1);
+          const auto fut = std::async(std::launch::async, [&]() {
+            fut_started.count_down();
+
+            EXPECT_EQ(recv(local.get(), &recv_buf, sizeof(recv_buf), flags), -1) << strerror(errno);
+            EXPECT_EQ(errno, EAGAIN);
+          });
+          fut_started.wait();
+          ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
+        } break;
+        case ReadType::NonBlocking:
+          EXPECT_EQ(recv(local.get(), &recv_buf, sizeof(recv_buf), flags), -1) << strerror(errno);
+          EXPECT_EQ(errno, EAGAIN);
+          break;
+      }
+    } break;
+  }
+}
+
+std::string ReadAfterShutdownTestCaseToString(
+    const testing::TestParamInfo<ReadAfterShutdownTestCase>& info) {
+  const auto& [domain, socket_type, which_end, shutdown_type, read_type, read_socket_state] =
+      info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << socketTypeToString(socket_type);
+
+  switch (which_end) {
+    case ShutdownEnd::Local:
+      oss << '_' << "Self";
+      break;
+    case ShutdownEnd::Remote:
+      oss << '_' << "Peer";
+      break;
+  }
+
+  switch (shutdown_type.which()) {
+    case ShutdownType::Which::Read:
+      oss << '_' << "SHUT_RD";
+      break;
+    case ShutdownType::Which::Write:
+      oss << '_' << "SHUT_WR";
+      break;
+  }
+
+  switch (read_type) {
+    case ReadType::Blocking:
+      oss << '_' << "BlockingRead";
+      break;
+    case ReadType::NonBlocking:
+      oss << '_' << "NonBlockingRead";
+      break;
+  }
+
+  switch (read_socket_state) {
+    case ReadSocketState::WithPendingData:
+      oss << '_' << "WithPendingData";
+      break;
+    case ReadSocketState::NoPendingData:
+      oss << '_' << "NoPendingData";
+      break;
+  }
+
+  return oss.str();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ReadAfterShutdownTests, ReadAfterShutdownTest,
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                     testing::Values(SocketType::Dgram(), SocketType::Stream()),
+                     testing::Values(ShutdownEnd::Remote, ShutdownEnd::Local),
+                     testing::Values(ShutdownType::Read(), ShutdownType::Write()),
+                     testing::Values(ReadType::Blocking, ReadType::NonBlocking),
+                     testing::Values(ReadSocketState::WithPendingData,
+                                     ReadSocketState::NoPendingData)),
+    ReadAfterShutdownTestCaseToString);
+
 // Socket tests across multiple socket-types, SOCK_DGRAM, SOCK_STREAM.
 class NetSocketTest : public testing::TestWithParam<SocketType> {};
 
@@ -1316,45 +1568,23 @@ class NetSocketTest : public testing::TestWithParam<SocketType> {};
 // MSG_PEEK with scatter/gather.
 TEST_P(NetSocketTest, SocketPeekTest) {
   const SocketType socket_type = GetParam();
-  sockaddr_in addr = LoopbackSockaddrV4(0);
-  socklen_t addrlen = sizeof(addr);
-  fbl::unique_fd sendfd;
-  fbl::unique_fd recvfd;
   ssize_t expectReadLen = 0;
   char sendbuf[8] = {};
   char recvbuf[2 * sizeof(sendbuf)] = {};
   ssize_t sendlen = sizeof(sendbuf);
 
-  ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, socket_type.Get(), 0))) << strerror(errno);
-  // Setup the sender and receiver sockets.
+  fbl::unique_fd sendfd;
+  fbl::unique_fd recvfd;
+  ASSERT_NO_FATAL_FAILURE(
+      ConnectSocketsOverLoopback(SocketDomain::IPv4(), socket_type, sendfd, recvfd));
+
   switch (socket_type.which()) {
     case SocketType::Which::Stream: {
-      fbl::unique_fd acptfd;
-      ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, socket_type.Get(), 0)))
-          << strerror(errno);
-      EXPECT_EQ(bind(acptfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
-          << strerror(errno);
-      EXPECT_EQ(getsockname(acptfd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
-          << strerror(errno);
-      EXPECT_EQ(addrlen, sizeof(addr));
-      EXPECT_EQ(listen(acptfd.get(), 0), 0) << strerror(errno);
-      EXPECT_EQ(connect(sendfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
-          << strerror(errno);
-      ASSERT_TRUE(recvfd = fbl::unique_fd(accept(acptfd.get(), nullptr, nullptr)))
-          << strerror(errno);
-      EXPECT_EQ(close(acptfd.release()), 0) << strerror(errno);
       // Expect to read both the packets in a single recv() call.
       expectReadLen = sizeof(recvbuf);
       break;
     }
     case SocketType::Which::Dgram: {
-      ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, socket_type.Get(), 0)))
-          << strerror(errno);
-      EXPECT_EQ(bind(recvfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
-          << strerror(errno);
-      EXPECT_EQ(getsockname(recvfd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
-          << strerror(errno);
-      EXPECT_EQ(addrlen, sizeof(addr));
       // Expect to read single packet per recv() call.
       expectReadLen = sizeof(sendbuf);
       break;
@@ -1366,19 +1596,13 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   sendbuf[6] = 0x78;
 
   // send 2 separate packets and test peeking across
-  EXPECT_EQ(sendto(sendfd.get(), sendbuf, sizeof(sendbuf), 0,
-                   reinterpret_cast<const sockaddr*>(&addr), addrlen),
-            sendlen)
-      << strerror(errno);
-  EXPECT_EQ(sendto(sendfd.get(), sendbuf, sizeof(sendbuf), 0,
-                   reinterpret_cast<const sockaddr*>(&addr), addrlen),
-            sendlen)
-      << strerror(errno);
+  EXPECT_EQ(send(sendfd.get(), sendbuf, sizeof(sendbuf), 0), sendlen) << strerror(errno);
+  EXPECT_EQ(send(sendfd.get(), sendbuf, sizeof(sendbuf), 0), sendlen) << strerror(errno);
 
   auto start = std::chrono::steady_clock::now();
   // First peek on first byte.
-  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, 1, MSG_PEEK, &addr, &addrlen,
-                            socket_type, kTimeout),
+  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, 1, MSG_PEEK, socket_type,
+                            SocketDomain::IPv4(), kTimeout),
             1);
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_EQ(recvbuf[0], sendbuf[0]);
@@ -1392,8 +1616,8 @@ TEST_P(NetSocketTest, SocketPeekTest) {
     //
     // TODO(https://fxbug.dev/74639) : Use SO_RCVLOWAT instead of retry.
     do {
-      readLen = asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), flags, &addr,
-                                &addrlen, socket_type, kTimeout);
+      readLen = asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), flags,
+                                socket_type, SocketDomain::IPv4(), kTimeout);
       if (HasFailure()) {
         break;
       }
@@ -1416,8 +1640,8 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   //
   // As we expect failure, to keep the recv wait time minimal, we base it on the time taken for a
   // successful recv.
-  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, 1, MSG_PEEK, &addr, &addrlen,
-                            socket_type, success_rcv_duration * 10),
+  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, 1, MSG_PEEK, socket_type,
+                            SocketDomain::IPv4(), success_rcv_duration * 10),
             0);
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
@@ -1548,9 +1772,7 @@ void TestGetname(const fbl::unique_fd& fd, F getname, const sockaddr* sa, const 
 }
 
 TEST_P(SocketKindTest, Getsockname) {
-  socklen_t len;
-  sockaddr_storage ss;
-  LoopbackAddr(&ss, &len);
+  auto [ss, len] = LoopbackAddr();
 
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
@@ -1566,10 +1788,7 @@ TEST_P(SocketKindTest, Getsockname) {
 
 TEST_P(SocketKindTest, Getpeername) {
   auto const& [domain, protocol] = GetParam();
-
-  socklen_t len;
-  sockaddr_storage ss;
-  LoopbackAddr(&ss, &len);
+  auto [ss, len] = LoopbackAddr();
 
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = NewSocket()) << strerror(errno);

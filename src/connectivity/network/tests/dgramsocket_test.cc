@@ -30,11 +30,6 @@ void PrintTo(const std::chrono::duration<Rep, Period>& duration, std::ostream* o
 
 namespace {
 
-void ExpectCharsEqual(const char* first, const char* second, size_t len) {
-  EXPECT_EQ(memcmp(first, second, len), 0)
-      << std::string_view(first, len) << " != " << std::string_view(second, len);
-}
-
 template <typename T>
 void SendWithCmsg(int sock, char* buf, size_t buf_size, int cmsg_level, int cmsg_type,
                   T cmsg_value) {
@@ -514,7 +509,8 @@ TEST_P(DatagramSocketErrWithIOMethodTest, ClearsErrWithIOAfterDatagramReceived) 
   char recv_buf[sizeof(send_buf) + 1];
   ASSERT_EQ(read(fd.get(), recv_buf, sizeof(recv_buf)), ssize_t(sizeof(send_buf)))
       << strerror(errno);
-  ASSERT_NO_FATAL_FAILURE(ExpectCharsEqual(recv_buf, send_buf, sizeof(send_buf)));
+  EXPECT_EQ(std::string_view(recv_buf, sizeof(send_buf)),
+            std::string_view(send_buf, sizeof(send_buf)));
 
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
   EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
@@ -568,7 +564,8 @@ TEST_P(DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest, ClearsErrWithIOWi
   // Receive a datagram while providing space for control messages. This causes
   // the socket to look up and cache the set of requested control messages.
   EXPECT_EQ(recvmsg(fd.get(), &msghdr, 0), ssize_t(sizeof(send_buf))) << strerror(errno);
-  ASSERT_NO_FATAL_FAILURE(ExpectCharsEqual(recv_buf, send_buf, sizeof(send_buf)));
+  EXPECT_EQ(std::string_view(recv_buf, sizeof(send_buf)),
+            std::string_view(send_buf, sizeof(send_buf)));
   EXPECT_EQ(msghdr.msg_controllen, 0u);
   EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
 
@@ -598,7 +595,8 @@ TEST_P(DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest, ClearsErrWithIOWi
       .msg_controllen = sizeof(control),
   };
   EXPECT_EQ(recvmsg(fd.get(), &msghdr, 0), ssize_t(sizeof(send_buf))) << strerror(errno);
-  ASSERT_NO_FATAL_FAILURE(ExpectCharsEqual(recv_buf, send_buf, sizeof(send_buf)));
+  EXPECT_EQ(std::string_view(recv_buf, sizeof(send_buf)),
+            std::string_view(send_buf, sizeof(send_buf)));
 
   // Expect that a cmsg is returned with the datagram iff it was previously requested.
   if (request_cmsg) {
@@ -727,8 +725,8 @@ TEST_P(DatagramSendTest, DatagramSend) {
     }
   }
   auto start = std::chrono::steady_clock::now();
-  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SocketType::Dgram(), kTimeout),
+  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0,
+                            SocketType::Dgram(), SocketDomain::IPv4(), kTimeout),
             ssize_t(msg.size()));
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_EQ(std::string_view(recvbuf, msg.size()), msg);
@@ -756,8 +754,8 @@ TEST_P(DatagramSendTest, DatagramSend) {
       break;
     }
   }
-  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SocketType::Dgram(), kTimeout),
+  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0,
+                            SocketType::Dgram(), SocketDomain::IPv4(), kTimeout),
             ssize_t(msg.size()));
   EXPECT_EQ(std::string_view(recvbuf, msg.size()), msg);
 
@@ -801,8 +799,8 @@ TEST_P(DatagramSendTest, DatagramSend) {
   addr.sin_port = orig_sin_port;
   // As we expect failure, to keep the recv wait time minimal, we base it on the time taken for a
   // successful recv.
-  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
-                            &addrlen, SocketType::Dgram(), success_rcv_duration * 10),
+  EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0,
+                            SocketType::Dgram(), SocketDomain::IPv4(), success_rcv_duration * 10),
             0);
 
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);

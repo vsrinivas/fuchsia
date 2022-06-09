@@ -487,7 +487,7 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
 }
 
 ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flags,
-                        sockaddr_in* addr, const socklen_t* addrlen, SocketType socket_type,
+                        SocketType socket_type, SocketDomain socket_domain,
                         std::chrono::duration<double> timeout) {
   std::future<ssize_t> recv = std::async(std::launch::async, [recvfd, buf, len, flags]() {
     memset(buf, 0xde, len);
@@ -518,7 +518,22 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
       // we could call shutdown(), but that returns ENOTCONN (unconnected) but still causing
       // recv() to return. shutdown() becomes unreliable for unconnected UDP sockets because,
       // irrespective of the effect of calling this call, it returns error.
-      EXPECT_EQ(sendto(sendfd, nullptr, 0, 0, reinterpret_cast<sockaddr*>(addr), *addrlen), 0)
+      sockaddr_storage addr;
+      socklen_t expect_addrlen;
+      switch (socket_domain.which()) {
+        case SocketDomain::Which::IPv4:
+          expect_addrlen = sizeof(sockaddr_in);
+          break;
+        case SocketDomain::Which::IPv6:
+          expect_addrlen = sizeof(sockaddr_in6);
+          break;
+      }
+      socklen_t addrlen = expect_addrlen;
+      EXPECT_EQ(getsockname(recvfd, reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
+          << strerror(errno);
+      EXPECT_EQ(addrlen, expect_addrlen);
+
+      EXPECT_EQ(sendto(sendfd, nullptr, 0, 0, reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
           << strerror(errno);
       // We use a known large timeout for the same reason as for the above case.
       EXPECT_EQ(recv.wait_for(kTimeout), std::future_status::ready);
