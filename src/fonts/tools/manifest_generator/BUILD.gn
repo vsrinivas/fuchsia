@@ -14,9 +14,9 @@ rustc_binary("font_manifest_generator") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_fonts_ext",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//src/fonts/char_set",
+    "//src/fonts/fidl_fuchsia_fonts_ext",
     "//src/fonts/font_info",
     "//src/fonts/manifest",
     "//src/fonts/offset_string",

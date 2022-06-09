@@ -16,13 +16,13 @@ rustc_test("font_provider_integration_tests_bin") {
   name = "font_provider_integration_tests"
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_fonts_ext",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/fonts/char_set",
+    "//src/fonts/fidl_fuchsia_fonts_ext",
     "//src/fonts/manifest",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

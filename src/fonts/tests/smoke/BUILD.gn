@@ -15,8 +15,8 @@ rustc_test("font_provider_smoke_tests_bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_fonts_ext",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//src/fonts/fidl_fuchsia_fonts_ext",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
