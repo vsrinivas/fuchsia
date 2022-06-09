@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use fuchsia_runtime as runtime;
-use fuchsia_syslog as syslog;
 use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
-use libc;
 use std::borrow::Borrow;
 use std::ffi::CStr;
 use std::ops::Deref;
 use std::panic;
+use tracing::error;
 
 lazy_static! {
     static ref SCOPED_JOB: Scoped<zx::Job> = initialize();
@@ -177,9 +176,9 @@ fn kill<T: zx::Task>(process: &T, what: &'static str) {
     })();
     match result {
         Ok(()) => {}
-        Err(e) => {
-            eprintln!("error: could not kill {}: {}", what, e);
-            syslog::fx_log_err!("error: could not kill {}: {}", what, e);
+        Err(status) => {
+            eprintln!("error: could not kill {what}: {status}");
+            error!(%status, "error: could not kill {what}");
         }
     }
 }
