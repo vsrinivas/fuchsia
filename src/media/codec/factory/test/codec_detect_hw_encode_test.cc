@@ -10,7 +10,7 @@
 using CodecFactoryHwDetectTest = ::gtest::RealLoopFixture;
 
 TEST_F(CodecFactoryHwDetectTest, H264EncoderPresent) {
-  CodecFactoryApp app(dispatcher());
+  CodecFactoryApp app(dispatcher(), CodecFactoryApp::ProdOrTest::kTesting);
 
   // Loop needs to run till hw codec are fully discovered, so run test till that happens.
   RunLoopUntil([&app]() {
@@ -25,7 +25,7 @@ TEST_F(CodecFactoryHwDetectTest, H264EncoderPresent) {
 }
 
 TEST_F(CodecFactoryHwDetectTest, H265EncoderPresent) {
-  CodecFactoryApp app(dispatcher());
+  CodecFactoryApp app(dispatcher(), CodecFactoryApp::ProdOrTest::kTesting);
 
   // Loop needs to run till hw codec are fully discovered, so run test till that happens.
   RunLoopUntil([&app]() {

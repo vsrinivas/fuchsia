@@ -22,7 +22,16 @@
 // CodecFactoryApp is singleton per-process.
 class CodecFactoryApp {
  public:
-  CodecFactoryApp(async_dispatcher_t* dispatcher);
+  enum class ProdOrTest {
+    kProduction,
+
+    // In tests, the outgoing directory will not be serviced, since test
+    // components do not have access to the outgoing directory server endpoint
+    // in their process startup info.
+    kTesting,
+  };
+
+  CodecFactoryApp(async_dispatcher_t* dispatcher, ProdOrTest prod_or_test);
 
   // The caller must only call this on the FIDL thread, and the returned * is
   // only valid for use until the caller returns from the caller's work on the
@@ -75,6 +84,7 @@ class CodecFactoryApp {
   [[nodiscard]] std::string GetBoardName();
 
   async_dispatcher_t* dispatcher_;
+  ProdOrTest prod_or_test_;
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
   std::string board_name_;

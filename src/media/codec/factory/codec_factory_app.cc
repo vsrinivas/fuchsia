@@ -38,8 +38,9 @@ const std::string kAllSwDecoderMimeTypes[] = {
 
 // board_name_ initialization requires startup_context_ already initialized.
 // policy_ initialization requires board_name_ already initialized.
-CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher)
+CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher, ProdOrTest prod_or_test)
     : dispatcher_(dispatcher),
+      prod_or_test_(prod_or_test),
       startup_context_(sys::ComponentContext::Create()),
       board_name_(GetBoardName()),
       policy_(this) {
@@ -98,8 +99,10 @@ void CodecFactoryApp::PublishService() {
           });
   // else this codec_factory is useless
   ZX_ASSERT(status == ZX_OK);
-  status = startup_context_->outgoing()->ServeFromStartupInfo();
-  ZX_ASSERT(status == ZX_OK);
+  if (prod_or_test_ == ProdOrTest::kProduction) {
+    status = startup_context_->outgoing()->ServeFromStartupInfo();
+    ZX_ASSERT(status == ZX_OK);
+  }
 }
 
 // All of the current supported hardware and software decoders, randomly shuffled
