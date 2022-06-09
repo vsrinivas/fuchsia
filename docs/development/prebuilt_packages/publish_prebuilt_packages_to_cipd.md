@@ -173,7 +173,7 @@ instructions in a comment, as shown in the following pseudo-example:
 #
 #   TAG=git_revision:cd13435a975057b0ad0b72636f6c8323113c9c8b
 #   VERSION=version:22.0.773.345
-#   cipd create -pkg-file cipd.yaml -tag $TAG -tag $VERSION
+#   cipd create -pkg-defs cipd.yaml -tag $TAG -tag $VERSION
 #
 package: myproject/fuchsia/mypackage-arm64
 description: mypackage's Fuchsia binaries from myproject.
