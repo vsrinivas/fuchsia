@@ -62,7 +62,7 @@ rustc_binary("scoped_task_test_spawner") {
 fuchsia_unittest_component("scoped_task_test_cmp") {
   component_name = "scoped_task_test"
   deps = [ ":scoped_task_test" ]
-  manifest = "meta/scoped_task_test.cmx"
+  manifest = "meta/scoped_task_test.cml"
 }
 
 fuchsia_test_package("scoped-task-tests") {
