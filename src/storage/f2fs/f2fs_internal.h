@@ -24,13 +24,6 @@ struct DirInodeEntry {
   VnodeF2fs *vnode = nullptr;  // vfs inode pointer
 };
 
-// for the list of fsync inodes, used only during recovery
-struct FsyncInodeEntry {
-  list_node_t list;                        // list head
-  fbl::RefPtr<VnodeF2fs> vnode = nullptr;  // vfs inode pointer
-  block_t blkaddr = 0;                     // block address locating the last inode
-};
-
 inline int NatsInCursum(SummaryBlock *sum) { return LeToCpu(sum->n_nats); }
 inline int SitsInCursum(SummaryBlock *sum) { return LeToCpu(sum->n_sits); }
 

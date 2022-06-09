@@ -8,94 +8,84 @@ namespace f2fs {
 
 bool F2fs::SpaceForRollForward() {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
+  std::lock_guard stat_lock(superblock_info.GetStatLock());
   if (superblock_info.GetLastValidBlockCount() + superblock_info.GetAllocValidBlockCount() >
       superblock_info.GetUserBlockCount())
     return false;
   return true;
 }
 
-FsyncInodeEntry *F2fs::GetFsyncInode(list_node_t *head, nid_t ino) {
-  list_node_t *this_node;
-  FsyncInodeEntry *entry;
-
-  list_for_every(head, this_node) {
-    entry = containerof(this_node, FsyncInodeEntry, list);
-    if (entry->vnode->Ino() == ino)
-      return entry;
-  }
-  return nullptr;
+F2fs::FsyncInodeEntry *F2fs::GetFsyncInode(FsyncInodeList &inode_list, nid_t ino) {
+  auto inode_entry =
+      inode_list.find_if([ino](const auto &entry) { return entry.GetVnode().Ino() == ino; });
+  if (inode_entry == inode_list.end())
+    return nullptr;
+  return &(*inode_entry);
 }
 
-zx_status_t F2fs::RecoverDentry(NodePage *ipage, VnodeF2fs *vnode) {
-  Node *raw_node = ipage->GetAddress<Node>();
+zx_status_t F2fs::RecoverDentry(NodePage &ipage, VnodeF2fs &vnode) {
+  Node *raw_node = ipage.GetAddress<Node>();
   Inode *raw_inode = &(raw_node->i);
   fbl::RefPtr<VnodeF2fs> dir_refptr;
-  Dir *dir;
   zx_status_t err = ZX_OK;
 
-  if (!ipage->IsDentDnode())
-    goto out;
-
-  err = VnodeF2fs::Vget(this, LeToCpu(raw_inode->i_pino), &dir_refptr);
-  if (err != ZX_OK) {
-    goto out;
+  if (!ipage.IsDentDnode()) {
+    return ZX_OK;
   }
 
-  dir = static_cast<Dir *>(dir_refptr.get());
-
-#if 0  // porting needed
-  // parent.d_inode = dir;
-  // dent.d_parent = &parent;
-  // dent.d_name.len = LeToCpu(raw_inode->i_namelen);
-  // dent.d_name.name = raw_inode->i_name;
-#endif
-
-  if (auto dir_entry = dir->FindEntry(vnode->GetNameView()); dir_entry.is_error()) {
-    dir->AddLink(vnode->GetNameView(), vnode);
+  if (err = VnodeF2fs::Vget(this, LeToCpu(raw_inode->i_pino), &dir_refptr); err != ZX_OK) {
+    return err;
   }
-out:
-#if 0  // porting needed
-  // kunmap(ipage);
-#endif
+
+  auto dir = static_cast<Dir *>(dir_refptr.get());
+  fbl::RefPtr<Page> page;
+  auto dir_entry = dir->FindEntry(vnode.GetNameView(), &page);
+  if (dir_entry == nullptr) {
+    dir->AddLink(vnode.GetNameView(), &vnode);
+  } else if (dir_entry && vnode.Ino() != LeToCpu(dir_entry->ino)) {
+    // Remove old dentry
+    fbl::RefPtr<VnodeF2fs> old_vnode_refptr;
+    if (err = VnodeF2fs::Vget(this, dir_entry->ino, &old_vnode_refptr); err != ZX_OK) {
+      return err;
+    }
+    dir->DeleteEntry(dir_entry, page, old_vnode_refptr.get());
+    ZX_ASSERT(dir->FindEntry(vnode.GetNameView()).status_value() == ZX_ERR_NOT_FOUND);
+    dir->AddLink(vnode.GetNameView(), &vnode);
+  }
   return err;
 }
 
-zx_status_t F2fs::RecoverInode(VnodeF2fs *vnode, NodePage *node_page) {
-  struct Node *raw_node = node_page->GetAddress<Node>();
+zx_status_t F2fs::RecoverInode(VnodeF2fs &vnode, NodePage &node_page) {
+  struct Node *raw_node = node_page.GetAddress<Node>();
   struct Inode *raw_inode = &(raw_node->i);
 
-  vnode->SetMode(LeToCpu(raw_inode->i_mode));
-  vnode->SetSize(LeToCpu(raw_inode->i_size));
-  vnode->SetATime(LeToCpu(raw_inode->i_atime), LeToCpu(raw_inode->i_atime_nsec));
-  vnode->SetCTime(LeToCpu(raw_inode->i_ctime), LeToCpu(raw_inode->i_ctime_nsec));
-  vnode->SetMTime(LeToCpu(raw_inode->i_mtime), LeToCpu(raw_inode->i_mtime_nsec));
+  vnode.SetMode(LeToCpu(raw_inode->i_mode));
+  vnode.SetSize(LeToCpu(raw_inode->i_size));
+  vnode.SetATime(LeToCpu(raw_inode->i_atime), LeToCpu(raw_inode->i_atime_nsec));
+  vnode.SetCTime(LeToCpu(raw_inode->i_ctime), LeToCpu(raw_inode->i_ctime_nsec));
+  vnode.SetMTime(LeToCpu(raw_inode->i_mtime), LeToCpu(raw_inode->i_mtime_nsec));
 
   return RecoverDentry(node_page, vnode);
 }
 
-zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
+zx_status_t F2fs::FindFsyncDnodes(FsyncInodeList &inode_list) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   uint64_t cp_ver = LeToCpu(superblock_info.GetCheckpoint().checkpoint_ver);
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
   zx_status_t err = ZX_OK;
 
-  // retrieve the curseg information of kCursegWarmNode
+  // Retrieve the curseg information of kCursegWarmNode
   CursegInfo *curseg = segment_manager_->CURSEG_I(CursegType::kCursegWarmNode);
-  // get blkaddr from which it starts finding fsyncd dnode block
+  // Get blkaddr from which it starts finding fsynced dnode block
   block_t blkaddr = segment_manager_->StartBlock(curseg->segno) + curseg->next_blkoff;
 
-  // alloc a temporal page to read node blocks.
-  LockedPage page;
-  if (zx_status_t ret = GetNodeVnode().GrabCachePage(-1, &page); ret != ZX_OK) {
-    return ret;
-  }
-#if 0  // porting needed
-  // lock_page(page);
-#endif
-
   while (true) {
-    if (MakeOperation(storage::OperationType::kRead, page, blkaddr, PageType::kNode)) {
-      break;
+    LockedPage page;
+    // Since node inode cache cannot be used for recovery, use meta inode cache temporarily and
+    // delete it later. Meta vnode is indexed by LBA, it can be used to read node blocks. This
+    // method eliminates duplicate node block reads.
+    if (zx_status_t ret = GetMetaPage(blkaddr, &page); ret != ZX_OK) {
+      return ret;
     }
 
     if (cp_ver != page.GetPage<NodePage>().CpverOfNode()) {
@@ -103,76 +93,53 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
     }
 
     if (!page.GetPage<NodePage>().IsFsyncDnode()) {
-      /* check next segment */
+      // Check next segment
       blkaddr = page.GetPage<NodePage>().NextBlkaddrOfNode();
       page->ClearUptodate();
       continue;
     }
 
-    FsyncInodeEntry *entry = GetFsyncInode(head, page.GetPage<NodePage>().InoOfNode());
-    if (entry) {
-      entry->blkaddr = blkaddr;
+    auto entry_ptr = GetFsyncInode(inode_list, page.GetPage<NodePage>().InoOfNode());
+    if (entry_ptr) {
+      entry_ptr->SetLastDnodeBlkaddr(blkaddr);
       if (IsInode(*page) && page.GetPage<NodePage>().IsDentDnode()) {
-        entry->vnode->SetFlag(InodeInfoFlag::kIncLink);
+        entry_ptr->GetVnode().SetFlag(InodeInfoFlag::kIncLink);
       }
     } else {
       if (IsInode(*page) && page.GetPage<NodePage>().IsDentDnode()) {
-        if (GetNodeManager().RecoverInodePage(page.GetPage<NodePage>())) {
-          err = ZX_ERR_NO_MEMORY;
+        if (err = GetNodeManager().RecoverInodePage(page.GetPage<NodePage>()); err != ZX_OK) {
           break;
         }
       }
 
-      // TODO: Without cache, Vget cannot retrieve the node page for the fsyncd file
-      // that was created after the last checkpoint before spo. (i.e., IsDentDnode)
-      // It expects RecoverInodePage() creates a cached page for the inode.
       if (err = VnodeF2fs::Vget(this, page.GetPage<NodePage>().InoOfNode(), &vnode_refptr);
           err != ZX_OK) {
         break;
       }
 
-      // add this fsync inode to the list
-      entry = new FsyncInodeEntry;
-      if (!entry) {
-        err = ZX_ERR_NO_MEMORY;
-        vnode_refptr.reset();
-        break;
-      }
-
-      list_initialize(&entry->list);
-      entry->vnode = std::move(vnode_refptr);
-      entry->blkaddr = blkaddr;
-      list_add_tail(&entry->list, head);
+      // Add this fsync inode to the list
+      auto entry = std::make_unique<FsyncInodeEntry>(std::move(vnode_refptr));
+      entry_ptr = entry.get();
+      entry->SetLastDnodeBlkaddr(blkaddr);
+      inode_list.push_back(std::move(entry));
     }
 
     if (IsInode(*page)) {
-      err = RecoverInode(entry->vnode.get(), &page.GetPage<NodePage>());
-      if (err) {
+      if (err = RecoverInode(entry_ptr->GetVnode(), page.GetPage<NodePage>()); err != ZX_OK) {
         break;
       }
     }
 
-    // get the next block informatio from
+    // Get the next block information from footer
     blkaddr = page.GetPage<NodePage>().NextBlkaddrOfNode();
     page->ClearUptodate();
   }
-
-#if 0  // porting needed
-out:
-  // unlock_page(page);
-  //__free_pages(page, 0);
-#endif
   return err;
 }
 
-void F2fs::DestroyFsyncDnodes(list_node_t *head) {
-  list_node_t *this_node;
-  FsyncInodeEntry *entry;
-  list_for_every(head, this_node) {
-    entry = containerof(this_node, FsyncInodeEntry, list);
-    entry->vnode.reset();
-    list_delete(&entry->list);
-    delete entry;
+void F2fs::DestroyFsyncDnodes(FsyncInodeList &inode_list) {
+  for (auto &entry : inode_list) {
+    inode_list.erase(entry);
   }
 }
 
@@ -183,8 +150,6 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
                                           (superblock_info.GetBlocksPerSeg() - 1));
   Summary sum;
   nid_t ino;
-  fbl::RefPtr<VnodeF2fs> vnode_refptr;
-  VnodeF2fs *vnode;
   block_t bidx;
   int i;
 
@@ -223,94 +188,93 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   }
 
   // Deallocate previous index in the node page
+  fbl::RefPtr<VnodeF2fs> vnode_refptr;
   VnodeF2fs::Vget(this, ino, &vnode_refptr);
-  vnode = vnode_refptr.get();
-  vnode->TruncateHole(bidx, bidx + 1);
+  vnode_refptr->TruncateHole(bidx, bidx + 1);
 }
 
-void F2fs::DoRecoverData(VnodeF2fs *vnode, NodePage *page, block_t blkaddr) {
+void F2fs::DoRecoverData(VnodeF2fs &vnode, NodePage &page) {
   uint32_t start, end;
   Summary sum;
   NodeInfo ni;
 
-  start = page->StartBidxOfNode();
-  if (IsInode(*page)) {
+  if (vnode.RecoverInlineData(page) == ZX_OK) {
+    // Restored from inline data.
+    return;
+  }
+
+  start = page.StartBidxOfNode();
+  if (IsInode(page)) {
     end = start + kAddrsPerInode;
   } else {
     end = start + kAddrsPerBlock;
   }
 
   LockedPage dnode_page;
-  if (GetNodeManager().GetLockedDnodePage(*vnode, start, &dnode_page) != ZX_OK) {
+  if (GetNodeManager().GetLockedDnodePage(vnode, start, &dnode_page) != ZX_OK) {
     return;
   }
 
   dnode_page->WaitOnWriteback();
 
   GetNodeManager().GetNodeInfo(dnode_page.GetPage<NodePage>().NidOfNode(), ni);
-  ZX_ASSERT(ni.ino == page->InoOfNode());
-  ZX_ASSERT(dnode_page.GetPage<NodePage>().OfsOfNode() == page->OfsOfNode());
+  ZX_DEBUG_ASSERT(ni.ino == page.InoOfNode());
+  ZX_DEBUG_ASSERT(dnode_page.GetPage<NodePage>().OfsOfNode() == page.OfsOfNode());
 
-  uint32_t ofs_in_dnode;
-  if (auto result = GetNodeManager().GetOfsInDnode(*vnode, start); result.is_error()) {
+  zx::status<uint32_t> result;
+  if (result = GetNodeManager().GetOfsInDnode(vnode, start); result.is_error()) {
     return;
-  } else {
-    ofs_in_dnode = result.value();
   }
+  uint32_t offset_in_dnode = result.value();
 
   for (; start < end; ++start) {
     block_t src, dest;
 
-    src = DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode);
-    dest = DatablockAddr(page, ofs_in_dnode);
+    src = DatablockAddr(&dnode_page.GetPage<NodePage>(), offset_in_dnode);
+    dest = DatablockAddr(&page, offset_in_dnode);
 
     if (src != dest && dest != kNewAddr && dest != kNullAddr) {
       if (src == kNullAddr) {
-        zx_status_t err = vnode->ReserveNewBlock(dnode_page.GetPage<NodePage>(), ofs_in_dnode);
-        ZX_ASSERT(err == ZX_OK);
+        ZX_ASSERT(vnode.ReserveNewBlock(dnode_page.GetPage<NodePage>(), offset_in_dnode) == ZX_OK);
       }
 
       // Check the previous node page having this index
       CheckIndexInPrevNodes(dest);
 
-      GetSegmentManager().SetSummary(&sum, dnode_page.GetPage<NodePage>().NidOfNode(), ofs_in_dnode,
-                                     ni.version);
+      GetSegmentManager().SetSummary(&sum, dnode_page.GetPage<NodePage>().NidOfNode(),
+                                     offset_in_dnode, ni.version);
 
-      // write dummy data page
-      GetSegmentManager().RecoverDataPage(nullptr, &sum, src, dest);
-      vnode->SetDataBlkaddr(dnode_page.GetPage<NodePage>(), ofs_in_dnode, dest);
-      vnode->UpdateExtentCache(dest, page->StartBidxOfNode());
+      // Write dummy data page
+      GetSegmentManager().RecoverDataPage(sum, src, dest);
+      vnode.SetDataBlkaddr(dnode_page.GetPage<NodePage>(), offset_in_dnode, dest);
+      vnode.UpdateExtentCache(dest, page.StartBidxOfNode());
     }
-    ++ofs_in_dnode;
+    ++offset_in_dnode;
   }
 
-  // write node page in place
+  // Write node page in place
   GetSegmentManager().SetSummary(&sum, dnode_page.GetPage<NodePage>().NidOfNode(), 0, 0);
   if (IsInode(*dnode_page)) {
-    vnode->MarkInodeDirty();
+    vnode.MarkInodeDirty();
   }
 
-  dnode_page.GetPage<NodePage>().CopyNodeFooterFrom(*page);
-  dnode_page.GetPage<NodePage>().FillNodeFooter(ni.nid, ni.ino, page->OfsOfNode(), false);
+  dnode_page.GetPage<NodePage>().CopyNodeFooterFrom(page);
+  dnode_page.GetPage<NodePage>().FillNodeFooter(ni.nid, ni.ino, page.OfsOfNode(), false);
   dnode_page->SetDirty();
-
-  GetNodeManager().RecoverNodePage(dnode_page, sum, ni, blkaddr);
 }
 
-void F2fs::RecoverData(list_node_t *head, CursegType type) {
+void F2fs::RecoverData(FsyncInodeList &inode_list, CursegType type) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   uint64_t cp_ver = LeToCpu(superblock_info.GetCheckpoint().checkpoint_ver);
-  block_t blkaddr;
+  block_t blkaddr = segment_manager_->NextFreeBlkAddr(type);
 
-  blkaddr = segment_manager_->NextFreeBlkAddr(type);
-
-  // Alloc a tempotal page to read a chain of node blocks
-  // TODO: need to request read IOs w/ uncached pages
-  LockedPage page;
-  if (zx_status_t ret = GetNodeVnode().GrabCachePage(-1, &page); ret != ZX_OK) {
-    return;
-  }
   while (true) {
+    LockedPage page;
+    // Eliminate duplicate node block reads using a meta inode cache.
+    if (zx_status_t ret = GetMetaVnode().GrabCachePage(blkaddr, &page); ret != ZX_OK) {
+      return;
+    }
+
     if (MakeOperation(storage::OperationType::kRead, page, blkaddr, PageType::kNode)) {
       break;
     }
@@ -319,48 +283,40 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
       break;
     }
 
-    if (FsyncInodeEntry *entry = GetFsyncInode(head, page.GetPage<NodePage>().InoOfNode());
+    if (auto entry = GetFsyncInode(inode_list, page.GetPage<NodePage>().InoOfNode());
         entry != nullptr) {
-      DoRecoverData(entry->vnode.get(), &page.GetPage<NodePage>(), blkaddr);
-      if (entry->blkaddr == blkaddr) {
-        list_delete(&entry->list);
-        entry->vnode.reset();
-        delete entry;
+      DoRecoverData(entry->GetVnode(), page.GetPage<NodePage>());
+      if (entry->GetLastDnodeBlkaddr() == blkaddr) {
+        inode_list.erase(*entry);
       }
     }
     // check next segment
     blkaddr = page.GetPage<NodePage>().NextBlkaddrOfNode();
     page->ClearUptodate();
   }
-#if 0  // porting needed
-  //__free_pages(page, 0);
-#endif
 
   GetSegmentManager().AllocateNewSegments();
 }
 
 void F2fs::RecoverFsyncData() {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
-  list_node_t inode_list;
+  FsyncInodeList inode_list;
 
-  list_initialize(&inode_list);
+  // Step #1: find fsynced inode numbers
+  auto result = FindFsyncDnodes(inode_list);
 
-  // step #1: find fsynced inode numbers
-  if (FindFsyncDnodes(&inode_list)) {
-    goto out;
+  // Step #2: recover data
+  if (result == ZX_OK && !inode_list.is_empty()) {
+    superblock_info.SetOnRecovery();
+    RecoverData(inode_list, CursegType::kCursegWarmNode);
+    superblock_info.ClearOnRecovery();
+    ZX_ASSERT(inode_list.is_empty());
   }
 
-  if (list_is_empty(&inode_list)) {
-    goto out;
-  }
+  DestroyFsyncDnodes(inode_list);
+  // Remove meta pages used for recovery.
+  GetMetaVnode().InvalidatePages(GetSegmentManager().GetMainAreaStartBlock());
 
-  // step #2: recover data
-  superblock_info.SetOnRecovery();
-  RecoverData(&inode_list, CursegType::kCursegWarmNode);
-  superblock_info.ClearOnRecovery();
-  ZX_ASSERT(list_is_empty(&inode_list));
-out:
-  DestroyFsyncDnodes(&inode_list);
   WriteCheckpoint(false, false);
 }
 

@@ -364,8 +364,6 @@ zx_status_t F2fs::FillSuper() {
     return err;
   }
 
-  // TODO: recover fsynced data every mount time
-  // enable roll forward recovery when node dirty cache is impl.
   if (!superblock_info_->TestOpt(kMountDisableRollForward)) {
     RecoverFsyncData();
   }

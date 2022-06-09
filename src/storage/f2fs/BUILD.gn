@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # Enable f2fs_roll_forward
-  f2fs_roll_fwd = false
-}
-
 static_library("f2fs") {
   friend = [ "test:*" ]
   sources = [
@@ -79,10 +74,6 @@ static_library("f2fs") {
   ]
 
   defines = []
-
-  if (f2fs_roll_fwd) {
-    defines += [ "F2FS_ROLL_FORWARD" ]
-  }
 
   if (is_linux) {
     sources += [ "sync_host.cc" ]

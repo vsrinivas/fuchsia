@@ -32,6 +32,7 @@ test("f2fs_unit") {
     "unit/mount.cc",
     "unit/node.cc",
     "unit/orphan.cc",
+    "unit/roll_forward_recovery.cc",
     "unit/segment.cc",
     "unit/teardown.cc",
     "unit/unit_lib.cc",

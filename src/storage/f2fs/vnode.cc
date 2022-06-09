@@ -854,66 +854,70 @@ void VnodeF2fs::MarkInodeDirty() {
 }
 
 #ifdef __Fuchsia__
-void VnodeF2fs::Sync(SyncCallback closure) { closure(SyncFile(0, GetSize(), 0)); }
+void VnodeF2fs::Sync(SyncCallback closure) {
+  closure(SyncFile(0, safemath::checked_cast<loff_t>(GetSize()), 0));
+}
 #endif  // __Fuchsia__
 
-zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-  zx_status_t ret = ZX_OK;
-  bool need_cp = false;
+bool VnodeF2fs::NeedDoCheckpoint() {
+  if (!IsReg()) {
+    return true;
+  }
+  if (GetNlink() != 1) {
+    return true;
+  }
+  if (TestFlag(InodeInfoFlag::kNeedCp)) {
+    return true;
+  }
+  if (!Vfs()->SpaceForRollForward()) {
+    return true;
+  }
+  if (NeedToSyncDir()) {
+    return true;
+  }
+  if (Vfs()->GetSuperblockInfo().TestOpt(kMountDisableRollForward)) {
+    return true;
+  }
+  return false;
+}
 
+zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   // When kCpErrorFlag is set, write is not allowed.
   if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
 
   // TODO: When fdatasync is available, check if it should be written.
-  // TODO: Consider some case where there is no need to write node or data pages.
   if (!IsDirty()) {
-    return ret;
+    return ZX_OK;
   }
 
-  // Write out dirty data pages
+  // Write out dirty data pages and wait for completion
   WritebackOperation op = {.bSync = true};
   Writeback(op);
 
-  if (!IsReg() || GetNlink() != 1) {
-    need_cp = true;
-  }
-  if (TestFlag(InodeInfoFlag::kNeedCp)) {
-    need_cp = true;
-  }
-  if (!Vfs()->SpaceForRollForward()) {
-    need_cp = true;
-  }
-  if (superblock_info.TestOpt(kMountDisableRollForward) || NeedToSyncDir()) {
-    need_cp = true;
-  }
+  // TODO: STRICT mode will be supported when FUA interface is added.
+  // Currently, only POSIX mode is supported.
+  // TODO: We should consider fdatasync for WriteInode().
+  WriteInode(false);
+  bool need_cp = NeedDoCheckpoint();
 
   if (need_cp) {
     Vfs()->SyncFs();
     ClearFlag(InodeInfoFlag::kNeedCp);
     // Check if checkpoint errors happen during fsync().
     if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
-      ret = ZX_ERR_BAD_STATE;
+      return ZX_ERR_BAD_STATE;
     }
   } else {
-    // TODO: After impl ordered writeback for node pages,
-    // support logging nodes for roll-forward recovery.
-    // kMountDisableRollForward can be removed when gc is available
-    // since LFS cannot be used for nodes without gc.
-    LockedPage node_page;
-    bool mark = !Vfs()->GetNodeManager().IsCheckpointedNode(Ino());
-    if (ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK) {
-      return ret;
-    }
+    // Write dnode pages
+    Vfs()->GetNodeManager().FsyncNodePages(*this);
+    Vfs()->GetBc().Flush();
 
-    node_page.GetPage<NodePage>().SetFsyncMark(true);
-    node_page.GetPage<NodePage>().SetDentryMark(mark);
-
-    UpdateInode(node_page.get());
+    // TODO: Add flags to log recovery information to NAT entries and decide whether to write inode
+    // or not.
   }
-  return ret;
+  return ZX_OK;
 }
 
 bool VnodeF2fs::NeedToSyncDir() {

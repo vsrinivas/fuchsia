@@ -130,6 +130,7 @@ class NodeManager {
   // during ckpt. This way guarantees that RecycleNode() for valid vnodes executes only at ckpt
   // time.
   pgoff_t SyncNodePages(WritebackOperation &operation);
+  pgoff_t FsyncNodePages(VnodeF2fs &vnode);
 
   bool AllocNid(nid_t &out);
   void AllocNidFailed(nid_t nid);
@@ -151,7 +152,6 @@ class NodeManager {
   int F2fsWriteNodePages(VnodeF2fs &vnode, bool is_reclaim = false);
 
   zx_status_t RecoverInodePage(NodePage &page);
-  void RecoverNodePage(LockedPage &page, Summary &sum, NodeInfo &ni, block_t new_blkaddr);
 
   // Check whether the given nid is within node id range.
   void CheckNidRange(const nid_t &nid) { ZX_ASSERT(nid < max_nid_); }

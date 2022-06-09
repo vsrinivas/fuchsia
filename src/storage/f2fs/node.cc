@@ -28,26 +28,26 @@ void NodeManager::NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne) {
 
 bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
   block_t valid_block_count;
-  uint32_t ValidNodeCount;
+  uint32_t valid_node_count;
 
   std::lock_guard stat_lock(GetSuperblockInfo().GetStatLock());
 
   valid_block_count = GetSuperblockInfo().GetTotalValidBlockCount() + static_cast<block_t>(count);
   GetSuperblockInfo().SetAllocValidBlockCount(GetSuperblockInfo().GetAllocValidBlockCount() +
                                               static_cast<block_t>(count));
-  ValidNodeCount = GetSuperblockInfo().GetTotalValidNodeCount() + count;
+  valid_node_count = GetSuperblockInfo().GetTotalValidNodeCount() + count;
 
   if (valid_block_count > GetSuperblockInfo().GetUserBlockCount()) {
     return false;
   }
 
-  if (ValidNodeCount > GetSuperblockInfo().GetTotalNodeCount()) {
+  if (valid_node_count > GetSuperblockInfo().GetTotalNodeCount()) {
     return false;
   }
 
   if (vnode)
     vnode->IncBlocks(count);
-  GetSuperblockInfo().SetTotalValidNodeCount(ValidNodeCount);
+  GetSuperblockInfo().SetTotalValidNodeCount(valid_node_count);
   GetSuperblockInfo().SetTotalValidBlockCount(valid_block_count);
 
   return true;
@@ -903,111 +903,32 @@ pgoff_t NodeManager::SyncNodePages(WritebackOperation &operation) {
   }
   // TODO: Consider ordered writeback
   return fs_->GetNodeVnode().Writeback(operation);
+}
 
-#if 0  // porting needed
-  // SuperblockInfo &superblock_info = GetSuperblockInfo();
-  // //address_space *mapping = superblock_info.node_inode->i_mapping;
-  // pgoff_t index, end;
-  // // TODO: IMPL
-  // //pagevec pvec;
-  // int step = ino ? 2 : 0;
-  // int nwritten = 0, wrote = 0;
+pgoff_t NodeManager::FsyncNodePages(VnodeF2fs &vnode) {
+  nid_t ino = vnode.Ino();
 
-  // // TODO: IMPL
-  // //pagevec_init(&pvec, 0);
+  WritebackOperation op;
+  op.bSync = true;
+  op.if_page = [ino](fbl::RefPtr<Page> page) {
+    auto node_page = fbl::RefPtr<NodePage>::Downcast(std::move(page));
+    if (node_page->IsDirty() && node_page->InoOfNode() == ino && node_page->IsDnode() &&
+        node_page->IsColdNode()) {
+      return ZX_OK;
+    }
+    return ZX_ERR_NEXT;
+  };
+  op.node_page_cb = [ino, this](fbl::RefPtr<Page> page) {
+    auto node_page = fbl::RefPtr<NodePage>::Downcast(std::move(page));
+    node_page->SetFsyncMark(true);
+    node_page->SetDentryMark(false);
+    if (IsInode(*node_page)) {
+      node_page->SetDentryMark(!IsCheckpointedNode(ino));
+    }
+    return ZX_OK;
+  };
 
-  // next_step:
-  // 	index = 0;
-  // 	end = LONG_MAX;
-
-  // 	while (index <= end) {
-  // 		int nr_pages;
-  //  TODO: IMPL
-  // nr_pages = pagevec_lookup_tag(&pvec, mapping, &index,
-  // 		PAGECACHE_TAG_DIRTY,
-  // 		min(end - index, (pgoff_t)PAGEVEC_SIZE-1) + 1);
-  // if (nr_pages == 0)
-  // 	break;
-
-  // 		for (int i = 0; i < nr_pages; ++i) {
-  // 			page *page = pvec.pages[i];
-
-  // 			/*
-  // 			 * flushing sequence with step:
-  // 			 * 0. indirect nodes
-  // 			 * 1. dentry dnodes
-  // 			 * 2. file dnodes
-  // 			 */
-  // 			if (step == 0 && IS_DNODE(page))
-  // 				continue;
-  // 			if (step == 1 && (!IS_DNODE(page) ||
-  // 						IsColdNode(page)))
-  // 				continue;
-  // 			if (step == 2 && (!IS_DNODE(page) ||
-  // 						!IsColdNode(page)))
-  // 				continue;
-
-  // 			/*
-  // 			 * If an fsync mode,
-  // 			 * we should not skip writing node pages.
-  // 			 */
-  // 			if (ino && InoOfNode(page) == ino)
-  // 				lock_page(page);
-  // 			else if (!trylock_page(page))
-  // 				continue;
-
-  // 			if (unlikely(page->mapping != mapping)) {
-  // continue_unlock:
-  // 				unlock_page(page);
-  // 				continue;
-  // 			}
-  // 			if (ino && InoOfNode(page) != ino)
-  // 				goto continue_unlock;
-
-  // 			if (!PageDirty(page)) {
-  // 				/* someone wrote it for us */
-  // 				goto continue_unlock;
-  // 			}
-
-  // 			if (!ClearPageDirtyForIo(page))
-  // 				goto continue_unlock;
-
-  // 			/* called by fsync() */
-  // 			if (ino && IS_DNODE(page)) {
-  // 				int mark = !IsCheckpointedNode(superblock_info, ino);
-  // 				SetFsyncMark(page, 1);
-  // 				if (IsInode(page))
-  // 					SetDentryMark(page, mark);
-  // 				++nwritten;
-  // 			} else {
-  // 				SetFyncMark(page, 0);
-  // 				SetDentryMark(page, 0);
-  // 			}
-  // 			mapping->a_ops->writepage(page, wbc);
-  // 			++wrote;
-
-  // 			if (--wbc->nr_to_write == 0)
-  // 				break;
-  // 		}
-  // 		pagevec_release(&pvec);
-  // 		cond_resched();
-
-  // 		if (wbc->nr_to_write == 0) {
-  // 			step = 2;
-  // 			break;
-  // 		}
-  // 	}
-
-  // 	if (step < 2) {
-  // 		++step;
-  // 		goto next_step;
-  // 	}
-
-  // 	if (wrote)
-  // 		f2fs_submit_bio(superblock_info, NODE, wbc->sync_mode == WB_SYNC_ALL);
-
-  //	return nwritten;
-#endif
+  return fs_->GetNodeVnode().Writeback(op);
 }
 
 zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
@@ -1255,19 +1176,10 @@ void NodeManager::AllocNidFailed(nid_t nid) {
   AddFreeNid(nid);
 }
 
-void NodeManager::RecoverNodePage(LockedPage &page, Summary &sum, NodeInfo &ni,
-                                  block_t new_blkaddr) {
-  fs_->GetSegmentManager().RewriteNodePage(page, &sum, ni.blk_addr, new_blkaddr);
-  SetNodeAddr(ni, new_blkaddr);
-  page->Invalidate();
-  // TODO: Remove it when impl. recovery.
-  ZX_ASSERT(0);
-}
-
 zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
   Node *src, *dst;
   nid_t ino = page.InoOfNode();
-  NodeInfo old_ni, new_ni;
+  NodeInfo old_node_info, new_node_info;
   LockedPage ipage;
 
   if (zx_status_t ret = fs_->GetNodeVnode().GrabCachePage(ino, &ipage); ret != ZX_OK) {
@@ -1277,7 +1189,7 @@ zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
   // Should not use this inode  from free nid list
   RemoveFreeNid(ino);
 
-  GetNodeInfo(ino, old_ni);
+  GetNodeInfo(ino, old_node_info);
 
   ipage->SetUptodate();
   ipage.GetPage<NodePage>().FillNodeFooter(ino, ino, 0, true);
@@ -1291,12 +1203,13 @@ zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
   dst->i.i_links = 1;
   dst->i.i_xattr_nid = 0;
 
-  new_ni = old_ni;
-  new_ni.ino = ino;
+  new_node_info = old_node_info;
+  new_node_info.ino = ino;
 
-  SetNodeAddr(new_ni, kNewAddr);
+  ZX_ASSERT(IncValidNodeCount(nullptr, 1));
+  SetNodeAddr(new_node_info, kNewAddr);
   fs_->IncValidInodeCount();
-
+  ipage->SetDirty();
   return ZX_OK;
 }
 

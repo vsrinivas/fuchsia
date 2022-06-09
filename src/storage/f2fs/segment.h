@@ -246,8 +246,7 @@ class SegmentManager {
   zx_status_t WriteDataPage(VnodeF2fs *vnode, LockedPage &page, nid_t nid, uint32_t ofs_in_node,
                             block_t old_blkaddr, block_t *new_blkaddr);
   zx_status_t RewriteDataPage(LockedPage &page, block_t old_blk_addr);
-  void RewriteNodePage(LockedPage &page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
-  void RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
+  void RecoverDataPage(Summary &sum, block_t old_blkaddr, block_t new_blkaddr);
 
   zx_status_t ReadCompactedSummaries();
   zx_status_t ReadNormalSummaries(int type);

@@ -429,6 +429,9 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
 
     ZX_DEBUG_ASSERT(page->IsUptodate());
     ZX_DEBUG_ASSERT(page->IsLocked());
+    if (vnode_->IsNode() && operation.node_page_cb) {
+      operation.node_page_cb(page.CopyRefPtr());
+    }
     zx_status_t ret = vnode_->WriteDirtyPage(page, false);
     if (ret != ZX_OK) {
       if (ret != ZX_ERR_NOT_FOUND && ret != ZX_ERR_OUT_OF_RANGE) {

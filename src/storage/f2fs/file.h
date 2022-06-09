@@ -36,13 +36,14 @@ class File : public VnodeF2fs, public fbl::Recyclable<File> {
 #ifdef __Fuchsia__
   zx::status<> PopulateVmoWithInlineData(zx::vmo& vmo) final __TA_EXCLUDES(mutex_);
 #endif  // __Fuchsia__
+  zx_status_t RecoverInlineData(NodePage& node_page) final __TA_EXCLUDES(mutex_);
 
  private:
   zx_status_t ReadInline(void* data, size_t len, size_t off, size_t* out_actual)
       __TA_EXCLUDES(mutex_);
   zx_status_t WriteInline(const void* data, size_t len, size_t offset, size_t* out_actual)
       __TA_EXCLUDES(mutex_);
-  zx_status_t TruncateInline(size_t len) __TA_EXCLUDES(mutex_);
+  zx_status_t TruncateInline(size_t len, bool is_recover) __TA_EXCLUDES(mutex_);
   zx_status_t ConvertInlineData() __TA_EXCLUDES(mutex_);
 
   uint8_t* InlineDataPtr(Page* page);

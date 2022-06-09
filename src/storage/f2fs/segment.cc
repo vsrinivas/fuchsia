@@ -950,8 +950,7 @@ zx_status_t SegmentManager::RewriteDataPage(LockedPage &page, block_t old_blk_ad
   return fs_->MakeOperation(storage::OperationType::kWrite, page, old_blk_addr, PageType::kData);
 }
 
-void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr,
-                                     block_t new_blkaddr) {
+void SegmentManager::RecoverDataPage(Summary &sum, block_t old_blkaddr, block_t new_blkaddr) {
   CursegInfo *curseg;
   uint32_t old_cursegno;
   CursegType type;
@@ -982,52 +981,8 @@ void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkad
 
   curseg->next_blkoff = safemath::checked_cast<uint16_t>(GetSegOffFromSeg0(new_blkaddr) &
                                                          (superblock_info_->GetBlocksPerSeg() - 1));
-  AddSumEntry(type, sum, curseg->next_blkoff);
+  AddSumEntry(type, &sum, curseg->next_blkoff);
 
-  RefreshSitEntry(old_blkaddr, new_blkaddr);
-
-  LocateDirtySegment(old_cursegno);
-  LocateDirtySegment(GetSegmentNumber(old_blkaddr));
-  LocateDirtySegment(GetSegmentNumber(new_blkaddr));
-}
-
-void SegmentManager::RewriteNodePage(LockedPage &page, Summary *sum, block_t old_blkaddr,
-                                     block_t new_blkaddr) {
-  CursegType type = CursegType::kCursegWarmNode;
-  CursegInfo *curseg;
-  uint32_t segno, old_cursegno;
-  block_t next_blkaddr = page.GetPage<NodePage>().NextBlkaddrOfNode();
-  uint32_t next_segno = GetSegmentNumber(next_blkaddr);
-
-  curseg = CURSEG_I(type);
-
-  std::lock_guard curseg_lock(curseg->curseg_mutex);
-  std::lock_guard sentry_lock(sit_info_->sentry_lock);
-
-  segno = GetSegmentNumber(new_blkaddr);
-  old_cursegno = curseg->segno;
-
-  // change the current segment
-  if (segno != curseg->segno) {
-    curseg->next_segno = segno;
-    ChangeCurseg(type, true);
-  }
-  curseg->next_blkoff = safemath::checked_cast<uint16_t>(GetSegOffFromSeg0(new_blkaddr) &
-                                                         (superblock_info_->GetBlocksPerSeg() - 1));
-  AddSumEntry(type, sum, curseg->next_blkoff);
-
-  // change the current log to the next block addr in advance
-  if (next_segno != segno) {
-    curseg->next_segno = next_segno;
-    ChangeCurseg(type, true);
-  }
-  curseg->next_blkoff = safemath::checked_cast<uint16_t>(GetSegOffFromSeg0(next_blkaddr) &
-                                                         (superblock_info_->GetBlocksPerSeg() - 1));
-
-  // TODO: Rewrite node page
-  // Clear the update flag of page to prevent a cache hit
-  // page->SetWriteback();
-  fs_->MakeOperation(storage::OperationType::kWrite, page, new_blkaddr, PageType::kNode);
   RefreshSitEntry(old_blkaddr, new_blkaddr);
 
   LocateDirtySegment(old_cursegno);

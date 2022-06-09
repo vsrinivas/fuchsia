@@ -788,6 +788,8 @@ void CheckpointTestMain(uint32_t test) {
 
   FileTester::MkfsOnFakeDev(&bc, kBlockCount);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  // Disable roll-forward recovery
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptDisableRollForward), 1), ZX_OK);
   FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;

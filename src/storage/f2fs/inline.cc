@@ -509,7 +509,7 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
   return ZX_OK;
 }
 
-zx_status_t File::TruncateInline(size_t len) {
+zx_status_t File::TruncateInline(size_t len, bool is_recover) {
   {
     LockedPage inline_page;
     if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
@@ -527,8 +527,11 @@ zx_status_t File::TruncateInline(size_t len) {
       ZX_ASSERT(WritePagedVmo(inline_data + offset, offset, size_diff) == ZX_OK);
     }
 
-    SetSize(len);
-    if (GetSize() == 0) {
+    // When removing inline data during recovery, file size should not be modified.
+    if (!is_recover) {
+      SetSize(len);
+    }
+    if (len == 0) {
       ClearFlag(InodeInfoFlag::kDataExist);
     }
 
@@ -541,6 +544,48 @@ zx_status_t File::TruncateInline(size_t len) {
   MarkInodeDirty();
 
   return ZX_OK;
+}
+
+zx_status_t File::RecoverInlineData(NodePage &page) {
+  // The inline_data recovery policy is as follows.
+  // [prev.] [next] of inline_data flag
+  //    o       o  -> recover inline_data
+  //    o       x  -> remove inline_data, and then recover data blocks
+  //    x       o  -> remove data blocks, and then recover inline_data (TODO)
+  //    x       x  -> recover data blocks
+  // ([prev.] is checkpointed data. And [next] is data written and fsynced after checkpoint.)
+
+  Inode *raw_inode = nullptr;
+  if (IsInode(page)) {
+    raw_inode = &page.GetAddress<Node>()->i;
+  }
+
+  // [next] have inline data.
+  if (raw_inode && (raw_inode->i_inline & kInlineData)) {
+    // TODO: We should consider converting data blocks to inline data.
+
+    // Process inline.
+    LockedPage ipage;
+    if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
+      return err;
+    }
+    ipage->WaitOnWriteback();
+    memcpy(InlineDataPtr(ipage.get()), InlineDataPtr(&page), MaxInlineData());
+
+    SetFlag(InodeInfoFlag::kInlineData);
+    SetFlag(InodeInfoFlag::kDataExist);
+
+    ipage->SetDirty();
+    return ZX_OK;
+  }
+
+  // [prev.] has inline data but [next] has no inline data.
+  if (TestFlag(InodeInfoFlag::kInlineData)) {
+    TruncateInline(0, true);
+    ClearFlag(InodeInfoFlag::kInlineData);
+    ClearFlag(InodeInfoFlag::kDataExist);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace f2fs

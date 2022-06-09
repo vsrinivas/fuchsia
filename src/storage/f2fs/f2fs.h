@@ -238,16 +238,37 @@ class F2fs : public fs::Vfs {
 #endif
 
   // recovery.cc
+  // For the list of fsync inodes, used only during recovery
+  class FsyncInodeEntry : public fbl::DoublyLinkedListable<std::unique_ptr<FsyncInodeEntry>> {
+   public:
+    explicit FsyncInodeEntry(fbl::RefPtr<VnodeF2fs> vnode_refptr)
+        : vnode_(std::move(vnode_refptr)) {}
+
+    FsyncInodeEntry() = delete;
+    FsyncInodeEntry(const FsyncInodeEntry &) = delete;
+    FsyncInodeEntry &operator=(const FsyncInodeEntry &) = delete;
+    FsyncInodeEntry(FsyncInodeEntry &&) = delete;
+    FsyncInodeEntry &operator=(FsyncInodeEntry &&) = delete;
+
+    block_t GetLastDnodeBlkaddr() const { return last_dnode_blkaddr_; }
+    void SetLastDnodeBlkaddr(block_t blkaddr) { last_dnode_blkaddr_ = blkaddr; }
+    VnodeF2fs &GetVnode() const { return *vnode_; }
+
+   private:
+    fbl::RefPtr<VnodeF2fs> vnode_ = nullptr;  // vfs inode pointer
+    block_t last_dnode_blkaddr_ = 0;          // block address locating the last dnode
+  };
+  using FsyncInodeList = fbl::DoublyLinkedList<std::unique_ptr<FsyncInodeEntry>>;
+
   bool SpaceForRollForward();
-  FsyncInodeEntry *GetFsyncInode(list_node_t *head, nid_t ino);
-  // TODO: Use reference type parameters instead of pointer type
-  zx_status_t RecoverDentry(NodePage *ipage, VnodeF2fs *vnode);
-  zx_status_t RecoverInode(VnodeF2fs *inode, NodePage *node_page);
-  zx_status_t FindFsyncDnodes(list_node_t *head);
-  void DestroyFsyncDnodes(list_node_t *head);
+  FsyncInodeEntry *GetFsyncInode(FsyncInodeList &inode_list, nid_t ino);
+  zx_status_t RecoverDentry(NodePage &ipage, VnodeF2fs &vnode);
+  zx_status_t RecoverInode(VnodeF2fs &inode, NodePage &node_page);
+  zx_status_t FindFsyncDnodes(FsyncInodeList &inode_list);
+  void DestroyFsyncDnodes(FsyncInodeList &inode_list);
   void CheckIndexInPrevNodes(block_t blkaddr);
-  void DoRecoverData(VnodeF2fs *inode, NodePage *page, block_t blkaddr);
-  void RecoverData(list_node_t *head, CursegType type);
+  void DoRecoverData(VnodeF2fs &inode, NodePage &page);
+  void RecoverData(FsyncInodeList &inode_list, CursegType type);
   void RecoverFsyncData();
 
   // block count

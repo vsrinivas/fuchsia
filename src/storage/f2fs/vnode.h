@@ -72,7 +72,6 @@ class VnodeF2fs : public fs::Vnode,
   void Sync(SyncCallback closure) override;
 #endif  // __Fuchsia__
   zx_status_t SyncFile(loff_t start, loff_t end, int datasync);
-  bool NeedToSyncDir();
 
   void fbl_recycle() { RecycleNode(); }
 
@@ -151,6 +150,10 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t DoWriteDataPage(LockedPage &page);
   zx_status_t WriteDataPage(LockedPage &page, bool is_reclaim = false);
   zx_status_t WriteBegin(size_t pos, size_t len, LockedPage *page);
+
+  virtual zx_status_t RecoverInlineData(NodePage &node_page) __TA_EXCLUDES(mutex_) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
 #ifdef __Fuchsia__
   void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) final;
@@ -242,8 +245,15 @@ class VnodeF2fs : public fs::Vnode,
     return size_;
   }
 
-  void SetParentNid(const ino_t &pino) { parent_ino_ = pino; }
-  ino_t GetParentNid() const { return parent_ino_; }
+  void SetParentNid(const ino_t &pino) __TA_EXCLUDES(mutex_) {
+    std::lock_guard lock(mutex_);
+    parent_ino_ = pino;
+  }
+
+  ino_t GetParentNid() const __TA_EXCLUDES(mutex_) {
+    fs::SharedLock lock(mutex_);
+    return parent_ino_;
+  }
 
   void SetGeneration(const uint32_t &gen) { generation_ = gen; }
   uint32_t GetGeneration() const { return generation_; }
@@ -431,6 +441,9 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode> *out_redirect) final
       __TA_EXCLUDES(mutex_);
   zx_status_t CloseNode() final;
+
+  bool NeedToSyncDir() __TA_EXCLUDES(mutex_);
+  bool NeedDoCheckpoint() __TA_EXCLUDES(mutex_);
 
 #ifdef __Fuchsia__
   zx_status_t CreatePagedVmo(size_t size) __TA_REQUIRES(mutex_);

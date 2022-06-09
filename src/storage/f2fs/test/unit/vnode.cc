@@ -294,31 +294,41 @@ TEST_F(VnodeTest, SyncFile) {
   // 1. Check need_cp
   uint64_t pre_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
   fs_->GetSuperblockInfo().ClearOpt(kMountDisableRollForward);
+  file_vnode->SetFlag(InodeInfoFlag::kDirty);
   ASSERT_EQ(file_vnode->SyncFile(0, safemath::checked_cast<loff_t>(file_vnode->GetSize()), 0),
             ZX_OK);
   uint64_t curr_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
   ASSERT_EQ(pre_checkpoint_ver, curr_checkpoint_ver);
   fs_->GetSuperblockInfo().SetOpt(kMountDisableRollForward);
 
-  // 2. Check kNeedCp
+  // 2. Check vnode is clean
+  pre_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  file_vnode->ClearDirty();
+  ASSERT_EQ(file_vnode->SyncFile(0, safemath::checked_cast<loff_t>(file_vnode->GetSize()), 0),
+            ZX_OK);
+  curr_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  ASSERT_EQ(pre_checkpoint_ver, curr_checkpoint_ver);
+
+  // 3. Check kNeedCp
   pre_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
   file_vnode->SetFlag(InodeInfoFlag::kNeedCp);
+  file_vnode->SetFlag(InodeInfoFlag::kDirty);
   ASSERT_EQ(file_vnode->SyncFile(0, safemath::checked_cast<loff_t>(file_vnode->GetSize()), 0),
             ZX_OK);
   ASSERT_FALSE(file_vnode->TestFlag(InodeInfoFlag::kNeedCp));
   curr_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
   ASSERT_EQ(pre_checkpoint_ver + 1, curr_checkpoint_ver);
 
-  // 3. Check SpaceForRollForward()
+  // 4. Check SpaceForRollForward()
   pre_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
   block_t temp_user_block_count = fs_->GetSuperblockInfo().GetUserBlockCount();
   fs_->GetSuperblockInfo().SetUserBlockCount(0);
+  file_vnode->SetFlag(InodeInfoFlag::kDirty);
   ASSERT_EQ(file_vnode->SyncFile(0, safemath::checked_cast<loff_t>(file_vnode->GetSize()), 0),
             ZX_OK);
   ASSERT_FALSE(file_vnode->TestFlag(InodeInfoFlag::kNeedCp));
   curr_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
-  // In this case, SyncFile does nothing since file_vnode is not dirty.
-  ASSERT_EQ(pre_checkpoint_ver, curr_checkpoint_ver);
+  ASSERT_EQ(pre_checkpoint_ver + 1, curr_checkpoint_ver);
   fs_->GetSuperblockInfo().SetUserBlockCount(temp_user_block_count);
 
   ASSERT_EQ(file_vnode->Close(), ZX_OK);

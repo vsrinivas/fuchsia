@@ -475,7 +475,7 @@ zx_status_t File::Truncate(size_t len) {
 
   if (TestFlag(InodeInfoFlag::kInlineData)) {
     if (len < MaxInlineData()) {
-      return TruncateInline(len);
+      return TruncateInline(len, false);
     }
 
     ConvertInlineData();
