@@ -101,17 +101,21 @@ fn specialize_ip_inner(
     attr: TokenStream,
     input: TokenStream,
     attr_name: &'static str,
-    trait_name: &'static str,
+    default_trait_name: &'static str,
     ipv4_type_name: &str,
     ipv6_type_name: &str,
     ipv4_attr_name: &'static str,
     ipv6_attr_name: &'static str,
 ) -> TokenStream {
-    assert!(attr.is_empty(), "#[specialize_ip]: unexpected attribute argument");
+    let trait_ident = if attr.is_empty() {
+        Ident::new(&default_trait_name, Span::call_site())
+    } else {
+        parse_macro_input!(attr as Ident)
+    };
     let f = parse_macro_input!(input as ItemFn);
     let cfg = Config {
         attr_name,
-        trait_name,
+        trait_ident,
         ipv4_type_ident: Ident::new(ipv4_type_name, Span::call_site()),
         ipv6_type_ident: Ident::new(ipv6_type_name, Span::call_site()),
         ipv4_attr_name,
@@ -224,7 +228,7 @@ struct Config {
     // specialize_ip or specialize_ip_address
     attr_name: &'static str,
     // Ip or IpAddr
-    trait_name: &'static str,
+    trait_ident: Ident,
     // Ipv4 or Ipv4Addr
     ipv4_type_ident: Ident,
     // Ipv6 or Ipv6Addr
@@ -278,7 +282,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
         let mut trait_decl = input.traif_fn_sig.clone();
         trait_decl.ident = Ident::new("f", Span::call_site());
 
-        let trait_ident = Ident::new(&cfg.trait_name, Span::call_site());
+        let trait_ident = &cfg.trait_ident;
         let ipv4_type_ident = &cfg.ipv4_type_ident;
         let ipv6_type_ident = &cfg.ipv6_type_ident;
 
@@ -620,7 +624,7 @@ fn rewrite_types(
                 .iter()
                 .filter(|bound| {
                     if let TypeParamBound::Trait(bound) = bound {
-                        bound.path.is_ident(cfg.trait_name)
+                        bound.path.is_ident(&cfg.trait_ident)
                     } else {
                         false
                     }
@@ -634,7 +638,7 @@ fn rewrite_types(
                         type_param,
                         format!(
                             "type with {} trait bound cannot also have other bounds",
-                            cfg.trait_name
+                            cfg.trait_ident
                         ),
                     );
                 }
@@ -642,14 +646,14 @@ fn rewrite_types(
                     push_error(
                         errors,
                         type_param,
-                        format!("duplicate {} trait bounds", cfg.trait_name),
+                        format!("duplicate {} trait bounds", cfg.trait_ident),
                     );
                 }
                 if type_ident_and_index.is_some() {
                     push_error(
                         errors,
                         type_param,
-                        format!("duplicate types with {} trait bound", cfg.trait_name),
+                        format!("duplicate types with {} trait bound", cfg.trait_ident),
                     );
                 }
                 type_ident_and_index = Some((type_param.ident.clone(), idx));
@@ -658,7 +662,7 @@ fn rewrite_types(
     }
 
     if let Some((type_ident, idx)) = type_ident_and_index {
-        // Remove the type with the `cfg.trait_name` bound.
+        // Remove the type with the `cfg.trait_ident` bound.
         sig.generics.params = remove_from_punctuated(sig.generics.params.clone(), idx);
 
         let mut rename = RenameVisit::new(type_ident.clone());
@@ -688,7 +692,7 @@ fn rewrite_types(
         push_error(
             errors,
             &sig.generics.params,
-            format!("missing type with {} trait bound", cfg.trait_name),
+            format!("missing type with {} trait bound", cfg.trait_ident),
         );
         parse_quote!(Dummy)
     }

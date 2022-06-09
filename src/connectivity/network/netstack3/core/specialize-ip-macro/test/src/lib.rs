@@ -151,6 +151,12 @@ mod tests {
         }
     }
 
+    trait ImpliesIp: Ip {}
+    impl<T: Ip> ImpliesIp for T {}
+
+    trait ImpliesIpAddress: IpAddress {}
+    impl<T: IpAddress> ImpliesIpAddress for T {}
+
     #[specialize_ip]
     fn simple_specialized_for_ip<I: Ip>() -> i32 {
         #[ipv4]
@@ -164,8 +170,34 @@ mod tests {
         }
     }
 
+    #[specialize_ip(ImpliesIp)]
+    fn specialized_for_ip_alternate_trait<I: ImpliesIp>() -> i32 {
+        #[ipv4]
+        {
+            1
+        }
+
+        #[ipv6]
+        {
+            2
+        }
+    }
+
     #[specialize_ip_address]
     fn simple_specialized_for_ip_address<A: IpAddress>() -> i32 {
+        #[ipv4addr]
+        {
+            3
+        }
+
+        #[ipv6addr]
+        {
+            4
+        }
+    }
+
+    #[specialize_ip_address(ImpliesIpAddress)]
+    fn specialized_for_ip_address_alternate_trait<A: ImpliesIpAddress>() -> i32 {
         #[ipv4addr]
         {
             3
@@ -427,6 +459,18 @@ mod tests {
     fn test_simple_specialize_for_ip_address() {
         assert_eq!(simple_specialized_for_ip_address::<Ipv4Addr>(), 3);
         assert_eq!(simple_specialized_for_ip_address::<Ipv6Addr>(), 4);
+    }
+
+    #[test]
+    fn test_specialize_for_ip_alternate_trait() {
+        assert_eq!(specialized_for_ip_alternate_trait::<Ipv4>(), 1);
+        assert_eq!(specialized_for_ip_alternate_trait::<Ipv6>(), 2);
+    }
+
+    #[test]
+    fn test_specialize_for_ip_address() {
+        assert_eq!(specialized_for_ip_address_alternate_trait::<Ipv4Addr>(), 3);
+        assert_eq!(specialized_for_ip_address_alternate_trait::<Ipv6Addr>(), 4);
     }
 
     #[test]
