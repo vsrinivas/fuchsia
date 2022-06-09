@@ -211,7 +211,7 @@ Do the following:
 
 ## 3. Start the emulator {:#start-the-emulator}
 
-Start the Fuchsia emulator on the host machine.
+Start the [Fuchsia emulator][femu] on the host machine.
 
 The tasks include:
 
@@ -1201,3 +1201,4 @@ is available for the Fuchsia package server.
 [ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
 [fundamentals]: /docs/get-started/sdk/learn/README.md
 [workaround-01]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=100772
+[femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md

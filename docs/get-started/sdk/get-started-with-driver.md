@@ -212,8 +212,9 @@ Do the following:
 
 ## 3. Start the emulator {:#start-the-emulator}
 
-Start the Fuchsia emulator on the host machine while configuring the emulator
-instance to use Fuchsia’s new [driver framework][driver-framework] (DFv2).
+Start the [Fuchsia emulator][femu] on the host machine while configuring the
+emulator instance to use Fuchsia’s new [driver framework][driver-framework]
+(DFv2).
 
 The tasks include:
 
@@ -949,3 +950,4 @@ killall pm
 [driver-concepts]: /docs/concepts/drivers/README.md
 [driver-sample-walkthrough]: /docs/development/sdk/driver-sample-qemu-edu.md
 [driver-framework]: /docs/concepts/drivers/driver_framework.md
+[femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md

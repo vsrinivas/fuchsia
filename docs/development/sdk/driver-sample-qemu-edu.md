@@ -19,7 +19,7 @@ This development walkthrough guide contains the following sections:
 ## How this driver works
 
 For the `qemu_edu` driver to work, we first need to launch an instance of the
-Fuchsia emulator (for instance, using a Fuchsia’s Workstation image).
+[Fuchsia emulator][femu] (for instance, using a Fuchsia’s Workstation image).
 [QEMU][qemu]{:.external} (which underpins the Fuchsia emulator)
 then creates a virtual device named [`edu`][edu-device], which is an educational
 device for writing drivers. It is this `edu` device that provides a service that
@@ -761,4 +761,5 @@ two takes place using this FIDL channel.
 [eductl-cml]: https://fuchsia.googlesource.com/sdk-samples/drivers/+/refs/heads/main/src/qemu_edu/meta/eductl.cml
 [eductl-cc]: https://fuchsia.googlesource.com/sdk-samples/drivers/+/refs/heads/main/src/qemu_edu/eductl.cc
 [service-discovery]: /docs/concepts/drivers/driver_communication.md#service_discovery_using_devfs
+[femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md
 
