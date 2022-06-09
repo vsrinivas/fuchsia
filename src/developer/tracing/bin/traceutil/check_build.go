@@ -27,7 +27,7 @@ func checkBuildConfiguration() {
 	if !traceManagerIsInBaseBuildTargets() {
 		fmt.Printf("WARNING: %s is not in the base package set.\n", traceManagerPackageName)
 		fmt.Printf("    Tracing will likely have missing data. fxbug.dev/23004\n")
-		fmt.Printf("    To fix this, add --with-base=//garnet/packages/prod:tracing to \"fx set\"\n")
+		fmt.Printf("    To fix this, add --with-base=//src/developer/tracing to \"fx set\"\n")
 	}
 }
 
