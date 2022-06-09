@@ -98,7 +98,6 @@ group("runtime") {
   deps = [
     ":ui_pkg",
     "a11y",
-    "bin/text:text_manager",
     "scenic",
     "//src/graphics/bundles:vulkan",
     "//src/sys/activity",
