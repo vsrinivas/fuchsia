@@ -10,20 +10,12 @@ source_set("session") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/fit-promise",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/vfs/cpp",
     "//src/lib/files",
-    "//src/lib/fsl",
-    "//src/modular/lib/modular_config",
   ]
 }
 
@@ -38,9 +30,7 @@ source_set("unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//src/lib/files",
-    "//src/lib/fsl",
     "//src/lib/testing/loop_fixture",
-    "//src/modular/lib/modular_config",
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
     "//third_party/googletest:gtest",
   ]
