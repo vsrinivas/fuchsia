@@ -1623,3 +1623,110 @@ async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
     assert_eq!(get_ip_forwarding(&iface1).await, IpForwarding { v4: Some(true), v6: Some(true) });
     assert_eq!(get_ip_forwarding(&iface2).await, IpForwarding { v4: Some(false), v6: Some(false) });
 }
+
+// Test that reinstalling a port with the same base port identifier works.
+#[variants_test]
+async fn reinstall_same_port<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+
+    let installer = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
+        .expect("connect to protocol");
+
+    let (tun_dev, device) = create_tun_device();
+
+    let (device_control, device_control_server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
+            .expect("create proxy");
+    let () = installer.install_device(device, device_control_server_end).expect("install device");
+
+    const PORT_ID: u8 = 15;
+
+    for index in 0..3 {
+        let (tun_port, port_server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
+                .expect("create proxy");
+        let () = tun_dev
+            .add_port(
+                fidl_fuchsia_net_tun::DevicePortConfig {
+                    base: Some(fidl_fuchsia_net_tun::BasePortConfig {
+                        id: Some(PORT_ID),
+                        rx_types: Some(vec![fidl_fuchsia_hardware_network::FrameType::Ethernet]),
+                        tx_types: Some(vec![fidl_fuchsia_hardware_network::FrameTypeSupport {
+                            type_: fidl_fuchsia_hardware_network::FrameType::Ethernet,
+                            features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
+                            supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
+                        }]),
+                        mtu: Some(netemul::DEFAULT_MTU.into()),
+                        ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
+                    }),
+                    mac: Some(fidl_mac!("02:03:04:05:06:07")),
+                    ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
+                },
+                port_server_end,
+            )
+            .expect("add port");
+
+        let (dev_port, port_server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                .expect("create proxy");
+
+        tun_port.get_port(port_server_end).expect("get port");
+        let mut port_id = dev_port.get_info().await.expect("get info").id.expect("missing port id");
+
+        let (control, control_server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .expect("create proxy");
+        let () = device_control
+            .create_interface(
+                &mut port_id,
+                control_server_end,
+                fidl_fuchsia_net_interfaces_admin::Options {
+                    name: Some(format!("test{}", index)),
+                    metric: None,
+                    ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
+                },
+            )
+            .expect("create interface");
+
+        let did_enable = control.enable().await.expect("calling enable").expect("enable");
+        assert!(did_enable);
+
+        {
+            // Give the stream a clone of the port proxy. We do this in a closed
+            // scope to make sure we have no references to the proxy anymore
+            // when we decide to drop it to delete the port.
+            let attached_stream = futures::stream::unfold(tun_port.clone(), |port| async move {
+                let fidl_fuchsia_net_tun::InternalState { has_session, .. } =
+                    port.watch_state().await.expect("watch state");
+                Some((has_session.expect("missing session information"), port))
+            });
+            futures::pin_mut!(attached_stream);
+            attached_stream
+                .by_ref()
+                .filter_map(|attached| futures::future::ready(attached.then(|| ())))
+                .next()
+                .await
+                .expect("stream ended");
+
+            // Drop the interface control handle.
+            drop(control);
+
+            // Wait for the session to detach.
+            attached_stream
+                .filter_map(|attached| futures::future::ready((!attached).then(|| ())))
+                .next()
+                .await
+                .expect("stream ended");
+        }
+
+        tun_port.remove().expect("triggered port removal");
+        // Wait for the port to close, ensuring we can safely add the port again
+        // with the same ID in the next iteration.
+        assert_matches::assert_matches!(
+            tun_port.take_event_stream().try_next().await.expect("failed to read next event"),
+            None
+        );
+    }
+}

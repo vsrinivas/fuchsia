@@ -358,7 +358,7 @@ async fn run_interface_control<
     // TODO(https://fxbug.dev/100867): We're not supposed to cleanup if we're
     // detached.
 
-    {
+    let device_info = {
         let mut ctx = ctx.lock().await;
         let Ctx { sync_ctx } = ctx.deref_mut();
         let info = sync_ctx
@@ -367,7 +367,23 @@ async fn run_interface_control<
             .remove_device(id)
             .expect("device lifetime should be tied to channel lifetime");
         netstack3_core::remove_device(sync_ctx, info.core_id());
-    }
+        info
+    };
+    let handler = match device_info.into_info() {
+        devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {
+            handler,
+            common_info: _,
+            mac: _,
+            phy_up: _,
+        }) => handler,
+        i @ devices::DeviceSpecificInfo::Ethernet(_)
+        | i @ devices::DeviceSpecificInfo::Loopback(_) => {
+            unreachable!("unexpected device info {:?} for interface {}", i, id)
+        }
+    };
+    handler.uninstall().await.unwrap_or_else(|e| {
+        log::warn!("error uninstalling netdevice handler for interface {}: {:?}", id, e)
+    })
 }
 
 /// Sets interface with `id` to `admin_enabled = enabled`.

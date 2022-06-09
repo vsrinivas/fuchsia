@@ -208,6 +208,10 @@ where
         &self.info
     }
 
+    pub fn into_info(self) -> I {
+        self.info
+    }
+
     pub fn info_mut(&mut self) -> &mut I {
         &mut self.info
     }

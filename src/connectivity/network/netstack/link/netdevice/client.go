@@ -251,14 +251,17 @@ func (p *Port) Close() error {
 	p.client.mu.Lock()
 	// Remove from parent.
 	delete(p.client.mu.ports, p.portInfo.GetId().Base)
+	deviceClosed := p.client.mu.closed
 	p.client.mu.Unlock()
 
 	p.state.mu.Lock()
-	defer p.state.mu.Unlock()
-	if p.state.mu.closed {
+	wasClosed := p.state.mu.closed
+	p.state.mu.closed = true
+	p.state.mu.Unlock()
+	if wasClosed {
 		return nil
 	}
-	p.state.mu.closed = true
+
 	if p.cancelDispatch != nil {
 		p.cancelDispatch()
 	}
@@ -266,7 +269,34 @@ func (p *Port) Close() error {
 	if p.macAddressing != nil {
 		err = p.macAddressing.Close()
 	}
-	return multierr.Combine(p.port.Close(), p.watcher.Close(), err)
+
+	// Detach from the session if the device isn't already closed.
+	detachErr := func() error {
+		if deviceClosed {
+			return nil
+		}
+		result, err := p.client.session.Detach(context.Background(), p.portInfo.GetId())
+		if err != nil {
+			return err
+		}
+		switch w := result.Which(); w {
+		case network.SessionDetachResultResponse:
+			return nil
+		case network.SessionDetachResultErr:
+			switch status := zx.Status(result.Err); status {
+			case zx.ErrNotFound:
+				// Wasn't attached.
+				return nil
+			default:
+				return &zx.Error{Status: status, Text: "detaching from session"}
+			}
+			return nil
+		default:
+			panic(fmt.Sprintf("unexpected result %d", w))
+		}
+	}()
+
+	return multierr.Combine(p.port.Close(), p.watcher.Close(), err, detachErr)
 }
 
 func (c *Client) Run(ctx context.Context) {
