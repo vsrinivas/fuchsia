@@ -100,7 +100,12 @@ impl<'a> Device<'a> {
             write!(
                 f,
                 "{}",
-                Hexdumper { bytes: &self.device.config, show_ascii: false, offset: None }
+                Hexdumper {
+                    bytes: &self.device.config,
+                    show_header: true,
+                    show_ascii: false,
+                    offset: None
+                }
             )?;
         }
 

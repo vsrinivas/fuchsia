@@ -70,10 +70,17 @@ async fn handle_subcommands<'a>(proxies: &'a Vec<BusProxy>, args: Args) -> Resul
                 .with_context(|| {
                     format!("Couldn't read device {} bar {}", options.device, options.bar_id)
                 })?;
-            println!("read 0x{:x} bytes starting from 0x{:x}", bytes.len(), options.offset);
+            if options.verbose {
+                println!("read 0x{:x} bytes starting from 0x{:x}", bytes.len(), options.offset);
+            }
             print!(
                 "{}",
-                Hexdumper { bytes: &bytes, show_ascii: true, offset: Some(options.offset) }
+                Hexdumper {
+                    bytes: &bytes,
+                    show_header: options.verbose,
+                    show_ascii: options.verbose,
+                    offset: Some(options.offset)
+                }
             );
         }
         None => {
