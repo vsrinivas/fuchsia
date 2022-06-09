@@ -28,6 +28,7 @@ rustc_library("fuchsia-fs") {
   test_deps = [
     ":fidl.test.schema-rustc",
     "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:tempfile",
   ]
 
