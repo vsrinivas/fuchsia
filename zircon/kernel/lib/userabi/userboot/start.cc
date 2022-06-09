@@ -22,6 +22,7 @@
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
+#include <zircon/types.h>
 
 #include <array>
 #include <climits>
@@ -57,19 +58,6 @@ using namespace userboot;
   printl(log, "still here after %s!", r_str);
   while (true)
     __builtin_trap();
-}
-
-void LoadChildProcess(const zx::debuglog& log, const Options& opts, std::string_view filename,
-                      Bootfs& bootfs, const zx::vmo& vdso_vmo, const zx::process& proc,
-                      const zx::vmar& vmar, const zx::thread& thread, const zx::channel& to_child,
-                      zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
-                      zx::channel* loader_svc) {
-  // Examine the bootfs image and find the requested file in it.
-  // This will handle a PT_INTERP by doing a second lookup in bootfs.
-  *entry = elf_load_bootfs(log, bootfs, opts.root, proc, vmar, thread, filename, to_child,
-                           stack_size, loader_svc);
-  // Now load the vDSO into the child, so it has access to system calls.
-  *vdso_base = elf_load_vdso(log, vmar, vdso_vmo);
 }
 
 // Reserve roughly the low half of the address space, so the initial
@@ -226,16 +214,6 @@ struct ChildContext {
   zx::vmar vmar;
   zx::vmar reserved_vmar;
   zx::thread thread;
-
-  // to_child and bootstrap are peers, such that the child process receives the |bootstrap|
-  // end and userboot uses |to_child| to send the process arguments.
-
-  // Used to send initial message to the child with the process protocol,
-  // including handles.
-  zx::channel to_child;
-
-  // Handed off when the process starts, so it can bootstrap itself.
-  zx::channel bootstrap;
 };
 
 ChildContext CreateChildContext(const zx::debuglog& log, std::string_view name,
@@ -256,9 +234,6 @@ ChildContext CreateChildContext(const zx::debuglog& log, std::string_view name,
   check(log, status, "Failed to create main thread for child process(%.*s).",
         static_cast<int>(name.length()), name.data());
 
-  status = zx::channel::create(0, &child.to_child, &child.bootstrap);
-  check(log, status, "Failed to create bootstrap channels for child process(%.*s).",
-        static_cast<int>(name.length()), name.data());
   return child;
 }
 
@@ -304,6 +279,59 @@ Resources CreateResources(const zx::debuglog& log,
   return resources;
 }
 
+zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
+                              const ChildMessageLayout& child_message, std::string_view filename,
+                              ChildContext& child, Bootfs& bootfs,
+                              cpp20::span<zx_handle_t> handles) {
+  size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
+
+  zx::channel to_child, bootstrap;
+  auto status = zx::channel::create(0, &to_child, &bootstrap);
+  check(log, status, "zx_channel_create failed for child stack");
+
+  zx::channel loader_svc;
+
+  // Examine the bootfs image and find the requested file in it.
+  // This will handle a PT_INTERP by doing a second lookup in bootfs.
+  zx_vaddr_t entry = elf_load_bootfs(log, bootfs, options.root, child.process, child.vmar,
+                                     child.thread, filename, to_child, &stack_size, &loader_svc);
+
+  // Now load the vDSO into the child, so it has access to system calls.
+  zx_vaddr_t vdso_base = elf_load_vdso(log, child.vmar, *zx::unowned_vmo{handles[kFirstVdso]});
+
+  stack_size = (stack_size + zx_system_get_page_size() - 1) &
+               -static_cast<uint64_t>(zx_system_get_page_size());
+  zx::vmo stack_vmo;
+  status = zx::vmo::create(stack_size, 0, &stack_vmo);
+  check(log, status, "zx_vmo_create failed for child stack");
+  stack_vmo.set_property(ZX_PROP_NAME, kStackVmoName, sizeof(kStackVmoName) - 1);
+  zx_vaddr_t stack_base;
+  status =
+      child.vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, stack_vmo, 0, stack_size, &stack_base);
+  check(log, status, "zx_vmar_map failed for child stack");
+
+  // Allocate the stack for the child.
+  uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
+  printl(log, "stack [%p, %p) sp=%p", reinterpret_cast<void*>(stack_base),
+         reinterpret_cast<void*>(stack_base + stack_size), reinterpret_cast<void*>(sp));
+
+  // We're done doing mappings, so clear out the reservation VMAR.
+  check(log, child.reserved_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
+  child.reserved_vmar.reset();
+  // Now send the bootstrap message.  This transfers away all the handles
+  // we have left except the process and thread themselves.
+  status = to_child.write(0, &child_message, sizeof(child_message), handles.data(),
+                          static_cast<uint32_t>(handles.size()));
+  check(log, status, "zx_channel_write to child failed");
+
+  // Start the process going.
+  status = child.process.start(child.thread, entry, sp, std::move(bootstrap), vdso_base);
+  check(log, status, "zx_process_start failed");
+  child.thread.reset();
+
+  return loader_svc;
+}
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -318,17 +346,13 @@ Resources CreateResources(const zx::debuglog& log,
   // handle tied to stdout).
   std::array<zx_handle_t, kChildHandleCount> handles = ExtractHandles(std::move(channel));
 
-  // Now that we have the root resource, we can use it to get a debuglog.
   zx::debuglog log;
   auto status = zx::debuglog::create(*zx::unowned_resource{handles[kRootResource]}, 0, &log);
   check(log, status, "zx_debuglog_create failed: %d", status);
 
-  // We need our own root VMAR handle to map in the ZBI.
   zx::vmar vmar_self{handles[kVmarRootSelf]};
   handles[kVmarRootSelf] = ZX_HANDLE_INVALID;
 
-  // Hang on to our own process handle.  If we closed it, our process
-  // would be killed.  Exiting will clean it up.
   zx::process proc_self{handles[kProcSelf]};
   handles[kProcSelf] = ZX_HANDLE_INVALID;
 
@@ -358,54 +382,14 @@ Resources CreateResources(const zx::debuglog& log,
     // Map in the bootfs so we can look for files in it.
     Bootfs bootfs{vmar_self.borrow(), std::move(bootfs_vmo), std::move(vmex), DuplicateOrDie(log)};
 
-    // Map in the code.
-    zx_vaddr_t entry, vdso_base;
-    size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
-    zx::channel loader_service_channel;
-    LoadChildProcess(log, opts, filename, bootfs, *zx::unowned_vmo{handles[kFirstVdso]},
-                     child.process, child.vmar, child.thread, child.to_child, &entry, &vdso_base,
-                     &stack_size, &loader_service_channel);
-
-    // Allocate the stack for the child.
-    uintptr_t sp;
-    {
-      stack_size = (stack_size + zx_system_get_page_size() - 1) &
-                   -static_cast<uint64_t>(zx_system_get_page_size());
-      zx::vmo stack_vmo;
-      status = zx::vmo::create(stack_size, 0, &stack_vmo);
-      check(log, status, "zx_vmo_create failed for child stack");
-      stack_vmo.set_property(ZX_PROP_NAME, kStackVmoName, sizeof(kStackVmoName) - 1);
-      zx_vaddr_t stack_base;
-      status = child.vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, stack_vmo, 0, stack_size,
-                              &stack_base);
-      check(log, status, "zx_vmar_map failed for child stack");
-      sp = compute_initial_stack_pointer(stack_base, stack_size);
-      printl(log, "stack [%p, %p) sp=%p", reinterpret_cast<void*>(stack_base),
-             reinterpret_cast<void*>(stack_base + stack_size), reinterpret_cast<void*>(sp));
-    }
-
-    // We're done doing mappings, so clear out the reservation VMAR.
-    check(log, child.reserved_vmar.destroy(), "zx_vmar_destroy failed on reservation VMAR handle");
-    child.reserved_vmar.reset();
-
-    // Now send the bootstrap message.  This transfers away all the handles
-    // we have left except the process and thread themselves.
-    status = child.to_child.write(0, &child_message, sizeof(child_message), handles.data(),
-                                  handles.size());
-    check(log, status, "zx_channel_write to child failed");
-    child.to_child.reset();
-
-    // Start the process going.
-    status = child.process.start(child.thread, entry, sp, std::move(child.bootstrap), vdso_base);
-    check(log, status, "zx_process_start failed");
-    child.thread.reset();
-
+    zx::channel loader_svc =
+        StartChildProcess(log, opts, child_message, filename, child, bootfs, handles);
     printl(log, "process %.*s started.", static_cast<int>(filename.size()), filename.data());
 
     // Now become the loader service for as long as that's needed.
-    if (loader_service_channel) {
+    if (loader_svc) {
       LoaderService ldsvc(DuplicateOrDie(log), &bootfs, opts.root);
-      ldsvc.Serve(std::move(loader_service_channel));
+      ldsvc.Serve(std::move(loader_svc));
     }
 
     // All done with bootfs! Let it go out of scope.
