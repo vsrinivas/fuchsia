@@ -29,7 +29,7 @@ pub enum BlobfsError {
     OpenDir(#[from] fuchsia_fs::node::OpenError),
 
     #[error("while listing blobfs dir")]
-    ReadDir(#[source] files_async::Error),
+    ReadDir(#[source] fuchsia_fs::directory::Error),
 
     #[error("while deleting blob")]
     Unlink(#[source] Status),
@@ -158,11 +158,12 @@ impl Client {
 
     /// Returns the list of known blobs in blobfs.
     pub async fn list_known_blobs(&self) -> Result<HashSet<Hash>, BlobfsError> {
-        let entries = files_async::readdir(&self.proxy).await.map_err(BlobfsError::ReadDir)?;
+        let entries =
+            fuchsia_fs::directory::readdir(&self.proxy).await.map_err(BlobfsError::ReadDir)?;
 
         entries
             .into_iter()
-            .filter(|entry| entry.kind == files_async::DirentKind::File)
+            .filter(|entry| entry.kind == fuchsia_fs::directory::DirentKind::File)
             .map(|entry| entry.name.parse().map_err(BlobfsError::ParseHash))
             .collect()
     }

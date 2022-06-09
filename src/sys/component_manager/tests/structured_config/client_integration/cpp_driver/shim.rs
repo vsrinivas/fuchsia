@@ -27,7 +27,7 @@ async fn connect_to_puppet(
     loop {
         // TODO(fxbug.dev/4776): Once component manager supports watching for
         // service instances, this loop should be replaced by a watcher.
-        let entries = files_async::readdir(&service).await?;
+        let entries = fuchsia_fs::directory::readdir(&service).await?;
         if let Some(entry) = entries.iter().next() {
             instance_name = entry.name.clone();
             break;

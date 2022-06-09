@@ -7,7 +7,7 @@ use {
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy},
-    fidl_fuchsia_io as fio, files_async, fuchsia_fs, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_fs, fuchsia_zircon as zx,
     futures::stream::StreamExt,
     futures::TryFutureExt,
     pin_utils::pin_mut,
@@ -47,7 +47,7 @@ pub enum InspectData {
 
 fn maybe_load_service<P: DiscoverableProtocolMarker>(
     dir_proxy: &fio::DirectoryProxy,
-    entry: &files_async::DirEntry,
+    entry: &fuchsia_fs::directory::DirEntry,
 ) -> Result<Option<P::Proxy>, anyhow::Error> {
     if entry.name.ends_with(P::PROTOCOL_NAME) {
         let (proxy, server) = fidl::endpoints::create_proxy::<P>()?;
@@ -66,8 +66,8 @@ fn maybe_load_service<P: DiscoverableProtocolMarker>(
 pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
     // TODO(fxbug.dev/36762): Use a streaming and bounded readdir API when available to avoid
     // being hung.
-    let entries =
-        files_async::readdir_recursive(inspect_proxy, /* timeout= */ None).filter_map(|result| {
+    let entries = fuchsia_fs::directory::readdir_recursive(inspect_proxy, /* timeout= */ None)
+        .filter_map(|result| {
             async move {
                 // TODO(fxbug.dev/49157): decide how to show directories that we failed to read.
                 result.ok()
@@ -89,7 +89,9 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
             continue;
         }
 
-        if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
+        if !entry.name.ends_with(".inspect")
+            || entry.kind != fuchsia_fs::directory::DirentKind::File
+        {
             continue;
         }
 

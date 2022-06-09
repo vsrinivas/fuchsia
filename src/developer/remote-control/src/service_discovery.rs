@@ -154,10 +154,10 @@ impl Into<ServiceMatch> for &PathEntry {
 
 pub(crate) async fn connect_and_read_dir(
     hub_path: &PathBuf,
-) -> Result<Vec<files_async::DirEntry>, Error> {
+) -> Result<Vec<fuchsia_fs::directory::DirEntry>, Error> {
     let path_str = hub_path.to_string_lossy();
     let proxy = fuchsia_fs::open_directory_in_namespace(&path_str, io::OpenFlags::RIGHT_READABLE)?;
-    files_async::readdir(&proxy).await.map_err(Into::into)
+    fuchsia_fs::directory::readdir(&proxy).await.map_err(Into::into)
 }
 
 pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<PathEntry>, Error> {

@@ -37,12 +37,12 @@ pub async fn get_fake_device_in_isolated_devmgr(dir_path_str: &str) -> Result<Fi
     let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
         fdio::clone_channel(&tel_dir)?,
     )?);
-    let tel_devices = files_async::readdir(&directory_proxy).await?;
+    let tel_devices = fuchsia_fs::directory::readdir(&directory_proxy).await?;
     // Should have one and only one fake device available in IsolatedDevmgr
     if tel_devices.len() != 1 {
         return Err(format_err!("incorrect device number {}, shuold be 1", tel_devices.len()));
     }
-    let last_device: &files_async::DirEntry = tel_devices.last().unwrap();
+    let last_device: &fuchsia_fs::directory::DirEntry = tel_devices.last().unwrap();
     let found_device_path = Path::new(dir_path_str).join(last_device.name.clone());
     let file = isolated_devmgr::open_file_in_isolated_devmgr(found_device_path)
         .context("err opening tel device")?;
@@ -57,7 +57,7 @@ pub async fn validate_removal_of_fake_device(dir_path_str: &str) -> Result<(), E
         fdio::clone_channel(&tel_dir)?,
     )?);
     loop {
-        let tel_devices = files_async::readdir(&directory_proxy).await?;
+        let tel_devices = fuchsia_fs::directory::readdir(&directory_proxy).await?;
         if tel_devices.is_empty() {
             break;
         }

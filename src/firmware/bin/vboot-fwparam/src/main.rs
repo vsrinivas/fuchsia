@@ -35,7 +35,8 @@ async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )
     .context("Opening /dev/class/rtc")?;
-    let contents = files_async::readdir(&proxy).await.context("Reading /dev/class/rtc")?;
+    let contents =
+        fuchsia_fs::directory::readdir(&proxy).await.context("Reading /dev/class/rtc")?;
     if contents.len() > 1 {
         return Err(anyhow!("Too many rtc devices"));
     }
@@ -58,7 +59,8 @@ async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )
     .context("Opening /dev/class/nand")?;
-    let contents = files_async::readdir(&proxy).await.context("Reading /dev/class/nand")?;
+    let contents =
+        fuchsia_fs::directory::readdir(&proxy).await.context("Reading /dev/class/nand")?;
     if contents.len() > 1 {
         return Err(anyhow!("Too many nand devices"));
     }

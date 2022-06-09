@@ -21,11 +21,11 @@ pub async fn serve_iterator(
 ) -> Result<(), Error> {
     let directory =
         fuchsia_fs::open_directory_in_namespace(dir_path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
-    let mut file_stream = files_async::readdir_recursive(&directory, None)
+    let mut file_stream = fuchsia_fs::directory::readdir_recursive(&directory, None)
         .filter_map(|entry_result| {
             let result = match entry_result {
-                Ok(files_async::DirEntry { name, kind }) => match kind {
-                    files_async::DirentKind::File => Some(name),
+                Ok(fuchsia_fs::directory::DirEntry { name, kind }) => match kind {
+                    fuchsia_fs::directory::DirentKind::File => Some(name),
                     _ => None,
                 },
                 Err(e) => {

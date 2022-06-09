@@ -21,7 +21,6 @@ rustc_binary("bin") {
   configs += [ "//build/config/rust:bootfs" ]
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.power.button:fuchsia.power.button-rustc",
     "//sdk/fidl/fuchsia.tpm:fuchsia.tpm-rustc",

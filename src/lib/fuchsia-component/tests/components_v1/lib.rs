@@ -14,9 +14,9 @@ use {
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
     },
     fidl_fuchsia_io as fio,
-    files_async::readdir,
     fuchsia_async::{self as fasync, run_singlethreaded, run_until_stalled, OnSignals},
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
+    fuchsia_fs::directory::readdir,
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, stream::TryStreamExt, FutureExt, StreamExt},
     std::{future::Future, path::Path, sync::atomic},
@@ -404,18 +404,17 @@ async fn list_service_entries(
     let flags =
         fio::OpenFlags::DIRECTORY | fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
     let instance_proxy = fuchsia_fs::open_directory(dir_proxy, Path::new(&path), flags)?;
-    let mut entries =
-        files_async::readdir(&instance_proxy)
-            .await?
-            .into_iter()
-            .filter_map(|e| {
-                if let files_async::DirentKind::Service = e.kind {
-                    Some(e.name)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
+    let mut entries = fuchsia_fs::directory::readdir(&instance_proxy)
+        .await?
+        .into_iter()
+        .filter_map(|e| {
+            if let fuchsia_fs::directory::DirentKind::Service = e.kind {
+                Some(e.name)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
     entries.sort();
     Ok(entries)
 }

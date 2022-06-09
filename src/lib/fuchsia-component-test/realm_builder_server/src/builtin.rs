@@ -144,9 +144,8 @@ fn build_directory(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::create_proxy, fidl_fuchsia_mem as fmem, files_async,
-        fuchsia_async as fasync, fuchsia_fs, futures::TryStreamExt, maplit::hashset,
-        std::collections::HashSet,
+        super::*, fidl::endpoints::create_proxy, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
+        fuchsia_fs, futures::TryStreamExt, maplit::hashset, std::collections::HashSet,
     };
 
     #[fuchsia::test]
@@ -183,7 +182,7 @@ mod tests {
         ));
 
         let directory_filenames: HashSet<_> =
-            files_async::readdir_recursive(&outgoing_dir_proxy, None)
+            fuchsia_fs::directory::readdir_recursive(&outgoing_dir_proxy, None)
                 .map_ok(|dir_entry| dir_entry.name)
                 .try_collect()
                 .await

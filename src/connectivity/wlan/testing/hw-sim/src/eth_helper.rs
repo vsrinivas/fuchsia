@@ -4,7 +4,6 @@
 
 use {
     fdio, fidl_fuchsia_io as fio,
-    files_async::readdir,
     fuchsia_async::{
         self,
         futures::{
@@ -13,6 +12,7 @@ use {
             Future, StreamExt,
         },
     },
+    fuchsia_fs::directory::readdir,
     fuchsia_zircon as zx,
     log::info,
     pin_utils::pin_mut,

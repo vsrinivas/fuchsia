@@ -93,8 +93,9 @@ async fn check_kernel_vmos() -> Result<(), Error> {
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open kernel vdso directory")?;
-    let vdsos =
-        files_async::readdir(&directory).await.context("failed to read kernel vdso directory")?;
+    let vdsos = fuchsia_fs::directory::readdir(&directory)
+        .await
+        .context("failed to read kernel vdso directory")?;
 
     // We should have added at least the default VDSO.
     assert_ne!(vdsos.len(), 0);
@@ -126,7 +127,7 @@ async fn check_executable_files() -> Result<(), Error> {
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open /boot/lib directory")?;
-    let lib_paths = files_async::readdir_recursive(&directory, None)
+    let lib_paths = fuchsia_fs::directory::readdir_recursive(&directory, None)
         .filter_map(|result| async {
             assert!(result.is_ok());
             let entry = result.unwrap();
@@ -175,7 +176,7 @@ async fn check_readonly_files() -> Result<(), Error> {
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_EXECUTABLE,
     )
     .context("failed to open data directory")?;
-    let data_paths = files_async::readdir_recursive(&directory, None)
+    let data_paths = fuchsia_fs::directory::readdir_recursive(&directory, None)
         .filter_map(|result| async {
             assert!(result.is_ok());
             Some(format!("{}/{}", BOOTFS_DATA_DIRECTORY, result.unwrap().name))

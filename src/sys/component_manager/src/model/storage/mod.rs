@@ -361,7 +361,7 @@ pub async fn delete_isolated_storage(
     // cause it to spin or fail because a subdir was not empty after it removed all the contents.
     // It's also possible that the directory was already deleted by the backing component or a
     // prior run.
-    files_async::remove_dir_recursive(&dir, &name).await.map_err(|e| {
+    fuchsia_fs::directory::remove_dir_recursive(&dir, &name).await.map_err(|e| {
         StorageError::remove(
             storage_source_info.storage_provider.as_ref().map(|r| r.instanced_moniker().clone()),
             storage_source_info.backing_directory_path.clone(),

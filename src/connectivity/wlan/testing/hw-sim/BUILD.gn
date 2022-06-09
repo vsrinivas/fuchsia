@@ -12,7 +12,6 @@ rustc_library("wlan-hw-sim") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",

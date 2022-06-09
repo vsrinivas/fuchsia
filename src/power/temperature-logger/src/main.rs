@@ -80,7 +80,11 @@ async fn get_driver_topological_path(path: &str) -> Result<String> {
 
 async fn list_drivers(path: &str) -> Result<Vec<String>> {
     let dir = fuchsia_fs::open_directory_in_namespace(path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
-    Ok(files_async::readdir(&dir).await?.iter().map(|dir_entry| dir_entry.name.clone()).collect())
+    Ok(fuchsia_fs::directory::readdir(&dir)
+        .await?
+        .iter()
+        .map(|dir_entry| dir_entry.name.clone())
+        .collect())
 }
 
 /// Builds a TemperatureLoggerServer.

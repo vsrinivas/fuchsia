@@ -39,7 +39,6 @@ fuchsia_test_component("service-routing-branch") {
 rustc_test("service-routing-test-bin") {
   deps = [
     "//examples/components/services:fuchsia.examples.services-rustc",
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -69,7 +68,6 @@ fuchsia_test_component("service-routing-test") {
 
 rustc_test("filtered-service-routing-test-bin") {
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -105,7 +103,6 @@ fuchsia_test_component("filtered-service-routing-test") {
 rustc_binary("service-routing-client-bin") {
   output_name = "service_routing_client_bin"
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -113,6 +110,7 @@ rustc_binary("service-routing-client-bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/sys/component_manager/tests/services/src/fidl:fuchsia.examples-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

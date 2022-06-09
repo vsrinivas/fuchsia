@@ -23,12 +23,12 @@ pub async fn get_ot_device_in_isolated_devmgr(dir_path_str: &str) -> Result<File
     let directory_proxy = fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
         fdio::clone_channel(&ot_radio_dir)?,
     )?);
-    let ot_radio_devices = files_async::readdir(&directory_proxy).await?;
+    let ot_radio_devices = fuchsia_fs::directory::readdir(&directory_proxy).await?;
     // Should have 1 device that implements OT_RADIO
     if ot_radio_devices.len() != 1 {
         return Err(format_err!("incorrect device number {}, shuold be 1", ot_radio_devices.len()));
     }
-    let last_device: &files_async::DirEntry = ot_radio_devices.last().unwrap();
+    let last_device: &fuchsia_fs::directory::DirEntry = ot_radio_devices.last().unwrap();
     let found_device_path = Path::new(dir_path_str).join(last_device.name.clone());
     fx_log_info!("device path {} got", found_device_path.to_str().unwrap());
     let file =
@@ -65,7 +65,7 @@ pub async fn validate_removal_of_device_in_isolated_devmgr(
         fdio::clone_channel(&protocol_dir)?,
     )?);
     loop {
-        let ot_devices = files_async::readdir(&directory_proxy).await?;
+        let ot_devices = fuchsia_fs::directory::readdir(&directory_proxy).await?;
         if ot_devices.is_empty() {
             break;
         }

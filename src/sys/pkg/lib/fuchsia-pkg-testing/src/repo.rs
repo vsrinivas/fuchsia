@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_pkg_ext::{
         MirrorConfig, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
-    files_async::readdir,
+    fuchsia_fs::directory::readdir,
     fuchsia_fs::{
         directory::{self, open_directory, open_file},
         file::{read, write},
@@ -377,7 +377,7 @@ impl Repository {
         .unwrap();
 
         for dirent in readdir(&src_metadata).await.unwrap() {
-            if dirent.kind == files_async::DirentKind::File {
+            if dirent.kind == fuchsia_fs::directory::DirentKind::File {
                 let src_metadata =
                     open_file(&src_metadata, &dirent.name, fio::OpenFlags::RIGHT_READABLE)
                         .await

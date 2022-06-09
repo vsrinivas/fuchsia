@@ -8,7 +8,7 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_io as fio;
-use files_async::{DirEntry, DirentKind};
+use fuchsia_fs::directory::{DirEntry, DirentKind};
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
 use std::path::Path;
@@ -26,7 +26,7 @@ lazy_static! {
             DirEntry { name: CLIENT_ROOT_PATH.to_string(), kind: DirentKind::Directory },
             DirEntry { name: KEY_FILE_PATH.to_string(), kind: DirentKind::File }
         ];
-        // files_async::readdir sorts results, so by sorting the entries we can
+        // fuchsia_fs::directory::readdir sorts results, so by sorting the entries we can
         // do a direct comparison with the readdir results.
         entries.sort();
         entries
@@ -134,7 +134,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Locked => {
-                files_async::remove_dir_recursive(&self.managed_dir, CLIENT_ROOT_PATH)
+                fuchsia_fs::directory::remove_dir_recursive(&self.managed_dir, CLIENT_ROOT_PATH)
                     .await
                     .map_err(|e| {
                         AccountManagerError::new(ApiError::Unknown).with_cause(format_err!(
@@ -193,8 +193,9 @@ impl InsecureKeyDirectoryStorageManager {
     #[allow(dead_code)]
     pub async fn new(managed_dir: fio::DirectoryProxy) -> Result<Self, AccountManagerError> {
         // check internal state of filesystem to derive state
-        let dir_entries =
-            files_async::readdir(&managed_dir).await.account_manager_error(ApiError::Resource)?;
+        let dir_entries = fuchsia_fs::directory::readdir(&managed_dir)
+            .await
+            .account_manager_error(ApiError::Resource)?;
 
         let state = if dir_entries.as_slice() == EXPECTED_DIRECTORY_ENTRIES.as_slice() {
             StorageManagerState::Locked
@@ -290,7 +291,7 @@ mod test {
     }
 
     async fn assert_directory_empty(dir: &fio::DirectoryProxy) {
-        let dir_entries = files_async::readdir(dir).await.unwrap();
+        let dir_entries = fuchsia_fs::directory::readdir(dir).await.unwrap();
         assert!(dir_entries.is_empty());
     }
 

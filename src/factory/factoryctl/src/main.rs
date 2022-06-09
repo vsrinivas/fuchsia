@@ -11,11 +11,9 @@ use {
         MiscFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderMarker,
         WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
     },
-    fidl_fuchsia_io as fio,
-    files_async::{self, DirentKind},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_fs,
+    fuchsia_fs::directory::DirentKind,
     futures::stream::TryStreamExt,
     nom::HexDisplay,
     std::path::PathBuf,
@@ -68,7 +66,7 @@ fn hexdump(data: &[u8]) {
 
 /// Walks the given `dir`, printing the full path to every file.
 async fn print_files(dir_proxy: &fio::DirectoryProxy) -> Result<(), Error> {
-    let mut stream = files_async::readdir_recursive(dir_proxy, /*timeout=*/ None);
+    let mut stream = fuchsia_fs::directory::readdir_recursive(dir_proxy, /*timeout=*/ None);
     while let Some(entry) = stream.try_next().await? {
         if entry.kind == DirentKind::File {
             println!("{}", entry.name);

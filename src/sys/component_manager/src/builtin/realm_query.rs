@@ -348,39 +348,39 @@ mod tests {
         // Test resolvers provide a pkg dir with a fake file
         let pkg_dir = resolved.pkg_dir.unwrap();
         let pkg_dir = pkg_dir.into_proxy().unwrap();
-        let entries = files_async::readdir(&pkg_dir).await.unwrap();
+        let entries = fuchsia_fs::directory::readdir(&pkg_dir).await.unwrap();
         assert_eq!(
             entries,
-            vec![files_async::DirEntry {
+            vec![fuchsia_fs::directory::DirEntry {
                 name: "fake_file".to_string(),
-                kind: files_async::DirentKind::File
+                kind: fuchsia_fs::directory::DirentKind::File
             }]
         );
 
         // Component Manager serves the exposed dir with the `bar` protocol
         let exposed_dir = resolved.exposed_dir.into_proxy().unwrap();
-        let entries = files_async::readdir(&exposed_dir).await.unwrap();
+        let entries = fuchsia_fs::directory::readdir(&exposed_dir).await.unwrap();
         assert_eq!(
             entries,
-            vec![files_async::DirEntry {
+            vec![fuchsia_fs::directory::DirEntry {
                 name: "bar".to_string(),
-                kind: files_async::DirentKind::Unknown
+                kind: fuchsia_fs::directory::DirentKind::Unknown
             }]
         );
 
         // Component Manager serves the namespace dir with the `foo` protocol.
         let ns_dir = resolved.ns_dir.into_proxy().unwrap();
-        let entries = files_async::readdir(&ns_dir).await.unwrap();
+        let entries = fuchsia_fs::directory::readdir(&ns_dir).await.unwrap();
         assert_eq!(
             entries,
             vec![
-                files_async::DirEntry {
+                fuchsia_fs::directory::DirEntry {
                     name: "pkg".to_string(),
-                    kind: files_async::DirentKind::Directory
+                    kind: fuchsia_fs::directory::DirentKind::Directory
                 },
-                files_async::DirEntry {
+                fuchsia_fs::directory::DirEntry {
                     name: "svc".to_string(),
-                    kind: files_async::DirentKind::Directory
+                    kind: fuchsia_fs::directory::DirentKind::Directory
                 },
             ]
         );
@@ -388,12 +388,12 @@ mod tests {
             fuchsia_fs::directory::open_directory(&ns_dir, "svc", fio::OpenFlags::RIGHT_READABLE)
                 .await
                 .unwrap();
-        let entries = files_async::readdir(&svc_dir).await.unwrap();
+        let entries = fuchsia_fs::directory::readdir(&svc_dir).await.unwrap();
         assert_eq!(
             entries,
-            vec![files_async::DirEntry {
+            vec![fuchsia_fs::directory::DirEntry {
                 name: "foo".to_string(),
-                kind: files_async::DirentKind::Unknown
+                kind: fuchsia_fs::directory::DirentKind::Unknown
             }]
         );
 

@@ -12,7 +12,6 @@ rustc_binary("rust_bin") {
   source_root = "src/main.rs"
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

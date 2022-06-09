@@ -67,9 +67,9 @@ pub(crate) async fn copy_custom_artifact_directory(
     out_dir: Box<output::DynDirectoryArtifact>,
 ) -> Result<(), anyhow::Error> {
     let mut paths = vec![];
-    let mut enumerate = files_async::readdir_recursive(&directory, None);
+    let mut enumerate = fuchsia_fs::directory::readdir_recursive(&directory, None);
     while let Ok(Some(file)) = enumerate.try_next().await {
-        if file.kind == files_async::DirentKind::File {
+        if file.kind == fuchsia_fs::directory::DirentKind::File {
             paths.push(file.name);
         }
     }
@@ -155,9 +155,9 @@ mod tests {
             ServerEnd::new(directory_service.into_channel()),
         );
         let mut paths = vec![];
-        let mut enumerate = files_async::readdir_recursive(&directory_client, None);
+        let mut enumerate = fuchsia_fs::directory::readdir_recursive(&directory_client, None);
         while let Ok(Some(file)) = enumerate.try_next().await {
-            if file.kind == files_async::DirentKind::File {
+            if file.kind == fuchsia_fs::directory::DirentKind::File {
                 paths.push(file.name);
             }
         }

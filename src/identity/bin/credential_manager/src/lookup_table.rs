@@ -34,7 +34,7 @@ pub enum LookupTableError {
     #[error("Failed to open: {0}")]
     OpenError(#[from] fuchsia_fs::node::OpenError),
     #[error("Failed to readdir: {0}")]
-    ReaddirError(#[from] files_async::Error),
+    ReaddirError(#[from] fuchsia_fs::directory::Error),
     #[error("Failed to read: {0}")]
     ReadError(#[from] fuchsia_fs::file::ReadError),
     #[error("Failed during FIDL call: {0}")]
@@ -121,9 +121,9 @@ impl PersistentLookupTable {
         dir: &fio::DirectoryProxy,
     ) -> Result<Option<Version>, LookupTableError> {
         // Look through the directory for the latest version number.
-        let dirents = files_async::readdir(dir).await?;
+        let dirents = fuchsia_fs::directory::readdir(dir).await?;
         let mut latest_version = None;
-        // Since files_async::readdir returns files in a deterministic order,
+        // Since fuchsia_fs::directory::readdir returns files in a deterministic order,
         // it is possible to avoid looping through all files via padding
         // filenames. But we are continuing to use the loop in order to gain
         // data around if/how often unexpected filenames are found, and to
@@ -243,28 +243,37 @@ impl LookupTable for PersistentLookupTable {
         .await
         .map_err(|_| LookupTableError::NotFound)?;
 
-        files_async::remove_dir_recursive(&self.dir_proxy, &label.into_dir_name()).await.map_err(
-            |e| match e {
-                files_async::Error::Fidl(_, fidl_err) => LookupTableError::FidlError(fidl_err),
-                files_async::Error::Unlink(status) => LookupTableError::UnlinkError(status),
+        fuchsia_fs::directory::remove_dir_recursive(&self.dir_proxy, &label.into_dir_name())
+            .await
+            .map_err(|e| match e {
+                fuchsia_fs::directory::Error::Fidl(_, fidl_err) => {
+                    LookupTableError::FidlError(fidl_err)
+                }
+                fuchsia_fs::directory::Error::Unlink(status) => {
+                    LookupTableError::UnlinkError(status)
+                }
                 _ => LookupTableError::Unknown,
-            },
-        )
+            })
     }
 
     async fn reset(&mut self) -> Result<(), Vec<LookupTableError>> {
-        let dir_result = files_async::readdir(&self.dir_proxy).await;
+        let dir_result = fuchsia_fs::directory::readdir(&self.dir_proxy).await;
         let dir_entries =
             dir_result.map_err(|err| vec![LookupTableError::ReaddirError(err.into())])?;
         let mut failures = Vec::new();
         for entry in dir_entries.iter() {
-            if let Err(e) = files_async::remove_dir_recursive(&self.dir_proxy, &entry.name)
-                .await
-                .map_err(|e| match e {
-                    files_async::Error::Fidl(_, fidl_err) => LookupTableError::FidlError(fidl_err),
-                    files_async::Error::Unlink(status) => LookupTableError::UnlinkError(status),
-                    _ => LookupTableError::Unknown,
-                })
+            if let Err(e) =
+                fuchsia_fs::directory::remove_dir_recursive(&self.dir_proxy, &entry.name)
+                    .await
+                    .map_err(|e| match e {
+                        fuchsia_fs::directory::Error::Fidl(_, fidl_err) => {
+                            LookupTableError::FidlError(fidl_err)
+                        }
+                        fuchsia_fs::directory::Error::Unlink(status) => {
+                            LookupTableError::UnlinkError(status)
+                        }
+                        _ => LookupTableError::Unknown,
+                    })
             {
                 failures.push(e);
             }
@@ -328,7 +337,7 @@ mod test {
         )
         .await
         .unwrap();
-        for entry in files_async::readdir(&child_dir).await.unwrap() {
+        for entry in fuchsia_fs::directory::readdir(&child_dir).await.unwrap() {
             child_dir.unlink(&entry.name, fio::UnlinkOptions::EMPTY).await.unwrap().unwrap();
         }
 
@@ -509,7 +518,7 @@ mod test {
 
         // Check that after initializing the lookup table, we have cleaned up
         // stale files.
-        let entries = files_async::readdir(&child_dir).await.unwrap();
+        let entries = fuchsia_fs::directory::readdir(&child_dir).await.unwrap();
         assert!(entries.is_empty());
 
         // Check that we can write and read from the directory as expected.

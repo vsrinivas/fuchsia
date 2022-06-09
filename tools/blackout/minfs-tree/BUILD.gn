@@ -23,7 +23,6 @@ rustc_binary("blackout-minfs-tree-target-bin") {
   testonly = true
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/files_async",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/fs_management/rust:fs_management",

@@ -18,7 +18,7 @@ pub enum AccountMetadataStoreError {
     OpenError(#[from] fuchsia_fs::node::OpenError),
 
     #[error("Failed to readdir: {0}")]
-    ReaddirError(#[from] files_async::Error),
+    ReaddirError(#[from] fuchsia_fs::directory::Error),
 
     #[error("Failed during FIDL call: {0}")]
     FidlError(#[from] fidl::Error),
@@ -227,7 +227,7 @@ fn parse_account_id(text: &str) -> Option<AccountId> {
 #[async_trait]
 impl AccountMetadataStore for DataDirAccountMetadataStore {
     async fn account_ids(&self) -> Result<Vec<AccountId>, AccountMetadataStoreError> {
-        let dirents = files_async::readdir(&self.accounts_dir).await?;
+        let dirents = fuchsia_fs::directory::readdir(&self.accounts_dir).await?;
         let ids = dirents
             .iter()
             .flat_map(|d| {
@@ -515,7 +515,7 @@ pub mod test {
         // Try saving an account to ID 1, and expect it to write new data
         metadata_store.save(&1, &scrypt_content).await.expect("save account 1");
 
-        let dirents = files_async::readdir(&dir2).await.expect("readdir");
+        let dirents = fuchsia_fs::directory::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 1);
         assert_eq!(dirents[0].name, "1");
 
@@ -529,7 +529,7 @@ pub mod test {
         // Try saving an account to ID 1, and expect it to overwrite the existing data
         metadata_store.save(&1, &pinweaver_content).await.expect("save (overwrite) account 1");
 
-        let dirents = files_async::readdir(&dir2).await.expect("readdir");
+        let dirents = fuchsia_fs::directory::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 1);
         assert_eq!(dirents[0].name, "1");
         let roundtripped = metadata_store.load(&1).await.expect("load account 1, second time");
@@ -537,7 +537,7 @@ pub mod test {
         assert_eq!(roundtripped.unwrap(), pinweaver_content);
 
         metadata_store.save(&2, &pinweaver_content).await.expect("save account 2");
-        let dirents = files_async::readdir(&dir2).await.expect("readdir");
+        let dirents = fuchsia_fs::directory::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 2);
         assert_eq!(dirents[0].name, "1");
         assert_eq!(dirents[1].name, "2");
@@ -617,7 +617,7 @@ pub mod test {
         assert!(load_result.unwrap().is_none());
 
         // And the directory should be empty.
-        let dirents = files_async::readdir(&dir2).await.expect("readdir");
+        let dirents = fuchsia_fs::directory::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 0);
 
         // Try removing ID 2 and expect failure.
@@ -679,14 +679,14 @@ pub mod test {
         // Expect cleanup to remove the uncommitted file but retain the "1"
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
 
-        let dirents = files_async::readdir(&dir2).await.expect("readdir");
+        let dirents = fuchsia_fs::directory::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 2);
         assert_eq!(dirents[0].name, "1");
         assert_eq!(dirents[1].name, temp_filename);
 
         metadata_store.cleanup_stale_files().await.expect("cleanup_stale_files");
 
-        let dirents = files_async::readdir(&dir2).await.expect("readdir 2");
+        let dirents = fuchsia_fs::directory::readdir(&dir2).await.expect("readdir 2");
         assert_eq!(dirents.len(), 1);
         assert_eq!(dirents[0].name, "1");
     }

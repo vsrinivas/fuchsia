@@ -630,9 +630,8 @@ mod tests {
             close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
             open_file_checked, TestFixture,
         },
-        fidl_fuchsia_io as fio,
-        files_async::{DirEntry, DirentKind},
-        fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fuchsia_fs::directory::{DirEntry, DirentKind},
         fuchsia_fs::{read_file_bytes, write_file_bytes},
         fuchsia_zircon::Status,
         rand::Rng,
@@ -1181,7 +1180,7 @@ mod tests {
             let (status, buf) = dir.read_dirents(fio::MAX_BUF).await.expect("FIDL call failed");
             Status::ok(status).expect("read_dirents failed");
             let mut entries = vec![];
-            for res in files_async::parse_dir_entries(&buf) {
+            for res in fuchsia_fs::directory::parse_dir_entries(&buf) {
                 entries.push(res.expect("Failed to parse entry"));
             }
             entries
@@ -1240,7 +1239,7 @@ mod tests {
 
         let parse_entries = |buf| {
             let mut entries = vec![];
-            for res in files_async::parse_dir_entries(buf) {
+            for res in fuchsia_fs::directory::parse_dir_entries(buf) {
                 entries.push(res.expect("Failed to parse entry"));
             }
             entries

@@ -25,7 +25,6 @@ rustc_test("storage_admin_integration_test_bin") {
   edition = "2018"
   source_root = "admin_integration_test.rs"
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/async-utils",

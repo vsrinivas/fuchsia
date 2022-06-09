@@ -58,11 +58,11 @@ impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConn
     /// This method requires a round trip to the service directory to check for
     /// existence.
     pub async fn exists(&self) -> Result<bool, Error> {
-        match files_async::dir_contains(self.svc_dir.borrow(), P::PROTOCOL_NAME).await {
+        match fuchsia_fs::directory::dir_contains(self.svc_dir.borrow(), P::PROTOCOL_NAME).await {
             Ok(v) => Ok(v),
             // If the service directory is unavailable, then mask the error as if
             // the protocol does not exist.
-            Err(files_async::Error::Fidl(
+            Err(fuchsia_fs::directory::Error::Fidl(
                 _,
                 fidl::Error::ClientChannelClosed { status, protocol_name: _ },
             )) if status == zx::Status::PEER_CLOSED => Ok(false),

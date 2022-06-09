@@ -7,8 +7,8 @@ use {
     anyhow::{anyhow, Context as _, Error},
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io as fio,
-    files_async::{DirEntry, DirentKind},
     fuchsia_fs::directory::open_directory,
+    fuchsia_fs::directory::{DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::{future::Future, StreamExt},
     itertools::Itertools as _,
@@ -1238,7 +1238,7 @@ async fn assert_read_dirents_overflow(
     assert_eq!(buf, []);
 
     assert_eq!(
-        files_async::readdir(dir).await.unwrap().into_iter().sorted().collect::<Vec<_>>(),
+        fuchsia_fs::directory::readdir(dir).await.unwrap().into_iter().sorted().collect::<Vec<_>>(),
         ('a'..='z')
             .chain('A'..='E')
             .map(|seed| DirEntry {
@@ -1266,7 +1266,7 @@ async fn assert_read_dirents_no_overflow(
     assert_eq!(buf, []);
 
     assert_eq!(
-        files_async::readdir(dir).await.unwrap().into_iter().sorted().collect::<Vec<_>>(),
+        fuchsia_fs::directory::readdir(dir).await.unwrap().into_iter().sorted().collect::<Vec<_>>(),
         expected_dirents.into_iter().sorted().collect::<Vec<_>>()
     );
 }

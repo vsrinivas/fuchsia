@@ -168,7 +168,7 @@ impl Directory for FilteredServiceDirectory {
             TraversalPosition::Name(entry) => Some(entry),
             TraversalPosition::Index(_) => panic!("TraversalPosition::Index is never used"),
         };
-        match files_async::readdir(&self.source_dir_proxy).await {
+        match fuchsia_fs::directory::readdir(&self.source_dir_proxy).await {
             Ok(dirent_vec) => {
                 for dirent in dirent_vec {
                     let entry_name = dirent.name;
@@ -565,7 +565,7 @@ impl lazy::LazyDirectory for CollectionServiceDirectory {
                 })
                 .await
                 {
-                    if let Ok(mut dirents) = files_async::readdir(&proxy).await {
+                    if let Ok(mut dirents) = fuchsia_fs::directory::readdir(&proxy).await {
                         // Sort to guarantee a stable iteration order.
                         dirents.sort();
 
@@ -801,8 +801,9 @@ mod tests {
         .expect("failed to serve");
 
         // List the entries of the directory served by `open`.
-        let entries =
-            files_async::readdir(&service_proxy).await.expect("failed to read directory entries");
+        let entries = fuchsia_fs::directory::readdir(&service_proxy)
+            .await
+            .expect("failed to read directory entries");
         let instance_names: HashSet<String> = entries.into_iter().map(|d| d.name).collect();
         assert_eq!(instance_names.len(), 2);
 
@@ -816,7 +817,7 @@ mod tests {
         .expect("failed to open collection dir");
 
         // Make sure we're reading the expected directory.
-        let entries = files_async::readdir(&collection_dir)
+        let entries = fuchsia_fs::directory::readdir(&collection_dir)
             .await
             .expect("failed to read instances of collection dir");
         assert!(entries.into_iter().find(|d| d.name == "member").is_some());
@@ -910,19 +911,19 @@ mod tests {
 
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        let entries = files_async::parse_dir_entries(&buf);
+        let entries = fuchsia_fs::directory::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].as_ref().expect("complete entry").name, "bar,default");
 
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        let entries = files_async::parse_dir_entries(&buf);
+        let entries = fuchsia_fs::directory::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].as_ref().expect("complete entry").name, "bar,one");
 
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        let entries = files_async::parse_dir_entries(&buf);
+        let entries = fuchsia_fs::directory::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].as_ref().expect("complete entry").name, "foo,default");
     }
@@ -998,7 +999,7 @@ mod tests {
         for n in ["default", "two"] {
             let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
             assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-            let entries = files_async::parse_dir_entries(&buf);
+            let entries = fuchsia_fs::directory::parse_dir_entries(&buf);
             assert_eq!(entries.len(), 1);
             assert_eq!(entries[0].as_ref().expect("complete entry").name, n);
         }
@@ -1006,7 +1007,7 @@ mod tests {
         // Confirm no more entries found after allow listed instances.
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        let entries = files_async::parse_dir_entries(&buf);
+        let entries = fuchsia_fs::directory::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 0);
     }
 
@@ -1085,7 +1086,7 @@ mod tests {
         for n in ["aaaaaaa", "bbbbbbb", "one_a", "two"] {
             let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
             assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-            let entries = files_async::parse_dir_entries(&buf);
+            let entries = fuchsia_fs::directory::parse_dir_entries(&buf);
             assert_eq!(entries.len(), 1);
             assert_eq!(entries[0].as_ref().expect("complete entry").name, n);
         }
@@ -1093,7 +1094,7 @@ mod tests {
         // Confirm no more entries found after allow listed instances.
         let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        let entries = files_async::parse_dir_entries(&buf);
+        let entries = fuchsia_fs::directory::parse_dir_entries(&buf);
         assert_eq!(entries.len(), 0);
     }
 

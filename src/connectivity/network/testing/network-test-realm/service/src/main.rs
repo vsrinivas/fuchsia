@@ -104,30 +104,31 @@ async fn file_proxies<P: fidl::endpoints::ProtocolMarker>(
         fntr::Error::Internal
     })?;
 
-    let proxies: Result<Vec<P::Proxy>, fntr::Error> = files_async::readdir(&directory_proxy)
-        .await
-        .map_err(|e| {
-            error!("failed to read files in {} with error {:?}", directory, e);
-            fntr::Error::Internal
-        })?
-        .iter()
-        .map(|file| {
-            let filepath = path::Path::new(directory).join(&file.name);
-            let filepath = filepath.to_str().ok_or_else(|| {
-                error!("failed to convert file path to string");
+    let proxies: Result<Vec<P::Proxy>, fntr::Error> =
+        fuchsia_fs::directory::readdir(&directory_proxy)
+            .await
+            .map_err(|e| {
+                error!("failed to read files in {} with error {:?}", directory, e);
                 fntr::Error::Internal
-            })?;
-            let (proxy, server_end) = fidl::endpoints::create_proxy::<P>().map_err(|e| {
-                error!("create_proxy failed: {:?}", e);
-                fntr::Error::Internal
-            })?;
-            fdio::service_connect(filepath, server_end.into_channel().into()).map_err(|e| {
-                error!("service_connect failed to connect at {} with error: {:?}", filepath, e);
-                fntr::Error::Internal
-            })?;
-            Ok(proxy)
-        })
-        .collect();
+            })?
+            .iter()
+            .map(|file| {
+                let filepath = path::Path::new(directory).join(&file.name);
+                let filepath = filepath.to_str().ok_or_else(|| {
+                    error!("failed to convert file path to string");
+                    fntr::Error::Internal
+                })?;
+                let (proxy, server_end) = fidl::endpoints::create_proxy::<P>().map_err(|e| {
+                    error!("create_proxy failed: {:?}", e);
+                    fntr::Error::Internal
+                })?;
+                fdio::service_connect(filepath, server_end.into_channel().into()).map_err(|e| {
+                    error!("service_connect failed to connect at {} with error: {:?}", filepath, e);
+                    fntr::Error::Internal
+                })?;
+                Ok(proxy)
+            })
+            .collect();
 
     Ok(futures::stream::iter(proxies?))
 }

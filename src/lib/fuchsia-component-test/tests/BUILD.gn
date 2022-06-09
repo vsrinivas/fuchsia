@@ -17,7 +17,6 @@ rustc_test("fuchsia_component_test_tests_bin") {
     "..:fuchsia-component-test",
     "//examples/components/routing/fidl:echo-rustc",
     "//examples/components/services:fuchsia.examples.services-rustc",
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",

@@ -254,7 +254,7 @@ impl Package {
         }
 
         // Verify no other entries exist in the served directory.
-        let mut stream = files_async::readdir_recursive(&dir, /*timeout=*/ None);
+        let mut stream = fuchsia_fs::directory::readdir_recursive(&dir, /*timeout=*/ None);
         while let Some(entry) = stream.try_next().await? {
             let path = entry.name;
             if !expected_paths.contains(path.as_str()) {

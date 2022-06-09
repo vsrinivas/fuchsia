@@ -117,14 +117,15 @@ async fn list_minidumps(rcs: &RemoteControlProxy, capability: &str) -> Result<Ve
     let reports_dir_ref = &reports_dir;
 
     futures::future::try_join_all(
-        files_async::readdir_recursive(reports_dir_ref, None)
+        fuchsia_fs::directory::readdir_recursive(reports_dir_ref, None)
             .collect::<Vec<_>>()
             .await
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .filter(|entry| {
-                entry.kind == files_async::DirentKind::File && entry.name.ends_with("/minidump.dmp")
+                entry.kind == fuchsia_fs::directory::DirentKind::File
+                    && entry.name.ends_with("/minidump.dmp")
             })
             .map(|entry| async move {
                 let proxy = open_file_no_describe(

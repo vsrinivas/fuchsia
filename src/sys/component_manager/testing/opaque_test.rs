@@ -10,7 +10,7 @@ use {
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,
         EnvironmentMarker, EnvironmentOptions, LauncherProxy,
     },
-    fidl_fuchsia_sys2 as fsys, files_async,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::*,
     fuchsia_zircon as zx,
     futures::future,
@@ -364,7 +364,7 @@ fn find_component_manager_in_hub(component_manager_url: &str, label: &str) -> Pa
 
 /// Convenience method to lists the contents of a directory proxy as a sorted vector of strings.
 pub async fn list_directory(root_proxy: &fio::DirectoryProxy) -> Result<Vec<String>, Error> {
-    let entries = files_async::readdir(&root_proxy).await?;
+    let entries = fuchsia_fs::directory::readdir(&root_proxy).await?;
     let mut items = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
     items.sort();
     Ok(items)

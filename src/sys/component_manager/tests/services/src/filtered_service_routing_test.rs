@@ -90,12 +90,13 @@ async fn renamed_instances_test() {
     let renamed_service_dir_proxy =
         client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
             .expect("failed to open service in expose dir.");
-    let visible_service_instances: Vec<String> = files_async::readdir(&renamed_service_dir_proxy)
-        .await
-        .expect("failed to read entries from exposed service dir")
-        .into_iter()
-        .map(|dirent| dirent.name)
-        .collect();
+    let visible_service_instances: Vec<String> =
+        fuchsia_fs::directory::readdir(&renamed_service_dir_proxy)
+            .await
+            .expect("failed to read entries from exposed service dir")
+            .into_iter()
+            .map(|dirent| dirent.name)
+            .collect();
     info!("Entries in exposed service dir after rename: {:?}", visible_service_instances);
     assert_eq!(expected_visible_instance_list, visible_service_instances);
 
@@ -174,12 +175,13 @@ async fn filter_instances_test() {
     let filtered_service_dir_proxy =
         client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
             .expect("failed to open service in expose dir.");
-    let visible_service_instances: Vec<String> = files_async::readdir(&filtered_service_dir_proxy)
-        .await
-        .expect("failed to read entries from exposed service dir")
-        .into_iter()
-        .map(|dirent| dirent.name)
-        .collect();
+    let visible_service_instances: Vec<String> =
+        fuchsia_fs::directory::readdir(&filtered_service_dir_proxy)
+            .await
+            .expect("failed to read entries from exposed service dir")
+            .into_iter()
+            .map(|dirent| dirent.name)
+            .collect();
     info!("Entries in exposed service dir after filter: {:?}", visible_service_instances);
     assert_eq!(source_instance_filter, visible_service_instances);
 
@@ -288,12 +290,13 @@ async fn filtered_service_through_collection_test() {
     let filtered_service_dir_proxy =
         client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
             .expect("failed to open service in expose dir.");
-    let visible_service_instances: Vec<String> = files_async::readdir(&filtered_service_dir_proxy)
-        .await
-        .expect("failed to read entries from exposed service dir")
-        .into_iter()
-        .map(|dirent| dirent.name)
-        .collect();
+    let visible_service_instances: Vec<String> =
+        fuchsia_fs::directory::readdir(&filtered_service_dir_proxy)
+            .await
+            .expect("failed to read entries from exposed service dir")
+            .into_iter()
+            .map(|dirent| dirent.name)
+            .collect();
     info!("Entries in exposed service dir after filter: {:?}", visible_service_instances);
 
     assert_eq!(expected_visible_instance_list, visible_service_instances);
@@ -377,12 +380,13 @@ async fn aggregate_instances_test() {
     let filtered_service_dir_proxy =
         client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
             .expect("failed to open service in expose dir.");
-    let visible_service_instances: Vec<String> = files_async::readdir(&filtered_service_dir_proxy)
-        .await
-        .expect("failed to read entries from exposed service dir")
-        .into_iter()
-        .map(|dirent| dirent.name)
-        .collect();
+    let visible_service_instances: Vec<String> =
+        fuchsia_fs::directory::readdir(&filtered_service_dir_proxy)
+            .await
+            .expect("failed to read entries from exposed service dir")
+            .into_iter()
+            .map(|dirent| dirent.name)
+            .collect();
     info!("Entries in exposed service dir after aggregation: {:?}", visible_service_instances);
     let expected_visible_instance_list: Vec<String> =
         vec!["default", "goodbye"].iter().map(|s| s.to_string()).collect();
@@ -458,12 +462,13 @@ async fn aggregate_instances_renamed_test() {
     let renamed_service_dir_proxy =
         client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
             .expect("failed to open service in expose dir.");
-    let visible_service_instances: Vec<String> = files_async::readdir(&renamed_service_dir_proxy)
-        .await
-        .expect("failed to read entries from exposed service dir")
-        .into_iter()
-        .map(|dirent| dirent.name)
-        .collect();
+    let visible_service_instances: Vec<String> =
+        fuchsia_fs::directory::readdir(&renamed_service_dir_proxy)
+            .await
+            .expect("failed to read entries from exposed service dir")
+            .into_iter()
+            .map(|dirent| dirent.name)
+            .collect();
     info!("Entries in exposed service dir after rename: {:?}", visible_service_instances);
     let expected_visible_instance_list: Vec<String> =
         vec!["default_from_a", "hello_from_dynamic"].iter().map(|s| s.to_string()).collect();
@@ -535,7 +540,7 @@ async fn aggregate_service_fails_without_filter_test() {
     let aggregated_service_dir_proxy =
         client::open_service_at_dir::<fexamples::EchoServiceMarker>(&filtered_exposed_dir)
             .expect("failed to open service in expose dir.");
-    let read_dir_result = files_async::readdir(&aggregated_service_dir_proxy).await;
+    let read_dir_result = fuchsia_fs::directory::readdir(&aggregated_service_dir_proxy).await;
     // This directory read is intended to fail because source_instance_filter is None for at least one of the service
     // offers being aggregated.
     assert!(matches!(read_dir_result, Err(_)));
@@ -580,7 +585,7 @@ async fn regular_echo_at_service_instance(
 async fn verify_original_service(exposed_dir: &fio::DirectoryProxy) -> Vec<String> {
     let service_proxy = client::open_service_at_dir::<fexamples::EchoServiceMarker>(&exposed_dir)
         .expect("failed to open service in expose dir.");
-    let instances = files_async::readdir(&service_proxy)
+    let instances = fuchsia_fs::directory::readdir(&service_proxy)
         .await
         .expect("failed to read entries from service dir")
         .into_iter()

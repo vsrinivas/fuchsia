@@ -41,7 +41,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",

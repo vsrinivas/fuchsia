@@ -16,7 +16,6 @@ rustc_test("bad_signature_update-test") {
     "//src/security/pkg_test/assemblies/hello_world_v1:meta_far",
   ]
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -24,6 +23,7 @@ rustc_test("bad_signature_update-test") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog",
     "//src/security/pkg_test/pkg_server:test.security.pkg-rustc",
     "//src/security/pkg_test/util",

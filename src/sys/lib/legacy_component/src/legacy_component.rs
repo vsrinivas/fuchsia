@@ -61,7 +61,7 @@ impl LegacyComponent {
                         .directory
                         .ok_or(format_err!("missing directory handle"))?
                         .into_proxy()?;
-                    svc_names = files_async::readdir(&dir_proxy)
+                    svc_names = fuchsia_fs::directory::readdir(&dir_proxy)
                         .await?
                         .into_iter()
                         .map(|direntry| direntry.name)

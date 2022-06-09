@@ -8,13 +8,13 @@ use {
         matcher::EventMatcher,
     },
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ServerEnd},
-    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, files_async, fuchsia_fs,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_fs,
     futures::StreamExt,
     maplit::hashmap,
 };
 
 async fn list_entries(directory: &fio::DirectoryProxy) -> Vec<String> {
-    files_async::readdir_recursive(&directory, /*timeout=*/ None)
+    fuchsia_fs::directory::readdir_recursive(&directory, /*timeout=*/ None)
         .map(|entry_result| entry_result.expect("entry ok").name)
         .collect::<Vec<_>>()
         .await

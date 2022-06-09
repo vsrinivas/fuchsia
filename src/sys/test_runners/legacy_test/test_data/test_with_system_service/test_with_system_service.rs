@@ -14,7 +14,7 @@ async fn system_services() {
         fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
     env_proxy.get_directory(directory_request.into_channel()).unwrap();
 
-    let mut protocols = files_async::readdir(&dir_proxy)
+    let mut protocols = fuchsia_fs::directory::readdir(&dir_proxy)
         .await
         .unwrap()
         .into_iter()

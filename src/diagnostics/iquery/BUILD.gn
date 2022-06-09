@@ -7,7 +7,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 iquery_deps = [
-  "//garnet/lib/rust/files_async",
   "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
   "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
   "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",

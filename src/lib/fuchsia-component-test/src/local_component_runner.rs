@@ -354,7 +354,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy,
-        files_async::{readdir, DirEntry, DirentKind},
+        fuchsia_fs::directory::{readdir, DirEntry, DirentKind},
         fuchsia_zircon::AsHandleRef,
         futures::{channel::oneshot, future::pending, lock::Mutex},
     };

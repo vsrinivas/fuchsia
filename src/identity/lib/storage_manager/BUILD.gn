@@ -9,7 +9,6 @@ rustc_library("storage_manager") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/identity/lib/account_common",

@@ -4,7 +4,6 @@
 
 use anyhow::Error;
 use fidl_fuchsia_io as fio;
-use files_async;
 use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
 use std::path::Path;
 
@@ -22,7 +21,7 @@ pub async fn find_devices() -> Result<Vec<DigitalAudioInterface>, Error> {
 async fn find_devices_internal(
     directory_proxy: fio::DirectoryProxy,
 ) -> Result<Vec<DigitalAudioInterface>, Error> {
-    let files = files_async::readdir(&directory_proxy).await?;
+    let files = fuchsia_fs::directory::readdir(&directory_proxy).await?;
 
     let paths: Vec<_> =
         files.iter().map(|file| Path::new(DAI_DEVICE_DIR).join(&file.name)).collect();

@@ -23,7 +23,6 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.nvram:fuchsia.hardware.nvram-rustc",

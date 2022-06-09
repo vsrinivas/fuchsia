@@ -248,23 +248,23 @@ mod tests {
         );
 
         assert_eq!(
-            files_async::readdir(&proxy).await.unwrap(),
+            fuchsia_fs::directory::readdir(&proxy).await.unwrap(),
             vec![
-                files_async::DirEntry {
+                fuchsia_fs::directory::DirEntry {
                     name: "contents".to_string(),
-                    kind: files_async::DirentKind::File
+                    kind: fuchsia_fs::directory::DirentKind::File
                 },
-                files_async::DirEntry {
+                fuchsia_fs::directory::DirEntry {
                     name: "dir".to_string(),
-                    kind: files_async::DirentKind::Directory
+                    kind: fuchsia_fs::directory::DirentKind::Directory
                 },
-                files_async::DirEntry {
+                fuchsia_fs::directory::DirEntry {
                     name: "fuchsia.abi".to_string(),
-                    kind: files_async::DirentKind::Directory
+                    kind: fuchsia_fs::directory::DirentKind::Directory
                 },
-                files_async::DirEntry {
+                fuchsia_fs::directory::DirEntry {
                     name: "package".to_string(),
-                    kind: files_async::DirentKind::File
+                    kind: fuchsia_fs::directory::DirentKind::File
                 }
             ]
         );
@@ -306,10 +306,10 @@ mod tests {
             );
 
             assert_eq!(
-                files_async::readdir(&proxy).await.unwrap(),
-                vec![files_async::DirEntry {
+                fuchsia_fs::directory::readdir(&proxy).await.unwrap(),
+                vec![fuchsia_fs::directory::DirEntry {
                     name: "file".to_string(),
-                    kind: files_async::DirentKind::File
+                    kind: fuchsia_fs::directory::DirentKind::File
                 }]
             );
         }

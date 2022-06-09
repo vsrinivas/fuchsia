@@ -310,14 +310,14 @@ async fn connect_to_spinel_device_proxy_hack() -> Result<(Option<App>, SpinelDev
         fdio::clone_channel(&ot_radio_dir)?,
     )?);
 
-    let ot_radio_devices = files_async::readdir(&directory_proxy).await?;
+    let ot_radio_devices = fuchsia_fs::directory::readdir(&directory_proxy).await?;
 
     // Should have 1 device that implements OT_RADIO
     if ot_radio_devices.len() != 1 {
         return Err(format_err!("incorrect device number {}, shuold be 1", ot_radio_devices.len()));
     }
 
-    let last_device: &files_async::DirEntry = ot_radio_devices.last().unwrap();
+    let last_device: &fuchsia_fs::directory::DirEntry = ot_radio_devices.last().unwrap();
 
     let found_device_path = Path::new(OT_PROTOCOL_PATH).join(last_device.name.clone());
 

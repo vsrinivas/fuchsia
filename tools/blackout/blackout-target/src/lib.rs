@@ -11,10 +11,11 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_blackout_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_device::ControllerMarker,
-    files_async::readdir,
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_fs, fuchsia_zircon as zx,
+    fuchsia_fs,
+    fuchsia_fs::directory::readdir,
+    fuchsia_zircon as zx,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     rand::{distributions, rngs::StdRng, Rng, SeedableRng},
 };

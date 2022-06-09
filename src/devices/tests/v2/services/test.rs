@@ -42,8 +42,9 @@ async fn test_services() -> Result<()> {
     loop {
         // TODO(fxbug.dev/4776): Once component manager supports watching for
         // service instances, this loop shousld be replaced by a watcher.
-        let entries =
-            files_async::readdir(&service).await.context("Failed to read service instances")?;
+        let entries = fuchsia_fs::directory::readdir(&service)
+            .await
+            .context("Failed to read service instances")?;
         if let Some(entry) = entries.iter().next() {
             instance = entry.name.clone();
             break;

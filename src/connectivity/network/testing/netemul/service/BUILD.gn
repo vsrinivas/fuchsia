@@ -39,7 +39,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//src/connectivity/network/testing/netemul/test-support:fidl-rustc",
     "//src/lib/diagnostics/data/rust",
@@ -47,6 +46,7 @@ rustc_binary("bin") {
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-fs",
     "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/testing/fixture",
     "//third_party/rust_crates:assert_matches",

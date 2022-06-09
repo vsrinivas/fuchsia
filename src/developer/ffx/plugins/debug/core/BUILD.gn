@@ -12,7 +12,6 @@ ffx_plugin("ffx_debug_core") {
   sources = [ "src/lib.rs" ]
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/developer/ffx/lib/symbol-index",

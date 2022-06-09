@@ -11,7 +11,6 @@ rustc_library("component_hub") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

@@ -2108,13 +2108,13 @@ mod tests {
             devfs_b.read_dirents(fio::MAX_BUF).await.expect("calling read dirents");
         let () = zx::Status::ok(status).expect("failed reading directory entries");
         assert_eq!(
-            files_async::parse_dir_entries(&mut buf)
+            fuchsia_fs::directory::parse_dir_entries(&mut buf)
                 .into_iter()
                 .collect::<Result<Vec<_>, _>>()
                 .expect("failed parsing directory entries"),
-            &[files_async::DirEntry {
+            &[fuchsia_fs::directory::DirEntry {
                 name: ".".to_string(),
-                kind: files_async::DirentKind::Directory
+                kind: fuchsia_fs::directory::DirentKind::Directory
             }],
         );
     }
@@ -2466,13 +2466,13 @@ mod tests {
             ethernet.read_dirents(fio::MAX_BUF).await.expect("calling read dirents");
         let () = zx::Status::ok(status).expect("failed reading directory entries");
         assert_eq!(
-            files_async::parse_dir_entries(&mut buf)
+            fuchsia_fs::directory::parse_dir_entries(&mut buf)
                 .into_iter()
                 .collect::<Result<Vec<_>, _>>()
                 .expect("failed parsing directory entries"),
-            &[files_async::DirEntry {
+            &[fuchsia_fs::directory::DirEntry {
                 name: ".".to_string(),
-                kind: files_async::DirentKind::Directory
+                kind: fuchsia_fs::directory::DirentKind::Directory
             }],
         );
     }

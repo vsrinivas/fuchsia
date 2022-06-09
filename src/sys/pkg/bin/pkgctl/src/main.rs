@@ -24,7 +24,7 @@ use {
     fidl_fuchsia_pkg_rewrite::EngineMarker,
     fidl_fuchsia_pkg_rewrite_ext::{do_transaction, Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
-    files_async, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_url::RepositoryUrl,
     fuchsia_zircon as zx,
@@ -65,7 +65,8 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
 
             if verbose {
                 println!("package contents:");
-                let mut stream = files_async::readdir_recursive(&dir, /*timeout=*/ None);
+                let mut stream =
+                    fuchsia_fs::directory::readdir_recursive(&dir, /*timeout=*/ None);
                 while let Some(entry) = stream.try_next().await? {
                     println!("/{}", entry.name);
                 }
@@ -140,7 +141,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 .await?
                 .map_err(zx::Status::from_raw)?;
 
-            let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None)
+            let entries = fuchsia_fs::directory::readdir_recursive(&dir, /*timeout=*/ None)
                 .try_collect::<Vec<_>>()
                 .await?;
             println!("package contents:");

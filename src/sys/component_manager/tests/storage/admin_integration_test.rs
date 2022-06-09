@@ -131,7 +131,7 @@ async fn single_storage_user() {
             node_server,
         )
         .expect("open component storage");
-    let filenames: HashSet<_> = files_async::readdir_recursive(&dir_proxy, None)
+    let filenames: HashSet<_> = fuchsia_fs::directory::readdir_recursive(&dir_proxy, None)
         .map_ok(|dir_entry| dir_entry.name)
         .try_collect()
         .await

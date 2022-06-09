@@ -229,7 +229,8 @@ impl SuiteServer for TestServer {
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )
             .expect("Cannot open data directory");
-            if let Err(e) = files_async::remove_dir_recursive(&test_data_dir, &test_data_name).await
+            if let Err(e) =
+                fuchsia_fs::directory::remove_dir_recursive(&test_data_dir, &test_data_name).await
             {
                 debug!(
                     "cannot delete temp data dir '{}/{}': {:?}",

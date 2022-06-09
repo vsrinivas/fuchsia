@@ -82,7 +82,7 @@ impl Config {
                 fdio::clone_channel(&ot_radio_dir)?,
             )?);
 
-            let ot_radio_devices = files_async::readdir(&directory_proxy).await?;
+            let ot_radio_devices = fuchsia_fs::directory::readdir(&directory_proxy).await?;
 
             // Should have 1 device that implements OT_RADIO
             if ot_radio_devices.len() != 1 {
@@ -93,7 +93,7 @@ impl Config {
                 ));
             }
 
-            let last_device: &files_async::DirEntry = ot_radio_devices.last().unwrap();
+            let last_device: &fuchsia_fs::directory::DirEntry = ot_radio_devices.last().unwrap();
 
             found_device_path = found_device_path.join(last_device.name.clone());
         }

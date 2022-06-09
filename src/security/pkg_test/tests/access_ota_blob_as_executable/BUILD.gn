@@ -16,7 +16,6 @@ rustc_test("access_ota_blob_as_executable-test") {
     "//src/security/pkg_test/assemblies/hello_world_v1:meta_far",
   ]
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",

@@ -71,10 +71,10 @@ async fn expose_pkgfs_packages_directory() {
     let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
 
     assert_eq!(
-        files_async::readdir(&env.proxies.pkgfs_packages).await.unwrap(),
-        vec![files_async::DirEntry {
+        fuchsia_fs::directory::readdir(&env.proxies.pkgfs_packages).await.unwrap(),
+        vec![fuchsia_fs::directory::DirEntry {
             name: "system_image".to_string(),
-            kind: files_async::DirentKind::Directory
+            kind: fuchsia_fs::directory::DirentKind::Directory
         },]
     );
 
@@ -87,10 +87,10 @@ async fn expose_pkgfs_versions_directory() {
     let env = TestEnv::builder().blobfs_from_system_image(&system_image_package).build().await;
 
     assert_eq!(
-        files_async::readdir(&env.proxies.pkgfs_versions).await.unwrap(),
-        vec![files_async::DirEntry {
+        fuchsia_fs::directory::readdir(&env.proxies.pkgfs_versions).await.unwrap(),
+        vec![fuchsia_fs::directory::DirEntry {
             name: system_image_package.meta_far_merkle_root().to_string(),
-            kind: files_async::DirentKind::Directory
+            kind: fuchsia_fs::directory::DirentKind::Directory
         },]
     );
 

@@ -51,19 +51,21 @@ async fn find_network_device(
     fdio::service_connect(NETDEV_DIRECTORY, directory_server.into_channel().into())
         .expect("connect to netdevice devfs");
     let devices =
-        files_async::readdir(&directory).await.expect("readdir failed").into_iter().map(|file| {
-            let filepath = std::path::Path::new(NETDEV_DIRECTORY).join(&file.name);
-            let filepath = filepath
-                .to_str()
-                .unwrap_or_else(|| panic!("{} failed to convert to str", filepath.display()));
-            let (netdevice, netdevice_server) = fidl::endpoints::create_proxy::<
-                fidl_fuchsia_hardware_network::DeviceInstanceMarker,
-            >()
-            .expect("create proxy");
-            fdio::service_connect(filepath, netdevice_server.into_channel())
-                .expect("connect to service");
-            netdevice
-        });
+        fuchsia_fs::directory::readdir(&directory).await.expect("readdir failed").into_iter().map(
+            |file| {
+                let filepath = std::path::Path::new(NETDEV_DIRECTORY).join(&file.name);
+                let filepath = filepath
+                    .to_str()
+                    .unwrap_or_else(|| panic!("{} failed to convert to str", filepath.display()));
+                let (netdevice, netdevice_server) = fidl::endpoints::create_proxy::<
+                    fidl_fuchsia_hardware_network::DeviceInstanceMarker,
+                >()
+                .expect("create proxy");
+                fdio::service_connect(filepath, netdevice_server.into_channel())
+                    .expect("connect to service");
+                netdevice
+            },
+        );
     let results = futures::stream::iter(devices).filter_map(|netdev_device| async move {
         let (device_proxy, device_server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()

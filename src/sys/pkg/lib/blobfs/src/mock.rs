@@ -87,7 +87,7 @@ impl Mock {
     ///
     /// Panics on error or assertion violation (unexpected requests or not all entries are read)
     pub async fn expect_readdir(&mut self, entries: impl Iterator<Item = Hash>) {
-        // files_async starts by resetting the directory channel's readdir position.
+        // fuchsia_fs::directory starts by resetting the directory channel's readdir position.
         self.handle_rewind().await;
 
         const NAME_LEN: usize = 64;

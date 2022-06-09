@@ -30,7 +30,7 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream},
-    files_async, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
@@ -202,13 +202,13 @@ pub async fn dir_contains<'a>(
     let dir =
         fuchsia_fs::open_directory(&root_proxy, &Path::new(path), fio::OpenFlags::RIGHT_READABLE)
             .expect("Failed to open directory");
-    let entries = files_async::readdir(&dir).await.expect("readdir failed");
+    let entries = fuchsia_fs::directory::readdir(&dir).await.expect("readdir failed");
     let listing = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
     listing.contains(&String::from(entry_name))
 }
 
 pub async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
-    let entries = files_async::readdir(&root_proxy).await.expect("readdir failed");
+    let entries = fuchsia_fs::directory::readdir(&root_proxy).await.expect("readdir failed");
     let mut items = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
     items.sort();
     items
@@ -227,7 +227,7 @@ pub async fn list_sub_directory(parent: &fio::DirectoryProxy, path: &str) -> Vec
 pub async fn list_directory_recursive<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
     let dir = fuchsia_fs::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
         .expect("Failed to clone DirectoryProxy");
-    let entries = files_async::readdir_recursive(&dir, /*timeout=*/ None);
+    let entries = fuchsia_fs::directory::readdir_recursive(&dir, /*timeout=*/ None);
     let mut items = entries
         .map(|result| result.map(|entry| entry.name.clone()))
         .try_collect::<Vec<_>>()

@@ -22,7 +22,7 @@
 use anyhow::{bail, Context, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_io::{DirectoryProxy, FileProxy, UnlinkOptions};
-use files_async::{readdir, DirEntry, DirentKind};
+use fuchsia_fs::directory::{readdir, DirEntry, DirentKind};
 use fuchsia_fs::file::WriteError;
 use fuchsia_fs::node::{OpenError, RenameError};
 use fuchsia_fs::OpenFlags;

@@ -44,7 +44,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//garnet/lib/rust/files_async" ]
+  test_deps = [ "//src/lib/fuchsia-fs" ]
 
   sources = [
     "src/cases.rs",

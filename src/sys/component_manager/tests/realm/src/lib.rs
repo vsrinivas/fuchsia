@@ -49,61 +49,61 @@ pub async fn query_echo_server_child() {
 
     let pkg_dir = resolved.pkg_dir.unwrap();
     let pkg_dir = pkg_dir.into_proxy().unwrap();
-    let entries = files_async::readdir(&pkg_dir).await.unwrap();
+    let entries = fuchsia_fs::directory::readdir(&pkg_dir).await.unwrap();
     assert_eq!(
         entries,
         vec![
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "bin".to_string(),
-                kind: files_async::DirentKind::Directory,
+                kind: fuchsia_fs::directory::DirentKind::Directory,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "data".to_string(),
-                kind: files_async::DirentKind::Directory,
+                kind: fuchsia_fs::directory::DirentKind::Directory,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "lib".to_string(),
-                kind: files_async::DirentKind::Directory,
+                kind: fuchsia_fs::directory::DirentKind::Directory,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "meta".to_string(),
-                kind: files_async::DirentKind::Directory,
+                kind: fuchsia_fs::directory::DirentKind::Directory,
             }
         ]
     );
 
     let exposed_dir = resolved.exposed_dir.into_proxy().unwrap();
-    let entries = files_async::readdir(&exposed_dir).await.unwrap();
+    let entries = fuchsia_fs::directory::readdir(&exposed_dir).await.unwrap();
     assert_eq!(
         entries,
         vec![
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "fidl.examples.routing.echo.Echo".to_string(),
-                kind: files_async::DirentKind::Unknown,
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "fuchsia.component.Binder".to_string(),
-                kind: files_async::DirentKind::Unknown,
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "hub".to_string(),
-                kind: files_async::DirentKind::Unknown,
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
             }
         ]
     );
 
     let ns_dir = resolved.ns_dir.into_proxy().unwrap();
-    let entries = files_async::readdir(&ns_dir).await.unwrap();
+    let entries = fuchsia_fs::directory::readdir(&ns_dir).await.unwrap();
     assert_eq!(
         entries,
         vec![
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "pkg".to_string(),
-                kind: files_async::DirentKind::Directory,
+                kind: fuchsia_fs::directory::DirentKind::Directory,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "svc".to_string(),
-                kind: files_async::DirentKind::Directory,
+                kind: fuchsia_fs::directory::DirentKind::Directory,
             }
         ]
     );
@@ -115,12 +115,12 @@ pub async fn query_echo_server_child() {
     )
     .await
     .unwrap();
-    let entries = files_async::readdir(&svc_dir).await.unwrap();
+    let entries = fuchsia_fs::directory::readdir(&svc_dir).await.unwrap();
     assert_eq!(
         entries,
-        vec![files_async::DirEntry {
+        vec![fuchsia_fs::directory::DirEntry {
             name: "fuchsia.logger.LogSink".to_string(),
-            kind: files_async::DirentKind::Unknown,
+            kind: fuchsia_fs::directory::DirentKind::Unknown,
         }]
     );
 
@@ -141,7 +141,7 @@ pub async fn query_echo_server_child() {
     )
     .await
     .unwrap();
-    let mut entries = files_async::readdir(&elf_dir).await.unwrap();
+    let mut entries = fuchsia_fs::directory::readdir(&elf_dir).await.unwrap();
 
     // TODO(http://fxbug.dev/99823): The existence of "process_start_time_utc_estimate" is flaky.
     if let Some(position) = entries.iter().position(|e| e.name == "process_start_time_utc_estimate")
@@ -152,17 +152,17 @@ pub async fn query_echo_server_child() {
     assert_eq!(
         entries,
         vec![
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "job_id".to_string(),
-                kind: files_async::DirentKind::File,
+                kind: fuchsia_fs::directory::DirentKind::File,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "process_id".to_string(),
-                kind: files_async::DirentKind::File,
+                kind: fuchsia_fs::directory::DirentKind::File,
             },
-            files_async::DirEntry {
+            fuchsia_fs::directory::DirEntry {
                 name: "process_start_time".to_string(),
-                kind: files_async::DirentKind::File,
+                kind: fuchsia_fs::directory::DirentKind::File,
             },
         ]
     );

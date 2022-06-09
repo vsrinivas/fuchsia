@@ -47,7 +47,7 @@ async fn list_instances_test() {
     .await
     .expect("failed to open service dir");
 
-    let mut instances: Vec<String> = files_async::readdir(&service_dir)
+    let mut instances: Vec<String> = fuchsia_fs::directory::readdir(&service_dir)
         .await
         .expect("failed to read entries from service dir")
         .into_iter()
@@ -72,7 +72,7 @@ async fn connect_to_instances_test() {
     )
     .await
     .expect("failed to open service dir");
-    let instances = files_async::readdir(&service_dir)
+    let instances = fuchsia_fs::directory::readdir(&service_dir)
         .await
         .expect("failed to read entries from service dir")
         .into_iter()
@@ -114,7 +114,7 @@ async fn create_destroy_instance_test() {
     .await
     .expect("failed to open service dir");
 
-    let mut instances: Vec<String> = files_async::readdir(&service_dir)
+    let mut instances: Vec<String> = fuchsia_fs::directory::readdir(&service_dir)
         .await
         .expect("failed to read entries from service dir")
         .into_iter()
@@ -128,7 +128,7 @@ async fn create_destroy_instance_test() {
     // Destroy provider a.
     destroy_provider(&branch, PROVIDER_A_NAME).await.expect("failed to destroy provider a");
 
-    let instances: Vec<String> = files_async::readdir(&service_dir)
+    let instances: Vec<String> = fuchsia_fs::directory::readdir(&service_dir)
         .await
         .expect("failed to read entries from service dir")
         .into_iter()

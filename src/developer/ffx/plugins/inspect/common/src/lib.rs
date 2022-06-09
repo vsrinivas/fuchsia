@@ -17,7 +17,7 @@ use {
         ClientSelectorConfiguration::{SelectAll, Selectors},
         SelectorArgument,
     },
-    fidl_fuchsia_io as fio, files_async,
+    fidl_fuchsia_io as fio,
     fuchsia_async::Duration,
     fuchsia_fs,
     futures::future::join_all,
@@ -183,7 +183,7 @@ async fn all_accessors(
     };
     let expected_file_re = Regex::new(&EXPECTED_FILE_RE).unwrap();
 
-    let paths = files_async::readdir_recursive(
+    let paths = fuchsia_fs::directory::readdir_recursive(
         &dir_proxy,
         Some(Duration::from_secs(*READDIR_TIMEOUT_SECONDS)),
     )

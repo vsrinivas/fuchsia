@@ -362,7 +362,7 @@ mod tests {
             let (status, buf) = dir.read_dirents(fio::MAX_BUF).await.expect("FIDL call failed");
             Status::ok(status).expect("read_dirents failed");
             let mut entries = vec![];
-            for res in files_async::parse_dir_entries(&buf) {
+            for res in fuchsia_fs::directory::parse_dir_entries(&buf) {
                 entries.push(res.expect("Failed to parse entry").name);
             }
             entries

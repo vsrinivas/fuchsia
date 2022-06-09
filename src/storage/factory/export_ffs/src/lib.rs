@@ -10,7 +10,7 @@ use {
     anyhow::{bail, Context, Error},
     byteorder::{LittleEndian, WriteBytesExt},
     fidl, fidl_fuchsia_io as fio,
-    files_async::{readdir_recursive, DirEntry, DirentKind},
+    fuchsia_fs::directory::{readdir_recursive, DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::StreamExt,
     remote_block_device::{cache::Cache, RemoteBlockClientSync},

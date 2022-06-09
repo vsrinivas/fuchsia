@@ -16,7 +16,7 @@ use {
     thiserror::Error,
 };
 
-/// Error returned by files_async library.
+/// Error returned by fuchsia_fs::directory library.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("a directory entry could not be decoded: {:?}", _0)]

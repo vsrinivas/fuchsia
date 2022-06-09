@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxr/66157): Migrate to the new library that substitutes io_utils and files_async.
+// TODO(fxr/66157): Migrate to the new library that substitutes io_utils and fuchsia_fs::directory.
 // Ask for host-side support on the new library (fxr/467217).
 
 use {
     anyhow::{format_err, Result},
     fidl_fuchsia_io as fio,
-    files_async::readdir,
+    fuchsia_fs::directory::readdir,
     fuchsia_fs::{
         directory::{clone_no_describe, open_directory_no_describe, open_file_no_describe},
         file::{close, read, read_to_string, write},
@@ -22,7 +22,7 @@ use {
 pub struct Directory {
     path: PathBuf,
     proxy: fio::DirectoryProxy,
-    // The `fuchsia.io.Directory` protocol is stateful in readdir, and the associated `files_async`
+    // The `fuchsia.io.Directory` protocol is stateful in readdir, and the associated `fuchsia_fs::directory`
     // library used for enumerating the directory has no mechanism for synchronization of readdir
     // operations, as such this mutex must be held throughout directory enumeration in order to
     // avoid race conditions from concurrent rewinds and reads.

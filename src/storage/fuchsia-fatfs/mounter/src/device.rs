@@ -61,7 +61,7 @@ impl FatDevice {
 
     /// Find a partition with the "Microsoft Basic Data" GUID, which may contain a FAT partition.
     async fn find_fat_partition(dir_proxy: &fio::DirectoryProxy) -> Result<Option<String>, Error> {
-        let children = files_async::readdir(&dir_proxy).await?;
+        let children = fuchsia_fs::directory::readdir(&dir_proxy).await?;
         let (channel, remote) = zx::Channel::create()?;
         dir_proxy
             .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, fidl::endpoints::ServerEnd::new(remote))?;
@@ -352,7 +352,7 @@ pub mod test {
         let (proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         open_root(&dev, remote.into_channel()).await;
 
-        let mut children: Vec<_> = files_async::readdir(&proxy)
+        let mut children: Vec<_> = fuchsia_fs::directory::readdir(&proxy)
             .await
             .expect("Readdir succeeds")
             .into_iter()
@@ -393,7 +393,7 @@ pub mod test {
         let (proxy, remote) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         open_root(&dev, remote.into_channel()).await;
 
-        let mut children: Vec<_> = files_async::readdir(&proxy)
+        let mut children: Vec<_> = fuchsia_fs::directory::readdir(&proxy)
             .await
             .expect("Readdir succeeds")
             .into_iter()

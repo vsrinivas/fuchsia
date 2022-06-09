@@ -20,7 +20,6 @@ rustc_library("test_utils_lib") {
 
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

@@ -243,10 +243,10 @@ mod tests {
         );
 
         assert_eq!(
-            files_async::readdir(&proxy).await.unwrap(),
-            vec![files_async::DirEntry {
+            fuchsia_fs::directory::readdir(&proxy).await.unwrap(),
+            vec![fuchsia_fs::directory::DirEntry {
                 name: "missing".to_string(),
-                kind: files_async::DirentKind::File
+                kind: fuchsia_fs::directory::DirentKind::File
             }]
         );
     }

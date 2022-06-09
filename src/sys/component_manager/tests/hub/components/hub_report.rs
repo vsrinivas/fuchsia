@@ -4,8 +4,8 @@
 
 use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_sys2 as fsys,
-    files_async::readdir,
     fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path},
+    fuchsia_fs::directory::readdir,
     fuchsia_fs::{open_directory_in_namespace, open_file_in_namespace},
     tracing::info,
 };

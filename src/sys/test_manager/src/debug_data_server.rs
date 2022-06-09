@@ -123,7 +123,7 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
     // Iterate over files as tuples containing an entry and the prefix the entry was found at.
     struct IteratedEntry {
         prefix: &'static str,
-        entry: files_async::DirEntry,
+        entry: fuchsia_fs::directory::DirEntry,
     }
 
     // Create a single stream over the files in all directories
@@ -132,7 +132,7 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
             .iter()
             .map(move |val| {
                 let (prefix, directory) = val;
-                files_async::readdir_recursive(
+                fuchsia_fs::directory::readdir_recursive(
                     directory,
                     Some(fasync::Duration::from_seconds(
                         PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS,

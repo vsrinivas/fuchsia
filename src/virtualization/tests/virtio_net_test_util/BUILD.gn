@@ -12,13 +12,13 @@ rustc_binary("virtio_net_test_util") {
 
   if (is_fuchsia) {
     deps = [
-      "//garnet/lib/rust/files_async",
       "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
       "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
       "//src/connectivity/lib/network-device/rust",
       "//src/lib/fdio/rust:fdio",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-fs",
       "//src/lib/network/ethernet",
       "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
       "//src/lib/syslog/rust:syslog",

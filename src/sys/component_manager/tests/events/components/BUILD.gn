@@ -223,7 +223,6 @@ rustc_binary("directory_ready_root_bin") {
   testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

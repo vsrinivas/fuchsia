@@ -34,7 +34,6 @@ rustc_library("lib") {
     ":archivist-config",
     ":logmessage_measure_tape",
     "fidl:controller-rustc",
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",

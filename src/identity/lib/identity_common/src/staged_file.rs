@@ -43,7 +43,7 @@ pub enum StagedFileError {
 
     /// Failed to readdir.
     #[error("Failed to readdir: {0}")]
-    ReaddirError(#[from] files_async::Error),
+    ReaddirError(#[from] fuchsia_fs::directory::Error),
 
     /// Failed to unlink file.
     #[error("Failed to unlink file: {0}")]
@@ -139,7 +139,7 @@ impl<'a> StagedFile<'a> {
         dir_proxy: &fio::DirectoryProxy,
         tempfile_prefix: &str,
     ) -> Result<(), Vec<StagedFileError>> {
-        let dirents_res = files_async::readdir(dir_proxy).await;
+        let dirents_res = fuchsia_fs::directory::readdir(dir_proxy).await;
         let dirents = dirents_res.map_err(|err| vec![StagedFileError::ReaddirError(err.into())])?;
         let mut failures = Vec::new();
 
@@ -272,7 +272,7 @@ mod test {
         StagedFile::cleanup_stale_files(&dir, "staged-").await.unwrap();
 
         // Ensure that only the non-staged files remain.
-        let dirents = files_async::readdir(&dir).await.unwrap();
+        let dirents = fuchsia_fs::directory::readdir(&dir).await.unwrap();
         assert_eq!(dirents.len(), 3);
         assert!(file_exists_with_data(&dir, "real-001", &b"real-001".to_vec()).await);
         assert!(file_exists_with_data(&dir, "real-002", &b"real-002".to_vec()).await);

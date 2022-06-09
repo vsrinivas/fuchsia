@@ -14,9 +14,9 @@ use fidl_fuchsia_factory::{
     WeaveFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,
 };
 use fidl_fuchsia_io as fio;
-use files_async::{readdir_recursive, DirentKind};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_fs;
+use fuchsia_fs::directory::{readdir_recursive, DirentKind};
 use futures::stream::TryStreamExt;
 use serde_json::{from_value, to_value, Value};
 use std::path::Path;

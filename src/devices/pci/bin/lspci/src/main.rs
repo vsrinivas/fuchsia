@@ -8,8 +8,8 @@ use {
     anyhow::{anyhow, Context, Error},
     fdio,
     fidl_fuchsia_hardware_pci::{Address, BusMarker, BusProxy, HeaderType},
-    files_async::{dir_contains, readdir, DirentKind},
     fuchsia_async,
+    fuchsia_fs::directory::{dir_contains, readdir, DirentKind},
     fuchsia_fs::{directory::open_in_namespace, OpenFlags},
     fuchsia_zircon::Status,
     lspci::{

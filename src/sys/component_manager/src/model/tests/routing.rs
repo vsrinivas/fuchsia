@@ -2736,7 +2736,7 @@ async fn use_service_from_sibling_collection() {
     )
     .await
     .expect("failed to open service");
-    let entries: HashSet<String> = files_async::readdir(&service_dir)
+    let entries: HashSet<String> = fuchsia_fs::directory::readdir(&service_dir)
         .await
         .expect("failed to read entries")
         .into_iter()
@@ -2879,7 +2879,7 @@ async fn use_filtered_service_from_sibling() {
     )
     .await
     .expect("failed to open service");
-    let entries: HashSet<String> = files_async::readdir(&service_dir_c)
+    let entries: HashSet<String> = fuchsia_fs::directory::readdir(&service_dir_c)
         .await
         .expect("failed to read entries")
         .into_iter()
@@ -2899,7 +2899,7 @@ async fn use_filtered_service_from_sibling() {
     )
     .await
     .expect("failed to open service");
-    let entries: HashSet<String> = files_async::readdir(&service_dir_d)
+    let entries: HashSet<String> = fuchsia_fs::directory::readdir(&service_dir_d)
         .await
         .expect("failed to read entries")
         .into_iter()

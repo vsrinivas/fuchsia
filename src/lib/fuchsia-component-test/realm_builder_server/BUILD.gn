@@ -16,7 +16,6 @@ rustc_binary("realm_builder_server_bin") {
   ]
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",

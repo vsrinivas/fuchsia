@@ -70,12 +70,13 @@ async fn load_boot_drivers(
     )
     .context("boot: Failed to open meta")?;
 
-    let entries = files_async::readdir(&meta).await.context("boot: failed to read meta")?;
+    let entries =
+        fuchsia_fs::directory::readdir(&meta).await.context("boot: failed to read meta")?;
 
     let mut drivers = std::vec::Vec::new();
     for entry in entries
         .iter()
-        .filter(|entry| entry.kind == files_async::DirentKind::File)
+        .filter(|entry| entry.kind == fuchsia_fs::directory::DirentKind::File)
         .filter(|entry| entry.name.ends_with(".cm"))
     {
         let url_string = "fuchsia-boot:///#meta/".to_string() + &entry.name;

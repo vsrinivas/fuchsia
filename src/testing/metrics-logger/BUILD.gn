@@ -34,7 +34,6 @@ rustc_binary("bin") {
 
   deps = [
     "fuchsia.metricslogger.test:fuchsia.metricslogger.test-rustc",
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor-rustc",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature-rustc",

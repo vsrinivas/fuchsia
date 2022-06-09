@@ -158,7 +158,7 @@ mod tests {
     async fn list_directory<'a>(root_proxy: &'a fio::DirectoryProxy) -> Vec<String> {
         let dir = fuchsia_fs::clone_directory(&root_proxy, fio::OpenFlags::CLONE_SAME_RIGHTS)
             .expect("Failed to clone DirectoryProxy");
-        let entries = files_async::readdir(&dir).await.expect("readdir failed");
+        let entries = fuchsia_fs::directory::readdir(&dir).await.expect("readdir failed");
         entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>()
     }
 

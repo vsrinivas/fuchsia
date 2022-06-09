@@ -18,9 +18,9 @@ use {
         State,
     },
     fidl_test_security_pkg::PackageServer_Marker,
-    files_async::readdir,
     fuchsia_async::{futures::TryStreamExt, Task},
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_fs::directory::readdir,
     fuchsia_fs::{
         directory::{open_file, open_in_namespace},
         read_file_bytes,

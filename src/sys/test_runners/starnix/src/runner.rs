@@ -122,8 +122,9 @@ mod tests {
     };
 
     async fn list_directory(root_proxy: &fio::DirectoryProxy) -> Vec<String> {
-        let entries =
-            files_async::readdir(&root_proxy).await.expect("Couldn't read listed directory.");
+        let entries = fuchsia_fs::directory::readdir(&root_proxy)
+            .await
+            .expect("Couldn't read listed directory.");
         let items = entries.into_iter().map(|entry| entry.name).collect::<Vec<String>>();
         items
     }

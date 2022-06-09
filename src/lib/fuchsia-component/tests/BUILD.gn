@@ -12,7 +12,6 @@ rustc_test("fuchsia-component-v1-test") {
   source_root = "components_v1/lib.rs"
   deps = [
     ":fuchsia.component.test-rustc",
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

@@ -10,9 +10,8 @@ use {
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy},
     fidl_fuchsia_io as fio,
-    files_async::{self, DirentKind},
     fuchsia_component::client,
-    fuchsia_fs,
+    fuchsia_fs::directory::DirentKind,
     fuchsia_zircon::DurationNum,
     futures::future::join_all,
     futures::StreamExt,
@@ -93,7 +92,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
                             fio::OpenFlags::RIGHT_READABLE,
                         )
                         .map_err(|e| Error::io_error("open directory in namespace", e))?;
-                        let mut stream = files_async::readdir_recursive(&directory, None);
+                        let mut stream = fuchsia_fs::directory::readdir_recursive(&directory, None);
                         while let Some(result) = stream.next().await {
                             if let Ok(entry) = result {
                                 if entry.kind == DirentKind::Service
@@ -154,25 +153,28 @@ async fn all_accessors(root: impl AsRef<str>) -> Result<Vec<String>, Error> {
     .map_err(|e| Error::io_error(format!("Open dir {}", root.as_ref()), e))?;
     let expected_file_re = Regex::new(&EXPECTED_FILE_RE).unwrap();
 
-    let paths = files_async::readdir_recursive(&dir_proxy, Some(READDIR_TIMEOUT_SECONDS.seconds()))
-        .filter_map(|result| async {
-            match result {
-                Err(err) => {
-                    eprintln!("{}", err);
+    let paths = fuchsia_fs::directory::readdir_recursive(
+        &dir_proxy,
+        Some(READDIR_TIMEOUT_SECONDS.seconds()),
+    )
+    .filter_map(|result| async {
+        match result {
+            Err(err) => {
+                eprintln!("{}", err);
+                None
+            }
+            Ok(entry) => {
+                if expected_file_re.is_match(&entry.name) {
+                    let mut path = PathBuf::from(root.as_ref());
+                    path.push(&entry.name);
+                    Some(path.to_string_lossy().to_string())
+                } else {
                     None
                 }
-                Ok(entry) => {
-                    if expected_file_re.is_match(&entry.name) {
-                        let mut path = PathBuf::from(root.as_ref());
-                        path.push(&entry.name);
-                        Some(path.to_string_lossy().to_string())
-                    } else {
-                        None
-                    }
-                }
             }
-        })
-        .collect::<Vec<String>>()
-        .await;
+        }
+    })
+    .collect::<Vec<String>>()
+    .await;
     Ok(paths)
 }

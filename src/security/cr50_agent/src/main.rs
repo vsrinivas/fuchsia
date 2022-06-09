@@ -64,7 +64,7 @@ async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
     )
     .context("Opening TPM directory")?;
 
-    let contents = files_async::readdir(&proxy).await.context("Reading TPM directory")?;
+    let contents = fuchsia_fs::directory::readdir(&proxy).await.context("Reading TPM directory")?;
     for entry in contents.iter() {
         match is_cr50(&proxy, &entry.name).await {
             Ok(Some(proxy)) => return Ok(proxy),

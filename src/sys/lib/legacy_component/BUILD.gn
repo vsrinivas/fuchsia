@@ -7,7 +7,6 @@ import("//build/rust/rustc_library.gni")
 rustc_library("legacy_component_lib") {
   source_root = "src/legacy_component.rs"
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

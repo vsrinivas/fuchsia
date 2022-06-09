@@ -557,10 +557,11 @@ impl FidlSuiteEventProcessor {
                     let mut sender_clone = sender.clone();
                     fasync::Task::spawn(async move {
                         let directory = directory.into_proxy().unwrap();
-                        let entries: Vec<_> = files_async::readdir_recursive(&directory, None)
-                            .try_collect()
-                            .await
-                            .expect("read custom artifact directory");
+                        let entries: Vec<_> =
+                            fuchsia_fs::directory::readdir_recursive(&directory, None)
+                                .try_collect()
+                                .await
+                                .expect("read custom artifact directory");
                         for entry in entries.into_iter() {
                             let file = fuchsia_fs::open_file(
                                 &directory,

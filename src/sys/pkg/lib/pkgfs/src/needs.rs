@@ -24,7 +24,7 @@ pub enum ListNeedsError {
     OpenDir(fuchsia_fs::node::OpenError),
 
     #[error("while listing needs dir: {}", _0)]
-    ReadDir(files_async::Error),
+    ReadDir(fuchsia_fs::directory::Error),
 
     #[error("unable to parse a need blob id: {}", _0)]
     ParseError(ParseHashError),
@@ -132,12 +132,13 @@ async fn enumerate_needs_dir(
         Err(e) => return Err(ListNeedsError::OpenDir(e)),
     };
 
-    let entries = files_async::readdir(&needs_dir).await.map_err(ListNeedsError::ReadDir)?;
+    let entries =
+        fuchsia_fs::directory::readdir(&needs_dir).await.map_err(ListNeedsError::ReadDir)?;
 
     Ok(entries
         .into_iter()
         .filter_map(|entry| {
-            if entry.kind == files_async::DirentKind::File {
+            if entry.kind == fuchsia_fs::directory::DirentKind::File {
                 Some(entry.name.parse().map_err(ListNeedsError::ParseError))
             } else {
                 // Ignore unknown entries.
@@ -243,7 +244,7 @@ impl MockNeeds {
     pub async fn enumerate_needs(mut self, needs: BTreeSet<Hash>) {
         self.send_on_open(Status::OK);
 
-        // files_async starts by resetting the directory channel's readdir position.
+        // fuchsia_fs::directory starts by resetting the directory channel's readdir position.
         self.handle_rewind().await;
 
         #[repr(C, packed)]

@@ -92,7 +92,7 @@ async fn list_drivers(path: &str) -> Vec<String> {
             return Vec::new();
         }
     };
-    match files_async::readdir(&dir).await {
+    match fuchsia_fs::directory::readdir(&dir).await {
         Ok(s) => s.iter().map(|dir_entry| dir_entry.name.clone()).collect(),
         Err(e) => {
             fx_log_err!("Read service directory {} failed with error: {}", path, e);

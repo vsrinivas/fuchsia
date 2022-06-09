@@ -30,7 +30,7 @@ pub enum DiskError {
     #[error("Failed to open: {0}")]
     OpenError(#[from] fuchsia_fs::node::OpenError),
     #[error("Failed to readdir: {0}")]
-    ReaddirError(#[from] files_async::Error),
+    ReaddirError(#[from] fuchsia_fs::directory::Error),
     #[error("Failed during FIDL call: {0}")]
     FidlError(#[from] fidl::Error),
     #[error("Failed to read first block of partition: {0}")]
@@ -134,7 +134,7 @@ async fn all_partitions(
 ) -> Result<Vec<DevBlockPartition>, DiskError> {
     let block_dir =
         fuchsia_fs::directory::open_directory(dev_root_dir, "class/block", OPEN_RW).await?;
-    let dirents = files_async::readdir(&block_dir).await?;
+    let dirents = fuchsia_fs::directory::readdir(&block_dir).await?;
     let mut partitions = Vec::new();
     for child in dirents {
         match fuchsia_fs::directory::open_node_no_describe(

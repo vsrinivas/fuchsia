@@ -26,7 +26,7 @@ async fn read_and_write_to_multiple_service_instances() {
 
     let service_dir = fclient::open_service::<fexamples::BankAccountMarker>()
         .expect("failed to open service dir");
-    let instances = files_async::readdir(&service_dir)
+    let instances = fuchsia_fs::directory::readdir(&service_dir)
         .await
         .expect("failed to read entries from service_dir")
         .into_iter()

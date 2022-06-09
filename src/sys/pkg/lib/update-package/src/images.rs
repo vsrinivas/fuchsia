@@ -21,7 +21,7 @@ use {
 #[allow(missing_docs)]
 pub enum ResolveImagesError {
     #[error("while listing files in the update package")]
-    ListCandidates(#[source] files_async::Error),
+    ListCandidates(#[source] fuchsia_fs::directory::Error),
 }
 
 /// An error encountered while verifying an [`UnverifiedImageList`].
@@ -100,12 +100,13 @@ impl UnverifiedImageList {
 async fn list_dir_files(
     proxy: &fio::DirectoryProxy,
 ) -> Result<BTreeSet<String>, ResolveImagesError> {
-    let entries = files_async::readdir(proxy).await.map_err(ResolveImagesError::ListCandidates)?;
+    let entries =
+        fuchsia_fs::directory::readdir(proxy).await.map_err(ResolveImagesError::ListCandidates)?;
 
     let names = entries
         .into_iter()
         .filter_map(|entry| match entry.kind {
-            files_async::DirentKind::File => Some(entry.name),
+            fuchsia_fs::directory::DirentKind::File => Some(entry.name),
             _ => None,
         })
         .collect();

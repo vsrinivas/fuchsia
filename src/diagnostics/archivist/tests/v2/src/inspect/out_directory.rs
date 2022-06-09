@@ -59,5 +59,9 @@ async fn read_entries(path: &Path) -> Result<Vec<String>, Error> {
         path.to_str().unwrap(),
         fio::OpenFlags::RIGHT_READABLE,
     )?;
-    Ok(files_async::readdir(&directory).await?.into_iter().map(|e| e.name).collect::<Vec<_>>())
+    Ok(fuchsia_fs::directory::readdir(&directory)
+        .await?
+        .into_iter()
+        .map(|e| e.name)
+        .collect::<Vec<_>>())
 }

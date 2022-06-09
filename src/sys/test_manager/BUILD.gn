@@ -15,7 +15,6 @@ rustc_library("test_lib") {
   source_root = "src/test_lib.rs"
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -46,7 +45,6 @@ rustc_library("lib") {
   ]
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
