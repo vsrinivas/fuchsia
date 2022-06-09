@@ -1,0 +1,140 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.amlogic.platform.a5;
+
+// Values taken from <soc/aml-a5/a5-gpio.h>
+
+extend uint fuchsia.BIND_PWM_ID {
+    PWM_A = 0,
+    PWM_B = 1,
+    PWM_C = 2,
+    PWM_D = 3,
+    PWM_E = 4,
+    PWM_F = 5,
+    PWM_G = 6,
+    PWM_H = 7,
+};
+
+uint GPIOB_PIN_ID {
+    PIN_0 = 0,
+    PIN_1 = 1,
+    PIN_2 = 2,
+    PIN_3 = 3,
+    PIN_4 = 4,
+    PIN_5 = 5,
+    PIN_6 = 6,
+    PIN_7 = 7,
+    PIN_8 = 8,
+    PIN_9 = 9,
+    PIN_10 = 10,
+    PIN_11 = 11,
+    PIN_12 = 12,
+    PIN_13 = 13,
+};
+
+uint GPIOC_PIN_ID {
+    PIN_0 = 14,
+    PIN_1 = 15,
+    PIN_2 = 16,
+    PIN_3 = 17,
+    PIN_4 = 18,
+    PIN_5 = 19,
+    PIN_6 = 20,
+    PIN_7 = 21,
+    PIN_8 = 22,
+    PIN_9 = 23,
+    PIN_10 = 24,
+};
+
+uint GPIOE_PIN_ID {
+    PIN_0 = 25,
+    PIN_1 = 26,
+};
+
+uint GPIOH_PIN_ID {
+    PIN_0 = 27,
+    PIN_1 = 28,
+    PIN_2 = 29,
+    PIN_3 = 30,
+    PIN_4 = 31,
+};
+
+uint GPIOD_PIN_ID {
+    PIN_0 = 32,
+    PIN_1 = 33,
+    PIN_2 = 34,
+    PIN_3 = 35,
+    PIN_4 = 36,
+    PIN_5 = 37,
+    PIN_6 = 38,
+    PIN_7 = 39,
+    PIN_8 = 40,
+    PIN_9 = 41,
+    PIN_10 = 42,
+    PIN_11 = 43,
+    PIN_12 = 44,
+    PIN_13 = 45,
+    PIN_14 = 46,
+    PIN_15 = 47,
+};
+
+uint GPIOT_PIN_ID {
+    PIN_0 = 48,
+    PIN_1 = 49,
+    PIN_2 = 50,
+    PIN_3 = 51,
+    PIN_4 = 52,
+    PIN_5 = 53,
+    PIN_6 = 54,
+    PIN_7 = 55,
+    PIN_8 = 56,
+    PIN_9 = 57,
+    PIN_10 = 58,
+    PIN_11 = 59,
+    PIN_12 = 60,
+    PIN_13 = 61,
+};
+
+uint GPIOX_PIN_ID {
+    PIN_0 = 62,
+    PIN_1 = 63,
+    PIN_2 = 64,
+    PIN_3 = 65,
+    PIN_4 = 66,
+    PIN_5 = 67,
+    PIN_6 = 68,
+    PIN_7 = 69,
+    PIN_8 = 70,
+    PIN_9 = 71,
+    PIN_10 = 72,
+    PIN_11 = 73,
+    PIN_12 = 74,
+    PIN_13 = 75,
+    PIN_14 = 76,
+    PIN_15 = 77,
+    PIN_16 = 78,
+    PIN_17 = 79,
+    PIN_18 = 80,
+    PIN_19 = 81,
+};
+
+uint GPIOZ_PIN_ID {
+    PIN_0 = 82,
+    PIN_1 = 83,
+    PIN_2 = 84,
+    PIN_3 = 85,
+    PIN_4 = 86,
+    PIN_5 = 87,
+    PIN_6 = 88,
+    PIN_7 = 89,
+    PIN_8 = 90,
+    PIN_9 = 91,
+    PIN_10 = 92,
+    PIN_11 = 93,
+    PIN_12 = 94,
+    PIN_13 = 95,
+    PIN_14 = 96,
+    PIN_15 = 97,
+};
