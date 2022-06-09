@@ -55,6 +55,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/module.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-cfg.h"
 #endif
@@ -1395,6 +1396,9 @@ static struct iwl_op_mode* _iwl_op_mode_start(struct iwl_drv* drv,
     return NULL;
 #endif
   }
+
+  iwl_stats_init(drv->trans->dev->irq_dispatcher);
+  iwl_stats_start_reporting();
 
   return op_mode;
 }

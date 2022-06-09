@@ -52,6 +52,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-scd.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 
 #define IWL_TX_CRC_SIZE 4
 #define IWL_TX_DELIMITER_SIZE 4
@@ -295,6 +296,8 @@ static void iwl_pcie_txq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_txq* txq
   if (!txq->block) {
     iwl_write32(trans, HBUS_TARG_WRPTR, txq->write_ptr | (txq_id << 8));
   }
+
+  iwl_stats_inc(IWL_STATS_CNT_CMD_TO_FW);
 }
 
 void iwl_pcie_txq_check_wrptrs(struct iwl_trans* trans) {
@@ -2426,6 +2429,8 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, struct ieee80211_mac_pack
     iwl_pcie_txq_inc_wr_ptr(trans, txq);
   }
 #endif  // NEEDS_PORTING
+
+  iwl_stats_inc(IWL_STATS_CNT_DATA_TO_FW);
 
 unlock:
   mtx_unlock(&txq->lock);

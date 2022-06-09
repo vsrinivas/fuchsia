@@ -30,6 +30,7 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
@@ -453,6 +454,7 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
 
   static zx_status_t tx_wrapper(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
                                 const struct iwl_device_cmd* dev_cmd, int txq_id) {
+    iwl_stats_inc(IWL_STATS_CNT_DATA_TO_FW);  // to simulate the iwl_trans_pcie_tx() behavior.
     auto test = GET_TEST(MacInterfaceTest, trans);
     return test->mock_tx_.Call(pkt->header_size + pkt->headroom_used_size + pkt->body_size,
                                WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
@@ -956,10 +958,14 @@ TEST_F(MacInterfaceTest, TxPktTooLong) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   wlan_pkt->wlan_pkt()->mac_frame_size = WLAN_MSDU_MAX_LEN + 1;
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 0);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
   bool enqueue_pending = false;
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
   ASSERT_EQ(enqueue_pending, false);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 1);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
   unbindTx();
 }
 
@@ -991,9 +997,13 @@ TEST_F(MacInterfaceTest, TxPkt) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 0);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 0);
   bool enqueue_pending = false;
   ASSERT_EQ(ZX_OK, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
   ASSERT_EQ(enqueue_pending, false);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_FROM_MLME), 1);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_DATA_TO_FW), 1);
   unbindTx();
 }
 

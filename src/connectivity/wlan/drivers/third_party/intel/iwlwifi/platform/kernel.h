@@ -205,6 +205,14 @@ static inline void eth_broadcast_addr(uint8_t* addr) {
   }
 }
 
+static inline bool is_broadcast_addr(const uint8_t* mac) {
+  uint8_t bcast[ETH_ALEN];
+  eth_broadcast_addr(bcast);
+  return !memcmp(bcast, mac, ETH_ALEN);
+}
+
+static inline bool is_multicast_addr(const uint8_t* mac) { return mac[0] & 1; }
+
 #if defined(__cplusplus)
 }  // extern "C"
 #endif  // defined(__cplusplus)

@@ -41,6 +41,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/pcie-device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 #include "src/devices/pci/testing/pci_protocol_fake.h"
 
@@ -528,7 +529,9 @@ TEST_F(PcieTest, RxInterrupts) {
   // Spurious interrupt.
   trans_pcie_->ict_index = 0;
   ict_table[0] = 0;
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_INTS_FROM_FW), 0);
   ASSERT_OK(iwl_pcie_isr(trans_));
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_INTS_FROM_FW), 1);
 
   // Set up the ICT table with an RX interrupt at index 0.
   trans_pcie_->ict_index = 0;
@@ -545,6 +548,7 @@ TEST_F(PcieTest, RxInterrupts) {
   rb_status->closed_rb_num = 128;
   markUcodeOrignated(0, 127);
   ASSERT_OK(iwl_pcie_isr(trans_));
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_INTS_FROM_FW), 2);
   EXPECT_EQ(trans_pcie_->rxq->write, 127);
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 120);
 
@@ -557,6 +561,7 @@ TEST_F(PcieTest, RxInterrupts) {
   rb_status->closed_rb_num = 172;
   markUcodeOrignated(128, 171);
   ASSERT_OK(iwl_pcie_isr(trans_));
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_INTS_FROM_FW), 3);
   EXPECT_EQ(trans_pcie_->rxq->write, 171);
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 168);
 

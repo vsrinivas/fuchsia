@@ -33,6 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
@@ -973,6 +974,7 @@ static zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, struct ieee80211_mac_pac
 
   struct iwl_device_cmd dev_cmd;
   if ((ret = iwl_mvm_set_tx_params(mvm, pkt, info, mvmsta, &dev_cmd)) != ZX_OK) {
+    IWL_ERR(mvm, "failed to set Tx parameters: %s\n", zx_status_get_string(ret));
     return ret;
   }
 
@@ -985,6 +987,7 @@ static zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, struct ieee80211_mac_pac
   ret = iwl_trans_tx(mvm->trans, pkt, &dev_cmd, txq_id);
   mtx_unlock(&mvmsta->lock);
   if ((ret != ZX_OK)) {
+    IWL_ERR(mvm, "failed to Tx packet: %s\n", zx_status_get_string(ret));
     return ret;
   }
 

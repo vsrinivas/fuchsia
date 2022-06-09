@@ -38,6 +38,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 
 static bool is_multicast_ether_addr(uint8_t addr[6]) { return (addr[0] & 0x1) != 0; }
 
@@ -220,6 +221,7 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
       .mac_frame_size = frame_len,
       .info = rx_status->rx_info,
   };
+  iwl_stats_analyze_rx(&rx_packet);
   wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
 }
 
@@ -1229,6 +1231,8 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   uint16_t sts_phy_info = le16_to_cpu(desc->phy_info);
   uint8_t band;
 
+  iwl_stats_inc(IWL_STATS_CNT_CMD_FROM_FW);
+
 #if 0   // NEEDS_PORTING
   // TODO(fxbug.dev/84773)
   struct iwl_mvm_rx_phy_data phy_data = {
@@ -1364,6 +1368,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
 #endif  // NEEDS_PORTING
 
   rx_status.rx_info.rssi_dbm = iwl_mvm_get_signal_strength(mvm, energy_a, energy_b);
+  iwl_stats_update_last_rssi(rx_status.rx_info.rssi_dbm);
   rx_status.rx_info.valid_fields |= WLAN_RX_INFO_VALID_RSSI;
   band = iwl_mvm_get_channel_band(channel);
   rx_status.rx_info.channel.primary = channel;
@@ -1535,6 +1540,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
         phy_info & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_PHY_TYPE_HR : WLAN_PHY_TYPE_OFDM;
   }
   rx_status.rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
+  iwl_stats_update_date_rate(rx_status.rx_info.data_rate);
 
 #if 0   // NEEDS_PORTING
     /* management stuff on default queue */

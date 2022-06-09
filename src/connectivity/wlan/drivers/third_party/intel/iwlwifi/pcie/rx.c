@@ -48,6 +48,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 
 zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans);
 void iwl_pcie_free_rbs_pool(struct iwl_trans* trans);
@@ -906,6 +907,8 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     // In the case of pcie_test, the MVM is not required for testing so that we just ignore the RX
     // packet anyway.
     if (trans->op_mode) {
+      iwl_stats_inc(IWL_STATS_CNT_CMD_FROM_FW);
+
       if (rxq->id == trans_pcie->def_rx_queue) {
         iwl_op_mode_rx(trans->op_mode, &rxq->napi, &rxcb);
       } else {
@@ -1253,6 +1256,8 @@ zx_status_t iwl_pcie_isr(struct iwl_trans* trans) {
    * If we *don't* have something, we'll re-enable before leaving here.
    */
   iwl_write32(trans, CSR_INT_MASK, 0x00000000);
+
+  iwl_stats_inc(IWL_STATS_CNT_INTS_FROM_FW);
 
   mtx_lock(&trans_pcie->irq_lock);
 

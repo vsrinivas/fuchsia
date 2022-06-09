@@ -17,6 +17,7 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-time-event.h"
@@ -212,10 +213,14 @@ TEST_F(MvmTest, rxMpdu) {
   };
   TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
 
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 0);
+
   TestCtx test_ctx = {};
   MockRecv(&test_ctx);
   iwl_mvm_rx_rx_mpdu(mvm_, nullptr /* napi */, &mpdu_rxcb);
 
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 1);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_UNICAST_TO_MLME), 1);
   EXPECT_EQ(WLAN_RX_INFO_VALID_DATA_RATE,
             test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_DATA_RATE);
   EXPECT_EQ(TO_HALF_MBPS(18), test_ctx.rx_info.data_rate);
@@ -262,10 +267,14 @@ TEST_F(MvmTest, rxMqMpdu) {
   mpdu.frame.frame_ctrl = 0x8;  // Data frame
   TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
 
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 0);
+
   TestCtx test_ctx = {};
   MockRecv(&test_ctx);
   iwl_mvm_rx_mpdu_mq(mvm_, nullptr /* napi */, &mpdu_rxcb, 0);
 
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_CMD_FROM_FW), 1);
+  EXPECT_EQ(iwl_stats_read(IWL_STATS_CNT_UNICAST_TO_MLME), 1);
   EXPECT_EQ(desc->mpdu_len, test_ctx.frame_len);
   EXPECT_EQ(WLAN_RX_INFO_VALID_DATA_RATE,
             test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_DATA_RATE);

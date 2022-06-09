@@ -39,6 +39,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 /*
  * iwl_mvm_rx_rx_phy_cmd - REPLY_RX_PHY_CMD handler
  *
@@ -92,6 +93,7 @@ static void iwl_mvm_get_signal_strength(const struct iwl_mvm* mvm,
 
   rx_info->valid_fields |= WLAN_RX_INFO_VALID_RSSI;
   rx_info->rssi_dbm = max_energy;
+  iwl_stats_update_last_rssi(rx_info->rssi_dbm);
 }
 
 /*
@@ -251,6 +253,8 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   size_t res_len = le16_to_cpu(rx_res->byte_count);
   uint32_t rx_pkt_status = le32_to_cpup((__le32*)(pkt->data + sizeof(*rx_res) + res_len));
   size_t crypt_len = 0;
+
+  iwl_stats_inc(IWL_STATS_CNT_CMD_FROM_FW);
 
   // Prepare the meta info sent to MLME.
   wlan_rx_info_t rx_info = {};
@@ -449,6 +453,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
   }
   rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
+  iwl_stats_update_date_rate(rx_info.data_rate);
 
 #if 0  // NEEDS_PORTING
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
@@ -488,6 +493,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
       .mac_frame_size = res_len,
       .info = rx_info,
   };
+  iwl_stats_analyze_rx(&rx_packet);
   wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
 
 #if 0   // NEEDS_PORTING

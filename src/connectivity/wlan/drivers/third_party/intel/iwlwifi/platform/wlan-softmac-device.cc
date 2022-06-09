@@ -17,6 +17,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 
 #define CHECK_DELETE_IN_PROGRESS_WITHOUT_ERRCODE(mvmvif)                \
   do {                                                                  \
@@ -84,6 +85,8 @@ void WlanSoftmacDevice::WlanSoftmacStop() {
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(const wlan_tx_packet_t* packet,
                                                   bool* out_enqueue_pending) {
+  iwl_stats_inc(IWL_STATS_CNT_DATA_FROM_MLME);
+
   // Delayed transmission is never used right now.
   *out_enqueue_pending = false;
 
