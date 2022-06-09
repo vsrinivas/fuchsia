@@ -76,7 +76,6 @@ template("audio_pipeline_benchmark") {
     ]
 
     deps = [
-      "//garnet/lib/profiler",
       "//sdk/fidl/fuchsia.media",
       "//src/lib/fxl",
       "//src/media/audio/audio_core:audio_core_lib",
@@ -86,6 +85,7 @@ template("audio_pipeline_benchmark") {
       "//src/media/audio/lib/clock/testing",
       "//src/media/audio/lib/effects_loader",
       "//src/media/audio/lib/format",
+      "//src/performance/lib/profiler",
       "//zircon/system/ulib/perftest",
     ]
   }

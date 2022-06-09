@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "perfmon:tests" ]
+  deps = [
+    "perfmon:tests",
+    "profiler:tests",
+  ]
 }

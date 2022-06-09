@@ -81,3 +81,8 @@ static_library("profiler_static") {
 shared_library("profiler") {
   public_deps = [ ":profiler_lib" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "tests:profiler_tests" ]
+}

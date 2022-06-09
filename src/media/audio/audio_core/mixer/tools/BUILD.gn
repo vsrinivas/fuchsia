@@ -20,7 +20,6 @@ executable("profiler_bin") {
   ]
 
   deps = [
-    "//garnet/lib/profiler",
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/audio_core/mixer:empty_coefficient_tables",
@@ -28,6 +27,7 @@ executable("profiler_bin") {
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/processing",
+    "//src/performance/lib/profiler",
     "//zircon/system/ulib/perftest",
   ]
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_PROFILER_FUCHSIA_PROFILER_LOG_LISTENER_H_
-#define GARNET_LIB_PROFILER_FUCHSIA_PROFILER_LOG_LISTENER_H_
+#ifndef SRC_PERFORMANCE_LIB_PROFILER_FUCHSIA_PROFILER_LOG_LISTENER_H_
+#define SRC_PERFORMANCE_LIB_PROFILER_FUCHSIA_PROFILER_LOG_LISTENER_H_
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -56,4 +56,4 @@ class ProfilerLogListener : public fuchsia::logger::LogListenerSafe {
 
 std::string CollectProfilerLog();
 
-#endif  // GARNET_LIB_PROFILER_FUCHSIA_PROFILER_LOG_LISTENER_H_
+#endif  // SRC_PERFORMANCE_LIB_PROFILER_FUCHSIA_PROFILER_LOG_LISTENER_H_
