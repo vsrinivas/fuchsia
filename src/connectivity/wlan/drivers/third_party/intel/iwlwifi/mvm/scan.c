@@ -1690,16 +1690,18 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
 
   iwl_mvm_build_scan_probe(mvm, mvmvif, scan_req, &params);
 
+  bool scan_umac_was_executed = false;  // No matter it is successful or not, we need to clean up.
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
     hcmd.id = iwl_cmd_id(SCAN_REQ_UMAC, IWL_ALWAYS_LONG_GROUP, 0);
     ret = iwl_mvm_scan_umac(mvmvif, &params, IWL_MVM_SCAN_REGULAR);
+    scan_umac_was_executed = true;
   } else {
     hcmd.id = SCAN_OFFLOAD_REQUEST_CMD;
     ret = iwl_mvm_scan_lmac(mvm, &params);
   }
 
   if (ret != ZX_OK) {
-    return ret;
+    goto error;
   }
 
 #if 0   // NEEDS_PORTING
@@ -1716,7 +1718,7 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
         iwl_mvm_resume_tcm(mvm);
 #endif  // NEEDS_PORTING
 
-    return ret;
+    goto error;
   }
 
   IWL_DEBUG_SCAN(mvm, "Scan request was sent successfully\n");
@@ -1731,6 +1733,17 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
   }
 
   return ZX_OK;
+
+error:
+  // reset the uid status.
+  if (scan_umac_was_executed) {
+    struct iwl_scan_req_umac* cmd = mvm->scan_cmd;
+    if (cmd) {
+      size_t uid = le32_to_cpu(cmd->uid);
+      mvm->scan_uid_status[uid] = 0;
+    }
+  }
+  return ret;
 }
 
 #if 0   // NEEDS_PORTING

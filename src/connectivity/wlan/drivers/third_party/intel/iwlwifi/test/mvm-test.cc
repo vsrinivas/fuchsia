@@ -462,7 +462,7 @@ class LmacScanTest : public MvmTest {
 };
 
 // UMAC scan currently supports both passive and active scan.
-class UmacScanTest : public FakeUcodeTest {
+class UmacScanTest : public FakeUcodeTest, public MockTrans {
  public:
   static constexpr size_t kChannelNum = 4;
   const uint8_t kChannelsToScan_[kChannelNum] = {7, 1, 40, 136};
@@ -521,13 +521,20 @@ class UmacScanTest : public FakeUcodeTest {
   }
 
   ~UmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    mock_send_umac_scan_cmd_.VerifyAndClear();
     free(mvmvif_->ifc.ops);
     free(mvmvif_);
     free(active_scan_args_.ssids);
     mtx_unlock(&mvm_->mutex);
   }
 
-  struct iwl_trans* trans_;
+  static zx_status_t send_scan_cmd_wrapper(struct iwl_trans* trans, struct iwl_host_cmd* host_cmd) {
+    auto umac_scan_cmd = reinterpret_cast<const struct iwl_scan_req_umac*>(host_cmd->data[0]);
+
+    auto test = GET_TEST(UmacScanTest, trans);
+    return test->mock_send_umac_scan_cmd_.Call(host_cmd->id, host_cmd->len[0], umac_scan_cmd->uid);
+  }
+
   wlan_softmac_ifc_protocol_ops_t ops_;
   struct iwl_mvm_vif mvmvif_sta_;
 
@@ -556,6 +563,14 @@ class UmacScanTest : public FakeUcodeTest {
  protected:
   struct iwl_mvm* mvm_;
   struct iwl_mvm_vif* mvmvif_;
+
+  // Expected fields.
+  mock_function::MockFunction<zx_status_t,  // return value
+                              uint32_t,     // host_cmd->id
+                              uint16_t,     // host_cmd->len[0]
+                              __le32        // umac_scan_cmd->uid
+                              >
+      mock_send_umac_scan_cmd_;
 };
 
 /* Tests for LMAC scan */
@@ -643,6 +658,7 @@ TEST_F(UmacScanTest, RegActiveUmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(false, scan_result_.success);
   ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta_, &active_scan_args_));
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_uid_status[0]);
   EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
 
   // Verify the scan cmd filling is correct.
@@ -748,6 +764,25 @@ TEST_F(UmacScanTest, RegPassiveUmacAbortScan) __TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(true, scan_result_.sme_notified);
   EXPECT_EQ(false, scan_result_.success);
+}
+
+TEST_F(UmacScanTest, FailedScanCmd) __TA_NO_THREAD_SAFETY_ANALYSIS {
+  // mock function after the testing environment had been set.
+  BIND_TEST(mvm_->trans);
+  bindSendCmd(send_scan_cmd_wrapper);
+
+  static constexpr size_t uid = 0;
+  ASSERT_EQ(0, mvm_->scan_uid_status[uid]);
+  size_t cmd_len = iwl_mvm_scan_size(mvm_);
+  mock_send_umac_scan_cmd_.ExpectCall(ZX_ERR_INTERNAL,                     // return value
+                                      WIDE_ID(LONG_GROUP, SCAN_REQ_UMAC),  // host_cmd->id
+                                      cmd_len,                             // host_cmd->len[0]
+                                      uid                                  // umac_scan_cmd->uid
+  );
+  ASSERT_EQ(ZX_ERR_INTERNAL, iwl_mvm_reg_scan_start(&mvmvif_sta_, &passive_scan_args_));
+  ASSERT_EQ(0, mvm_->scan_uid_status[uid]);
+
+  unbindSendCmd();
 }
 
 /* Tests for both LMAC and UMAC scans */
