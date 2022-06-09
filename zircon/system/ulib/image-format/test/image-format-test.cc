@@ -886,6 +886,110 @@ TEST(ImageFormat, CorrectModifiers) {
             sysmem_v2::wire::kFormatModifierGoogleGoldfishOptimal);
 }
 
+TEST(ImageFormat, IntelYTiledFormat_V1_LLCPP) {
+  sysmem_v1::wire::PixelFormat format = {
+      .type = sysmem_v1::wire::PixelFormatType::kNv12,
+      .has_format_modifier = true,
+      .format_modifier =
+          {
+              .value = sysmem_v1::wire::kFormatModifierIntelI915YTiled,
+          },
+  };
+
+  sysmem_v1::wire::ImageFormatConstraints constraints = {
+      .pixel_format = format,
+      .min_coded_width = 128u,
+      .max_coded_width = 1920u,
+      .min_coded_height = 32u,
+      .max_coded_height = 1080u,
+      .max_bytes_per_row = 0u,
+      .bytes_per_row_divisor = 0u,
+  };
+
+  auto optional_format = image_format::ConstraintsToFormat(constraints, 1920u, 1080u);
+  EXPECT_TRUE(optional_format);
+
+  auto& image_format = *optional_format;
+
+  constexpr uint32_t kTileSize = 4096u;
+  constexpr uint32_t kBytesPerRowPerTile = 128u;
+
+  constexpr uint32_t kYPlaneWidthInTiles = 15u;
+  constexpr uint32_t kYPlaneHeightInTiles = 34u;
+  constexpr uint32_t kUVPlaneWidthInTiles = 15u;
+  constexpr uint32_t kUVPlaneHeightInTiles = 17u;
+
+  constexpr uint32_t kYPlaneSize = kYPlaneWidthInTiles * kYPlaneHeightInTiles * kTileSize;
+  constexpr uint32_t kUVPlaneSize = kUVPlaneWidthInTiles * kUVPlaneHeightInTiles * kTileSize;
+  constexpr uint32_t kTotalSize = kYPlaneSize + kUVPlaneSize;
+
+  EXPECT_EQ(kTotalSize, ImageFormatImageSize(image_format));
+
+  uint64_t y_plane_byte_offset;
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, 0u, &y_plane_byte_offset));
+  EXPECT_EQ(0u, y_plane_byte_offset);
+
+  uint64_t uv_plane_byte_offset;
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, 1u, &uv_plane_byte_offset));
+  EXPECT_EQ(kYPlaneSize, uv_plane_byte_offset);
+
+  uint32_t y_plane_row_stride;
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, 0u, &y_plane_row_stride));
+  EXPECT_EQ(kBytesPerRowPerTile * kYPlaneWidthInTiles, y_plane_row_stride);
+
+  uint32_t uv_plane_row_stride;
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, 1u, &uv_plane_row_stride));
+  EXPECT_EQ(kBytesPerRowPerTile * kUVPlaneWidthInTiles, uv_plane_row_stride);
+}
+
+TEST(ImageFormat, IntelYTiledFormat_V2_LLCPP) {
+  fidl::Arena allocator;
+  sysmem_v2::wire::PixelFormat pixel_format(allocator);
+  pixel_format.set_type(sysmem_v2::wire::PixelFormatType::kNv12);
+  pixel_format.set_format_modifier_value(allocator,
+                                         sysmem_v2::wire::kFormatModifierIntelI915YTiled);
+  sysmem_v2::wire::ImageFormatConstraints constraints(allocator);
+  constraints.set_pixel_format(allocator, std::move(pixel_format));
+  constraints.set_min_coded_width(128u);
+  constraints.set_min_coded_height(32u);
+  constraints.set_bytes_per_row_divisor(0u);
+  constraints.set_max_bytes_per_row(0u);
+
+  auto image_format_result = ImageConstraintsToFormat(allocator, constraints, 3440u, 1440u);
+  EXPECT_TRUE(image_format_result.is_ok());
+  auto image_format = image_format_result.take_value();
+
+  constexpr uint32_t kTileSize = 4096u;
+  constexpr uint32_t kBytesPerRowPerTile = 128u;
+
+  constexpr uint32_t kYPlaneWidthInTiles = 27u;
+  constexpr uint32_t kYPlaneHeightInTiles = 45u;
+  constexpr uint32_t kUVPlaneWidthInTiles = 27u;
+  constexpr uint32_t kUVPlaneHeightInTiles = 23u;
+
+  constexpr uint32_t kYPlaneSize = kYPlaneWidthInTiles * kYPlaneHeightInTiles * kTileSize;
+  constexpr uint32_t kUVPlaneSize = kUVPlaneWidthInTiles * kUVPlaneHeightInTiles * kTileSize;
+  constexpr uint32_t kTotalSize = kYPlaneSize + kUVPlaneSize;
+
+  EXPECT_EQ(kTotalSize, ImageFormatImageSize(image_format));
+
+  uint64_t y_plane_byte_offset;
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, 0u, &y_plane_byte_offset));
+  EXPECT_EQ(0u, y_plane_byte_offset);
+
+  uint64_t uv_plane_byte_offset;
+  EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, 1u, &uv_plane_byte_offset));
+  EXPECT_EQ(kYPlaneSize, uv_plane_byte_offset);
+
+  uint32_t y_plane_row_stride;
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, 0u, &y_plane_row_stride));
+  EXPECT_EQ(kBytesPerRowPerTile * kYPlaneWidthInTiles, y_plane_row_stride);
+
+  uint32_t uv_plane_row_stride;
+  EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, 1u, &uv_plane_row_stride));
+  EXPECT_EQ(kBytesPerRowPerTile * kUVPlaneWidthInTiles, uv_plane_row_stride);
+}
+
 TEST(ImageFormat, IntelCcsFormats_V1_LLCPP) {
   for (auto& format_modifier : {
            sysmem_v1::wire::kFormatModifierIntelI915YTiledCcs,
