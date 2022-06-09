@@ -307,10 +307,10 @@ void EffectsStageV1::SetPresentationDelay(zx::duration external_delay) {
   zx::duration total_delay = external_delay + intrinsic_lead_time;
 
   if constexpr (kLogPresentationDelay) {
-    FX_LOGS(WARNING) << "(" << this << ") " << __FUNCTION__ << " given external_delay "
-                     << external_delay.to_nsecs() << "ns";
-    FX_LOGS(WARNING) << "Adding it to our intrinsic_lead_time " << intrinsic_lead_time.to_nsecs()
-                     << "ns; setting our total_delay " << total_delay.to_nsecs() << "ns";
+    FX_LOGS(INFO) << "(" << this << ") " << __FUNCTION__ << " given external_delay "
+                  << external_delay.to_nsecs() << "ns";
+    FX_LOGS(INFO) << "Adding it to our intrinsic_lead_time " << intrinsic_lead_time.to_nsecs()
+                  << "ns; setting our total_delay " << total_delay.to_nsecs() << "ns";
   }
 
   // Apply the total lead time to us and propagate that value to our source.

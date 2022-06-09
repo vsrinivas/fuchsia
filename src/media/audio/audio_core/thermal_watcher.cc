@@ -79,10 +79,11 @@ void ThermalWatcher::WatchThermalState() {
 
 void ThermalWatcher::SetThermalState(uint64_t state) {
   if (thermal_state_ == state) {
-    FX_LOGS(INFO) << "No thermal state change (was already " << state << ")";
+    if constexpr (kLogThermalStateChanges) {
+      FX_LOGS(INFO) << "No thermal state change (was already " << state << ")";
+    }
     return;
   }
-
   for (auto& state_entry : context_.process_config().thermal_config().states()) {
     if (state_entry.thermal_state_number() == state) {
       for (auto& effect_config : state_entry.effect_configs()) {
@@ -127,8 +128,10 @@ void ThermalWatcher::SetThermalState(uint64_t state) {
   auto previous_state = thermal_state_;
   thermal_state_ = state;
   Reporter::Singleton().SetThermalState(state);
-  FX_LOGS(INFO) << "Thermal state change (from " << previous_state << " to " << thermal_state_
-                << ") has been posted";
+  if constexpr (kLogThermalStateChanges) {
+    FX_LOGS(INFO) << "Thermal state change (from " << previous_state << " to " << thermal_state_
+                  << ") has been posted";
+  }
 }
 
 }  // namespace media::audio

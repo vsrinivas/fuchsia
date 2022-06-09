@@ -46,13 +46,13 @@ inline constexpr uint16_t kCaptureOverflowInfoInterval = 10;
 inline constexpr uint16_t kCaptureOverflowWarningInterval = 100;
 
 // Relevant for both renderers and capturers
-inline constexpr bool kLogPresentationDelay = true;
+inline constexpr bool kLogPresentationDelay = false;
 
 // Device- and driver-related logging
 //
 inline constexpr bool kLogAudioDevice = false;
 inline constexpr bool kLogDevicePlugUnplug = true;
-inline constexpr bool kLogSetDeviceGainMuteActions = true;
+inline constexpr bool kLogSetDeviceGainMuteActions = false;
 
 // Values retrieved from the audio driver related to delay, and associated calculations.
 inline constexpr bool kLogDriverDelayProperties = false;
@@ -106,6 +106,8 @@ inline constexpr bool kLogIdleTimers = false;
 inline constexpr bool kLogSetActiveChannelsSupport = false;
 inline constexpr bool kLogSetActiveChannelsCalls = false;
 inline constexpr bool kLogSetActiveChannelsActions = true;
+// Logging related to thermal management
+inline constexpr bool kLogThermalStateChanges = true;
 
 }  // namespace media::audio
 
