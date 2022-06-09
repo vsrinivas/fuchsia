@@ -1325,6 +1325,10 @@ int pipe(int pipefd[2]) { return pipe2(pipefd, 0); }
 __EXPORT
 int socketpair(int domain, int type, int protocol, int fd[2]) {
   uint32_t options = 0;
+
+  // Ignore SOCK_CLOEXEC.
+  type = type & ~SOCK_CLOEXEC;
+
   switch (type) {
     case SOCK_DGRAM:
       options = ZX_SOCKET_DATAGRAM;

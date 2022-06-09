@@ -417,6 +417,19 @@ TEST_P(SocketPair, StreamPartialWrite) {
   ASSERT_EQ(fut.get(), WRITE_DATA_SIZE);
 }
 
+// POSIX systems should handle SOCK_CLOEXEC, and Fuchsia should ignore it
+// gracefully.
+TEST_P(SocketPair, SocketPairWithCloExecFlag) {
+  int fd[2];
+
+  ASSERT_EQ(socketpair(AF_UNIX, GetParam() | SOCK_CLOEXEC, 0, fd), 0);
+  ASSERT_NE(0, fd[0]);
+  ASSERT_NE(0, fd[1]);
+
+  ASSERT_EQ(0, close(fd[0]));
+  ASSERT_EQ(0, close(fd[1]));
+}
+
 // TODO(https://fxbug.dev/79231): These tests depend on Fuchsia specific primitives
 // to coordinate between threads. They should be modified to use cross-platform primitives
 // and run on other platforms as well, as demonstrated here:
