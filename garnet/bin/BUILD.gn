@@ -12,7 +12,6 @@ group("bin") {
     "ktrace_provider",
     "//src/developer/sched",
     "//src/developer/trace2json",
-    "//src/sys/run_test_component",
     "//src/ui/benchmarks",
   ]
 }

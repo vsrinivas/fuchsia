@@ -83,7 +83,6 @@ group("all") {
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/device_settings:device_settings_manager",
-    "//src/sys/run_test_component:tests",
     "//src/sys/sysmgr",
     "//src/sys/sysmgr/integration_tests",
     "//src/sys/sysmgr/test:sysmgr-tests",

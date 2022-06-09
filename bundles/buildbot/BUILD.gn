@@ -204,13 +204,9 @@ group("core_base_packages") {
   ]
 }
 
+# WARNING: Known to infrastructure.
 group("terminal") {
   testonly = true
-  deps = [
-    # TODO(fxbug.dev/51983): Re-organize these deps to include all packages
-    # required for running tests.
-    "//src/sys/run_test_component",
-  ]
 }
 
 # TODO(https://fxbug.dev/94919) split this into target/host groups and move to //products
