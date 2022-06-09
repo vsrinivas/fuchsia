@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/run_test_component/log_collector.h"
+#include "src/sys/run_test_component/log_collector.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <zircon/assert.h>

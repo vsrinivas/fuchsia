@@ -18,7 +18,6 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/bin/run_test_component:lib",
     "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.sys2",
@@ -28,6 +27,7 @@ executable("bin") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/pkg_url",
+    "//src/sys/run_test_component:lib",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

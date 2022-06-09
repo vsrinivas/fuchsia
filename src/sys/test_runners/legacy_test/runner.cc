@@ -18,11 +18,11 @@
 #include <memory>
 #include <utility>
 
-#include <garnet/bin/run_test_component/test_metadata.h>
 #include <src/lib/fsl/io/fd.h>
 #include <src/lib/fsl/vmo/file.h>
 #include <src/lib/fsl/vmo/sized_vmo.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
+#include <src/sys/run_test_component/test_metadata.h>
 
 #include "test_component.h"
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_RUN_TEST_COMPONENT_COMPONENT_H_
-#define GARNET_BIN_RUN_TEST_COMPONENT_COMPONENT_H_
+#ifndef SRC_SYS_RUN_TEST_COMPONENT_COMPONENT_H_
+#define SRC_SYS_RUN_TEST_COMPONENT_COMPONENT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fpromise/promise.h>
@@ -15,7 +15,7 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/run_test_component/output_collector.h"
+#include "src/sys/run_test_component/output_collector.h"
 
 namespace run {
 
@@ -45,4 +45,4 @@ class Component {
 
 }  // namespace run
 
-#endif  // GARNET_BIN_RUN_TEST_COMPONENT_COMPONENT_H_
+#endif  // SRC_SYS_RUN_TEST_COMPONENT_COMPONENT_H_

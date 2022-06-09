@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_RUN_TEST_COMPONENT_SYS_TESTS_H_
-#define GARNET_BIN_RUN_TEST_COMPONENT_SYS_TESTS_H_
+#ifndef SRC_SYS_RUN_TEST_COMPONENT_SYS_TESTS_H_
+#define SRC_SYS_RUN_TEST_COMPONENT_SYS_TESTS_H_
 
 #include <unordered_set>
 
@@ -28,4 +28,4 @@ bool should_run_in_sys(const std::string& url);
 
 }  // namespace run
 
-#endif  // GARNET_BIN_RUN_TEST_COMPONENT_SYS_TESTS_H_
+#endif  // SRC_SYS_RUN_TEST_COMPONENT_SYS_TESTS_H_

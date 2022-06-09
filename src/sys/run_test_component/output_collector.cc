@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/run_test_component/output_collector.h"
+#include "src/sys/run_test_component/output_collector.h"
 
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>

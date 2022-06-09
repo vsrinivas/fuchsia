@@ -36,7 +36,7 @@ third_party_rust_crate_log_visibility = [
 
   "//examples/components/services:*",
   "//examples/diagnostics/logs/rust:*",
-  "//garnet/bin/run_test_component/test:*",
+  "//src/sys/run_test_component/test:*",
   "//src/connectivity/bluetooth/core/bt-gap:*",
   "//src/connectivity/bluetooth/lib/async-helpers:*",
   "//src/connectivity/bluetooth/lib/bt-device-watcher:*",

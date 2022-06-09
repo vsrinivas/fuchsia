@@ -209,7 +209,7 @@ group("terminal") {
   deps = [
     # TODO(fxbug.dev/51983): Re-organize these deps to include all packages
     # required for running tests.
-    "//garnet/bin/run_test_component",
+    "//src/sys/run_test_component",
   ]
 }
 

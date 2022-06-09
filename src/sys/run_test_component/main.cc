@@ -34,16 +34,16 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/run_test_component/component.h"
-#include "garnet/bin/run_test_component/log_collector.h"
-#include "garnet/bin/run_test_component/run_test_component.h"
-#include "garnet/bin/run_test_component/sys_tests.h"
-#include "garnet/bin/run_test_component/test_metadata.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/zx/object_traits.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/sys/run_test_component/component.h"
+#include "src/sys/run_test_component/log_collector.h"
+#include "src/sys/run_test_component/run_test_component.h"
+#include "src/sys/run_test_component/sys_tests.h"
+#include "src/sys/run_test_component/test_metadata.h"
 
 using fuchsia::sys::TerminationReason;
 

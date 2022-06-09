@@ -14,7 +14,7 @@
 
 #include <memory>
 
-#include <garnet/bin/run_test_component/test_metadata.h>
+#include <src/sys/run_test_component/test_metadata.h>
 
 #include "suite.h"
 

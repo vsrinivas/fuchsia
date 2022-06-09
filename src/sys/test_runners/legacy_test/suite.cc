@@ -32,8 +32,8 @@
 #include <utility>
 #include <vector>
 
-#include <garnet/bin/run_test_component/component.h>
 #include <src/lib/fxl/strings/string_printf.h>
+#include <src/sys/run_test_component/component.h>
 
 static const char kTestCaseName[] = "legacy_test";
 constexpr char kEnvPrefix[] = "test_env_";

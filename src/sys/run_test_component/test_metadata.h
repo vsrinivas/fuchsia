@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_RUN_TEST_COMPONENT_TEST_METADATA_H_
-#define GARNET_BIN_RUN_TEST_COMPONENT_TEST_METADATA_H_
+#ifndef SRC_SYS_RUN_TEST_COMPONENT_TEST_METADATA_H_
+#define SRC_SYS_RUN_TEST_COMPONENT_TEST_METADATA_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -73,4 +73,4 @@ class TestMetadata {
 
 }  // namespace run
 
-#endif  // GARNET_BIN_RUN_TEST_COMPONENT_TEST_METADATA_H_
+#endif  // SRC_SYS_RUN_TEST_COMPONENT_TEST_METADATA_H_

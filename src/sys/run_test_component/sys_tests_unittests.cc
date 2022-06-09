@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/bin/run_test_component/sys_tests.h"
+#include "src/sys/run_test_component/sys_tests.h"
 
 namespace {
 

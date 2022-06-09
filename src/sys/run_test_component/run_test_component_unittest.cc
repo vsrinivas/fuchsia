@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/run_test_component/run_test_component.h"
+#include "src/sys/run_test_component/run_test_component.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

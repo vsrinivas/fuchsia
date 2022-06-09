@@ -13,7 +13,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/bin/run_test_component/log_collector.h"
+#include "src/sys/run_test_component/log_collector.h"
 
 TEST(LogCollector, DoubleBind) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

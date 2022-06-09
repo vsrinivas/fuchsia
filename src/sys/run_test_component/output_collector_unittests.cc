@@ -16,8 +16,8 @@
 
 #include <fbl/unique_fd.h>
 
-#include "garnet/bin/run_test_component/output_collector.h"
 #include "gtest/gtest.h"
+#include "src/sys/run_test_component/output_collector.h"
 
 #define EXPECT_EQ_OUTPUT(expect, actual)                                        \
   EXPECT_EQ(std::accumulate((expect).begin(), (expect).end(), std::string("")), \

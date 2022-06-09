@@ -18,8 +18,8 @@
 #include <memory>
 #include <vector>
 
-#include <garnet/bin/run_test_component/component.h>
-#include <garnet/bin/run_test_component/test_metadata.h>
+#include <src/sys/run_test_component/component.h>
+#include <src/sys/run_test_component/test_metadata.h>
 
 /// Implement and expose Suite protocol on behalf of wrapped legacy test component.
 class Suite final : public fuchsia::test::Suite {

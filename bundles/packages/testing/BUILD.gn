@@ -20,5 +20,5 @@ group("environment_delegating_runner") {
 
 group("run_test_component") {
   testonly = true
-  public_deps = [ "//garnet/bin/run_test_component" ]
+  public_deps = [ "//src/sys/run_test_component" ]
 }

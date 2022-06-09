@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
-#define GARNET_BIN_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
+#ifndef SRC_SYS_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
+#define SRC_SYS_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
@@ -56,4 +56,4 @@ class OutputCollector {
 
 }  // namespace run
 
-#endif  // GARNET_BIN_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
+#endif  // SRC_SYS_RUN_TEST_COMPONENT_OUTPUT_COLLECTOR_H_
