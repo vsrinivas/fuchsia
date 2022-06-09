@@ -4,9 +4,14 @@
 
 #![cfg(test)]
 
-use futures::{FutureExt as _, TryStreamExt as _};
+use assert_matches::assert_matches;
+use fidl_fuchsia_hardware_network as fhardware_network;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_debug as fnet_debug;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use futures::TryStreamExt as _;
 use netstack_testing_common::{
-    devices::create_tun_device,
+    devices::{create_tun_device, create_tun_port, install_device},
     realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _},
 };
 
@@ -31,123 +36,109 @@ async fn get_admin_unknown() {
 
     let id = get_loopback_id(&realm).await;
 
-    let debug_interfaces = realm
-        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
-        .expect("connect to protocol");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
 
     // Request unknown NIC ID, expect request channel to be closed.
     let (admin_control, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
+        fidl::endpoints::create_proxy::<fnet_interfaces_admin::ControlMarker>()
             .expect("create proxy");
     let () = debug_interfaces.get_admin(id + 1, server_end).expect("get admin failed");
-    assert_matches::assert_matches!(
+    assert_matches!(
         admin_control.take_event_stream().try_collect::<Vec<_>>().await.as_ref().map(Vec::as_slice),
         // TODO(https://fxbug.dev/8018): Sending epitaphs not supported in Go.
         Ok([])
     );
 }
 
+// Retrieve the MAC address for the given device id, expecting no FIDL errors.
+//
+// This helper extracts the MAC from its `Box` making matching easier. See
+// https://doc.rust-lang.org/beta/unstable-book/language-features/box-patterns.html.
+async fn get_mac(
+    id: u64,
+    debug_interfaces: &fnet_debug::InterfacesProxy,
+) -> Result<Option<fnet::MacAddress>, fnet_debug::InterfacesGetMacError> {
+    let mac = debug_interfaces.get_mac(id).await.expect("get mac");
+    mac.map(|option| option.map(|box_| *box_))
+}
+
+// TODO(https://fxbug.dev/88797): Parameterize by Netstack to test NS3.
 #[fuchsia::test]
-async fn get_mac() {
+async fn get_mac_not_found() {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>("get_mac").expect("create realm");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
 
     let loopback_id = get_loopback_id(&realm).await;
+    // Unknown device ID produces an error.
+    assert_matches!(
+        get_mac(loopback_id + 1, &debug_interfaces).await,
+        Err(fnet_debug::InterfacesGetMacError::NotFound)
+    );
+}
 
-    let (tun_device, network_device) = create_tun_device();
+// TODO(https://fxbug.dev/88797): Parameterize by Netstack to test NS3.
+#[fuchsia::test]
+async fn get_mac_loopback() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>("get_mac").expect("create realm");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
 
-    let (admin_device_control, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
-            .expect("create proxy");
-    let installer = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
-        .expect("connect to protocol");
-    let () = installer.install_device(network_device, server_end).expect("install device");
+    let loopback_id = get_loopback_id(&realm).await;
+    // Loopback has the all-zero MAC address.
+    assert_matches!(
+        get_mac(loopback_id, &debug_interfaces).await,
+        Ok(Some(fnet::MacAddress { octets: [0, 0, 0, 0, 0, 0] }))
+    );
+}
 
-    let (tun_port, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>().expect("create proxy");
-    // At the time of writing, netstack only supports dual-mode devices.
-    const IP_FRAME_TYPES: [fidl_fuchsia_hardware_network::FrameType; 2] = [
-        fidl_fuchsia_hardware_network::FrameType::Ipv4,
-        fidl_fuchsia_hardware_network::FrameType::Ipv6,
-    ];
-    let () = tun_device
-        .add_port(
-            fidl_fuchsia_net_tun::DevicePortConfig {
-                base: Some(fidl_fuchsia_net_tun::BasePortConfig {
-                    id: Some(7), // Arbitrary nonzero to avoid masking default value assumptions.
-                    rx_types: Some(IP_FRAME_TYPES.to_vec()),
-                    tx_types: Some(
-                        IP_FRAME_TYPES
-                            .iter()
-                            .copied()
-                            .map(|type_| fidl_fuchsia_hardware_network::FrameTypeSupport {
-                                type_,
-                                features: fidl_fuchsia_hardware_network::FRAME_FEATURES_RAW,
-                                supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
-                            })
-                            .collect(),
-                    ),
-                    mtu: Some(netemul::DEFAULT_MTU.into()),
-                    ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
-                }),
-                ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
-            },
-            server_end,
-        )
-        .expect("add port");
-
-    let () = tun_port.set_online(false).await.expect("set online");
-
-    let (network_port, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
-            .expect("create endpoints");
-    let () = tun_port.get_port(server_end).expect("get port");
-    let fidl_fuchsia_hardware_network::PortInfo { id, .. } =
-        network_port.get_info().await.expect("get info");
+// Add a pure IP interface to the given device/port, returning the created
+// `fuchsia.net.interfaces.admin/Control` handle.
+async fn add_pure_ip_interface(
+    network_port: &fhardware_network::PortProxy,
+    admin_device_control: &fnet_interfaces_admin::DeviceControlProxy,
+    interface_name: &str,
+) -> fnet_interfaces_admin::ControlProxy {
+    let fhardware_network::PortInfo { id, .. } = network_port.get_info().await.expect("get info");
     let mut port_id = id.expect("port id");
 
     let (admin_control, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
+        fidl::endpoints::create_proxy::<fnet_interfaces_admin::ControlMarker>()
             .expect("create proxy");
 
     let () = admin_device_control
         .create_interface(
             &mut port_id,
             server_end,
-            fidl_fuchsia_net_interfaces_admin::Options {
-                name: Some("ihazmac?".to_string()),
-                ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
+            fnet_interfaces_admin::Options {
+                name: Some(interface_name.to_string()),
+                ..fnet_interfaces_admin::Options::EMPTY
             },
         )
         .expect("create interface");
+    admin_control
+}
 
+// TODO(https://fxbug.dev/88797): Parameterize by Netstack to test NS3.
+#[fuchsia::test]
+async fn get_mac_pure_ip() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>("get_mac").expect("create realm");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
+
+    const PORT_ID: u8 = 7; // Arbitrary nonzero to avoid masking default value assumptions.
+    const INTERFACE_NAME: &str = "ihazmac";
+    let (tun_device, network_device) = create_tun_device();
+    let admin_device_control = install_device(&realm, network_device);
+    // Retain `_tun_port` to keep the FIDL channel open.
+    let (_tun_port, network_port) = create_tun_port(&tun_device, Some(PORT_ID)).await;
+    let admin_control =
+        add_pure_ip_interface(&network_port, &admin_device_control, INTERFACE_NAME).await;
     let virtual_id = admin_control.get_id().await.expect("get id");
-
-    let debug_interfaces = realm
-        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
-        .expect("connect to protocol");
-
-    // Box<T> -> T.
-    //
-    // This helper works around the inability to match on `Box`. See
-    // https://doc.rust-lang.org/beta/unstable-book/language-features/box-patterns.html.
-    let get_mac = |id| {
-        debug_interfaces
-            .get_mac(id)
-            .map(|result| result.map(|result| result.map(|option| option.map(|box_| *box_))))
-    };
-
-    // Loopback has the all-zero MAC address.
-    assert_matches::assert_matches!(
-        get_mac(loopback_id).await,
-        Ok(Ok(Some(fidl_fuchsia_net::MacAddress { octets: [0, 0, 0, 0, 0, 0] })))
-    );
-    // Virtual interfaces do not have MAC addresses.
-    assert_matches::assert_matches!(get_mac(virtual_id).await, Ok(Ok(None)));
-    // Unknown NIC ID produces an error.
-    assert_matches::assert_matches!(
-        get_mac(virtual_id + 1).await,
-        Ok(Err(fidl_fuchsia_net_debug::InterfacesGetMacError::NotFound))
-    );
+    // Pure IP interfaces do not have MAC addresses.
+    assert_matches!(get_mac(virtual_id, &debug_interfaces).await, Ok(None));
 }
