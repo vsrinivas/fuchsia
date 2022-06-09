@@ -169,7 +169,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   zx_status_t MakeVisible(const fbl::RefPtr<Device>& dev);
 
-  zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;
+  static zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out,
+                                        size_t max);
 
   zx_status_t GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                           size_t buflen, size_t* size);
@@ -277,11 +278,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void UnregisterSystemStorageForShutdown(
       UnregisterSystemStorageForShutdownRequestView request,
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
-
-  zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
-      fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers);
-  zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
-      fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices);
 
   // Driver registrar interface
   void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;

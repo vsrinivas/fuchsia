@@ -62,6 +62,7 @@
 #include "src/devices/bin/driver_manager/driver_host_loader_service.h"
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
+#include "src/devices/bin/driver_manager/v1/driver_development.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -421,7 +422,7 @@ zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_v
 zx_handle_t get_service_root();
 
 zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out,
-                                            size_t max) const {
+                                            size_t max) {
   // TODO: Remove VLA.
   char tmp[max];
   char name_buf[fio::wire::kMaxFilename + strlen("dev/")];
@@ -436,7 +437,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
     }
 
     const char* name;
-    if (&*itr == root_device_.get()) {
+    if (itr->name().compare("root") == 0 && itr->parent() == nullptr) {
       name = "dev";
     } else if (itr->composite() != nullptr) {
       strcpy(name_buf, "dev/");
@@ -924,89 +925,6 @@ void Coordinator::BindFallbackDrivers() {
   AddAndBindDrivers(std::move(fallback_drivers_));
 }
 
-zx::status<std::vector<fdd::wire::DriverInfo>> Coordinator::GetDriverInfo(
-    fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers) {
-  std::vector<fdd::wire::DriverInfo> driver_info_vec;
-  // TODO(fxbug.dev/80033): Support base drivers.
-  for (const auto& driver : drivers) {
-    fdd::wire::DriverInfo driver_info(allocator);
-    driver_info.set_name(allocator,
-                         fidl::StringView(allocator, {driver->name.data(), driver->name.size()}));
-    driver_info.set_url(
-        allocator, fidl::StringView(allocator, {driver->libname.data(), driver->libname.size()}));
-
-    if (driver->bytecode_version == 1) {
-      auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&driver->binding);
-      if (!binding) {
-        return zx::error(ZX_ERR_NOT_FOUND);
-      }
-      auto binding_insts = binding->get();
-
-      uint32_t count = 0;
-      if (driver->binding_size > 0) {
-        count = driver->binding_size / sizeof(binding_insts[0]);
-      }
-      if (count > fdm::wire::kBindRulesInstructionsMax) {
-        return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
-      }
-
-      using fdm::wire::BindInstruction;
-      fidl::VectorView<BindInstruction> instructions(allocator, count);
-      for (uint32_t i = 0; i < count; i++) {
-        instructions[i] = BindInstruction{
-            .op = binding_insts[i].op,
-            .arg = binding_insts[i].arg,
-            .debug = binding_insts[i].debug,
-        };
-      }
-      driver_info.set_bind_rules(
-          allocator, fdd::wire::BindRulesBytecode::WithBytecodeV1(allocator, instructions));
-
-    } else if (driver->bytecode_version == 2) {
-      auto* binding = std::get_if<std::unique_ptr<uint8_t[]>>(&driver->binding);
-      if (!binding) {
-        return zx::error(ZX_ERR_NOT_FOUND);
-      }
-
-      fidl::VectorView<uint8_t> bytecode(allocator, driver->binding_size);
-      for (uint32_t i = 0; i < driver->binding_size; i++) {
-        bytecode[i] = binding->get()[i];
-      }
-
-      driver_info.set_bind_rules(allocator,
-                                 fdd::wire::BindRulesBytecode::WithBytecodeV2(allocator, bytecode));
-    } else {
-      return zx::error(ZX_ERR_INVALID_ARGS);
-    }
-    driver_info_vec.push_back(std::move(driver_info));
-  }
-
-  return zx::ok(std::move(driver_info_vec));
-}
-
-namespace {
-class DriverInfoIterator : public fidl::WireServer<fuchsia_driver_development::DriverInfoIterator> {
- public:
-  explicit DriverInfoIterator(std::unique_ptr<fidl::Arena<512>> arena,
-                              std::vector<fdd::wire::DriverInfo> list)
-      : arena_(std::move(arena)), list_(std::move(list)) {}
-
-  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
-    constexpr size_t kMaxEntries = 100;
-    auto result = cpp20::span(&list_[offset_], std::min(kMaxEntries, list_.size() - offset_));
-    offset_ += result.size();
-
-    completer.Reply(
-        fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(result.data(), result.size()));
-  }
-
- private:
-  size_t offset_ = 0;
-  std::unique_ptr<fidl::Arena<512>> arena_;
-  std::vector<fdd::wire::DriverInfo> list_;
-};
-}  // namespace
-
 void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
                                 GetDriverInfoCompleter::Sync& completer) {
   std::vector<const Driver*> driver_list;
@@ -1027,7 +945,7 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
   }
 
   auto arena = std::make_unique<fidl::Arena<512>>();
-  auto result = GetDriverInfo(*arena, driver_list);
+  auto result = ::GetDriverInfo(*arena, driver_list);
   if (result.is_error()) {
     request->iterator.Close(result.status_value());
     return;
@@ -1080,140 +998,6 @@ zx_status_t Coordinator::LoadEphemeralDriver(internal::PackageResolverInterface*
   return ZX_OK;
 }
 
-zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
-    fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices) {
-  std::vector<fdd::wire::DeviceInfo> device_info_vec;
-  for (const auto& device : devices) {
-    if (device->props().size() > fdm::wire::kPropertiesMax) {
-      return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
-    }
-    if (device->str_props().size() > fdm::wire::kPropertiesMax) {
-      return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
-    }
-
-    fdd::wire::DeviceInfo device_info(allocator);
-
-    // id leaks internal pointers, but since this is a development only API, it shouldn't be
-    // a big deal.
-    device_info.set_id(allocator, reinterpret_cast<uint64_t>(device.get()));
-
-    // TODO(fxbug.dev/80094): Handle multiple parents case.
-    fidl::VectorView<uint64_t> parent_ids(allocator, 1);
-    parent_ids[0] = reinterpret_cast<uint64_t>(device->parent().get());
-    device_info.set_parent_ids(allocator, parent_ids);
-
-    size_t child_count = 0;
-    for (const auto& child __attribute__((unused)) : device->children()) {
-      child_count++;
-    }
-    if (child_count > 0) {
-      fidl::VectorView<uint64_t> child_ids(allocator, child_count);
-      size_t i = 0;
-      for (const auto& child : device->children()) {
-        child_ids[i++] = reinterpret_cast<uint64_t>(&child);
-      }
-      device_info.set_child_ids(allocator, child_ids);
-    }
-
-    if (device->host()) {
-      device_info.set_driver_host_koid(allocator, device->host()->koid());
-    }
-
-    char path[fdm::wire::kDevicePathMax + 1];
-    if (auto status = GetTopologicalPath(device, path, sizeof(path)); status != ZX_OK) {
-      return zx::error(status);
-    }
-
-    device_info.set_topological_path(allocator, fidl::StringView(allocator, {path, strlen(path)}));
-
-    device_info.set_bound_driver_libname(
-        allocator,
-        fidl::StringView(allocator, {device->libname().data(), device->libname().size()}));
-
-    fidl::VectorView<fdm::wire::DeviceProperty> props(allocator, device->props().size());
-    for (size_t i = 0; i < device->props().size(); i++) {
-      const auto& prop = device->props()[i];
-      props[i] = fdm::wire::DeviceProperty{
-          .id = prop.id,
-          .reserved = prop.reserved,
-          .value = prop.value,
-      };
-    }
-
-    fidl::VectorView<fdm::wire::DeviceStrProperty> str_props(allocator, device->str_props().size());
-    for (size_t i = 0; i < device->str_props().size(); i++) {
-      const auto& str_prop = device->str_props()[i];
-      if (str_prop.value.valueless_by_exception()) {
-        return zx::error(ZX_ERR_INVALID_ARGS);
-      }
-
-      auto fidl_str_prop = fdm::wire::DeviceStrProperty{
-          .key = fidl::StringView(allocator, str_prop.key),
-      };
-
-      switch (str_prop.value.index()) {
-        case StrPropValueType::Integer: {
-          const auto prop_val = std::get<StrPropValueType::Integer>(str_prop.value);
-          fidl_str_prop.value = fdm::wire::PropertyValue::WithIntValue(prop_val);
-          break;
-        }
-        case StrPropValueType::String: {
-          const auto prop_val = std::get<StrPropValueType::String>(str_prop.value);
-          fidl_str_prop.value = fdm::wire::PropertyValue::WithStrValue(
-              allocator, fidl::StringView(allocator, prop_val));
-          break;
-        }
-        case StrPropValueType::Bool: {
-          const auto prop_val = std::get<StrPropValueType::Bool>(str_prop.value);
-          fidl_str_prop.value = fdm::wire::PropertyValue::WithBoolValue(prop_val);
-          break;
-        }
-        case StrPropValueType::Enum: {
-          const auto prop_val = std::get<StrPropValueType::Enum>(str_prop.value);
-          fidl_str_prop.value = fdm::wire::PropertyValue::WithEnumValue(
-              allocator, fidl::StringView(allocator, prop_val));
-          break;
-        }
-      }
-
-      str_props[i] = fidl_str_prop;
-    }
-
-    device_info.set_property_list(allocator, fdm::wire::DevicePropertyList{
-                                                 .props = props,
-                                                 .str_props = str_props,
-                                             });
-
-    device_info.set_flags(fdd::wire::DeviceFlags(device->flags));
-
-    device_info_vec.push_back(std::move(device_info));
-  }
-  return zx::ok(std::move(device_info_vec));
-}
-
-namespace {
-class DeviceInfoIterator : public fidl::WireServer<fuchsia_driver_development::DeviceInfoIterator> {
- public:
-  explicit DeviceInfoIterator(std::unique_ptr<fidl::Arena<512>> arena,
-                              std::vector<fdd::wire::DeviceInfo> list)
-      : arena_(std::move(arena)), list_(std::move(list)) {}
-
-  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
-    constexpr size_t kMaxEntries = 100;
-    auto result = cpp20::span(&list_[offset_], std::min(kMaxEntries, list_.size() - offset_));
-    offset_ += result.size();
-
-    completer.Reply(
-        fidl::VectorView<fdd::wire::DeviceInfo>::FromExternal(result.data(), result.size()));
-  }
-
- private:
-  size_t offset_ = 0;
-  std::unique_ptr<fidl::Arena<512>> arena_;
-  std::vector<fdd::wire::DeviceInfo> list_;
-};
-}  // namespace
-
 void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
                                 GetDeviceInfoCompleter::Sync& completer) {
   std::vector<fbl::RefPtr<Device>> device_list;
@@ -1235,14 +1019,19 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
   }
 
   auto arena = std::make_unique<fidl::Arena<512>>();
-  auto result = GetDeviceInfo(*arena, device_list);
+  auto result = ::GetDeviceInfo(*arena, device_list);
   if (result.is_error()) {
     request->iterator.Close(result.status_value());
     return;
   }
 
   auto iterator = std::make_unique<DeviceInfoIterator>(std::move(arena), std::move(*result));
-  fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
+  fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator),
+                   [](auto* server, fidl::UnbindInfo info, auto channel) {
+                     if (!info.is_peer_closed()) {
+                       LOGF(WARNING, "Closed DeviceInfoIterator: %s", info.lossy_description());
+                     }
+                   });
 }
 
 void Coordinator::BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
