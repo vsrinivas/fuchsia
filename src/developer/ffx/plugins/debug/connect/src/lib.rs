@@ -28,6 +28,15 @@ pub async fn connect(
 
     let socket = DebugAgentSocket::create(debugger_proxy)?;
 
+    if cmd.agent_only {
+        println!("{}", socket.unix_socket_path().display());
+        loop {
+            let _ = socket.forward_one_connection().await.map_err(|e| {
+                eprintln!("Connection to debug_agent broken: {}", e);
+            });
+        }
+    }
+
     let sdk = ffx_config::get_sdk().await?;
 
     let zxdb_path = sdk.get_host_tool("zxdb")?;

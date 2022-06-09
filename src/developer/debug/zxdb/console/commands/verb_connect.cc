@@ -39,7 +39,8 @@ Options
 
   --unix-socket
   -u
-      Attempt to connect to a unix socket. In this case <host> is a filesystem path.
+      Attempt to connect to a unix socket. In this case <host> is a filesystem
+      path.
 
 Examples
 

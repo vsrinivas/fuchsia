@@ -15,8 +15,6 @@ dart_test("fidlcat_test") {
 
   deps = [
     "//sdk/testing/sl4f/client",
-    "//third_party/dart-pkg/pub/logging",
-    "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]
 
@@ -26,8 +24,9 @@ dart_test("fidlcat_test") {
 
   # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
   # as we don't currently support Dart on arm64 hosts.
+  # TODO(fxbug.dev/100888): fix the timeout issue with asan on.
   environments = []
-  if (is_host && target_cpu == "x64") {
+  if (is_host && target_cpu == "x64" && !is_asan) {
     environments = [ emu_env ]
   }
 }
@@ -91,7 +90,9 @@ if (is_host) {
       "$_shared_out_dir/fidling/gen/sdk/fidl/fuchsia.sys/fuchsia.sys.fidl.json",
       "$_shared_out_dir/fidling/gen/src/testing/fidl/placeholders.fidl.json",
       "$_shared_out_dir/fidling/gen/src/tests/end_to_end/fidlcat/echo.fidl.json",
-      "$host_tools_dir/fidlcat",
+      "$root_out_dir/ffx",
+      "$root_out_dir/fidlcat",
+      "$root_out_dir/gen/tools/fidlcat/fidlcat_sdk.meta.json",
       "${target_gen_dir}/echo_client_placeholder.debug",
       "//src/tests/end_to_end/fidlcat/echo.pb",
       "//src/tests/end_to_end/fidlcat/echo_client.pb",
@@ -110,9 +111,11 @@ if (is_host) {
       "//sdk/fidl/fuchsia.io($fidl_toolchain)",
       "//sdk/fidl/fuchsia.mem($fidl_toolchain)",
       "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
-      "//src/developer/debug/debug_agent",
+      "//src/developer/debug/debug_agent($target_toolchain)",
+      "//src/developer/ffx:ffx_bin",
       "//src/testing/fidl:placeholders",
-      "//tools/fidlcat:fidlcat_host($host_toolchain)",
+      "//src/testing/sl4f($target_toolchain)",
+      "//tools/fidlcat",
     ]
   }
 }

@@ -21,3 +21,9 @@ Relevant code paths with unit and integration tests:
 See the [fidlcat
 docs](https://fuchsia.dev/fuchsia-src/development/monitor/fidlcat) for
 more information about fidlcat.
+
+### How to run this test manually
+
+1. Add `//src/tests/end_to_end/fidlcat:tests` to your `universe_package_labels` and `fx build`.
+2. Run `fx test fidlcat_test`.
+3. Consider uncomment some additional outputs to help debug.

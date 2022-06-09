@@ -13,6 +13,11 @@ pub struct ConnectCommand {
     #[argh(option)]
     pub debugger: Option<String>,
 
+    /// only start the debug agent but not the zxdb. The path to the UNIX socket will be printed
+    /// and can be connected via "connect -u" in zxdb shell.
+    #[argh(switch)]
+    pub agent_only: bool,
+
     /// extra arguments passed to zxdb. Any arguments starting with "-" must be after a "--" separator.
     #[argh(positional)]
     pub zxdb_args: Vec<String>,
