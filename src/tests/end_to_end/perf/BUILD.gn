@@ -22,7 +22,7 @@ test_list = [
   "diagnostics_benchmarks_test",
   "fidlc_microbenchmarks_test",
   "flatland_benchmarks_test",
-  "garnet_input_latency_benchmarks_test",
+  "input_latency_benchmarks_test",
   "kernel_boot_stats_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
@@ -219,7 +219,7 @@ group("package_deps") {
     # These are used by flatland_benchmarks.
     "//src/ui/examples:flatland-examples",
 
-    # These are used by garnet_input_latency_benchmarks.
+    # These are used by input_latency_benchmarks.
     "//src/sys/activity",
     "//src/ui/bin/input-pipeline",
     "//src/ui/examples/simplest_app",
