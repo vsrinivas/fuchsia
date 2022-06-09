@@ -1600,13 +1600,6 @@ corrupted. Setting this flag to true helps debugging corruptions.
 
 From //src/storage/fshost/generated_fshost_config.gni:29
 
-### f2fs_roll_fwd
-Enable f2fs_roll_forward
-
-**Current value (from the default):** `false`
-
-From //src/storage/f2fs/BUILD.gn:7
-
 ### fastboot_product
 
 **Current value (from the default):** `""`
