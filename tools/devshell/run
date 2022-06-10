@@ -6,7 +6,7 @@
 #### CATEGORY=Software delivery
 ### build Fuchsia and push to device
 
-## usage: fx run [--no-build|[NINJA OPTION,...]] [--no-pkg-check] [--no-kill] [--no-restart-session] TARGET [ARG,...]
+## usage: fx run [--no-build|[NINJA OPTION,...]] [--no-pkg-check] [--no-kill] TARGET [ARG,...]
 ##
 ## Build ALL targets.
 ## Execute 'fx shell killall TARGET'.
@@ -15,7 +15,6 @@
 ##   --no-build               do not execute a build
 ##   --no-pkg-check           do not check for a package server
 ##   --no-kill                do not kill all instances of matching components
-##   --no-restart-session     do not perform a sessionctl restart_session
 ##
 ## NINJA OPTION
 ## The following ninja options are passed to the build if invoked:
@@ -43,7 +42,6 @@ function main {
   local build=true
   local pkg_check=true
   local kill_components=true
-  local restart_session=true
   while (($#)); do
     case "$1" in
       --no-build)
@@ -54,9 +52,6 @@ function main {
         ;;
       --no-kill)
         kill_components=false
-        ;;
-      --no-restart-session)
-        restart_session=false
         ;;
       -C|-f|-j|-k|-l|-t|-w)
         ninja_args+=("$1")
@@ -82,12 +77,6 @@ function main {
     check-for-package-server || return 1
   fi
 
-  if $restart_session; then
-    if ! fx-command-run shell sessionctl restart_session; then
-      fx-warn "Restarting session failed"
-    fi
-  fi
-
   local r=0
   # As running components are typically named after their cmx, the
   # basename here avoids the case where a user has provided a full
@@ -96,12 +85,16 @@ function main {
   # strategy could be improved if implemented in a more featureful
   # environment.
   if $kill_components; then
-    echo >&2 Stopping "${target} with killall $(basename "${target}") ..."
+    echo >&2 "Stopping ${target} with killall $(basename "${target}") ..."
     fx-command-run shell killall "$(basename "${target}")" || true
   fi
-  echo >&2 Running "${target} with run "${target}" ..."
+  echo >&2 "Running ${target} with run "${target}" ..."
   fx-command-run shell run "${target}" "$@"
   ((r += $?))
+  echo >&2
+  fx-info "If this component exposes protocols, you may want to restart its clients."
+  fx-info "Use `ffx session restart` to restart the session or `ffx component reload`"
+  fx-info "to reload a component."
   return r
 }
 
