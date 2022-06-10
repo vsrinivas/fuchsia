@@ -35,6 +35,9 @@ Intel  | Xe+           | ✔                  | ✔               |
 ### NVIDIA Quadro K2200
 ![NVIDIA Quadro K2200](docs/images/nvidia_k2200.png)
 
+### AMD Radeon RX 6600 XT
+![AMD Radeon RX 6600 XT](docs/images/amd_rx6600xt.png)
+
 ### AMD Radeon RX 560
 ![AMD Radeon RX 560](docs/images/amd_rx560.png)
 

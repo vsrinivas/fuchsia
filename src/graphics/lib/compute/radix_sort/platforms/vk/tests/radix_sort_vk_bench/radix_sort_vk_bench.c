@@ -1763,7 +1763,7 @@ radix_sort_vk_bench(struct radix_sort_vk_bench_info const * info)
       // timestamps are in nanoseconds
       //
       fprintf(stdout,
-              "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %12.3f, %7.2f, GPU, %9u, %9u",
+              "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %12.3f, %7.2f, GPU, %9u, %9u, ",
               pdp.deviceName,
               VK_API_VERSION_VARIANT(pdp.driverVersion),
               VK_API_VERSION_MAJOR(pdp.driverVersion),
