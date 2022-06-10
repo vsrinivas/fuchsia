@@ -63,15 +63,17 @@ where
     txt.push(("sb".to_string(), (border_agent_state.bits as u32).to_be_bytes().to_vec()));
 
     // `nn` - Network Name
-    match ot_instance.get_network_name().try_as_str() {
-        Ok(nn) => txt.push(("nn".to_string(), nn.as_bytes().to_vec())),
-        Err(err) => {
-            warn!("Can't render network name: {:?}", err);
+    if ot_instance.is_commissioned() {
+        match ot_instance.get_network_name().try_as_str() {
+            Ok(nn) => txt.push(("nn".to_string(), nn.as_bytes().to_vec())),
+            Err(err) => {
+                warn!("Can't render network name: {:?}", err);
+            }
         }
-    }
 
-    // `xp` - Extended PAN-ID
-    txt.push(("xp".to_string(), ot_instance.get_extended_pan_id().as_slice().to_vec()));
+        // `xp` - Extended PAN-ID
+        txt.push(("xp".to_string(), ot_instance.get_extended_pan_id().as_slice().to_vec()));
+    }
 
     // `vn` - Vendor Name
     txt.push(("vn".to_string(), vendor.as_bytes().to_vec()));
