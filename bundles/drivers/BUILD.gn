@@ -100,3 +100,11 @@ group("pci") {
     ]
   }
 }
+
+group("conformance-tests") {
+  testonly = true
+  deps = [
+    "//src/devices/light-sensor/drivers/ams-light:ams-light-test",
+    "//src/ui/tools/print-input-report:print-input-report-test",
+  ]
+}
