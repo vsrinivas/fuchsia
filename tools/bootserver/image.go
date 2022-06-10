@@ -232,6 +232,7 @@ func ImagesFromGCS(ctx context.Context, manifest *url.URL, bootMode Mode) ([]Ima
 			Size:         objAttrs.Size,
 			Args:         args,
 			IsExecutable: isExecutable(buildImg.Type),
+			IsFlashable:  isFlashable(buildImg),
 		})
 	}
 
