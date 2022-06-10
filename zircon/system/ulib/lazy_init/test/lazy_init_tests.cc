@@ -43,13 +43,6 @@ union Storage {
   T value;
 };
 
-template <typename Type>
-inline void DoNotOptimize(const Type& value) {
-  // The "memory" constraint tells the compiler that the inline assembly
-  // must be assumed to access memory that |value| points to.
-  asm volatile("" : : "g"(value) : "memory");
-}
-
 template <CheckType Check, Destructor Enabled>
 void lazy_init_test() {
   // Define a unique test type for this test instantiation.
@@ -69,11 +62,6 @@ void lazy_init_test() {
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
-
-  // Work around a bug in the LazyInit implementation which causes the
-  // compiler to optimize away an assertion.
-  // TODO(fxbug.dev/55268): Fix the bug and remove this workaround.
-  DoNotOptimize(&test_value);
 
   const auto dereference_test = [] { test_value->Method(); };
 
@@ -177,6 +165,18 @@ class TypeWithPrivateCtor {
 TEST(LazyInitTest, PrivateCtor) {
   LazyInit<TypeWithPrivateCtor, CheckType::None, Destructor::Disabled> instance;
   instance.Initialize(0);
+}
+
+// Verify the initialization guard is initialized during LazyInit's construction.
+TEST(LazyInitTest, InitializeGuardIsInitialized) {
+  {
+    LazyInit<TestType<>, CheckType::Basic> basic_instance;
+    basic_instance.Initialize();
+  }
+  {
+    LazyInit<TestType<>, CheckType::Atomic> atomic_instance;
+    atomic_instance.Initialize();
+  }
 }
 
 }  // anonymous namespace

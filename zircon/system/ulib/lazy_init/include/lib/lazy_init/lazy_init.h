@@ -127,8 +127,8 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
   T& Initialize(Args&&... args) {
     static_assert(alignof(LazyInit) >= alignof(T));
 
-    ZX_ASSERT(!*initialized_);
-    *initialized_ = true;
+    ZX_ASSERT(!initialized_);
+    initialized_ = true;
     Access::Initialize(&storage_.value, std::forward<Args>(args)...);
     return *storage_;
   }
@@ -137,12 +137,12 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
   // is already performed, however, it is up to the caller to ensure that the
   // effects of initialization are visible.
   T& Get() {
-    ZX_ASSERT(*initialized_);
+    ZX_ASSERT(initialized_);
     return *storage_;
   }
 
   const T& Get() const {
-    ZX_ASSERT(*initialized_);
+    ZX_ASSERT(initialized_);
     return *storage_;
   }
 
@@ -166,11 +166,11 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
   // Explicitly destroys the wrapped global. Called by the specialization of
   // LazyInit with the destructor enabled.
   void Destruct() {
-    ZX_ASSERT(*initialized_);
+    ZX_ASSERT(initialized_);
     storage_->T::~T();
 
     // Prevent the compiler from omitting this write during destruction.
-    static_cast<volatile bool&>(*initialized_) = false;
+    static_cast<volatile bool&>(initialized_) = false;
   }
 
   // Lazy-initialized storage for a value of type T.
@@ -178,7 +178,7 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
 
   // Guard variable to check for multiple initializations and access before
   // initialization.
-  internal::LazyInitStorage<bool> initialized_;
+  bool initialized_{};
 };
 
 // Specialization that provides atomic consistency checks. Checks are guaranteed
@@ -203,7 +203,7 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
 
     TransitionState(State::Uninitialized, State::Constructing);
     Access::Initialize(&storage_.value, std::forward<Args>(args)...);
-    state_->store(State::Initialized, std::memory_order_release);
+    state_.store(State::Initialized, std::memory_order_release);
 
     return *storage_;
   }
@@ -212,12 +212,12 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   // is already performed. The effects of initialization are guaranteed to be
   // visible if the assertion passes.
   T& Get() {
-    AssertState(State::Initialized, state_->load(std::memory_order_relaxed));
+    AssertState(State::Initialized, state_.load(std::memory_order_relaxed));
     return *storage_;
   }
 
   const T& Get() const {
-    AssertState(State::Initialized, state_->load(std::memory_order_relaxed));
+    AssertState(State::Initialized, state_.load(std::memory_order_relaxed));
     return *storage_;
   }
 
@@ -256,10 +256,10 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   // Transitions the guard from the |expected| state to the |target| state.
   // Asserts that the expected state matches the actual state.
   void TransitionState(State expected, State target) {
-    State actual = state_->load(std::memory_order_relaxed);
+    State actual = state_.load(std::memory_order_relaxed);
     AssertState(expected, actual);
-    while (!state_->compare_exchange_weak(actual, target, std::memory_order_acquire,
-                                          std::memory_order_relaxed)) {
+    while (!state_.compare_exchange_weak(actual, target, std::memory_order_acquire,
+                                         std::memory_order_relaxed)) {
       AssertState(expected, actual);
     }
   }
@@ -269,7 +269,7 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   void Destruct() {
     TransitionState(State::Initialized, State::Destructing);
     storage_->T::~T();
-    state_->store(State::Destroyed, std::memory_order_release);
+    state_.store(State::Destroyed, std::memory_order_release);
   }
 
   // Lazy-initialized storage for a value of type T.
@@ -277,7 +277,7 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
 
   // Guard variable to check for multiple initializations and access before
   // initialization.
-  internal::LazyInitStorage<std::atomic<State>> state_;
+  std::atomic<State> state_{};
 };
 
 // Specialization that includes a global destructor. This type is based on the
