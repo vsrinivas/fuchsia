@@ -9,8 +9,10 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <thread>
 
 #include "command_buffer.h"
+#include "magma_util/semaphore_port.h"
 #include "magma_util/status.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
@@ -24,25 +26,6 @@ class MsdIntelConnection;
 // Base context, not tied to a connection.
 class MsdIntelContext {
  public:
-  // Context for handling a wait semaphore.
-  struct HandleWaitContext {
-    HandleWaitContext(MsdIntelContext* context,
-                      std::shared_ptr<magma::PlatformSemaphore> semaphore) {
-      this->context = context;
-      this->semaphore = std::move(semaphore);
-      this->completed = false;
-      this->cancel_token = nullptr;
-    }
-
-    static void Completer(void* context, magma_status_t status, magma_handle_t handle);
-    static void Starter(void* context, void* cancel_token);
-
-    MsdIntelContext* context;  // set to null if the context is shutdown
-    std::shared_ptr<magma::PlatformSemaphore> semaphore;
-    bool completed;
-    void* cancel_token;
-  };
-
   explicit MsdIntelContext(std::shared_ptr<AddressSpace> address_space)
       : address_space_(std::move(address_space)) {
     DASSERT(address_space_);
@@ -51,6 +34,8 @@ class MsdIntelContext {
   MsdIntelContext(std::shared_ptr<AddressSpace> address_space,
                   std::weak_ptr<MsdIntelConnection> connection)
       : address_space_(std::move(address_space)), connection_(std::move(connection)) {}
+
+  ~MsdIntelContext();
 
   // The context has a single target command streamer so that mapping release batches and pipeline
   // fence batches are processed by the appropriate command streamer.
@@ -74,7 +59,10 @@ class MsdIntelContext {
 
   void Kill();
 
-  size_t GetQueueSize() { return presubmit_queue_.size(); }
+  size_t GetQueueSize() {
+    std::lock_guard lock(presubmit_mutex_);
+    return presubmit_queue_.size();
+  }
 
   // Gets the gpu address of the context buffer if mapped.
   bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
@@ -119,16 +107,10 @@ class MsdIntelContext {
   magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch);
 
-  std::vector<std::shared_ptr<magma::PlatformSemaphore>> GetWaitSemaphores() const;
-
-  void UpdateWaitSet();
   void Shutdown();
 
  private:
-  void AddToWaitset(std::shared_ptr<MsdIntelConnection> connection,
-                    std::shared_ptr<magma::PlatformSemaphore> semaphore);
-  void WaitComplete(HandleWaitContext* wait_context, magma_status_t status);
-  magma::Status ProcessPresubmitQueue();
+  magma::Status SubmitBatchLocked() MAGMA_REQUIRES(presubmit_mutex_);
 
   struct PerEngineState {
     std::shared_ptr<MsdIntelBuffer> context_buffer;
@@ -144,9 +126,10 @@ class MsdIntelContext {
   std::shared_ptr<AddressSpace> address_space_;
 
   std::weak_ptr<MsdIntelConnection> connection_;
-  std::queue<std::unique_ptr<MappedBatch>> presubmit_queue_;
-  // The wait set tracks pending semaphores for the head of the presubmit queue.
-  std::vector<HandleWaitContext*> wait_set_;
+  std::unique_ptr<magma::SemaphorePort> semaphore_port_;
+  std::thread wait_thread_;
+  std::mutex presubmit_mutex_;
+  std::queue<std::unique_ptr<MappedBatch>> presubmit_queue_ MAGMA_GUARDED(presubmit_mutex_);
   bool killed_ = false;
 
   friend class TestContext;

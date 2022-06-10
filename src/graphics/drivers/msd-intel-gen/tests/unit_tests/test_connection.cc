@@ -12,18 +12,6 @@
 
 class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection::Owner {
  public:
-  ~TestMsdIntelConnection() {
-    // Call back completions just to prevent memory leaks
-    for (auto& n : notifications_) {
-      if (n.type == MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT) {
-        static int cancel_token;
-        n.u.handle_wait.starter(n.u.handle_wait.wait_context, &cancel_token);
-        n.u.handle_wait.completer(n.u.handle_wait.wait_context, MAGMA_STATUS_OK,
-                                  n.u.handle_wait.handle);
-      }
-    }
-  }
-
   void SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
     if (submit_batch_handler_)
       submit_batch_handler_(std::move(batch));
@@ -49,15 +37,10 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
   static void NotificationCallbackStatic(void* token, msd_notification_t* notification) {
     reinterpret_cast<TestMsdIntelConnection*>(token)->NotificationCallback(notification);
   }
-
   void NotificationCallback(msd_notification_t* notification) {
     EXPECT_EQ(MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND, notification->type);
     constexpr uint32_t kMaxUint64PerSend = MSD_CHANNEL_SEND_MAX_SIZE / sizeof(uint64_t);
-
-    uint32_t count = callback_counts_[notification->type];
-    callback_counts_[notification->type] += 1;
-
-    switch (count) {
+    switch (callback_count_++) {
       case 0:
         EXPECT_EQ(kMaxUint64PerSend, notification->u.channel_send.size / sizeof(uint64_t));
         for (uint32_t i = 0; i < notification->u.channel_send.size / sizeof(uint64_t); i++) {
@@ -82,7 +65,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     auto connection = MsdIntelConnection::Create(this, 0);
     ASSERT_TRUE(connection);
 
-    connection->SetNotificationCallback(CallbackCounter, this);
+    connection->SetNotificationCallback(KillCallbackStatic, this);
 
     std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
     std::shared_ptr<GpuMapping> mapping;
@@ -100,10 +83,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
 
     mapping.reset();
     connection->ReleaseBuffer(buffer->platform_buffer());
-
-    for (auto iter : callback_counts_) {
-      EXPECT_EQ(0u, iter.second);
-    }
+    EXPECT_EQ(0u, callback_count_);
 
     EXPECT_EQ(2u, batch_count);
   }
@@ -118,9 +98,8 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     context->SetTargetCommandStreamer(RENDER_COMMAND_STREAMER);
 
     size_t expected_flush_batches = context->GetTargetCommandStreamers().size();
-    EXPECT_GE(expected_flush_batches, 1u);
 
-    connection->SetNotificationCallback(CallbackCounter, this);
+    connection->SetNotificationCallback(KillCallbackStatic, this);
 
     std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
     std::shared_ptr<GpuMapping> mapping;
@@ -132,10 +111,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
     uint32_t wait_callback_count = 0;
-    auto wait_callback = [&](std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores,
-                             uint32_t timeout_ms) {
-      EXPECT_EQ(semaphores.size(), 1u);
-
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
       wait_callback_count += 1;
 
       if (wait_callback_count == 1) {
@@ -148,7 +124,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
 
       // The pipeline flush batch is submitted, then destroyed by the submit handler
       // in the test harness.
-      EXPECT_EQ(MAGMA_STATUS_OK, semaphores[0]->WaitNoReset(timeout_ms).get());
+      EXPECT_EQ(MAGMA_STATUS_OK, event->Wait(timeout_ms).get());
       mapping.reset();
       return magma::Status(MAGMA_STATUS_OK);
     };
@@ -164,10 +140,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
 
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
-    for (auto iter : callback_counts_) {
-      EXPECT_EQ(0u, iter.second);
-    }
-
+    EXPECT_EQ(0u, callback_count_);
     EXPECT_FALSE(connection->sent_context_killed());
 
     EXPECT_EQ(expected_flush_batches + 2, batch_count);
@@ -179,7 +152,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     auto connection = std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(this, 0));
     ASSERT_TRUE(connection);
 
-    connection->SetNotificationCallback(CallbackCounter, this);
+    connection->SetNotificationCallback(KillCallbackStatic, this);
 
     std::vector<std::shared_ptr<MsdIntelContext>> contexts;
     contexts.push_back(MsdIntelConnection::CreateContext(connection));
@@ -199,11 +172,8 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
     uint32_t wait_callback_count = 0;
-    auto wait_callback = [&](std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores,
-                             uint32_t timeout_ms) {
-      EXPECT_EQ(semaphores.size(), 1u);
-      EXPECT_EQ(MAGMA_STATUS_OK, semaphores[0]->WaitNoReset(timeout_ms).get());
-
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
+      EXPECT_EQ(MAGMA_STATUS_OK, event->Wait(timeout_ms).get());
       wait_callback_count += 1;
       if (wait_callback_count == contexts.size()) {
         mapping.reset();
@@ -223,11 +193,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
     EXPECT_EQ(wait_callback_count, contexts.size());
-
-    for (auto iter : callback_counts_) {
-      EXPECT_EQ(0u, iter.second);
-    }
-
+    EXPECT_EQ(0u, callback_count_);
     EXPECT_FALSE(connection->sent_context_killed());
 
     EXPECT_EQ(expected_flush_batches + 2, batch_count);
@@ -237,25 +203,23 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     }
   }
 
-  void ReleaseBufferCommandBuffer(bool command_buffer_stuck) {
+  void ReleaseBufferStuckCommandBuffer() {
     auto connection = std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(this, 0));
     ASSERT_TRUE(connection);
 
-    connection->SetNotificationCallback(CallbackCounter, this);
+    connection->SetNotificationCallback(KillCallbackStatic, this);
 
     auto context = MsdIntelConnection::CreateContext(connection);
     context->SetTargetCommandStreamer(RENDER_COMMAND_STREAMER);
 
     std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
-    {
-      std::shared_ptr<GpuMapping> mapping;
-      EXPECT_TRUE(AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer, 0x10000, 0, 1,
-                                             &mapping));
-      ASSERT_TRUE(mapping);
-      EXPECT_TRUE(connection->per_process_gtt()->AddMapping(std::move(mapping)));
-    }
+    std::shared_ptr<GpuMapping> mapping;
+    EXPECT_TRUE(
+        AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer, 0x10000, 0, 1, &mapping));
+    ASSERT_TRUE(mapping);
+    EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
-    // Send a command buffer
+    // Send a command buffer that waits forever
     auto command = std::make_unique<magma_command_buffer>();
     command->resource_count = 1;
     command->batch_buffer_resource_index = 0;
@@ -275,62 +239,21 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     ASSERT_EQ(MAGMA_STATUS_OK, context->SubmitCommandBuffer(std::move(command_buffer)).get());
 
     uint32_t wait_callback_count = 0;
-    auto wait_callback = [&](std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores,
-                             uint32_t timeout_ms) {
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
       wait_callback_count += 1;
-
-      if (command_buffer_stuck)
-        return MAGMA_STATUS_TIMED_OUT;
-
-      if (semaphores.size() > 1) {
-        // By signalling the wait semaphore, the command buffer should be submitted, and the
-        // pipeline fences after it.
-        EXPECT_EQ(semaphores.size(), 2u);
-        wait_semaphore->Signal();
-        return MAGMA_STATUS_OK;
-      }
-
       return MAGMA_STATUS_TIMED_OUT;
     };
 
-    std::map<MappedBatch::BatchType, int> batch_count;
-    submit_batch_handler_ = [&](std::unique_ptr<MappedBatch> batch) {
-      batch_count[batch->GetType()] += 1;
-    };
+    size_t batch_count = 0;
+    submit_batch_handler_ = [&](std::unique_ptr<MappedBatch> batch) { batch_count += 1; };
 
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
-    EXPECT_EQ(wait_callback_count, 1u);
+    EXPECT_EQ(1u, wait_callback_count);
+    EXPECT_EQ(1u, callback_count_);
+    EXPECT_TRUE(connection->sent_context_killed());
 
-    for (auto iter : callback_counts_) {
-      uint32_t count = iter.second;
-      switch (iter.first) {
-        case MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT:
-          EXPECT_EQ(1u, count);
-          break;
-        case MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED:
-          EXPECT_EQ(command_buffer_stuck ? 1u : 0u, count);
-          break;
-        case MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND:
-          EXPECT_EQ(command_buffer_stuck ? 0u : 1u, count);
-          break;
-        default:
-          EXPECT_EQ(0u, count) << "type " << iter.first;
-      }
-    }
-
-    if (command_buffer_stuck) {
-      EXPECT_TRUE(connection->sent_context_killed());
-      EXPECT_EQ(0u, batch_count.size());
-    } else {
-      EXPECT_FALSE(connection->sent_context_killed());
-      EXPECT_EQ(batch_count[MappedBatch::COMMAND_BUFFER], 1);
-      EXPECT_EQ(batch_count[MappedBatch::PIPELINE_FENCE_BATCH], 1);
-      EXPECT_EQ(batch_count[MappedBatch::MAPPING_RELEASE_BATCH], 2);
-    }
-
-    // Ensure wait semaphore is reset
-    EXPECT_FALSE(wait_semaphore->WaitNoReset(0));
+    EXPECT_EQ(0u, batch_count);
 
     connection->SetNotificationCallback(nullptr, nullptr);
 
@@ -351,8 +274,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     ASSERT_TRUE(mapping);
     EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
-    auto wait_callback = [&](std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores,
-                             uint32_t timeout_ms) {
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
       // Should never be called.
       EXPECT_TRUE(false);
       return MAGMA_STATUS_OK;
@@ -387,21 +309,16 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     }
   }
 
-  static void CallbackCounter(void* token, msd_notification_t* notification) {
-    auto test = reinterpret_cast<TestMsdIntelConnection*>(token);
-    test->callback_counts_[notification->type] += 1;
-    // Track notifications for cleanup purposes
-    test->notifications_.push_back(*notification);
+  static void KillCallbackStatic(void* token, msd_notification_t* notification) {
+    EXPECT_EQ(MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED, notification->type);
+    reinterpret_cast<TestMsdIntelConnection*>(token)->callback_count_++;
   }
 
  private:
   MockBusMapper mock_bus_mapper_;
   std::vector<uint64_t> test_buffer_ids_;
-  // Map of notification types to counts
-  std::map<uint64_t, uint32_t> callback_counts_;
+  uint32_t callback_count_ = 0;
   std::function<void(std::unique_ptr<MappedBatch> batch)> submit_batch_handler_;
-  // Notifications to be cleaned up to avoid leaks
-  std::vector<msd_notification_t> notifications_;
 };
 
 TEST_F(TestMsdIntelConnection, Notification) { Notification(); }
@@ -418,10 +335,8 @@ TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMappedNoContext) {
   ReleaseBufferWhileMappedNoContext();
 }
 
-TEST_F(TestMsdIntelConnection, ReleaseBufferCommandBuffer) { ReleaseBufferCommandBuffer(false); }
-
-TEST_F(TestMsdIntelConnection, ReleaseBufferCommandBufferStuck) {
-  ReleaseBufferCommandBuffer(true);
+TEST_F(TestMsdIntelConnection, ReleaseBufferStuckCommandBuffer) {
+  ReleaseBufferStuckCommandBuffer();
 }
 
 TEST_F(TestMsdIntelConnection, ReuseGpuAddrWithoutRelease) { ReuseGpuAddrWithoutRelease(); }

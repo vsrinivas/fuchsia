@@ -55,15 +55,8 @@ enum MSD_CONNECTION_NOTIFICATION_TYPE {
   MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND = 1,
   MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED = 2,
   MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED = 3,
-  MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT = 4,
-  MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT_CANCEL = 5,
 };
 
-typedef void (*msd_connection_handle_wait_complete_t)(void* context, magma_status_t status,
-                                                      magma_handle_t handle);
-typedef void (*msd_connection_handle_wait_start_t)(void* context, void* cancel_token);
-
-// TODO(fxbug.dev/100946) - rename to "callback"
 struct msd_notification_t {
   uint64_t type;
   union {
@@ -79,15 +72,6 @@ struct msd_notification_t {
       uint64_t timestamp;
       uint32_t result_flags;
     } perf_counter_result;
-    struct {
-      msd_connection_handle_wait_start_t starter;
-      msd_connection_handle_wait_complete_t completer;
-      void* wait_context;
-      magma_handle_t handle;
-    } handle_wait;
-    struct {
-      void* cancel_token;
-    } handle_wait_cancel;
   } u;
 };
 

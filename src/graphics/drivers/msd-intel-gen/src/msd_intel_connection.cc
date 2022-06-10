@@ -7,7 +7,6 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "msd_intel_context.h"
-#include "platform_trace.h"
 #include "ppgtt.h"
 
 void msd_connection_close(msd_connection_t* connection) {
@@ -117,28 +116,14 @@ void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* b
 }
 
 void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer) {
-  ReleaseBuffer(buffer, [](std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores,
-                           uint32_t timeout_ms) {
-    auto port = magma::PlatformPort::Create();
-    uint64_t key;
-
-    for (auto& semaphore : semaphores) {
-      if (!semaphore->WaitAsync(port.get(), &key)) {
-        DASSERT(false);
-      }
-    }
-
-    // Semaphores may be context wait semaphores or a pipeline fence so we return when any
-    // semaphore is signaled.
-    return port->Wait(&key, timeout_ms);
+  ReleaseBuffer(buffer, [](magma::PlatformEvent* event, uint32_t timeout_ms) {
+    return event->Wait(timeout_ms);
   });
 }
 
 void MsdIntelConnection::ReleaseBuffer(
     magma::PlatformBuffer* buffer,
-    std::function<magma::Status(std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores,
-                                uint32_t timeout_ms)>
-        wait_callback) {
+    std::function<magma::Status(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback) {
   std::vector<std::shared_ptr<GpuMapping>> mappings;
   per_process_gtt()->ReleaseBuffer(buffer, &mappings);
 
@@ -171,7 +156,7 @@ void MsdIntelConnection::ReleaseBuffer(
       // Also send one per command streamer since command streamers may operate in parallel.
       std::set<EngineCommandStreamerId> command_streamers = context->GetTargetCommandStreamers();
       for (auto command_streamer : command_streamers) {
-        auto event = std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
+        auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
 
         {
           auto batch = std::make_unique<PipelineFenceBatch>(context, event);
@@ -185,23 +170,12 @@ void MsdIntelConnection::ReleaseBuffer(
         // for the hardware, so we wait forever (unless there's a stuck command buffer).
         while (true) {
           {
-            auto semaphores = context->GetWaitSemaphores();
-            semaphores.push_back(event);
-
             TRACE_DURATION("magma", "stall on release");
             constexpr uint32_t kStallMaxMs = 1000;
-            auto status = wait_callback(semaphores, kStallMaxMs);
-
+            auto status = wait_callback(event.get(), kStallMaxMs);
             if (status.ok()) {
-              // Submits any command buffers if they're ready
-              context->UpdateWaitSet();
-
-              if (event->WaitNoReset(0)) {
-                break;
-              }
-
-              // Wait again
-              continue;
+              // Event signaled
+              break;
             }
           }
 

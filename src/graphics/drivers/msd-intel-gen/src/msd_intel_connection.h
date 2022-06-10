@@ -55,13 +55,6 @@ class MsdIntelConnection {
     sent_context_killed_ = true;
   }
 
-  void AddHandleWait(msd_connection_handle_wait_complete_t completer,
-                     msd_connection_handle_wait_start_t starter, void* wait_context,
-                     magma_handle_t handle) {
-    notifications_.AddHandleWait(completer, starter, wait_context, handle);
-  }
-  void CancelHandleWait(void* cancel_token) { notifications_.CancelHandleWait(cancel_token); }
-
   // Maps |page_count| pages of the given |buffer| at |page_offset| to |gpu_addr| into the
   // GPU address space belonging to this connection.
   magma::Status MapBufferGpu(std::shared_ptr<MsdIntelBuffer> buffer, uint64_t gpu_addr,
@@ -75,12 +68,9 @@ class MsdIntelConnection {
 
   bool sent_context_killed() { return sent_context_killed_; }
 
-  // The given callback should return when any of the given semaphores are signaled.
   void ReleaseBuffer(
       magma::PlatformBuffer* buffer,
-      std::function<magma::Status(
-          std::vector<std::shared_ptr<magma::PlatformSemaphore>>& semaphores, uint32_t timeout_ms)>
-          wait_callback);
+      std::function<magma::Status(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback);
 
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
 
@@ -115,29 +105,6 @@ class MsdIntelConnection {
       std::lock_guard<std::mutex> lock(mutex_);
       if (callback_ && token_) {
         msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED};
-        callback_(token_, &notification);
-      }
-    }
-
-    void AddHandleWait(msd_connection_handle_wait_complete_t completer,
-                       msd_connection_handle_wait_start_t starter, void* wait_context,
-                       magma_handle_t handle) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (callback_ && token_) {
-        msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT};
-        notification.u.handle_wait = {.starter = starter,
-                                      .completer = completer,
-                                      .wait_context = wait_context,
-                                      .handle = handle};
-        callback_(token_, &notification);
-      }
-    }
-
-    void CancelHandleWait(void* cancel_token) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (callback_ && token_) {
-        msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT_CANCEL};
-        notification.u.handle_wait_cancel = {.cancel_token = cancel_token};
         callback_(token_, &notification);
       }
     }
