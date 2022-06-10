@@ -5,7 +5,7 @@
 #ifndef SRC_TESTS_FIDL_DYN_SUITE_HARNESS_HARNESS_H_
 #define SRC_TESTS_FIDL_DYN_SUITE_HARNESS_HARNESS_H_
 
-#include <fidl/fidl.dynsuite/cpp/wire.h>
+#include <fidl/fidl.dynsuite/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/client.h>
@@ -66,7 +66,7 @@ class Observations final {
 // The ObserverOrchestrator is responsible for listening to
 // `fidl.dynsuite/Observation` sent by the bindings under test, and orchestating
 // the actions that these should lead to.
-class ObserverOrchestrator final : public fidl::WireServer<fidl_dynsuite::Observer> {
+class ObserverOrchestrator final : public fidl::Server<fidl_dynsuite::Observer> {
  public:
   ObserverOrchestrator(async_dispatcher_t* dispatcher,
                        fidl::ServerEnd<fidl_dynsuite::Observer> server_end,
@@ -74,7 +74,7 @@ class ObserverOrchestrator final : public fidl::WireServer<fidl_dynsuite::Observ
       : server_ref_(fidl::BindServer(dispatcher, std::move(server_end), this)),
         on_completion_callback_(on_completion_callback) {}
 
-  void Observe(ObserveRequestView request, ObserveCompleter::Sync& _completer);
+  void Observe(ObserveRequest& request, ObserveCompleter::Sync& _completer) override;
 
   void RecordInto(std::vector<Observation>* observations);
 
@@ -93,7 +93,7 @@ class TestBase;
 class TestContext final {
  public:
   TestContext(TestBase* test_base, async_dispatcher_t* dispatcher,
-              fidl::WireClient<fidl_dynsuite::Entry>& entry_client)
+              fidl::Client<fidl_dynsuite::Entry>& entry_client)
       : stage_(Stage::kInitial),
         test_base_(test_base),
         dispatcher_(dispatcher),
@@ -120,7 +120,7 @@ class TestContext final {
   Stage stage_;
   TestBase* test_base_;
   async_dispatcher_t* dispatcher_;
-  fidl::WireClient<fidl_dynsuite::Entry>& entry_client_;
+  fidl::Client<fidl_dynsuite::Entry>& entry_client_;
   fidl::ClientEnd<fidl_dynsuite::ServerTest> client_end_to_test_;
   fidl::ServerEnd<fidl_dynsuite::ClientTest> server_end_to_test_;
   std::optional<ObserverOrchestrator> observer_orchestrator_;
@@ -178,7 +178,7 @@ class TestBase : private ::loop_fixture::RealLoop, public ::testing::Test {
   TestContext& context();
 
  private:
-  std::optional<fidl::WireClient<fidl_dynsuite::Entry>> entry_client_;
+  std::optional<fidl::Client<fidl_dynsuite::Entry>> entry_client_;
   std::optional<TestContext> context_;
 };
 

@@ -42,23 +42,23 @@ std::ostream& operator<<(std::ostream& os, const Observation::Kind& kind) {
   return os;
 }
 
-void ObserverOrchestrator::Observe(ObserveRequestView request, ObserveCompleter::Sync& _completer) {
+void ObserverOrchestrator::Observe(ObserveRequest& request, ObserveCompleter::Sync& _completer) {
   // Record the observation.
   if (to_record_) {
-    switch (request->observation.Which()) {
-      case fidl_dynsuite::wire::Observation::Tag::kOnBind:
+    switch (request.observation().Which()) {
+      case fidl_dynsuite::Observation::Tag::kOnBind:
         to_record_->emplace_back(Observation::Kind::kOnBind);
         break;
-      case fidl_dynsuite::wire::Observation::Tag::kOnUnbind:
+      case fidl_dynsuite::Observation::Tag::kOnUnbind:
         to_record_->emplace_back(Observation::Kind::kOnUnbind);
         break;
-      case fidl_dynsuite::wire::Observation::Tag::kOnComplete:
+      case fidl_dynsuite::Observation::Tag::kOnComplete:
         to_record_->emplace_back(Observation::Kind::kOnComplete);
         break;
-      case fidl_dynsuite::wire::Observation::Tag::kOnError:
+      case fidl_dynsuite::Observation::Tag::kOnError:
         to_record_->emplace_back(Observation::Kind::kOnError);
         break;
-      case fidl_dynsuite::wire::Observation::Tag::kOnMethodInvocation:
+      case fidl_dynsuite::Observation::Tag::kOnMethodInvocation:
         to_record_->emplace_back(Observation::Kind::kOnMethodInvocation);
         break;
       default:
@@ -66,33 +66,33 @@ void ObserverOrchestrator::Observe(ObserveRequestView request, ObserveCompleter:
     }
   }
 
-  switch (request->observation.Which()) {
-    case fidl_dynsuite::wire::Observation::Tag::kOnBind:
+  switch (request.observation().Which()) {
+    case fidl_dynsuite::Observation::Tag::kOnBind:
       std::cout << "observed: on bind" << std::endl;
       break;
-    case fidl_dynsuite::wire::Observation::Tag::kOnUnbind:
+    case fidl_dynsuite::Observation::Tag::kOnUnbind:
       std::cout << "observed: on unbind" << std::endl;
       break;
-    case fidl_dynsuite::wire::Observation::Tag::kOnComplete:
+    case fidl_dynsuite::Observation::Tag::kOnComplete:
       std::cout << "observed: on complete" << std::endl;
       on_completion_callback_();
       break;
-    case fidl_dynsuite::wire::Observation::Tag::kOnMethodInvocation: {
+    case fidl_dynsuite::Observation::Tag::kOnMethodInvocation: {
       std::string name;
-      switch (request->observation.on_method_invocation().method) {
+      switch (request.observation().on_method_invocation()->method()) {
         case fidl_dynsuite::wire::Method::kOneWayInteractionNoPayload:
           name = "OneWayInteractionNoPayload";
           break;
       }
       std::cout << "observed: on method invocation of " << name << " @ "
-                << static_cast<int32_t>(request->observation.on_method_invocation().method_point)
+                << static_cast<int32_t>(
+                       request.observation().on_method_invocation()->method_point())
                 << std::endl;
     } break;
-    case fidl_dynsuite::wire::Observation::Tag::kOnError:
-      std::cout << "observed: context=" << request->observation.on_error().context.get()
-                << ", error="
+    case fidl_dynsuite::Observation::Tag::kOnError:
+      std::cout << "observed: context=" << request.observation().on_error()->context() << ", error="
                 << zx_status_get_string(
-                       static_cast<zx_status_t>(request->observation.on_error().err))
+                       static_cast<zx_status_t>(request.observation().on_error()->err()))
                 << std::endl;
       break;
   }
@@ -116,8 +116,9 @@ void TestContext::start_server_test() {
   ZX_ASSERT(endpoints.is_ok());
   auto [client_end_to_test, server_end_to_test] = *std::move(endpoints);
   ZX_ASSERT(entry_client_
-                ->StartServerTest(std::move(server_end_to_test), std::move(client_end_to_observer))
-                .ok());
+                ->StartServerTest({{.server_end = std::move(server_end_to_test),
+                                    .observer = std::move(client_end_to_observer)}})
+                .is_ok());
   client_end_to_test_ = std::move(client_end_to_test);
 
   stage_ = Stage::kStarted;
@@ -137,8 +138,11 @@ void TestContext::start_client_test() {
   ZX_ASSERT(endpoints.is_ok());
   auto [client_end_to_test, server_end_to_test] = *std::move(endpoints);
   ZX_ASSERT(entry_client_
-                ->StartClientTest(std::move(client_end_to_test), std::move(client_end_to_observer))
-                .ok());
+                ->StartClientTest({{
+                    .client_end = std::move(client_end_to_test),
+                    .observer = std::move(client_end_to_observer),
+                }})
+                .is_ok());
   server_end_to_test_ = std::move(server_end_to_test);
 
   stage_ = Stage::kStarted;
