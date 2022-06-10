@@ -90,8 +90,6 @@ template("clang_toolchain") {
       prefix = invoker.prefix
     }
 
-    rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
-
     # Configure builds to be restat-friendly by preserving timestamps of
     # unchanged outputs.
     _restat_rustc_prefix = ""
@@ -161,14 +159,12 @@ template("clang_toolchain") {
       _rust_concurrent_jobs = concurrent_jobs.local
     }
 
-    rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
-
     # Set all tools to defaults
     cc = "${prefix}/clang"
     cxx = "${prefix}/clang++"
     ar = "${prefix}/llvm-ar"
     ld = cxx
-    rustc = "${rebased_rustc_prefix}/rustc"
+    rustc = "${rebased_rustc_prefix}/bin/rustc"
     verify_depfile = string_join(" ",
                                  [
                                    rebase_path(python_exe_src, root_build_dir),
@@ -365,7 +361,7 @@ template("clang_toolchain") {
         # TODO(fxbug.dev/56076): Remove need for ld location.
         # On WASM builds, rust-ldd has trouble finding libLLVM.
         # This workaround allows the build to proceed.
-        shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
+        shared_lib_dir = rebase_path("$rustc_prefix/lib", root_build_dir)
         if (host_os == "mac") {
           ld_location_env = " DYLD_FALLBACK_LIBRARY_PATH=\"$shared_lib_dir\""
         } else if (host_os == "linux") {
@@ -421,7 +417,7 @@ template("clang_toolchain") {
               " -entry \".debug={{UNSTRIPPED_OUTFILE}}\""
         }
       }
-      rust_sysroot = "$rebased_rust_sysroot"
+      rust_sysroot = "$rebased_rustc_prefix"
     }
 
     # Compute common values for "rust_dylib" and "rust_cdylib".
@@ -462,7 +458,7 @@ template("clang_toolchain") {
     tool("rust_bin") {
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
-      rust_sysroot = "$rebased_rust_sysroot"
+      rust_sysroot = "$rebased_rustc_prefix"
 
       forward_variables_from(_rust_link_common, "*", [ "outputs" ])
 
@@ -521,7 +517,7 @@ template("clang_toolchain") {
           [ "{{output_dir}}/lib{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".rlib"
-      rust_sysroot = "$rebased_rust_sysroot"
+      rust_sysroot = "$rebased_rustc_prefix"
     }
 
     tool("rust_staticlib") {
@@ -547,7 +543,7 @@ template("clang_toolchain") {
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".a"
       output_prefix = "lib"
-      rust_sysroot = "$rebased_rust_sysroot"
+      rust_sysroot = "$rebased_rustc_prefix"
     }
 
     tool("rust_cdylib") {
@@ -588,7 +584,7 @@ template("clang_toolchain") {
       default_output_dir = "{{root_out_dir}}"
       default_output_extension = _dylib_extension
       output_prefix = "lib"
-      rust_sysroot = "$rebased_rust_sysroot"
+      rust_sysroot = "$rebased_rustc_prefix"
     }
 
     tool("alink") {

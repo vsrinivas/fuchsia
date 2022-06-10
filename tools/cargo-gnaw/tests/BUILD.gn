@@ -20,14 +20,14 @@ if (is_host) {
       "--test-base-dir",
       rebase_path(".", root_build_dir),
       "--rustc-binary-path",
-      "$out_rustc_prefix/rustc",
+      "$out_rustc_prefix/bin/rustc",
       "--gn-binary-path",
       rebase_path("//prebuilt/third_party/gn/${host_platform}/gn",
                   root_build_dir),
       "--cargo-binary-path",
-      "$out_rustc_prefix/cargo",
+      "$out_rustc_prefix/bin/cargo",
       "--lib-path",
-      "$out_rust_sysroot/lib",
+      "$out_rustc_prefix/lib",
     ]
 
     # Host tests are tested on different workers from those the artifacts were

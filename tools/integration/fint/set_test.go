@@ -368,7 +368,7 @@ func TestGenArgs(t *testing.T) {
 				UseGoma: true,
 			},
 			expectedArgs: []string{
-				`rustc_prefix="/tmp/rust_toolchain/bin"`,
+				`rustc_prefix="/tmp/rust_toolchain"`,
 				`use_goma=true`,
 			},
 		},

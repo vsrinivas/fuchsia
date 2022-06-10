@@ -253,7 +253,7 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 		vars["gcc_tool_dir"] = filepath.Join(contextSpec.GccToolchainDir, "bin")
 	}
 	if contextSpec.RustToolchainDir != "" {
-		vars["rustc_prefix"] = filepath.Join(contextSpec.RustToolchainDir, "bin")
+		vars["rustc_prefix"] = filepath.Join(contextSpec.RustToolchainDir)
 	}
 
 	vars["use_goma"] = staticSpec.UseGoma

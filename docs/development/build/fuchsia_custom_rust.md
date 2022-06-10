@@ -63,7 +63,7 @@ correct package manager for your machine.
    DEV_ROOT={{ '<var>' }}DEV_ROOT{{ '</var>' }}
 
    fx set core.x64 \
-     --args=rustc_prefix="\"$DEV_ROOT/rust/install/fuchsia-rust/bin\"" \
+     --args=rustc_prefix="\"$DEV_ROOT/rust/install/fuchsia-rust\"" \
      --args=rustc_version_string='"1"'
    # plus other settings such as:
    #   --with //bundles:kitchen_sink

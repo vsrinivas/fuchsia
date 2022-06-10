@@ -176,8 +176,8 @@ if (is_host) {
     _stamp = "$target_gen_dir/$target_name.stamp"
     _depfile = "$target_out_dir/$target_name.d"
     args = [
-      rebased_rust_sysroot,
-      out_rust_sysroot,
+      rebased_rustc_prefix,
+      out_rustc_prefix,
       rebase_path(_stamp, root_build_dir),
       "--depfile",
       rebase_path(_depfile, root_build_dir),
@@ -208,7 +208,7 @@ if (is_host) {
 
   host_test_data("prebuilt_toolchain_host_test_data") {
     deps = [ ":make_toolchain_host_binaries" ]
-    sources = [ "$root_build_dir/$out_rust_sysroot" ]
+    sources = [ "$root_build_dir/$out_rustc_prefix" ]
   }
 }
 

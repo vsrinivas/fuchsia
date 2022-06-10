@@ -18,7 +18,7 @@ if (is_host) {
       "--test-base-dir",
       rebase_path(test_output_dir, root_build_dir),
       "--rust-bin-dir",
-      out_rustc_prefix,
+      "$out_rustc_prefix/bin",
       "--cargo-outdated",
       rebase_path(prebuilt_cargo_outdated, root_build_dir),
       "--update-crates",

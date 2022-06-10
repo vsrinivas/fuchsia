@@ -206,7 +206,7 @@ go_test("rust_coverage_tests") {
       rebase_path("//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
                   root_build_dir),
       "--llvm-profdata",
-      "$out_rustc_prefix/llvm-profdata",
+      "$out_rustc_prefix/bin/llvm-profdata",
     ]
   }
 }

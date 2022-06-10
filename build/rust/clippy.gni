@@ -69,9 +69,9 @@ template("clippy") {
       args += invoker.rustenv
     }
     args += [
-      "$rebased_rustc_prefix/clippy-driver",
+      "$rebased_rustc_prefix/bin/clippy-driver",
       rebase_path(invoker.crate_root, root_build_dir),
-      "--sysroot=$rebased_rust_sysroot",
+      "--sysroot=$rebased_rustc_prefix",
       "--crate-type=${invoker.clippy_crate_type}",
       "{{rustflags}}",
       "-Wwarnings",  # undo -Dwarnings

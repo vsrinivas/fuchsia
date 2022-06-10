@@ -841,10 +841,10 @@ build_api_module("tool_paths") {
 group("tool_paths.metadata") {
   visibility = [ ":tool_paths" ]
   prebuilt_tools = [
-    "$rustc_prefix/cargo",
-    "$rustc_prefix/rustc",
-    "$rustc_prefix/rustdoc",
-    "$rustc_prefix/rustfmt",
+    "$rustc_prefix/bin/cargo",
+    "$rustc_prefix/bin/rustc",
+    "$rustc_prefix/bin/rustdoc",
+    "$rustc_prefix/bin/rustfmt",
     "//src/testing/perfcompare",
 
     # reclient is using fairly generic names (bootstrap, dumpstats). We may

@@ -7,7 +7,7 @@ import("//build/config/compiler.gni")
 import("//build/config/sysroot.gni")
 import("//build/fidl/toolchain.gni")
 
-default_rustc_prefix = "//prebuilt/third_party/rust/${host_platform}/bin"
+default_rustc_prefix = "//prebuilt/third_party/rust/${host_platform}"
 
 _rustc_version = read_file(
         "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version",
@@ -65,13 +65,6 @@ declare_args() {
   include_clippy = false
 }
 
-# Separate declare_args blocks to use the value of rustc_prefix from previous one.
-declare_args() {
-  # Sets a custom base directory for where rust tooling
-  # looks for the standard library
-  rust_sysroot = get_path_info(rustc_prefix, "dir")
-}
-
 if (rustc_prefix == default_rustc_prefix &&
     rustc_version_string != default_rustc_version_string) {
   # You almost never want to set this when using a prebuilt, it could result in
@@ -80,16 +73,14 @@ if (rustc_prefix == default_rustc_prefix &&
       "WARNING: Using prebuilt toolchain, but rustc_version_string is set! Toolchain updates won't be detected.")
 }
 
-# rustc_prefix/rust_sysroot paths rebased to root_build_dir, useful in string
-# expansions that go into command arguments.
+# rustc_prefix rebased to root_build_dir, useful in string expansions that go
+# into command arguments.
 rebased_rustc_prefix = rebase_path(rustc_prefix, root_build_dir)
-rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
 
-# similar to the above rebased rust paths, but the toolchain is one copied to
-# the output directory for host tests. Test targets that use this sysroot must
-# depend on //build/rust:prebuilt_toolchain_host_test_data
+# Similar to above, but the toolchain is one copied to the output directory for
+# host tests. Test targets that use this sysroot must depend on
+# //build/rust:prebuilt_toolchain_host_test_data
 out_rustc_prefix = rebase_path("$root_out_dir/rust-sysroot/bin", root_build_dir)
-out_rust_sysroot = rebase_path("$root_out_dir/rust-sysroot", root_build_dir)
 
 if (is_fuchsia) {
   rust_panic = "abort"

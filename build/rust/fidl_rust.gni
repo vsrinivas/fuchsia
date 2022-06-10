@@ -47,7 +47,7 @@ template("fidl_rust") {
       inputs = [
         json_representation,
         "//rustfmt.toml",
-        "$rustc_prefix/rustfmt",
+        "$rustc_prefix/bin/rustfmt",
         rustc_version_file,
       ]
 
@@ -59,7 +59,7 @@ template("fidl_rust") {
         "--output-filename",
         rebase_path(filename, root_build_dir),
         "--rustfmt",
-        "$rebased_rustc_prefix/rustfmt",
+        "$rebased_rustc_prefix/bin/rustfmt",
         "--rustfmt-config",
         rebase_path("//rustfmt.toml", root_build_dir),
       ]

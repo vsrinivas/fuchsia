@@ -66,7 +66,7 @@ template("verify_manifest_elf_binaries") {
       args += [
         "--check-unstripped-files",
         "--toolchain-lib-dir=${rebased_clang_prefix}/../lib",
-        "--toolchain-lib-dir=${rebased_rustc_prefix}/../lib",
+        "--toolchain-lib-dir=${rebased_rustc_prefix}/lib",
       ]
     }
     deps = invoker.deps
