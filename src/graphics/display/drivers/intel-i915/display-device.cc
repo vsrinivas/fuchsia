@@ -126,22 +126,15 @@ void DisplayDevice::LoadActiveMode() {
 }
 
 bool DisplayDevice::AttachPipe(Pipe* pipe) {
+  // Once attached, the pipe assignment never changes until the display is
+  // disconnected.
+  ZX_DEBUG_ASSERT(pipe == pipe_ || !pipe_);
   if (pipe == pipe_) {
     return false;
   }
 
-  if (pipe_) {
-    pipe_->Reset(controller_);
-    pipe_->Detach();
-  }
   if (pipe) {
     pipe->AttachToDisplay(id_, controller()->igd_opregion().IsEdp(ddi()));
-
-    if (info_.h_addressable) {
-      PipeConfigPreamble(info_, pipe->pipe(), pipe->transcoder());
-      pipe->ApplyModeConfig(info_);
-      PipeConfigEpilogue(info_, pipe->pipe(), pipe->transcoder());
-    }
   }
   pipe_ = pipe;
   return true;
