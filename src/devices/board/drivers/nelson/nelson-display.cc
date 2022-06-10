@@ -109,7 +109,7 @@ uint32_t uboot_mapping[] = {
     PANEL_UNKNOWN,           // 0 - invalid
     PANEL_KD070D82_FT,       // 1
     PANEL_TV070WSM_FT,       // 2
-    PANEL_UNKNOWN,           // 3 - should be unused
+    PANEL_P070ACB_FT,        // 3 - should be unused
     PANEL_KD070D82_FT_9365,  // 4
     PANEL_TV070WSM_FT_9365,  // 5
     PANEL_TV070WSM_ST7703I,  // 6
