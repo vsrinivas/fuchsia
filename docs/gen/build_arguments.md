@@ -3951,14 +3951,6 @@ Sets the default LTO type for rustc bulids.
 
 From //build/rust/config.gni:41
 
-### rust_sysroot
-Sets a custom base directory for where rust tooling
-looks for the standard library
-
-**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64"`
-
-From //build/rust/config.gni:72
-
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
@@ -3981,7 +3973,7 @@ From //build/config/rust/BUILD.gn:28
 Sets a custom base directory for `rustc` and `cargo`.
 This can be used to test custom Rust toolchains.
 
-**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64/bin"`
+**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64"`
 
 From //build/rust/config.gni:24
 
@@ -4003,7 +3995,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"qmZPCiTc3oMHEo1F87C15fIq82CaZ5xqdKpJOcqQTPwC"`
+**Current value (from the default):** `"Bu03CgjNquYzjOK0B2XLsSvzxxWVvLxP-gAMnOGP9gkC"`
 
 From //build/rust/config.gni:32
 
