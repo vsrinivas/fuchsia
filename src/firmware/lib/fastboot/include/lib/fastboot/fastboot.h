@@ -125,6 +125,8 @@ class __EXPORT Fastboot {
 
   zx::status<fidl::ClientEnd<fuchsia_io::Directory> *> GetSvcRoot();
 
+  fuchsia_mem::wire::Buffer GetWireBufferFromDownload();
+
   friend class FastbootDownloadTest;
 };
 

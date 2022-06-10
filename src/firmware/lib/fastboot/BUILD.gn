@@ -14,6 +14,7 @@ source_set("lib") {
   sources = [
     "fastboot.cc",
     "payload-streamer.cc",
+    "sparse_format.h",
   ]
   public_configs = [ ":include" ]
   public_deps = [

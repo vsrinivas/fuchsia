@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "payload-streamer.h"
+#include "sparse_format.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -105,6 +106,15 @@ FlashPartitionInfo GetPartitionInfo(std::string_view partition_label) {
   }
 
   return ret;
+}
+
+bool IsAndroidSparseImage(const void* img, size_t size) {
+  if (size < sizeof(sparse_header_t)) {
+    return false;
+  }
+  sparse_header_t header;
+  memcpy(&header, img, sizeof(sparse_header_t));
+  return header.magic == SPARSE_HEADER_MAGIC;
 }
 
 }  // namespace
@@ -327,14 +337,18 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver(
   return zx::ok(fidl::BindSyncClient(std::move(*paver_svc)));
 }
 
-zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
-                                     std::string_view firmware_type, Transport* transport,
-                                     fidl::WireSyncClient<fuchsia_paver::DataSink>& data_sink) {
+fuchsia_mem::wire::Buffer Fastboot::GetWireBufferFromDownload() {
   fuchsia_mem::wire::Buffer buf;
   buf.size = download_vmo_mapper_.size();
   buf.vmo = download_vmo_mapper_.Release();
+  return buf;
+}
+
+zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
+                                     std::string_view firmware_type, Transport* transport,
+                                     fidl::WireSyncClient<fuchsia_paver::DataSink>& data_sink) {
   auto ret = data_sink->WriteFirmware(config, fidl::StringView::FromExternal(firmware_type),
-                                      std::move(buf));
+                                      GetWireBufferFromDownload());
   if (ret.status() != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to invoke paver bootloader write", transport,
                         zx::error(ret.status()));
@@ -355,10 +369,7 @@ zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
 zx::status<> Fastboot::WriteAsset(fuchsia_paver::wire::Configuration config,
                                   fuchsia_paver::wire::Asset asset, Transport* transport,
                                   fidl::WireSyncClient<fuchsia_paver::DataSink>& data_sink) {
-  fuchsia_mem::wire::Buffer buf;
-  buf.size = download_vmo_mapper_.size();
-  buf.vmo = download_vmo_mapper_.Release();
-  auto ret = data_sink->WriteAsset(config, asset, std::move(buf));
+  auto ret = data_sink->WriteAsset(config, asset, GetWireBufferFromDownload());
   zx_status_t status = ret.status() == ZX_OK ? ret.value().status : ret.status();
   if (status != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to flash asset", transport, zx::error(status));
@@ -368,6 +379,10 @@ zx::status<> Fastboot::WriteAsset(fuchsia_paver::wire::Configuration config,
 }
 
 zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
+  if (IsAndroidSparseImage(download_vmo_mapper_.start(), download_vmo_mapper_.size())) {
+    return SendResponse(ResponseType::kFail, "Android sparse image is not supported.", transport);
+  }
+
   std::vector<std::string_view> args =
       fxl::SplitString(command, ":", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (args.size() < 2) {
@@ -401,6 +416,14 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   } else if (info.partition == "vbmeta" && info.configuration) {
     return WriteAsset(*info.configuration, fuchsia_paver::wire::Asset::kVerifiedBootMetadata,
                       transport, data_sink);
+  } else if (info.partition == "fvm") {
+    auto ret = data_sink->WriteOpaqueVolume(GetWireBufferFromDownload());
+    zx_status_t status = ret.status();
+    if (status != ZX_OK) {
+      return SendResponse(ResponseType::kFail, "Failed to flash opaque fvm", transport,
+                          zx::error(status));
+    }
+    return SendResponse(ResponseType::kOkay, "", transport);
   } else if (info.partition == "fvm.sparse") {
     // Flashing the sparse format FVM image via the paver. Note that at the time this code is
     // written, the format of FVM for fuchsia has not reached at a stable point yet. However, the

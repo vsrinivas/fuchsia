@@ -17,6 +17,7 @@
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
 
+#include "sparse_format.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
@@ -746,6 +747,45 @@ TEST_F(FastbootFlashTest, OemAddStagedBootloaderFileUnsupportedFile) {
   transport.AddInPacket(command);
   zx::status<> ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, FlashRawFVM) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+  paver_test::FakePaver& fake_paver = paver();
+  fake_paver.set_expected_payload_size(download_content.size());
+
+  std::string command = "flash:fvm";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+TEST_F(FastbootFlashTest, AndroidSparseImageNotSupported) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  sparse_header_t header{
+      .magic = SPARSE_HEADER_MAGIC,
+  };
+  const uint8_t* header_ptr = reinterpret_cast<const uint8_t*>(&header);
+  std::vector<uint8_t> download_content(header_ptr, header_ptr + sizeof(header));
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+  paver_test::FakePaver& fake_paver = paver();
+  fake_paver.set_expected_payload_size(download_content.size());
+
+  std::string command = "flash:fvm";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
   const std::vector<std::string>& sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
