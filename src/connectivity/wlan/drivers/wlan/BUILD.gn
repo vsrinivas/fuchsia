@@ -55,11 +55,9 @@ fuchsia_driver_component("wlan_driver") {
   colocate = true
 }
 
-fuchsia_system_package("wlan") {
+fuchsia_driver_package("wlan") {
   package_name = "wlan-system"
-
-  deps = [ ":wlan_driver" ]
-  allowed_in_extra_deps = true
+  driver_components = [ ":wlan_driver" ]
 }
 
 group("tests") {

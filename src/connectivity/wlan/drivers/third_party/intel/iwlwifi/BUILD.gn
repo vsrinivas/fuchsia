@@ -105,14 +105,14 @@ foreach(fw_file, all_fw_files) {
   }
 }
 
-fuchsia_system_package("iwlwifi") {
-  deps = [ ":iwlwifi_driver" ]
+fuchsia_driver_package("iwlwifi") {
+  driver_components = [ ":iwlwifi_driver" ]
+  deps = []
   foreach(fw_file, all_fw_files) {
     deps += [ ":iwlwifi-firmware-" + fw_file ]
   }
   visibility = []
   visibility = [ "*" ]
-  allowed_in_extra_deps = true
 }
 
 group("tests") {

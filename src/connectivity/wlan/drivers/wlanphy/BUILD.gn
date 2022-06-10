@@ -53,9 +53,8 @@ fuchsia_driver_component("wlanphy_driver") {
   colocate = true
 }
 
-fuchsia_system_package("wlanphy") {
-  deps = [ ":wlanphy_driver" ]
-  allowed_in_extra_deps = true
+fuchsia_driver_package("wlanphy") {
+  driver_components = [ ":wlanphy_driver" ]
 }
 
 # unit tests start here
