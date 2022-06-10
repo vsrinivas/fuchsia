@@ -103,6 +103,13 @@ impl From<u32> for SeqNum {
     }
 }
 
+impl Into<u32> for SeqNum {
+    fn into(self) -> u32 {
+        let Self(x) = self;
+        x as u32
+    }
+}
+
 impl SeqNum {
     pub(crate) const fn new(x: u32) -> Self {
         Self(x as i32)
@@ -134,7 +141,7 @@ impl SeqNum {
 ///
 /// [RFC 7323 Section 2.3]: https://tools.ietf.org/html/rfc7323#section-2.3
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub(super) struct WindowSize(u32);
+pub(crate) struct WindowSize(u32);
 
 impl WindowSize {
     pub(super) const MAX: WindowSize = WindowSize(1 << 30 - 1);
@@ -151,6 +158,10 @@ impl WindowSize {
         } else {
             Some(Self(wnd))
         }
+    }
+
+    pub(crate) fn from_u16(wnd: u16) -> Self {
+        Self(wnd.into())
     }
 
     pub(super) fn new(wnd: usize) -> Option<Self> {

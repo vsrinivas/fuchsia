@@ -8,6 +8,7 @@ mod buffer;
 mod rtt;
 mod segment;
 mod seqnum;
+mod socket;
 mod state;
 
 /// Control flags that can alter the state of a TCP control block.
@@ -35,7 +36,7 @@ impl Control {
 /// Errors surfaced to the user.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-enum UserError {
+pub(crate) enum UserError {
     /// The connection was reset because of a RST segment.
     ConnectionReset,
     /// The connection was closed because of a user request.
