@@ -12,6 +12,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/event.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/pager.h>
@@ -179,6 +180,9 @@ class SingleVmoTestInstance : public TestInstance {
   std::atomic<bool> debug_pager_reset_{false};
   std::atomic<bool> debug_pager_threads_created_{false};
 
+  // If using a pager, event to signal when the VMO threads can start generating page requests.
+  zx::event pager_threads_ready_;
+
   zx::vmo vmo_{};
   zx::pager pager_;
   zx::port port_;
@@ -208,6 +212,15 @@ int SingleVmoTestInstance::vmo_thread() {
   };
 
   ZX_ASSERT(buf_size < vmo_size_);
+
+  if (use_pager_) {
+    // Wait for the pager threads to be created so that page requests can be serviced. Otherwise, we
+    // will block until the pager threads come up, which can be a while on a heavily loaded system
+    // (which is true for these stress tests), and could even cause us to hit the pager wait timeout
+    // and error out/ crash.
+    status = pager_threads_ready_.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
+    ZX_ASSERT_MSG(status == ZX_OK, "event wait failed with %s\n", zx_status_get_string(status));
+  }
 
   while (!shutdown_.load()) {
     uint64_t off, len;
@@ -453,6 +466,9 @@ zx_status_t SingleVmoTestInstance::Start() {
 
     // create a test vmo
     status = pager_.create_vmo(0, port_, 0, vmo_size_, &vmo_);
+
+    // create an event to signal when the VMO threads can start generating requests.
+    status = zx::event::create(0, &pager_threads_ready_);
   } else {
     status = zx::vmo::create(vmo_size_, 0, &vmo_);
   }
@@ -479,7 +495,12 @@ zx_status_t SingleVmoTestInstance::Start() {
     zx::unowned_thread unowned(thrd_get_zx_handle(threads_[i]));
     ZX_ASSERT(unowned->duplicate(ZX_RIGHT_SAME_RIGHTS, thread_handles_ + i) == ZX_OK);
   }
-  debug_pager_threads_created_ = use_pager_;
+
+  if (use_pager_) {
+    debug_pager_threads_created_ = true;
+    status = pager_threads_ready_.signal(0, ZX_USER_SIGNAL_0);
+    ZX_ASSERT_MSG(status == ZX_OK, "event signal failed with %s\n", zx_status_get_string(status));
+  }
   return ZX_OK;
 }
 
