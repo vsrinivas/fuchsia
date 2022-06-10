@@ -20,7 +20,6 @@ import 'package:test/test.dart';
 const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
-const stashCtlUrl = 'fuchsia-pkg://fuchsia.com/stash_ctl#meta/stash_ctl.cmx';
 const kLoginInspectSelector =
     'core/session-manager/session\\:session/workstation_session/login_shell';
 const kErmineInspectSelector =
