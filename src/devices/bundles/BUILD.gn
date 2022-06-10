@@ -114,6 +114,7 @@ group("utils") {
     "//src/devices/bin/acpidump",
     "//src/devices/bin/driver-info:driverinfo",
     "//src/devices/bin/driver-registrar",
+    "//src/devices/bin/driver_tools:driver_tools",
     "//src/devices/bin/driverctl",
     "//src/devices/bin/lsdev",
     "//src/devices/bin/register-util",
