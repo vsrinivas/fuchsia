@@ -145,6 +145,10 @@ void fidl::WireServer<::test_inheritance::Super>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_inheritance::Super::Foo>::Reply(int64_t y) {
+  return MakeReply(y);
+}
+
+void fidl::internal::WireCompleterImpl<::test_inheritance::Super::Foo>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo> _response{y};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -156,6 +160,10 @@ void fidl::internal::WireCompleterImpl<::test_inheritance::Super::Foo>::Reply(in
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Super::Foo>::Reply(int64_t y) {
+  return MakeReply(y);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Super::Foo>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo> _response{y};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_inheritance::Super::Foo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -326,6 +334,10 @@ void fidl::WireServer<::test_inheritance::Sub>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_inheritance::Sub::Foo>::Reply(int64_t y) {
+  return MakeReply(y);
+}
+
+void fidl::internal::WireCompleterImpl<::test_inheritance::Sub::Foo>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo> _response{y};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -337,6 +349,10 @@ void fidl::internal::WireCompleterImpl<::test_inheritance::Sub::Foo>::Reply(int6
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Sub::Foo>::Reply(int64_t y) {
+  return MakeReply(y);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Sub::Foo>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo> _response{y};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_inheritance::Sub::Foo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

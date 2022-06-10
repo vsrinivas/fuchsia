@@ -835,6 +835,9 @@ class ::fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protoc
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_requestflexibleenvelope::wire::FlexibleFoo f);
+
+ private:
+  void MakeReply(::test_requestflexibleenvelope::wire::FlexibleFoo f);
 };
 
 template <>
@@ -843,6 +846,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_requestflexibleenvelope::wire::FlexibleFoo f);
+
+ private:
+  void MakeReply(::test_requestflexibleenvelope::wire::FlexibleFoo f);
 };
 
 template <>
@@ -866,6 +872,9 @@ class ::fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protoc
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_requestflexibleenvelope::wire::StrictFoo f);
+
+ private:
+  void MakeReply(::test_requestflexibleenvelope::wire::StrictFoo f);
 };
 
 template <>
@@ -874,6 +883,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_requestflexibleenvelope::wire::StrictFoo f);
+
+ private:
+  void MakeReply(::test_requestflexibleenvelope::wire::StrictFoo f);
 };
 
 template <>

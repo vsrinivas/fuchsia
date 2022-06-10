@@ -160,7 +160,14 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
+void fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
   ::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -175,15 +182,21 @@ void fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMetho
   ::test_anonymous::wire::SomeProtocolSomeMethodResponse _response = ::test_anonymous::wire::SomeProtocolSomeMethodResponse{
       .bits_member = std::move(bits_member),
   };
-
-  return Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error) {
-  return Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithErr(std::move(error)));
+  return MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
   ::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_anonymous::SomeProtocol::SomeMethod>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -204,12 +217,11 @@ void fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::Som
   ::test_anonymous::wire::SomeProtocolSomeMethodResponse _response = ::test_anonymous::wire::SomeProtocolSomeMethodResponse{
       .bits_member = std::move(bits_member),
   };
-
-  return Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error) {
-  return Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithErr(std::move(error)));
+  return MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 

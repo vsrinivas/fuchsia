@@ -250,6 +250,10 @@ void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_emptystruct::EmptyProtocol::SendAndReceive>::Reply(const ::test_emptystruct::wire::Empty& e) {
+  return MakeReply(e);
+}
+
+void fidl::internal::WireCompleterImpl<::test_emptystruct::EmptyProtocol::SendAndReceive>::MakeReply(const ::test_emptystruct::wire::Empty& e) {
   ::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> _response{e};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -261,6 +265,10 @@ void fidl::internal::WireCompleterImpl<::test_emptystruct::EmptyProtocol::SendAn
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_emptystruct::EmptyProtocol::SendAndReceive>::Reply(const ::test_emptystruct::wire::Empty& e) {
+  return MakeReply(e);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_emptystruct::EmptyProtocol::SendAndReceive>::MakeReply(const ::test_emptystruct::wire::Empty& e) {
   ::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> _response{e};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_emptystruct::EmptyProtocol::SendAndReceive>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

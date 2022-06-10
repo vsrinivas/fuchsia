@@ -134,7 +134,7 @@ class FakeI2c : public ddk::I2cProtocol<FakeI2c>,
       memcpy(response->read_data[0].mutable_data(), read_buffer, read_buffer_size);
     }
 
-    completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithResponse(response));
+    completer.Reply(::fitx::ok(response.get()));
   }
 
  protected:

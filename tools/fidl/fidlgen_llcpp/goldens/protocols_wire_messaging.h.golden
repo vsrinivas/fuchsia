@@ -1968,6 +1968,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutReques
   using CompleterImplBase::CompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template <>
@@ -1976,6 +1979,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithout
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template<>
@@ -1999,6 +2005,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutReques
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fidl::StringView ret);
+
+ private:
+  void MakeReply(::fidl::StringView ret);
 };
 
 template <>
@@ -2007,6 +2016,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithout
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fidl::StringView ret);
+
+ private:
+  void MakeReply(::fidl::StringView ret);
 };
 
 template<>
@@ -2030,6 +2042,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutReques
   using CompleterImplBase::CompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template <>
@@ -2038,6 +2053,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithout
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template<>
@@ -2061,6 +2079,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutReques
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fidl::StringView ret);
+
+ private:
+  void MakeReply(::fidl::StringView ret);
 };
 
 template <>
@@ -2069,6 +2090,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithout
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fidl::StringView ret);
+
+ private:
+  void MakeReply(::fidl::StringView ret);
 };
 
 template<>
@@ -2931,6 +2955,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::Transitional::Reques
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(int64_t y);
+
+ private:
+  void MakeReply(int64_t y);
 };
 
 template <>
@@ -2939,6 +2966,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::Transitional::
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(int64_t y);
+
+ private:
+  void MakeReply(int64_t y);
 };
 
 template<>
@@ -4319,6 +4349,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::Cl
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out);
+
+ private:
+  void MakeReply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out);
 };
 
 template <>
@@ -4327,6 +4360,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out);
+
+ private:
+  void MakeReply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out);
 };
 
 template<>
@@ -4350,6 +4386,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::Se
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out);
+
+ private:
+  void MakeReply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out);
 };
 
 template <>
@@ -4358,6 +4397,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out);
+
+ private:
+  void MakeReply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out);
 };
 
 template<>
@@ -4381,6 +4423,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::St
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocols::wire::ProtocolEnds&& out);
+
+ private:
+  void MakeReply(::test_protocols::wire::ProtocolEnds&& out);
 };
 
 template <>
@@ -4389,6 +4434,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocols::wire::ProtocolEnds&& out);
+
+ private:
+  void MakeReply(::test_protocols::wire::ProtocolEnds&& out);
 };
 
 template<>
@@ -4946,6 +4994,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::Uni
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_protocols::wire::TheUnion u);
+
+ private:
+  void MakeReply(::test_protocols::wire::TheUnion u);
 };
 
 template <>
@@ -4954,6 +5005,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnio
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_protocols::wire::TheUnion u);
+
+ private:
+  void MakeReply(::test_protocols::wire::TheUnion u);
 };
 
 template<>
@@ -6156,6 +6210,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::HandleRightsProtocol
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::zx::socket&& h);
+
+ private:
+  void MakeReply(::zx::socket&& h);
 };
 
 template <>
@@ -6164,6 +6221,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::HandleRightsPr
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::zx::socket&& h);
+
+ private:
+  void MakeReply(::zx::socket&& h);
 };
 
 template<>
@@ -7778,10 +7838,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Res
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*> result);
   
   void ReplySuccess(int64_t a, int64_t b, int64_t c);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result);
 };
 
 template <>
@@ -7789,10 +7852,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*> result);
   
   void ReplySuccess(int64_t a, int64_t b, int64_t c);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result);
 };
 
 template<>
@@ -7815,10 +7881,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Err
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result);
+  void Reply(::fitx::result<uint32_t> result);
   
   void ReplySuccess();
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result);
 };
 
 template <>
@@ -7826,10 +7895,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result);
+  void Reply(::fitx::result<uint32_t> result);
   
   void ReplySuccess();
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result);
 };
 
 template<>
@@ -7852,10 +7924,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Err
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result);
+  void Reply(::fitx::result<::test_protocols::wire::ErrorEnum> result);
   
   void ReplySuccess();
   void ReplyError(::test_protocols::wire::ErrorEnum error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result);
 };
 
 template <>
@@ -7863,10 +7938,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result);
+  void Reply(::fitx::result<::test_protocols::wire::ErrorEnum> result);
   
   void ReplySuccess();
   void ReplyError(::test_protocols::wire::ErrorEnum error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result);
 };
 
 template<>
@@ -7889,10 +7967,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Han
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*> result);
   
   void ReplySuccess(::zx::handle&& h);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result);
 };
 
 template <>
@@ -7900,10 +7981,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*> result);
   
   void ReplySuccess(::zx::handle&& h);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result);
 };
 
 template<>
@@ -9750,6 +9834,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::Met
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(int64_t result);
+
+ private:
+  void MakeReply(int64_t result);
 };
 
 template <>
@@ -9758,6 +9845,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtoco
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(int64_t result);
+
+ private:
+  void MakeReply(int64_t result);
 };
 
 template<>
@@ -9781,6 +9871,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::Tak
   using CompleterImplBase::CompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template <>
@@ -9789,6 +9882,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtoco
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template<>
@@ -9812,6 +9908,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::Mut
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::zx::socket&& b);
+
+ private:
+  void MakeReply(::zx::socket&& b);
 };
 
 template <>
@@ -9820,6 +9919,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtoco
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::zx::socket&& b);
+
+ private:
+  void MakeReply(::zx::socket&& b);
 };
 
 template<>

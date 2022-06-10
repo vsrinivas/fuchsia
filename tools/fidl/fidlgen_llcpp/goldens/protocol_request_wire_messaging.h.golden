@@ -1129,6 +1129,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
+
+ private:
+  void MakeReply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
 };
 
 template <>
@@ -1137,6 +1140,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
+
+ private:
+  void MakeReply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
 };
 
 template <>
@@ -1160,6 +1166,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
+
+ private:
+  void MakeReply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
 };
 
 template <>
@@ -1168,6 +1177,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
+
+ private:
+  void MakeReply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
 };
 
 template <>

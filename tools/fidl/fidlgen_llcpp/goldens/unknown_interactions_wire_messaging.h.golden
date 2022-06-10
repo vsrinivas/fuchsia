@@ -1085,6 +1085,9 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::S
   using CompleterImplBase::CompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template <>
@@ -1093,6 +1096,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Exam
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply();
+
+ private:
+  void MakeReply();
 };
 
 template <>
@@ -1116,6 +1122,9 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::F
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
+
+ private:
+  void MakeReply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
 };
 
 template <>
@@ -1124,6 +1133,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Exam
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
+
+ private:
+  void MakeReply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result);
 };
 
 template <>

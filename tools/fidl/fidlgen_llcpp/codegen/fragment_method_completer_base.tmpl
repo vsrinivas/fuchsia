@@ -12,13 +12,16 @@ class {{ .WireCompleterImpl }} : public ::fidl::internal::CompleterImplBase<{{ .
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply({{ RenderParams .ResponseArgs }});
+  void Reply({{ .WireReplyArgs .ResponseArgs }});
 
   {{- if .HasApplicationError }}
   {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
+
+ private:
+  void MakeReply({{ RenderParams .ResponseArgs }});
 };
 
 template <>
@@ -26,13 +29,16 @@ class {{ .WireBufferCompleterImpl }} : public ::fidl::internal::BufferCompleterI
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply({{ RenderParams .ResponseArgs }});
+  void Reply({{ .WireReplyArgs .ResponseArgs }});
 
   {{- if .HasApplicationError }}
   {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
+
+ private:
+  void MakeReply({{ RenderParams .ResponseArgs }});
 };
 
 template<>
@@ -61,7 +67,19 @@ class {{ .WireCompleterBase }} : public ::fidl::CompleterBase, public {{ .WireCo
 {{- IfdefFuchsia -}}
 
 void
-{{ .WireCompleterImpl.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
+{{ .WireCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs .ResponseArgs }}) {
+  {{- if .HasApplicationError }}
+  if (result.is_ok()) {
+    return MakeReply({{ .WireReplySuccess "result.value()" }});
+  }
+  return ReplyError(std::move(result.error_value()));
+  {{- else }}
+  return MakeReply({{ RenderForwardParams .ResponseArgs }});
+  {{- end }}
+}
+
+void
+{{ .WireCompleterImpl.NoLeading }}::MakeReply({{ RenderParams .ResponseArgs }}) {
   {{ .WireTransactionalResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -76,29 +94,30 @@ void
   void
   {{ .WireCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueParameters }}) {
     {{ .Result.BuildPayload "_response" -}}
-
-    {{- if .Result.Value.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(_response)));
-    {{- else }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(
-        ::fidl::ObjectView<{{ .Result.ValueTypeDecl }}>::FromExternal(&_response)));
-    {{- end }}
+    return MakeReply({{ .WireReplySuccess "&_response" }});
   }
 
   void
   {{ .WireCompleterImpl.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error) {
-    {{- if .Result.Error.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));
-    {{- else }}
-    return Reply({{ .Result.ResultDecl }}::WithErr(
-        ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
-    {{- end }}
+    return MakeReply({{ .WireReplyError "error" }});
   }
 {{- end }}
 
 
 void
-{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
+{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs .ResponseArgs }}) {
+  {{- if .HasApplicationError }}
+  if (result.is_ok()) {
+    return MakeReply({{ .WireReplySuccess "result.value()" }});
+  }
+  return ReplyError(std::move(result.error_value()));
+  {{- else }}
+  return MakeReply({{ RenderForwardParams .ResponseArgs }});
+  {{- end }}
+}
+
+void
+{{ .WireBufferCompleterImpl.NoLeading }}::MakeReply({{ RenderParams .ResponseArgs }}) {
   {{ .WireTransactionalResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<{{ .Marker }}>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -119,23 +138,12 @@ void
   void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueParameters }}) {
     {{ .Result.BuildPayload "_response" -}}
-
-    {{- if .Result.Value.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(_response)));
-    {{- else }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(
-        ::fidl::ObjectView<{{ .Result.ValueTypeDecl }}>::FromExternal(&_response)));
-    {{- end }}
+    return MakeReply({{ .WireReplySuccess "&_response" }});
   }
 
   void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error) {
-    {{- if .Result.Error.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));
-    {{- else }}
-    return Reply({{ .Result.ResultDecl }}::WithErr(
-        ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
-    {{- end }}
+    return MakeReply({{ .WireReplyError "error" }});
   }
 {{- end }}
 

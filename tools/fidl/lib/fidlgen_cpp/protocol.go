@@ -709,6 +709,43 @@ func (m Method) WireResultBase() string {
 	panic("Cannot call WireResultBase on an empty response payload")
 }
 
+func (m Method) WireReplyArgs(params ...interface{}) string {
+	if m.Result == nil || !m.Result.HasError {
+		return renderParams(param, params)
+	}
+	if len(m.Result.ValueParameters) > 0 {
+		return fmt.Sprintf("::fitx::result<%s, %s*> result", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+	}
+
+	return fmt.Sprintf("::fitx::result<%s> result", m.Result.ErrorDecl)
+}
+
+func (m Method) WireReplySuccess(varName string) string {
+	if m.Result == nil {
+		panic("Cannot call WireReplySuccess on a non-error bearing response")
+	}
+
+	if m.Result.Value.InlineInEnvelope {
+		if len(m.Result.ValueParameters) > 0 {
+			return fmt.Sprintf("%s::WithResponse(std::move(*%s))", m.Result.ResultDecl, varName)
+		} else {
+			return fmt.Sprintf("%s::WithResponse({})", m.Result.ResultDecl)
+		}
+	}
+	return fmt.Sprintf("%s::WithResponse(::fidl::ObjectView<%s>::FromExternal(%s))", m.Result.ResultDecl, m.Result.ValueTypeDecl, varName)
+}
+
+func (m Method) WireReplyError(varName string) string {
+	if m.Result == nil {
+		panic("Cannot call WireReplyError on a non-error bearing response")
+	}
+
+	if m.Result.Error.InlineInEnvelope {
+		return fmt.Sprintf("%s::WithErr(std::move(%s))", m.Result.ResultDecl, varName)
+	}
+	return fmt.Sprintf("%s::WithErr(::fidl::ObjectView<%s>::FromExternal(&%s))", m.Result.ResultDecl, m.Result.ErrorDecl, varName)
+}
+
 func (m Method) RequestMessageBase() string {
 	if m.HasRequestPayload {
 		return m.RequestPayload.String()

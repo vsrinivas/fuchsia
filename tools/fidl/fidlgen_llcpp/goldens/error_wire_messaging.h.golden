@@ -495,10 +495,13 @@ class ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo> : public :
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_error::wire::ExampleFooResult result);
+  void Reply(::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*> result);
 
   void ReplySuccess(int64_t y);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_error::wire::ExampleFooResult result);
 };
 
 template <>
@@ -506,10 +509,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo> : pu
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_error::wire::ExampleFooResult result);
+  void Reply(::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*> result);
 
   void ReplySuccess(int64_t y);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_error::wire::ExampleFooResult result);
 };
 
 template <>

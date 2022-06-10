@@ -234,6 +234,10 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::Reply(::test_union::wire::StrictBoundedXUnion xu) {
+  return MakeReply(xu);
+}
+
+void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::MakeReply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> _response{xu};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -245,6 +249,10 @@ void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::StrictXUnionH
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::Reply(::test_union::wire::StrictBoundedXUnion xu) {
+  return MakeReply(xu);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::MakeReply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> _response{xu};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -264,6 +272,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::StrictX
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::Reply(::test_union::wire::OlderSimpleUnion xu) {
+  return MakeReply(xu);
+}
+
+void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::MakeReply(::test_union::wire::OlderSimpleUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> _response{xu};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -275,6 +287,10 @@ void fidl::internal::WireCompleterImpl<::test_union::TestProtocol::FlexibleXUnio
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::Reply(::test_union::wire::OlderSimpleUnion xu) {
+  return MakeReply(xu);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::MakeReply(::test_union::wire::OlderSimpleUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> _response{xu};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

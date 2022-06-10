@@ -116,8 +116,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {}
   void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    completer.Reply(::fuchsia_io::wire::Directory2UnlinkResult::WithErr(status));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;
   void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override;
@@ -125,8 +124,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
   }
   void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    completer.Reply(::fuchsia_io::wire::Directory2RenameResult::WithErr(status));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);

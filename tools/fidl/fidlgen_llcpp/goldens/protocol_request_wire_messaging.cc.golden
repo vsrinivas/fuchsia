@@ -391,6 +391,10 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChild>::Reply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
+  return MakeReply(std::move(c));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChild>::MakeReply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild> _response{std::move(c)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -402,6 +406,10 @@ void fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChild>
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChild>::Reply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
+  return MakeReply(std::move(c));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChild>::MakeReply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild> _response{std::move(c)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolrequest::Parent::GetChild>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -421,6 +429,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::Get
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChildRequest>::Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
+  return MakeReply(std::move(r));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChildRequest>::MakeReply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest> _response{std::move(r)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -432,6 +444,10 @@ void fidl::internal::WireCompleterImpl<::test_protocolrequest::Parent::GetChildR
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChildRequest>::Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
+  return MakeReply(std::move(r));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChildRequest>::MakeReply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest> _response{std::move(r)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolrequest::Parent::GetChildRequest>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

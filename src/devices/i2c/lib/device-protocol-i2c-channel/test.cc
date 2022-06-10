@@ -110,7 +110,7 @@ class I2cDevice : public fake_i2c::FakeI2c {
       *stop_it++ = transaction.has_stop() ? transaction.stop() : false;
     }
 
-    completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithResponse(response));
+    completer.Reply(::fitx::ok(response.get()));
   }
 
   const std::vector<uint8_t>& tx_data() const { return tx_data_; }

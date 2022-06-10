@@ -363,7 +363,7 @@ void Device::EvaluateObject(EvaluateObjectRequestView request,
   if (result.is_error()) {
     completer.ReplyError(fuchsia_hardware_acpi::wire::Status(result.error_value()));
   } else {
-    completer.Reply(std::move(result.value()));
+    completer.ReplySuccess(std::move(result.value().response().result));
   }
 }
 

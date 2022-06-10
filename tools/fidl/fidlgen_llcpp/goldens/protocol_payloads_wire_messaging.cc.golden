@@ -1360,6 +1360,10 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposed>::Reply(int32_t a) {
+  return MakeReply(a);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposed>::MakeReply(int32_t a) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed> _response{a};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1371,6 +1375,10 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposed>::Reply(int32_t a) {
+  return MakeReply(a);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposed>::MakeReply(int32_t a) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed> _response{a};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayComposed>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1389,7 +1397,14 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1404,15 +1419,21 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
   };
-
-  return Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1433,17 +1454,20 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
   };
-
-  return Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocal>::Reply(uint32_t a, uint32_t b) {
+  return MakeReply(a, b);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocal>::MakeReply(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal> _response{a, b};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1455,6 +1479,10 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocal>::Reply(uint32_t a, uint32_t b) {
+  return MakeReply(a, b);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocal>::MakeReply(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal> _response{a, b};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayLocal>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1473,7 +1501,14 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::LocalStructPayload*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::LocalStructPayload>::FromExternal(result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1489,16 +1524,21 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
       .a = std::move(a),
       .b = std::move(b),
   };
-
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithResponse(
-      ::fidl::ObjectView<::test_protocolpayloads::wire::LocalStructPayload>::FromExternal(&_response)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::LocalStructPayload>::FromExternal(&_response)));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::LocalStructPayload*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::LocalStructPayload>::FromExternal(result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1520,18 +1560,20 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
       .a = std::move(a),
       .b = std::move(b),
   };
-
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithResponse(
-      ::fidl::ObjectView<::test_protocolpayloads::wire::LocalStructPayload>::FromExternal(&_response)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::LocalStructPayload>::FromExternal(&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImport>::Reply(int32_t a) {
+  return MakeReply(a);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImport>::MakeReply(int32_t a) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport> _response{a};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1543,6 +1585,10 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImport>::Reply(int32_t a) {
+  return MakeReply(a);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImport>::MakeReply(int32_t a) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport> _response{a};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayImport>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1561,7 +1607,14 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1576,15 +1629,21 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
   };
-
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1605,17 +1664,20 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response = ::test_protocolpayloads_imported::wire::ImportStructPayload{
       .a = std::move(a),
   };
-
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnon>::Reply(uint32_t a, uint32_t b) {
+  return MakeReply(a, b);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnon>::MakeReply(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> _response{a, b};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1627,6 +1689,10 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnon>::Reply(uint32_t a, uint32_t b) {
+  return MakeReply(a, b);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnon>::MakeReply(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> _response{a, b};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayAnon>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1645,7 +1711,14 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse>::FromExternal(result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1661,16 +1734,21 @@ void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::Tw
       .a = std::move(a),
       .b = std::move(b),
   };
-
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithResponse(
-      ::fidl::ObjectView<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse>::FromExternal(&_response)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse>::FromExternal(&_response)));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse>::FromExternal(result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1692,13 +1770,11 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
       .a = std::move(a),
       .b = std::move(b),
   };
-
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithResponse(
-      ::fidl::ObjectView<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse>::FromExternal(&_response)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithResponse(::fidl::ObjectView<::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse>::FromExternal(&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::ReplyError(uint32_t error) {
-  return Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 

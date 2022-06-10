@@ -772,6 +772,9 @@ class ::fidl::internal::WireCompleterImpl<::test_union::TestProtocol::StrictXUni
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_union::wire::StrictBoundedXUnion xu);
+
+ private:
+  void MakeReply(::test_union::wire::StrictBoundedXUnion xu);
 };
 
 template <>
@@ -780,6 +783,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::Stri
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_union::wire::StrictBoundedXUnion xu);
+
+ private:
+  void MakeReply(::test_union::wire::StrictBoundedXUnion xu);
 };
 
 template <>
@@ -803,6 +809,9 @@ class ::fidl::internal::WireCompleterImpl<::test_union::TestProtocol::FlexibleXU
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::test_union::wire::OlderSimpleUnion xu);
+
+ private:
+  void MakeReply(::test_union::wire::OlderSimpleUnion xu);
 };
 
 template <>
@@ -811,6 +820,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::Flex
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::test_union::wire::OlderSimpleUnion xu);
+
+ private:
+  void MakeReply(::test_union::wire::OlderSimpleUnion xu);
 };
 
 template <>

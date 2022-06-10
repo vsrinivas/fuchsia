@@ -47,10 +47,8 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
   }
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
-    auto result = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResult::WithResponse({});
-
     shutdown_count_++;
-    completer.Reply(result);
+    completer.ReplySuccess();
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {

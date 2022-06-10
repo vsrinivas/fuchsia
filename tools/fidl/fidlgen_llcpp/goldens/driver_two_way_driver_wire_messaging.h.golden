@@ -398,6 +398,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_drivertwoway::TwoWay::Add
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(uint16_t sum);
+
+ private:
+  void MakeReply(uint16_t sum);
 };
 
 template <>

@@ -453,6 +453,9 @@ class ::fidl::internal::WireCompleterImpl<::test_transitivedependenciescompose::
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(const ::test_bottom::wire::Foo& foo);
+
+ private:
+  void MakeReply(const ::test_bottom::wire::Foo& foo);
 };
 
 template <>
@@ -461,6 +464,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_transitivedependenciescom
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(const ::test_bottom::wire::Foo& foo);
+
+ private:
+  void MakeReply(const ::test_bottom::wire::Foo& foo);
 };
 
 template <>

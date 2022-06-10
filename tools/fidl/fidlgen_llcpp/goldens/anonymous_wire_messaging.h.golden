@@ -499,10 +499,13 @@ class ::fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMe
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+  void Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
 
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
+
+ private:
+  void MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
 };
 
 template <>
@@ -510,10 +513,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+  void Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
 
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
+
+ private:
+  void MakeReply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
 };
 
 template <>

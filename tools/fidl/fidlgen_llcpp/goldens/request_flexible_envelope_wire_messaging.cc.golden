@@ -244,6 +244,10 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::dispatch_messag
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::Reply(::test_requestflexibleenvelope::wire::FlexibleFoo f) {
+  return MakeReply(f);
+}
+
+void fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::MakeReply(::test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> _response{f};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -255,6 +259,10 @@ void fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protocol:
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::Reply(::test_requestflexibleenvelope::wire::FlexibleFoo f) {
+  return MakeReply(f);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::MakeReply(::test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> _response{f};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -274,6 +282,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Pro
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::Reply(::test_requestflexibleenvelope::wire::StrictFoo f) {
+  return MakeReply(f);
+}
+
+void fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::MakeReply(::test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> _response{f};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -285,6 +297,10 @@ void fidl::internal::WireCompleterImpl<::test_requestflexibleenvelope::Protocol:
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::Reply(::test_requestflexibleenvelope::wire::StrictFoo f) {
+  return MakeReply(f);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::MakeReply(::test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> _response{f};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

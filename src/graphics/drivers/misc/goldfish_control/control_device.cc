@@ -514,7 +514,11 @@ void Control::CreateBuffer2(CreateBuffer2RequestView request,
   auto result =
       CreateBuffer2(allocator, std::move(request->vmo), std::move(request->create_params));
   if (result.is_ok()) {
-    completer.Reply(result.take_value());
+    if (result.value().is_response()) {
+      completer.ReplySuccess(result.value().response().hw_address_page_offset);
+    } else if (result.value().is_err()) {
+      completer.ReplyError(result.value().err());
+    }
   } else {
     completer.Close(result.error());
   }
@@ -613,8 +617,7 @@ void Control::GetBufferHandleInfo(GetBufferHandleInfoRequestView request,
   response.info.set_id(handle)
       .set_memory_property(it_types->second.memory_property)
       .set_type(it_types->second.type);
-  completer.Reply(
-      ControlDeviceGetBufferHandleInfoResult::WithResponse(allocator, std::move(response)));
+  completer.Reply(::fitx::ok(&response));
 }
 
 void Control::DdkRelease() { delete this; }

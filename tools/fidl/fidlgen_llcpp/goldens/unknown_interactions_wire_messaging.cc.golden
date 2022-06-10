@@ -420,6 +420,10 @@ void fidl::WireServer<::test_unknowninteractions::Example>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -431,6 +435,10 @@ void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::Stri
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::StrictTwoWay>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::StrictTwoWay> _response{};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::Example::StrictTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -450,6 +458,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
+  return MakeReply(result);
+}
+
+void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -461,6 +473,10 @@ void fidl::internal::WireCompleterImpl<::test_unknowninteractions::Example::Flex
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
+  return MakeReply(result);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Example::FlexibleTwoWay>::MakeReply(::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result) {
   ::fidl::internal::TransactionalResponse<::test_unknowninteractions::Example::FlexibleTwoWay> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_unknowninteractions::Example::FlexibleTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

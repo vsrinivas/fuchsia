@@ -4807,6 +4807,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(int32_t a);
+
+ private:
+  void MakeReply(int32_t a);
 };
 
 template <>
@@ -4815,6 +4818,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(int32_t a);
+
+ private:
+  void MakeReply(int32_t a);
 };
 
 template<>
@@ -4837,10 +4843,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
   
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result);
 };
 
 template <>
@@ -4848,10 +4857,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
   
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult result);
 };
 
 template<>
@@ -4875,6 +4887,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(uint32_t a, uint32_t b);
+
+ private:
+  void MakeReply(uint32_t a, uint32_t b);
 };
 
 template <>
@@ -4883,6 +4898,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(uint32_t a, uint32_t b);
+
+ private:
+  void MakeReply(uint32_t a, uint32_t b);
 };
 
 template<>
@@ -4905,10 +4923,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::LocalStructPayload*> result);
   
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result);
 };
 
 template <>
@@ -4916,10 +4937,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::LocalStructPayload*> result);
   
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result);
 };
 
 template<>
@@ -4943,6 +4967,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(int32_t a);
+
+ private:
+  void MakeReply(int32_t a);
 };
 
 template <>
@@ -4951,6 +4978,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(int32_t a);
+
+ private:
+  void MakeReply(int32_t a);
 };
 
 template<>
@@ -4973,10 +5003,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
   
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result);
 };
 
 template <>
@@ -4984,10 +5017,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
   
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result);
 };
 
 template<>
@@ -5011,6 +5047,9 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(uint32_t a, uint32_t b);
+
+ private:
+  void MakeReply(uint32_t a, uint32_t b);
 };
 
 template <>
@@ -5019,6 +5058,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(uint32_t a, uint32_t b);
+
+ private:
+  void MakeReply(uint32_t a, uint32_t b);
 };
 
 template<>
@@ -5041,10 +5083,13 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*> result);
   
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result);
 };
 
 template <>
@@ -5052,10 +5097,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result);
+  void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*> result);
   
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result);
 };
 
 template<>

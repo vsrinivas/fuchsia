@@ -2723,10 +2723,13 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
 };
 
 template <>
@@ -2734,10 +2737,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
 };
 
 template <>
@@ -2760,10 +2766,13 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
 };
 
 template <>
@@ -2771,10 +2780,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
 };
 
 template <>
@@ -2797,10 +2809,13 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result);
 };
 
 template <>
@@ -2808,10 +2823,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result);
 };
 
 template <>
@@ -2834,10 +2852,13 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
 };
 
 template <>
@@ -2845,10 +2866,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
 };
 
 template <>
@@ -2871,10 +2895,13 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result);
 };
 
 template <>
@@ -2882,10 +2909,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result);
+  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
 
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result);
 };
 
 template <>

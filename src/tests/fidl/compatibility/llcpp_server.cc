@@ -606,7 +606,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         wire::EchoEchoTablePayloadWithErrorResult res =
             wire::EchoEchoTablePayloadWithErrorResult::WithResponse(
                 allocator, wire::ResponseTable::Builder(allocator).value(request->value()).Build());
-        completer.Reply(std::move(res));
+        completer.Reply(::fitx::ok(&res.response()));
       }
     } else {
       EchoClientApp app(request->forward_to_server());

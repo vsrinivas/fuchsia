@@ -250,7 +250,7 @@ void FidlDevice::SetBusMastering(SetBusMasteringRequestView request,
 
 void FidlDevice::ResetDevice(ResetDeviceRequestView request,
                              ResetDeviceCompleter::Sync& completer) {
-  completer.Reply({});
+  completer.ReplySuccess();
 }
 
 void FidlDevice::AckInterrupt(AckInterruptRequestView request,

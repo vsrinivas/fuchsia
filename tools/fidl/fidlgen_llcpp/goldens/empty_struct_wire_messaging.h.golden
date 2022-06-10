@@ -755,6 +755,9 @@ class ::fidl::internal::WireCompleterImpl<::test_emptystruct::EmptyProtocol::Sen
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(const ::test_emptystruct::wire::Empty& e);
+
+ private:
+  void MakeReply(const ::test_emptystruct::wire::Empty& e);
 };
 
 template <>
@@ -763,6 +766,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_emptystruct::EmptyProtoco
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(const ::test_emptystruct::wire::Empty& e);
+
+ private:
+  void MakeReply(const ::test_emptystruct::wire::Empty& e);
 };
 
 template <>

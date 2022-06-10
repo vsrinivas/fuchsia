@@ -20,12 +20,15 @@ class {{ .WireBufferCompleterImpl }} : public ::fdf::internal::BufferCompleterIm
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply({{ RenderParams .ResponseArgs }});
+  void Reply({{ .WireReplyArgs .ResponseArgs }});
 
   {{- if .HasApplicationError }}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
+
+ private:
+  void MakeReply({{ RenderParams .ResponseArgs }});
 };
 
 template<>
@@ -54,7 +57,19 @@ class {{ .WireCompleterBase }} : public ::fidl::CompleterBase, public {{ .WireCo
 {{- IfdefFuchsia -}}
 
 void
-{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
+{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs .ResponseArgs }}) {
+  {{- if .HasApplicationError }}
+  if (result.is_ok()) {
+    return MakeReply({{ .WireReplySuccess "result.value()" }});
+  }
+  return ReplyError(std::move(result.error_value()));
+  {{- else }}
+  return MakeReply({{ RenderForwardParams .ResponseArgs }});
+  {{- end }}
+}
+
+void
+{{ .WireBufferCompleterImpl.NoLeading }}::MakeReply({{ RenderParams .ResponseArgs }}) {
   {{ .WireTransactionalResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<{{ .Marker }}>();
   uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
@@ -72,23 +87,12 @@ void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess(
       {{- RenderParams .Result.ValueParameters }}) {
     {{ .Result.BuildPayload "_response" -}}
-
-    {{- if .Result.Value.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(_response)));
-    {{- else }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(
-        ::fidl::ObjectView<{{ .Result.ValueTypeDecl }}>::FromExternal(&_response)));
-    {{- end }}
+    return MakeReply({{ .WireReplySuccess "&_response" }});
   }
 
   void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error) {
-    {{- if .Result.Error.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));
-    {{- else }}
-    return Reply({{ .Result.ResultDecl }}::WithErr(
-        ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
-    {{- end }}
+    return MakeReply({{ .WireReplyError "error" }});
   }
 {{- end }}
 

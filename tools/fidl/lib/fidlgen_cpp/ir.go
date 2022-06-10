@@ -335,6 +335,9 @@ func (r Result) ValueArity() int {
 //
 //   MyLayoutArgType _response = std::move(my_layout_arg);
 func (r Result) BuildPayload(varName string) string {
+	if len(r.ValueParameters) == 0 {
+		return ""
+	}
 	out := fmt.Sprintf("%s %s = ", r.ValueTypeDecl, varName)
 	if !r.valueTypeIsStruct && currentVariant != unifiedVariant {
 		return out + fmt.Sprintf("std::move(%s);\n", r.Value.Name())

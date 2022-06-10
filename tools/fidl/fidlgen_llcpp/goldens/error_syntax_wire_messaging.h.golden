@@ -862,10 +862,13 @@ class ::fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorS
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult result);
+  void Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
 
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult result);
 };
 
 template <>
@@ -873,10 +876,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOf
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult result);
+  void Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
 
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult result);
 };
 
 template <>
@@ -899,10 +905,13 @@ class ::fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorS
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult result);
+  void Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
 
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult result);
 };
 
 template <>
@@ -910,10 +919,13 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOf
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult result);
+  void Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
 
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
+
+ private:
+  void MakeReply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult result);
 };
 
 template <>

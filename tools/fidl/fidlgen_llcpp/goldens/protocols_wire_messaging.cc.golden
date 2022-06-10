@@ -622,6 +622,10 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::dispatch
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -633,6 +637,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestRe
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> _response{};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -652,6 +660,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutReq
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::Reply(::fidl::StringView ret) {
+  return MakeReply(ret);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::MakeReply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> _response{ret};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -663,6 +675,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestRe
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::Reply(::fidl::StringView ret) {
+  return MakeReply(ret);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::MakeReply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> _response{ret};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -682,6 +698,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutReq
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -693,6 +713,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestRe
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> _response{};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -712,6 +736,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutReq
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::Reply(::fidl::StringView ret) {
+  return MakeReply(ret);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::MakeReply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> _response{ret};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -723,6 +751,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestRe
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::Reply(::fidl::StringView ret) {
+  return MakeReply(ret);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::MakeReply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> _response{ret};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1136,6 +1168,10 @@ void fidl::WireServer<::test_protocols::Transitional>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::Transitional::Request>::Reply(int64_t y) {
+  return MakeReply(y);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::Transitional::Request>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request> _response{y};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1147,6 +1183,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::Transitional::Request>:
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::Transitional::Request>::Reply(int64_t y) {
+  return MakeReply(y);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::Transitional::Request>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request> _response{y};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::Transitional::Request>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1572,6 +1612,10 @@ void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::ClientEnds>::Reply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out) {
+  return MakeReply(std::move(out));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::ClientEnds>::MakeReply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds> _response{std::move(out)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1583,6 +1627,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::Clien
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::ClientEnds>::Reply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out) {
+  return MakeReply(std::move(out));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::ClientEnds>::MakeReply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds> _response{std::move(out)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithProtocolEnds::ClientEnds>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1602,6 +1650,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds:
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::ServerEnds>::Reply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out) {
+  return MakeReply(std::move(out));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::ServerEnds>::MakeReply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds> _response{std::move(out)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1613,6 +1665,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::Serve
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::ServerEnds>::Reply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out) {
+  return MakeReply(std::move(out));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::ServerEnds>::MakeReply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds> _response{std::move(out)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithProtocolEnds::ServerEnds>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1632,6 +1688,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds:
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::StructContainingEnds>::Reply(::test_protocols::wire::ProtocolEnds&& out) {
+  return MakeReply(std::move(out));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::StructContainingEnds>::MakeReply(::test_protocols::wire::ProtocolEnds&& out) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds> _response{std::move(out)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1643,6 +1703,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::Struc
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::StructContainingEnds>::Reply(::test_protocols::wire::ProtocolEnds&& out) {
+  return MakeReply(std::move(out));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithProtocolEnds::StructContainingEnds>::MakeReply(::test_protocols::wire::ProtocolEnds&& out) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds> _response{std::move(out)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithProtocolEnds::StructContainingEnds>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -1847,6 +1911,10 @@ void fidl::WireServer<::test_protocols::MethodWithUnion>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::Reply(::test_protocols::wire::TheUnion u) {
+  return MakeReply(u);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::MakeReply(::test_protocols::wire::TheUnion u) {
   ::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod> _response{u};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -1858,6 +1926,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionM
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::Reply(::test_protocols::wire::TheUnion u) {
+  return MakeReply(u);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::MakeReply(::test_protocols::wire::TheUnion u) {
   ::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod> _response{u};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::MethodWithUnion::UnionMethod>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -2260,6 +2332,10 @@ void fidl::WireServer<::test_protocols::HandleRightsProtocol>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::HandleRightsProtocol::ResponseMethod>::Reply(::zx::socket&& h) {
+  return MakeReply(std::move(h));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::HandleRightsProtocol::ResponseMethod>::MakeReply(::zx::socket&& h) {
   ::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod> _response{std::move(h)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -2271,6 +2347,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::HandleRightsProtocol::R
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::HandleRightsProtocol::ResponseMethod>::Reply(::zx::socket&& h) {
+  return MakeReply(std::move(h));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::HandleRightsProtocol::ResponseMethod>::MakeReply(::zx::socket&& h) {
   ::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod> _response{std::move(h)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::HandleRightsProtocol::ResponseMethod>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -2850,7 +2930,14 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithResponse(::fidl::ObjectView<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>::FromExternal(result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -2867,16 +2954,21 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Respon
       .b = std::move(b),
       .c = std::move(c),
   };
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithResponse(
-      ::fidl::ObjectView<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>::FromExternal(&_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithResponse(::fidl::ObjectView<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>::FromExternal(&_response)));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::ReplyError(uint32_t error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithResponse(::fidl::ObjectView<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>::FromExternal(result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithErrorSyntax::ResponseAsStruct>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -2899,18 +2991,23 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
       .b = std::move(b),
       .c = std::move(c),
   };
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithResponse(
-      ::fidl::ObjectView<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>::FromExternal(&_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithResponse(::fidl::ObjectView<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>::FromExternal(&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::ReplyError(uint32_t error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Reply(::fitx::result<uint32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -2922,16 +3019,21 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorA
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse{};
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse({}));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplyError(uint32_t error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Reply(::fitx::result<uint32_t> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -2949,18 +3051,23 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse{};
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse({}));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplyError(uint32_t error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Reply(::fitx::result<::test_protocols::wire::ErrorEnum> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -2972,16 +3079,21 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorA
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse{};
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse({}));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplyError(::test_protocols::wire::ErrorEnum error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Reply(::fitx::result<::test_protocols::wire::ErrorEnum> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse({}));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithErrorSyntax::ErrorAsEnum>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -2999,18 +3111,23 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse{};
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse({}));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplyError(::test_protocols::wire::ErrorEnum error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result) {
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult> _response{std::move(result)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -3025,15 +3142,21 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Handle
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response = ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse{
       .h = std::move(h),
   };
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::ReplyError(uint32_t error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result) {
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*> result) {
+  if (result.is_ok()) {
+    return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(std::move(*result.value())));
+  }
+  return ReplyError(std::move(result.error_value()));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult> _response{std::move(result)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::WithErrorSyntax::HandleInResult>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -3054,12 +3177,11 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response = ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse{
       .h = std::move(h),
   };
-
-  return Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(std::move(_response)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(std::move(*&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::ReplyError(uint32_t error) {
-  return Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithErr(std::move(error)));
+  return MakeReply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
@@ -3666,6 +3788,10 @@ void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::MethodB>::Reply(int64_t result) {
+  return MakeReply(result);
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::MethodB>::MakeReply(int64_t result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -3677,6 +3803,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::Method
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::MethodB>::Reply(int64_t result) {
+  return MakeReply(result);
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::MethodB>::MakeReply(int64_t result) {
   ::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::ChannelProtocol::MethodB>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -3696,6 +3826,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::TakeHandle>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::TakeHandle>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -3707,6 +3841,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::TakeHa
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::TakeHandle>::Reply() {
+  return MakeReply();
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::TakeHandle>::MakeReply() {
   ::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle> _response{};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::ChannelProtocol::TakeHandle>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
@@ -3726,6 +3864,10 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::
 
 #ifdef __Fuchsia__
 void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::MutateSocket>::Reply(::zx::socket&& b) {
+  return MakeReply(std::move(b));
+}
+
+void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::MutateSocket>::MakeReply(::zx::socket&& b) {
   ::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket> _response{std::move(b)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -3737,6 +3879,10 @@ void fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::Mutate
 }
 
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::MutateSocket>::Reply(::zx::socket&& b) {
+  return MakeReply(std::move(b));
+}
+
+void fidl::internal::WireBufferCompleterImpl<::test_protocols::ChannelProtocol::MutateSocket>::MakeReply(::zx::socket&& b) {
   ::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket> _response{std::move(b)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::ChannelProtocol::MutateSocket>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

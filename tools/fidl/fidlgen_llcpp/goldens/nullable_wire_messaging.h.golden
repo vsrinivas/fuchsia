@@ -483,6 +483,9 @@ class ::fidl::internal::WireCompleterImpl<::test_nullable::SimpleProtocol::Add> 
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(int32_t sum);
+
+ private:
+  void MakeReply(int32_t sum);
 };
 
 template <>
@@ -491,6 +494,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_nullable::SimpleProtocol:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(int32_t sum);
+
+ private:
+  void MakeReply(int32_t sum);
 };
 
 template <>

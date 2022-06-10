@@ -116,7 +116,7 @@ class MockI2c : ddk::I2cProtocol<MockI2c>, public fidl::WireServer<fuchsia_hardw
     }
 
     if (status != ZX_OK) {
-      completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithErr(status));
+      completer.ReplyError(status);
       return;
     }
 
@@ -131,7 +131,7 @@ class MockI2c : ddk::I2cProtocol<MockI2c>, public fidl::WireServer<fuchsia_hardw
       read_data_it++;
     }
 
-    completer.Reply(fuchsia_hardware_i2c::wire::DeviceTransferResult::WithResponse(response));
+    completer.Reply(::fitx::ok(response.get()));
   }
 
  private:
