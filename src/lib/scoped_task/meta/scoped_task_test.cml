@@ -10,6 +10,10 @@
         binary: "bin/scoped_task_test",
         args: [
             "--test-threads=1",
+
+            // For easier debugging of failures, we ask for individual unit
+            // tests to time out instead of waiting for CQ to kill the whole
+            // test.
             "-Zunstable-options",
             "--ensure-time",
         ],
