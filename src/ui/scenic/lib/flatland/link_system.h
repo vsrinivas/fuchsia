@@ -5,13 +5,16 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_LINK_SYSTEM_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_LINK_SYSTEM_H_
 
+#include <fidl/fuchsia.ui.composition/cpp/fidl.h>
+#include <fidl/fuchsia.ui.composition/cpp/hlcpp_conversion.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/errors.h>
 
 #include <functional>
-#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -34,15 +37,29 @@ using LinkProtocolErrorCallback = std::function<void(const std::string&)>;
 
 // An implementation of the ParentViewportWatcher protocol, consisting of hanging gets for various
 // updateable pieces of information.
-class ParentViewportWatcherImpl : public fuchsia::ui::composition::ParentViewportWatcher {
+class ParentViewportWatcherImpl
+    : public fidl::Server<fuchsia_ui_composition::ParentViewportWatcher> {
  public:
-  explicit ParentViewportWatcherImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                                     fidl::InterfaceRequest<ParentViewportWatcher> request,
-                                     LinkProtocolErrorCallback error_callback)
-      : binding_(this, std::move(request), dispatcher_holder->dispatcher()),
+  ParentViewportWatcherImpl(
+      std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+      fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher> request,
+      LinkProtocolErrorCallback error_callback)
+      : binding_ref_(fidl::BindServer(
+            dispatcher_holder->dispatcher(), fidl::HLCPPToNatural(request), this,
+            [](ParentViewportWatcherImpl* /*unused*/, fidl::UnbindInfo info,
+               fidl::ServerEnd<fuchsia_ui_composition::ParentViewportWatcher> /*unused*/) {
+              OnUnbound(info);
+            })),
         error_callback_(std::move(error_callback)),
         layout_helper_(dispatcher_holder),
         status_helper_(std::move(dispatcher_holder)) {}
+
+  ~ParentViewportWatcherImpl() override {
+    // `ServerBindingRef` doesn't have RAII semantics for destroying the underlying channel, so it
+    // must be done explicitly to avoid "leaking" the channel (not forever, rather for the lifetime
+    // of the dispatcher, i.e. the lifetime of the associated View's Flatland session).
+    binding_ref_.Unbind();
+  }
 
   void UpdateLayoutInfo(fuchsia::ui::composition::LayoutInfo info) {
     layout_helper_.Update(std::move(info));
@@ -51,35 +68,51 @@ class ParentViewportWatcherImpl : public fuchsia::ui::composition::ParentViewpor
   void UpdateLinkStatus(fuchsia::ui::composition::ParentViewportStatus status) {
     status_helper_.Update(std::move(status));
   }
-
   // |fuchsia::ui::composition::ParentViewportWatcher|
-  void GetLayout(GetLayoutCallback callback) override {
+  void GetLayout(GetLayoutRequest& request, GetLayoutCompleter::Sync& sync_completer) override {
     if (layout_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(
           "GetLayout() called when there is a pending GetLayout() call. Flatland connection "
           "will be closed because of broken flow control.");
+      sync_completer.Close(ZX_ERR_SHOULD_WAIT);
       return;
     }
 
-    layout_helper_.SetCallback(std::move(callback));
+    layout_helper_.SetCallback([completer = sync_completer.ToAsync()](
+                                   fuchsia::ui::composition::LayoutInfo layout_info) mutable {
+      completer.Reply({fidl::HLCPPToNatural(layout_info)});
+    });
   }
 
-  // |fuchsia::ui::composition::ParentViewportWatcher|
-  void GetStatus(GetStatusCallback callback) override {
+  // |fuchsia_ui_composition::ParentViewportWatcher|
+  void GetStatus(GetStatusRequest& request, GetStatusCompleter::Sync& sync_completer) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(
           "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
           "will be closed because of broken flow control.");
+      sync_completer.Close(ZX_ERR_SHOULD_WAIT);
       return;
     }
 
-    status_helper_.SetCallback(std::move(callback));
+    status_helper_.SetCallback([completer = sync_completer.ToAsync()](
+                                   fuchsia::ui::composition::ParentViewportStatus status) mutable {
+      completer.Reply({fidl::HLCPPToNatural(status)});
+    });
   }
 
  private:
-  fidl::Binding<fuchsia::ui::composition::ParentViewportWatcher> binding_;
+  // Called when the connection is torn down, shortly before the implementation is destroyed.
+  static void OnUnbound(fidl::UnbindInfo info) {
+    if (info.is_peer_closed()) {
+      FX_LOGS(DEBUG) << "ParentViewportWatcherImpl::OnUnbound()  Client disconnected";
+    } else if (!info.is_user_initiated()) {
+      FX_LOGS(WARNING) << "ParentViewportWatcherImpl::OnUnbound()  server error: " << info;
+    }
+  }
+
+  fidl::ServerBindingRef<fuchsia_ui_composition::ParentViewportWatcher> binding_ref_;
   LinkProtocolErrorCallback error_callback_;
   HangingGetHelper<fuchsia::ui::composition::LayoutInfo> layout_helper_;
   HangingGetHelper<fuchsia::ui::composition::ParentViewportStatus> status_helper_;
@@ -87,15 +120,27 @@ class ParentViewportWatcherImpl : public fuchsia::ui::composition::ParentViewpor
 
 // An implementation of the ChildViewWatcher protocol, consisting of hanging gets for various
 // updateable pieces of information.
-class ChildViewWatcherImpl : public fuchsia::ui::composition::ChildViewWatcher {
+class ChildViewWatcherImpl : public fidl::Server<fuchsia_ui_composition::ChildViewWatcher> {
  public:
-  explicit ChildViewWatcherImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                                fidl::InterfaceRequest<ChildViewWatcher> request,
-                                LinkProtocolErrorCallback error_callback)
-      : binding_(this, std::move(request), dispatcher_holder->dispatcher()),
+  ChildViewWatcherImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+                       fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher> request,
+                       LinkProtocolErrorCallback error_callback)
+      : binding_ref_(fidl::BindServer(
+            dispatcher_holder->dispatcher(), fidl::HLCPPToNatural(request), this,
+            [](ChildViewWatcherImpl* /*unused*/, fidl::UnbindInfo info,
+               fidl::ServerEnd<fuchsia_ui_composition::ChildViewWatcher> /*unused*/) {
+              OnUnbound(info);
+            })),
         error_callback_(std::move(error_callback)),
         status_helper_(dispatcher_holder),
         viewref_helper_(std::move(dispatcher_holder)) {}
+
+  ~ChildViewWatcherImpl() override {
+    // `ServerBindingRef` doesn't have RAII semantics for destroying the underlying channel, so it
+    // must be done explicitly to avoid "leaking" the channel (not forever, rather for the lifetime
+    // of the dispatcher, i.e. the lifetime of the associated Viewport's Flatland session).
+    binding_ref_.Unbind();
+  }
 
   void UpdateLinkStatus(fuchsia::ui::composition::ChildViewStatus status) {
     status_helper_.Update(status);
@@ -119,34 +164,51 @@ class ChildViewWatcherImpl : public fuchsia::ui::composition::ChildViewWatcher {
     viewref_ = std::move(viewref);
   }
 
-  // |fuchsia::ui::composition::ChildViewWatcher|
-  void GetStatus(GetStatusCallback callback) override {
+  // |fuchsia_ui_composition::ChildViewWatcher|
+  void GetStatus(GetStatusRequest& request, GetStatusCompleter::Sync& sync_completer) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(
           "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
           "will be closed because of broken flow control.");
+      sync_completer.Close(ZX_ERR_SHOULD_WAIT);
       return;
     }
 
-    status_helper_.SetCallback(std::move(callback));
+    status_helper_.SetCallback([completer = sync_completer.ToAsync()](
+                                   fuchsia::ui::composition::ChildViewStatus status) mutable {
+      completer.Reply({fidl::HLCPPToNatural(status)});
+    });
   }
 
-  // |fuchsia::ui::composition::ChildViewWatcher|
-  void GetViewRef(GetViewRefCallback callback) override {
+  // |fuchsia_ui_composition::ChildViewWatcher|
+  void GetViewRef(GetViewRefRequest& request, GetViewRefCompleter::Sync& sync_completer) override {
     if (viewref_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(
           "GetViewRef() called when there is a pending GetViewRef() call. Flatland connection "
           "will be closed because of broken flow control.");
+      sync_completer.Close(ZX_ERR_SHOULD_WAIT);
       return;
     }
 
-    viewref_helper_.SetCallback(std::move(callback));
+    viewref_helper_.SetCallback(
+        [completer = sync_completer.ToAsync()](fuchsia::ui::views::ViewRef viewref) mutable {
+          completer.Reply({fidl::HLCPPToNatural(viewref)});
+        });
   }
 
  private:
-  fidl::Binding<fuchsia::ui::composition::ChildViewWatcher> binding_;
+  // Called when the connection is torn down, shortly before the implementation is destroyed.
+  static void OnUnbound(fidl::UnbindInfo info) {
+    if (info.is_peer_closed()) {
+      FX_LOGS(DEBUG) << "ChildViewWatcherImpl::OnUnbound()  Client disconnected";
+    } else if (!info.is_user_initiated()) {
+      FX_LOGS(WARNING) << "ChildViewWatcherImpl::OnUnbound()  server error: " << info;
+    }
+  }
+
+  fidl::ServerBindingRef<fuchsia_ui_composition::ChildViewWatcher> binding_ref_;
   LinkProtocolErrorCallback error_callback_;
   HangingGetHelper<fuchsia::ui::composition::ChildViewStatus> status_helper_;
   HangingGetHelper<fuchsia::ui::views::ViewRef> viewref_helper_;
