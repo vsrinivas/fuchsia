@@ -114,7 +114,7 @@ driver_bind_rules("sherlock-backlight-bind") {
   deps = [
     "//src/devices/bind/fuchsia.i2c",
     "//src/devices/bind/fuchsia.platform",
-    "//src/devices/bind/fuchsia.texasinstruments.platform",
+    "//src/devices/bind/fuchsia.ti.platform",
   ]
 }
 
