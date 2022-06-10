@@ -31,6 +31,8 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -89,10 +91,9 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
 
   // |test::mouse::ResponseListener|
   void Respond(test::mouse::PointerData pointer_data) override {
-    FX_CHECK(!respond_callbacks_.empty())
-        << "Expected callback to be set for test.mouse.Respond().";
-    respond_callbacks_.front()(std::move(pointer_data));
-    respond_callbacks_.pop_front();
+    mutex_.lock();
+    events_.push(std::move(pointer_data));
+    mutex_.unlock();
   }
 
   // |MockComponent::Start|
@@ -108,8 +109,19 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
     mock_handles_.emplace_back(std::move(mock_handles));
   }
 
-  void QueueRespondCallback(fit::function<void(test::mouse::PointerData)> callback) {
-    respond_callbacks_.push_back(std::move(callback));
+  size_t SizeOfEvents() {
+    mutex_.lock();
+    size_t size = events_.size();
+    mutex_.unlock();
+    return size;
+  }
+
+  test::mouse::PointerData PopEvent() {
+    mutex_.lock();
+    test::mouse::PointerData e = std::move(events_.front());
+    events_.pop();
+    mutex_.unlock();
+    return e;
   }
 
  private:
@@ -117,7 +129,8 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
   async_dispatcher_t* dispatcher_ = nullptr;
   fidl::BindingSet<test::mouse::ResponseListener> bindings_;
   std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_;
-  std::deque<fit::function<void(test::mouse::PointerData)>> respond_callbacks_;
+  std::queue<test::mouse::PointerData> events_;
+  std::mutex mutex_;
 };
 
 constexpr auto kResponseListener = "response_listener";
@@ -162,6 +175,11 @@ class MouseInputBase : public gtest::RealLoopFixture {
     RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
   }
 
+  void TearDown() override {
+    // at the end of test, ensure event queue is empty.
+    ASSERT_EQ(response_listener_->SizeOfEvents(), 0u);
+  }
+
   // Subclass should implement this method to add components to the test realm
   // next to the base ones added.
   virtual std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() { return {}; }
@@ -171,75 +189,54 @@ class MouseInputBase : public gtest::RealLoopFixture {
   virtual std::vector<Route> GetTestRoutes() { return {}; }
 
   // Helper method for checking the test.mouse.ResponseListener response from the client app.
-  void QueueResponseExpectations(float expected_x, float expected_y, int64_t expected_buttons,
-                                 std::string expected_type,
-                                 zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time,
-                                 std::string component_name, bool& injection_complete) {
-    response_listener()->QueueRespondCallback(
-        [expected_x, expected_y, expected_buttons, expected_type, component_name,
-         &input_injection_time, &injection_complete](test::mouse::PointerData pointer_data) {
-          FX_LOGS(INFO) << "Client received mouse change at (" << pointer_data.local_x() << ", "
-                        << pointer_data.local_y() << ") with buttons " << pointer_data.buttons()
-                        << ".";
-          FX_LOGS(INFO) << "Expected mouse change is at approximately (" << expected_x << ", "
-                        << expected_y << ") with buttons " << expected_buttons << ".";
+  void VerifyEvent(test::mouse::PointerData& pointer_data, float expected_x, float expected_y,
+                   int64_t expected_buttons, const std::string& expected_type,
+                   zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time,
+                   const std::string& component_name) {
+    FX_LOGS(INFO) << "Client received mouse change at (" << pointer_data.local_x() << ", "
+                  << pointer_data.local_y() << ") with buttons " << pointer_data.buttons() << ".";
+    FX_LOGS(INFO) << "Expected mouse change is at approximately (" << expected_x << ", "
+                  << expected_y << ") with buttons " << expected_buttons << ".";
 
-          zx::duration elapsed_time =
-              zx::basic_time<ZX_CLOCK_MONOTONIC>(pointer_data.time_received()) -
-              input_injection_time;
-          EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
-          FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
-          FX_LOGS(INFO) << "Client Received Time (ns): " << pointer_data.time_received();
-          FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
+    zx::duration elapsed_time =
+        zx::basic_time<ZX_CLOCK_MONOTONIC>(pointer_data.time_received()) - input_injection_time;
+    EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
+    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
+    FX_LOGS(INFO) << "Client Received Time (ns): " << pointer_data.time_received();
+    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
 
-          // Allow for minor rounding differences in coordinates.
-          // Note: These approximations don't account for `PointerMotionDisplayScaleHandler`
-          // or `PointerMotionSensorScaleHandler`. We will need to do so in order to validate
-          // larger motion or different sized displays.
-          EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
-          EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
-          EXPECT_EQ(pointer_data.buttons(), expected_buttons);
-          EXPECT_EQ(pointer_data.type(), expected_type);
-          EXPECT_EQ(pointer_data.component_name(), component_name);
-
-          injection_complete = true;
-        });
+    // Allow for minor rounding differences in coordinates.
+    // Note: These approximations don't account for `PointerMotionDisplayScaleHandler`
+    // or `PointerMotionSensorScaleHandler`. We will need to do so in order to validate
+    // larger motion or different sized displays.
+    EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
+    EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
+    EXPECT_EQ(pointer_data.buttons(), expected_buttons);
+    EXPECT_EQ(pointer_data.type(), expected_type);
+    EXPECT_EQ(pointer_data.component_name(), component_name);
   }
 
-  // Helper method for checking the test.mouse.ResponseListener response from the client app.
-  // Differs from `QueueResponseExpectations` because it asserts a lower bound for the new X
-  // position rather than a precise value. A precise value is not knowable by this test because the
-  // motion given and the motion received differ due to `PointerMotionSensorScaleHandler` and
-  // `PointerMotionDisplayScaleHandler`.
-  void QueueApproximateResponseExpectations(
-      float expected_x_min, float expected_y, int64_t expected_buttons, std::string expected_type,
-      zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time, std::string component_name,
-      bool& injection_complete) {
-    response_listener()->QueueRespondCallback(
-        [expected_x_min, expected_y, expected_buttons, expected_type, component_name,
-         &input_injection_time, &injection_complete](test::mouse::PointerData pointer_data) {
-          FX_LOGS(INFO) << "Client received mouse change at (" << pointer_data.local_x() << ", "
-                        << pointer_data.local_y() << ") with buttons " << pointer_data.buttons()
-                        << ".";
-          FX_LOGS(INFO) << "Expected mouse change is at approximately (>" << expected_x_min << ", "
-                        << expected_y << ") with buttons " << expected_buttons << ".";
+  void VerifyEventLocationOnTheRightOfExpectation(
+      test::mouse::PointerData& pointer_data, float expected_x_min, float expected_y,
+      int64_t expected_buttons, const std::string& expected_type,
+      zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time, const std::string& component_name) {
+    FX_LOGS(INFO) << "Client received mouse change at (" << pointer_data.local_x() << ", "
+                  << pointer_data.local_y() << ") with buttons " << pointer_data.buttons() << ".";
+    FX_LOGS(INFO) << "Expected mouse change is at approximately (>" << expected_x_min << ", "
+                  << expected_y << ") with buttons " << expected_buttons << ".";
 
-          zx::duration elapsed_time =
-              zx::basic_time<ZX_CLOCK_MONOTONIC>(pointer_data.time_received()) -
-              input_injection_time;
-          EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
-          FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
-          FX_LOGS(INFO) << "Client Received Time (ns): " << pointer_data.time_received();
-          FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
+    zx::duration elapsed_time =
+        zx::basic_time<ZX_CLOCK_MONOTONIC>(pointer_data.time_received()) - input_injection_time;
+    EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
+    FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
+    FX_LOGS(INFO) << "Client Received Time (ns): " << pointer_data.time_received();
+    FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
 
-          EXPECT_GT(pointer_data.local_x(), expected_x_min);
-          EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
-          EXPECT_EQ(pointer_data.buttons(), expected_buttons);
-          EXPECT_EQ(pointer_data.type(), expected_type);
-          EXPECT_EQ(pointer_data.component_name(), component_name);
-
-          injection_complete = true;
-        });
+    EXPECT_GT(pointer_data.local_x(), expected_x_min);
+    EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
+    EXPECT_EQ(pointer_data.buttons(), expected_buttons);
+    EXPECT_EQ(pointer_data.type(), expected_type);
+    EXPECT_EQ(pointer_data.component_name(), component_name);
   }
 
   void AssembleRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
@@ -372,15 +369,6 @@ TEST_F(FlutterInputTest, FlutterMouseMove) {
   auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
   uint32_t device_id = AddMouseDevice(input_synthesis);
 
-  // If the first mouse event is cursor movement, Flutter first sends an ADD event with updated
-  // location.
-  bool injection_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f + 1,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f + 2,
-                            /*expected_buttons=*/0,
-                            /*expected_type=*/"add", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", injection_complete);
-
   bool injection_initiated = false;
   fuchsia::input::report::MouseInputReport report;
   report.set_movement_x(1);
@@ -394,7 +382,20 @@ TEST_F(FlutterInputTest, FlutterMouseMove) {
 
   RunLoopUntil([&injection_initiated] { return injection_initiated; });
 
-  RunLoopUntil([&injection_complete] { return injection_complete; });
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  ASSERT_EQ(response_listener_->SizeOfEvents(), 1u);
+
+  auto e = response_listener_->PopEvent();
+
+  // If the first mouse event is cursor movement, Flutter first sends an ADD event with updated
+  // location.
+  VerifyEvent(e,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f + 1,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f + 2,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"add", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
 }
 
 TEST_F(FlutterInputTest, FlutterMouseDown) {
@@ -404,30 +405,6 @@ TEST_F(FlutterInputTest, FlutterMouseDown) {
   LaunchClient();
   auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
   uint32_t device_id = AddMouseDevice(input_synthesis);
-
-  // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
-  bool add_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/0,
-                            /*expected_type=*/"add", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", add_event_complete);
-
-  // Then Flutter sends a DOWN pointer event with the buttons we care about.
-  bool down_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
-                            /*expected_type=*/"down", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", down_event_complete);
-
-  // Then Flutter sends a MOVE pointer event with no new information.
-  bool noop_move_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
-                            /*expected_type=*/"move", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", noop_move_event_complete);
 
   bool injection_initiated = false;
   fuchsia::input::report::MouseInputReport report;
@@ -442,9 +419,37 @@ TEST_F(FlutterInputTest, FlutterMouseDown) {
       });
 
   RunLoopUntil([&injection_initiated] { return injection_initiated; });
-  RunLoopUntil([&add_event_complete] { return add_event_complete; });
-  RunLoopUntil([&down_event_complete] { return down_event_complete; });
-  RunLoopUntil([&noop_move_event_complete] { return noop_move_event_complete; });
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 3; });
+
+  ASSERT_EQ(response_listener_->SizeOfEvents(), 3u);
+
+  auto event_add = response_listener_->PopEvent();
+  auto event_down = response_listener_->PopEvent();
+  auto event_noop_move = response_listener_->PopEvent();
+
+  // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
+  VerifyEvent(event_add,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"add", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+
+  // Then Flutter sends a DOWN pointer event with the buttons we care about.
+  VerifyEvent(event_down,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
+              /*expected_type=*/"down", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+
+  // Then Flutter sends a MOVE pointer event with no new information.
+  VerifyEvent(event_noop_move,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
+              /*expected_type=*/"move", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
 }
 
 TEST_F(FlutterInputTest, FlutterMouseDownUp) {
@@ -454,30 +459,6 @@ TEST_F(FlutterInputTest, FlutterMouseDownUp) {
   LaunchClient();
   auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
   uint32_t device_id = AddMouseDevice(input_synthesis);
-
-  // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
-  bool add_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/0,
-                            /*expected_type=*/"add", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", add_event_complete);
-
-  // Then Flutter sends a DOWN pointer event with the buttons we care about.
-  bool down_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
-                            /*expected_type=*/"down", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", down_event_complete);
-
-  // Then Flutter sends a MOVE pointer event with no new information.
-  bool noop_move_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
-                            /*expected_type=*/"move", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", noop_move_event_complete);
 
   bool down_injection_initiated = false;
   fuchsia::input::report::MouseInputReport down_report;
@@ -492,16 +473,37 @@ TEST_F(FlutterInputTest, FlutterMouseDownUp) {
       });
 
   RunLoopUntil([&down_injection_initiated] { return down_injection_initiated; });
-  RunLoopUntil([&add_event_complete] { return add_event_complete; });
-  RunLoopUntil([&down_event_complete] { return down_event_complete; });
-  RunLoopUntil([&noop_move_event_complete] { return noop_move_event_complete; });
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 3; });
 
-  bool up_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/0,
-                            /*expected_type=*/"up", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", up_event_complete);
+  ASSERT_EQ(response_listener_->SizeOfEvents(), 3u);
+
+  auto event_add = response_listener_->PopEvent();
+  auto event_down = response_listener_->PopEvent();
+  auto event_noop_move = response_listener_->PopEvent();
+
+  // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
+  VerifyEvent(event_add,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"add", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+
+  // Then Flutter sends a DOWN pointer event with the buttons we care about.
+  VerifyEvent(event_down,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
+              /*expected_type=*/"down", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+
+  // Then Flutter sends a MOVE pointer event with no new information.
+  VerifyEvent(event_noop_move,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
+              /*expected_type=*/"move", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
 
   bool up_injection_initiated = false;
   fuchsia::input::report::MouseInputReport up_report;
@@ -514,7 +516,17 @@ TEST_F(FlutterInputTest, FlutterMouseDownUp) {
         up_injection_initiated = true;
       });
   RunLoopUntil([&up_injection_initiated] { return up_injection_initiated; });
-  RunLoopUntil([&up_event_complete] { return up_event_complete; });
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  ASSERT_EQ(response_listener_->SizeOfEvents(), 1u);
+
+  auto event_up = response_listener_->PopEvent();
+  VerifyEvent(event_up,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"up", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
 }
 
 TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
@@ -524,30 +536,6 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
   LaunchClient();
   auto input_synthesis = realm_exposed_services()->Connect<test::inputsynthesis::Mouse>();
   uint32_t device_id = AddMouseDevice(input_synthesis);
-
-  // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
-  bool add_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/0,
-                            /*expected_type=*/"add", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", add_event_complete);
-
-  // Then Flutter sends a DOWN pointer event with the buttons we care about.
-  bool down_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
-                            /*expected_type=*/"down", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", down_event_complete);
-
-  // Then Flutter sends a MOVE pointer event with no new information.
-  bool noop_move_event_complete = false;
-  QueueResponseExpectations(/*expected_x=*/static_cast<float>(display_width()) / 2.f,
-                            /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-                            /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
-                            /*expected_type=*/"move", input_injection_time,
-                            /*component_name=*/"mouse-input-flutter", noop_move_event_complete);
 
   bool down_injection_initiated = false;
   fuchsia::input::report::MouseInputReport down_report;
@@ -562,17 +550,38 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
       });
 
   RunLoopUntil([&down_injection_initiated] { return down_injection_initiated; });
-  RunLoopUntil([&add_event_complete] { return add_event_complete; });
-  RunLoopUntil([&down_event_complete] { return down_event_complete; });
-  RunLoopUntil([&noop_move_event_complete] { return noop_move_event_complete; });
+  RunLoopUntil([&down_injection_initiated] { return down_injection_initiated; });
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 3; });
 
-  bool move_event_complete = false;
-  QueueApproximateResponseExpectations(
-      /*expected_x_min=*/static_cast<float>(display_width()) / 2.f + 1,
-      /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-      /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
-      /*expected_type=*/"move", input_injection_time,
-      /*component_name=*/"mouse-input-flutter", move_event_complete);
+  ASSERT_EQ(response_listener_->SizeOfEvents(), 3u);
+
+  auto event_add = response_listener_->PopEvent();
+  auto event_down = response_listener_->PopEvent();
+  auto event_noop_move = response_listener_->PopEvent();
+
+  // If the first mouse event is a button press, Flutter first sends an ADD event with no buttons.
+  VerifyEvent(event_add,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/0,
+              /*expected_type=*/"add", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+
+  // Then Flutter sends a DOWN pointer event with the buttons we care about.
+  VerifyEvent(event_down,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
+              /*expected_type=*/"down", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
+
+  // Then Flutter sends a MOVE pointer event with no new information.
+  VerifyEvent(event_noop_move,
+              /*expected_x=*/static_cast<float>(display_width()) / 2.f,
+              /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+              /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
+              /*expected_type=*/"move", input_injection_time,
+              /*component_name=*/"mouse-input-flutter");
 
   bool move_injection_initiated = false;
   fuchsia::input::report::MouseInputReport move_report;
@@ -585,15 +594,19 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
         move_injection_initiated = true;
       });
   RunLoopUntil([&move_injection_initiated] { return move_injection_initiated; });
-  RunLoopUntil([&move_event_complete] { return move_event_complete; });
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
 
-  bool up_event_complete = false;
-  QueueApproximateResponseExpectations(
+  ASSERT_EQ(response_listener_->SizeOfEvents(), 1u);
+
+  auto event_move = response_listener_->PopEvent();
+
+  VerifyEventLocationOnTheRightOfExpectation(
+      event_move,
       /*expected_x_min=*/static_cast<float>(display_width()) / 2.f + 1,
       /*expected_y=*/static_cast<float>(display_height()) / 2.f,
-      /*expected_buttons=*/0,
-      /*expected_type=*/"up", input_injection_time,
-      /*component_name=*/"mouse-input-flutter", up_event_complete);
+      /*expected_buttons=*/fuchsia::ui::input::kMousePrimaryButton,
+      /*expected_type=*/"move", input_injection_time,
+      /*component_name=*/"mouse-input-flutter");
 
   bool up_injection_initiated = false;
   fuchsia::input::report::MouseInputReport up_report;
@@ -606,7 +619,19 @@ TEST_F(FlutterInputTest, FlutterMouseDownMoveUp) {
         up_injection_initiated = true;
       });
   RunLoopUntil([&up_injection_initiated] { return up_injection_initiated; });
-  RunLoopUntil([&up_event_complete] { return up_event_complete; });
+  RunLoopUntil([this] { return this->response_listener_->SizeOfEvents() == 1; });
+
+  ASSERT_EQ(response_listener_->SizeOfEvents(), 1u);
+
+  auto event_up = response_listener_->PopEvent();
+
+  VerifyEventLocationOnTheRightOfExpectation(
+      event_up,
+      /*expected_x_min=*/static_cast<float>(display_width()) / 2.f + 1,
+      /*expected_y=*/static_cast<float>(display_height()) / 2.f,
+      /*expected_buttons=*/0,
+      /*expected_type=*/"up", input_injection_time,
+      /*component_name=*/"mouse-input-flutter");
 }
 
 }  // namespace
