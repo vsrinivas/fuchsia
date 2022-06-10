@@ -26,7 +26,6 @@ group("tests") {
     "c:tests",
     "closure-queue:tests",
     "cmdline:tests",
-    "cobalt-client:tests",
     "debugdata:tests",
     "driver-unit-test:tests",
     "edid:tests",

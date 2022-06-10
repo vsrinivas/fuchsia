@@ -245,7 +245,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/c/*",
     "//zircon/system/ulib/closure-queue/*",
     "//zircon/system/ulib/cmdline/*",
-    "//zircon/system/ulib/cobalt-client/*",
     "//zircon/system/ulib/ddk-platform-defs/*",
     "//zircon/system/ulib/debugdata/*",
     "//zircon/system/ulib/devmgr-integration-test/*",
