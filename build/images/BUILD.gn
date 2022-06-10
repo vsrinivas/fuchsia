@@ -140,11 +140,6 @@ group("fuchsia.vbmeta") {
   public_deps = [ "${labels.images}" ]
 }
 
-group("signed") {
-  testonly = fuchsia_zbi_testonly
-  public_deps = [ "${labels.images}" ]
-}
-
 # Pseudo-target to record information about the sizes of filesystems assembled
 # during the build for later analysis.
 # TODO(fxbug.dev/81871): Only include this for builds that generate blobfs
