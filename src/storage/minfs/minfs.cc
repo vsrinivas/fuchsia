@@ -566,7 +566,7 @@ zx::status<std::unique_ptr<Transaction>> Minfs::BeginTransaction(size_t reserve_
       (reserve_blocks > 0 || reserve_inodes > 0)) {
     // When there's no more space, flush the journal in case a recent transaction has freed blocks
     // but has yet to be flushed from the journal and committed. Then, try again.
-    FX_LOGS(INFO)
+    FX_LOGS_FIRST_N(INFO, 10)
         << "Unable to reserve blocks. Flushing journal in attempt to reclaim unlinked blocks.";
 
     auto sync_status = BlockingJournalSync();
@@ -584,7 +584,7 @@ zx::status<std::unique_ptr<Transaction>> Minfs::BeginTransaction(size_t reserve_
   }
 
   if (transaction_or.is_error()) {
-    FX_LOGS(ERROR) << "Failed to reserve blocks for transaction (status: "
+    FX_LOGS_FIRST_N(ERROR, 10) << "Failed to reserve blocks for transaction (status: "
                    << transaction_or.status_string() << ")";
     if (transaction_or.error_value() == ZX_ERR_NO_SPACE) {
       inspect_tree_.OnOutOfSpace();
