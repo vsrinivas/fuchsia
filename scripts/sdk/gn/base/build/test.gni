@@ -6,8 +6,8 @@ import("component.gni")
 import("config/config.gni")
 import("package.gni")
 
-# Define a test executable, which is packaged in a Fuchsia package.
-# Metadata is generated for the target to enable programmatic execution.
+# Define a test executable (and a package and component to hold it).
+# Also generates metadata so the target can be executed from the command line.
 #
 # Parameters
 #
@@ -72,8 +72,7 @@ template("fuchsia_test") {
     package_name = _output_name
   }
 
-  # Create metadata JSON which enables building the
-  # command line to execute the test.
+  # Create metadata JSON so the test can be executed from the command line.
   group(target_name) {
     testonly = true
     metadata = {
