@@ -172,7 +172,7 @@ fx set core.x64 --with //zircon/system/ulib/inspect:tests
 1. Run tests.
 
 ```
-fx test inspect-unittest-package
+fx test inspect-cpp-unittest
 ```
 
 ### Reader change {#update-cpp-reader}

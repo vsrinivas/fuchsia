@@ -1,6 +1,6 @@
 # Inspect Library
 
-This document was last reviewed for accuracy on: 2019-10-31
+This document was last reviewed for accuracy on: 2022-06-10
 
 Inspect is a library for exposing structured, hierarchical
 diagnostics information from components at runtime.  Full
@@ -42,5 +42,5 @@ information can be read and aggregated by `iquery --health`.
 
 ```
 fx set ... --with //zircon/system/ulib/inspect:tests
-fx test -od inspect-unittest-package
+fx test -od inspect-cpp-unittest
 ```
