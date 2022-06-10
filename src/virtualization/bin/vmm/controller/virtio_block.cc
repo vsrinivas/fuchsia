@@ -23,14 +23,6 @@ uint32_t discardable(fuchsia::virtualization::BlockFormat format) {
   return 0;
 }
 
-bool UseRustDevice(fuchsia::virtualization::BlockMode mode,
-                   fuchsia::virtualization::BlockFormat format) {
-  // The rust device supports all configurations.
-  //
-  // TODO(fxbug.dev/95529): Delete this and all the support for using the C++ virtio-block device.
-  return true;
-}
-
 }  // namespace
 
 VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::BlockMode mode,
@@ -52,20 +44,15 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
                                fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher, size_t component_name_suffix) {
   if (launcher) {
-    constexpr auto kCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
-    constexpr auto kRustUrl = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cmx";
-
     fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = UseRustDevice(mode_, format_) ? kRustUrl : kCppUrl;
+    launch_info.url = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cmx";
     auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
     launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
     services->Connect(block_.NewRequest());
   } else {
     const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
     constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
-    constexpr auto kCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
-    constexpr auto kRustUrl = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
-    auto component_url = UseRustDevice(mode_, format_) ? kRustUrl : kCppUrl;
+    auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
 
     zx_status_t status = CreateDynamicComponent(
         realm, kVirtioBlockCollectionName, kComponentName.c_str(), component_url,

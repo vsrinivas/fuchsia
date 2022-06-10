@@ -30,8 +30,7 @@ static constexpr char kVirtioBlockId[] = "block-id";
 static constexpr size_t kNumSectors = 2;
 static constexpr uint8_t kSectorBytes[kNumSectors] = {0xab, 0xcd};
 
-constexpr auto kVirtioBlockCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
-constexpr auto kVirtioBlockRustUrl =
+constexpr auto kVirtioBlockUrl =
     "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
 
 struct VirtioBlockTestParam {
@@ -53,7 +52,7 @@ class VirtioBlockTest : public TestWithDevice,
     using component_testing::Route;
 
     constexpr auto kComponentName = "virtio_block";
-    auto component_url = GetParam().component_url;
+    auto component_url = kVirtioBlockUrl;
 
     auto realm_builder = RealmBuilder::Create();
     realm_builder.AddChild(kComponentName, component_url);
@@ -128,8 +127,6 @@ class VirtioBlockTest : public TestWithDevice,
     ASSERT_EQ(ZX_OK, status);
   }
 
-  bool IsRustComponent() { return GetParam().component_url == kVirtioBlockRustUrl; }
-
   void VerifySectorNotWritten(uint64_t sector) {
     ASSERT_LT(sector, kNumSectors);
 
@@ -202,7 +199,7 @@ class VirtioBlockTest : public TestWithDevice,
   }
 };
 
-TEST_P(VirtioBlockTest, BadHeaderShort) {
+TEST_F(VirtioBlockTest, BadHeaderShort) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   uint8_t header[sizeof(virtio_blk_req_t) - 1] = {};
@@ -221,7 +218,7 @@ TEST_P(VirtioBlockTest, BadHeaderShort) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, BadHeaderLong) {
+TEST_F(VirtioBlockTest, BadHeaderLong) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   uint8_t header[sizeof(virtio_blk_req_t) + 1] = {};
@@ -240,7 +237,7 @@ TEST_P(VirtioBlockTest, BadHeaderLong) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, BadPayload) {
+TEST_F(VirtioBlockTest, BadPayload) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -263,7 +260,7 @@ TEST_P(VirtioBlockTest, BadPayload) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, BadRequestType) {
+TEST_F(VirtioBlockTest, BadRequestType) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -284,7 +281,7 @@ TEST_P(VirtioBlockTest, BadRequestType) {
   EXPECT_EQ(VIRTIO_BLK_S_UNSUPP, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, Read) {
+TEST_F(VirtioBlockTest, Read) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -310,7 +307,7 @@ TEST_P(VirtioBlockTest, Read) {
   }
 }
 
-TEST_P(VirtioBlockTest, ReadMultipleDescriptors) {
+TEST_F(VirtioBlockTest, ReadMultipleDescriptors) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -339,7 +336,7 @@ TEST_P(VirtioBlockTest, ReadMultipleDescriptors) {
   }
 }
 
-TEST_P(VirtioBlockTest, UnderflowOnWrite) {
+TEST_F(VirtioBlockTest, UnderflowOnWrite) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -364,7 +361,7 @@ TEST_P(VirtioBlockTest, UnderflowOnWrite) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, BadWriteOffset) {
+TEST_F(VirtioBlockTest, BadWriteOffset) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -389,7 +386,7 @@ TEST_P(VirtioBlockTest, BadWriteOffset) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, Write) {
+TEST_F(VirtioBlockTest, Write) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -413,7 +410,7 @@ TEST_P(VirtioBlockTest, Write) {
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, WriteGoodAndBadSectors) {
+TEST_F(VirtioBlockTest, WriteGoodAndBadSectors) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -446,25 +443,16 @@ TEST_P(VirtioBlockTest, WriteGoodAndBadSectors) {
   ASSERT_EQ(pread(fd_.get(), result.data(), result.size(), kBlockSectorSize),
             static_cast<const long>(kBlockSectorSize));
 
-  // The C++ component will write part of a request before failing. The rust device, however, will
-  // reject the entire chain if any part of the request will extend beyond the capacity of the
-  // device.
-  //
   // From Virtio 1.1, Section 5.2.6.1: A driver MUST NOT submit a request which would cause a read
   // or write beyond capacity.
   //
   // Since the language is clear this is something the device MUST NOT do, strictly rejecting the
-  // entire request is OK but we'll continue to allow the existing coponents current behavior since
-  // that component should be removed before too long.
-  if (IsRustComponent()) {
-    std::vector<uint8_t> expected(kBlockSectorSize, kSectorBytes[1]);
-    ASSERT_EQ(memcmp(result.data(), expected.data(), expected.size()), 0);
-  } else {
-    ASSERT_EQ(memcmp(result.data(), block_1.data(), block_1.size()), 0);
-  }
+  // entire request is OK.
+  std::vector<uint8_t> expected(kBlockSectorSize, kSectorBytes[1]);
+  ASSERT_EQ(memcmp(result.data(), expected.data(), expected.size()), 0);
 }
 
-TEST_P(VirtioBlockTest, WriteMultipleDescriptors) {
+TEST_F(VirtioBlockTest, WriteMultipleDescriptors) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -497,13 +485,13 @@ TEST_P(VirtioBlockTest, WriteMultipleDescriptors) {
   ASSERT_EQ(memcmp(result.data() + block_1.size(), block_2.data(), block_2.size()), 0);
 }
 
-TEST_P(VirtioBlockTest, WriteReadOnlyDeviceWithFeature) {
+TEST_F(VirtioBlockTest, WriteReadOnlyDeviceWithFeature) {
   TestWriteReadOnlyDevice(VIRTIO_BLK_F_RO);
 }
 
-TEST_P(VirtioBlockTest, WriteReadOnlyDeviceWithoutFeature) { TestWriteReadOnlyDevice(0); }
+TEST_F(VirtioBlockTest, WriteReadOnlyDeviceWithoutFeature) { TestWriteReadOnlyDevice(0); }
 
-TEST_P(VirtioBlockTest, Sync) {
+TEST_F(VirtioBlockTest, Sync) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -524,7 +512,7 @@ TEST_P(VirtioBlockTest, Sync) {
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, SyncWithData) {
+TEST_F(VirtioBlockTest, SyncWithData) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -548,7 +536,7 @@ TEST_P(VirtioBlockTest, SyncWithData) {
   EXPECT_EQ(VIRTIO_BLK_S_OK, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, SyncNonZeroSector) {
+TEST_F(VirtioBlockTest, SyncNonZeroSector) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -570,7 +558,7 @@ TEST_P(VirtioBlockTest, SyncNonZeroSector) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_P(VirtioBlockTest, Id) {
+TEST_F(VirtioBlockTest, Id) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -594,7 +582,7 @@ TEST_P(VirtioBlockTest, Id) {
   EXPECT_EQ(0, memcmp(id, kVirtioBlockId, sizeof(kVirtioBlockId)));
 }
 
-TEST_P(VirtioBlockTest, IdLengthIncorrect) {
+TEST_F(VirtioBlockTest, IdLengthIncorrect) {
   ASSERT_NO_FATAL_FAILURE(StartFileBlockDevice());
 
   virtio_blk_req_t header = {
@@ -616,10 +604,3 @@ TEST_P(VirtioBlockTest, IdLengthIncorrect) {
 
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
-
-INSTANTIATE_TEST_SUITE_P(VirtioBlockComponentsTest, VirtioBlockTest,
-                         testing::Values(VirtioBlockTestParam{"cpp", kVirtioBlockCppUrl},
-                                         VirtioBlockTestParam{"rust", kVirtioBlockRustUrl}),
-                         [](const testing::TestParamInfo<VirtioBlockTestParam>& info) {
-                           return info.param.test_name;
-                         });
