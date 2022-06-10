@@ -1109,7 +1109,8 @@ mod tests {
 
     #[test]
     fn test_ipv4_reassembly_not_needed() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<Ipv4>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<Ipv4>::default());
 
         // Test that we don't attempt reassembly if the packet is not
         // fragmented.
@@ -1120,7 +1121,7 @@ mod tests {
             Buf::new(body.to_vec(), ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         assert_matches::assert_matches!(
-            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut (), packet),
+            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
             FragmentProcessingState::NotNeeded(unfragmented) if unfragmented.body() == body
         );
     }
@@ -1130,7 +1131,8 @@ mod tests {
         expected = "internal error: entered unreachable code: Should never call this function if the packet does not have a fragment header"
     )]
     fn test_ipv6_reassembly_not_needed() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::default());
 
         // Test that we panic if we call `fragment_data` on a packet that has no
         // fragment data.
@@ -1140,51 +1142,81 @@ mod tests {
             Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
         assert_matches::assert_matches!(
-            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut (), packet),
+            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
             FragmentProcessingState::InvalidFragment
         );
     }
 
     #[ip_test]
     fn test_ip_reassembly<I: Ip + TestIpExt>() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
         let fragment_id = 5;
 
         // Test that we properly reassemble fragmented packets.
 
         // Process fragment #0
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #1
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #2
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id,
             2,
             false,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut sync_ctx, &mut (), fragment_id, 24);
+        try_reassemble_ip_packet(&mut sync_ctx, &mut non_sync_ctx, fragment_id, 24);
     }
 
     #[ip_test]
     fn test_ip_reassemble_with_missing_blocks<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
         let fragment_id = 5;
 
         // Test the error we get when we attempt to reassemble with missing
         // fragments.
 
         // Process fragment #0
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #2
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         let mut buffer: Vec<u8> = vec![0; 1];
         let mut buffer = &mut buffer[..];
@@ -1194,7 +1226,7 @@ mod tests {
             fragment_id as u32,
         );
         assert_eq!(
-            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut (), &key, &mut buffer)
+            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut non_sync_ctx, &key, &mut buffer)
                 .unwrap_err(),
             FragmentReassemblyError::MissingFragments,
         );
@@ -1203,7 +1235,8 @@ mod tests {
     #[ip_test]
     fn test_ip_reassemble_after_timer<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
         let fragment_id = 5;
         let key = test_key::<I>(fragment_id.into());
 
@@ -1214,7 +1247,14 @@ mod tests {
         // Test that we properly reset fragment cache on timer.
 
         // Process fragment #0
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
         // Make sure a timer got added.
         sync_ctx
             .timer_ctx()
@@ -1222,7 +1262,14 @@ mod tests {
         validate_size(&sync_ctx.get_ref().cache);
 
         // Process fragment #1
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 1, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            1,
+            true,
+            ExpectedResult::NeedMore,
+        );
         // Make sure no new timers got added or fired.
         sync_ctx
             .timer_ctx()
@@ -1232,7 +1279,7 @@ mod tests {
         // Process fragment #2
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id,
             2,
             false,
@@ -1262,7 +1309,7 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         assert_eq!(
-            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut (), &key, &mut buffer)
+            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut non_sync_ctx, &key, &mut buffer)
                 .unwrap_err(),
             FragmentReassemblyError::InvalidKey,
         );
@@ -1270,7 +1317,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_fragment_cache_oom<I: Ip + TestIpExt>() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
         let mut fragment_id = 0;
         const THRESHOLD: usize = 8196usize;
 
@@ -1283,7 +1331,7 @@ mod tests {
         while sync_ctx.get_ref().cache.size < THRESHOLD {
             process_ip_fragment(
                 &mut sync_ctx,
-                &mut (),
+                &mut non_sync_ctx,
                 fragment_id,
                 0,
                 true,
@@ -1296,7 +1344,7 @@ mod tests {
         // Now that the cache is at or above the threshold, observe OOM.
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id,
             0,
             true,
@@ -1316,26 +1364,49 @@ mod tests {
         validate_size(&sync_ctx.get_ref().cache);
 
         // Can process fragments again.
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
     }
 
     #[ip_test]
     fn test_ip_overlapping_single_fragment<I: Ip>() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
         let fragment_id = 5;
 
         // Test that we error on overlapping/duplicate fragments.
 
         // Process fragment #0
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 0, true, ExpectedResult::NeedMore);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::NeedMore,
+        );
 
         // Process fragment #0 (overlaps original fragment #0 completely)
-        process_ip_fragment(&mut sync_ctx, &mut (), fragment_id, 0, true, ExpectedResult::Invalid);
+        process_ip_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            fragment_id,
+            0,
+            true,
+            ExpectedResult::Invalid,
+        );
     }
 
     #[test]
     fn test_ipv4_fragment_not_multiple_of_offset_unit() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<Ipv4>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<Ipv4>::default());
         let fragment_id = 0;
 
         assert_eq!(sync_ctx.get_ref().cache.size, 0);
@@ -1345,7 +1416,7 @@ mod tests {
         // Process fragment #0
         process_ipv4_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id,
             0,
             true,
@@ -1365,7 +1436,7 @@ mod tests {
         let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         assert_matches!(
-            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut (), packet),
+            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
             FragmentProcessingState::InvalidFragment
         );
 
@@ -1383,7 +1454,7 @@ mod tests {
         let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
-            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut (), packet),
+            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
             DUMMY_CONFIG_V4.remote_ip.get(),
             DUMMY_CONFIG_V4.local_ip.get(),
             fragment_id,
@@ -1393,7 +1464,8 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         let packet =
-            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut (), &key, &mut buffer).unwrap();
+            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut non_sync_ctx, &key, &mut buffer)
+                .unwrap();
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
@@ -1402,7 +1474,8 @@ mod tests {
 
     #[test]
     fn test_ipv6_fragment_not_multiple_of_offset_unit() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::default());
         let fragment_id = 0;
 
         assert_eq!(sync_ctx.get_ref().cache.size, 0);
@@ -1412,7 +1485,7 @@ mod tests {
         // Process fragment #0
         process_ipv6_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id,
             0,
             true,
@@ -1437,7 +1510,7 @@ mod tests {
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         assert_matches!(
-            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut (), packet),
+            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
             FragmentProcessingState::InvalidFragment
         );
 
@@ -1460,7 +1533,7 @@ mod tests {
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
-            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut (), packet),
+            FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
             DUMMY_CONFIG_V6.remote_ip.get(),
             DUMMY_CONFIG_V6.local_ip.get(),
             fragment_id,
@@ -1470,7 +1543,8 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         let packet =
-            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut (), &key, &mut buffer).unwrap();
+            FragmentHandler::reassemble_packet(&mut sync_ctx, &mut non_sync_ctx, &key, &mut buffer)
+                .unwrap();
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
@@ -1479,7 +1553,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly_with_multiple_intertwined_packets<I: Ip + TestIpExt>() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
 
@@ -1489,7 +1564,7 @@ mod tests {
         // Process fragment #0 for packet #0
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_0,
             0,
             true,
@@ -1499,7 +1574,7 @@ mod tests {
         // Process fragment #0 for packet #1
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_1,
             0,
             true,
@@ -1509,7 +1584,7 @@ mod tests {
         // Process fragment #1 for packet #0
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_0,
             1,
             true,
@@ -1519,7 +1594,7 @@ mod tests {
         // Process fragment #1 for packet #0
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_1,
             1,
             true,
@@ -1529,31 +1604,32 @@ mod tests {
         // Process fragment #2 for packet #0
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_0,
             2,
             false,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut sync_ctx, &mut (), fragment_id_0, 24);
+        try_reassemble_ip_packet(&mut sync_ctx, &mut non_sync_ctx, fragment_id_0, 24);
 
         // Process fragment #2 for packet #1
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_1,
             2,
             false,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut sync_ctx, &mut (), fragment_id_1, 24);
+        try_reassemble_ip_packet(&mut sync_ctx, &mut non_sync_ctx, fragment_id_1, 24);
     }
 
     #[ip_test]
     fn test_ip_reassembly_timer_with_multiple_intertwined_packets<I: Ip + TestIpExt>() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;
@@ -1585,7 +1661,7 @@ mod tests {
         // Process fragment #0 for packet #0
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_0,
             0,
             true,
@@ -1595,7 +1671,7 @@ mod tests {
         // Process fragment #1 for packet #1
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_1,
             2,
             false,
@@ -1605,7 +1681,7 @@ mod tests {
         // Process fragment #2 for packet #2
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_2,
             2,
             false,
@@ -1620,7 +1696,7 @@ mod tests {
         // Process fragment #2 for packet #0
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_0,
             2,
             false,
@@ -1635,7 +1711,7 @@ mod tests {
         // Process fragment #1 for packet #2
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_2,
             1,
             true,
@@ -1645,14 +1721,14 @@ mod tests {
         // Process fragment #1 for packet #0
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_0,
             1,
             true,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut sync_ctx, &mut (), fragment_id_0, 24);
+        try_reassemble_ip_packet(&mut sync_ctx, &mut non_sync_ctx, fragment_id_0, 24);
 
         // Advance time by 10s (should be at 50s now).
         assert_empty(
@@ -1662,7 +1738,7 @@ mod tests {
         // Process fragment #0 for packet #1
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_1,
             0,
             true,
@@ -1672,14 +1748,14 @@ mod tests {
         // Process fragment #0 for packet #2
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_2,
             0,
             true,
             ExpectedResult::Ready { total_body_len: 24 },
         );
 
-        try_reassemble_ip_packet(&mut sync_ctx, &mut (), fragment_id_2, 24);
+        try_reassemble_ip_packet(&mut sync_ctx, &mut non_sync_ctx, fragment_id_2, 24);
 
         // Advance time by 10s (should be at 60s now)), triggering the timer for
         // the reassembly of packet #1
@@ -1697,7 +1773,7 @@ mod tests {
         // fragment didn't arrive until after the reassembly timer.
         process_ip_fragment(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             fragment_id_1,
             2,
             true,
@@ -1707,9 +1783,24 @@ mod tests {
 
     #[test]
     fn test_no_more_fragments_in_middle_of_block() {
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<Ipv4>::default());
-        process_ipv4_fragment(&mut sync_ctx, &mut (), 0, 100, false, ExpectedResult::NeedMore);
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<Ipv4>::default());
+        process_ipv4_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            0,
+            100,
+            false,
+            ExpectedResult::NeedMore,
+        );
 
-        process_ipv4_fragment(&mut sync_ctx, &mut (), 0, 50, false, ExpectedResult::Invalid);
+        process_ipv4_fragment(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            0,
+            50,
+            false,
+            ExpectedResult::Invalid,
+        );
     }
 }

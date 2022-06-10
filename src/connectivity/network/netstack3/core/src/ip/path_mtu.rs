@@ -467,7 +467,8 @@ mod tests {
     #[ip_test]
     fn test_ip_path_mtu_cache_ctx<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
 
         // Nothing in the cache yet
         assert_eq!(
@@ -491,7 +492,7 @@ mod tests {
         // the test + 1s.
         PmtuHandler::update_pmtu_if_less(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
             new_mtu1,
@@ -523,7 +524,7 @@ mod tests {
         // the test + 3s.
         PmtuHandler::update_pmtu_if_less(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
             new_mtu2,
@@ -555,7 +556,7 @@ mod tests {
         // updated to the start of the test + 5s.
         PmtuHandler::update_pmtu_if_less(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
             new_mtu3,
@@ -586,7 +587,7 @@ mod tests {
         // Make sure update only if new PMTU is less than current (it isn't)
         PmtuHandler::update_pmtu_if_less(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
             new_mtu4,
@@ -615,7 +616,7 @@ mod tests {
         // Updating with MTU value less than the minimum MTU should fail.
         PmtuHandler::update_pmtu_if_less(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
             low_mtu,
@@ -640,7 +641,8 @@ mod tests {
     #[ip_test]
     fn test_ip_pmtu_task<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::default());
 
         // Make sure there are no timers.
         sync_ctx.timer_ctx().assert_no_timers_installed();
@@ -657,7 +659,7 @@ mod tests {
         // the test + 1s.
         PmtuHandler::update_pmtu_if_less(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
             new_mtu1,
@@ -695,7 +697,7 @@ mod tests {
         let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 100;
         PmtuHandler::update_pmtu_if_less(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             dummy_config.local_ip.get(),
             other_ip.get(),
             new_mtu2,

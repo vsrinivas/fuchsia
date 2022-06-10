@@ -254,20 +254,20 @@ mod tests {
 
     #[test]
     fn stop_router_solicitation() {
-        let DummyCtx { mut sync_ctx } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
                 max_router_solicitations: NonZeroU8::new(1),
                 router_soliciations_remaining: None,
                 link_layer_bytes: None,
             }));
-        RsHandler::start_router_solicitation(&mut sync_ctx, &mut (), DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, DummyDeviceId);
 
         let now = sync_ctx.now();
         sync_ctx
             .timer_ctx()
             .assert_timers_installed([(RS_TIMER_ID, now..=now + MAX_RTR_SOLICITATION_DELAY)]);
 
-        RsHandler::stop_router_solicitation(&mut sync_ctx, &mut (), DummyDeviceId);
+        RsHandler::stop_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, DummyDeviceId);
         sync_ctx.timer_ctx().assert_no_timers_installed();
 
         assert_eq!(sync_ctx.frames(), &[][..]);
@@ -287,13 +287,13 @@ mod tests {
         let (link_layer_bytes, expected_pad_bytes) =
             link_layer_bytes.map_or((None, 0), |(a, b)| (Some(a), b));
 
-        let DummyCtx { mut sync_ctx } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
                 max_router_solicitations: NonZeroU8::new(max_router_solicitations),
                 router_soliciations_remaining: None,
                 link_layer_bytes,
             }));
-        RsHandler::start_router_solicitation(&mut sync_ctx, &mut (), DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, DummyDeviceId);
 
         assert_eq!(sync_ctx.frames(), &[][..]);
 

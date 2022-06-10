@@ -1204,6 +1204,7 @@ pub(crate) mod testutil {
 
     pub(crate) struct DummyCtx<S, TimerId, Meta, Event: Debug, DeviceId> {
         pub(crate) sync_ctx: DummySyncCtx<S, TimerId, Meta, Event, DeviceId>,
+        pub(crate) non_sync_ctx: (),
     }
 
     impl<S: Default, Id, Meta, Event: Debug, DeviceId> Default
@@ -1275,11 +1276,12 @@ pub(crate) mod testutil {
                     events: DummyEventCtx::default(),
                     _devices_marker: PhantomData,
                 },
+                non_sync_ctx: (),
             }
         }
 
         pub(crate) fn with_sync_ctx(sync_ctx: DummySyncCtx<S, Id, Meta, Event, DeviceId>) -> Self {
-            DummyCtx { sync_ctx }
+            DummyCtx { sync_ctx, non_sync_ctx: () }
         }
     }
 
@@ -1882,7 +1884,7 @@ pub(crate) mod testutil {
             &mut self,
             context: K,
         ) -> &mut DummySyncCtx<S, Id, SendMeta, Event, DeviceId> {
-            let DummyCtx { sync_ctx } = self.context(context);
+            let DummyCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
             sync_ctx
         }
     }

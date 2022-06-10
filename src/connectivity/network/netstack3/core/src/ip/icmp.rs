@@ -4693,10 +4693,10 @@ mod tests {
         crate::testutil::set_logger_for_test();
 
         /// Call `send_icmpv4_ttl_expired` with dummy values.
-        fn send_icmpv4_ttl_expired_helper(DummyCtx { sync_ctx }: &mut Dummyv4Ctx) {
+        fn send_icmpv4_ttl_expired_helper(DummyCtx { sync_ctx, non_sync_ctx }: &mut Dummyv4Ctx) {
             send_icmpv4_ttl_expired(
                 sync_ctx,
-                &mut (),
+                non_sync_ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
@@ -4709,10 +4709,12 @@ mod tests {
         }
 
         /// Call `send_icmpv4_parameter_problem` with dummy values.
-        fn send_icmpv4_parameter_problem_helper(DummyCtx { sync_ctx }: &mut Dummyv4Ctx) {
+        fn send_icmpv4_parameter_problem_helper(
+            DummyCtx { sync_ctx, non_sync_ctx }: &mut Dummyv4Ctx,
+        ) {
             send_icmpv4_parameter_problem(
                 sync_ctx,
-                &mut (),
+                non_sync_ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
@@ -4726,10 +4728,12 @@ mod tests {
         }
 
         /// Call `send_icmpv4_dest_unreachable` with dummy values.
-        fn send_icmpv4_dest_unreachable_helper(DummyCtx { sync_ctx }: &mut Dummyv4Ctx) {
+        fn send_icmpv4_dest_unreachable_helper(
+            DummyCtx { sync_ctx, non_sync_ctx }: &mut Dummyv4Ctx,
+        ) {
             send_icmpv4_dest_unreachable(
                 sync_ctx,
-                &mut (),
+                non_sync_ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
@@ -4742,10 +4746,10 @@ mod tests {
         }
 
         /// Call `send_icmpv6_ttl_expired` with dummy values.
-        fn send_icmpv6_ttl_expired_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
+        fn send_icmpv6_ttl_expired_helper(DummyCtx { sync_ctx, non_sync_ctx }: &mut Dummyv6Ctx) {
             send_icmpv6_ttl_expired(
                 sync_ctx,
-                &mut (),
+                non_sync_ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
@@ -4757,10 +4761,10 @@ mod tests {
         }
 
         /// Call `send_icmpv6_packet_too_big` with dummy values.
-        fn send_icmpv6_packet_too_big_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
+        fn send_icmpv6_packet_too_big_helper(DummyCtx { sync_ctx, non_sync_ctx }: &mut Dummyv6Ctx) {
             send_icmpv6_packet_too_big(
                 sync_ctx,
-                &mut (),
+                non_sync_ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
@@ -4773,10 +4777,12 @@ mod tests {
         }
 
         /// Call `send_icmpv6_parameter_problem` with dummy values.
-        fn send_icmpv6_parameter_problem_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
+        fn send_icmpv6_parameter_problem_helper(
+            DummyCtx { sync_ctx, non_sync_ctx }: &mut Dummyv6Ctx,
+        ) {
             send_icmpv6_parameter_problem(
                 sync_ctx,
-                &mut (),
+                non_sync_ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::new(*DUMMY_CONFIG_V6.remote_ip).expect("unicast source address"),
@@ -4789,10 +4795,12 @@ mod tests {
         }
 
         /// Call `send_icmpv6_dest_unreachable` with dummy values.
-        fn send_icmpv6_dest_unreachable_helper(DummyCtx { sync_ctx }: &mut Dummyv6Ctx) {
+        fn send_icmpv6_dest_unreachable_helper(
+            DummyCtx { sync_ctx, non_sync_ctx }: &mut Dummyv6Ctx,
+        ) {
             send_icmpv6_dest_unreachable(
                 sync_ctx,
-                &mut (),
+                non_sync_ctx,
                 DummyDeviceId,
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),

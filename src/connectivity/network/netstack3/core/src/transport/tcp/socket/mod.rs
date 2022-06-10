@@ -652,7 +652,7 @@ mod tests {
     }
 
     fn handle_frame<I: TcpTestIpExt>(
-        DummyCtx { sync_ctx }: &mut TcpCtx<I>,
+        DummyCtx { sync_ctx, non_sync_ctx }: &mut TcpCtx<I>,
         meta: SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
         buffer: Buf<Vec<u8>>,
     ) where
@@ -662,7 +662,7 @@ mod tests {
     {
         TcpIpTransportContext::receive_ip_packet(
             sync_ctx,
-            &mut (),
+            non_sync_ctx,
             DummyDeviceId,
             I::recv_src_addr(*meta.src_ip),
             meta.dst_ip,
@@ -767,22 +767,24 @@ mod tests {
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
-        let TcpCtx { mut sync_ctx } = TcpCtx::with_state(TcpState::new(
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::new(
             I::DUMMY_CONFIG.local_ip,
             I::DUMMY_CONFIG.local_ip,
             I::DUMMY_CONFIG.subnet.prefix(),
         ));
-        let s1 = create_socket(&mut sync_ctx, &mut ());
-        let s2 = create_socket(&mut sync_ctx, &mut ());
+        let s1 = create_socket(&mut sync_ctx, &mut non_sync_ctx);
+        let s2 = create_socket(&mut sync_ctx, &mut non_sync_ctx);
 
-        let _b1 = bind(&mut sync_ctx, &mut (), s1, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
-            .expect("first bind should succeed");
+        let _b1 =
+            bind(&mut sync_ctx, &mut non_sync_ctx, s1, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
+                .expect("first bind should succeed");
         assert_matches!(
-            bind(&mut sync_ctx, &mut (), s2, *I::DUMMY_CONFIG.local_ip, Some(PORT_1)),
+            bind(&mut sync_ctx, &mut non_sync_ctx, s2, *I::DUMMY_CONFIG.local_ip, Some(PORT_1)),
             Err(BindError::Conflict(_))
         );
-        let _b2 = bind(&mut sync_ctx, &mut (), s2, *I::DUMMY_CONFIG.local_ip, Some(PORT_2))
-            .expect("able to rebind to a free address");
+        let _b2 =
+            bind(&mut sync_ctx, &mut non_sync_ctx, s2, *I::DUMMY_CONFIG.local_ip, Some(PORT_2))
+                .expect("able to rebind to a free address");
     }
 
     #[ip_test]
@@ -793,21 +795,22 @@ mod tests {
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
-        let TcpCtx { mut sync_ctx } = TcpCtx::with_state(TcpState::new(
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::new(
             I::DUMMY_CONFIG.local_ip,
             I::DUMMY_CONFIG.local_ip,
             I::DUMMY_CONFIG.subnet.prefix(),
         ));
-        let s1 = create_socket(&mut sync_ctx, &mut ());
-        let s2 = create_socket(&mut sync_ctx, &mut ());
+        let s1 = create_socket(&mut sync_ctx, &mut non_sync_ctx);
+        let s2 = create_socket(&mut sync_ctx, &mut non_sync_ctx);
 
-        let _b1 = bind(&mut sync_ctx, &mut (), s1, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
-            .expect("first bind should succeed");
+        let _b1 =
+            bind(&mut sync_ctx, &mut non_sync_ctx, s1, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
+                .expect("first bind should succeed");
         assert_matches!(
-            bind(&mut sync_ctx, &mut (), s2, I::UNSPECIFIED_ADDRESS, Some(PORT_1)),
+            bind(&mut sync_ctx, &mut non_sync_ctx, s2, I::UNSPECIFIED_ADDRESS, Some(PORT_1)),
             Err(BindError::Conflict(_))
         );
-        let _b2 = bind(&mut sync_ctx, &mut (), s2, I::UNSPECIFIED_ADDRESS, Some(PORT_2))
+        let _b2 = bind(&mut sync_ctx, &mut non_sync_ctx, s2, I::UNSPECIFIED_ADDRESS, Some(PORT_2))
             .expect("able to rebind to a free address");
     }
 

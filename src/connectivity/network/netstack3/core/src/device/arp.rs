@@ -907,7 +907,8 @@ mod tests {
         // Test that, when we receive a gratuitous ARP request, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
         send_arp_packet(
             &mut sync_ctx,
             ArpOp::Request,
@@ -931,7 +932,8 @@ mod tests {
         // Test that, when we receive a gratuitous ARP response, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
         send_arp_packet(
             &mut sync_ctx,
             ArpOp::Response,
@@ -956,9 +958,13 @@ mod tests {
         // a gratuitous ARP for the same host, we cancel the timer and notify
         // the device layer.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
-        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(
+            lookup(&mut sync_ctx, &mut non_sync_ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            None
+        );
 
         // We should have installed a single retry timer.
         validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
@@ -1069,13 +1075,14 @@ mod tests {
         }
 
         // Setup up a dummy context and trigger a timer with a lookup
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx2::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx2::default());
 
         let device_id_0: usize = 0;
         let device_id_1: usize = 1;
 
         assert_eq!(
-            lookup(&mut sync_ctx, &mut (), device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            lookup(&mut sync_ctx, &mut non_sync_ctx, device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
             None
         );
 
@@ -1085,11 +1092,11 @@ mod tests {
         sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing a different ID should not impact the current timer.
-        deinitialize(&mut sync_ctx, &mut (), device_id_1);
+        deinitialize(&mut sync_ctx, &mut non_sync_ctx, device_id_1);
         sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing the correct ID should cancel the timer.
-        deinitialize(&mut sync_ctx, &mut (), device_id_0);
+        deinitialize(&mut sync_ctx, &mut non_sync_ctx, device_id_0);
         sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -1098,10 +1105,14 @@ mod tests {
         // Test that, when we perform a lookup that fails, we send an ARP
         // request and install a timer to retry.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
         // Perform the lookup.
-        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(
+            lookup(&mut sync_ctx, &mut non_sync_ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            None
+        );
 
         // We should have sent a single ARP request.
         validate_last_arp_packet(
@@ -1154,7 +1165,8 @@ mod tests {
         // Test that, when we perform a lookup that succeeds, we do not send an
         // ARP request or install a retry timer.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
         // Perform a gratuitous ARP to populate the cache.
         send_arp_packet(
@@ -1168,7 +1180,7 @@ mod tests {
 
         // Perform the lookup.
         assert_eq!(
-            lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            lookup(&mut sync_ctx, &mut non_sync_ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
             Some(TEST_REMOTE_MAC)
         );
 
@@ -1186,9 +1198,13 @@ mod tests {
         // Test that, after performing a certain number of ARP request retries,
         // we give up and don't install another retry timer.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
-        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(
+            lookup(&mut sync_ctx, &mut non_sync_ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            None
+        );
 
         // `i` represents the `i`th request, so we start it at 1 since we
         // already sent one request during the call to `lookup`.
@@ -1256,7 +1272,8 @@ mod tests {
         // Test that, when we receive an ARP request, we cache the sender's
         // address information and send an ARP response.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
         send_arp_packet(
             &mut sync_ctx,
@@ -1269,7 +1286,7 @@ mod tests {
 
         // Make sure we cached the sender's address information.
         assert_eq!(
-            lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            lookup(&mut sync_ctx, &mut non_sync_ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
             Some(TEST_REMOTE_MAC)
         );
 
@@ -1349,7 +1366,7 @@ mod tests {
                 host_iter.clone().map(|cfg| {
                     let ArpHostConfig { name, proto_addr, hw_addr } = cfg;
                     let mut ctx = DummyCtx::with_sync_ctx(MockCtx::default());
-                    let DummyCtx { sync_ctx } = &mut ctx;
+                    let DummyCtx { sync_ctx, non_sync_ctx: _ } = &mut ctx;
                     sync_ctx.get_mut().hw_addr = UnicastAddr::new(*hw_addr).unwrap();
                     sync_ctx.get_mut().proto_addr = Some(*proto_addr);
                     (*name, ctx)
@@ -1413,10 +1430,12 @@ mod tests {
 
         // Step once to deliver the ARP request to the remotes.
         let res = network.step(
-            |DummyCtx { sync_ctx }, device_id, buf| {
-                handle_packet(sync_ctx, &mut (), device_id, buf)
+            |DummyCtx { sync_ctx, non_sync_ctx }, device_id, buf| {
+                handle_packet(sync_ctx, non_sync_ctx, device_id, buf)
             },
-            |DummyCtx { sync_ctx }, ctx, id| TimerHandler::handle_timer(sync_ctx, ctx, id),
+            |DummyCtx { sync_ctx, non_sync_ctx }, _ctx, id| {
+                TimerHandler::handle_timer(sync_ctx, non_sync_ctx, id)
+            },
         );
         assert_eq!(res.timers_fired, 0);
 
@@ -1470,10 +1489,12 @@ mod tests {
 
         // Step once to deliver the ARP response to the local.
         let res = network.step(
-            |DummyCtx { sync_ctx }, device_id, buf| {
-                handle_packet(sync_ctx, &mut (), device_id, buf)
+            |DummyCtx { sync_ctx, non_sync_ctx }, device_id, buf| {
+                handle_packet(sync_ctx, non_sync_ctx, device_id, buf)
             },
-            |DummyCtx { sync_ctx }, ctx, id| TimerHandler::handle_timer(sync_ctx, ctx, id),
+            |DummyCtx { sync_ctx, non_sync_ctx }, _ctx, id| {
+                TimerHandler::handle_timer(sync_ctx, non_sync_ctx, id)
+            },
         );
         assert_eq!(res.timers_fired, 0);
         assert_eq!(res.frames_sent, expected_frames_sent_bcast);
@@ -1578,11 +1599,15 @@ mod tests {
         // Test that, if we insert a static entry while a request retry timer is
         // installed, that timer is canceled, and the device layer is notified.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
         // Perform a lookup in order to kick off a request and install a retry
         // timer.
-        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(
+            lookup(&mut sync_ctx, &mut non_sync_ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            None
+        );
 
         // We should be in the Waiting state.
         assert_eq!(
@@ -1593,7 +1618,13 @@ mod tests {
         validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         // Now insert a static entry.
-        insert_static_neighbor(&mut sync_ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            (),
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
 
         // The timer should have been canceled.
         sync_ctx.timer_ctx().assert_no_timers_installed();
@@ -1610,7 +1641,8 @@ mod tests {
         // Test that, if we insert a static entry that overrides an existing
         // dynamic entry, the dynamic entry's expiration timer is canceled.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
         insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
@@ -1627,7 +1659,13 @@ mod tests {
         );
 
         // Now insert a static entry.
-        insert_static_neighbor(&mut sync_ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            (),
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
 
         // The timer should have been canceled.
         sync_ctx.timer_ctx().assert_no_timers_installed();
@@ -1638,7 +1676,8 @@ mod tests {
         // Test that, if a dynamic entry is installed, it is removed after the
         // appropriate amount of time.
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
         insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
@@ -1681,7 +1720,8 @@ mod tests {
         // 4. Check whether the entry disappears at instant
         //    (DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD + 5)
 
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
         insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
@@ -1738,9 +1778,16 @@ mod tests {
     fn test_arp_table_dynamic_after_static_should_not_set_timer() {
         // Test that, if a static entry exists, attempting to insert a dynamic
         // entry for the same address will not cause a timer to be scheduled.
-        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_static_neighbor(&mut sync_ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            (),
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
         sync_ctx.timer_ctx().assert_no_timers_installed();
 
         insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);

@@ -292,7 +292,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected address to exist")]
     fn panic_unknown_address() {
-        let DummyCtx { mut sync_ctx } =
+        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative { dad_transmits_remaining: None },
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected address to be tentative")]
     fn panic_non_tentative_address() {
-        let DummyCtx { mut sync_ctx } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Assigned,
@@ -319,7 +319,7 @@ mod tests {
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             DummyDeviceId,
             DAD_ADDRESS,
         );
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn dad_disabled() {
-        let DummyCtx { mut sync_ctx } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative { dad_transmits_remaining: None },
@@ -336,7 +336,7 @@ mod tests {
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             DummyDeviceId,
             DAD_ADDRESS,
         );
@@ -390,7 +390,7 @@ mod tests {
         let (link_layer_bytes, expected_sll_bytes) =
             link_layer_bytes.map_or((None, None), |(a, b)| (Some(a), Some(b)));
 
-        let DummyCtx { mut sync_ctx } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative {
@@ -401,7 +401,7 @@ mod tests {
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             DummyDeviceId,
             DAD_ADDRESS,
         );
@@ -430,7 +430,7 @@ mod tests {
         const DAD_TRANSMITS_REQUIRED: u8 = 2;
         const RETRANS_TIMER: Duration = Duration::from_secs(2);
 
-        let DummyCtx { mut sync_ctx } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative {
@@ -441,7 +441,7 @@ mod tests {
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             DummyDeviceId,
             DAD_ADDRESS,
         );
@@ -449,7 +449,7 @@ mod tests {
 
         DadHandler::stop_duplicate_address_detection(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             DummyDeviceId,
             DAD_ADDRESS,
         );
