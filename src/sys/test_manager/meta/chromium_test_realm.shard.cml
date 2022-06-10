@@ -35,8 +35,12 @@
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.memorypressure.Provider",
                 "fuchsia.posix.socket.Provider",
+                "fuchsia.settings.Display",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",
 
                 // TODO: add any other required capabilities

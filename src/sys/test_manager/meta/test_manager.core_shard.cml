@@ -143,10 +143,16 @@
         },
         {
             protocol: [
+                "fuchsia.settings.Display",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Privacy",
             ],
             from: "#setui_service",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "#memory_monitor",
             to: "#test_manager",
         },
         {
