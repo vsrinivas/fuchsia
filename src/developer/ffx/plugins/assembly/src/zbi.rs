@@ -8,11 +8,16 @@ use anyhow::{anyhow, Context, Result};
 use assembly_config::ImageAssemblyConfig;
 use assembly_images_config::{Zbi, ZbiCompression};
 use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_package_list::{PackageList, WritablePackageList};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
 use std::path::{Path, PathBuf};
 use zbi::ZbiBuilder;
+
+/// The path to the package index file for bootfs packages in gendir and
+/// in the bootfs.
+const BOOTFS_PACKAGE_INDEX: &str = "data/bootfs_packages";
 
 pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
@@ -70,6 +75,40 @@ pub fn construct_zbi(
     // Add the command line.
     for cmd in &product.kernel.args {
         zbi_builder.add_cmdline_arg(cmd);
+    }
+
+    // Below, we generate the package index used by early boot to resolve
+    // components. The index relies of assembly_base_package utility as it heavily
+    // overlaps with the work done to generate cache and static indices.
+
+    // Mapping from human-readable package name to merkle root for that package's
+    // meta.far.
+    let mut bootfs_package_list = PackageList::default();
+
+    for bootfs_package in &product.bootfs_packages {
+        let manifest = PackageManifest::try_load_from(bootfs_package)?;
+
+        for blob_info in manifest.blobs() {
+            // Every file that is part of a package included in the bootfs image
+            // will exist under a `blob` directory, and will be identified by
+            // its merkle root.
+            let bootfs_path = format!("blob/{}", blob_info.merkle);
+            zbi_builder.add_bootfs_file(&blob_info.source_path, &bootfs_path);
+        }
+
+        // Note: this utility does not assert uniqueness of bootfs packages.
+        bootfs_package_list.add_package(manifest)?;
+    }
+
+    // Write the bootfs package index to the gendir, unconditionally, to satisfy
+    // ninja file-use.
+    bootfs_package_list.write_index_file(gendir.as_ref(), "bootfs", BOOTFS_PACKAGE_INDEX)?;
+
+    if !bootfs_package_list.is_empty() {
+        let bootfs_package_index_source = gendir.as_ref().join(BOOTFS_PACKAGE_INDEX);
+
+        // Write the bootfs package index from the gendir to the bootfs.
+        zbi_builder.add_bootfs_file(&bootfs_package_index_source, &BOOTFS_PACKAGE_INDEX);
     }
 
     // Add the BootFS files.
@@ -138,7 +177,7 @@ pub fn vendor_sign_zbi(
 
 #[cfg(test)]
 mod tests {
-    use super::{construct_zbi, vendor_sign_zbi};
+    use super::{construct_zbi, vendor_sign_zbi, BOOTFS_PACKAGE_INDEX};
 
     use crate::base_package::BasePackage;
     use assembly_config::ImageAssemblyConfig;
@@ -148,6 +187,7 @@ mod tests {
     use assembly_tool::{ToolCommandLog, ToolProvider};
     use assembly_util::PathToStringExt;
     use fuchsia_hash::Hash;
+    use regex::Regex;
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::fs::File;
@@ -167,6 +207,7 @@ mod tests {
         // Create fake product/board definitions.
         let kernel_path = dir.path().join("kernel");
         let mut product_config = ImageAssemblyConfig::new_for_testing(&kernel_path, 0);
+
         let zbi_config = Zbi {
             name: "fuchsia".into(),
             compression: ZbiCompression::ZStd,
@@ -213,6 +254,64 @@ mod tests {
             None::<PathBuf>,
         )
         .unwrap();
+
+        let bootfs_index_string =
+            std::fs::read_to_string(dir.path().join(BOOTFS_PACKAGE_INDEX)).unwrap();
+        assert_eq!("", bootfs_index_string);
+
+        // Create a fake archivist.
+        let archivist_manifest_path = generate_test_manifest_file(dir.path(), "archivist");
+        product_config.bootfs_packages.push(archivist_manifest_path);
+
+        // Create a new fake zbi tool for isolated logs.
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+
+        let mut images_manifest = ImagesManifest::default();
+        construct_zbi(
+            zbi_tool,
+            &mut images_manifest,
+            dir.path(),
+            dir.path(),
+            &product_config,
+            &zbi_config,
+            Some(&base),
+            None::<PathBuf>,
+        )
+        .unwrap();
+
+        let bootfs_index_string =
+            std::fs::read_to_string(dir.path().join(BOOTFS_PACKAGE_INDEX)).unwrap();
+
+        assert_eq!(
+            "archivist/1=0000000000000000000000000000000000000000000000000000000000000000\n",
+            bootfs_index_string
+        );
+
+        let zbi_args: Vec<String> = tools
+            .log()
+            .commands
+            .borrow()
+            .iter()
+            .find(|command| command.tool == "./host_x64/zbi")
+            .unwrap()
+            .args
+            .clone();
+        let bootfs_file_index =
+            zbi_args.iter().enumerate().find(|(_, arg)| **arg == "--files".to_string()).unwrap().0
+                + 1;
+
+        let bootfs_files = std::fs::read_to_string(&zbi_args[bootfs_file_index]).unwrap();
+
+        let expected_bootfs_files_regex = Regex::new(
+            r"blob/0000000000000000000000000000000000000000000000000000000000000000=path/to/archivist/meta\.far\nblob/1111111111111111111111111111111111111111111111111111111111111111=/.*/archivist_data\.txt\nconfig/devmgr=/.*/devmgr_config\.txt\ndata/bootfs_packages=/.*/data/bootfs_packages.*"
+        ).unwrap();
+
+        assert!(
+            expected_bootfs_files_regex.is_match(&bootfs_files),
+            "Failed to regex match: {:?}",
+            bootfs_files
+        );
     }
 
     #[test]

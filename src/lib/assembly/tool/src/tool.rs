@@ -33,7 +33,7 @@ pub trait Tool {
 pub struct ToolCommandLog {
     /// The list of commands that were run.
     #[serde(with = "serde_arc")]
-    commands: Arc<RefCell<Vec<ToolCommand>>>,
+    pub commands: Arc<RefCell<Vec<ToolCommand>>>,
 }
 
 impl ToolCommandLog {
@@ -47,10 +47,10 @@ impl ToolCommandLog {
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub struct ToolCommand {
     /// The tool's name.
-    tool: String,
+    pub tool: String,
 
     /// The arguments passed to the tool.
-    args: Vec<String>,
+    pub args: Vec<String>,
 }
 
 impl ToolCommand {

@@ -47,6 +47,7 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/images_config",
     "//src/lib/assembly/images_manifest",
     "//src/lib/assembly/minfs",
+    "//src/lib/assembly/package_list",
     "//src/lib/assembly/partitions_config",
     "//src/lib/assembly/structured_config",
     "//src/lib/assembly/test_keys",
@@ -76,6 +77,7 @@ ffx_plugin("ffx_assembly") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:camino",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serial_test",
     "//zircon/tools/blobfs",
   ]

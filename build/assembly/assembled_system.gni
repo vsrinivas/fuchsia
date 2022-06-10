@@ -294,6 +294,7 @@ template("assembled_system") {
     zbi_manifest = "${gendir}/zbi.json"
     blobfs_manifest = "${gendir}/blob.manifest"
     blobs_json = "${gendir}/blobs.json"
+    bootfs_packages = "${gendir}/data/bootfs_packages"
     static_packages = "${gendir}/${base_package_name}/data/static_packages"
     cache_packages = "${gendir}/${base_package_name}/data/cache_packages.json"
     base_meta_package = "${gendir}/${base_package_name}/meta/package"
@@ -761,6 +762,7 @@ template("assembled_system") {
       files.zbi,
       files.zbi_manifest,
       files.packages,
+      files.bootfs_packages,
       files.image_command_log,
       files.images_manifest,
     ]
