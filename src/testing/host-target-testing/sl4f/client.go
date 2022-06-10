@@ -70,32 +70,40 @@ func (c *Client) connect(ctx context.Context) error {
 	}
 	cancel()
 
-	// In order to run components via SSH, we need the `run` package to be
-	// cached on the device. Since builds can be configured to not
-	// automatically cache packages, we need to explicitly resolve it.
-	cmd := []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/run/0", c.repoName)}
+	// Start the CFv2 sl4f daemon.
+	cmd := []string{"start_sl4f"}
 	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		logger.Infof(ctx, "unable to resolve `run` package: %s", err)
-		return err
-	}
+		// FIXME(fxbug.dev/99571): We can remove the CFv1 fallback once we do a stepping stone
+		// release, and update our min supported version to match the stepping stone.
+		logger.Warningf(ctx, "unable to launch CFv2 sl4f, trying CFv1 sl4f: %s", err)
 
-	// Additionally, we must resolve the sl4f package before attempting to
-	// run it if the build is not configured to automatically cache
-	// packages.
-	cmd = []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/sl4f/0", c.repoName)}
-	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		logger.Infof(ctx, "unable to resolve `sl4f` package: %s", err)
-		return err
-	}
+		// In order to run components via SSH, we need the `run` package to be
+		// cached on the device. Since builds can be configured to not
+		// automatically cache packages, we need to explicitly resolve it.
+		cmd = []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/run/0", c.repoName)}
+		if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+			logger.Errorf(ctx, "unable to resolve `run` package: %s", err)
+			return err
+		}
 
-	// Start the sl4f daemon.
-	cmd = []string{"run", fmt.Sprintf("fuchsia-pkg://%s/sl4f#meta/sl4f.cmx", c.repoName)}
-	server, err := c.sshClient.Start(ctx, cmd, os.Stdout, os.Stderr)
-	if err != nil {
-		logger.Infof(ctx, "unable to launch sl4f: %s", err)
-		return err
+		// Additionally, we must resolve the sl4f package before attempting to
+		// run it if the build is not configured to automatically cache
+		// packages.
+		cmd = []string{"pkgctl", "resolve", fmt.Sprintf("fuchsia-pkg://%s/sl4f/0", c.repoName)}
+		if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+			logger.Errorf(ctx, "unable to resolve `sl4f` package: %s", err)
+			return err
+		}
+
+		// Start the sl4f daemon.
+		cmd = []string{"run", fmt.Sprintf("fuchsia-pkg://%s/sl4f#meta/sl4f.cmx", c.repoName)}
+		server, err := c.sshClient.Start(ctx, cmd, os.Stdout, os.Stderr)
+		if err != nil {
+			logger.Errorf(ctx, "unable to launch sl4f: %s", err)
+			return err
+		}
+		c.server = server
 	}
-	c.server = server
 
 	// Wait a few seconds for it to respond to requests.
 	pingCtx, cancel = context.WithTimeout(ctx, 30*time.Second)
@@ -107,7 +115,7 @@ func (c *Client) connect(ctx context.Context) error {
 		time.Sleep(time.Second)
 	}
 
-	logger.Infof(ctx, "unable to ping sl4f: %s", pingCtx.Err())
+	logger.Errorf(ctx, "unable to ping sl4f: %s", pingCtx.Err())
 	return pingCtx.Err()
 }
 
