@@ -7,8 +7,10 @@
 //! This module defines the format and meaning of all the inspect information published by
 //! account_handler.
 
-use account_common::{AccountId, PersonaId};
-use fuchsia_inspect::{Node, StringProperty, UintProperty};
+use {
+    account_common::{AccountId, PersonaId},
+    fuchsia_inspect::{Node, StringProperty, UintProperty},
+};
 
 /// An abstraction over the properties of the account handler that we expose via fuchsia-inspect.
 pub struct AccountHandler {

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_identity_authentication::{
-    AttemptedEvent, Enrollment, Error as ApiError, StorageUnlockMechanismRequest,
-    StorageUnlockMechanismRequestStream,
+use {
+    fidl_fuchsia_identity_authentication::{
+        AttemptedEvent, Enrollment, Error as ApiError, StorageUnlockMechanismRequest,
+        StorageUnlockMechanismRequestStream,
+    },
+    futures::prelude::*,
+    lazy_static::lazy_static,
 };
-use futures::prelude::*;
-use lazy_static::lazy_static;
 
 type EnrollmentData = Vec<u8>;
 type PrekeyMaterial = Vec<u8>;

@@ -8,19 +8,23 @@
 //! used to trigger different errors and responses.
 
 #![cfg(test)]
-use crate::account_handler_connection::AccountHandlerConnection;
-use crate::account_handler_context::AccountHandlerContext;
-use account_common::{AccountId, AccountManagerError};
-use async_trait::async_trait;
-use fidl::endpoints::create_proxy_and_stream;
-use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
-use fidl_fuchsia_identity_internal::{
-    AccountHandlerControlMarker, AccountHandlerControlProxy, AccountHandlerControlRequest,
+use {
+    crate::{
+        account_handler_connection::AccountHandlerConnection,
+        account_handler_context::AccountHandlerContext,
+    },
+    account_common::{AccountId, AccountManagerError},
+    async_trait::async_trait,
+    fidl::endpoints::create_proxy_and_stream,
+    fidl_fuchsia_identity_account::{Error as ApiError, Lifetime},
+    fidl_fuchsia_identity_internal::{
+        AccountHandlerControlMarker, AccountHandlerControlProxy, AccountHandlerControlRequest,
+    },
+    fuchsia_async as fasync,
+    futures::prelude::*,
+    lazy_static::lazy_static,
+    std::sync::Arc,
 };
-use fuchsia_async as fasync;
-use futures::prelude::*;
-use lazy_static::lazy_static;
-use std::sync::Arc;
 
 lazy_static! {
     // Indicating en error-free, standard response.

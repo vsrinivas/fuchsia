@@ -7,17 +7,19 @@
 //! contains two implementations for persistence of the data, one Stash-based
 //! and one in-memory fake store, for use with tests.
 
-use account_common::{AccountManagerError, ResultExt};
-use anyhow::format_err;
-use async_trait::async_trait;
-use fidl::endpoints::create_proxy;
-use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_mem::Buffer;
-use fidl_fuchsia_stash::{StoreAccessorProxy, StoreMarker, StoreProxy, Value};
-use fuchsia_component::client::connect_to_protocol;
-use fuchsia_zircon::Vmo;
-use futures::lock::Mutex;
-use std::sync::Arc;
+use {
+    account_common::{AccountManagerError, ResultExt},
+    anyhow::format_err,
+    async_trait::async_trait,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_identity_account::Error as ApiError,
+    fidl_fuchsia_mem::Buffer,
+    fidl_fuchsia_stash::{StoreAccessorProxy, StoreMarker, StoreProxy, Value},
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon::Vmo,
+    futures::lock::Mutex,
+    std::sync::Arc,
+};
 
 /// Identifier in stash for the authentication mechanism id field.
 const AUTH_MECHANISM_ID: &str = "auth_mechanism_id";

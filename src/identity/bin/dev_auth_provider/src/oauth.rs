@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::*;
-
-use fidl_fuchsia_identity_external::{
-    Error as ApiError, OauthAccessTokenFromOauthRefreshTokenRequest, OauthRefreshTokenRequest,
-    OauthRequest, OauthRequestStream,
+use {
+    crate::common::*,
+    fidl_fuchsia_identity_external::{
+        Error as ApiError, OauthAccessTokenFromOauthRefreshTokenRequest, OauthRefreshTokenRequest,
+        OauthRequest, OauthRequestStream,
+    },
+    fidl_fuchsia_identity_tokens::{OauthAccessToken, OauthRefreshToken},
+    futures::{future, prelude::*},
+    log::warn,
+    serde::{Deserialize, Serialize},
 };
-use fidl_fuchsia_identity_tokens::{OauthAccessToken, OauthRefreshToken};
-use futures::future;
-use futures::prelude::*;
-use log::warn;
-use serde::{Deserialize, Serialize};
 
 /// Data format for an access token.  In general, an access token is in an
 /// opaque format that is unreadable to a client.  Here, we serialize the data as json,

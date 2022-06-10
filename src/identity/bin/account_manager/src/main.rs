@@ -22,19 +22,20 @@ mod fake_account_handler_connection;
 pub mod inspect;
 mod stored_account_list;
 
-use crate::account_handler_connection::AccountHandlerConnectionImpl;
-use crate::account_manager::AccountManager;
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_auth::AuthProviderConfig;
-use fuchsia_async as fasync;
-use fuchsia_component::fuchsia_single_component_package_url;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_inspect::Inspector;
-use futures::prelude::*;
-use lazy_static::lazy_static;
-use log::{error, info};
-use std::path::PathBuf;
-use std::sync::Arc;
+use {
+    crate::{
+        account_handler_connection::AccountHandlerConnectionImpl, account_manager::AccountManager,
+    },
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_auth::AuthProviderConfig,
+    fuchsia_async as fasync,
+    fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs},
+    fuchsia_inspect::Inspector,
+    futures::prelude::*,
+    lazy_static::lazy_static,
+    log::{error, info},
+    std::{path::PathBuf, sync::Arc},
+};
 
 /// This command line flag (prefixed with `--`) results in a set of hermetic auth providers.
 const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";

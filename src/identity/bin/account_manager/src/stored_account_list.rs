@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use log::warn;
-use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Write};
-use std::path::{Path, PathBuf};
-
-use account_common::{AccountId, AccountManagerError};
-use fidl_fuchsia_identity_account::Error as ApiError;
-use serde::{Deserialize, Serialize};
+use {
+    account_common::{AccountId, AccountManagerError},
+    fidl_fuchsia_identity_account::Error as ApiError,
+    log::warn,
+    serde::{Deserialize, Serialize},
+    std::{
+        fs::{self, File},
+        io::{BufReader, BufWriter, Write},
+        path::{Path, PathBuf},
+    },
+};
 
 /// Name of account list file (one per account manager), within the account list dir.
 const ACCOUNT_LIST_DOC: &str = "list.json";

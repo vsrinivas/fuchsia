@@ -5,18 +5,19 @@
 //! AccountMap defines the set of accounts on the current Fuchsia device.
 //! It caches AccountHandlerConnectionImpls for accounts for repeat access.
 
-use account_common::{AccountId, AccountManagerError, ResultExt};
-use anyhow::format_err;
-use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
-use fuchsia_inspect::{Node, Property};
-use std::collections::BTreeMap;
-use std::path::PathBuf;
-use std::sync::Arc;
-
-use crate::account_handler_connection::AccountHandlerConnection;
-use crate::account_handler_context::AccountHandlerContext;
-use crate::inspect;
-use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
+use {
+    crate::{
+        account_handler_connection::AccountHandlerConnection,
+        account_handler_context::AccountHandlerContext,
+        inspect,
+        stored_account_list::{StoredAccountList, StoredAccountMetadata},
+    },
+    account_common::{AccountId, AccountManagerError, ResultExt},
+    anyhow::format_err,
+    fidl_fuchsia_identity_account::{Error as ApiError, Lifetime},
+    fuchsia_inspect::{Node, Property},
+    std::{collections::BTreeMap, path::PathBuf, sync::Arc},
+};
 
 /// Type alias for the inner map type used in AccountMap.
 // TODO(dnordstrom): Replace `Option` with something more flexible, perhaps

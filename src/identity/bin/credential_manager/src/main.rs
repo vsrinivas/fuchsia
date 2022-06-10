@@ -9,24 +9,25 @@ mod lookup_table;
 mod pinweaver;
 mod provision;
 
-use anyhow::{Context, Error};
-use fidl_fuchsia_identity_credential::{ManagerRequestStream, ResetRequestStream};
-use fidl_fuchsia_io as fio;
-use fidl_fuchsia_tpm_cr50::PinWeaverMarker;
-use fuchsia_async as fasync;
-use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
-use fuchsia_fs::directory::open_in_namespace;
-use futures::StreamExt;
-use log::info;
-use std::sync::Arc;
-
-use crate::{
-    credential_manager::CredentialManager,
-    diagnostics::{InspectDiagnostics, INSPECTOR},
-    hash_tree::HashTreeStorageCbor,
-    lookup_table::{PersistentLookupTable, LOOKUP_TABLE_PATH},
-    pinweaver::PinWeaver,
-    provision::provision,
+use {
+    crate::{
+        credential_manager::CredentialManager,
+        diagnostics::{InspectDiagnostics, INSPECTOR},
+        hash_tree::HashTreeStorageCbor,
+        lookup_table::{PersistentLookupTable, LOOKUP_TABLE_PATH},
+        pinweaver::PinWeaver,
+        provision::provision,
+    },
+    anyhow::{Context, Error},
+    fidl_fuchsia_identity_credential::{ManagerRequestStream, ResetRequestStream},
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_tpm_cr50::PinWeaverMarker,
+    fuchsia_async as fasync,
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fuchsia_fs::directory::open_in_namespace,
+    futures::StreamExt,
+    log::info,
+    std::sync::Arc,
 };
 
 /// The path where the hash tree is stored on disk.

@@ -2,26 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::AccountLifetime;
-use crate::inspect;
-use crate::lock_request;
-use crate::persona::{Persona, PersonaContext};
-use crate::stored_account::StoredAccount;
-use account_common::{AccountManagerError, FidlPersonaId, PersonaId};
-use anyhow::Error;
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_identity_account::{
-    AccountRequest, AccountRequestStream, AuthState, AuthTargetRegisterAuthListenerRequest,
-    Error as ApiError, Lifetime, PersonaMarker,
+use {
+    crate::{
+        common::AccountLifetime,
+        inspect, lock_request,
+        persona::{Persona, PersonaContext},
+        stored_account::StoredAccount,
+    },
+    account_common::{AccountManagerError, FidlPersonaId, PersonaId},
+    anyhow::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_identity_account::{
+        AccountRequest, AccountRequestStream, AuthState, AuthTargetRegisterAuthListenerRequest,
+        Error as ApiError, Lifetime, PersonaMarker,
+    },
+    fidl_fuchsia_identity_internal::AccountHandlerContextProxy,
+    fuchsia_inspect::{Node, NumericProperty},
+    futures::prelude::*,
+    identity_common::{cancel_or, TaskGroup, TaskGroupCancel},
+    log::{error, info, warn},
+    scopeguard,
+    std::{fs, sync::Arc},
 };
-use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
-use fuchsia_inspect::{Node, NumericProperty};
-use futures::prelude::*;
-use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
-use log::{error, info, warn};
-use scopeguard;
-use std::fs;
-use std::sync::Arc;
 
 /// The context that a particular request to an Account should be executed in, capturing
 /// information that was supplied upon creation of the channel.

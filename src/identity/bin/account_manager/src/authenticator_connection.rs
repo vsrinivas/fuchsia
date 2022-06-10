@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{AccountManagerError, ResultExt};
-use anyhow::{format_err, Context as _};
-use fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd};
-use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_identity_authentication::StorageUnlockMechanismMarker;
-use fuchsia_component::client::{launch, launcher, App};
-use log::info;
-use parking_lot::Mutex;
-use std::sync::Arc;
+use {
+    account_common::{AccountManagerError, ResultExt},
+    anyhow::{format_err, Context as _},
+    fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd},
+    fidl_fuchsia_identity_account::Error as ApiError,
+    fidl_fuchsia_identity_authentication::StorageUnlockMechanismMarker,
+    fuchsia_component::client::{launch, launcher, App},
+    log::info,
+    parking_lot::Mutex,
+    std::sync::Arc,
+};
 
 /// A type capable of launching and connecting to a component that implements
 /// one or more authentication mechanism protocols. Launching is performed on demand.

@@ -7,14 +7,16 @@ mod oauth;
 mod oauth_open_id_connect;
 mod open_id_connect;
 
-use crate::oauth::Oauth;
-use crate::oauth_open_id_connect::OauthOpenIdConnect;
-use crate::open_id_connect::OpenIdConnect;
-use anyhow::Error;
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use futures::StreamExt;
-use log::info;
+use {
+    crate::{
+        oauth::Oauth, oauth_open_id_connect::OauthOpenIdConnect, open_id_connect::OpenIdConnect,
+    },
+    anyhow::Error,
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::StreamExt,
+    log::info,
+};
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {

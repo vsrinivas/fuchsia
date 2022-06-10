@@ -4,13 +4,15 @@
 
 //! A fake implementation of `StorageUnlockMechanism` to simplify unit testing.
 
-use fidl_fuchsia_identity_authentication::{
-    AttemptedEvent, Enrollment, Error as ApiError, StorageUnlockMechanismRequest,
-    StorageUnlockMechanismRequestStream,
+use {
+    fidl_fuchsia_identity_authentication::{
+        AttemptedEvent, Enrollment, Error as ApiError, StorageUnlockMechanismRequest,
+        StorageUnlockMechanismRequestStream,
+    },
+    fuchsia_async::futures::lock::Mutex,
+    futures::prelude::*,
+    std::collections::VecDeque,
 };
-use fuchsia_async::futures::lock::Mutex;
-use futures::prelude::*;
-use std::collections::VecDeque;
 
 /// A fake implementation of a `StorageUnlockMechanism` authenticator.
 ///

@@ -2,23 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::account_handler_context::AccountHandlerContext;
-use account_common::{AccountId, AccountManagerError, ResultExt as AccountResultExt};
-use anyhow::Context as _;
-use async_trait::async_trait;
-use core::fmt::Debug;
-use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
-use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
-use fidl_fuchsia_stash::StoreMarker;
-use fidl_fuchsia_sys::EnvironmentControllerProxy;
-use fuchsia_async as fasync;
-use fuchsia_component::client::App;
-use fuchsia_component::fuchsia_single_component_package_url;
-use fuchsia_component::server::ServiceFs;
-use futures::prelude::*;
-use log::{error, info, warn};
-use std::fmt;
-use std::sync::Arc;
+use {
+    crate::account_handler_context::AccountHandlerContext,
+    account_common::{AccountId, AccountManagerError, ResultExt as AccountResultExt},
+    anyhow::Context as _,
+    async_trait::async_trait,
+    core::fmt::Debug,
+    fidl_fuchsia_identity_account::{Error as ApiError, Lifetime},
+    fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy},
+    fidl_fuchsia_stash::StoreMarker,
+    fidl_fuchsia_sys::EnvironmentControllerProxy,
+    fuchsia_async as fasync,
+    fuchsia_component::{client::App, fuchsia_single_component_package_url, server::ServiceFs},
+    futures::prelude::*,
+    log::{error, info, warn},
+    std::{fmt, sync::Arc},
+};
 
 /// The url used to launch new AccountHandler component instances.
 const ACCOUNT_HANDLER_URL: &str = fuchsia_single_component_package_url!("account_handler");

@@ -5,11 +5,13 @@
 //! This module provides common constants and helpers to assist in the unit-testing of other
 //! modules within the crate.
 
-use crate::common::AccountLifetime;
-use account_common::{AccountId, PersonaId};
-use lazy_static::lazy_static;
-use std::path::PathBuf;
-use tempfile::TempDir;
+use {
+    crate::common::AccountLifetime,
+    account_common::{AccountId, PersonaId},
+    lazy_static::lazy_static,
+    std::path::PathBuf,
+    tempfile::TempDir,
+};
 
 lazy_static! {
     pub static ref TEST_ACCOUNT_ID: AccountId = AccountId::new(111111);

@@ -24,18 +24,18 @@ mod fake_authenticator;
 #[cfg(test)]
 mod test_util;
 
-use crate::account_handler::AccountHandler;
-use crate::common::AccountLifetime;
-use account_common::{AccountId, AccountManagerError};
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_protocol;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_inspect::Inspector;
-use futures::StreamExt;
-use log::{error, info};
-use std::sync::Arc;
+use {
+    crate::{account_handler::AccountHandler, common::AccountLifetime},
+    account_common::{AccountId, AccountManagerError},
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_identity_internal::AccountHandlerContextMarker,
+    fuchsia_async as fasync,
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fuchsia_inspect::Inspector,
+    futures::StreamExt,
+    log::{error, info},
+    std::sync::Arc,
+};
 
 const DATA_DIR: &str = "/data";
 

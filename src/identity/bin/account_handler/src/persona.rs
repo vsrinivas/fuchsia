@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::AccountLifetime;
-use crate::inspect;
-use account_common::PersonaId;
-use anyhow::Error;
-use fidl_fuchsia_identity_account::{
-    AuthState, AuthTargetRegisterAuthListenerRequest, Error as ApiError, Lifetime, PersonaRequest,
-    PersonaRequestStream,
+use {
+    crate::{common::AccountLifetime, inspect},
+    account_common::PersonaId,
+    anyhow::Error,
+    fidl_fuchsia_identity_account::{
+        AuthState, AuthTargetRegisterAuthListenerRequest, Error as ApiError, Lifetime,
+        PersonaRequest, PersonaRequestStream,
+    },
+    fuchsia_inspect::{Node, NumericProperty},
+    futures::prelude::*,
+    identity_common::{cancel_or, TaskGroup, TaskGroupCancel},
+    log::warn,
+    std::sync::Arc,
 };
-use fuchsia_inspect::{Node, NumericProperty};
-use futures::prelude::*;
-use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
-use log::warn;
-use std::sync::Arc;
 
 /// The context that a particular request to a Persona should be executed in, capturing
 /// information that was supplied upon creation of the channel.

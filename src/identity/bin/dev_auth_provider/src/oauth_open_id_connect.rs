@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::{
-    generate_random_string, get_token_expiry_time_nanos, USER_PROFILE_INFO_DISPLAY_NAME,
-    USER_PROFILE_INFO_EMAIL, USER_PROFILE_INFO_IMAGE_URL,
+use {
+    crate::{
+        common::{
+            generate_random_string, get_token_expiry_time_nanos, USER_PROFILE_INFO_DISPLAY_NAME,
+            USER_PROFILE_INFO_EMAIL, USER_PROFILE_INFO_IMAGE_URL,
+        },
+        oauth::AccessTokenContent,
+    },
+    fidl_fuchsia_identity_external::{
+        Error as ApiError, OauthOpenIdConnectRequest, OauthOpenIdConnectRequestStream,
+        OpenIdTokenFromOauthRefreshTokenRequest, OpenIdUserInfoFromOauthAccessTokenRequest,
+    },
+    fidl_fuchsia_identity_tokens::{OpenIdToken, OpenIdUserInfo},
+    futures::{future, prelude::*},
+    log::warn,
 };
-use crate::oauth::AccessTokenContent;
-use fidl_fuchsia_identity_external::{
-    Error as ApiError, OauthOpenIdConnectRequest, OauthOpenIdConnectRequestStream,
-    OpenIdTokenFromOauthRefreshTokenRequest, OpenIdUserInfoFromOauthAccessTokenRequest,
-};
-use fidl_fuchsia_identity_tokens::{OpenIdToken, OpenIdUserInfo};
-use futures::future;
-use futures::prelude::*;
-use log::warn;
 
 /// An implementation of the `OauthOpenIdConnect` protocol for testing.
 pub struct OauthOpenIdConnect {}

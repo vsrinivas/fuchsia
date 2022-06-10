@@ -7,13 +7,15 @@
 
 mod storage_unlock;
 
-use crate::storage_unlock::{Mode, StorageUnlockMechanism};
-use anyhow::{anyhow, Error};
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use futures::StreamExt;
-use log::{error, info};
-use std::convert::TryFrom;
+use {
+    crate::storage_unlock::{Mode, StorageUnlockMechanism},
+    anyhow::{anyhow, Error},
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::StreamExt,
+    log::{error, info},
+    std::convert::TryFrom,
+};
 
 /// This required command line option (prefixed with `--`) determines the mode of operation.
 const MODE_OPTION: &str = "mode";

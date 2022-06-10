@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::format_err;
-use async_trait::async_trait;
-use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_auth::{AuthProviderConfig, Status};
-use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
-use std::collections::HashMap;
-use std::sync::Arc;
-use token_manager::{AuthProviderConnection, AuthProviderService, TokenManagerError};
+use {
+    anyhow::format_err,
+    async_trait::async_trait,
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_auth::{AuthProviderConfig, Status},
+    fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker},
+    std::{collections::HashMap, sync::Arc},
+    token_manager::{AuthProviderConnection, AuthProviderService, TokenManagerError},
+};
 
 /// A type capable of launching and connecting to components that implement the
 /// `AuthProvider` protocol. Launching is performed on demand and components are

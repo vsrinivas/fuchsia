@@ -18,13 +18,15 @@
 mod auth_provider_supplier;
 mod token_manager_factory;
 
-use crate::token_manager_factory::TokenManagerFactory;
-use anyhow::{Context as _, Error};
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use futures::StreamExt;
-use log::info;
-use std::sync::Arc;
+use {
+    crate::token_manager_factory::TokenManagerFactory,
+    anyhow::{Context as _, Error},
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::StreamExt,
+    log::info,
+    std::sync::Arc,
+};
 
 // Default data directory for the TokenManagerFactory.
 const DATA_DIR: &str = "/data";

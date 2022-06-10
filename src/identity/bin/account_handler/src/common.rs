@@ -4,8 +4,7 @@
 
 //! Crate-wide types.
 
-use fidl_fuchsia_identity_account::Lifetime;
-use std::path::PathBuf;
+use {fidl_fuchsia_identity_account::Lifetime, std::path::PathBuf};
 
 /// Enum describing whether the account is ephemeral or persistent. If persistent, contains the
 /// persistent storage location.

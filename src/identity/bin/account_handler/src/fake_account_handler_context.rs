@@ -4,18 +4,19 @@
 
 //! A fake implementation of `AccountHandlerContext` to simplify unit testing.
 
-use crate::fake_authenticator::FakeAuthenticator;
-use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
-use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_identity_internal::{
-    AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerContextRequest,
-    AccountHandlerContextRequestStream,
+use {
+    crate::fake_authenticator::FakeAuthenticator,
+    fidl::endpoints::{create_endpoints, create_proxy_and_stream},
+    fidl_fuchsia_identity_account::Error as ApiError,
+    fidl_fuchsia_identity_internal::{
+        AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerContextRequest,
+        AccountHandlerContextRequestStream,
+    },
+    fuchsia_async as fasync,
+    futures::prelude::*,
+    log::error,
+    std::{collections::BTreeMap, sync::Arc},
 };
-use fuchsia_async as fasync;
-use futures::prelude::*;
-use log::error;
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 /// A fake meant for tests which rely on an AccountHandlerContext, but the context itself
 /// isn't under test. As opposed to the real type, this doesn't depend on any other

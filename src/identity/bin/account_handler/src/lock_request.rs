@@ -4,8 +4,7 @@
 
 //! Utilities for handling lock requests.
 
-use futures::channel::oneshot;
-use futures::lock::Mutex;
+use futures::{channel::oneshot, lock::Mutex};
 
 /// A wrapper for oneshot::channel::<()>() for the interactions between
 /// AccountHandler and Account during Account locking.

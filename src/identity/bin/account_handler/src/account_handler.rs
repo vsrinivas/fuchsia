@@ -2,30 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::account::{Account, AccountContext};
-use crate::common::AccountLifetime;
-use crate::inspect;
-use crate::lock_request;
-use crate::pre_auth;
-use account_common::{AccountId, AccountManagerError};
-use anyhow::format_err;
-use fidl::endpoints::{create_proxy, ServerEnd};
-use fidl::prelude::*;
-use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
-use fidl_fuchsia_identity_authentication::{Enrollment, StorageUnlockMechanismProxy};
-use fidl_fuchsia_identity_internal::{
-    AccountHandlerContextProxy, AccountHandlerControlRequest, AccountHandlerControlRequestStream,
+use {
+    crate::{
+        account::{Account, AccountContext},
+        common::AccountLifetime,
+        inspect, lock_request, pre_auth,
+    },
+    account_common::{AccountId, AccountManagerError},
+    anyhow::format_err,
+    fidl::endpoints::{create_proxy, ServerEnd},
+    fidl::prelude::*,
+    fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError},
+    fidl_fuchsia_identity_authentication::{Enrollment, StorageUnlockMechanismProxy},
+    fidl_fuchsia_identity_internal::{
+        AccountHandlerContextProxy, AccountHandlerControlRequest,
+        AccountHandlerControlRequestStream,
+    },
+    fuchsia_async as fasync,
+    fuchsia_inspect::{Inspector, Property},
+    futures::{channel::oneshot, lock::Mutex, prelude::*},
+    identity_common::TaskGroupError,
+    lazy_static::lazy_static,
+    log::{error, info, warn},
+    std::{fmt, sync::Arc},
 };
-use fuchsia_async as fasync;
-use fuchsia_inspect::{Inspector, Property};
-use futures::channel::oneshot;
-use futures::lock::Mutex;
-use futures::prelude::*;
-use identity_common::TaskGroupError;
-use lazy_static::lazy_static;
-use log::{error, info, warn};
-use std::fmt;
-use std::sync::Arc;
 
 lazy_static! {
     /// Temporary pre-key material which constitutes a successful authentication

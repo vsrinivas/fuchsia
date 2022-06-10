@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::authenticator_connection::{AuthenticatorConnection, AuthenticatorService};
-use anyhow::Error;
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_auth::AuthProviderConfig;
-use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_identity_internal::{
-    AccountHandlerContextRequest, AccountHandlerContextRequestStream,
+use {
+    crate::authenticator_connection::{AuthenticatorConnection, AuthenticatorService},
+    anyhow::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_auth::AuthProviderConfig,
+    fidl_fuchsia_identity_account::Error as ApiError,
+    fidl_fuchsia_identity_internal::{
+        AccountHandlerContextRequest, AccountHandlerContextRequestStream,
+    },
+    futures::prelude::*,
+    std::collections::HashMap,
+    token_manager::{AuthProviderConnection, AuthProviderService},
 };
-use futures::prelude::*;
-use std::collections::HashMap;
-use token_manager::{AuthProviderConnection, AuthProviderService};
 
 /// A type that can respond to`AccountHandlerContext` requests from the AccountHandler components
 /// that we launch. These requests provide contextual and service information to the

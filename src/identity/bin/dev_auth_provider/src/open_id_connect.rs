@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_identity_external::{
-    Error as ApiError, OpenIdConnectRequest, OpenIdConnectRequestStream,
+use {
+    fidl_fuchsia_identity_external::{
+        Error as ApiError, OpenIdConnectRequest, OpenIdConnectRequestStream,
+    },
+    fidl_fuchsia_identity_tokens::OpenIdToken,
+    futures::prelude::*,
+    log::warn,
 };
-use fidl_fuchsia_identity_tokens::OpenIdToken;
-use futures::prelude::*;
-use log::warn;
 
 /// An implementation of the `OpenIdConnect` protocol for testing.
 pub struct OpenIdConnect {}

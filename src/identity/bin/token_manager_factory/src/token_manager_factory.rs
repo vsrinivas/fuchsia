@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::auth_provider_supplier::AuthProviderSupplier;
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_auth::{
-    AuthProviderConfig, TokenManagerFactoryRequest, TokenManagerFactoryRequestStream,
+use {
+    crate::auth_provider_supplier::AuthProviderSupplier,
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_auth::{
+        AuthProviderConfig, TokenManagerFactoryRequest, TokenManagerFactoryRequestStream,
+    },
+    futures::prelude::*,
+    identity_common::TaskGroup,
+    log::{info, warn},
+    parking_lot::Mutex,
+    std::{collections::HashMap, path::PathBuf, sync::Arc},
+    token_manager::{TokenManagerContext, TokenManagerError},
 };
-use futures::prelude::*;
-use identity_common::TaskGroup;
-use log::{info, warn};
-use parking_lot::Mutex;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::Arc;
-use token_manager::{TokenManagerContext, TokenManagerError};
 
 // The file suffix to use for token manager databases. This string is appended to the user id.
 const DB_SUFFIX: &str = "_token_store.json";

@@ -2,30 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{AccountId, AccountManagerError, FidlAccountId};
-use anyhow::Error;
-use fidl_fuchsia_auth::AuthProviderConfig;
-use fidl_fuchsia_identity_account::{
-    AccountManagerGetAccountRequest, AccountManagerProvisionNewAccountRequest,
-    AccountManagerRegisterAccountListenerRequest, AccountManagerRequest,
-    AccountManagerRequestStream, Error as ApiError, Lifetime,
+use {
+    crate::{
+        account_event_emitter::{
+            AccountEvent, AccountEventEmitter, Options as AccountEventEmitterOptions,
+        },
+        account_handler_connection::AccountHandlerConnection,
+        account_handler_context::AccountHandlerContext,
+        account_map::AccountMap,
+        inspect,
+    },
+    account_common::{AccountId, AccountManagerError, FidlAccountId},
+    anyhow::Error,
+    fidl_fuchsia_auth::AuthProviderConfig,
+    fidl_fuchsia_identity_account::{
+        AccountManagerGetAccountRequest, AccountManagerProvisionNewAccountRequest,
+        AccountManagerRegisterAccountListenerRequest, AccountManagerRequest,
+        AccountManagerRequestStream, Error as ApiError, Lifetime,
+    },
+    fuchsia_inspect::{Inspector, Property},
+    futures::{lock::Mutex, prelude::*},
+    lazy_static::lazy_static,
+    log::{info, warn},
+    std::{convert::TryFrom, path::PathBuf, sync::Arc},
 };
-use fuchsia_inspect::{Inspector, Property};
-use futures::lock::Mutex;
-use futures::prelude::*;
-use lazy_static::lazy_static;
-use log::{info, warn};
-use std::convert::TryFrom;
-use std::path::PathBuf;
-use std::sync::Arc;
-
-use crate::account_event_emitter::{
-    AccountEvent, AccountEventEmitter, Options as AccountEventEmitterOptions,
-};
-use crate::account_handler_connection::AccountHandlerConnection;
-use crate::account_handler_context::AccountHandlerContext;
-use crate::account_map::AccountMap;
-use crate::inspect;
 
 lazy_static! {
     /// The Auth scopes used for authorization during service provider-based account provisioning.

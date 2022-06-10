@@ -20,9 +20,11 @@ use {
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
     log::{error, info, warn},
-    std::cell::{RefCell, RefMut},
-    std::collections::VecDeque,
-    std::sync::Arc,
+    std::{
+        cell::{RefCell, RefMut},
+        collections::VecDeque,
+        sync::Arc,
+    },
 };
 
 /// Retry threshold for fast retrys for failed |CommitOperation|.

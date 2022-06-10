@@ -6,19 +6,18 @@
 //! sending events to listeners, optionally configured with filters, about changes in the accounts
 //! presence and states during their lifetime.
 
-use account_common::AccountId;
-use fidl::endpoints::Proxy;
-use fidl_fuchsia_identity_account::{
-    AccountAuthState, AccountListenerProxy, AccountManagerRegisterAccountListenerRequest,
-    AuthState, AuthStateSummary,
+use {
+    crate::inspect,
+    account_common::AccountId,
+    fidl::endpoints::Proxy,
+    fidl_fuchsia_identity_account::{
+        AccountAuthState, AccountListenerProxy, AccountManagerRegisterAccountListenerRequest,
+        AuthState, AuthStateSummary,
+    },
+    fuchsia_inspect::{Node, NumericProperty, Property},
+    futures::{future::*, lock::Mutex},
+    std::{convert::TryFrom, pin::Pin},
 };
-use fuchsia_inspect::{Node, NumericProperty, Property};
-use futures::future::*;
-use futures::lock::Mutex;
-use std::convert::TryFrom;
-use std::pin::Pin;
-
-use crate::inspect;
 
 // TODO(jsankey): Add a mechanism to publicize auth state changes rather than this fixed minimum
 // possible value.
