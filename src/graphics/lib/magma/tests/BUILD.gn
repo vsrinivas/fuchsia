@@ -59,7 +59,11 @@ group("test-drivers") {
 # Tests that require a working libvulkan to run.
 group("vulkan-tests") {
   testonly = true
-  public_deps = [ "//src/graphics/tests:vulkan-tests" ]
+  public_deps = [
+    # We also need run-test-component to run these tests.
+    "//bundles/packages/testing:run_test_component",
+    "//src/graphics/tests:vulkan-tests",
+  ]
 }
 
 # Packages needed for L0 from //doc/the-book/magma/contributing.md

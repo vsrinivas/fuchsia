@@ -11,6 +11,7 @@ group("bin") {
     "//src/developer/trace2json",
     "//src/performance/bin/cpuperf_provider",
     "//src/performance/bin/ktrace_provider",
+    "//src/sys/run_test_component",
     "//src/ui/benchmarks",
   ]
 }
