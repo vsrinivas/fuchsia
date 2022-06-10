@@ -56,9 +56,6 @@ lib_sources = [
   "src/transport/tcp/rtt.rs",
   "src/transport/tcp/segment.rs",
   "src/transport/tcp/seqnum.rs",
-  "src/transport/tcp/socket/demux.rs",
-  "src/transport/tcp/socket/icmp.rs",
-  "src/transport/tcp/socket/mod.rs",
   "src/transport/tcp/state.rs",
   "src/transport/udp.rs",
 ]

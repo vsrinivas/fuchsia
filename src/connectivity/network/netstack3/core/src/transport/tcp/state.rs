@@ -42,14 +42,14 @@ const MSL: Duration = Duration::from_secs(2 * 60);
 ///   - accept
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct Closed<Error> {
+struct Closed<Error> {
     /// Describes a reason why the connection was closed.
-    pub(crate) reason: Error,
+    reason: Error,
 }
 
 /// An uninhabited type used together with [`Closed`] to sugest that it is in
 /// initial condition and no errors have occurred yet.
-pub(crate) enum Initial {}
+enum Initial {}
 
 impl Closed<Initial> {
     /// Corresponds to the [OPEN](https://tools.ietf.org/html/rfc793#page-54)
@@ -57,7 +57,7 @@ impl Closed<Initial> {
     ///
     /// `iss`is The initial send sequence number. Which is effectively the
     /// sequence number of SYN.
-    pub(crate) fn connect<I: Instant>(iss: SeqNum, now: I) -> (SynSent<I>, Segment<()>) {
+    fn connect<I: Instant>(iss: SeqNum, now: I) -> (SynSent<I>, Segment<()>) {
         (
             SynSent {
                 iss,
@@ -68,7 +68,7 @@ impl Closed<Initial> {
         )
     }
 
-    pub(crate) fn listen(iss: SeqNum) -> Listen {
+    fn listen(iss: SeqNum) -> Listen {
         Listen { iss }
     }
 }
@@ -77,7 +77,7 @@ impl<Error> Closed<Error> {
     /// Processes an incoming segment in the CLOSED state.
     ///
     /// TCP will either drop the incoming segment or generate a RST.
-    pub(crate) fn on_segment(
+    fn on_segment(
         &self,
         Segment { seq: seg_seq, ack: seg_ack, wnd: _, contents }: Segment<impl Payload>,
     ) -> Option<Segment<()>> {
@@ -119,7 +119,7 @@ impl<Error> Closed<Error> {
 ///   - listen
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct Listen {
+struct Listen {
     iss: SeqNum,
 }
 
@@ -198,7 +198,7 @@ impl Listen {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct SynSent<I: Instant> {
+struct SynSent<I: Instant> {
     iss: SeqNum,
     // The timestamp when the SYN segment was sent. A `None` here means that
     // the SYN segment was retransmitted so that it can't be used to estimate
@@ -378,7 +378,7 @@ impl<I: Instant> SynSent<I> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct SynRcvd<I: Instant> {
+struct SynRcvd<I: Instant> {
     iss: SeqNum,
     irs: SeqNum,
     // The timestamp when the SYN segment was received, and consequently, our
@@ -491,7 +491,7 @@ impl<R: ReceiveBuffer> Recv<R> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct Established<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
+struct Established<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::NO }>,
     rcv: Recv<R>,
 }
@@ -715,7 +715,7 @@ impl<I: Instant, S: SendBuffer> Send<I, S, { FinQueued::NO }> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct CloseWait<I: Instant, R, S: SendBuffer> {
+struct CloseWait<I: Instant, R, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::NO }>,
     rcv_residual: R,
     last_ack: SeqNum,
@@ -739,7 +739,7 @@ pub(crate) struct CloseWait<I: Instant, R, S: SendBuffer> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct LastAck<I: Instant, R, S: SendBuffer> {
+struct LastAck<I: Instant, R, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::YES }>,
     rcv_residual: R,
     last_ack: SeqNum,
@@ -762,7 +762,7 @@ pub(crate) struct LastAck<I: Instant, R, S: SendBuffer> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct FinWait1<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
+struct FinWait1<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::YES }>,
     rcv: Recv<R>,
 }
@@ -782,7 +782,7 @@ pub(crate) struct FinWait1<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
 ///   - accept
 ///   - listen
 ///   - connect
-pub(crate) struct FinWait2<R: ReceiveBuffer> {
+struct FinWait2<R: ReceiveBuffer> {
     last_seq: SeqNum,
     rcv: Recv<R>,
 }
@@ -802,7 +802,7 @@ pub(crate) struct FinWait2<R: ReceiveBuffer> {
 ///   - accept
 ///   - listen
 ///   - connect
-pub(crate) struct Closing<I: Instant, R, S: SendBuffer> {
+struct Closing<I: Instant, R, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::YES }>,
     rcv_residual: R,
     last_ack: SeqNum,
@@ -825,7 +825,7 @@ pub(crate) struct Closing<I: Instant, R, S: SendBuffer> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct TimeWait<I: Instant, R> {
+struct TimeWait<I: Instant, R> {
     last_seq: SeqNum,
     last_ack: SeqNum,
     last_wnd: WindowSize,
@@ -841,7 +841,7 @@ fn new_time_wait_expiry<I: Instant>(now: I) -> I {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
+enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     Closed(Closed<UserError>),
     Listen(Listen),
     SynRcvd(SynRcvd<I>),
@@ -864,11 +864,7 @@ enum CloseError {
 
 impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
     /// Processes an incoming segment and advances the state machine.
-    pub(crate) fn on_segment<P: Payload>(
-        &mut self,
-        incoming: Segment<P>,
-        now: I,
-    ) -> Option<Segment<()>> {
+    fn on_segment<P: Payload>(&mut self, incoming: Segment<P>, now: I) -> Option<Segment<()>> {
         let (mut rcv_nxt, rcv_wnd, snd_nxt) = match self {
             State::Closed(closed) => return closed.on_segment(incoming),
             State::Listen(listen) => {
@@ -1219,7 +1215,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
     ///
     /// Forms one segment of at most `mss` available bytes, as long as the
     /// receiver window allows.
-    pub(crate) fn poll_send(&mut self, mss: u32, now: I) -> Option<Segment<SendPayload<'_>>> {
+    fn poll_send(&mut self, mss: u32, now: I) -> Option<Segment<SendPayload<'_>>> {
         match self {
             State::SynSent(SynSent { iss, timestamp, retrans_timer }) => (retrans_timer.at >= now)
                 .then(|| {
@@ -1279,7 +1275,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
     /// timers (for example, by using `TimerContext`), then calls to
     /// `poll_send_at` and to `install_timer`/`cancel_timer` should not
     /// interleave, otherwise timers may be lost.
-    pub(crate) fn poll_send_at(&self) -> Option<I> {
+    fn poll_send_at(&self) -> Option<I> {
         match self {
             State::Established(Established { snd, rcv: _ })
             | State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
