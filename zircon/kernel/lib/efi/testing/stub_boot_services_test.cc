@@ -29,10 +29,16 @@ TEST(StubBootServicesDeathTest, CreateDuplicate) {
 
 TEST(StubBootServices, AllocateAndFreePool) {
   StubBootServices stub;
+  constexpr size_t kPoolSize = 16;
 
   void* memory = nullptr;
-  ASSERT_EQ(EFI_SUCCESS, stub.services()->AllocatePool(EfiConventionalMemory, 16, &memory));
+  ASSERT_EQ(EFI_SUCCESS, stub.services()->AllocatePool(EfiConventionalMemory, kPoolSize, &memory));
   ASSERT_NE(nullptr, memory);
+
+  // Make sure we initialized the memory to something nonzero.
+  for (size_t i = 0; i < kPoolSize; ++i) {
+    EXPECT_NE(0, reinterpret_cast<uint8_t*>(memory)[i]);
+  }
 
   ASSERT_EQ(EFI_SUCCESS, stub.services()->FreePool(memory));
 }

@@ -55,6 +55,18 @@ void* xefi_load_file(const char16_t* filename, size_t* size_out, size_t front_by
 efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t ifc,
                               uint64_t* mmio);
 
+// Fetches any load options that were passed by the UEFI boot manager.
+//
+// On success:
+//   * |load_options| will always be valid; if no load options were provided, it
+//     will just be an empty UTF-16 string.
+//   * The caller is responsible for calling FreePool() to free |load_options|.
+//
+// load_options_size: will be filled with the size of the load options provided,
+//                    including the null terminator.
+// load_options: will be updated to point to an allocated buffer containing
+//               |load_options_size| bytes plus 2 bytes of random garbage.
+//               TODO(https://fxbug.dev/100791): fix the random garbage.
 efi_status xefi_get_load_options(size_t* load_options_size, void** load_options);
 
 // GUIDs

@@ -47,8 +47,11 @@ class StubBootServices {
   //   void (*RestoreTPL)(efi_tpl old_tpl);
 
   // Default page allocation implementation is just to call malloc/free.
+  //
   // |type| and |memory_type| are ignored, and freeing a different number of
   // pages than were initially allocated is unsupported.
+  //
+  // Also initializes memory to some non-zero value.
   virtual efi_status AllocatePages(efi_allocate_type type, efi_memory_type memory_type,
                                    size_t pages, efi_physical_addr* memory);
   virtual efi_status FreePages(efi_physical_addr memory, size_t pages);
@@ -142,8 +145,15 @@ class StubBootServices {
   //   efi_status (*InstallMultipleProtocolInterfaces)(efi_handle* handle, ...);
   //   efi_status (*UninstallMultipleProtocolInterfaces)(efi_handle handle, ...);
   //   efi_status (*CalculateCrc32)(void* data, size_t len, uint32_t* crc32);
-  //   void (*CopyMem)(void* dest, const void* src, size_t len);
-  //   void (*SetMem)(void* buf, size_t len, uint8_t val);
+
+  // Default implementation is memmove()/memset().
+  //
+  // UEFI documentation doesn't mention whether the pointers have to be valid
+  // when length is 0, so to be cautious the default implementation will also
+  // explicitly fail the test if the pointers are invalid.
+  virtual void CopyMem(void* dest, const void* src, size_t len);
+  virtual void SetMem(void* buf, size_t len, uint8_t val);
+
   //   efi_status (*CreateEventEx)(uint32_t type, efi_tpl notify_tpl, efi_event_notify notify_fn,
   //                               const void* notify_ctx, const efi_guid* event_group,
   //                               efi_event* event);

@@ -46,7 +46,10 @@ config("shared_config") {
 }
 
 test("gigaboot_shared_lib_test") {
-  sources = [ "xefi_test.cc" ]
+  sources = [
+    "cmdline_test.cc",
+    "xefi_test.cc",
+  ]
 
   deps = [
     ":shared",
