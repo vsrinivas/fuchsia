@@ -131,7 +131,7 @@ AVB metadata which will be used to validate public key
 
 **Current value for `target_cpu = "arm64"`:** `"//third_party/android/platform/external/avb/test/data/atx_metadata.bin"`
 
-From //boards/arm64.gni:52
+From //boards/arm64.gni:51
 
 **Overridden from the default:** `""`
 
@@ -150,7 +150,7 @@ a key which will be used to sign VBMETA and images for AVB
 
 **Current value for `target_cpu = "arm64"`:** `"//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"`
 
-From //boards/arm64.gni:54
+From //boards/arm64.gni:53
 
 **Overridden from the default:** `""`
 
@@ -390,9 +390,9 @@ From //build/board.gni:10
 A list of driver package labels to include in the 'base' package set. Used
 by the board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//bundles/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "arm64"`:** `["//bundles/packages/prod:drivers-system", "//bundles/packages/prod:wlan_drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/arm64.gni:29
+From //boards/arm64.gni:27
 
 **Overridden from the default:** `[]`
 
@@ -449,7 +449,7 @@ physical/virtual device spec or both.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:44
+From //boards/arm64.gni:43
 
 **Overridden from the default:** `false`
 
@@ -467,7 +467,7 @@ From //build/board.gni:80
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //boards/arm64.gni:45
+From //boards/arm64.gni:44
 
 **Overridden from the default:** `true`
 
@@ -502,7 +502,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader"]`
 
-From //boards/arm64.gni:34
+From //boards/arm64.gni:33
 
 **Overridden from the default:** `[]`
 
@@ -552,14 +552,6 @@ From //build/board.gni:75
 
 ### board_system_image_deps
 A list of binary labels to include in the system_image package.
-
-**Current value for `target_cpu = "arm64"`:** `["//bundles/packages/prod:wlan_drivers"]`
-
-From //boards/arm64.gni:27
-
-**Overridden from the default:** `[]`
-
-From //build/board.gni:53
 
 **Current value (from the default):** `[]`
 
@@ -749,7 +741,7 @@ Generate a UEFI disk image
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:48
+From //boards/arm64.gni:47
 
 **Overridden from the default:** `false`
 
@@ -2860,11 +2852,11 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:18
 
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
-Zero means no limit.
+False means no limit.
 contents_size refers to contents stored within the filesystem (regardless
 of how they are stored).
 
-**Current value (from the default):** `"0"`
+**Current value (from the default):** `false`
 
 From //build/images/filesystem_limits.gni:10
 
@@ -2903,7 +2895,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:40
+From //boards/arm64.gni:39
 
 **Overridden from the default:** `0`
 
@@ -2926,7 +2918,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:41
+From //boards/arm64.gni:40
 
 **Overridden from the default:** `0`
 
@@ -4633,7 +4625,7 @@ Build the gigaboot bootloader.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:49
+From //boards/arm64.gni:48
 
 **Overridden from the default:** `false`
 
@@ -4778,7 +4770,7 @@ and the paving script will pave vbmeta images to the target device.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //boards/arm64.gni:50
+From //boards/arm64.gni:49
 
 **Overridden from the default:** `false`
 
