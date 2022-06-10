@@ -15,15 +15,15 @@ use crate::transport::tcp::{
 /// A TCP segment.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(Clone, Copy))]
-pub(super) struct Segment<P: Payload> {
+pub(crate) struct Segment<P: Payload> {
     /// The sequence number of the segment.
-    pub(super) seq: SeqNum,
+    pub(crate) seq: SeqNum,
     /// The acknowledge number of the segment. [`None`] if not present.
-    pub(super) ack: Option<SeqNum>,
+    pub(crate) ack: Option<SeqNum>,
     /// The advertised window size.
-    pub(super) wnd: WindowSize,
+    pub(crate) wnd: WindowSize,
     /// The carried data and its control flag.
-    pub(super) contents: Contents<P>,
+    pub(crate) contents: Contents<P>,
 }
 
 /// The maximum length that the sequence number doesn't wrap around.
@@ -34,7 +34,7 @@ const MAX_PAYLOAD_AND_CONTROL_LEN_U32: u32 = MAX_PAYLOAD_AND_CONTROL_LEN as u32;
 /// The contents of a TCP segment that takes up some sequence number space.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(Clone, Copy))]
-pub(super) struct Contents<P: Payload> {
+pub(crate) struct Contents<P: Payload> {
     /// The control flag of the segment.
     control: Option<Control>,
     /// The data carried by the segment; it is guaranteed that

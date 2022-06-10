@@ -2145,6 +2145,7 @@ pub(crate) fn iter_all_routes<
 }
 
 /// The metadata associated with an outgoing IP packet.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct SendIpPacketMeta<I: packet_formats::ip::IpExt, D, Src> {
     /// The outgoing device.
     pub(crate) device: D,
