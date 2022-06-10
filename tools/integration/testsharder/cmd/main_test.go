@@ -61,6 +61,7 @@ func TestExecute(t *testing.T) {
 		testDurations []build.TestDuration
 		testList      []build.TestListEntry
 		modifiers     []testsharder.TestModifier
+		packageRepos  []build.PackageRepo
 		affectedTests []string
 	}{
 		{
@@ -137,6 +138,13 @@ func TestExecute(t *testing.T) {
 				fuchsiaTestSpec("foo"),
 				fuchsiaTestSpec("bar"),
 				fuchsiaTestSpec("baz"),
+			},
+			packageRepos: []build.PackageRepo{
+				{
+					Path:    t.TempDir(),
+					Blobs:   filepath.Join(t.TempDir(), "blobs"),
+					Targets: filepath.Join(t.TempDir(), "targets.json"),
+				},
 			},
 		},
 		{
@@ -286,7 +294,11 @@ func TestExecute(t *testing.T) {
 			}
 			writeDepFiles(t, tc.flags.buildDir, tc.testSpecs)
 
-			m := &fakeModules{testSpecs: tc.testSpecs, testDurations: tc.testDurations}
+			m := &fakeModules{
+				testSpecs:           tc.testSpecs,
+				testDurations:       tc.testDurations,
+				packageRepositories: tc.packageRepos,
+			}
 			if err := execute(ctx, tc.flags, m); err != nil {
 				t.Fatal(err)
 			}
@@ -297,7 +309,7 @@ func TestExecute(t *testing.T) {
 				if diff := cmp.Diff(want, got); diff != "" {
 					t.Errorf(strings.Join([]string{
 						"Golden file mismatch!",
-						"To fix, run `tools/integration/testsharder/update_golden.sh",
+						"To fix, run `tools/integration/testsharder/update_goldens.sh",
 						diff,
 					}, "\n"))
 				}
@@ -307,10 +319,11 @@ func TestExecute(t *testing.T) {
 }
 
 type fakeModules struct {
-	images        []build.Image
-	testSpecs     []build.TestSpec
-	testList      string
-	testDurations []build.TestDuration
+	images              []build.Image
+	testSpecs           []build.TestSpec
+	testList            string
+	testDurations       []build.TestDuration
+	packageRepositories []build.PackageRepo
 }
 
 func (m *fakeModules) Platforms() []build.DimensionSet {
@@ -335,9 +348,10 @@ func (m *fakeModules) Images() []build.Image {
 	}
 }
 
-func (m *fakeModules) TestListLocation() []string          { return []string{testListPath} }
-func (m *fakeModules) TestSpecs() []build.TestSpec         { return m.testSpecs }
-func (m *fakeModules) TestDurations() []build.TestDuration { return m.testDurations }
+func (m *fakeModules) TestListLocation() []string               { return []string{testListPath} }
+func (m *fakeModules) TestSpecs() []build.TestSpec              { return m.testSpecs }
+func (m *fakeModules) TestDurations() []build.TestDuration      { return m.testDurations }
+func (m *fakeModules) PackageRepositories() []build.PackageRepo { return m.packageRepositories }
 
 func packageURL(basename string) string {
 	return fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cm", basename, basename)

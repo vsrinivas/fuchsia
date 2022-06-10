@@ -37,6 +37,7 @@ go_library("build") {
     "images.go",
     "modules.go",
     "package_manifest_list.go",
+    "package_repositories.go",
     "prebuilt_binaries.go",
     "sdk_archives.go",
     "test_durations.go",

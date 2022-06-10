@@ -5,17 +5,24 @@
 package testsharder
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
+	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
+	pm_build "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+)
+
+const (
+	// The name of the metadata directory within a package repository.
+	metadataDirName = "repository"
+	// The name of the blobs directory within a package repository.
+	blobsDirName = "blobs"
 )
 
 // Shard represents a set of tests with a common execution environment.
@@ -48,66 +55,65 @@ type Shard struct {
 }
 
 // CreatePackageRepo creates a package repository for the given shard.
-func (s *Shard) CreatePackageRepo() error {
-	// Aggregate the package manifests used by the shard. We do this first
-	// as we can early exit for shards with no such manifests.
-	var pkgManifests []string
-	for _, t := range s.Tests {
-		if len(t.PackageManifests) != 0 {
-			pkgManifests = append(pkgManifests, t.PackageManifests...)
-		}
-	}
-	if len(pkgManifests) == 0 {
-		return nil
-	}
-
-	// run-test-suite and run-test-component are used by all shards, so
-	// always add their package manifests to the list.
-	// TODO(rudymathu): This is very much a hack to get the CAS builders
-	// up and running to evaluate stability and performance. In the long
-	// term, this should be handled by the build system and passed in.
-	pkgManifests = append(pkgManifests,
-		"obj/src/sys/run_test_component/run-test-component-pkg/package_manifest.json",
-		"obj/src/sys/run_test_suite/run_test_suite_pkg/package_manifest.json",
-	)
-
+func (s *Shard) CreatePackageRepo(globalRepoMetadata string) error {
 	// The path to the package repository should be unique so as to not
-	// conflict with other shards' repositories. Ideally we'd just use
-	// the shard name, but that can include nonstandard characters, so
-	// we use the base64 encoding just in case.
-	repoPath := fmt.Sprintf("repo_%s", base64.StdEncoding.EncodeToString([]byte(s.Name)))
-
-	// Clean out any existing repositories for this shard. Theoretically,
-	// we could build on top of previous repositories, but this seems a
-	// bit unsafe and prone to monotonically increasing repo sizes.
-	if err := os.RemoveAll(repoPath); err != nil {
+	// conflict with other shards' repositories.
+	localRepo := fmt.Sprintf("repo_%s", url.PathEscape(s.Name))
+	// Remove the localRepo if it exists in the incremental build cache.
+	if err := os.RemoveAll(localRepo); err != nil {
 		return err
 	}
 
-	// Initialize the empty repository.
-	r, err := repo.New(repoPath, filepath.Join(repoPath, "repository", "blobs"))
+	// Copy over all repository metadata (encoded in JSON files).
+	localRepoMetadata := filepath.Join(localRepo, metadataDirName)
+	if err := os.MkdirAll(localRepoMetadata, os.ModePerm); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(globalRepoMetadata)
 	if err != nil {
 		return err
 	}
-	if err := r.Init(); err != nil {
-		return err
+	for _, e := range entries {
+		filename := e.Name()
+		if filepath.Ext(filename) == ".json" {
+			src := filepath.Join(globalRepoMetadata, filename)
+			dst := filepath.Join(localRepoMetadata, filename)
+			if err := os.Link(src, dst); err != nil {
+				return err
+			}
+		}
 	}
 
-	// While this looks like a no-op, the underlying pm library uses it to
-	// generate targets/snapshot/timestamp metadata.
-	if err := r.AddTargets([]string{}, json.RawMessage{}); err != nil {
-		return err
+	// Aggregate the package manifests we know will be used by the shard.
+	var pkgManifests []string
+	for _, t := range s.Tests {
+		pkgManifests = append(pkgManifests, t.PackageManifests...)
 	}
 
-	// Publish the package manifests to the new repository.
-	if _, err := r.PublishManifests(pkgManifests); err != nil {
+	// Add the blobs we expect the shard to access.
+	blobsDir := filepath.Join(localRepo, blobsDirName)
+	addedBlobs := make(map[string]struct{})
+	if err := os.Mkdir(blobsDir, os.ModePerm); err != nil {
 		return err
 	}
-	if err := r.CommitUpdates(true); err != nil {
-		return err
+	for _, p := range pkgManifests {
+		manifest, err := pm_build.LoadPackageManifest(p)
+		if err != nil {
+			return err
+		}
+		for _, blob := range manifest.Blobs {
+			if _, exists := addedBlobs[blob.Merkle.String()]; !exists {
+				dst := filepath.Join(blobsDir, blob.Merkle.String())
+				if err := linkOrCopy(blob.SourcePath, dst); err != nil {
+					return err
+				}
+				addedBlobs[blob.Merkle.String()] = struct{}{}
+			}
+		}
 	}
-	s.PkgRepo = repoPath
-	s.AddDeps([]string{repoPath})
+
+	s.PkgRepo = localRepo
+	s.AddDeps([]string{localRepo})
 	return nil
 }
 
@@ -264,4 +270,30 @@ func stringSlicesEq(s []string, t []string) bool {
 		}
 	}
 	return true
+}
+
+// linkOrCopy hardlinks src to dst if src is not a symlink. If the source is a
+// symlink, then it copies it. There are several blobs in the build directory
+// that are symlinks to CIPD packages, and we don't want to include that
+// symlink in the final package repository, so we copy instead.
+func linkOrCopy(src string, dst string) error {
+	info, err := os.Lstat(src)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSymlink != os.ModeSymlink {
+		return os.Link(src, dst)
+	}
+	s, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	d, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	_, err = io.Copy(d, s)
+	return err
 }

@@ -31,6 +31,7 @@ type Modules struct {
 	generatedSources         []string
 	images                   []Image
 	packageManifestsLocation []string
+	packageRepositories      []PackageRepo
 	platforms                []DimensionSet
 	prebuiltBinarySets       []PrebuiltBinarySet
 	sdkArchives              []SDKArchive
@@ -56,6 +57,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"generated_sources.json":          &m.generatedSources,
 		imageManifestName:                 &m.images,
 		"all_package_manifest_paths.json": &m.packageManifestsLocation,
+		"package-repositories.json":       &m.packageRepositories,
 		"platforms.json":                  &m.platforms,
 		"prebuilt_binaries.json":          &m.prebuiltBinarySets,
 		"sdk_archives.json":               &m.sdkArchives,
@@ -123,6 +125,10 @@ func (m Modules) Images() []Image {
 
 func (m Modules) PackageManifestsLocation() []string {
 	return m.packageManifestsLocation
+}
+
+func (m Modules) PackageRepositories() []PackageRepo {
+	return m.packageRepositories
 }
 
 // Platforms returns the build API module of available platforms to test on.

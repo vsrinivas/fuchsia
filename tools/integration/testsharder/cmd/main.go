@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -128,6 +129,7 @@ type buildModules interface {
 	TestSpecs() []build.TestSpec
 	TestListLocation() []string
 	TestDurations() []build.TestDuration
+	PackageRepositories() []build.PackageRepo
 }
 
 func execute(ctx context.Context, flags testsharderFlags, m buildModules) error {
@@ -243,7 +245,11 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		for _, s := range shards {
 			testsharder.AddImageDeps(s, m.Images(), flags.pave)
 			if flags.hermeticDeps {
-				if err := s.CreatePackageRepo(); err != nil {
+				pkgRepos := m.PackageRepositories()
+				if len(pkgRepos) < 1 {
+					return errors.New("build did not generate a package repository")
+				}
+				if err := s.CreatePackageRepo(pkgRepos[0].Path); err != nil {
 					return err
 				}
 			}
