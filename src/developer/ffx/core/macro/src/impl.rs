@@ -590,9 +590,20 @@ fn generate_proxy_from_selector(
                         fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
                             errors::ffx_error!(format!(
 "The plugin service selector '{}' did not match any services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new/ffx+User+Bug.
 
-Plugin developers: you can use `ffx component select moniker '<selector>'` to explore the component topology of your target device and fix this selector.",
+It is possible that the expected component is either not built into the system image, or that the
+package server has not been setup.
+
+For users, ensure your Fuchsia device is registered with ffx. To do this you can run:
+
+$ ffx target repository register -r $IMAGE_TYPE --alias fuchsia.com
+
+For plugin developers, it may be possible that the moniker you're attempting to connect to is
+incorrect. You can use `ffx component select moniker '<selector>'` to explore the component topology
+of your target device to fix this selector if this is the case.
+
+If you believe you have encountered a bug after walking through the above please report it at
+http://fxbug.dev/new/ffx+User+Bug",
                             #mapping)).into()
                         }
                         fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
