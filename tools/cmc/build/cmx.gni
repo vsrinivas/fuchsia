@@ -265,5 +265,9 @@ template("cmx") {
                              "testonly",
                              "visibility",
                            ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//build/components/cmx:cmx_allowlist" ]
   }
 }
