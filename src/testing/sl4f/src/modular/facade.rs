@@ -82,12 +82,6 @@ enum BasemgrRuntimeState {
     V2Session,
 }
 
-/// Returns true if sessionmgr is running.
-fn is_sessionmgr_running() -> bool {
-    // sessionmgr is running if its hub directory exists.
-    glob(SESSIONCTL_GLOB).unwrap().find_map(Result::ok).is_some()
-}
-
 /// Returns the state of the currently running basemgr instance, or None if not running.
 fn get_basemgr_runtime_state() -> Option<BasemgrRuntimeState> {
     if BASEMGR_DEBUG_SESSION_EXEC_PATH.exists() {
@@ -146,6 +140,7 @@ async fn resolve_session_component() -> Result<(), Error> {
 pub struct ModularFacade {
     sys_launcher: fsys::LauncherProxy,
     session_launcher: fsession::LauncherProxy,
+    session_restarter: fsession::RestarterProxy,
 }
 
 impl ModularFacade {
@@ -153,22 +148,24 @@ impl ModularFacade {
         let sys_launcher = client::launcher().expect("failed to connect to fuchsia.sys.Launcher");
         let session_launcher = connect_to_protocol::<fsession::LauncherMarker>()
             .expect("failed to connect to fuchsia.session.Launcher");
-        ModularFacade { sys_launcher, session_launcher }
+        let session_restarter = connect_to_protocol::<fsession::RestarterMarker>()
+            .expect("failed to connect to fuchsia.session.Restarter");
+        ModularFacade { sys_launcher, session_launcher, session_restarter }
     }
 
     pub fn new_with_proxies(
         sys_launcher: fsys::LauncherProxy,
         session_launcher: fsession::LauncherProxy,
+        session_restarter: fsession::RestarterProxy,
     ) -> ModularFacade {
-        ModularFacade { sys_launcher, session_launcher }
+        ModularFacade { sys_launcher, session_launcher, session_restarter }
     }
 
-    /// Restarts the currently running Modular session.
+    /// Restarts the currently running session.
     pub async fn restart_session(&self) -> Result<RestartSessionResult, Error> {
-        if !is_sessionmgr_running() {
-            return Ok(RestartSessionResult::NoSessionToRestart);
+        if self.session_restarter.restart().await?.is_err() {
+            return Ok(RestartSessionResult::Fail);
         }
-        connect_to_basemgr_debug()?.restart_session().await?;
         Ok(RestartSessionResult::Success)
     }
 
@@ -454,7 +451,12 @@ mod tests {
             panic!("fuchsia.session.Launcher should not be called as this test does not provide a session_url");
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("fuchsia.session.Restarter should not be called when starting");
+        })?;
+
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         let start_basemgr_args = json!({
             "config": { "hello": "world" },
@@ -488,7 +490,12 @@ mod tests {
             panic!("fuchsia.session.Launcher should not be called as this test does not provide a session_url");
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("fuchsia.session.Restarter should not be called when starting");
+        })?;
+
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         assert_matches!(facade.start_basemgr(json!(null)).await, Ok(BasemgrResult::Success));
         assert_eq!(LAUNCH_CALL_COUNT.get(), 1);
@@ -510,6 +517,10 @@ mod tests {
             panic!(
                 "basemgr should not be started as a legacy component if a session_url is provided"
             );
+        })?;
+
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("fuchsia.session.Restarter should not be called when starting");
         })?;
 
         let scope = ExecutionScope::new();
@@ -603,7 +614,8 @@ mod tests {
             }
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         let start_basemgr_args = json!({
             "config": { "hello": "world" },
@@ -638,6 +650,10 @@ mod tests {
             );
         })?;
 
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("fuchsia.session.Restarter should not be called when starting");
+        })?;
+
         let session_launcher = spawn_stream_handler(move |launcher_request| async move {
             match launcher_request {
                 fsession::LauncherRequest::Launch { configuration, responder } => {
@@ -651,7 +667,8 @@ mod tests {
             }
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         let scope = ExecutionScope::new();
         let mut ns = NamespaceBinder::new(scope);
@@ -690,6 +707,10 @@ mod tests {
             );
         })?;
 
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("fuchsia.session.Restarter should not be called when starting");
+        })?;
+
         let session_launcher = spawn_stream_handler(move |launcher_request| async move {
             match launcher_request {
                 fsession::LauncherRequest::Launch { configuration, responder } => {
@@ -703,7 +724,8 @@ mod tests {
             }
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         let scope = ExecutionScope::new();
         let mut ns = NamespaceBinder::new(scope);
@@ -726,7 +748,7 @@ mod tests {
                             }
                             _ => {
                                 panic!(
-                                    "BasemgrDebug methods other than Shutdown shold not be called"
+                                    "BasemgrDebug methods other than Shutdown should not be called"
                                 );
                             }
                         }
@@ -769,7 +791,12 @@ mod tests {
             panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Launcher");
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Restarter");
+        })?;
+
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         assert_matches!(facade.is_basemgr_running(), Ok(false));
 
@@ -798,7 +825,12 @@ mod tests {
             panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Launcher");
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Restarter");
+        })?;
+
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         assert_matches!(facade.is_basemgr_running(), Ok(true));
 
@@ -827,9 +859,46 @@ mod tests {
             panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Launcher");
         })?;
 
-        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Restarter");
+        })?;
+
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
 
         assert_matches!(facade.is_basemgr_running(), Ok(true));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_restart_session() -> Result<(), Error> {
+        lazy_static! {
+            static ref RESTART_CALL_COUNT: Counter = Counter::new(0);
+        }
+
+        let sys_launcher = spawn_stream_handler(move |_launcher_request| async move {
+            panic!("fuchsia.sys.Launcher should not be called when restarting");
+        })?;
+
+        let session_launcher = spawn_stream_handler(move |_launcher_request| async move {
+            panic!("fuchsia.session.Launcher should not be called when restarting");
+        })?;
+
+        let session_restarter = spawn_stream_handler(move |restarter_request| async move {
+            match restarter_request {
+                fsession::RestarterRequest::Restart { responder } => {
+                    RESTART_CALL_COUNT.inc();
+                    let _ = responder.send(&mut Ok(()));
+                }
+            }
+        })?;
+
+        let facade =
+            ModularFacade::new_with_proxies(sys_launcher, session_launcher, session_restarter);
+
+        assert_matches!(facade.restart_session().await, Ok(RestartSessionResult::Success));
+        assert_eq!(RESTART_CALL_COUNT.get(), 1);
 
         Ok(())
     }

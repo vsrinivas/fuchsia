@@ -85,6 +85,7 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.recovery.FactoryReset",
                 "fuchsia.session.Launcher",
+                "fuchsia.session.Restarter",
                 "fuchsia.settings.Audio",
                 "fuchsia.settings.Display",
                 "fuchsia.settings.Input",

@@ -36,13 +36,13 @@ class Modular {
 
   /// Restarts a Modular session.
   ///
-  /// This is equivalent to sessionctl restart_session.
+  /// This is equivalent to `ffx session restart`.
   Future<String> restartSession() async =>
       await _request('modular_facade.RestartSession');
 
   /// Kill Basemgr.
   ///
-  /// This is equivalent to basemgr_launcher shutdown.
+  /// This is equivalent to stopping the session component.
   Future<String> killBasemgr() async =>
       await _request('modular_facade.KillBasemgr');
 

@@ -31,6 +31,7 @@ impl std::str::FromStr for ModularMethod {
 pub enum RestartSessionResult {
     Success,
     NoSessionToRestart,
+    Fail,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

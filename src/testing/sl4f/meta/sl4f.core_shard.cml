@@ -186,7 +186,10 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "fuchsia.session.Launcher" ],
+            protocol: [
+                "fuchsia.session.Launcher",
+                "fuchsia.session.Restarter",
+            ],
             from: "#session-manager",
             to: "#sl4f",
             dependency: "weak_for_migration",
