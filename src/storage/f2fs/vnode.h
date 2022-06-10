@@ -393,8 +393,8 @@ class VnodeF2fs : public fs::Vnode,
   }
 
   pgoff_t Writeback(WritebackOperation &operation) { return file_cache_.Writeback(operation); }
-  void InvalidatePages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
-    file_cache_.InvalidatePages(start, end);
+  std::vector<LockedPage> InvalidatePages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
+    return file_cache_.InvalidatePages(start, end);
   }
 
   // TODO: When |is_reclaim| is set, release |page| after the IO completion

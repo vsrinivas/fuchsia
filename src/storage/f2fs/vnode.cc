@@ -640,8 +640,6 @@ zx_status_t VnodeF2fs::DoTruncate(size_t len) {
 int VnodeF2fs::TruncateDataBlocksRange(NodePage &node_page, uint32_t ofs_in_node, uint32_t count) {
   int nr_free = 0;
   Node *raw_node = node_page.GetAddress<Node>();
-  pgoff_t start = node_page.StartBidxOfNode() + ofs_in_node;
-  pgoff_t end = start + count;
 
   for (; count > 0; --count, ++ofs_in_node) {
     uint32_t *addr = BlkaddrInNode(*raw_node) + ofs_in_node;
@@ -655,7 +653,6 @@ int VnodeF2fs::TruncateDataBlocksRange(NodePage &node_page, uint32_t ofs_in_node
     ++nr_free;
   }
   if (nr_free) {
-    InvalidatePages(start, end);
     node_page.SetDirty();
     MarkInodeDirty();
   }
@@ -701,6 +698,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 
   {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
+    auto locked_data_pages = InvalidatePages(free_from);
 
     do {
       LockedPage node_page;
@@ -734,6 +732,14 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
     } while (false);
 
     err = Vfs()->GetNodeManager().TruncateInodeBlocks(*this, free_from);
+
+    // TODO: Since there is deadlock problem between FileCache::tree_lock_ & Page::Lock, RecyclePage
+    // and Page::Unlock is separated by using released_pages. It would be removed when potential
+    // deadlock problem is solved.
+    std::vector<fbl::RefPtr<Page>> released_pages;
+    for (auto &locked_page : locked_data_pages) {
+      released_pages.push_back(locked_page.release());
+    }
   }
   // lastly zero out the first data page
   TruncatePartialDataPage(from);
@@ -742,6 +748,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 }
 
 zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
+  std::vector<LockedPage> locked_data_pages = InvalidatePages(pg_start, pg_end);
   for (pgoff_t index = pg_start; index < pg_end; ++index) {
     LockedPage dnode_page;
     if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
@@ -765,6 +772,14 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
     if (DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode) != kNullAddr) {
       TruncateDataBlocksRange(dnode_page.GetPage<NodePage>(), ofs_in_dnode, 1);
     }
+  }
+
+  // TODO: Since there is deadlock problem between FileCache::tree_lock_ & Page::Lock, RecyclePage
+  // and Page::Unlock is separated by using released_pages. It would be removed when potential
+  // deadlock problem is solved.
+  std::vector<fbl::RefPtr<Page>> released_pages;
+  for (auto &locked_page : locked_data_pages) {
+    released_pages.push_back(locked_page.release());
   }
   return ZX_OK;
 }

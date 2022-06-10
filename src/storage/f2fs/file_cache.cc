@@ -292,7 +292,7 @@ zx_status_t FileCache::EvictUnsafe(Page *page) {
   return ZX_OK;
 }
 
-std::vector<LockedPage> FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end) {
+std::vector<LockedPage> FileCache::GetLockedPagesUnsafe(pgoff_t start, pgoff_t end) {
   pgoff_t prev_key = kPgOffMax;
   std::vector<LockedPage> pages;
   while (!page_tree_.is_empty()) {
@@ -304,10 +304,9 @@ std::vector<LockedPage> FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end
     }
     if (!current->IsActive()) {
       // No reference to |current|. It is safe to make a reference.
-      prev_key = current->GetKey();
+      prev_key = current->GetKey() + 1;
       LockedPage locked_page(fbl::ImportFromRawPtr(&(*current)));
       locked_page->SetActive();
-      EvictUnsafe(locked_page.get());
       pages.push_back(std::move(locked_page));
     } else {
       auto page = fbl::MakeRefPtrUpgradeFromRaw(&(*current), tree_lock_);
@@ -316,24 +315,32 @@ std::vector<LockedPage> FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end
         recycle_cvar_.wait(tree_lock_);
         continue;
       }
-      prev_key = page->GetKey();
+      prev_key = page->GetKey() + 1;
       LockedPage locked_page(std::move(page));
-      EvictUnsafe(locked_page.get());
       pages.push_back(std::move(locked_page));
     }
   }
   return pages;
 }
 
-void FileCache::InvalidatePages(pgoff_t start, pgoff_t end) {
+std::vector<LockedPage> FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end) {
+  std::vector<LockedPage> pages = GetLockedPagesUnsafe(start, end);
+  for (auto &page : pages) {
+    EvictUnsafe(page.get());
+  }
+  return pages;
+}
+
+std::vector<LockedPage> FileCache::InvalidatePages(pgoff_t start, pgoff_t end) {
   std::vector<LockedPage> pages;
   {
     std::lock_guard tree_lock(tree_lock_);
-    pages = CleanupPagesUnsafe(start, end);
+    pages = GetLockedPagesUnsafe(start, end);
   }
   for (auto &page : pages) {
     page->Invalidate();
   }
+  return pages;
 }
 
 void FileCache::Reset() {

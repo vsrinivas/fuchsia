@@ -253,7 +253,9 @@ class LockedPage final {
   // After release() is called, the LockedPage instance no longer has the ownership of the Page.
   // Therefore, the LockedPage instance should no longer be referenced.
   fbl::RefPtr<Page> release() {
-    page_->Unlock();
+    if (page_ != nullptr) {
+      page_->Unlock();
+    }
     return fbl::RefPtr<Page>(std::move(page_));
   }
 
@@ -301,8 +303,8 @@ class FileCache {
   zx_status_t FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
   // It tries to write out dirty Pages that meets |operation| in |page_tree_|.
   pgoff_t Writeback(WritebackOperation &operation) __TA_EXCLUDES(tree_lock_);
-  // It removes and invalidates Pages within the range of |start| to |end| in |page_tree_|.
-  void InvalidatePages(pgoff_t start, pgoff_t end) __TA_EXCLUDES(tree_lock_);
+  // It invalidates Pages within the range of |start| to |end| in |page_tree_|.
+  std::vector<LockedPage> InvalidatePages(pgoff_t start, pgoff_t end) __TA_EXCLUDES(tree_lock_);
   // It removes all Pages from |page_tree_|. It should be called when no one can get access to
   // |vnode_|. (e.g., fbl_recycle()) It assumes that all active Pages are under writeback.
   void Reset() __TA_EXCLUDES(tree_lock_);
@@ -321,6 +323,8 @@ class FileCache {
       __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
+  std::vector<LockedPage> GetLockedPagesUnsafe(pgoff_t start = 0, pgoff_t end = kPgOffMax)
+      __TA_REQUIRES(tree_lock_);
   // It evicts all Pages within the range of |start| to |end| and returns them locked.
   // When a caller resets returned Pages after doing some necessary work, they will be deleted.
   std::vector<LockedPage> CleanupPagesUnsafe(pgoff_t start = 0, pgoff_t end = kPgOffMax)
