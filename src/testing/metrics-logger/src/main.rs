@@ -198,37 +198,76 @@ impl Sensor<fpower::DeviceProxy> for fpower::DeviceProxy {
 }
 
 macro_rules! log_trace {
-    ( $sensor_type:expr, $client_id:expr, $key:expr, $val:expr) => {
-        // Use hash of `|client_id| driver_name [metrics]` as counter id.
-        let mut hasher = DefaultHasher::new();
-        format!("|{}| {}", $client_id, $key).hash(&mut hasher);
-        let counter_id = hasher.finish();
-
+    ( $sensor_type:expr, $trace_args:expr) => {
         match $sensor_type {
             // TODO (didis): Remove temperature_logger category after the e2e test is transitioned.
             SensorType::Temperature => {
-                fuchsia_trace::counter!(
-                    "temperature_logger",
-                    "temperature",
-                    counter_id,
-                    "client_id" => $client_id,
-                    $key => $val as f64
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("temperature_logger"),
+                    fuchsia_trace::cstr!("temperature"),
+                    0,
+                    $trace_args,
                 );
-                fuchsia_trace::counter!(
-                    "metrics_logger",
-                    "temperature",
-                    counter_id,
-                    "client_id" => $client_id,
-                    $key => $val as f64
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("temperature"),
+                    0,
+                    $trace_args,
                 );
             }
             SensorType::Power => {
-                fuchsia_trace::counter!(
-                    "metrics_logger",
-                    "power",
-                    counter_id,
-                    "client_id" => $client_id,
-                    $key => $val as f64
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("power"),
+                    0,
+                    $trace_args,
+                );
+            }
+        }
+    };
+}
+
+macro_rules! log_trace_statistics {
+    ( $sensor_type:expr, $trace_args:expr) => {
+        match $sensor_type {
+            SensorType::Temperature => {
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("temperature_min"),
+                    0,
+                    &$trace_args[Statistics::Min as usize],
+                );
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("temperature_max"),
+                    0,
+                    &$trace_args[Statistics::Max as usize],
+                );
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("temperature_avg"),
+                    0,
+                    &$trace_args[Statistics::Avg as usize],
+                );
+            }
+            SensorType::Power => {
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("power_min"),
+                    0,
+                    &$trace_args[Statistics::Min as usize],
+                );
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("power_max"),
+                    0,
+                    &$trace_args[Statistics::Max as usize],
+                );
+                fuchsia_trace::counter(
+                    fuchsia_trace::cstr!("metrics_logger"),
+                    fuchsia_trace::cstr!("power_avg"),
+                    0,
+                    &$trace_args[Statistics::Avg as usize],
                 );
             }
         }
@@ -355,13 +394,19 @@ impl<T: Sensor<T>> SensorLogger<T> {
             .as_ref()
             .map_or(false, |t| time_stamp - t.statistics_start_time >= t.statistics_interval);
 
-        for (index, result) in results.into_iter() {
-            let topological_path = &self.drivers[index].topological_path;
-            let sensor_name =
-                self.drivers[index].alias.as_ref().map_or(topological_path.to_string(), |alias| {
-                    format!("{:?}({:?})", alias, topological_path)
-                });
+        let mut trace_args = Vec::new();
+        let mut trace_args_statistics = vec![Vec::new(), Vec::new(), Vec::new()];
 
+        let mut sensor_names = Vec::new();
+        for driver in self.drivers.iter() {
+            let topological_path = &driver.topological_path;
+            let sensor_name = driver.alias.as_ref().map_or(topological_path.to_string(), |alias| {
+                format!("{:?}({:?})", alias, topological_path)
+            });
+            sensor_names.push(sensor_name);
+        }
+
+        for (index, result) in results.into_iter() {
             match result {
                 Ok(value) => {
                     // Save the current sample for calculating statistics.
@@ -376,13 +421,13 @@ impl<T: Sensor<T>> SensorLogger<T> {
                         (time_stamp - self.start_time).into_millis(),
                     );
 
-                    // Log data to Trace.
-                    log_trace!(T::sensor_type(), self.client_id.as_str(), &sensor_name, value);
+                    trace_args
+                        .push(fuchsia_trace::ArgValue::of(&sensor_names[index], value as f64));
 
                     if self.output_samples_to_syslog {
                         fx_log_info!(
                             "Reading sensor {:?} [{:?}]: {:?}",
-                            sensor_name,
+                            &sensor_names[index],
                             T::unit(),
                             value
                         );
@@ -421,30 +466,18 @@ impl<T: Sensor<T>> SensorLogger<T> {
                         avg,
                     );
 
-                    log_trace!(
-                        T::sensor_type(),
-                        self.client_id.as_str(),
-                        &format!("{} [min]", sensor_name),
-                        min
-                    );
-                    log_trace!(
-                        T::sensor_type(),
-                        self.client_id.as_str(),
-                        &format!("{} [max]", sensor_name),
-                        max
-                    );
-                    log_trace!(
-                        T::sensor_type(),
-                        self.client_id.as_str(),
-                        &format!("{} [avg]", sensor_name),
-                        avg
-                    );
+                    trace_args_statistics[Statistics::Min as usize]
+                        .push(fuchsia_trace::ArgValue::of(&sensor_names[index], min as f64));
+                    trace_args_statistics[Statistics::Max as usize]
+                        .push(fuchsia_trace::ArgValue::of(&sensor_names[index], max as f64));
+                    trace_args_statistics[Statistics::Avg as usize]
+                        .push(fuchsia_trace::ArgValue::of(&sensor_names[index], avg as f64));
 
                     if self.output_stats_to_syslog {
                         fx_log_info!(
                             "Sensor {:?} statistics [{:?}]:\n\
                             max: {:?}, min: {:?}, avg: {:?};",
-                            sensor_name,
+                            &sensor_names[index],
                             T::unit(),
                             max,
                             min,
@@ -457,8 +490,17 @@ impl<T: Sensor<T>> SensorLogger<T> {
                 }
             }
         }
-        // Reset timestamp to the calculated theoretical start time of next cycle.
+
+        trace_args.push(fuchsia_trace::ArgValue::of("client_id", self.client_id.as_str()));
+        log_trace!(T::sensor_type(), &trace_args);
+
         if is_last_sample_for_statistics {
+            for t in trace_args_statistics.iter_mut() {
+                t.push(fuchsia_trace::ArgValue::of("client_id", self.client_id.as_str()));
+            }
+            log_trace_statistics!(T::sensor_type(), trace_args_statistics);
+
+            // Reset timestamp to the calculated theoretical start time of next cycle.
             self.statistics_tracker
                 .as_mut()
                 .map(|t| t.statistics_start_time += t.statistics_interval);
