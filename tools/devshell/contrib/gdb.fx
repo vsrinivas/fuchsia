@@ -16,6 +16,6 @@
 ##
 ## On Linux, it may be necessary to run:
 ## ```shell
-## sudo apt install libpython3.7 libdebuginfod1
+## sudo apt install libpython3.8 libdebuginfod1
 ## ```
 ## before running the prebuilt GDB binary.
