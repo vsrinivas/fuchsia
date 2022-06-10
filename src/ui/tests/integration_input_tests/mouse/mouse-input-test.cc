@@ -31,7 +31,6 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <queue>
 #include <type_traits>
 #include <utility>
@@ -85,15 +84,16 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
 
 // `ResponseListener` is a local test protocol that our test Flutter app uses to let us know
 // what position and button press state the mouse cursor has.
+// No need to use mutex in ResponseListenerServer because `MouseInputBase` inherits from
+// `gtest::RealLoopFixture`, `RealLoopFixture` inherits from `RealLoop`, `RealLoop` has-an
+// `async::Loop`, `Loop::Run()` Runs the message loop on the same thread with test.
 class ResponseListenerServer : public test::mouse::ResponseListener, public LocalComponent {
  public:
   explicit ResponseListenerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   // |test::mouse::ResponseListener|
   void Respond(test::mouse::PointerData pointer_data) override {
-    mutex_.lock();
     events_.push(std::move(pointer_data));
-    mutex_.unlock();
   }
 
   // |MockComponent::Start|
@@ -109,18 +109,11 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
     mock_handles_.emplace_back(std::move(mock_handles));
   }
 
-  size_t SizeOfEvents() {
-    mutex_.lock();
-    size_t size = events_.size();
-    mutex_.unlock();
-    return size;
-  }
+  size_t SizeOfEvents() { return events_.size(); }
 
   test::mouse::PointerData PopEvent() {
-    mutex_.lock();
     test::mouse::PointerData e = std::move(events_.front());
     events_.pop();
-    mutex_.unlock();
     return e;
   }
 
@@ -130,7 +123,6 @@ class ResponseListenerServer : public test::mouse::ResponseListener, public Loca
   fidl::BindingSet<test::mouse::ResponseListener> bindings_;
   std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_;
   std::queue<test::mouse::PointerData> events_;
-  std::mutex mutex_;
 };
 
 constexpr auto kResponseListener = "response_listener";
