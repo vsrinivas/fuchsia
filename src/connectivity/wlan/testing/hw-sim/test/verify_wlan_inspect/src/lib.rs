@@ -88,6 +88,7 @@ fn build_event_handler<'a>(
                                 &Protection::Open,
                                 Some(WSC_IE_BODY),
                                 &phy,
+                                -10,
                             )
                             .expect("Error sending fake probe response frame");
                         }

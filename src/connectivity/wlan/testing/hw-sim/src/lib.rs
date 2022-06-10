@@ -90,43 +90,66 @@ pub fn create_rx_info(channel: &fidl_common::WlanChannel, rssi_dbm: i8) -> WlanR
         valid_fields: if rssi_dbm == 0 { 0 } else { WLAN_RX_INFO_VALID_RSSI },
         phy: fidl_common::WlanPhyType::Dsss,
         data_rate: 0,
-        channel: fidl_common::WlanChannel {
-            // TODO(fxbug.dev/7391): use clone()
-            primary: channel.primary,
-            cbw: channel.cbw,
-            secondary80: channel.secondary80,
-        },
+        channel: channel.clone(),
         mcs: 0,
         rssi_dbm,
         snr_dbh: 0,
     }
 }
 
-pub fn send_beacon(
+enum BeaconOrProbeResp<'a> {
+    Beacon,
+    ProbeResp { wsc_ie: Option<&'a [u8]> },
+}
+
+fn generate_probe_or_beacon(
+    type_: BeaconOrProbeResp<'_>,
     channel: &fidl_common::WlanChannel,
     bssid: &Bssid,
     ssid: &Ssid,
     protection: &Protection,
-    proxy: &WlantapPhyProxy,
-    rssi_dbm: i8,
-) -> Result<(), anyhow::Error> {
+) -> Result<Vec<u8>, anyhow::Error> {
     let wpa1_ie = wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie();
+    // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
+    let beacon_interval = TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16;
+    let capabilities = mac::CapabilityInfo(0)
+        // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
+        // subfield to 0 within transmitted Beacon or Probe Response frames.
+        .with_ess(true)
+        .with_ibss(false)
+        // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
+        // transmitted Beacon, Probe Response, (Re)Association Response frames if data
+        // confidentiality is required for all Data frames exchanged within the BSS.
+        .with_privacy(*protection != Protection::Open);
+    let beacon_hdr = match type_ {
+        BeaconOrProbeResp::Beacon => Some(mac::BeaconHdr::new(beacon_interval, capabilities)),
+        BeaconOrProbeResp::ProbeResp { wsc_ie: _ } => None,
+    };
+    let proberesp_hdr = match type_ {
+        BeaconOrProbeResp::Beacon => None,
+        BeaconOrProbeResp::ProbeResp { .. } => {
+            Some(mac::ProbeRespHdr::new(beacon_interval, capabilities))
+        }
+    };
 
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
         headers: {
             mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
                 mac::FrameControl(0)
                     .with_frame_type(mac::FrameType::MGMT)
-                    .with_mgmt_subtype(mac::MgmtSubtype::BEACON),
-                mac::BCAST_ADDR,
+                    .with_mgmt_subtype(match type_ {
+                        BeaconOrProbeResp::Beacon => mac::MgmtSubtype::BEACON,
+                        BeaconOrProbeResp::ProbeResp{..} => mac::MgmtSubtype::PROBE_RESP
+                    }),
+                match type_ {
+                    BeaconOrProbeResp::Beacon => mac::BCAST_ADDR,
+                    BeaconOrProbeResp::ProbeResp{..} => CLIENT_MAC_ADDR
+                },
                 *bssid,
                 mac::SequenceControl(0).with_seq_num(123),
             ),
-            mac::BeaconHdr: &mac::BeaconHdr::new(
-                // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
-                TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
-                mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
-            ),
+            mac::BeaconHdr?: beacon_hdr,
+            mac::ProbeRespHdr?: proberesp_hdr,
         },
         ies: {
             ssid: ssid,
@@ -148,8 +171,25 @@ pub fn send_beacon(
                 Protection::Wpa2Personal | Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => None,
                 _ => panic!("unsupported fake beacon: {:?}", protection),
             },
+            wsc?: match type_ {
+                BeaconOrProbeResp::Beacon => None,
+                BeaconOrProbeResp::ProbeResp{ wsc_ie } => wsc_ie.clone()
+            }
         },
     })?;
+    Ok(buf)
+}
+
+pub fn send_beacon(
+    channel: &fidl_common::WlanChannel,
+    bssid: &Bssid,
+    ssid: &Ssid,
+    protection: &Protection,
+    proxy: &WlantapPhyProxy,
+    rssi_dbm: i8,
+) -> Result<(), anyhow::Error> {
+    let buf =
+        generate_probe_or_beacon(BeaconOrProbeResp::Beacon, channel, bssid, ssid, protection)?;
     proxy.rx(0, &buf, &mut create_rx_info(channel, rssi_dbm))?;
     Ok(())
 }
@@ -161,49 +201,16 @@ pub fn send_probe_resp(
     protection: &Protection,
     wsc_ie: Option<&[u8]>,
     proxy: &WlantapPhyProxy,
+    rssi_dbm: i8,
 ) -> Result<(), anyhow::Error> {
-    let wpa1_ie = wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie();
-
-    let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
-        headers: {
-            mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
-                mac::FrameControl(0)
-                    .with_frame_type(mac::FrameType::MGMT)
-                    .with_mgmt_subtype(mac::MgmtSubtype::PROBE_RESP),
-                CLIENT_MAC_ADDR,
-                *bssid,
-                mac::SequenceControl(0).with_seq_num(123),
-            ),
-            mac::ProbeRespHdr: &mac::ProbeRespHdr::new(
-                // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
-                TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
-                mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true),
-            ),
-        },
-        ies: {
-            ssid: ssid,
-            supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0xe0, 0x6c],
-            extended_supported_rates: { /* continues from supported_rates */ },
-            dsss_param_set: &ie::DsssParamSet { current_channel: channel.primary },
-            rsne?: match protection {
-                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
-                Protection::Open | Protection::Wep | Protection::Wpa1 => None,
-                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(rsne::Rsne::wpa2_rsne()),
-                Protection::Wpa2Wpa3Personal => Some(rsne::Rsne::wpa2_wpa3_rsne()),
-                Protection::Wpa3Personal => Some(rsne::Rsne::wpa3_rsne()),
-                _ => panic!("unsupported fake beacon: {:?}", protection),
-            },
-            wpa1?: match protection {
-                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
-                Protection::Open | Protection::Wep => None,
-                Protection::Wpa1 | Protection::Wpa1Wpa2Personal => Some(&wpa1_ie),
-                Protection::Wpa2Personal | Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal => None,
-                _ => panic!("unsupported fake beacon: {:?}", protection),
-            },
-            wsc?: wsc_ie,
-        }
-    })?;
-    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
+    let buf = generate_probe_or_beacon(
+        BeaconOrProbeResp::ProbeResp { wsc_ie },
+        channel,
+        bssid,
+        ssid,
+        protection,
+    )?;
+    proxy.rx(0, &buf, &mut create_rx_info(channel, rssi_dbm))?;
     Ok(())
 }
 
