@@ -232,6 +232,22 @@ pub fn sys_process_vm_readv(
     Ok(len)
 }
 
+pub fn sys_membarrier(
+    _current_task: &CurrentTask,
+    cmd: uapi::membarrier_cmd,
+    flags: u32,
+    cpu_id: i32,
+) -> Result<u32, Errno> {
+    // Minimal implementation of membarrier that only handle queries, and return that it doesn't
+    // support any other command.
+    not_implemented!("membarrier: cmd: 0x{:x}, flags: 0x{:x}, cpu_id: 0x{:x}", cmd, flags, cpu_id);
+    if cmd == uapi::membarrier_cmd_MEMBARRIER_CMD_QUERY {
+        Ok(0)
+    } else {
+        error!(EINVAL)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -714,5 +730,12 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[::fuchsia::test]
+    fn test_membarrier() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        assert_eq!(sys_membarrier(&current_task, 0, 0, 0), Ok(0));
+        assert_eq!(sys_membarrier(&current_task, 3, 0, 0), error!(EINVAL));
     }
 }

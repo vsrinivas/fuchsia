@@ -132,6 +132,7 @@ pub fn dispatch_syscall(
         lsetxattr[5],
         lstat[2],
         madvise[3],
+        membarrier[3],
         memfd_create[2],
         mkdir[2],
         mkdirat[3],

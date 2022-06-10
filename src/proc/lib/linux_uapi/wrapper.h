@@ -25,6 +25,7 @@
 #include <linux/futex.h>
 #include <linux/limits.h>
 #include <linux/magic.h>
+#include <linux/membarrier.h>
 #include <linux/memfd.h>
 #include <linux/mman.h>
 #include <linux/poll.h>

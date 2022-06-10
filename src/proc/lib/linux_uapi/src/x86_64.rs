@@ -3135,6 +3135,20 @@ impl Default for robust_list_head {
         }
     }
 }
+pub const membarrier_cmd_MEMBARRIER_CMD_QUERY: membarrier_cmd = 0;
+pub const membarrier_cmd_MEMBARRIER_CMD_GLOBAL: membarrier_cmd = 1;
+pub const membarrier_cmd_MEMBARRIER_CMD_GLOBAL_EXPEDITED: membarrier_cmd = 2;
+pub const membarrier_cmd_MEMBARRIER_CMD_REGISTER_GLOBAL_EXPEDITED: membarrier_cmd = 4;
+pub const membarrier_cmd_MEMBARRIER_CMD_PRIVATE_EXPEDITED: membarrier_cmd = 8;
+pub const membarrier_cmd_MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED: membarrier_cmd = 16;
+pub const membarrier_cmd_MEMBARRIER_CMD_PRIVATE_EXPEDITED_SYNC_CORE: membarrier_cmd = 32;
+pub const membarrier_cmd_MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_SYNC_CORE: membarrier_cmd = 64;
+pub const membarrier_cmd_MEMBARRIER_CMD_PRIVATE_EXPEDITED_RSEQ: membarrier_cmd = 128;
+pub const membarrier_cmd_MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_RSEQ: membarrier_cmd = 256;
+pub const membarrier_cmd_MEMBARRIER_CMD_SHARED: membarrier_cmd = 1;
+pub type membarrier_cmd = crate::x86_64_types::c_uint;
+pub const membarrier_cmd_flag_MEMBARRIER_CMD_FLAG_CPU: membarrier_cmd_flag = 1;
+pub type membarrier_cmd_flag = crate::x86_64_types::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct prctl_mm_map {
