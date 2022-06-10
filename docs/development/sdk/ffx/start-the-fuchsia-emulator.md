@@ -577,10 +577,10 @@ Both consoles work with both the [QEMU and AEMU](#qemu-and-aemu) engines.
 
 ### The QEMU monitor {:#qemu-monitor}
 
-With the QEMU monitor, you can issue commands directly to the emulator process. Some of these commands
-allow you to modify emulated devices, query virtual hardware state, terminate the emulator process
-using virtual hardware signals. (For more information on available commands, see the
-[QEMU Monitor][qemu-monitor]{:.external} page.)
+With the QEMU monitor, you can issue commands directly to the emulator process. Some of these
+commands allow you to modify emulated devices, query virtual hardware state, and terminate the
+emulator process using virtual hardware signals. (For more information on available commands, see
+the [QEMU Monitor][qemu-monitor]{:.external} page.)
 
 To start an emulator instance attached to the QEMU monitor, run the following command:
 
