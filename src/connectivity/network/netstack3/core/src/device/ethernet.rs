@@ -770,17 +770,16 @@ pub(super) fn get_mac<'a, C, SC: EthernetIpLinkDeviceContext<C>>(
 }
 
 impl<C, SC: EthernetIpLinkDeviceContext<C>> NdpContext<EthernetLinkDevice, C> for SC {
-    fn get_retrans_timer(&self, _ctx: &mut C, device_id: Self::DeviceId) -> NonZeroDuration {
+    fn get_retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration {
         self.get_state_with(device_id).ip.ipv6.retrans_timer
     }
 
-    fn get_link_layer_addr(&self, _ctx: &mut C, device_id: SC::DeviceId) -> UnicastAddr<Mac> {
+    fn get_link_layer_addr(&self, device_id: SC::DeviceId) -> UnicastAddr<Mac> {
         get_mac(self, device_id).clone()
     }
 
     fn get_ip_device_state(
         &self,
-        _ctx: &mut C,
         device_id: Self::DeviceId,
     ) -> &IpDeviceState<Self::Instant, Ipv6> {
         &self.get_state_with(device_id).ip.ipv6.ip_state
@@ -788,7 +787,6 @@ impl<C, SC: EthernetIpLinkDeviceContext<C>> NdpContext<EthernetLinkDevice, C> fo
 
     fn get_ip_device_state_mut(
         &mut self,
-        _ctx: &mut C,
         device_id: Self::DeviceId,
     ) -> &mut IpDeviceState<Self::Instant, Ipv6> {
         &mut self.get_state_mut_with(device_id).ip.ipv6.ip_state
