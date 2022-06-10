@@ -7,9 +7,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/outgoing_directory.h>
 
+#include "src/modular/lib/deprecated_svc/service_provider_bridge.h"
 #include "src/virtualization/bin/host_vsock/guest_vsock_endpoint.h"
 
 class GuestServices : public fuchsia::virtualization::GuestConfigProvider {
@@ -22,8 +21,8 @@ class GuestServices : public fuchsia::virtualization::GuestConfigProvider {
   // |fuchsia::virtualization::GuestConfigProvider|
   void Get(GetCallback callback) override;
 
-  sys::OutgoingDirectory services_;
-  fidl::BindingSet<fuchsia::virtualization::GuestConfigProvider> bindings_;
+  component::ServiceProviderBridge services_;
+  fidl::Binding<fuchsia::virtualization::GuestConfigProvider> binding_{this};
   fuchsia::virtualization::GuestConfig cfg_;
 };
 

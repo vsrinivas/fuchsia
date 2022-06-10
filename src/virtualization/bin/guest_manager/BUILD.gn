@@ -37,6 +37,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/modular/lib/deprecated_svc",
     "//src/virtualization/bin/host_vsock:lib",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
