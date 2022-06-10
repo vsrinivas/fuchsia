@@ -208,7 +208,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/pkg/tests/system-updater:*",
   "//src/sys/pkg/tests/usb-system-update-checker:*",
   "//src/sys/stash:*",
-  "//src/sys/test_manager/tests/test_data:*",
   "//src/sys/time/httpsdate_time_source:*",
   "//src/sys/time/lib/push-source:*",
   "//src/sys/time/timekeeper:*",

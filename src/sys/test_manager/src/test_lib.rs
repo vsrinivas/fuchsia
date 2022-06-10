@@ -14,9 +14,9 @@ use {
     fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},
     linked_hash_map::LinkedHashMap,
-    log::*,
     std::{collections::HashMap, sync::Arc},
     test_diagnostics::{collect_and_send_string_output, LogStream},
+    tracing::*,
 };
 
 /// Builds and runs test suite(s).

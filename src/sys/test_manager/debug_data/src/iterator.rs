@@ -7,7 +7,7 @@ use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_test_manager as ftest_manager;
 use futures::stream::{FusedStream, StreamExt, TryStreamExt};
-use log::warn;
+use tracing::warn;
 
 const ITERATOR_BATCH_SIZE: usize = 10;
 

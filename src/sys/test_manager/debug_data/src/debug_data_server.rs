@@ -12,7 +12,7 @@ use futures::{
     stream::{Stream, StreamExt, TryStreamExt},
     SinkExt, TryFutureExt,
 };
-use log::warn;
+use tracing::warn;
 
 /// Serve the |fuchsia.debugdata.Publisher| protocol for each connection received over
 /// |request_stream|. VMOs ready to be processed are output via |vmo_sender|.

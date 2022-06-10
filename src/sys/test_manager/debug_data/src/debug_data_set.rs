@@ -13,12 +13,12 @@ use fidl_fuchsia_test_manager as ftest_manager;
 use fuchsia_inspect::types::Node;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
-use log::{error, warn};
 use moniker::{ChildMoniker, RelativeMoniker, RelativeMonikerBase};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Weak},
 };
+use tracing::{error, warn};
 
 #[async_trait(?Send)]
 pub trait PublishRequestHandler {

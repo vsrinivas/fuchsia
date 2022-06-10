@@ -18,7 +18,7 @@ use fidl_fuchsia_test_manager as ftest_manager;
 use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, pin_mut, FutureExt, StreamExt};
-use log::info;
+use tracing::info;
 
 /// Timeout after Finish() is sent for a set to process events.
 const TIMEOUT_AFTER_FINISH: zx::Duration = zx::Duration::from_seconds(20);
