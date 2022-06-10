@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_RUNNER_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_RUNNER_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_RUNNER_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_RUNNER_H_
 
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.component/cpp/wire.h>
@@ -342,4 +342,4 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   std::vector<std::weak_ptr<Node>> orphaned_nodes_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_RUNNER_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_RUNNER_H_

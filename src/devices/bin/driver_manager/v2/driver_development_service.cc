@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bin/driver_manager/driver_development_service.h"
+#include "src/devices/bin/driver_manager/v2/driver_development_service.h"
 
 #include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/fidl/llcpp/internal/transport.h>

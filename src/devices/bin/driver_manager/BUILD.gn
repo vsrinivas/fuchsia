@@ -62,8 +62,6 @@ source_set("lib") {
     "device.h",
     "driver.cc",
     "driver.h",
-    "driver_development_service.cc",
-    "driver_development_service.h",
     "driver_host.cc",
     "driver_host.h",
     "driver_host_loader_service.cc",
@@ -93,6 +91,8 @@ source_set("lib") {
     "v1/suspend_task.cc",
     "v1/task.cc",
     "v1/unbind_task.cc",
+    "v2/driver_development_service.cc",
+    "v2/driver_development_service.h",
     "vmo_writer.cc",
   ]
 
@@ -258,8 +258,8 @@ fuchsia_unittest_component("driver-host-loader-service-test") {
 
 source_set("driver_runner") {
   sources = [
-    "driver_runner.cc",
-    "driver_runner.h",
+    "v2/driver_runner.cc",
+    "v2/driver_runner.h",
   ]
 
   deps = [
@@ -302,7 +302,7 @@ fuchsia_unittest_component("manifest_parser_test_component") {
 
 executable("driver_runner_test") {
   testonly = true
-  sources = [ "driver_runner_test.cc" ]
+  sources = [ "v2/driver_runner_test.cc" ]
 
   deps = [
     ":driver_runner",

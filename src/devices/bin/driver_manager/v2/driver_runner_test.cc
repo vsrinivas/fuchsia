@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bin/driver_manager/driver_runner.h"
+#include "src/devices/bin/driver_manager/v2/driver_runner.h"
 
 #include <fuchsia/component/cpp/fidl_test_base.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
