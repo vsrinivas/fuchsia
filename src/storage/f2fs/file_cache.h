@@ -234,9 +234,11 @@ class LockedPage final {
     return *this;
   }
 
-  LockedPage(fbl::RefPtr<Page> page) {
+  LockedPage(fbl::RefPtr<Page> page, bool try_lock = true) {
     page_ = page;
-    page_->Lock();
+    if (try_lock) {
+      page_->Lock();
+    }
   }
 
   ~LockedPage() { reset(); }
@@ -316,11 +318,18 @@ class FileCache {
 #endif  // __Fuchsia__
 
  private:
+  // If |page| is unlocked, it returns a locked |page|. If |page| is already locked,
+  // it returns ZX_ERR_UNAVAILABLE after waiting for |page| to be unlocked. While waiting,
+  // |tree_lock_| keeps unlocked to prevent a deadlock problem that would occur when two threads
+  // try to call FileCache::GetPage() for Pages in a duplicate range. When the locked
+  // |page| is unlocked, it acquires |tree_lock_| again and returns ZX_ERR_UNAVAILABLE since
+  // it is not allowed to acquire |tree_lock_| with |page| locked. Then, a caller may retry it
+  // with the same |page|.
+  zx::status<LockedPage> GetLockedPage(fbl::RefPtr<Page> page) __TA_REQUIRES(tree_lock_);
   // It returns a set of locked dirty Pages that meet |operation|.
   std::vector<LockedPage> GetLockedDirtyPagesUnsafe(const WritebackOperation &operation)
       __TA_REQUIRES(tree_lock_);
-  zx::status<bool> GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out)
-      __TA_REQUIRES(tree_lock_);
+  zx::status<LockedPage> GetPageUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
   std::vector<LockedPage> GetLockedPagesUnsafe(pgoff_t start = 0, pgoff_t end = kPgOffMax)

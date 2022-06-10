@@ -219,23 +219,28 @@ TEST(DeadLockTest, Truncate) {
   root_dir->Create("test2", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
 
-  constexpr int kNTry = 10;
-  uint8_t buf[kPageSize] = {1};
-  for (int i = 0; i < kNTry; ++i) {
-    FileTester::AppendToFile(vn.get(), buf, sizeof(buf));
-    std::thread thread1 = std::thread([&]() {
+  constexpr int kNTry = 1000;
+  uint8_t buf[kPageSize * 2] = {1};
+  FileTester::AppendToFile(vn.get(), buf, sizeof(buf));
+  std::thread thread1 = std::thread([&]() {
+    for (int i = 0; i < kNTry; ++i) {
       size_t out_actual;
-      ASSERT_EQ(vn->Write(buf, kPageSize, 0, &out_actual), ZX_OK);
-    });
-    std::thread thread2 = std::thread([&]() { ASSERT_EQ(vn->Truncate(0), ZX_OK); });
-    thread1.join();
-    thread2.join();
-  }
+      ASSERT_EQ(vn->Write(buf, sizeof(buf), 0, &out_actual), ZX_OK);
+    }
+  });
+  std::thread thread2 = std::thread([&]() {
+    for (int i = 0; i < kNTry; ++i) {
+      ASSERT_EQ(vn->Truncate(0), ZX_OK);
+    }
+  });
+  thread1.join();
+  thread2.join();
   vn->Close();
   vn = nullptr;
   root_dir->Close();
   root_dir = nullptr;
   FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
 }  // namespace

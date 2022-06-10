@@ -228,19 +228,22 @@ zx_status_t FileCache::AddPageUnsafe(const fbl::RefPtr<Page> &page) {
 
 zx_status_t FileCache::GetPage(const pgoff_t index, LockedPage *out) {
   fbl::RefPtr<Page> page;
+  LockedPage locked_page;
   std::lock_guard tree_lock(tree_lock_);
-  auto ret = GetPageUnsafe(index, &page);
-  if (ret.is_error()) {
+  auto locked_page_or = GetPageUnsafe(index);
+  if (locked_page_or.is_error()) {
     if (GetVnode().IsNode()) {
       page = fbl::MakeRefCounted<NodePage>(this, index);
     } else {
       page = fbl::MakeRefCounted<Page>(this, index);
     }
     ZX_ASSERT(AddPageUnsafe(page) == ZX_OK);
-    page->SetActive();
+    locked_page = LockedPage(std::move(page));
+    locked_page->SetActive();
+  } else {
+    locked_page = std::move(*locked_page_or);
   }
-  LockedPage locked_page(page);
-  if (zx_status_t ret = locked_page->GetPage(); ret != ZX_OK) {
+  if (auto ret = locked_page->GetPage(); ret != ZX_OK) {
     return ret;
   }
   *out = std::move(locked_page);
@@ -249,36 +252,63 @@ zx_status_t FileCache::GetPage(const pgoff_t index, LockedPage *out) {
 
 zx_status_t FileCache::FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
   std::lock_guard tree_lock(tree_lock_);
-  auto ret = GetPageUnsafe(index, out);
-  if (ret.is_error()) {
-    return ret.error_value();
+  auto locked_page_or = GetPageUnsafe(index);
+  if (locked_page_or.is_error()) {
+    return locked_page_or.error_value();
   }
-  LockedPage locked_page(*out);
-  return locked_page->GetPage();
+  if (auto ret = (*locked_page_or)->GetPage(); ret != ZX_OK) {
+    return ret;
+  }
+  *out = (*locked_page_or).release();
+  return ZX_OK;
 }
 
-zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out) {
+zx::status<LockedPage> FileCache::GetPageUnsafe(const pgoff_t index) {
   while (true) {
     auto raw_ptr = page_tree_.find(index).CopyPointer();
+    fbl::RefPtr<Page> page;
     if (raw_ptr != nullptr) {
       if (raw_ptr->IsActive()) {
-        *out = fbl::MakeRefPtrUpgradeFromRaw(raw_ptr, tree_lock_);
+        page = fbl::MakeRefPtrUpgradeFromRaw(raw_ptr, tree_lock_);
         // We wait for it to be resurrected in fbl_recycle().
-        if (*out == nullptr) {
+        if (page == nullptr) {
           recycle_cvar_.wait(tree_lock_);
           continue;
         }
+        auto locked_page_or = GetLockedPage(std::move(page));
+        if (locked_page_or.is_error()) {
+          continue;
+        }
         // Here, Page::ref_count should not be less than one.
-        return zx::ok(false);
+        return zx::ok(std::move(locked_page_or.value()));
       }
-      *out = fbl::ImportFromRawPtr(raw_ptr);
-      (*out)->SetActive();
-      ZX_DEBUG_ASSERT((*out)->IsLastReference());
-      return zx::ok(true);
+      page = fbl::ImportFromRawPtr(raw_ptr);
+      LockedPage locked_page(std::move(page));
+      locked_page->SetActive();
+      ZX_DEBUG_ASSERT(locked_page->IsLastReference());
+      return zx::ok(std::move(locked_page));
     }
     break;
   }
   return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+zx::status<LockedPage> FileCache::GetLockedPage(fbl::RefPtr<Page> page) {
+  if (page->TryLock()) {
+    tree_lock_.unlock();
+    {
+      // If |page| is already locked, wait for it to be unlocked.
+      // Ensure that the references to |page| drop before |tree_lock_|.
+      // If |page| is the last reference, it enters Page::RecyclePage() and
+      // possibly acquires |tree_lock_|.
+      LockedPage locked_page(std::move(page));
+    }
+    // It is not allowed to acquire |tree_lock_| with locked Pages.
+    tree_lock_.lock();
+    return zx::error(ZX_ERR_SHOULD_WAIT);
+  }
+  LockedPage locked_page(std::move(page), false);
+  return zx::ok(std::move(locked_page));
 }
 
 zx_status_t FileCache::EvictUnsafe(Page *page) {
@@ -315,9 +345,12 @@ std::vector<LockedPage> FileCache::GetLockedPagesUnsafe(pgoff_t start, pgoff_t e
         recycle_cvar_.wait(tree_lock_);
         continue;
       }
-      prev_key = page->GetKey() + 1;
-      LockedPage locked_page(std::move(page));
-      pages.push_back(std::move(locked_page));
+      auto locked_page_or = GetLockedPage(std::move(page));
+      if (locked_page_or.is_error()) {
+        continue;
+      }
+      prev_key = (*locked_page_or)->GetKey() + 1;
+      pages.push_back(std::move(*locked_page_or));
     }
   }
   return pages;
