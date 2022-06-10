@@ -359,7 +359,7 @@ zx_status_t ZirconEnclosedGuest::ShutdownAndWait(zx::time deadline) {
 
 std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
     const std::string& util, const std::vector<std::string>& argv) {
-  std::vector<std::string> exec_argv = {util};
+  std::vector<std::string> exec_argv = { util };
   exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());
   return exec_argv;
 }

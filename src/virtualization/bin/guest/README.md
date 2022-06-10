@@ -62,15 +62,17 @@ The `list` command allows for viewing of all currently running VMs.
 
 **Example output**:
 ```guest list
-guest:zircon
-guest:termina
+env:0 zircon_guest
+guest:3 fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx
 ```
 
 #### Structure
 The `list` command connects to the Guest Manager via FIDL, and queries for a list of all currently
 running VMs on Fuchsia. These environments contain information about all VMs running within them,
-in the form of `guest: label` pairs, where the label is the type of the VM.
- The values outputted by this command are used as arguments for other commands of the tool.
+in the form of `context-id, label` pairs, where the label is the name of the package running in the
+VM. The values outputted by this command are used as arguments for other commands of the tool;
+in the above example, `env_id` is `0` and the `cid` for the VM listed is `3`. This could then be
+used in other commands, such as `guest balloon-stats 0 3` (see `balloon-stats`).
 
 ![list_diagram](doc/list.png)
 
@@ -78,13 +80,15 @@ in the form of `guest: label` pairs, where the label is the type of the VM.
 The `balloon` command allows for modifying the size of a memory balloon. See `virtio-balloon.cc`
 for more on the Balloon device.
 #### Arguments
-`guest balloon guest-type num-pages`
+`guest balloon env-id cid num-pages`
 
-**Example**: `guest balloon debian 3`
+**Example**: `guest balloon 1 2 3`
 
 **Positional Arguments**
-- `guest-type: string`: Id string that homes the VM you are trying to modify. See `list` for
+- `env-id: u32`: Environment id number that homes the VM you are trying to modify. See `list` for
     how to find this value.
+- `cid: u32`: Context id number for the VM you are trying to modify. See `list` for how to find
+    this value.
 - `num-pages: u32`: Number of memory pages the balloon will have after this operation.
 
 #### Structure
@@ -100,13 +104,15 @@ talk to the VM balloon via FIDL to modify the page number of the memory balloon.
 ### Balloon Stats
 The `balloon-stats` command allows for viewing the current statistics of a memory balloon.
 #### Arguments
-`guest balloon-stats guest-type`
+`guest balloon-stats env-id cid`
 
-**Example**: `guest balloon-stats debian`
+**Example**: `guest balloon-stats 0 10`
 
 **Positional Arguments**
-- `guest-type: string`: Id string that homes the VM you are trying to modify. See `list` for
+- `env-id: u32`: Environment id number that homes the VM you are trying to modify. See `list` for
     how to find this value.
+- `cid: u32`: Context id number for the VM you are trying to modify. See `list` for how to find
+    this value.
 
 #### Structure
 The `balloon-stats` command functions almost identically to the `balloon` command in terms of how
@@ -134,13 +140,15 @@ These tags are detailed here:
 The `serial` command allows for interacting with a Guest over a serial connection.
 
 #### Arguments
-`guest serial guest-type`
+`guest serial env-id cid`
 
-**Example**: `guest serial debian`
+**Example**: `guest serial 1 3`
 
 **Positional Arguments**
-- `guest-type: string`: Id string that homes the VM you are trying to interact with.
+- `env-id: u32`: Environment id number that homes the VM you are trying to interact with.
     See `list` for how to find this value.
+- `cid: u32`: Context id number for the VM you are trying to interact with. See `list` for how to
+    find this value.
 
 #### Structure
 The `serial` command provides a convenient way to interact with a VM through a serial connection.
@@ -157,13 +165,15 @@ takes this socket and begins an interactive session over serial only, similar to
 The `vsh` command allows for creating a virtual shell to a guest.
 
 #### Arguments
-`guest vsh [guest-type] [--args <arg>]`
+`guest vsh [env_id [cid [port]]] [--args <arg>]`
 
-**Example**: `guest vsh termina --args penguin`
+**Example**: `guest vsh 0 2 2222 --args penguin`
 
 **Positional Arguments**
-- `guest-type: string`: Id string that homes the VM is currently running. See `list` for how
+- `env-id: u32`: Environment id number for where the VM is currently running. See `list` for how
     to find this value.
+- `cid: u32`: Context id number for the VM hosting the virtual shell you wish to connect to.
+    See `list` for how to find this value.
 - `port: u32`: Port for where a currently running virtual shell is running on.
 
 **Optional Arguments**
@@ -180,8 +190,10 @@ provides `guest` with optional values for the environment, context, and port tha
 vsock connection for `vsh` to create a new virtual shell on, with defaults provided in their
 absence. These defaults are described below:
 
-- `guest-type`: Defaults to Linux environment, if available, else the first environment in the VMM's
+- `env-id`: Defaults to Linux environment, if available, else the first environment in the VMM's
     list.
+- `cid`: Defaults to Linux Guest cid, if available, else the first cid in the list of instances
+    in the environment specified.
 - `port`: Defaults to 9001 if no port given.
 
 Regardless of if these values are specified or not, the `guest` tool will attempt to create a
@@ -199,18 +211,19 @@ notably internet connection issues).
 ![vsh_diagram](doc/vsh.png)
 
 ### Socat (**Soc**ket **cat**)
-The `socat` command. allow for creating a vsock connection on `guest_type`. Data received
+The `socat` command. allow for creating a vsock connection on `cid:port` in `env_id`. Data received
 on the socket will be sent to `stdout` and data from `stdin` will be sent over the socket.
 
 #### Arguments
-`guest socat guest-type port`
+`guest socat env-id cid port`
 
-**Example**: `guest socat debian 2222`
+**Example**: `guest socat 0 3 2222`
 
 **Positional Arguments**
-- `guest-type: string`: Id string that homes the VM is currently running. See `list` for how to
+- `env-id: u32`: Environment id number for where the VM is currently running. See `list` for how to
     find this value.
-- `port: u32`: Port on `guest` to connect to.
+- `cid: u32`: Context id number for the VM. See `list` for how to find this value.
+- `port: u32`: Port on `cid` to connect to.
 
 #### Structure
 The `socat` command is the used to create a vsock connection in a running VM. The end user provides
@@ -222,21 +235,23 @@ socket, with data received being sent to `stdout` and input from `stdin` sent to
 ![socat_diagram](doc/socat.png)
 
 ### Socat Listen
-The `socat-listen` command allows for listening on a vsock `port` within `guest_type` VM.
+The `socat-listen` command allows for listening on a vsock `port` within `env_id` on the
+host `cid` (`2`).
 
 #### Arguments
-`guest socat-listen guest-type host-port`
+`guest socat-listen env-id host-port`
 
-**Example**: `guest socat-listen debian 2222`
+**Example**: `guest socat-listen 0 2222`
 
 **Positional Arguments**
-- `guest-type: string`: Id string that homes the VM for where a socat connection is running.
+- `env-id: u32`: Environment id number for where a socat connection is running.
 - `port: u32`: Port to listen on.
 
 #### Structure
-The `socat-listen` command is used to listen on a vsock port on the host endpoint (`guest-type`),
+The `socat-listen` command is used to listen on a vsock port on the host endpoint (`cid 2`),
 acting as a server for a vsock connection. The end user provides `guest` with the environment
-and port they wish to have this server listen on.
+and port they wish to have this server listen on, as the `cid` will always be set to the
+host `cid`.
 
 Once `guest` is successfully able to listen on a port, it starts as a server. The server will
 run until it accepts one connection, at which point a session will begin between the client and
