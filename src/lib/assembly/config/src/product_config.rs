@@ -8,7 +8,7 @@ use anyhow::ensure;
 use camino::Utf8PathBuf;
 use fidl_fuchsia_logger::MAX_TAGS;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// ffx config flag for enabling configuring the assembly+structured config example.
 const EXAMPLE_ENABLED_FLAG: &str = "assembly_example_enabled";
@@ -29,6 +29,12 @@ pub struct ProductAssemblyConfig {
 pub struct PlatformConfig {
     #[serde(default)]
     pub build_type: BuildType,
+
+    /// List of logging tags to forward to the serial console.
+    ///
+    /// Appended to the list of tags defined for the platform.
+    #[serde(default)]
+    additional_serial_log_tags: Vec<String>,
 }
 
 /// The platform BuildTypes.
@@ -73,7 +79,7 @@ pub struct ProductPackagesConfig {
     pub cache: Vec<Utf8PathBuf>,
 }
 
-static BASE_CONSOLE_ALLOWED_TAGS: &[&str] = &[
+const BASE_CONSOLE_ALLOWED_TAGS: &[&str] = &[
     "console-launcher",
     "driver_manager.cm",
     "driver_host2.cm",
@@ -89,7 +95,9 @@ static BASE_CONSOLE_ALLOWED_TAGS: &[&str] = &[
     "fxfs",
     "sshd-host",
 ];
-static BASE_CONSOLE_DENIED_TAGS: &[&str] = &["NUD", "klog"];
+static_assertions::const_assert!(BASE_CONSOLE_ALLOWED_TAGS.len() <= MAX_TAGS as usize);
+
+const BASE_CONSOLE_DENIED_TAGS: &[&str] = &["NUD", "klog"];
 
 impl ProductAssemblyConfig {
     /// Convert the high-level description of product configuration into a series of configuration
@@ -100,16 +108,21 @@ impl ProductAssemblyConfig {
         let mut bootfs_patches = PackageConfigPatch::default();
 
         // Configure the serial console.
-        let allowed_log_tags: Vec<_> =
-            BASE_CONSOLE_ALLOWED_TAGS.iter().map(|s| s.to_string()).collect();
+        let allowed_log_tags = {
+            let mut allowed_log_tags: BTreeSet<_> =
+                BASE_CONSOLE_ALLOWED_TAGS.iter().map(|s| s.to_string()).collect();
+
+            let num_product_tags = self.platform.additional_serial_log_tags.len();
+            let max_product_tags = MAX_TAGS as usize - BASE_CONSOLE_ALLOWED_TAGS.len();
+            ensure!(
+                num_product_tags <= max_product_tags,
+                "Max {max_product_tags} tags can be forwarded to serial, got {num_product_tags}."
+            );
+            allowed_log_tags.extend(self.platform.additional_serial_log_tags.iter().cloned());
+            allowed_log_tags.into_iter().collect::<Vec<_>>()
+        };
         let denied_log_tags: Vec<_> =
             BASE_CONSOLE_DENIED_TAGS.iter().map(|s| s.to_string()).collect();
-
-        let num_allowed_tags = allowed_log_tags.len();
-        ensure!(
-            num_allowed_tags <= MAX_TAGS as usize,
-            "A maximum of {MAX_TAGS} tags can be defined for serial forwarding, got {num_allowed_tags}."
-        );
         bootfs_patches
             .component("meta/console.cm")
             .field("allowed_log_tags", allowed_log_tags)
