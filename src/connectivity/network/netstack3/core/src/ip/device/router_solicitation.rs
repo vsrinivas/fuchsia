@@ -254,22 +254,23 @@ mod tests {
 
     #[test]
     fn stop_router_solicitation() {
-        let DummyCtx { sync_ctx: mut ctx } =
+        let DummyCtx { mut sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
                 max_router_solicitations: NonZeroU8::new(1),
                 router_soliciations_remaining: None,
                 link_layer_bytes: None,
             }));
-        RsHandler::start_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut sync_ctx, &mut (), DummyDeviceId);
 
-        let now = ctx.now();
-        ctx.timer_ctx()
+        let now = sync_ctx.now();
+        sync_ctx
+            .timer_ctx()
             .assert_timers_installed([(RS_TIMER_ID, now..=now + MAX_RTR_SOLICITATION_DELAY)]);
 
-        RsHandler::stop_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
-        ctx.timer_ctx().assert_no_timers_installed();
+        RsHandler::stop_router_solicitation(&mut sync_ctx, &mut (), DummyDeviceId);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
 
-        assert_eq!(ctx.frames(), &[][..]);
+        assert_eq!(sync_ctx.frames(), &[][..]);
     }
 
     #[test_case(0, None; "disabled")]
@@ -286,27 +287,27 @@ mod tests {
         let (link_layer_bytes, expected_pad_bytes) =
             link_layer_bytes.map_or((None, 0), |(a, b)| (Some(a), b));
 
-        let DummyCtx { sync_ctx: mut ctx } =
+        let DummyCtx { mut sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
                 max_router_solicitations: NonZeroU8::new(max_router_solicitations),
                 router_soliciations_remaining: None,
                 link_layer_bytes,
             }));
-        RsHandler::start_router_solicitation(&mut ctx, &mut (), DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut sync_ctx, &mut (), DummyDeviceId);
 
-        assert_eq!(ctx.frames(), &[][..]);
+        assert_eq!(sync_ctx.frames(), &[][..]);
 
         let mut duration = MAX_RTR_SOLICITATION_DELAY;
         for i in 0..max_router_solicitations {
             assert_eq!(
-                *ctx.get_router_soliciations_remaining_mut(DummyDeviceId),
+                *sync_ctx.get_router_soliciations_remaining_mut(DummyDeviceId),
                 NonZeroU8::new(max_router_solicitations - i)
             );
-            let now = ctx.now();
-            ctx.timer_ctx().assert_timers_installed([(RS_TIMER_ID, now..=now + duration)]);
+            let now = sync_ctx.now();
+            sync_ctx.timer_ctx().assert_timers_installed([(RS_TIMER_ID, now..=now + duration)]);
 
-            assert_eq!(ctx.trigger_next_timer(RsHandler::handle_timer), Some(RS_TIMER_ID));
-            let frames = ctx.frames();
+            assert_eq!(sync_ctx.trigger_next_timer(RsHandler::handle_timer), Some(RS_TIMER_ID));
+            let frames = sync_ctx.frames();
             assert_eq!(frames.len(), usize::from(i + 1), "frames = {:?}", frames);
             let (RsMessageMeta { message }, frame) =
                 frames.last().expect("should have transmitted a frame");
@@ -335,9 +336,9 @@ mod tests {
             duration = RTR_SOLICITATION_INTERVAL;
         }
 
-        ctx.timer_ctx().assert_no_timers_installed();
-        assert_eq!(*ctx.get_router_soliciations_remaining_mut(DummyDeviceId), None);
-        let frames = ctx.frames();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
+        assert_eq!(*sync_ctx.get_router_soliciations_remaining_mut(DummyDeviceId), None);
+        let frames = sync_ctx.frames();
         assert_eq!(frames.len(), usize::from(max_router_solicitations), "frames = {:?}", frames);
     }
 }

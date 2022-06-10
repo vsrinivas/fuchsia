@@ -274,21 +274,27 @@ mod tests {
 
     #[test]
     fn new_route_no_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        RouteDiscoveryHandler::update_route(&mut ctx, &mut (), DummyDeviceId, ROUTE1, None);
-        assert_eq!(ctx.take_events(), []);
-        ctx.timer_ctx().assert_no_timers_installed();
+        RouteDiscoveryHandler::update_route(&mut sync_ctx, &mut (), DummyDeviceId, ROUTE1, None);
+        assert_eq!(sync_ctx.take_events(), []);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     fn discover_new_route(
-        ctx: &mut MockCtx,
+        sync_ctx: &mut MockCtx,
         route: Ipv6DiscoveredRoute,
         duration: NonZeroNdpLifetime,
     ) {
-        RouteDiscoveryHandler::update_route(ctx, &mut (), DummyDeviceId, route, Some(duration));
+        RouteDiscoveryHandler::update_route(
+            sync_ctx,
+            &mut (),
+            DummyDeviceId,
+            route,
+            Some(duration),
+        );
         assert_eq!(
-            ctx.take_events(),
+            sync_ctx.take_events(),
             [Ipv6RouteDiscoveryEvent {
                 device_id: DummyDeviceId,
                 route,
@@ -296,7 +302,7 @@ mod tests {
             }]
         );
 
-        ctx.timer_ctx().assert_some_timers_installed(
+        sync_ctx.timer_ctx().assert_some_timers_installed(
             match duration {
                 NonZeroNdpLifetime::Finite(duration) => Some((
                     Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route },
@@ -308,139 +314,139 @@ mod tests {
         )
     }
 
-    fn assert_single_invalidation_timer(ctx: &mut MockCtx, route: Ipv6DiscoveredRoute) {
+    fn assert_single_invalidation_timer(sync_ctx: &mut MockCtx, route: Ipv6DiscoveredRoute) {
         assert_eq!(
-            ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
             Some(Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route })
         );
         assert_eq!(
-            ctx.take_events(),
+            sync_ctx.take_events(),
             [Ipv6RouteDiscoveryEvent {
                 device_id: DummyDeviceId,
                 route,
                 action: Ipv6RouteDiscoverAction::Invalidated
             }]
         );
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
     fn new_route_with_infinite_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
-        ctx.timer_ctx().assert_no_timers_installed();
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
     fn update_route_from_infinite_to_finite_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
-        ctx.timer_ctx().assert_no_timers_installed();
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
 
         RouteDiscoveryHandler::update_route(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             DummyDeviceId,
             ROUTE1,
             Some(NonZeroNdpLifetime::Finite(ONE_SECOND)),
         );
-        assert_eq!(ctx.take_events(), []);
-        ctx.timer_ctx().assert_some_timers_installed([(
+        assert_eq!(sync_ctx.take_events(), []);
+        sync_ctx.timer_ctx().assert_some_timers_installed([(
             Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route: ROUTE1 },
             DummyInstant::from(ONE_SECOND.get()),
         )]);
-        assert_single_invalidation_timer(&mut ctx, ROUTE1);
+        assert_single_invalidation_timer(&mut sync_ctx, ROUTE1);
     }
 
-    fn update_to_invalidate_check_invalidation(ctx: &mut MockCtx, route: Ipv6DiscoveredRoute) {
-        RouteDiscoveryHandler::update_route(ctx, &mut (), DummyDeviceId, ROUTE1, None);
+    fn update_to_invalidate_check_invalidation(sync_ctx: &mut MockCtx, route: Ipv6DiscoveredRoute) {
+        RouteDiscoveryHandler::update_route(sync_ctx, &mut (), DummyDeviceId, ROUTE1, None);
         assert_eq!(
-            ctx.take_events(),
+            sync_ctx.take_events(),
             [Ipv6RouteDiscoveryEvent {
                 device_id: DummyDeviceId,
                 route,
                 action: Ipv6RouteDiscoverAction::Invalidated
             }]
         );
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
     fn invalidate_route_with_infinite_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
-        ctx.timer_ctx().assert_no_timers_installed();
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
 
-        update_to_invalidate_check_invalidation(&mut ctx, ROUTE1);
+        update_to_invalidate_check_invalidation(&mut sync_ctx, ROUTE1);
     }
     #[test]
     fn new_route_with_finite_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
-        assert_single_invalidation_timer(&mut ctx, ROUTE1);
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
+        assert_single_invalidation_timer(&mut sync_ctx, ROUTE1);
     }
 
     #[test]
     fn update_route_from_finite_to_infinite_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
 
         RouteDiscoveryHandler::update_route(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             DummyDeviceId,
             ROUTE1,
             Some(NonZeroNdpLifetime::Infinite),
         );
-        assert_eq!(ctx.take_events(), []);
-        ctx.timer_ctx().assert_no_timers_installed();
+        assert_eq!(sync_ctx.take_events(), []);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
     fn update_route_from_finite_to_finite_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
 
         RouteDiscoveryHandler::update_route(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             DummyDeviceId,
             ROUTE1,
             Some(NonZeroNdpLifetime::Finite(TWO_SECONDS)),
         );
-        assert_eq!(ctx.take_events(), []);
-        ctx.timer_ctx().assert_timers_installed([(
+        assert_eq!(sync_ctx.take_events(), []);
+        sync_ctx.timer_ctx().assert_timers_installed([(
             Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route: ROUTE1 },
             DummyInstant::from(TWO_SECONDS.get()),
         )]);
 
-        assert_single_invalidation_timer(&mut ctx, ROUTE1);
+        assert_single_invalidation_timer(&mut sync_ctx, ROUTE1);
     }
 
     #[test]
     fn invalidate_route_with_finite_lifetime() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
 
-        update_to_invalidate_check_invalidation(&mut ctx, ROUTE1);
+        update_to_invalidate_check_invalidation(&mut sync_ctx, ROUTE1);
     }
 
     #[test]
     fn invalidate_all_routes() {
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
-        discover_new_route(&mut ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
-        discover_new_route(&mut ctx, ROUTE2, NonZeroNdpLifetime::Finite(TWO_SECONDS));
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        discover_new_route(&mut sync_ctx, ROUTE1, NonZeroNdpLifetime::Finite(ONE_SECOND));
+        discover_new_route(&mut sync_ctx, ROUTE2, NonZeroNdpLifetime::Finite(TWO_SECONDS));
 
-        RouteDiscoveryHandler::invalidate_routes(&mut ctx, &mut (), DummyDeviceId);
+        RouteDiscoveryHandler::invalidate_routes(&mut sync_ctx, &mut (), DummyDeviceId);
         assert_eq!(
-            ctx.take_events().into_iter().collect::<HashSet<_>>(),
+            sync_ctx.take_events().into_iter().collect::<HashSet<_>>(),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
                     device_id: DummyDeviceId,
@@ -454,7 +460,7 @@ mod tests {
                 },
             ])
         );
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     fn router_advertisement_buf(

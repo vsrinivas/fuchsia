@@ -467,27 +467,30 @@ mod tests {
     #[ip_test]
     fn test_ip_path_mtu_cache_ctx<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
 
         // Nothing in the cache yet
-        assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()), None);
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            None
+        );
+        assert_eq!(
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
         );
 
         let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 50;
-        let start_time = ctx.now();
+        let start_time = sync_ctx.now();
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Update pmtu from local to remote. PMTU should be updated to
         // `new_mtu1` and last updated instant should be updated to the start of
         // the test + 1s.
         PmtuHandler::update_pmtu_if_less(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
@@ -495,17 +498,17 @@ mod tests {
         );
 
         // Advance time to 2s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu1` and
         // last updated instant should be updated to the start of the test + 1s
         // (when the update occurred.
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             start_time + duration
         );
@@ -513,13 +516,13 @@ mod tests {
         let new_mtu2 = new_mtu1 - 1;
 
         // Advance time to 3s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Updating again should return the last pmtu PMTU should be updated to
         // `new_mtu2` and last updated instant should be updated to the start of
         // the test + 3s.
         PmtuHandler::update_pmtu_if_less(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
@@ -527,17 +530,17 @@ mod tests {
         );
 
         // Advance time to 4s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu2` and
         // last updated instant should be updated to the start of the test + 3s
         // (when the update occurred).
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu2
         );
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             start_time + (duration * 3)
         );
@@ -545,13 +548,13 @@ mod tests {
         let new_mtu3 = new_mtu2 - 1;
 
         // Advance time to 5s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure update only if new PMTU is less than current (it is). PMTU
         // should be updated to `new_mtu3` and last updated instant should be
         // updated to the start of the test + 5s.
         PmtuHandler::update_pmtu_if_less(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
@@ -559,18 +562,18 @@ mod tests {
         );
 
         // Advance time to 6s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu3` and
         // last updated instant should be updated to the start of the test + 5s
         // (when the update occurred).
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu3
         );
         let last_updated = start_time + (duration * 5);
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             last_updated
         );
@@ -578,11 +581,11 @@ mod tests {
         let new_mtu4 = new_mtu3 + 50;
 
         // Advance time to 7s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure update only if new PMTU is less than current (it isn't)
         PmtuHandler::update_pmtu_if_less(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
@@ -590,16 +593,16 @@ mod tests {
         );
 
         // Advance time to 8s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure the update didn't work. PMTU and last updated should not
         // have changed.
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu3
         );
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             last_updated
         );
@@ -607,11 +610,11 @@ mod tests {
         let low_mtu = u32::from(I::MINIMUM_LINK_MTU) - 1;
 
         // Advance time to 9s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Updating with MTU value less than the minimum MTU should fail.
         PmtuHandler::update_pmtu_if_less(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
@@ -619,16 +622,16 @@ mod tests {
         );
 
         // Advance time to 10s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure the update didn't work. PMTU and last updated should not
         // have changed.
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu3
         );
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             last_updated
         );
@@ -637,23 +640,23 @@ mod tests {
     #[ip_test]
     fn test_ip_pmtu_task<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::<I>::default());
 
         // Make sure there are no timers.
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
 
         let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 50;
-        let start_time = ctx.now();
+        let start_time = sync_ctx.now();
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Update pmtu from local to remote. PMTU should be updated to
         // `new_mtu1` and last updated instant should be updated to the start of
         // the test + 1s.
         PmtuHandler::update_pmtu_if_less(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             dummy_config.local_ip.get(),
             dummy_config.remote_ip.get(),
@@ -661,29 +664,29 @@ mod tests {
         );
 
         // Make sure a task got scheduled.
-        ctx.timer_ctx().assert_timers_installed([(
+        sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD + Duration::from_secs(1)),
         )]);
 
         // Advance time to 2s.
-        assert_empty(ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration, TimerHandler::handle_timer));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu1` and
         // last updated instant should be updated to the start of the test + 1s
         // (when the update occurred.
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             start_time + duration
         );
 
         // Advance time to 30mins.
-        assert_empty(ctx.trigger_timers_for(duration * 1798, TimerHandler::handle_timer));
+        assert_empty(sync_ctx.trigger_timers_for(duration * 1798, TimerHandler::handle_timer));
 
         // Update pmtu from local to another remote. PMTU should be updated to
         // `new_mtu1` and last updated instant should be updated to the start of
@@ -691,7 +694,7 @@ mod tests {
         let other_ip = get_other_ip_address::<I>();
         let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 100;
         PmtuHandler::update_pmtu_if_less(
-            &mut ctx,
+            &mut sync_ctx,
             &mut (),
             dummy_config.local_ip.get(),
             other_ip.get(),
@@ -700,7 +703,7 @@ mod tests {
 
         // Make sure there is still a task scheduled. (we know no timers got
         // triggered because the `run_for` methods returned 0 so far).
-        ctx.timer_ctx().assert_timers_installed([(
+        sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD + Duration::from_secs(1)),
         )]);
@@ -708,24 +711,27 @@ mod tests {
         // Make sure the update worked. PMTU should be updated to `new_mtu2` and
         // last updated instant should be updated to the start of the test +
         // 30mins + 2s (when the update occurred.
-        assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(), new_mtu2);
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            new_mtu2
+        );
+        assert_eq!(
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
             start_time + (duration * 1800)
         );
         // Make sure first update is still in the cache.
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             start_time + duration
         );
 
         // Advance time to 1hr + 1s. Should have triggered a timer.
-        ctx.trigger_timers_for_and_expect(
+        sync_ctx.trigger_timers_for_and_expect(
             duration * 1801,
             [PmtuTimerId::default()],
             TimerHandler::handle_timer,
@@ -733,63 +739,75 @@ mod tests {
         // Make sure none of the cache data has been marked as stale and
         // removed.
         assert_eq!(
-            get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
             new_mtu1
         );
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             start_time + duration
         );
-        assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(), new_mtu2);
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            new_mtu2
+        );
+        assert_eq!(
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
-        ctx.timer_ctx().assert_timers_installed([(
+        sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD * 2 + Duration::from_secs(1)),
         )]);
 
         // Advance time to 3hr + 1s. Should have triggered 2 timers.
-        ctx.trigger_timers_for_and_expect(
+        sync_ctx.trigger_timers_for_and_expect(
             duration * 7200,
             [PmtuTimerId::default(), PmtuTimerId::default()],
             TimerHandler::handle_timer,
         );
         // Make sure only the earlier PMTU data got marked as stale and removed.
-        assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()), None);
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
         );
-        assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(), new_mtu2);
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            None
+        );
+        assert_eq!(
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
+            new_mtu2
+        );
+        assert_eq!(
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()).unwrap(),
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
-        ctx.timer_ctx().assert_timers_installed([(
+        sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD * 4 + Duration::from_secs(1)),
         )]);
 
         // Advance time to 4hr + 1s. Should have triggered 1 timers.
-        ctx.trigger_timers_for_and_expect(
+        sync_ctx.trigger_timers_for_and_expect(
             duration * 3600,
             [PmtuTimerId::default()],
             TimerHandler::handle_timer,
         );
         // Make sure both PMTU data got marked as stale and removed.
-        assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()), None);
         assert_eq!(
-            get_last_updated(&ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            get_pmtu(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
         );
-        assert_eq!(get_pmtu(&ctx, dummy_config.local_ip.get(), other_ip.get()), None);
-        assert_eq!(get_last_updated(&ctx, dummy_config.local_ip.get(), other_ip.get()), None);
+        assert_eq!(
+            get_last_updated(&sync_ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            None
+        );
+        assert_eq!(get_pmtu(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()), None);
+        assert_eq!(get_last_updated(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()), None);
         // Should not have a task scheduled since there is no more PMTU data.
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

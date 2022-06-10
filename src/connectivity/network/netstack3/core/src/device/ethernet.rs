@@ -1078,25 +1078,25 @@ mod tests {
         // and that we don't send an Ethernet frame whose size is greater than
         // the MTU.
         fn test(size: usize, expect_frames_sent: usize) {
-            let crate::context::testutil::DummyCtx { sync_ctx: mut ctx } =
+            let crate::context::testutil::DummyCtx { mut sync_ctx } =
                 crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::with_state(
                     DummyEthernetCtx::new(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
                 ));
             <DummyCtx as ArpHandler<_, _, _>>::insert_static_neighbor(
-                &mut ctx,
+                &mut sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 DUMMY_CONFIG_V4.remote_ip.get(),
                 DUMMY_CONFIG_V4.remote_mac.get(),
             );
             let _ = send_ip_frame(
-                &mut ctx,
+                &mut sync_ctx,
                 &mut (),
                 DummyDeviceId,
                 DUMMY_CONFIG_V4.remote_ip,
                 Buf::new(&mut vec![0; size], ..),
             );
-            assert_eq!(ctx.frames().len(), expect_frames_sent);
+            assert_eq!(sync_ctx.frames().len(), expect_frames_sent);
         }
 
         test(Ipv6::MINIMUM_LINK_MTU.into(), 1);

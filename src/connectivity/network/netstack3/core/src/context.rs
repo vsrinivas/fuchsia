@@ -1221,6 +1221,46 @@ pub(crate) mod testutil {
         type SendMeta = Meta;
     }
 
+    impl<S, Id, Meta, Event: Debug, DeviceId> AsRef<DummyInstantCtx>
+        for DummyCtx<S, Id, Meta, Event, DeviceId>
+    {
+        fn as_ref(&self) -> &DummyInstantCtx {
+            self.sync_ctx.timers.as_ref()
+        }
+    }
+
+    impl<S, Id, Meta, Event: Debug, DeviceId> AsRef<DummyTimerCtx<Id>>
+        for DummyCtx<S, Id, Meta, Event, DeviceId>
+    {
+        fn as_ref(&self) -> &DummyTimerCtx<Id> {
+            &self.sync_ctx.timers
+        }
+    }
+
+    impl<S, Id, Meta, Event: Debug, DeviceId> AsMut<DummyTimerCtx<Id>>
+        for DummyCtx<S, Id, Meta, Event, DeviceId>
+    {
+        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
+            &mut self.sync_ctx.timers
+        }
+    }
+
+    impl<S, Id, Meta, Event: Debug, DeviceId> AsMut<DummyFrameCtx<Meta>>
+        for DummyCtx<S, Id, Meta, Event, DeviceId>
+    {
+        fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
+            &mut self.sync_ctx.frames
+        }
+    }
+
+    impl<S, Id, Meta, Event: Debug, DeviceId> AsRef<DummyCounterCtx>
+        for DummyCtx<S, Id, Meta, Event, DeviceId>
+    {
+        fn as_ref(&self) -> &DummyCounterCtx {
+            &self.sync_ctx.counters
+        }
+    }
+
     impl<S, Id, Meta, Event: Debug, DeviceId> DummyCtx<S, Id, Meta, Event, DeviceId> {
         /// Constructs a `DummyCtx` with the given state and default
         /// `DummyTimerCtx`, `DummyFrameCtx`, and `DummyCounterCtx`.
@@ -1269,13 +1309,6 @@ pub(crate) mod testutil {
         fn default() -> DummySyncCtx<S, Id, Meta, Event, DeviceId> {
             DummySyncCtx::with_state(S::default())
         }
-    }
-
-    impl<S, Id, Meta, Event: Debug, DeviceId> DummyNetworkContext
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        type TimerId = Id;
-        type SendMeta = Meta;
     }
 
     impl<S, Id, Meta, Event: Debug, DeviceId> DummySyncCtx<S, Id, Meta, Event, DeviceId> {
@@ -1832,6 +1865,24 @@ pub(crate) mod testutil {
             context: K,
         ) -> &mut crate::testutil::DummySyncCtx {
             let crate::testutil::DummyCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
+            sync_ctx
+        }
+    }
+
+    impl<RecvMeta, S, Id, SendMeta, Event, DeviceId, CtxId, Links>
+        DummyNetwork<CtxId, RecvMeta, DummyCtx<S, Id, SendMeta, Event, DeviceId>, Links>
+    where
+        Id: Copy,
+        Event: Debug,
+        CtxId: Eq + Hash + Copy + Debug,
+        Links: DummyNetworkLinks<SendMeta, RecvMeta, CtxId>,
+    {
+        /// Retrieves a `DummySyncCtx` named `context`.
+        pub(crate) fn sync_ctx<K: Into<CtxId>>(
+            &mut self,
+            context: K,
+        ) -> &mut DummySyncCtx<S, Id, SendMeta, Event, DeviceId> {
+            let DummyCtx { sync_ctx } = self.context(context);
             sync_ctx
         }
     }

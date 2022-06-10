@@ -830,7 +830,7 @@ mod tests {
     }
 
     fn send_arp_packet(
-        ctx: &mut MockCtx,
+        sync_ctx: &mut MockCtx,
         op: ArpOp,
         sender_ipv4: Ipv4Addr,
         target_ipv4: Ipv4Addr,
@@ -845,7 +845,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, ArpNetworkType::Ipv4);
 
-        handle_packet::<_, Ipv4Addr, _, _, _>(ctx, &mut (), (), buf);
+        handle_packet::<_, Ipv4Addr, _, _, _>(sync_ctx, &mut (), (), buf);
     }
 
     // Validate that buf is an ARP packet with the specific op, local_ipv4,
@@ -869,7 +869,7 @@ mod tests {
     // Validate that we've sent `total_frames` frames in total, and that the
     // most recent one was sent to `dst` with the given ARP packet contents.
     fn validate_last_arp_packet(
-        ctx: &MockCtx,
+        sync_ctx: &MockCtx,
         total_frames: usize,
         dst: Mac,
         op: ArpOp,
@@ -878,28 +878,28 @@ mod tests {
         local_mac: Mac,
         remote_mac: Mac,
     ) {
-        assert_eq!(ctx.frames().len(), total_frames);
-        let (meta, frame) = &ctx.frames()[total_frames - 1];
+        assert_eq!(sync_ctx.frames().len(), total_frames);
+        let (meta, frame) = &sync_ctx.frames()[total_frames - 1];
         assert_eq!(meta.dst_addr, dst);
         validate_arp_packet(frame, op, local_ipv4, remote_ipv4, local_mac, remote_mac);
     }
 
-    // Validate that `ctx` contains exactly one installed timer with the given
+    // Validate that `sync_ctx` contains exactly one installed timer with the given
     // instant and ID.
     fn validate_single_timer(
-        ctx: &MockCtx,
+        sync_ctx: &MockCtx,
         instant: Duration,
         id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
     ) {
-        ctx.timer_ctx().assert_timers_installed([(id, DummyInstant::from(instant))]);
+        sync_ctx.timer_ctx().assert_timers_installed([(id, DummyInstant::from(instant))]);
     }
 
-    fn validate_single_retry_timer(ctx: &MockCtx, instant: Duration, addr: Ipv4Addr) {
-        validate_single_timer(ctx, instant, ArpTimerId::new_request_retry((), addr))
+    fn validate_single_retry_timer(sync_ctx: &MockCtx, instant: Duration, addr: Ipv4Addr) {
+        validate_single_timer(sync_ctx, instant, ArpTimerId::new_request_retry((), addr))
     }
 
-    fn validate_single_entry_timer(ctx: &MockCtx, instant: Duration, addr: Ipv4Addr) {
-        validate_single_timer(ctx, instant, ArpTimerId::new_entry_expiration((), addr))
+    fn validate_single_entry_timer(sync_ctx: &MockCtx, instant: Duration, addr: Ipv4Addr) {
+        validate_single_timer(sync_ctx, instant, ArpTimerId::new_entry_expiration((), addr))
     }
 
     #[test]
@@ -907,9 +907,9 @@ mod tests {
         // Test that, when we receive a gratuitous ARP request, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
         send_arp_packet(
-            &mut ctx,
+            &mut sync_ctx,
             ArpOp::Request,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -918,9 +918,12 @@ mod tests {
         );
 
         // We should have cached the sender's address information.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
         // Gratuitous ARPs should not prompt a response.
-        assert_empty(ctx.frames().iter());
+        assert_empty(sync_ctx.frames().iter());
     }
 
     #[test]
@@ -928,9 +931,9 @@ mod tests {
         // Test that, when we receive a gratuitous ARP response, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
         send_arp_packet(
-            &mut ctx,
+            &mut sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -939,9 +942,12 @@ mod tests {
         );
 
         // We should have cached the sender's address information.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
         // Gratuitous ARPs should not send a response.
-        assert_empty(ctx.frames().iter());
+        assert_empty(sync_ctx.frames().iter());
     }
 
     #[test]
@@ -950,15 +956,15 @@ mod tests {
         // a gratuitous ARP for the same host, we cancel the timer and notify
         // the device layer.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have installed a single retry timer.
-        validate_single_retry_timer(&ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         send_arp_packet(
-            &mut ctx,
+            &mut sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -967,18 +973,28 @@ mod tests {
         );
 
         // The response should now be in our cache.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
 
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
-        validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_entry_timer(
+            &sync_ctx,
+            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
+            TEST_REMOTE_IPV4,
+        );
 
         // We should have notified the device layer.
-        assert_eq!(ctx.get_ref().addr_resolved.as_slice(), [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]);
+        assert_eq!(
+            sync_ctx.get_ref().addr_resolved.as_slice(),
+            [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]
+        );
 
         // Gratuitous ARPs should not send a response (the 1 frame is for the
         // original request).
-        assert_eq!(ctx.frames().len(), 1);
+        assert_eq!(sync_ctx.frames().len(), 1);
     }
 
     #[test]
@@ -1053,25 +1069,28 @@ mod tests {
         }
 
         // Setup up a dummy context and trigger a timer with a lookup
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx2::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx2::default());
 
         let device_id_0: usize = 0;
         let device_id_1: usize = 1;
 
-        assert_eq!(lookup(&mut ctx, &mut (), device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(
+            lookup(&mut sync_ctx, &mut (), device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            None
+        );
 
         // We should have installed a single retry timer.
-        let deadline = ctx.now() + DEFAULT_ARP_REQUEST_PERIOD;
+        let deadline = sync_ctx.now() + DEFAULT_ARP_REQUEST_PERIOD;
         let timer = ArpTimerId::new_request_retry(device_id_0, TEST_REMOTE_IPV4);
-        ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
+        sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing a different ID should not impact the current timer.
-        deinitialize(&mut ctx, &mut (), device_id_1);
-        ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
+        deinitialize(&mut sync_ctx, &mut (), device_id_1);
+        sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing the correct ID should cancel the timer.
-        deinitialize(&mut ctx, &mut (), device_id_0);
-        ctx.timer_ctx().assert_no_timers_installed();
+        deinitialize(&mut sync_ctx, &mut (), device_id_0);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -1079,14 +1098,14 @@ mod tests {
         // Test that, when we perform a lookup that fails, we send an ARP
         // request and install a timer to retry.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         // Perform the lookup.
-        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have sent a single ARP request.
         validate_last_arp_packet(
-            &ctx,
+            &sync_ctx,
             1,
             Mac::BROADCAST,
             ArpOp::Request,
@@ -1097,11 +1116,11 @@ mod tests {
         );
 
         // We should have installed a single retry timer.
-        validate_single_retry_timer(&ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         // Test that, when we receive an ARP response, we cancel the timer.
         send_arp_packet(
-            &mut ctx,
+            &mut sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_LOCAL_IPV4,
@@ -1110,14 +1129,24 @@ mod tests {
         );
 
         // The response should now be in our cache.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
 
         // We should have notified the device layer.
-        assert_eq!(ctx.get_ref().addr_resolved.as_slice(), [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]);
+        assert_eq!(
+            sync_ctx.get_ref().addr_resolved.as_slice(),
+            [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]
+        );
 
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
-        validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_entry_timer(
+            &sync_ctx,
+            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
+            TEST_REMOTE_IPV4,
+        );
     }
 
     #[test]
@@ -1125,11 +1154,11 @@ mod tests {
         // Test that, when we perform a lookup that succeeds, we do not send an
         // ARP request or install a retry timer.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         // Perform a gratuitous ARP to populate the cache.
         send_arp_packet(
-            &mut ctx,
+            &mut sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -1139,14 +1168,17 @@ mod tests {
 
         // Perform the lookup.
         assert_eq!(
-            lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
             Some(TEST_REMOTE_MAC)
         );
 
         // We should not have sent any ARP request.
-        assert_empty(ctx.frames().iter());
+        assert_empty(sync_ctx.frames().iter());
         // We should not have set a retry timer.
-        assert_eq!(ctx.cancel_timer(ArpTimerId::new_request_retry((), TEST_REMOTE_IPV4)), None);
+        assert_eq!(
+            sync_ctx.cancel_timer(ArpTimerId::new_request_retry((), TEST_REMOTE_IPV4)),
+            None
+        );
     }
 
     #[test]
@@ -1154,9 +1186,9 @@ mod tests {
         // Test that, after performing a certain number of ARP request retries,
         // we give up and don't install another retry timer.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // `i` represents the `i`th request, so we start it at 1 since we
         // already sent one request during the call to `lookup`.
@@ -1164,7 +1196,7 @@ mod tests {
             // We should have sent i requests total. We have already validated
             // all the rest, so only validate the most recent one.
             validate_last_arp_packet(
-                &ctx,
+                &sync_ctx,
                 i,
                 Mac::BROADCAST,
                 ArpOp::Request,
@@ -1176,13 +1208,13 @@ mod tests {
 
             // Check the number of remaining tries.
             assert_eq!(
-                ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4),
+                sync_ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4),
                 Some(DEFAULT_ARP_REQUEST_MAX_TRIES - i)
             );
 
             // There should be a single ARP request retry timer installed.
             validate_single_retry_timer(
-                &ctx,
+                &sync_ctx,
                 // Duration only implements Mul<u32>
                 DEFAULT_ARP_REQUEST_PERIOD * (i as u32),
                 TEST_REMOTE_IPV4,
@@ -1190,7 +1222,7 @@ mod tests {
 
             // Trigger the ARP request retry timer.
             assert_eq!(
-                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
                 Some(TEST_REQUEST_RETRY_TIMER_ID)
             );
         }
@@ -1199,7 +1231,7 @@ mod tests {
         // have already validated all the rest, so only validate the most recent
         // one.
         validate_last_arp_packet(
-            &ctx,
+            &sync_ctx,
             DEFAULT_ARP_REQUEST_MAX_TRIES,
             Mac::BROADCAST,
             ArpOp::Request,
@@ -1210,13 +1242,13 @@ mod tests {
         );
 
         // There shouldn't be any timers installed.
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // The table entry should have been completely removed.
-        assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
+        assert_eq!(sync_ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
 
         // We should have notified the device layer of the failure.
-        assert_eq!(ctx.get_ref().addr_resolution_failed.as_slice(), [TEST_REMOTE_IPV4]);
+        assert_eq!(sync_ctx.get_ref().addr_resolution_failed.as_slice(), [TEST_REMOTE_IPV4]);
     }
 
     #[test]
@@ -1224,10 +1256,10 @@ mod tests {
         // Test that, when we receive an ARP request, we cache the sender's
         // address information and send an ARP response.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         send_arp_packet(
-            &mut ctx,
+            &mut sync_ctx,
             ArpOp::Request,
             TEST_REMOTE_IPV4,
             TEST_LOCAL_IPV4,
@@ -1237,13 +1269,13 @@ mod tests {
 
         // Make sure we cached the sender's address information.
         assert_eq!(
-            lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
+            lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4),
             Some(TEST_REMOTE_MAC)
         );
 
         // We should have sent an ARP response.
         validate_last_arp_packet(
-            &ctx,
+            &sync_ctx,
             1,
             TEST_REMOTE_MAC,
             ArpOp::Response,
@@ -1316,10 +1348,10 @@ mod tests {
             {
                 host_iter.clone().map(|cfg| {
                     let ArpHostConfig { name, proto_addr, hw_addr } = cfg;
-                    let DummyCtx { sync_ctx: mut ctx } =
-                        DummyCtx::with_sync_ctx(MockCtx::default());
-                    ctx.get_mut().hw_addr = UnicastAddr::new(*hw_addr).unwrap();
-                    ctx.get_mut().proto_addr = Some(*proto_addr);
+                    let mut ctx = DummyCtx::with_sync_ctx(MockCtx::default());
+                    let DummyCtx { sync_ctx } = &mut ctx;
+                    sync_ctx.get_mut().hw_addr = UnicastAddr::new(*hw_addr).unwrap();
+                    sync_ctx.get_mut().proto_addr = Some(*proto_addr);
                     (*name, ctx)
                 })
             },
@@ -1353,7 +1385,7 @@ mod tests {
         // The lookup should fail.
         assert_eq!(
             lookup(
-                network.context(local_name),
+                network.sync_ctx(local_name),
                 &mut (),
                 (),
                 local_hw_addr,
@@ -1363,7 +1395,7 @@ mod tests {
         );
         // We should have sent an ARP request.
         validate_last_arp_packet(
-            network.context(local_name),
+            network.sync_ctx(local_name),
             1,
             Mac::BROADCAST,
             ArpOp::Request,
@@ -1374,15 +1406,17 @@ mod tests {
         );
         // We should have installed a retry timer.
         validate_single_retry_timer(
-            network.context(local_name),
+            network.sync_ctx(local_name),
             DEFAULT_ARP_REQUEST_PERIOD,
             requested_remote_proto_addr,
         );
 
         // Step once to deliver the ARP request to the remotes.
         let res = network.step(
-            |sync_ctx, device_id, buf| handle_packet(sync_ctx, &mut (), device_id, buf),
-            TimerHandler::handle_timer,
+            |DummyCtx { sync_ctx }, device_id, buf| {
+                handle_packet(sync_ctx, &mut (), device_id, buf)
+            },
+            |DummyCtx { sync_ctx }, ctx, id| TimerHandler::handle_timer(sync_ctx, ctx, id),
         );
         assert_eq!(res.timers_fired, 0);
 
@@ -1397,7 +1431,7 @@ mod tests {
         // information.
         assert_eq!(
             network
-                .context(requested_remote_name)
+                .sync_ctx(requested_remote_name)
                 .get_ref()
                 .arp_state
                 .table
@@ -1406,7 +1440,7 @@ mod tests {
         );
         // The requested remote should have sent an ARP response.
         validate_last_arp_packet(
-            network.context(requested_remote_name),
+            network.sync_ctx(requested_remote_name),
             1,
             local_hw_addr,
             ArpOp::Response,
@@ -1422,7 +1456,7 @@ mod tests {
             // The non-requested_remote should not have populated its ARP cache.
             assert_eq!(
                 network
-                    .context(*unrequested_remote_name)
+                    .sync_ctx(*unrequested_remote_name)
                     .get_ref()
                     .arp_state
                     .table
@@ -1431,13 +1465,15 @@ mod tests {
             );
 
             // The non-requested_remote should not have sent an ARP response.
-            assert_empty(network.context(*unrequested_remote_name).frames().iter());
+            assert_empty(network.sync_ctx(*unrequested_remote_name).frames().iter());
         });
 
         // Step once to deliver the ARP response to the local.
         let res = network.step(
-            |sync_ctx, device_id, buf| handle_packet(sync_ctx, &mut (), device_id, buf),
-            TimerHandler::handle_timer,
+            |DummyCtx { sync_ctx }, device_id, buf| {
+                handle_packet(sync_ctx, &mut (), device_id, buf)
+            },
+            |DummyCtx { sync_ctx }, ctx, id| TimerHandler::handle_timer(sync_ctx, ctx, id),
         );
         assert_eq!(res.timers_fired, 0);
         assert_eq!(res.frames_sent, expected_frames_sent_bcast);
@@ -1446,7 +1482,7 @@ mod tests {
         // information.
         assert_eq!(
             network
-                .context(local_name)
+                .sync_ctx(local_name)
                 .get_ref()
                 .arp_state
                 .table
@@ -1456,13 +1492,13 @@ mod tests {
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
         validate_single_entry_timer(
-            network.context(local_name),
+            network.sync_ctx(local_name),
             DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
             requested_remote_proto_addr,
         );
         // The device layer should have been notified.
         assert_eq!(
-            network.context(local_name).get_ref().addr_resolved.as_slice(),
+            network.sync_ctx(local_name).get_ref().addr_resolved.as_slice(),
             [(requested_remote_proto_addr, requested_remote_hw_addr)]
         );
     }
@@ -1542,28 +1578,31 @@ mod tests {
         // Test that, if we insert a static entry while a request retry timer is
         // installed, that timer is canceled, and the device layer is notified.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
         // Perform a lookup in order to kick off a request and install a retry
         // timer.
-        assert_eq!(lookup(&mut ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(lookup(&mut sync_ctx, &mut (), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should be in the Waiting state.
         assert_eq!(
-            ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4),
+            sync_ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4),
             Some(DEFAULT_ARP_REQUEST_MAX_TRIES - 1)
         );
         // We should have an ARP request retry timer set.
-        validate_single_retry_timer(&ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         // Now insert a static entry.
-        insert_static_neighbor(&mut ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(&mut sync_ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // We should have notified the device layer.
-        assert_eq!(ctx.get_ref().addr_resolved.as_slice(), [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]);
+        assert_eq!(
+            sync_ctx.get_ref().addr_resolved.as_slice(),
+            [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]
+        );
     }
 
     #[test]
@@ -1571,20 +1610,27 @@ mod tests {
         // Test that, if we insert a static entry that overrides an existing
         // dynamic entry, the dynamic entry's expiration timer is canceled.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // We should have the address in cache.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
         // We should have an ARP entry expiration timer set.
-        validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_entry_timer(
+            &sync_ctx,
+            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
+            TEST_REMOTE_IPV4,
+        );
 
         // Now insert a static entry.
-        insert_static_neighbor(&mut ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_static_neighbor(&mut sync_ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -1592,29 +1638,36 @@ mod tests {
         // Test that, if a dynamic entry is installed, it is removed after the
         // appropriate amount of time.
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // We should have the address in cache.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
         // We should have an ARP entry expiration timer set.
-        validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_entry_timer(
+            &sync_ctx,
+            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
+            TEST_REMOTE_IPV4,
+        );
 
         // Trigger the entry expiration timer.
         assert_eq!(
-            ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
             Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
         );
 
         // The right amount of time should have elapsed.
-        assert_eq!(ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
+        assert_eq!(sync_ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
         // The entry should have been removed.
-        assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
+        assert_eq!(sync_ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
         // The timer should have been canceled.
-        ctx.timer_ctx().assert_no_timers_installed();
+        sync_ctx.timer_ctx().assert_no_timers_installed();
         // The device layer should have been notified.
-        assert_eq!(ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
+        assert_eq!(sync_ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
 
     #[test]
@@ -1628,22 +1681,25 @@ mod tests {
         // 4. Check whether the entry disappears at instant
         //    (DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD + 5)
 
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // Let 5 seconds elapse.
-        assert_empty(ctx.trigger_timers_until_instant(
+        assert_empty(sync_ctx.trigger_timers_until_instant(
             DummyInstant::from(Duration::from_secs(5)),
             TimerHandler::handle_timer,
         ));
 
         // The entry should still be there.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
 
         // Receive the gratuitous ARP response.
         send_arp_packet(
-            &mut ctx,
+            &mut sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -1652,39 +1708,42 @@ mod tests {
         );
 
         // Let the remaining time elapse to the first entry expiration timer.
-        assert_empty(ctx.trigger_timers_until_instant(
+        assert_empty(sync_ctx.trigger_timers_until_instant(
             DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD),
             TimerHandler::handle_timer,
         ));
         // The entry should still be there.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
+        assert_eq!(
+            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
+        );
 
         // Trigger the entry expiration timer.
         assert_eq!(
-            ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
             Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
         );
         // The right amount of time should have elapsed.
         assert_eq!(
-            ctx.now(),
+            sync_ctx.now(),
             DummyInstant::from(Duration::from_secs(5) + DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD)
         );
         // The entry should be gone.
-        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), None);
+        assert_eq!(sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), None);
         // The device layer should have been notified.
-        assert_eq!(ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
+        assert_eq!(sync_ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
 
     #[test]
     fn test_arp_table_dynamic_after_static_should_not_set_timer() {
         // Test that, if a static entry exists, attempting to insert a dynamic
         // entry for the same address will not cause a timer to be scheduled.
-        let DummyCtx { sync_ctx: mut ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
+        let DummyCtx { mut sync_ctx } = DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_static_neighbor(&mut ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-        ctx.timer_ctx().assert_no_timers_installed();
+        insert_static_neighbor(&mut sync_ctx, &mut (), (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
 
-        insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-        ctx.timer_ctx().assert_no_timers_installed();
+        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }
