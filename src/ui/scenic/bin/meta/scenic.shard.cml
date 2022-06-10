@@ -49,7 +49,6 @@
                 "fuchsia.stash.Store",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.input.ImeService",
             ],
         },
     ],

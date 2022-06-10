@@ -125,10 +125,7 @@
             to: "#ui",
         },
         {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
+            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
             from: "#text_manager",
             to: "#ui",
         },

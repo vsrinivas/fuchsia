@@ -107,7 +107,6 @@
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.stash.Store",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.ui.input.ImeService",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
