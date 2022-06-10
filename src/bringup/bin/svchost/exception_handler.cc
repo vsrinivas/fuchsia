@@ -96,7 +96,7 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
     }
 
     if (!shared_exception->is_valid()) {
-      LogError("Exception was released before hander responded", info);
+      LogError("Exception was released before handler responded", info);
       return;
     }
 
