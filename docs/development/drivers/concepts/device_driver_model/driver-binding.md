@@ -522,21 +522,6 @@ Driver   : None
 [ 5/  5] : Key "fuchsia.acpi.hid" Value "GFSH0005"
 ```
 
-You can also run `dm devprops` through the shell (ex/ `fx shell dm devprops`)
-
-```
-Name [pci-00:07.0]
-Flags   : Bound
-ProtoId : '....' 00000000(0)
-9 Properties
-[ 0/ 4] : Value 0x00001f Id Protocol
-[ 1/ 4] : Value 0x001af4 Id PCI.VID
-[ 2/ 4] : Value 0x001052 Id PCI.DID
-[ 3/ 4] : Value 0x000001 Id 0x03
-1 String Property
-[ 0/ 1] : fuchsia.acpi.hid="GFSH0005"
-```
-
 See the [drivers and nodes documentation](/docs/concepts/drivers/drivers_and_nodes.md) for more information on the printed topology.
 
 
@@ -650,7 +635,7 @@ fuchsia.acpi.hid == "GFSH0005";
 
 #####Property key
 
-The integer key names are defined in `binding_priv.h` and are prefixed with “fuchsia”. For example, the key 0x03 in `dm dump` is determined to be `fuchsia.BIND_COMPOSITE` because `binding_priv.h` contains the following:
+The integer key names are defined in `binding_priv.h` and are prefixed with “fuchsia”. For example, a key 0x03 means `fuchsia.BIND_COMPOSITE` because `binding_priv.h` contains the following:
 
 ```
 #define BIND_FLAGS 0x0000          // value of the flags register
