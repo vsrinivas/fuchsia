@@ -1129,7 +1129,8 @@ class EmbeddingFlutterTestIp {
          .targets = {ChildRef{kEmbeddingFlutter}}},
 
         // Needed for Flutter runner.
-        {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_},
+        {.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                          Protocol{fuchsia::sysmem::Allocator::Name_},
                           Protocol{fuchsia::tracing::provider::Registry::Name_},
                           Protocol{fuchsia::vulkan::loader::Loader::Name_}},
          .source = ParentRef(),
