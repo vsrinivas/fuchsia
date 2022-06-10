@@ -27,6 +27,10 @@ If the *handle* was used in a pending [`zx_object_wait_one()`] or a
 It is not an error to close the special "never a valid handle" **ZX_HANDLE_INVALID**,
 similar to `free(NULL)` being a valid call.
 
+Closing the last handle to a peered object using `zx_handle_close()` can affect
+the state of the object's peer (if any).  See also
+[peered-objects][peered-objects].
+
 ## RIGHTS
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
@@ -46,6 +50,9 @@ None.
  - [`zx_handle_close_many()`]
  - [`zx_handle_duplicate()`]
  - [`zx_handle_replace()`]
+
+<!-- Reference links -->
+[peered-objects]: /docs/reference/kernel_objects/objects.md#peered-objects-and-the-peer-closed-state
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
