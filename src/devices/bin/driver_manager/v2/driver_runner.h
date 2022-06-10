@@ -40,19 +40,20 @@ std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeDirOffer(
 class Node;
 
 class DriverComponent : public fidl::WireServer<fuchsia_component_runner::ComponentController>,
-                        public fidl::WireAsyncEventHandler<fuchsia_driver_host::Driver>,
-                        public fbl::DoublyLinkedListable<std::unique_ptr<DriverComponent>> {
+                        public fidl::WireAsyncEventHandler<fuchsia_driver_host::Driver> {
  public:
+  // The driver will call this function when it would like to be removed.
+  // This function should shut down all of the children of the driver.
+  using RequestRemove = fit::function<void(zx_status_t)>;
+  // The driver will call this function when it has lost connection to the
+  // driver_host/driver component. The driver is dead and must be removed.
+  using Remove = fit::function<void(zx_status_t)>;
   explicit DriverComponent(fidl::ClientEnd<fuchsia_driver_host::Driver> driver,
-                           async_dispatcher_t* dispatcher, std::string_view url);
-  ~DriverComponent();
+                           fidl::ServerEnd<fuchsia_component_runner::ComponentController> component,
+                           async_dispatcher_t* dispatcher, std::string_view url,
+                           RequestRemove request_remove, Remove remove);
 
   std::string_view url() const;
-
-  void set_driver_ref(
-      fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
-
-  void set_node(std::shared_ptr<Node> node) { node_ = std::move(node); }
 
   // Request that this Driver be stopped. This will go through and
   // stop all of the Driver's children first.
@@ -63,6 +64,11 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   // have been stopped.
   // This should only be used by the Node class.
   void StopDriver();
+
+  // This is true when the class is connected to the underlying driver component.
+  // If the driver host or driver component connection is removed, this will
+  // be false.
+  bool is_alive() const { return is_alive_; }
 
  private:
   // This is called when fuchsia_driver_framework::Driver is closed.
@@ -78,14 +84,7 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   void StopComponent();
 
   bool stop_in_progress_ = false;
-
-  // The node that the Driver is bound to.
-  // We want to keep the Node alive as long as the Driver is alive, because
-  // the Driver must make sure that all of it's children are stopped before
-  // it is stopped.
-  // Also, a Node will not finish it's Remove process while it has a driver
-  // bound to it.
-  std::shared_ptr<Node> node_;
+  bool is_alive_ = true;
 
   // This channel represents the Driver in the DriverHost. If we call
   // Stop() on this channel, the DriverHost will call Stop on the Driver
@@ -101,6 +100,9 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
 
   // URL of the driver's component manifest
   std::string url_;
+
+  RequestRemove request_remove_;
+  Remove remove_;
 };
 
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
@@ -200,7 +202,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   ~Node() override;
 
   const std::string& name() const;
-  const std::optional<DriverComponent*>& driver_component() const;
+  const DriverComponent* driver_component() const;
   const std::vector<Node*>& parents() const;
   const std::list<std::shared_ptr<Node>>& children() const;
   std::vector<OwnedOffer>& offers() const;
@@ -214,7 +216,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_bound_driver_url(std::optional<std::string_view> bound_driver_url);
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
-  void set_driver_component(std::optional<DriverComponent*> driver_component);
+  void set_driver_component(std::unique_ptr<DriverComponent> driver_component);
   void set_parents_names(std::vector<std::string> names) { parents_names_ = std::move(names); }
 
   std::string TopoName() const;
@@ -260,9 +262,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   bool removal_in_progress_ = false;
 
   // If this exists, then this `driver_component_` is bound to this node.
-  // The driver_component is not guaranteed to outlive the node, but if
-  // the driver_component is freed, it will reset this field.
-  std::optional<DriverComponent*> driver_component_;
+  std::unique_ptr<DriverComponent> driver_component_;
   std::optional<std::string> bound_driver_url_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
@@ -333,7 +333,6 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
 
   std::unordered_map<zx_koid_t, Node&> driver_args_;
   std::unordered_multimap<DriverUrl, CompositeArgs> composite_args_;
-  fbl::DoublyLinkedList<std::unique_ptr<DriverComponent>> drivers_;
   fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>> driver_hosts_;
 
   // Orphaned nodes are nodes that have failed to bind to a driver, either

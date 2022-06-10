@@ -89,13 +89,9 @@ zx::status<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator, co
 
   device_info.set_moniker(allocator, fidl::StringView(allocator, node->TopoName()));
 
-  const auto& driver_component = node->driver_component();
-  if (driver_component.has_value()) {
-    const auto* driver_component_ptr = driver_component.value();
-    if (driver_component_ptr != nullptr) {
-      device_info.set_bound_driver_url(allocator,
-                                       fidl::StringView(allocator, driver_component_ptr->url()));
-    }
+  if (node->driver_component()) {
+    device_info.set_bound_driver_url(allocator,
+                                     fidl::StringView(allocator, node->driver_component()->url()));
   }
 
   auto properties = node->properties();

@@ -113,7 +113,7 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
     }
     std::string driver_string = "unbound";
     if (node->driver_component()) {
-      driver_string = std::string((*node->driver_component())->url());
+      driver_string = std::string(node->driver_component()->url());
     }
     root->CreateString("driver", driver_string, &inspector);
 
@@ -216,21 +216,23 @@ std::optional<fdecl::wire::Offer> CreateCompositeDirOffer(fidl::AnyArena& arena,
   return fdecl::wire::Offer::WithDirectory(arena, dir.Build());
 }
 
-DriverComponent::DriverComponent(fidl::ClientEnd<fdh::Driver> driver,
-                                 async_dispatcher_t* dispatcher, std::string_view url)
-    : driver_(std::move(driver), dispatcher, this), url_(url) {}
-
-DriverComponent::~DriverComponent() {
-  node_->set_driver_component(std::nullopt);
-  node_->Remove();
+DriverComponent::DriverComponent(
+    fidl::ClientEnd<fdh::Driver> driver,
+    fidl::ServerEnd<fuchsia_component_runner::ComponentController> component,
+    async_dispatcher_t* dispatcher, std::string_view url, RequestRemove request_remove,
+    Remove remove)
+    : driver_(std::move(driver), dispatcher, this),
+      url_(url),
+      request_remove_(std::move(request_remove)),
+      remove_(std::move(remove)) {
+  driver_ref_ = fidl::BindServer(dispatcher, std::move(component), this,
+                                 [](DriverComponent* driver, auto, auto) {
+                                   driver->is_alive_ = false;
+                                   driver->remove_(ZX_OK);
+                                 });
 }
 
 std::string_view DriverComponent::url() const { return url_; }
-
-void DriverComponent::set_driver_ref(
-    fidl::ServerBindingRef<frunner::ComponentController> driver_ref) {
-  driver_ref_.emplace(std::move(driver_ref));
-}
 
 void DriverComponent::on_fidl_error(fidl::UnbindInfo info) {
   // The only valid way a driver host should shut down the Driver channel
@@ -256,7 +258,7 @@ void DriverComponent::Kill(KillRequestView request,
 
 void DriverComponent::StopComponent() { CloseAndReset(driver_ref_); }
 
-void DriverComponent::RequestDriverStop() { node_->Remove(); }
+void DriverComponent::RequestDriverStop() { request_remove_(ZX_OK); }
 
 void DriverComponent::StopDriver() {
   if (stop_in_progress_) {
@@ -396,7 +398,7 @@ Node::~Node() { UnbindAndReset(controller_ref_); }
 
 const std::string& Node::name() const { return name_; }
 
-const std::optional<DriverComponent*>& Node::driver_component() const { return driver_component_; }
+const DriverComponent* Node::driver_component() const { return driver_component_.get(); }
 
 const std::vector<Node*>& Node::parents() const { return parents_; }
 
@@ -433,8 +435,8 @@ void Node::set_controller_ref(fidl::ServerBindingRef<fdf::NodeController> contro
   controller_ref_.emplace(std::move(controller_ref));
 }
 
-void Node::set_driver_component(std::optional<DriverComponent*> driver_component) {
-  driver_component_ = driver_component;
+void Node::set_driver_component(std::unique_ptr<DriverComponent> driver_component) {
+  driver_component_ = std::move(driver_component);
 }
 
 void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
@@ -549,8 +551,8 @@ void Node::Remove() {
 
   // If we still have a driver bound to us, we tell it to stop.
   // (The Driver will call back into this Remove function once it stops).
-  if (driver_component_.has_value()) {
-    (*driver_component_)->StopDriver();
+  if (driver_component_ && driver_component_->is_alive()) {
+    driver_component_->StopDriver();
     return;
   }
 
@@ -966,14 +968,11 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   }
 
   // Create a DriverComponent to manage the driver.
-  auto driver = std::make_unique<DriverComponent>(std::move(*start), dispatcher_, url);
-  auto bind_driver =
-      fidl::BindServer(dispatcher_, std::move(request->controller), driver.get(),
-                       [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
-  node.set_driver_component(driver.get());
-  driver->set_driver_ref(std::move(bind_driver));
-  driver->set_node(node.shared_from_this());
-  drivers_.push_back(std::move(driver));
+  auto driver = std::make_unique<DriverComponent>(
+      std::move(*start), std::move(request->controller), dispatcher_, url,
+      [node = &node](auto status) { node->Remove(); },
+      [node = &node](auto status) { node->Remove(); });
+  node.set_driver_component(std::move(driver));
 }
 
 void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) {
