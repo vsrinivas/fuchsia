@@ -191,8 +191,16 @@
     <string name="vertical_line_symbol_name">vertical line</string>
     <!-- Spoken description for square root symbol "√". -->
     <string name="square_root_symbol_name">square root</string>
-    <!-- Spoken description for bullet symbol "•". -->
+    <!-- Spoken description for bullet symbol U+2022 "•". -->
     <string name="bullet_symbol_name">bullet</string>
+    <!-- Spoken description for white bullet symbol U+25E6 "◦". -->
+    <string name="white_bullet_symbol_name">white bullet</string>
+    <!-- Spoken description for black square symbol U+25A0 "▪". -->
+    <string name="black_square_symbol_name">black square</string>
+    <!-- Spoken description for triangular bullet symbol U+2023 "‣". -->
+    <string name="triangular_bullet_symbol_name">triangular bullet</string>
+    <!-- Spoken description for hyphen bullet symbol U+2043 "⁃". -->
+    <string name="hyphen_bullet_symbol_name">hyphen bullet</string>
     <!-- Spoken description for multiplication symbol "✕". -->
     <string name="multiplication_symbol_name">multiplication sign</string>
     <!-- Spoken description for the division symbol "÷". -->
