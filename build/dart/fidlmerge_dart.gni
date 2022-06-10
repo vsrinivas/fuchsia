@@ -17,7 +17,7 @@ import("//build/fidl/toolchain.gni")
 #
 #   template_path (required)
 #     Specifies the template to use to generate the source code for the
-#     source_set. For example, "//garnet/public/build/fostr/fostr.fidlmerge".
+#     source_set. For example, "//src/lib/fostr/build/fostr.fidlmerge".
 #
 #   generated_source_base (required)
 #     The base file name from which the source_set's 'source' file names are
@@ -28,8 +28,7 @@ import("//build/fidl/toolchain.gni")
 #
 #   amendments_path (optional)
 #     Specifies a JSON file that contains amendments to be made to the fidl
-#     model before the template is applied. For example,
-#     "//garnet/public/build/fostr/fidl/fuchsia.media/amendments.fidlmerge".
+#     model before the template is applied.
 #     See the fidlmerge README for details.
 #
 #   deps, public_deps, test_only, visibility (optional)
