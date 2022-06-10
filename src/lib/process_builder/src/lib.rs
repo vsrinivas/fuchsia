@@ -233,7 +233,9 @@ impl ProcessBuilder {
             min_stack_size: 0,
             system_vdso_vmo,
         };
-        pb.common.add_to_message(&mut pb.msg_contents)?;
+        pb.common.add_process_self(&mut pb.msg_contents)?;
+        pb.common.add_thread_self(&mut pb.msg_contents)?;
+        pb.common.add_root_vmar(&mut pb.msg_contents)?;
         Ok(pb)
     }
 
@@ -607,7 +609,8 @@ impl ProcessBuilder {
                 },
             ],
         };
-        self.common.add_to_message(&mut linker_msg_contents)?;
+        self.common.add_process_self(&mut linker_msg_contents)?;
+        self.common.add_root_vmar(&mut linker_msg_contents)?;
         Ok(processargs::Message::build(linker_msg_contents)?)
     }
 
@@ -743,24 +746,37 @@ fn extract_ld_environment_variables(envvars: &[CString]) -> Vec<CString> {
 }
 
 impl CommonMessageHandles {
-    /// Returns a vector of processargs message handles created by this library which are common to
-    /// both the linker and main messages, duplicating handles as needed.
-    fn add_to_message(
+    fn add_process_self(
         &self,
         msg: &mut processargs::MessageContents,
     ) -> Result<(), ProcessBuilderError> {
-        let handles: &[(zx::HandleRef<'_>, &str, HandleType)] = &[
-            (self.process.as_handle_ref(), "Failed to dup process handle", HandleType::ProcessSelf),
-            (self.root_vmar.as_handle_ref(), "Failed to dup VMAR handle", HandleType::RootVmar),
-            (self.thread.as_handle_ref(), "Failed to dup thread handle", HandleType::ThreadSelf),
-        ];
+        Self::add_to_message(msg, self.process.as_handle_ref(), HandleType::ProcessSelf)
+    }
 
-        for (handle, err_str, handle_type) in handles {
-            let dup = handle
-                .duplicate(zx::Rights::SAME_RIGHTS)
-                .map_err(|s| ProcessBuilderError::GenericStatus(err_str, s))?;
-            msg.handles.push(StartupHandle { handle: dup, info: HandleInfo::new(*handle_type, 0) });
-        }
+    fn add_thread_self(
+        &self,
+        msg: &mut processargs::MessageContents,
+    ) -> Result<(), ProcessBuilderError> {
+        Self::add_to_message(msg, self.thread.as_handle_ref(), HandleType::ThreadSelf)
+    }
+
+    fn add_root_vmar(
+        &self,
+        msg: &mut processargs::MessageContents,
+    ) -> Result<(), ProcessBuilderError> {
+        Self::add_to_message(msg, self.root_vmar.as_handle_ref(), HandleType::RootVmar)
+    }
+
+    /// Add a handle to the procargs message with `0` for its `arg`.
+    fn add_to_message(
+        msg: &mut processargs::MessageContents,
+        handle: zx::HandleRef<'_>,
+        handle_type: HandleType,
+    ) -> Result<(), ProcessBuilderError> {
+        let dup = handle
+            .duplicate(zx::Rights::SAME_RIGHTS)
+            .map_err(|s| ProcessBuilderError::DuplicateHandle(handle_type, s))?;
+        msg.handles.push(StartupHandle { handle: dup, info: HandleInfo::new(handle_type, 0) });
         Ok(())
     }
 }
@@ -944,6 +960,8 @@ pub enum ProcessBuilderError {
     WriteBootstrapMessage(zx::Status),
     #[error("Failed to destroy reservation VMAR: {}", _0)]
     DestroyReservationVMAR(zx::Status),
+    #[error("Failed to duplicate handle of type {:?}: {}", _0, _1)]
+    DuplicateHandle(HandleType, zx::Status),
 }
 
 impl ProcessBuilderError {
@@ -966,6 +984,7 @@ impl ProcessBuilderError {
             ProcessBuilderError::Internal(_, _) => zx::Status::INTERNAL,
             ProcessBuilderError::LoadDynamicLinker(_) => zx::Status::NOT_FOUND,
             ProcessBuilderError::LoadDynamicLinkerTimeout() => zx::Status::TIMED_OUT,
+            ProcessBuilderError::DuplicateHandle(_, s) => *s,
         }
     }
 }
@@ -1501,7 +1520,6 @@ mod tests {
 
     const LINKER_MESSAGE_HANDLES: &[HandleType] = &[
         HandleType::ProcessSelf,
-        HandleType::ThreadSelf,
         HandleType::RootVmar,
         HandleType::LdsvcLoader,
         HandleType::LoadedVmar,
