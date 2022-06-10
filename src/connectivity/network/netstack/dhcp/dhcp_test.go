@@ -20,7 +20,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/packetsocket"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
@@ -719,7 +718,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				}
 				b.setOptions(opts)
 				pkt.Data().CapLength(0)
-				pkt.Data().AppendView(buffer.NewViewFromBytes(b))
+				pkt.Data().AppendView(b)
 
 				// Rewrite all the headers and IP checksum. Yes, this is all
 				// required.
@@ -1150,7 +1149,7 @@ func mustCloneWithNewMsgType(t *testing.T, pkt *stack.PacketBuffer, msgType dhcp
 	header.UDP(pkt.TransportHeader().View()).SetChecksum(0)
 
 	pkt.Data().CapLength(0)
-	pkt.Data().AppendView(buffer.NewViewFromBytes(h))
+	pkt.Data().AppendView(h)
 	return pkt
 }
 

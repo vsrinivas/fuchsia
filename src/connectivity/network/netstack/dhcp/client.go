@@ -19,8 +19,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
+	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/packet"
@@ -869,7 +869,7 @@ func (c *Client) send(
 	ciaddr bool,
 ) error {
 	dhcpLength := headerBaseSize + opts.len() + 1
-	bytes := buffer.NewView(header.IPv4MinimumSize + header.UDPMinimumSize + dhcpLength)
+	bytes := make([]byte, header.IPv4MinimumSize+header.UDPMinimumSize+dhcpLength)
 	dhcpPayload := hdr(bytes[header.IPv4MinimumSize+header.UDPMinimumSize:][:dhcpLength])
 	dhcpPayload.init()
 	dhcpPayload.setOp(opRequest)
@@ -972,7 +972,7 @@ func (c *Client) send(
 		writeTo.NIC,
 		linkAddress,
 		header.IPv4ProtocolNumber,
-		bytes.ToVectorisedView(),
+		buffer.NewWithData(bytes),
 	); err != nil {
 		return fmt.Errorf("failed to write packet: %s", err)
 	}

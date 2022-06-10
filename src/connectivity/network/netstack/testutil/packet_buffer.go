@@ -6,16 +6,15 @@ package testutil
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 // The headers and data from a stack.PacketBuffer.
 type PacketBufferParts struct {
-	LinkHeader      buffer.View
-	NetworkHeader   buffer.View
-	TransportHeader buffer.View
-	Data            buffer.View
+	LinkHeader      []byte
+	NetworkHeader   []byte
+	TransportHeader []byte
+	Data            []byte
 }
 
 // PacketBufferCmpTransformer transforms a stack.PacketBuffer to a

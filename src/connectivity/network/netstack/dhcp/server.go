@@ -29,7 +29,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -53,7 +52,7 @@ type Server struct {
 
 // conn is a blocking read/write network endpoint.
 type conn interface {
-	Read() (buffer.View, tcpip.FullAddress, error)
+	Read() ([]byte, tcpip.FullAddress, error)
 	Write([]byte, *tcpip.FullAddress) error
 }
 
@@ -82,7 +81,7 @@ func newEPConn(ctx context.Context, wq *waiter.Queue, ep tcpip.Endpoint) *epConn
 	return c
 }
 
-func (c *epConn) Read() (buffer.View, tcpip.FullAddress, error) {
+func (c *epConn) Read() ([]byte, tcpip.FullAddress, error) {
 	var b bytes.Buffer
 	for {
 		res, err := c.ep.Read(&b, tcpip.ReadOptions{

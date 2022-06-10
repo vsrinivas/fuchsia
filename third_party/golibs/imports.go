@@ -58,7 +58,6 @@ import (
 	_ "gvisor.dev/gvisor/pkg/atomicbitops"
 	_ "gvisor.dev/gvisor/pkg/log"
 	_ "gvisor.dev/gvisor/pkg/tcpip"
-	_ "gvisor.dev/gvisor/pkg/tcpip/buffer"
 	_ "gvisor.dev/gvisor/pkg/tcpip/faketime"
 	_ "gvisor.dev/gvisor/pkg/tcpip/header"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
