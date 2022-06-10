@@ -23,6 +23,7 @@ group("tests") {
   deps = [
     "a11y:tests",
     "backlight:tests",
+    "benchmarks",
     "bin:tests",
     "examples:tests",
     "input:tests",

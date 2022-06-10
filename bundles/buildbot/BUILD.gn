@@ -28,7 +28,6 @@ group("no_e2e_dep") {
     "//bundles/packages:all",
     "//examples",
     "//examples:tests",
-    "//garnet",
     "//scripts:tests",
     "//scripts/sdk/gn:tests",
     "//src/diagnostics:tests",
