@@ -875,6 +875,7 @@ impl FileObject {
 impl Drop for FileObject {
     fn drop(&mut self) {
         self.ops().close(self);
+        self.name.entry.node.on_file_closed();
     }
 }
 

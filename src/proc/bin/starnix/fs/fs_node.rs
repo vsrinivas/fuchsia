@@ -11,6 +11,7 @@ use crate::fs::pipe::Pipe;
 use crate::fs::socket::*;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::as_any::AsAny;
 use crate::types::*;
@@ -54,6 +55,11 @@ pub struct FsNode {
     /// field to ensure they operate sequentially. FileObjects writing without
     /// O_APPEND should grab read() lock so that they can operate in parallel.
     pub append_lock: RwLock<()>,
+
+    /// Information about the locking information on this node.
+    ///
+    /// No other lock on this object may be taken while this lock is held.
+    flock_info: Mutex<FlockInfo>,
 }
 
 pub type FsNodeHandle = Arc<FsNode>;
@@ -74,8 +80,73 @@ pub struct FsNodeInfo {
     pub rdev: DeviceType,
 }
 
+#[derive(Default)]
+struct FlockInfo {
+    /// Whether the node is currently locked. The meaning of the different values are:
+    /// - `None`: The node is not locked.
+    /// - `Some(false)`: The node is locked non exclusively.
+    /// - `Some(true)`: The node is locked exclusively.
+    locked_exclusive: Option<bool>,
+    /// The FileObject that hold the lock.
+    locking_handles: Vec<Weak<FileObject>>,
+    /// The queue to notify process waiting on the lock.
+    wait_queue: WaitQueue,
+}
+
+impl FlockInfo {
+    /// Removes all file handle not holding `predicate` from the list of object holding the lock. If
+    /// this empties the list, unlocks the node and notifies all waiting processes.
+    pub fn retain<F>(&mut self, predicate: F)
+    where
+        F: Fn(FileHandle) -> bool,
+    {
+        if !self.locking_handles.is_empty() {
+            self.locking_handles.retain(|w| {
+                if let Some(fh) = w.upgrade() {
+                    predicate(fh)
+                } else {
+                    false
+                }
+            });
+            if self.locking_handles.is_empty() {
+                self.locked_exclusive = None;
+                self.wait_queue.notify_all();
+            }
+        }
+    }
+}
+
 /// st_blksize is measured in units of 512 bytes.
 const DEFAULT_BYTES_PER_BLOCK: i64 = 512;
+
+pub struct FlockOperation {
+    operation: u32,
+}
+
+impl FlockOperation {
+    pub fn from_flags(operation: u32) -> Result<Self, Errno> {
+        if operation & !(LOCK_SH | LOCK_EX | LOCK_UN | LOCK_NB) != 0 {
+            not_implemented!("unsupported flock operation: {:#x}", operation);
+            return error!(EINVAL);
+        }
+        if [LOCK_SH, LOCK_EX, LOCK_UN].iter().filter(|&&o| operation & o == o).count() != 1 {
+            return error!(EINVAL);
+        }
+        Ok(Self { operation })
+    }
+
+    pub fn is_unlock(&self) -> bool {
+        self.operation & LOCK_UN > 0
+    }
+
+    pub fn is_lock_exclusive(&self) -> bool {
+        self.operation & LOCK_EX > 0
+    }
+
+    pub fn is_blocking(&self) -> bool {
+        self.operation & LOCK_NB == 0
+    }
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UnlinkKind {
@@ -302,6 +373,7 @@ impl FsNode {
             socket: OnceCell::new(),
             info: RwLock::new(info),
             append_lock: RwLock::new(()),
+            flock_info: Default::default(),
         }
     }
 
@@ -328,6 +400,83 @@ impl FsNode {
         T: 'static,
     {
         self.ops().as_any().downcast_ref::<T>()
+    }
+
+    pub fn on_file_closed(&self) {
+        let mut flock_info = self.flock_info.lock();
+        flock_info.retain(|_| true);
+    }
+
+    /// Lock/Unlock the current node.
+    ///
+    /// See flock(2).
+    pub fn flock(
+        &self,
+        current_task: &CurrentTask,
+        file_handle: &FileHandle,
+        operation: FlockOperation,
+    ) -> Result<(), Errno> {
+        loop {
+            let mut flock_info = self.flock_info.lock();
+            if operation.is_unlock() {
+                flock_info.retain(|fh| !Arc::ptr_eq(&fh, file_handle));
+                return Ok(());
+            }
+            // Operation is a locking operation.
+            // 1. File is not locked
+            if flock_info.locked_exclusive.is_none() {
+                flock_info.locked_exclusive = Some(operation.is_lock_exclusive());
+                flock_info.locking_handles.push(Arc::downgrade(file_handle));
+                return Ok(());
+            }
+
+            let file_lock_is_exclusive = flock_info.locked_exclusive == Some(true);
+            let fd_has_lock = flock_info
+                .locking_handles
+                .iter()
+                .find_map(|w| {
+                    w.upgrade().and_then(|fh| {
+                        if Arc::ptr_eq(&fh, file_handle) {
+                            Some(())
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .is_some();
+
+            // 2. File is locked, but fd already have a lock
+            if fd_has_lock {
+                if operation.is_lock_exclusive() == file_lock_is_exclusive {
+                    // Correct lock is already held, return.
+                    return Ok(());
+                } else {
+                    // Incorrect lock is held. Release the lock and loop back to try to reacquire
+                    // it. flock doesn't guarantee atomic lock type switching.
+                    flock_info.retain(|fh| !Arc::ptr_eq(&fh, file_handle));
+                    continue;
+                }
+            }
+
+            // 3. File is locked, and fd doesn't have a lock.
+            if !file_lock_is_exclusive && !operation.is_lock_exclusive() {
+                // The lock is not exclusive, let's grab it.
+                flock_info.locking_handles.push(Arc::downgrade(file_handle));
+                return Ok(());
+            }
+
+            // 4. The operation cannot be done at this time.
+            if !operation.is_blocking() {
+                return error!(EWOULDBLOCK);
+            }
+
+            // Register a waiter to be notified when the lock is released. Release the lock on
+            // FlockInfo, and wait.
+            let waiter = Waiter::new();
+            flock_info.wait_queue.wait_async(&waiter);
+            std::mem::drop(flock_info);
+            waiter.wait(current_task)?;
+        }
     }
 
     pub fn open(
@@ -589,5 +738,26 @@ mod tests {
         assert_eq!(time_from_timespec(stat.st_mtim).expect("mtim"), zx::Time::from_nanos(3));
         assert_eq!(stat.st_dev, DeviceType::new(12, 12).bits());
         assert_eq!(stat.st_rdev, DeviceType::new(13, 13).bits());
+    }
+
+    #[::fuchsia::test]
+    fn test_flock_operation() {
+        assert!(FlockOperation::from_flags(0).is_err());
+        assert!(FlockOperation::from_flags(u32::MAX).is_err());
+
+        let operation1 = FlockOperation::from_flags(LOCK_SH).expect("from_flags");
+        assert_eq!(operation1.is_unlock(), false);
+        assert_eq!(operation1.is_lock_exclusive(), false);
+        assert_eq!(operation1.is_blocking(), true);
+
+        let operation2 = FlockOperation::from_flags(LOCK_EX | LOCK_NB).expect("from_flags");
+        assert_eq!(operation2.is_unlock(), false);
+        assert_eq!(operation2.is_lock_exclusive(), true);
+        assert_eq!(operation2.is_blocking(), false);
+
+        let operation3 = FlockOperation::from_flags(LOCK_UN).expect("from_flags");
+        assert_eq!(operation3.is_unlock(), true);
+        assert_eq!(operation3.is_lock_exclusive(), false);
+        assert_eq!(operation3.is_blocking(), true);
     }
 }

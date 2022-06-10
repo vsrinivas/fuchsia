@@ -1440,9 +1440,10 @@ pub fn sys_poll(
     poll(current_task, user_fds, num_fds, None, timeout)
 }
 
-pub fn sys_flock(_ctx: &CurrentTask, _fd: FdNumber, _operation: i32) -> Result<(), Errno> {
-    not_implemented!("flock not implemented");
-    Ok(())
+pub fn sys_flock(current_task: &CurrentTask, fd: FdNumber, operation: u32) -> Result<(), Errno> {
+    let file = current_task.files.get(fd)?;
+    let operation = FlockOperation::from_flags(operation)?;
+    file.name.entry.node.flock(current_task, &file, operation)
 }
 
 #[cfg(test)]
