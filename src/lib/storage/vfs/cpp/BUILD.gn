@@ -112,7 +112,6 @@ static_library("cpp") {
       "//zircon/system/ulib/trace",
     ]
     deps += [
-      "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.mem:fuchsia.mem_llcpp",
       "//sdk/lib/fdio",

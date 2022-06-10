@@ -174,12 +174,6 @@ fuchsia_test_package("fs-management-tests") {
     ":fs-management-test-component",
     ":fs-management-unittest-component",
   ]
-  test_specs = {
-    log_settings = {
-      # Required due to no access to Cobalt for minfs
-      max_severity = "ERROR"
-    }
-  }
   deps = [ "//src/storage/fxfs:fxfs_component" ]
 }
 
