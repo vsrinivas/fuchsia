@@ -21,7 +21,6 @@ group("core-tools") {
     "//bundles/packages/prod:run",
     "//bundles/packages/prod:tiles",
     "//bundles/packages/prod:tracing",
-    "//bundles/packages/testing:all",
     "//bundles/packages/testing:run_test_component",
     "//src/connectivity:tools",
     "//src/dart",

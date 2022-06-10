@@ -15,7 +15,6 @@ group("tools") {
     "packages/prod:far",
     "packages/prod:run",
     "packages/prod:tracing",
-    "packages/testing:all",
     "//build/tools/formatjson5:install($host_toolchain)",
     "//src/camera:tools",
     "//src/connectivity:tools",
