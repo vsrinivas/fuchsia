@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/wayland_bridge",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.wayland.Server" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.wayland.Server" ],
+            from: "self",
+        },
+    ],
+}

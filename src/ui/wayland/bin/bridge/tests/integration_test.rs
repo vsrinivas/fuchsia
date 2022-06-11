@@ -10,6 +10,7 @@ mod test {
         anyhow::Error,
         fidl_fuchsia_wayland::Server_Marker,
         fuchsia_async::{self as fasync},
+        fuchsia_component::client::connect_to_protocol,
         fuchsia_wayland_core::{self as wl, Interface, IntoMessage},
         fuchsia_zircon as zx,
         wayland_client_protocol::{
@@ -54,13 +55,7 @@ mod test {
 
         // Launch the wayland bridge process & connect to the WaylandDispatcher
         // FIDL service.
-        let launcher = fuchsia_component::client::launcher()?;
-        let app = fuchsia_component::client::launch(
-            &launcher,
-            "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx".to_string(),
-            None,
-        )?;
-        let bridge_proxy = app.connect_to_protocol::<Server_Marker>()?;
+        let bridge_proxy = connect_to_protocol::<Server_Marker>()?;
         let (h1, h2) = zx::Channel::create()?;
         bridge_proxy.connect(h1)?;
         let client_channel = fasync::Channel::from_channel(h2)?;

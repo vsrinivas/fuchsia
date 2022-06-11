@@ -57,6 +57,7 @@ legacy_base_package_labels += [
   "//src/virtualization/packages/termina_guest",
   "//src/virtualization/bin/guest",
 ]
+core_realm_shards += [ "//src/ui/wayland/bin/bridge:core_shard" ]
 
 # Add Bluetooth packages
 core_realm_shards +=

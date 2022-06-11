@@ -621,7 +621,6 @@ group("cmx_allowlist") {
     "//src/ui/tools/tiles:*",
     "//src/ui/tools/tiles/flatland:*",
     "//src/ui/tools/tiles_ctl:*",
-    "//src/ui/wayland/bin/bridge:*",
     "//src/virtualization/bin/guest_manager:*",
     "//src/virtualization/bin/guest_runner:*",
     "//src/virtualization/bin/linux_runner:*",

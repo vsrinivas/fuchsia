@@ -45,8 +45,6 @@ constexpr const char kContainerName[] = "penguin";
 constexpr const char kContainerImageAlias[] = "debian/bullseye";
 constexpr const char kContainerImageServer[] = "https://storage.googleapis.com/cros-containers/96";
 constexpr const char kDefaultContainerUser[] = "machina";
-constexpr const char kWaylandBridgePackage[] =
-    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
 
 #if defined(USE_VOLATILE_BLOCK)
 constexpr bool kForceVolatileWrites = true;
@@ -332,11 +330,11 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallba
              fuchsia::virtualization::TerminaGuestManagerPtr env_v2)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
+      context_(context),
       config_(config),
       callback_(std::move(callback)),
       guest_env_v1_(std::move(env_v1)),
-      guest_env_v2_(std::move(env_v2)),
-      wayland_dispatcher_(context, kWaylandBridgePackage) {
+      guest_env_v2_(std::move(env_v2)) {
   if (kUseCFV1) {
     guest_env_v1_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   } else {
@@ -468,8 +466,12 @@ void Guest::StartGuest() {
   fuchsia::virtualization::GuestConfig cfg;
   cfg.set_virtio_gpu(false);
   cfg.set_block_devices(std::move(block_devices));
-  cfg.mutable_wayland_device()->server = wayland_dispatcher_.NewBinding();
   cfg.set_magma_device(fuchsia::virtualization::MagmaDevice());
+
+  // Connect to the wayland bridge afresh, restarting it if it has crashed.
+  fuchsia::wayland::ServerPtr server_proxy;
+  context_->svc()->Connect(server_proxy.NewRequest());
+  cfg.mutable_wayland_device()->server = std::move(server_proxy);
 
   auto vm_create_nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);

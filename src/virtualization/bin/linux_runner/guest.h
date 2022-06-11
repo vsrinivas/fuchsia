@@ -12,7 +12,6 @@
 #include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
-#include <lib/virtualization/scenic_wayland_dispatcher.h>
 #include <zircon/types.h>
 
 #include <deque>
@@ -146,6 +145,7 @@ class Guest : public vm_tools::StartupListener::Service,
 
   async_dispatcher_t* async_;
   async::Executor executor_;
+  sys::ComponentContext* context_;
   GuestConfig config_;
   GuestInfoCallback callback_;
   std::unique_ptr<GrpcVsockServer> grpc_server_;
@@ -159,7 +159,6 @@ class Guest : public vm_tools::StartupListener::Service,
   std::unique_ptr<vm_tools::container::Garcon::Stub> garcon_;
   CrashListener crash_listener_;
   LogCollector log_collector_;
-  guest::ScenicWaylandDispatcher wayland_dispatcher_;
   fuchsia::sys::LauncherPtr launcher_;
 
   // A flow ID used to track the time from the time the VM is created until

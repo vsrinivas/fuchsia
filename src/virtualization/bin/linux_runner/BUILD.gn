@@ -62,7 +62,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.wayland",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/virtualization",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
