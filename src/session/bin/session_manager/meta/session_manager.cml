@@ -13,6 +13,7 @@
         {
             name: "session",
             durability: "transient",
+            persistent_storage: true,
         },
     ],
     capabilities: [
