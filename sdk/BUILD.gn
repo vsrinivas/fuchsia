@@ -624,6 +624,7 @@ sdk("ddk") {
     "//sdk/lib/driver2:llcpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_cpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_sdk",
+    "//sdk/lib/fidl/llcpp:llcpp_sdk",
     "//sdk/lib/input_report_reader:input_report_reader_sdk",
     "//sdk/lib/sys/component/llcpp:llcpp_sdk",
     "//src/devices/lib/mmio:mmio_sdk",

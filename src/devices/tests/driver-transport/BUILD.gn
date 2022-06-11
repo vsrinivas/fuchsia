@@ -86,7 +86,6 @@ fuchsia_driver("child-drv") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }
 

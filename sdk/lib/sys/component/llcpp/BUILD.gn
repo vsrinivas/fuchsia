@@ -22,7 +22,6 @@ sdk_source_set("llcpp") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/svc",
     "//zircon/system/ulib/async",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

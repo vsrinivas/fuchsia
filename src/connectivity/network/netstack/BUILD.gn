@@ -225,8 +225,8 @@ test("udp_serde_test") {
 
   deps = [
     ":udp_serde",
+    "//sdk/lib/fidl/llcpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }
 

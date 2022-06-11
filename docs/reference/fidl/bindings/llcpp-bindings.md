@@ -825,7 +825,7 @@ on the binding while the first thread is still in the handler. Note that
 repeated calls to `EnableNextDispatch()` on the same `Completer` are idempotent.
 
 Note: This use-case is currently possible only using the
-[lib/fidl](/zircon/system/ulib/fidl) bindings.
+[lib/fidl](/sdk/lib/fidl/llcpp) bindings.
 
 ```cpp
 void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync& completer) override {
@@ -1162,5 +1162,5 @@ The test base provides an implementation for the virtual protocol events
 [specifying-asynchronous-continuation]: #specifying-asynchronous-continuation
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
 [unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
-[wire-thenable-impl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/fidl/include/lib/fidl/llcpp/internal/thenable.h;l=34?q=wirethenable&ss=fuchsia%2Ffuchsia
+[wire-thenable-impl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fidl/llcpp/include/lib/fidl/llcpp/internal/thenable.h;l=34?q=wirethenable&ss=fuchsia%2Ffuchsia
 [zircon-channel]: /docs/reference/kernel_objects/channel.md

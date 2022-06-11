@@ -18,8 +18,8 @@ source_set("cpp_base") {
     "natural_encoder.cc",
   ]
   public_deps = [
+    "//sdk/lib/fidl/llcpp",
     "//sdk/lib/stdcompat",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zxc",
   ]
   deps = [ "//zircon/system/ulib/fidl:fidl_base" ]

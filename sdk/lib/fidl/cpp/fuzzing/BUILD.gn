@@ -16,6 +16,7 @@ source_set("fuzzing") {
   ]
   public_deps = [
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fidl/llcpp",
     "//sdk/lib/fuzzing/cpp",
     "//sdk/lib/fuzzing/cpp:traits",
     "//zircon/system/public",
@@ -23,7 +24,6 @@ source_set("fuzzing") {
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
   public_configs = [ "//sdk/config" ]
 }

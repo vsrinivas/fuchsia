@@ -327,12 +327,12 @@ Reach out for questions or for status updates:
 [fix-protocol-3]:
 https://fuchsia-review.googlesource.com/c/fuchsia/+/478491/28/src/storage/lib/paver/partition-client.h#b46
 [bind-server]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h?q=fidl::BindServer&ss=fuchsia%2Ffuchsia
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fidl/llcpp/include/lib/fidl/llcpp/server.h?q=fidl::BindServer&ss=fuchsia%2Ffuchsia
 [typed-channel]: /docs/reference/fidl/bindings/llcpp-bindings.md#typed-channels
 [raw-channel-interface]:
 https://cs.opensource.google/search?q=RawChannelInterface&sq=&ss=fuchsia%2Ffuchsia
 [create-endpoints]:
-https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/fidl/include/lib/fidl/llcpp/connect_service.h;l=36?q=fidl::CreateEndpoints&ss=fuchsia%2Ffuchsia
+https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fidl/llcpp/include/lib/fidl/llcpp/connect_service.h;l=36?q=fidl::CreateEndpoints&ss=fuchsia%2Ffuchsia
 [fdio-service-connect]:
 https://cs.opensource.google/search?q=fdio_service_connect&ss=fuchsia%2Ffuchsia&start=11
 [service-connect]:

@@ -104,8 +104,8 @@ source_set("conformance_utils") {
   testonly = true
   public = [ "conformance_utils.h" ]
   public_deps = [
+    "//sdk/lib/fidl/llcpp",
     "//zircon/system/public",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/zx",
   ]

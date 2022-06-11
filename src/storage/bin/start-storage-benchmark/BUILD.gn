@@ -29,7 +29,6 @@ source_set("start-storage-benchmark-lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zxc",
   ]
   deps = [

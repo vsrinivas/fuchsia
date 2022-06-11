@@ -24,8 +24,8 @@ source_set("arena_checker") {
     "arena_checker.h",
   ]
   public_deps = [
+    "//sdk/lib/fidl/llcpp",
     "//zircon/system/ulib/fidl",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }
 
@@ -37,9 +37,9 @@ source_set("types_test_utils") {
     "types_test_utils.h",
   ]
   public_deps = [
+    "//sdk/lib/fidl/llcpp",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fidl",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

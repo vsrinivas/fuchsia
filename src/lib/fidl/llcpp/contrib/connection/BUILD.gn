@@ -7,12 +7,12 @@ source_set("service_hub_connector") {
   public_deps = [
     ":service_reconnector",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fidl/llcpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/backoff",
     "//src/lib/fidl/cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }
 

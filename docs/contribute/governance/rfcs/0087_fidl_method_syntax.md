@@ -388,7 +388,7 @@ ordinals.
 <!-- xrefs -->
 
 [RFC-0050]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md
-[traits]: /zircon/system/ulib/fidl/include/lib/fidl/llcpp/traits.h
+[traits]: /sdk/lib/fidl/llcpp/include/lib/fidl/llcpp/traits.h
 [fxbug.dev/7704]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=7704
 [extensible-method-args]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#extensible-method-args
 [flattened-name]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#flattened-name

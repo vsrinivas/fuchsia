@@ -41,7 +41,6 @@ executable("metrics_buffer_unittests") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }
 

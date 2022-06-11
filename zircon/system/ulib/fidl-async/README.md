@@ -6,7 +6,7 @@ and to bind a channel to a server implementation using a specified dispatcher.
 ## BindSingleInFlightOnly
 
 Note: this function is deprecated and preserved for backwards compatibility only.
-Refer to [`fidl::BindServer`](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h)
+Refer to [`fidl::BindServer`](/sdk/lib/fidl/llcpp/include/lib/fidl/llcpp/server.h)
 for a more complete implementation.
 
 See `fidl::BindSingleInFlightOnly()` functions at

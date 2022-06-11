@@ -16,7 +16,6 @@
 #include <gtest/gtest.h>
 
 #include "magma.h"
-#include "zircon/system/ulib/fidl/include/lib/fidl/llcpp/channel.h"
 
 namespace magma {
 class TestDeviceBase {

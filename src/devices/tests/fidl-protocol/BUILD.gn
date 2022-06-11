@@ -63,7 +63,6 @@ fuchsia_driver("parent-driver") {
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/svc",
   ]
 }
@@ -91,7 +90,6 @@ fuchsia_driver("child-driver") {
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }
 
