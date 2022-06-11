@@ -251,7 +251,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return err
 			}
 		}
-		repoURL, blobURL, err := botanist.NewPackageServer(ctx, r.localRepo, port)
+		repoURL, blobURL, err := botanist.NewPackageServer(ctx, r.localRepo, r.repoURL, r.blobURL, port)
 		if err != nil {
 			return err
 		}
