@@ -234,3 +234,36 @@ template("libc_test") {
 
 variant_replaces_allocator = toolchain_variant.tags + [ "replaces-allocator" ] -
                              [ "replaces-allocator" ] != toolchain_variant.tags
+
+# Convenience wrapper over the pattern of creating a libc_source_set() and
+# libc_test() which is common when using llvm-libc functions.
+#
+# Parameters
+#
+#   * functions
+#     - Required: A list of functions to take from $llvm_libc/src/$target_name/
+#     - Type: list(string)
+#
+template("llvm_libc_source_set") {
+  libc_source_set_target_name = target_name
+  libc_source_set(target_name) {
+    dir = "$llvm_libc/src/$target_name"
+    public = []
+    sources = []
+
+    foreach(function, invoker.functions) {
+      public += [ "$function.h" ]
+      sources += [ "$function.cpp" ]
+    }
+  }
+
+  libc_test("unittests") {
+    dir = "$llvm_libc/test/src/$libc_source_set_target_name"
+    deps = [ ":$libc_source_set_target_name.testonly" ]
+    sources = []
+
+    foreach(function, invoker.functions) {
+      sources += [ "${function}_test.cpp" ]
+    }
+  }
+}

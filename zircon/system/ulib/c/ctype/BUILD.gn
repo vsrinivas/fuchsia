@@ -4,65 +4,23 @@
 
 import("../libc.gni")
 
-libc_source_set("ctype") {
-  dir = "$llvm_libc/src/ctype"
-  public = [
-    "isalnum.h",
-    "isalpha.h",
-    "isascii.h",
-    "isblank.h",
-    "iscntrl.h",
-    "isdigit.h",
-    "isgraph.h",
-    "islower.h",
-    "isprint.h",
-    "ispunct.h",
-    "isspace.h",
-    "isupper.h",
-    "isxdigit.h",
-    "toascii.h",
-    "tolower.h",
-    "toupper.h",
-  ]
-  sources = [
-    "isalnum.cpp",
-    "isalpha.cpp",
-    "isascii.cpp",
-    "isblank.cpp",
-    "iscntrl.cpp",
-    "isdigit.cpp",
-    "isgraph.cpp",
-    "islower.cpp",
-    "isprint.cpp",
-    "ispunct.cpp",
-    "isspace.cpp",
-    "isupper.cpp",
-    "isxdigit.cpp",
-    "toascii.cpp",
-    "tolower.cpp",
-    "toupper.cpp",
-  ]
-}
-
-libc_test("unittests") {
-  dir = "$llvm_libc/test/src/ctype"
-  deps = [ ":ctype.testonly" ]
-  sources = [
-    "isalnum_test.cpp",
-    "isalpha_test.cpp",
-    "isascii_test.cpp",
-    "isblank_test.cpp",
-    "iscntrl_test.cpp",
-    "isdigit_test.cpp",
-    "isgraph_test.cpp",
-    "islower_test.cpp",
-    "isprint_test.cpp",
-    "ispunct_test.cpp",
-    "isspace_test.cpp",
-    "isupper_test.cpp",
-    "isxdigit_test.cpp",
-    "toascii_test.cpp",
-    "tolower_test.cpp",
-    "toupper_test.cpp",
+llvm_libc_source_set("ctype") {
+  functions = [
+    "isalnum",
+    "isalpha",
+    "isascii",
+    "isblank",
+    "iscntrl",
+    "isdigit",
+    "isgraph",
+    "islower",
+    "isprint",
+    "ispunct",
+    "isspace",
+    "isupper",
+    "isxdigit",
+    "toascii",
+    "tolower",
+    "toupper",
   ]
 }
