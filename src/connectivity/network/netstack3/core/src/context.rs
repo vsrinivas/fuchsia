@@ -1215,9 +1215,12 @@ pub(crate) mod testutil {
         }
     }
 
+    #[derive(Default)]
+    pub(crate) struct DummyNonSyncCtx;
+
     pub(crate) struct DummyCtx<S, TimerId, Meta, Event: Debug, DeviceId> {
         pub(crate) sync_ctx: DummySyncCtx<S, TimerId, Meta, Event, DeviceId>,
-        pub(crate) non_sync_ctx: (),
+        pub(crate) non_sync_ctx: DummyNonSyncCtx,
     }
 
     impl<S: Default, Id, Meta, Event: Debug, DeviceId> Default
@@ -1289,12 +1292,12 @@ pub(crate) mod testutil {
                     events: DummyEventCtx::default(),
                     _devices_marker: PhantomData,
                 },
-                non_sync_ctx: (),
+                non_sync_ctx: DummyNonSyncCtx::default(),
             }
         }
 
         pub(crate) fn with_sync_ctx(sync_ctx: DummySyncCtx<S, Id, Meta, Event, DeviceId>) -> Self {
-            DummyCtx { sync_ctx, non_sync_ctx: () }
+            DummyCtx { sync_ctx, non_sync_ctx: DummyNonSyncCtx::default() }
         }
     }
 
@@ -1469,16 +1472,16 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<B: BufferMut, S, Id, Meta, Event: Debug, DeviceId> FrameContext<(), B, Meta>
+    impl<B: BufferMut, S, Id, Meta, Event: Debug, DeviceId> FrameContext<DummyNonSyncCtx, B, Meta>
         for DummySyncCtx<S, Id, Meta, Event, DeviceId>
     {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
-            _ctx: &mut (),
+            ctx: &mut DummyNonSyncCtx,
             metadata: Meta,
             frame: SS,
         ) -> Result<(), SS> {
-            self.frames.send_frame(&mut (), metadata, frame)
+            self.frames.send_frame(ctx, metadata, frame)
         }
     }
 
@@ -1892,6 +1895,18 @@ pub(crate) mod testutil {
         CtxId: Eq + Hash + Copy + Debug,
         Links: DummyNetworkLinks<SendMeta, RecvMeta, CtxId>,
     {
+        pub(crate) fn with_context<
+            K: Into<CtxId>,
+            O,
+            F: FnOnce(&mut DummyCtx<S, Id, SendMeta, Event, DeviceId>) -> O,
+        >(
+            &mut self,
+            context: K,
+            f: F,
+        ) -> O {
+            f(self.context(context))
+        }
+
         /// Retrieves a `DummySyncCtx` named `context`.
         pub(crate) fn sync_ctx<K: Into<CtxId>>(
             &mut self,
@@ -1969,10 +1984,10 @@ pub(crate) mod testutil {
         fn test_dummy_timer_context() {
             // An implementation of `TimerContext` that uses `usize` timer IDs
             // and stores every timer in a `Vec`.
-            impl<M, E: Debug, D> TimerHandler<(), usize>
+            impl<M, E: Debug, D> TimerHandler<DummyNonSyncCtx, usize>
                 for DummySyncCtx<Vec<(usize, DummyInstant)>, usize, M, E, D>
             {
-                fn handle_timer(&mut self, _ctx: &mut (), id: usize) {
+                fn handle_timer(&mut self, _ctx: &mut DummyNonSyncCtx, id: usize) {
                     let now = self.now();
                     self.get_mut().push((id, now));
                 }

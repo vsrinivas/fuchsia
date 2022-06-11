@@ -471,8 +471,8 @@ mod tests {
 
     use crate::{
         context::testutil::{
-            DummyCtx, DummyInstant, DummyNetwork, DummyNetworkLinks, DummySyncCtx, InstantAndData,
-            PendingFrameData, StepResult,
+            DummyCtx, DummyInstant, DummyNetwork, DummyNetworkLinks, DummyNonSyncCtx, DummySyncCtx,
+            InstantAndData, PendingFrameData, StepResult,
         },
         ip::{
             device::state::{
@@ -514,14 +514,16 @@ mod tests {
         DummyDeviceId,
     >;
 
+    type TcpNonSyncCtx = DummyNonSyncCtx;
+
     impl<I: TcpTestIpExt> TcpBufferContext for TcpSyncCtx<I> {
         type ReceiveBuffer = RingBuffer;
         type SendBuffer = RingBuffer;
     }
 
-    impl<I: TcpTestIpExt> TransportIpContext<I, ()> for TcpSyncCtx<I>
+    impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>
     where
-        TcpSyncCtx<I>: IpSocketHandler<I, ()>,
+        TcpSyncCtx<I>: IpSocketHandler<I, TcpNonSyncCtx>,
     {
         fn is_assigned_local_addr(&self, _addr: <I as Ip>::Addr) -> bool {
             true
@@ -652,11 +654,11 @@ mod tests {
     }
 
     fn handle_frame<I: TcpTestIpExt>(
-        DummyCtx { sync_ctx, non_sync_ctx }: &mut TcpCtx<I>,
+        TcpCtx { sync_ctx, non_sync_ctx }: &mut TcpCtx<I>,
         meta: SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
         buffer: Buf<Vec<u8>>,
     ) where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, (), Buf<Vec<u8>>>
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
@@ -671,7 +673,11 @@ mod tests {
         .expect("failed to deliver bytes");
     }
 
-    fn panic_if_any_timer<Ctx, Timer: Debug>(_sc: &mut Ctx, _c: &mut (), timer: Timer) {
+    fn panic_if_any_timer<Ctx, NonSyncCtx, Timer: Debug>(
+        _sc: &mut Ctx,
+        _c: &mut NonSyncCtx,
+        timer: Timer,
+    ) {
         panic!("unexpected timer fired: {:?}", timer)
     }
 
@@ -681,31 +687,34 @@ mod tests {
     #[ip_test]
     fn bind_listen_connect_accept<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, (), Buf<Vec<u8>>>
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
         let mut net = new_test_net::<I>();
 
-        let server = create_socket(net.sync_ctx(REMOTE), &mut ());
-        let client = create_socket(net.sync_ctx(LOCAL), &mut ());
-        let server =
-            bind(net.sync_ctx(REMOTE), &mut (), server, *I::DUMMY_CONFIG.remote_ip, Some(PORT_1))
-                .expect("failed to bind the servekr socket");
-        let client =
-            bind(net.sync_ctx(LOCAL), &mut (), client, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
-                .expect("failed to bind the client socket");
         let backlog = NonZeroUsize::new(1).unwrap();
-        let server = listen(net.sync_ctx(REMOTE), &mut (), server, backlog);
-        let client = connect(
-            net.sync_ctx(LOCAL),
-            &mut (),
-            client,
-            SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
-            SeqNum::new(0),
-        )
-        .expect("failed to connect");
+        let server = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            let conn = create_socket(sync_ctx, non_sync_ctx);
+            let conn = bind(sync_ctx, non_sync_ctx, conn, *I::DUMMY_CONFIG.remote_ip, Some(PORT_1))
+                .expect("failed to bind the server socket");
+            listen(sync_ctx, non_sync_ctx, conn, backlog)
+        });
+
+        let client = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            let conn = create_socket(sync_ctx, non_sync_ctx);
+            let conn = bind(sync_ctx, non_sync_ctx, conn, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
+                .expect("failed to bind the client socket");
+            connect(
+                sync_ctx,
+                non_sync_ctx,
+                conn,
+                SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
+                SeqNum::new(0),
+            )
+            .expect("failed to connect")
+        });
 
         // Step once for the SYN packet to be sent.
         let _: StepResult = net.step(handle_frame, panic_if_any_timer);
@@ -718,15 +727,15 @@ mod tests {
             }
         );
         // The handshake is not done, calling accept here should not succeed.
-        assert_matches!(
-            accept(net.sync_ctx(REMOTE), &mut (), server),
-            Err(AcceptError::WouldBlock)
-        );
+        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            assert_matches!(accept(sync_ctx, non_sync_ctx, server), Err(AcceptError::WouldBlock));
+        });
 
         // Step the test network until the handshake is done.
         net.run_until_idle(handle_frame, panic_if_any_timer);
-        let (accepted, addr) =
-            accept(net.sync_ctx(REMOTE), &mut (), server).expect("failed to accept");
+        let (accepted, addr) = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            accept(sync_ctx, non_sync_ctx, server).expect("failed to accept")
+        });
         assert_eq!(addr, SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 },);
 
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
@@ -762,7 +771,7 @@ mod tests {
     #[ip_test]
     fn bind_conflict_same_addr<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, (), Buf<Vec<u8>>>
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
@@ -790,7 +799,7 @@ mod tests {
     #[ip_test]
     fn bind_conflict_any_addr<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, (), Buf<Vec<u8>>>
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
@@ -819,25 +828,26 @@ mod tests {
     #[ip_test]
     fn connect_reset<I: Ip + TcpTestIpExt>()
     where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, (), Buf<Vec<u8>>>
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
         let mut net = new_test_net::<I>();
 
-        let client = create_socket(net.sync_ctx(LOCAL), &mut ());
-        let client =
-            bind(net.sync_ctx(LOCAL), &mut (), client, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
+        let client = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            let conn = create_socket(sync_ctx, non_sync_ctx);
+            let conn = bind(sync_ctx, non_sync_ctx, conn, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
                 .expect("failed to bind the client socket");
-        let client = connect(
-            net.sync_ctx(LOCAL),
-            &mut (),
-            client,
-            SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: NonZeroU16::new(42).unwrap() },
-            SeqNum::new(0),
-        )
-        .expect("failed to connect");
+            connect(
+                sync_ctx,
+                non_sync_ctx,
+                conn,
+                SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: NonZeroU16::new(42).unwrap() },
+                SeqNum::new(0),
+            )
+            .expect("failed to connect")
+        });
 
         // Step one time for SYN packet to be delivered.
         let _: StepResult = net.step(handle_frame, panic_if_any_timer);

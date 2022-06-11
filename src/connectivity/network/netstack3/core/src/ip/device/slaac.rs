@@ -1445,7 +1445,8 @@ mod tests {
     use super::*;
     use crate::{
         context::testutil::{
-            DummyCtx, DummyInstant, DummyInstantRange as _v, DummySyncCtx, DummyTimerCtxExt as _,
+            DummyCtx, DummyInstant, DummyInstantRange as _v, DummyNonSyncCtx, DummySyncCtx,
+            DummyTimerCtxExt as _,
         },
         device::FrameDestination,
         ip::{
@@ -1469,9 +1470,14 @@ mod tests {
 
     type MockCtx =
         DummySyncCtx<MockSlaacContext, SlaacTimerId<DummyDeviceId>, (), (), DummyDeviceId>;
+    type MockNonSyncCtx = DummyNonSyncCtx;
 
-    impl SlaacStateContext<()> for MockCtx {
-        fn get_config(&self, _ctx: &mut (), DummyDeviceId: Self::DeviceId) -> SlaacConfiguration {
+    impl SlaacStateContext<MockNonSyncCtx> for MockCtx {
+        fn get_config(
+            &self,
+            _ctx: &mut MockNonSyncCtx,
+            DummyDeviceId: Self::DeviceId,
+        ) -> SlaacConfiguration {
             let MockSlaacContext {
                 config,
                 dad_transmits: _,
@@ -1483,7 +1489,11 @@ mod tests {
             *config
         }
 
-        fn dad_transmits(&self, _ctx: &mut (), DummyDeviceId: Self::DeviceId) -> Option<NonZeroU8> {
+        fn dad_transmits(
+            &self,
+            _ctx: &mut MockNonSyncCtx,
+            DummyDeviceId: Self::DeviceId,
+        ) -> Option<NonZeroU8> {
             let MockSlaacContext {
                 config: _,
                 dad_transmits,
@@ -1495,7 +1505,11 @@ mod tests {
             *dad_transmits
         }
 
-        fn retrans_timer(&self, _ctx: &mut (), DummyDeviceId: Self::DeviceId) -> Duration {
+        fn retrans_timer(
+            &self,
+            _ctx: &mut MockNonSyncCtx,
+            DummyDeviceId: Self::DeviceId,
+        ) -> Duration {
             let MockSlaacContext {
                 config: _,
                 dad_transmits: _,
@@ -1509,7 +1523,7 @@ mod tests {
 
         fn get_interface_identifier(
             &self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: Self::DeviceId,
         ) -> [u8; 8] {
             let MockSlaacContext {
@@ -1525,7 +1539,7 @@ mod tests {
 
         fn iter_slaac_addrs(
             &self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: Self::DeviceId,
         ) -> Box<dyn Iterator<Item = SlaacAddressEntry<Self::Instant>> + '_> {
             let MockSlaacContext {
@@ -1541,7 +1555,7 @@ mod tests {
 
         fn iter_slaac_addrs_mut(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: Self::DeviceId,
         ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, Self::Instant>> + '_> {
             let MockSlaacContext {
@@ -1563,7 +1577,7 @@ mod tests {
 
         fn add_slaac_addr_sub(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: Self::DeviceId,
             addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
             config: SlaacConfig<Self::Instant>,
@@ -1591,7 +1605,7 @@ mod tests {
 
         fn remove_slaac_addr(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: Self::DeviceId,
             addr: &UnicastAddr<Ipv6Addr>,
         ) {

@@ -719,7 +719,10 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyInstant, DummyNetwork, DummySyncCtx, DummyTimerCtxExt},
+            testutil::{
+                DummyCtx, DummyInstant, DummyNetwork, DummyNonSyncCtx, DummySyncCtx,
+                DummyTimerCtxExt,
+            },
             InstantContext,
         },
         device::ethernet::EthernetLinkDevice,
@@ -769,6 +772,8 @@ mod tests {
         }
     }
 
+    type MockNonSyncCtx = DummyNonSyncCtx;
+
     type MockCtx = DummySyncCtx<
         DummyArpCtx,
         ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
@@ -781,18 +786,18 @@ mod tests {
         type DeviceId = ();
     }
 
-    impl ArpContext<EthernetLinkDevice, Ipv4Addr, ()> for MockCtx {
-        fn get_protocol_addr(&self, _ctx: &mut (), _device_id: ()) -> Option<Ipv4Addr> {
+    impl ArpContext<EthernetLinkDevice, Ipv4Addr, MockNonSyncCtx> for MockCtx {
+        fn get_protocol_addr(&self, _ctx: &mut MockNonSyncCtx, _device_id: ()) -> Option<Ipv4Addr> {
             self.get_ref().proto_addr
         }
 
-        fn get_hardware_addr(&self, _ctx: &mut (), _device_id: ()) -> UnicastAddr<Mac> {
+        fn get_hardware_addr(&self, _ctx: &mut MockNonSyncCtx, _device_id: ()) -> UnicastAddr<Mac> {
             self.get_ref().hw_addr
         }
 
         fn address_resolved(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             _device_id: (),
             proto_addr: Ipv4Addr,
             hw_addr: Mac,
@@ -802,7 +807,7 @@ mod tests {
 
         fn address_resolution_failed(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             _device_id: (),
             proto_addr: Ipv4Addr,
         ) {
@@ -811,7 +816,7 @@ mod tests {
 
         fn address_resolution_expired(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             _device_id: (),
             proto_addr: Ipv4Addr,
         ) {
@@ -831,6 +836,7 @@ mod tests {
 
     fn send_arp_packet(
         sync_ctx: &mut MockCtx,
+        ctx: &mut MockNonSyncCtx,
         op: ArpOp,
         sender_ipv4: Ipv4Addr,
         target_ipv4: Ipv4Addr,
@@ -845,7 +851,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, ArpNetworkType::Ipv4);
 
-        handle_packet::<_, Ipv4Addr, _, _, _>(sync_ctx, &mut (), (), buf);
+        handle_packet::<_, Ipv4Addr, _, _, _>(sync_ctx, ctx, (), buf);
     }
 
     // Validate that buf is an ARP packet with the specific op, local_ipv4,
@@ -907,10 +913,11 @@ mod tests {
         // Test that, when we receive a gratuitous ARP request, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::default());
         send_arp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             ArpOp::Request,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -932,10 +939,11 @@ mod tests {
         // Test that, when we receive a gratuitous ARP response, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::default());
         send_arp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -971,6 +979,7 @@ mod tests {
 
         send_arp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -1011,6 +1020,8 @@ mod tests {
         // Cancelling timers matches on the DeviceId, so setup a context that
         // uses IDs. The test doesn't use the context functions, so it's okay
         // that they return the same info.
+        type MockNonSyncCtx2 = DummyNonSyncCtx;
+
         type MockCtx2 = crate::context::testutil::DummySyncCtx<
             DummyArpCtx,
             ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>,
@@ -1023,18 +1034,26 @@ mod tests {
             type DeviceId = usize;
         }
 
-        impl ArpContext<EthernetLinkDevice, Ipv4Addr, ()> for MockCtx2 {
-            fn get_protocol_addr(&self, _ctx: &mut (), _device_id: usize) -> Option<Ipv4Addr> {
+        impl ArpContext<EthernetLinkDevice, Ipv4Addr, MockNonSyncCtx2> for MockCtx2 {
+            fn get_protocol_addr(
+                &self,
+                _ctx: &mut MockNonSyncCtx2,
+                _device_id: usize,
+            ) -> Option<Ipv4Addr> {
                 self.get_ref().proto_addr
             }
 
-            fn get_hardware_addr(&self, _ctx: &mut (), _device_id: usize) -> UnicastAddr<Mac> {
+            fn get_hardware_addr(
+                &self,
+                _ctx: &mut MockNonSyncCtx2,
+                _device_id: usize,
+            ) -> UnicastAddr<Mac> {
                 self.get_ref().hw_addr
             }
 
             fn address_resolved(
                 &mut self,
-                _ctx: &mut (),
+                _ctx: &mut MockNonSyncCtx2,
                 _device_id: usize,
                 proto_addr: Ipv4Addr,
                 hw_addr: Mac,
@@ -1044,7 +1063,7 @@ mod tests {
 
             fn address_resolution_failed(
                 &mut self,
-                _ctx: &mut (),
+                _ctx: &mut MockNonSyncCtx2,
                 _device_id: usize,
                 proto_addr: Ipv4Addr,
             ) {
@@ -1053,7 +1072,7 @@ mod tests {
 
             fn address_resolution_expired(
                 &mut self,
-                _ctx: &mut (),
+                _ctx: &mut MockNonSyncCtx2,
                 _device_id: usize,
                 proto_addr: Ipv4Addr,
             ) {
@@ -1132,6 +1151,7 @@ mod tests {
         // Test that, when we receive an ARP response, we cancel the timer.
         send_arp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_LOCAL_IPV4,
@@ -1171,6 +1191,7 @@ mod tests {
         // Perform a gratuitous ARP to populate the cache.
         send_arp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,
@@ -1277,6 +1298,7 @@ mod tests {
 
         send_arp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             ArpOp::Request,
             TEST_REMOTE_IPV4,
             TEST_LOCAL_IPV4,
@@ -1400,34 +1422,30 @@ mod tests {
         } = requested_remote_cfg;
 
         // The lookup should fail.
-        assert_eq!(
-            lookup(
-                network.sync_ctx(local_name),
-                &mut (),
-                (),
-                local_hw_addr,
-                requested_remote_proto_addr
-            ),
-            None
-        );
-        // We should have sent an ARP request.
-        validate_last_arp_packet(
-            network.sync_ctx(local_name),
-            1,
-            Mac::BROADCAST,
-            ArpOp::Request,
-            local_proto_addr,
-            requested_remote_proto_addr,
-            local_hw_addr,
-            Mac::BROADCAST,
-        );
-        // We should have installed a retry timer.
-        validate_single_retry_timer(
-            network.sync_ctx(local_name),
-            DEFAULT_ARP_REQUEST_PERIOD,
-            requested_remote_proto_addr,
-        );
+        network.with_context(local_name, |DummyCtx { sync_ctx, non_sync_ctx }| {
+            assert_eq!(
+                lookup(sync_ctx, non_sync_ctx, (), local_hw_addr, requested_remote_proto_addr),
+                None
+            );
 
+            // We should have sent an ARP request.
+            validate_last_arp_packet(
+                sync_ctx,
+                1,
+                Mac::BROADCAST,
+                ArpOp::Request,
+                local_proto_addr,
+                requested_remote_proto_addr,
+                local_hw_addr,
+                Mac::BROADCAST,
+            );
+            // We should have installed a retry timer.
+            validate_single_retry_timer(
+                sync_ctx,
+                DEFAULT_ARP_REQUEST_PERIOD,
+                requested_remote_proto_addr,
+            );
+        });
         // Step once to deliver the ARP request to the remotes.
         let res = network.step(
             |DummyCtx { sync_ctx, non_sync_ctx }, device_id, buf| {
@@ -1741,6 +1759,7 @@ mod tests {
         // Receive the gratuitous ARP response.
         send_arp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             ArpOp::Response,
             TEST_REMOTE_IPV4,
             TEST_REMOTE_IPV4,

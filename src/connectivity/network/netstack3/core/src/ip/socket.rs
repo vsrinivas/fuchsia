@@ -821,7 +821,7 @@ pub(crate) mod testutil {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyInstant, DummySyncCtx},
+            testutil::{DummyInstant, DummyNonSyncCtx, DummySyncCtx},
             FrameContext,
         },
         ip::{
@@ -847,11 +847,11 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId: IpDeviceId + 'static,
-        > IpSocketContext<I, ()> for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+        > IpSocketContext<I, DummyNonSyncCtx> for DummySyncCtx<S, Id, Meta, Event, DeviceId>
     {
         fn lookup_route(
             &self,
-            _ctx: &mut (),
+            _ctx: &mut DummyNonSyncCtx,
             device: Option<Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
@@ -895,26 +895,29 @@ pub(crate) mod testutil {
 
     impl<
             I: IpDeviceStateIpExt<DummyInstant> + packet_formats::ip::IpExt,
-            C,
             B: BufferMut,
             S: AsRef<DummyIpSocketCtx<I, DeviceId>> + AsMut<DummyIpSocketCtx<I, DeviceId>>,
             Id,
             Meta,
             Event: Debug,
             DeviceId,
-        > BufferIpSocketContext<I, C, B> for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+        > BufferIpSocketContext<I, DummyNonSyncCtx, B>
+        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
     where
-        DummySyncCtx<S, Id, Meta, Event, DeviceId>: FrameContext<(), B, SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>>
-            + IpSocketContext<I, C>
+        DummySyncCtx<S, Id, Meta, Event, DeviceId>: FrameContext<
+                DummyNonSyncCtx,
+                B,
+                SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
+            > + IpSocketContext<I, DummyNonSyncCtx>
             + InstantContext<Instant = DummyInstant>,
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
-            _ctx: &mut C,
+            ctx: &mut DummyNonSyncCtx,
             meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
             body: SS,
         ) -> Result<(), SS> {
-            self.send_frame(&mut (), meta, body)
+            self.send_frame(ctx, meta, body)
         }
     }
 

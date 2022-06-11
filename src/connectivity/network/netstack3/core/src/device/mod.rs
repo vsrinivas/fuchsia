@@ -34,7 +34,7 @@ use zerocopy::ByteSlice;
 use crate::{
     context::{
         CounterContext, DualStateContext, EventContext, FrameContext, InstantContext,
-        RecvFrameContext, RngContext, TimerContext,
+        NonTestCtxMarker, RecvFrameContext, RngContext, TimerContext,
     },
     data_structures::{IdMap, IdMapCollectionKey},
     device::{
@@ -101,7 +101,8 @@ impl<
         D: LinkDevice,
         C,
         TimerId,
-        SC: DeviceIdContext<D>
+        SC: NonTestCtxMarker
+            + DeviceIdContext<D>
             + CounterContext
             + RngContext
             + DualStateContext<

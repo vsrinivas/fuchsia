@@ -186,7 +186,7 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummySyncCtx, DummyTimerCtxExt as _},
+            testutil::{DummyCtx, DummyNonSyncCtx, DummySyncCtx, DummyTimerCtxExt as _},
             FrameContext as _, InstantContext as _,
         },
         ip::DummyDeviceId,
@@ -205,8 +205,9 @@ mod tests {
 
     type MockCtx<'a> =
         DummySyncCtx<MockRsContext<'a>, RsTimerId<DummyDeviceId>, RsMessageMeta, (), DummyDeviceId>;
+    type MockNonSyncCtx = DummyNonSyncCtx;
 
-    impl<'a> Ipv6DeviceRsContext<()> for MockCtx<'a> {
+    impl<'a> Ipv6DeviceRsContext<MockNonSyncCtx> for MockCtx<'a> {
         fn get_max_router_solicitations(&self, DummyDeviceId: DummyDeviceId) -> Option<NonZeroU8> {
             let MockRsContext {
                 max_router_solicitations,
@@ -238,15 +239,15 @@ mod tests {
         }
     }
 
-    impl<'a> Ipv6LayerRsContext<()> for MockCtx<'a> {
+    impl<'a> Ipv6LayerRsContext<MockNonSyncCtx> for MockCtx<'a> {
         fn send_rs_packet<S: Serializer<Buffer = EmptyBuf>>(
             &mut self,
-            _ctx: &mut (),
+            ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
             message: RouterSolicitation,
             body: S,
         ) -> Result<(), S> {
-            self.send_frame(&mut (), RsMessageMeta { message }, body)
+            self.send_frame(ctx, RsMessageMeta { message }, body)
         }
     }
 

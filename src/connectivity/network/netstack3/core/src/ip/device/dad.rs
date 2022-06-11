@@ -215,7 +215,7 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummySyncCtx, DummyTimerCtxExt as _},
+            testutil::{DummyCtx, DummyNonSyncCtx, DummySyncCtx, DummyTimerCtxExt as _},
             FrameContext as _, InstantContext as _,
         },
         ip::DummyDeviceId,
@@ -234,6 +234,8 @@ mod tests {
         message: NeighborSolicitation,
     }
 
+    type MockNonSyncCtx = DummyNonSyncCtx;
+
     type MockCtx<'a> = DummySyncCtx<
         MockDadContext<'a>,
         DadTimerId<DummyDeviceId>,
@@ -242,10 +244,10 @@ mod tests {
         DummyDeviceId,
     >;
 
-    impl<'a> Ipv6DeviceDadContext<()> for MockCtx<'a> {
+    impl<'a> Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx<'a> {
         fn get_address_state_mut(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
             request_addr: UnicastAddr<Ipv6Addr>,
         ) -> Option<&mut AddressState> {
@@ -254,7 +256,11 @@ mod tests {
             (*addr == request_addr).then(|| state)
         }
 
-        fn retrans_timer(&self, _ctx: &mut (), DummyDeviceId: DummyDeviceId) -> Duration {
+        fn retrans_timer(
+            &self,
+            _ctx: &mut MockNonSyncCtx,
+            DummyDeviceId: DummyDeviceId,
+        ) -> Duration {
             let MockDadContext { addr: _, state: _, retrans_timer, link_layer_bytes: _ } =
                 self.get_ref();
             *retrans_timer
@@ -262,7 +268,7 @@ mod tests {
 
         fn get_link_layer_addr_bytes(
             &self,
-            _ctx: &mut (),
+            _ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
         ) -> Option<&[u8]> {
             let MockDadContext { addr: _, state: _, retrans_timer: _, link_layer_bytes } =
@@ -271,16 +277,16 @@ mod tests {
         }
     }
 
-    impl<'a> Ipv6LayerDadContext<()> for MockCtx<'a> {
+    impl<'a> Ipv6LayerDadContext<MockNonSyncCtx> for MockCtx<'a> {
         fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
             &mut self,
-            _ctx: &mut (),
+            ctx: &mut MockNonSyncCtx,
             DummyDeviceId: DummyDeviceId,
             dst_ip: MulticastAddr<Ipv6Addr>,
             message: NeighborSolicitation,
             body: S,
         ) -> Result<(), S> {
-            self.send_frame(&mut (), DadMessageMeta { dst_ip, message }, body)
+            self.send_frame(ctx, DadMessageMeta { dst_ip, message }, body)
         }
     }
 
@@ -292,7 +298,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected address to exist")]
     fn panic_unknown_address() {
-        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative { dad_transmits_remaining: None },
@@ -301,7 +307,7 @@ mod tests {
             }));
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
-            &mut (),
+            &mut non_sync_ctx,
             DummyDeviceId,
             OTHER_ADDRESS,
         );

@@ -1921,24 +1921,28 @@ mod tests {
         D,
     >;
 
+    type DummyDeviceNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
+
     type DummyCtx<I> = DummyDeviceCtx<I, DummyDeviceId>;
     type DummySyncCtx<I> = DummyDeviceSyncCtx<I, DummyDeviceId>;
+    type DummyNonSyncCtx = DummyDeviceNonSyncCtx;
 
     /// The trait bounds required of `DummySyncCtx<I>` in tests.
     trait DummyDeviceSyncCtxBound<I: TestIpExt, D: IpDeviceId>:
-        Default + BufferIpSocketHandler<I, (), Buf<Vec<u8>>, DeviceId = D>
+        Default + BufferIpSocketHandler<I, DummyDeviceNonSyncCtx, Buf<Vec<u8>>, DeviceId = D>
     {
     }
     impl<I: TestIpExt, D: IpDeviceId> DummyDeviceSyncCtxBound<I, D> for DummyDeviceSyncCtx<I, D> where
         DummyDeviceSyncCtx<I, D>:
-            Default + BufferIpSocketHandler<I, (), Buf<Vec<u8>>, DeviceId = D>
+            Default + BufferIpSocketHandler<I, DummyDeviceNonSyncCtx, Buf<Vec<u8>>, DeviceId = D>
     {
     }
 
     trait DummySyncCtxBound<I: TestIpExt>: DummyDeviceSyncCtxBound<I, DummyDeviceId> {}
     impl<I: TestIpExt, C: DummyDeviceSyncCtxBound<I, DummyDeviceId>> DummySyncCtxBound<I> for C {}
 
-    impl<I: TestIpExt, D: IpDeviceId> TransportIpContext<I, ()> for DummyDeviceSyncCtx<I, D>
+    impl<I: TestIpExt, D: IpDeviceId> TransportIpContext<I, DummyDeviceNonSyncCtx>
+        for DummyDeviceSyncCtx<I, D>
     where
         DummyDeviceSyncCtx<I, D>: DummyDeviceSyncCtxBound<I, D>,
     {
@@ -2045,7 +2049,8 @@ mod tests {
 
     /// Helper function to inject an UDP packet with the provided parameters.
     fn receive_udp_packet<I: TestIpExt, D: IpDeviceId + 'static>(
-        ctx: &mut DummyDeviceSyncCtx<I, D>,
+        sync_ctx: &mut DummyDeviceSyncCtx<I, D>,
+        ctx: &mut DummyDeviceNonSyncCtx,
         device: D,
         src_ip: I::Addr,
         dst_ip: I::Addr,
@@ -2062,8 +2067,8 @@ mod tests {
             .unwrap()
             .into_inner();
         UdpIpTransportContext::receive_ip_packet(
+            sync_ctx,
             ctx,
-            &mut (),
             device,
             I::try_into_recv_src_addr(src_ip).unwrap(),
             SpecifiedAddr::new(dst_ip).unwrap(),
@@ -2181,6 +2186,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip.get(),
             local_ip.get(),
@@ -2252,7 +2258,7 @@ mod tests {
         DummySyncCtx<I>: DummySyncCtxBound<I>,
     {
         set_logger_for_test();
-        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
@@ -2260,6 +2266,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip.get(),
             local_ip.get(),
@@ -2302,6 +2309,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip.get(),
             local_ip.get(),
@@ -2805,6 +2813,7 @@ mod tests {
         let body_conn1 = [1, 1, 1, 1];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
@@ -2815,6 +2824,7 @@ mod tests {
         let body_conn2 = [2, 2, 2, 2];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip_b.get(),
             local_ip.get(),
@@ -2825,6 +2835,7 @@ mod tests {
         let body_list1 = [3, 3, 3, 3];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
@@ -2835,6 +2846,7 @@ mod tests {
         let body_list2 = [4, 4, 4, 4];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
@@ -2845,6 +2857,7 @@ mod tests {
         let body_wildcard_list = [5, 5, 5, 5];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
@@ -2914,6 +2927,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip_a.get(),
             local_ip_a.get(),
@@ -2924,6 +2938,7 @@ mod tests {
         // Receive into a different local IP.
         receive_udp_packet(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             DummyDeviceId,
             remote_ip_b.get(),
             local_ip_b.get(),
@@ -2994,6 +3009,7 @@ mod tests {
             let body = [body];
             receive_udp_packet(
                 &mut sync_ctx,
+                &mut non_sync_ctx,
                 DummyDeviceId,
                 remote_ip.get(),
                 local_ip.get(),
@@ -3056,6 +3072,7 @@ mod tests {
 
     type MultiDeviceDummyCtx<I> = DummyDeviceCtx<I, MultipleDevicesId>;
     type MultiDeviceDummySyncCtx<I> = DummyDeviceSyncCtx<I, MultipleDevicesId>;
+    type MultiDeviceDummyNonSyncCtx = DummyDeviceNonSyncCtx;
 
     impl Default for DummyUdpCtx<Ipv4, MultipleDevicesId> {
         fn default() -> Self {
@@ -3136,6 +3153,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             sync_ctx,
+            &mut non_sync_ctx,
             MultipleDevicesId::A,
             I::get_other_remote_ip_address(1).get(),
             local_ip::<I>().get(),
@@ -3151,6 +3169,7 @@ mod tests {
         // second socket.
         receive_udp_packet(
             sync_ctx,
+            &mut non_sync_ctx,
             MultipleDevicesId::B,
             I::get_other_remote_ip_address(1).get(),
             local_ip::<I>().get(),
@@ -3225,6 +3244,7 @@ mod tests {
 
     fn receive_packet_on<I: Ip + TestIpExt>(
         sync_ctx: &mut MultiDeviceDummySyncCtx<I>,
+        ctx: &mut MultiDeviceDummyNonSyncCtx,
         device: MultipleDevicesId,
     ) where
         MultiDeviceDummySyncCtx<I>: DummyDeviceSyncCtxBound<I, MultipleDevicesId>,
@@ -3232,6 +3252,7 @@ mod tests {
         const BODY: [u8; 5] = [1, 2, 3, 4, 5];
         receive_udp_packet(
             sync_ctx,
+            ctx,
             device,
             I::get_other_remote_ip_address(1).get(),
             local_ip::<I>().get(),
@@ -3266,14 +3287,14 @@ mod tests {
         };
 
         // Since it is bound, it does not receive a packet from another device.
-        receive_packet_on(sync_ctx, MultipleDevicesId::B);
+        receive_packet_on(sync_ctx, &mut non_sync_ctx, MultipleDevicesId::B);
         let listen_data = &sync_ctx.get_ref().listen_data;
         assert_matches!(&listen_data[..], &[]);
 
         // When unbound, the socket can receive packets on the other device.
         set_bound_udp_device(sync_ctx, &mut non_sync_ctx, socket.into(), None)
             .expect("clearing bound device failed");
-        receive_packet_on(sync_ctx, MultipleDevicesId::B);
+        receive_packet_on(sync_ctx, &mut non_sync_ctx, MultipleDevicesId::B);
         let listen_data = &sync_ctx.get_ref().listen_data;
         assert_matches!(&listen_data[..],
             &[ListenData {listener, body:_, src_ip: _, dst_ip: _, src_port: _ }] =>
@@ -3347,6 +3368,7 @@ mod tests {
             let body = vec![device.into()];
             receive_udp_packet(
                 sync_ctx,
+                &mut non_sync_ctx,
                 device,
                 remote_ip.get(),
                 multicast_addr.get(),
@@ -4160,8 +4182,12 @@ mod tests {
 
         // Serialize a UDP-in-IP packet with the given values, and then receive
         // an ICMP error message with that packet as the original packet.
-        fn receive_icmp_error<I: TestIpExt, F: Fn(&mut DummySyncCtx<I>, &[u8], I::ErrorCode)>(
+        fn receive_icmp_error<
+            I: TestIpExt,
+            F: Fn(&mut DummySyncCtx<I>, &mut DummyNonSyncCtx, &[u8], I::ErrorCode),
+        >(
             sync_ctx: &mut DummySyncCtx<I>,
+            ctx: &mut DummyNonSyncCtx,
             src_ip: I::Addr,
             dst_ip: I::Addr,
             src_port: u16,
@@ -4182,10 +4208,13 @@ mod tests {
                 .encapsulate(I::PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Udp.into()))
                 .serialize_vec_outer()
                 .unwrap();
-            f(sync_ctx, packet.as_ref(), err);
+            f(sync_ctx, ctx, packet.as_ref(), err);
         }
 
-        fn test<I: TestIpExt + PartialEq, F: Copy + Fn(&mut DummySyncCtx<I>, &[u8], I::ErrorCode)>(
+        fn test<
+            I: TestIpExt + PartialEq,
+            F: Copy + Fn(&mut DummySyncCtx<I>, &mut DummyNonSyncCtx, &[u8], I::ErrorCode),
+        >(
             err: I::ErrorCode,
             f: F,
             other_remote_ip: I::Addr,
@@ -4194,27 +4223,54 @@ mod tests {
             I::ErrorCode: Copy + core::fmt::Debug + PartialEq,
             DummySyncCtx<I>: DummySyncCtxBound<I>,
         {
-            let DummyCtx { mut sync_ctx, non_sync_ctx: _ } = initialize_context::<I>();
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = initialize_context::<I>();
 
             let src_ip = local_ip::<I>();
             let dst_ip = remote_ip::<I>();
 
             // Test that we receive an error for the connection.
-            receive_icmp_error(&mut sync_ctx, src_ip.get(), dst_ip.get(), 3, 4, err, f);
+            receive_icmp_error(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                src_ip.get(),
+                dst_ip.get(),
+                3,
+                4,
+                err,
+                f,
+            );
             assert_eq!(
                 sync_ctx.get_ref().icmp_errors.as_slice(),
                 [IcmpError { id: UdpConnId::new(0).into(), err }]
             );
 
             // Test that we receive an error for the listener.
-            receive_icmp_error(&mut sync_ctx, src_ip.get(), dst_ip.get(), 2, 4, err, f);
+            receive_icmp_error(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                src_ip.get(),
+                dst_ip.get(),
+                2,
+                4,
+                err,
+                f,
+            );
             assert_eq!(
                 &sync_ctx.get_ref().icmp_errors.as_slice()[1..],
                 [IcmpError { id: UdpListenerId::new(1).into(), err }]
             );
 
             // Test that we receive an error for the wildcard listener.
-            receive_icmp_error(&mut sync_ctx, src_ip.get(), dst_ip.get(), 1, 4, err, f);
+            receive_icmp_error(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                src_ip.get(),
+                dst_ip.get(),
+                1,
+                4,
+                err,
+                f,
+            );
             assert_eq!(
                 &sync_ctx.get_ref().icmp_errors.as_slice()[2..],
                 [IcmpError { id: UdpListenerId::new(0).into(), err }]
@@ -4222,7 +4278,16 @@ mod tests {
 
             // Test that we receive an error for the wildcard listener even if
             // the original packet was sent to a different remote IP/port.
-            receive_icmp_error(&mut sync_ctx, src_ip.get(), other_remote_ip, 1, 5, err, f);
+            receive_icmp_error(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                src_ip.get(),
+                other_remote_ip,
+                1,
+                5,
+                err,
+                f,
+            );
             assert_eq!(
                 &sync_ctx.get_ref().icmp_errors.as_slice()[3..],
                 [IcmpError { id: UdpListenerId::new(0).into(), err }]
@@ -4230,26 +4295,32 @@ mod tests {
 
             // Test that an error that doesn't correspond to any connection or
             // listener isn't received.
-            receive_icmp_error(&mut sync_ctx, src_ip.get(), dst_ip.get(), 3, 5, err, f);
+            receive_icmp_error(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                src_ip.get(),
+                dst_ip.get(),
+                3,
+                5,
+                err,
+                f,
+            );
             assert_eq!(sync_ctx.get_ref().icmp_errors.len(), 4);
         }
 
         test(
             Icmpv4ErrorCode::DestUnreachable(Icmpv4DestUnreachableCode::DestNetworkUnreachable),
-            |sync_ctx: &mut DummySyncCtx<Ipv4>, mut packet, error_code| {
+            |sync_ctx: &mut DummySyncCtx<Ipv4>,
+             ctx: &mut DummyNonSyncCtx,
+             mut packet,
+             error_code| {
                 let packet = packet.parse::<Ipv4PacketRaw<_>>().unwrap();
                 let device = DummyDeviceId;
                 let src_ip = SpecifiedAddr::new(packet.src_ip());
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().into_inner();
                 <UdpIpTransportContext as IpTransportContext<Ipv4, _, _>>::receive_icmp_error(
-                    sync_ctx,
-                    &mut (),
-                    device,
-                    src_ip,
-                    dst_ip,
-                    body,
-                    error_code,
+                    sync_ctx, ctx, device, src_ip, dst_ip, body, error_code,
                 )
             },
             Ipv4Addr::new([1, 2, 3, 4]),
@@ -4257,20 +4328,17 @@ mod tests {
 
         test(
             Icmpv6ErrorCode::DestUnreachable(Icmpv6DestUnreachableCode::NoRoute),
-            |sync_ctx: &mut DummySyncCtx<Ipv6>, mut packet, error_code| {
+            |sync_ctx: &mut DummySyncCtx<Ipv6>,
+             ctx: &mut DummyNonSyncCtx,
+             mut packet,
+             error_code| {
                 let packet = packet.parse::<Ipv6PacketRaw<_>>().unwrap();
                 let device = DummyDeviceId;
                 let src_ip = SpecifiedAddr::new(packet.src_ip());
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().unwrap().into_inner();
                 <UdpIpTransportContext as IpTransportContext<Ipv6, _, _>>::receive_icmp_error(
-                    sync_ctx,
-                    &mut (),
-                    device,
-                    src_ip,
-                    dst_ip,
-                    body,
-                    error_code,
+                    sync_ctx, ctx, device, src_ip, dst_ip, body, error_code,
                 )
             },
             Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),

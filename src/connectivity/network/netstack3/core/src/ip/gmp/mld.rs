@@ -510,8 +510,9 @@ mod tests {
         (),
         DummyDeviceId,
     >;
+    type MockNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
 
-    impl MldContext<()> for MockSyncCtx {
+    impl MldContext<MockNonSyncCtx> for MockSyncCtx {
         fn get_ipv6_link_local_addr(
             &self,
             _device: DummyDeviceId,
@@ -587,7 +588,7 @@ mod tests {
 
     fn receive_mld_query(
         sync_ctx: &mut MockSyncCtx,
-        non_sync_ctx: &mut (),
+        non_sync_ctx: &mut MockNonSyncCtx,
         resp_time: Duration,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) {
@@ -622,7 +623,7 @@ mod tests {
 
     fn receive_mld_report(
         sync_ctx: &mut MockSyncCtx,
-        non_sync_ctx: &mut (),
+        non_sync_ctx: &mut MockNonSyncCtx,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) {
         let router_addr: Ipv6Addr = ROUTER_MAC.to_ipv6_link_local().addr().get();

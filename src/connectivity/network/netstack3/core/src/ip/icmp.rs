@@ -2875,7 +2875,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyCtx, DummyInstant, DummySyncCtx},
+        context::testutil::{DummyCtx, DummyInstant, DummyNonSyncCtx, DummySyncCtx},
         device::{DeviceId, FrameDestination},
         ip::{
             device::{
@@ -3824,7 +3824,7 @@ mod tests {
     /// Implement a number of traits and methods for the `$inner` and `$outer`
     /// context types.
     macro_rules! impl_context_traits {
-        ($ip:ident, $inner:ident, $outer_ctx:ident, $outer_sync_ctx:ident, $state:ident) => {
+        ($ip:ident, $inner:ident, $outer_ctx:ident, $outer_sync_ctx:ident, $outer_non_sync_ctx:ident, $state:ident) => {
             type $outer_ctx = DummyCtx<
                 $inner,
                 (),
@@ -3841,6 +3841,8 @@ mod tests {
                 DummyDeviceId,
             >;
 
+            type $outer_non_sync_ctx = DummyNonSyncCtx;
+
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
                     let mut ctx = $inner::default();
@@ -3849,7 +3851,7 @@ mod tests {
                 }
             }
 
-            impl_pmtu_handler!($outer_sync_ctx, (), $ip);
+            impl_pmtu_handler!($outer_sync_ctx, $outer_non_sync_ctx, $ip);
 
             impl AsMut<DummyPmtuState<<$ip as Ip>::Addr>> for $outer_sync_ctx {
                 fn as_mut(&mut self) -> &mut DummyPmtuState<<$ip as Ip>::Addr> {
@@ -3921,10 +3923,10 @@ mod tests {
                 }
             }
 
-            impl InnerIcmpContext<$ip, ()> for $outer_sync_ctx {
+            impl InnerIcmpContext<$ip, $outer_non_sync_ctx> for $outer_sync_ctx {
                 fn receive_icmp_error(
                     &mut self,
-                    _ctx: &mut (),
+                    ctx: &mut $outer_non_sync_ctx,
                     device: DummyDeviceId,
                     original_src_ip: Option<SpecifiedAddr<<$ip as Ip>::Addr>>,
                     original_dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
@@ -3937,7 +3939,7 @@ mod tests {
                     if original_proto == <$ip as packet_formats::icmp::IcmpIpExt>::ICMP_IP_PROTO {
                         <IcmpIpTransportContext as IpTransportContext<$ip, _, _>>::receive_icmp_error(
                             self,
-                            &mut (),
+                            ctx,
                             device,
                             original_src_ip,
                             original_dst_ip,
@@ -3950,13 +3952,27 @@ mod tests {
         };
     }
 
-    impl_context_traits!(Ipv4, DummyIcmpv4Ctx, Dummyv4Ctx, Dummyv4SyncCtx, Icmpv4State);
-    impl_context_traits!(Ipv6, DummyIcmpv6Ctx, Dummyv6Ctx, Dummyv6SyncCtx, Icmpv6State);
+    impl_context_traits!(
+        Ipv4,
+        DummyIcmpv4Ctx,
+        Dummyv4Ctx,
+        Dummyv4SyncCtx,
+        Dummyv4NonSyncCtx,
+        Icmpv4State
+    );
+    impl_context_traits!(
+        Ipv6,
+        DummyIcmpv6Ctx,
+        Dummyv6Ctx,
+        Dummyv6SyncCtx,
+        Dummyv6NonSyncCtx,
+        Icmpv6State
+    );
 
-    impl NdpPacketHandler<(), DummyDeviceId> for Dummyv6SyncCtx {
+    impl NdpPacketHandler<Dummyv6NonSyncCtx, DummyDeviceId> for Dummyv6SyncCtx {
         fn receive_ndp_packet<B: ByteSlice>(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _device: DummyDeviceId,
             _src_ip: Ipv6SourceAddr,
             _dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -3966,10 +3982,10 @@ mod tests {
         }
     }
 
-    impl MldPacketHandler<(), DummyDeviceId> for Dummyv6SyncCtx {
+    impl MldPacketHandler<Dummyv6NonSyncCtx, DummyDeviceId> for Dummyv6SyncCtx {
         fn receive_mld_packet<B: ByteSlice>(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _device: DummyDeviceId,
             _src_ip: Ipv6SourceAddr,
             _dst_ip: SpecifiedAddr<Ipv6Addr>,
@@ -3979,10 +3995,10 @@ mod tests {
         }
     }
 
-    impl RouteDiscoveryHandler<()> for Dummyv6SyncCtx {
+    impl RouteDiscoveryHandler<Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
         fn update_route(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _device_id: Self::DeviceId,
             _route: Ipv6DiscoveredRoute,
             _lifetime: Option<NonZeroNdpLifetime>,
@@ -3990,15 +4006,15 @@ mod tests {
             unimplemented!()
         }
 
-        fn invalidate_routes(&mut self, _ctx: &mut (), _device_id: Self::DeviceId) {
+        fn invalidate_routes(&mut self, _ctx: &mut Dummyv6NonSyncCtx, _device_id: Self::DeviceId) {
             unimplemented!()
         }
     }
 
-    impl SlaacHandler<()> for Dummyv6SyncCtx {
+    impl SlaacHandler<Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
         fn apply_slaac_update(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _device_id: Self::DeviceId,
             _subnet: Subnet<Ipv6Addr>,
             _preferred_lifetime: Option<NonZeroNdpLifetime>,
@@ -4009,7 +4025,7 @@ mod tests {
 
         fn on_address_removed(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _device_id: Self::DeviceId,
             _addr: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
             _state: SlaacConfig<Self::Instant>,
@@ -4018,25 +4034,29 @@ mod tests {
             unimplemented!()
         }
 
-        fn remove_all_slaac_addresses(&mut self, _ctx: &mut (), _device_id: Self::DeviceId) {
+        fn remove_all_slaac_addresses(
+            &mut self,
+            _ctx: &mut Dummyv6NonSyncCtx,
+            _device_id: Self::DeviceId,
+        ) {
             unimplemented!()
         }
     }
 
-    impl IpDeviceHandler<Ipv6, ()> for Dummyv6SyncCtx {
+    impl IpDeviceHandler<Ipv6, Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
         fn is_router_device(&self, _device_id: Self::DeviceId) -> bool {
             unimplemented!()
         }
     }
 
-    impl Ipv6DeviceHandler<()> for Dummyv6SyncCtx {
+    impl Ipv6DeviceHandler<Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
         fn get_link_layer_addr_bytes(&self, _device_id: Self::DeviceId) -> Option<&[u8]> {
             unimplemented!()
         }
 
         fn set_discovered_retrans_timer(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _device_id: Self::DeviceId,
             _retrans_timer: NonZeroDuration,
         ) {
@@ -4045,7 +4065,7 @@ mod tests {
 
         fn remove_duplicate_tentative_address(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _device_id: Self::DeviceId,
             _addr: UnicastAddr<Ipv6Addr>,
         ) -> Result<bool, NotFoundError> {
@@ -4053,10 +4073,10 @@ mod tests {
         }
     }
 
-    impl<B: BufferMut> BufferIpLayerHandler<Ipv6, (), B> for Dummyv6SyncCtx {
+    impl<B: BufferMut> BufferIpLayerHandler<Ipv6, Dummyv6NonSyncCtx, B> for Dummyv6SyncCtx {
         fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut Dummyv6NonSyncCtx,
             _meta: SendIpPacketMeta<Ipv6, Self::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
             _body: S,
         ) -> Result<(), S> {
@@ -4098,17 +4118,17 @@ mod tests {
         ) {
             crate::testutil::set_logger_for_test();
 
-            let mut ctx = Dummyv4SyncCtx::default();
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = Dummyv4Ctx::default();
             // NOTE: This assertion is not a correctness requirement. It's just
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
             // evidence of a bug; we may just have to update this test to
             // accommodate whatever new ID allocation scheme is being used.
-            let unbound = create_icmpv4_unbound_inner(&mut ctx);
+            let unbound = create_icmpv4_unbound_inner(&mut sync_ctx);
             assert_eq!(
                 connect_icmpv4_inner(
-                    &mut ctx,
-                    &mut (),
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
                     unbound,
                     Some(DUMMY_CONFIG_V4.local_ip),
                     DUMMY_CONFIG_V4.remote_ip,
@@ -4119,8 +4139,8 @@ mod tests {
             );
 
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _, _>>::receive_ip_packet(
-                &mut ctx,
-                &mut (),
+                &mut sync_ctx,
+                &mut non_sync_ctx,
                 DummyDeviceId,
                 DUMMY_CONFIG_V4.remote_ip.get(),
                 DUMMY_CONFIG_V4.local_ip,
@@ -4137,9 +4157,9 @@ mod tests {
             .unwrap();
 
             for (ctr, count) in assert_counters {
-                assert_eq!(ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
+                assert_eq!(sync_ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
             }
-            f(&ctx);
+            f(&sync_ctx);
         }
         // Test that, when we receive various ICMPv4 error messages, we properly
         // pass them up to the IP layer and, sometimes, to the transport layer.
@@ -4413,8 +4433,8 @@ mod tests {
         ) {
             crate::testutil::set_logger_for_test();
 
-            let mut ctx = Dummyv6SyncCtx::default();
-            let unbound = create_icmpv6_unbound_inner(&mut ctx);
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = Dummyv6Ctx::default();
+            let unbound = create_icmpv6_unbound_inner(&mut sync_ctx);
             // NOTE: This assertion is not a correctness requirement. It's just
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
@@ -4422,8 +4442,8 @@ mod tests {
             // accommodate whatever new ID allocation scheme is being used.
             assert_eq!(
                 connect_icmpv6_inner(
-                    &mut ctx,
-                    &mut (),
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
                     unbound,
                     Some(DUMMY_CONFIG_V6.local_ip),
                     DUMMY_CONFIG_V6.remote_ip,
@@ -4434,8 +4454,8 @@ mod tests {
             );
 
             <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _, _>>::receive_ip_packet(
-                &mut ctx,
-                &mut (),
+                &mut sync_ctx,
+                &mut non_sync_ctx,
                 DummyDeviceId,
                 DUMMY_CONFIG_V6.remote_ip.get().try_into().unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
@@ -4452,9 +4472,9 @@ mod tests {
             .unwrap();
 
             for (ctr, count) in assert_counters {
-                assert_eq!(ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
+                assert_eq!(sync_ctx.get_counter(ctr), *count, "wrong count for counter {}", ctr);
             }
-            f(&ctx);
+            f(&sync_ctx);
         }
         // Test that, when we receive various ICMPv6 error messages, we properly
         // pass them up to the IP layer and, sometimes, to the transport layer.

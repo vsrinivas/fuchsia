@@ -970,6 +970,8 @@ mod tests {
         }
     }
 
+    type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
+
     type DummyCtx = crate::context::testutil::DummySyncCtx<
         DummyEthernetCtx,
         EthernetTimerId<DummyDeviceId>,
@@ -1008,10 +1010,10 @@ mod tests {
         }
     }
 
-    impl EthernetIpLinkDeviceContext<()> for DummyCtx {
+    impl EthernetIpLinkDeviceContext<DummyNonSyncCtx> for DummyCtx {
         fn add_ipv6_addr_subnet(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut DummyNonSyncCtx,
             _device_id: DummyDeviceId,
             _addr_sub: AddrSubnet<Ipv6Addr>,
             _config: AddrConfig<DummyInstant>,
@@ -1021,7 +1023,7 @@ mod tests {
 
         fn join_ipv6_multicast(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut DummyNonSyncCtx,
             _device_id: DummyDeviceId,
             _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
@@ -1030,7 +1032,7 @@ mod tests {
 
         fn leave_ipv6_multicast(
             &mut self,
-            _ctx: &mut (),
+            _ctx: &mut DummyNonSyncCtx,
             _device_id: DummyDeviceId,
             _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
@@ -1042,7 +1044,10 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl IpLinkDeviceContext<EthernetLinkDevice, (), EthernetTimerId<DummyDeviceId>> for DummyCtx {}
+    impl IpLinkDeviceContext<EthernetLinkDevice, DummyNonSyncCtx, EthernetTimerId<DummyDeviceId>>
+        for DummyCtx
+    {
+    }
 
     fn contains_addr<A: IpAddress>(
         ctx: &crate::testutil::DummySyncCtx,

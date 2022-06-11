@@ -600,7 +600,9 @@ mod tests {
         DummyDeviceId,
     >;
 
-    impl IgmpContext<()> for DummySyncCtx {
+    type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
+
+    impl IgmpContext<DummyNonSyncCtx> for DummySyncCtx {
         fn get_ip_addr_subnet(&self, _device: DummyDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
             self.get_ref().addr_subnet
         }
@@ -721,28 +723,36 @@ mod tests {
     const V1_ROUTER_PRESENT_TIMER_ID: IgmpTimerId<DummyDeviceId> =
         IgmpTimerId::V1RouterPresent { device: DummyDeviceId };
 
-    fn receive_igmp_query(sync_ctx: &mut DummySyncCtx, resp_time: Duration) {
+    fn receive_igmp_query(
+        sync_ctx: &mut DummySyncCtx,
+        ctx: &mut DummyNonSyncCtx,
+        resp_time: Duration,
+    ) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
             GROUP_ADDR.get(),
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(&mut (), DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
-    fn receive_igmp_general_query(sync_ctx: &mut DummySyncCtx, resp_time: Duration) {
+    fn receive_igmp_general_query(
+        sync_ctx: &mut DummySyncCtx,
+        ctx: &mut DummyNonSyncCtx,
+        resp_time: Duration,
+    ) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
             Ipv4Addr::new([0, 0, 0, 0]),
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(&mut (), DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
-    fn receive_igmp_report(sync_ctx: &mut DummySyncCtx) {
+    fn receive_igmp_report(sync_ctx: &mut DummySyncCtx, ctx: &mut DummyNonSyncCtx) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR.get());
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(&mut (), DummyDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, DummyDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
     fn setup_simple_test_environment_with_addr_subnet(
@@ -810,7 +820,7 @@ mod tests {
             check_report(&mut sync_ctx);
 
             // Should send a report after a query.
-            receive_igmp_query(&mut sync_ctx, Duration::from_secs(10));
+            receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(10));
             assert_eq!(
                 sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
@@ -835,7 +845,7 @@ mod tests {
             );
             assert_eq!(sync_ctx.frames().len(), 2);
 
-            receive_igmp_query(&mut sync_ctx, Duration::from_secs(10));
+            receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(10));
 
             // We have received a query, hence we are falling back to Delay
             // Member state.
@@ -871,7 +881,7 @@ mod tests {
             )]);
             let instant1 = sync_ctx.timer_ctx().timers()[0].0.clone();
 
-            receive_igmp_query(&mut sync_ctx, Duration::from_secs(0));
+            receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(0));
             assert_eq!(sync_ctx.frames().len(), 1);
 
             // Since we have heard from the v1 router, we should have set our
@@ -922,7 +932,7 @@ mod tests {
                 _ => panic!("Wrong State!"),
             }
 
-            receive_igmp_query(&mut sync_ctx, Duration::from_secs(10));
+            receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(10));
             assert_eq!(
                 sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
@@ -951,7 +961,7 @@ mod tests {
         let start = sync_ctx.now();
         let duration = Duration::from_micros(((instant1 - start).as_micros() / 2) as u64);
         assert!(duration.as_millis() > 100);
-        receive_igmp_query(&mut sync_ctx, duration);
+        receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, duration);
         assert_eq!(sync_ctx.frames().len(), 1);
         let now = sync_ctx.now();
         sync_ctx
@@ -1026,7 +1036,7 @@ mod tests {
                 now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
             )]);
             assert_eq!(sync_ctx.frames().len(), 1);
-            receive_igmp_report(&mut sync_ctx);
+            receive_igmp_report(&mut sync_ctx, &mut non_sync_ctx);
             sync_ctx.timer_ctx().assert_no_timers_installed();
             // The report should be discarded because we have received from
             // someone else.
@@ -1068,7 +1078,7 @@ mod tests {
             );
             assert_eq!(sync_ctx.frames().len(), 4);
             const RESP_TIME: Duration = Duration::from_secs(10);
-            receive_igmp_general_query(&mut sync_ctx, RESP_TIME);
+            receive_igmp_general_query(&mut sync_ctx, &mut non_sync_ctx, RESP_TIME);
             // Two new timers should be there.
             let now = sync_ctx.now();
             let range = now..=(now + RESP_TIME);
@@ -1112,12 +1122,12 @@ mod tests {
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_no_effect(&sync_ctx);
 
-            receive_igmp_report(&mut sync_ctx);
+            receive_igmp_report(&mut sync_ctx, &mut non_sync_ctx);
             // We should have done no state transitions/work.
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_no_effect(&sync_ctx);
 
-            receive_igmp_query(&mut sync_ctx, Duration::from_secs(10));
+            receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(10));
             // We should have done no state transitions/work.
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_no_effect(&sync_ctx);
