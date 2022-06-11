@@ -312,14 +312,10 @@ the various `zx_vmar_*` syscalls which take a permissions flag in `options`
 which will implicitly add read permission if XOM is not supported.
 `ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED` is logically only useful with
 `ZX_VM_PERM_EXEC` and not `ZX_VM_PERM_READ`, however the various syscall which
-accept this flag will not be treating this as an invariant.
-
-implies `ZX_VM_PERM_EXEC` and it can
-be safely omitted or explicitly or'd with `ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED`.
-Passing `ZX_VM_PERM_READ` with `ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED` is never
-meaningful because it defeats the purpose of the
-`ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED` therefore syscalls which accept permission
-flags will fail with `ZX_ERR_INVALID_ARGS` when these flags are or'd together.
+accept this flag will not be treating this as an invariant. It is safe to have
+`ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED` with any other combination of flags, it
+will just be treated as `ZX_VM_PERM_READ` in contexts where the system
+cannot map execute-only pages.
 
 A new `kind` value `ZX_FEATURE_KIND_VM` will be added for
 `zx_system_get_features`, which will yield a bitset similar to
