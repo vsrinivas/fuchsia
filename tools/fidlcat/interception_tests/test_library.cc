@@ -34,7 +34,6 @@
 // };
 
 std::string echo_service = R"({
-  "version": "0.0.1",
   "name": "fidl.examples.echo",
   "library_dependencies": [
     {

@@ -1506,7 +1506,6 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   fidl_codec::logger::LogCapturer capturer(&log_msg);
   // i32 in the schema is missing "subtype": "int32"
   std::string bad_schema = R"FIDL({
-  "version": "0.0.1",
   "name": "fidl.examples.types",
   "library_dependencies": [],
   "bits_declarations": [],

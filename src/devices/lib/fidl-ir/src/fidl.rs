@@ -23,7 +23,6 @@ lazy_static! {
             .unwrap();
     pub static ref LIBRARY_IDENTIFIER_RE: Regex =
         Regex::new(r#"^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)*$"#).unwrap();
-    pub static ref VERSION_RE: Regex = Regex::new(r#"^[0-9]+\.[0-9]+\.[0-9]+$"#).unwrap();
     pub static ref UNFLATTENED_PARAMETER_NAME: Identifier = Identifier { 0: "payload".to_string() };
     pub static ref EMPTY_FIELD_SHAPE: FieldShape =
         FieldShape { offset: Count(0), padding: Count(0) };
@@ -110,21 +109,6 @@ where
         return Err(serde::de::Error::custom(format!("Invalid library identifier: {}", id)));
     }
     Ok(id)
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct Version(#[serde(deserialize_with = "validate_version")] pub String);
-
-fn validate_version<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let version = String::deserialize(deserializer)?;
-    if !VERSION_RE.is_match(&version) {
-        return Err(serde::de::Error::custom(format!("Invalid version: {}", version)));
-    }
-    Ok(version)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -607,7 +591,6 @@ pub struct TypeAlias {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FidlIr {
-    pub version: Version,
     pub name: LibraryIdentifier,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub bits_declarations: Vec<Bits>,

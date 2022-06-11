@@ -937,9 +937,8 @@ void JSONGenerator::GenerateExternalDeclarationsMember(
 std::ostringstream JSONGenerator::Produce() {
   ResetIndentLevel();
   GenerateObject([&]() {
-    GenerateObjectMember("version", std::string_view("0.0.1"), Position::kFirst);
-
-    GenerateObjectMember("name", flat::LibraryName(compilation_->library_name, "."));
+    GenerateObjectMember("name", flat::LibraryName(compilation_->library_name, "."),
+                         Position::kFirst);
 
     if (!compilation_->library_attributes->Empty()) {
       GenerateObjectMember("maybe_attributes", compilation_->library_attributes);

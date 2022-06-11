@@ -1824,11 +1824,6 @@
                 "type_shape_v2"
             ],
             "type": "object"
-        },
-        "version": {
-            "description": "Definition of version regex",
-            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-            "type": "string"
         }
     },
     "description": "See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/json-ir.md",
@@ -1938,14 +1933,9 @@
                 "$ref": "#/definitions/union"
             },
             "type": "array"
-        },
-        "version": {
-            "$ref": "#/definitions/version",
-            "description": "Version of the JSON IR schema"
         }
     },
     "required": [
-        "version",
         "name",
         "bits_declarations",
         "const_declarations",
