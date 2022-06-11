@@ -67,10 +67,12 @@ impl<D> MldFrameMetadata<D> {
     }
 }
 
+pub(crate) trait MldNonSyncContext: RngContext {}
+impl<C: RngContext> MldNonSyncContext for C {}
+
 /// The execution context for the Multicast Listener Discovery (MLD) protocol.
-pub(crate) trait MldContext<C>:
+pub(crate) trait MldContext<C: MldNonSyncContext>:
     IpDeviceIdContext<Ipv6>
-    + RngContext
     + TimerContext<MldDelayedReportTimerId<Self::DeviceId>>
     + FrameContext<C, EmptyBuf, MldFrameMetadata<Self::DeviceId>>
 {
@@ -88,23 +90,11 @@ pub(crate) trait MldContext<C>:
     /// will be installed, and no outbound MLD traffic will be generated.
     fn mld_enabled(&self, device: Self::DeviceId) -> bool;
 
-    /// Gets mutable access to the device's MLD state and RNG.
-    fn get_state_mut_and_rng(
-        &mut self,
-        device: Self::DeviceId,
-    ) -> (
-        &mut MulticastGroupSet<Ipv6Addr, MldGroupState<<Self as InstantContext>::Instant>>,
-        &mut Self::Rng,
-    );
-
     /// Gets mutable access to the device's MLD state.
     fn get_state_mut(
         &mut self,
         device: Self::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<<Self as InstantContext>::Instant>> {
-        let (state, _rng): (_, &mut Self::Rng) = self.get_state_mut_and_rng(device);
-        state
-    }
+    ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<<Self as InstantContext>::Instant>>;
 
     /// Gets immutable access to the device's MLD state.
     fn get_state(
@@ -113,7 +103,7 @@ pub(crate) trait MldContext<C>:
     ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<<Self as InstantContext>::Instant>>;
 }
 
-impl<C, SC: MldContext<C>> GmpHandler<Ipv6, C> for SC {
+impl<C: MldNonSyncContext, SC: MldContext<C>> GmpHandler<Ipv6, C> for SC {
     fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
         gmp_handle_maybe_enabled(self, ctx, device)
     }
@@ -156,7 +146,7 @@ pub(crate) trait MldPacketHandler<C, DeviceId> {
     );
 }
 
-impl<C, SC: MldContext<C>> MldPacketHandler<C, SC::DeviceId> for SC {
+impl<C: MldNonSyncContext, SC: MldContext<C>> MldPacketHandler<C, SC::DeviceId> for SC {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
         ctx: &mut C,
@@ -206,7 +196,7 @@ impl<B: ByteSlice> GmpMessage<Ipv6> for Mldv1Body<B> {
     }
 }
 
-impl<C, SC: MldContext<C>> GmpContext<Ipv6, C, MldProtocolSpecific> for SC {
+impl<C: MldNonSyncContext, SC: MldContext<C>> GmpContext<Ipv6, C, MldProtocolSpecific> for SC {
     type Err = MldError;
     type GroupState = MldGroupState<Self::Instant>;
 
@@ -274,11 +264,11 @@ impl<C, SC: MldContext<C>> GmpContext<Ipv6, C, MldProtocolSpecific> for SC {
         Self::Err::NotAMember { addr }
     }
 
-    fn get_state_mut_and_rng(
+    fn get_state_mut(
         &mut self,
         device: SC::DeviceId,
-    ) -> (&mut MulticastGroupSet<Ipv6Addr, Self::GroupState>, &mut Self::Rng) {
-        self.get_state_mut_and_rng(device)
+    ) -> &mut MulticastGroupSet<Ipv6Addr, Self::GroupState> {
+        self.get_state_mut(device)
     }
 
     fn get_state(&self, device: SC::DeviceId) -> &MulticastGroupSet<Ipv6Addr, Self::GroupState> {
@@ -395,7 +385,9 @@ impl_timer_context!(
     id
 );
 
-impl<C, SC: MldContext<C>> TimerHandler<C, MldDelayedReportTimerId<SC::DeviceId>> for SC {
+impl<C: MldNonSyncContext, SC: MldContext<C>> TimerHandler<C, MldDelayedReportTimerId<SC::DeviceId>>
+    for SC
+{
     fn handle_timer(&mut self, ctx: &mut C, timer: MldDelayedReportTimerId<SC::DeviceId>) {
         let MldDelayedReportTimerId(id) = timer;
         gmp_handle_timer(self, ctx, id);
@@ -406,7 +398,12 @@ impl<C, SC: MldContext<C>> TimerHandler<C, MldDelayedReportTimerId<SC::DeviceId>
 ///
 /// The MLD packet being sent should have its `hop_limit` to be 1 and a
 /// `RouterAlert` option in its Hop-by-Hop Options extensions header.
-fn send_mld_packet<C, SC: MldContext<C>, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
+fn send_mld_packet<
+    C: MldNonSyncContext,
+    SC: MldContext<C>,
+    B: ByteSlice,
+    M: IcmpMldv1MessageType<B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -457,14 +454,10 @@ mod tests {
         },
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
-    use rand_xorshift::XorShiftRng;
 
     use super::*;
     use crate::{
-        context::{
-            testutil::{DummyInstant, DummyTimerCtxExt},
-            DualStateContext,
-        },
+        context::testutil::{DummyInstant, DummyTimerCtxExt},
         ip::{
             device::Ipv6DeviceTimerId,
             gmp::{MemberState, QueryReceivedActions, QueryReceivedGenericAction},
@@ -472,7 +465,7 @@ mod tests {
         },
         testutil::{
             assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcher,
-            DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _,
+            DummyEventDispatcherConfig, TestIpExt as _,
         },
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
@@ -524,23 +517,18 @@ mod tests {
             self.get_ref().mld_enabled
         }
 
-        fn get_state_mut_and_rng(
+        fn get_state_mut(
             &mut self,
-            _id0: DummyDeviceId,
-        ) -> (
-            &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>,
-            &mut FakeCryptoRng<XorShiftRng>,
-        ) {
-            let (state, rng) = self.get_states_mut();
-            (&mut state.groups, rng)
+            DummyDeviceId: DummyDeviceId,
+        ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
+            &mut self.get_mut().groups
         }
 
         fn get_state(
             &self,
             DummyDeviceId: DummyDeviceId,
         ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
-            let (state, _rng) = self.get_states();
-            &state.groups
+            &self.get_ref().groups
         }
     }
 
@@ -699,7 +687,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -734,7 +722,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -763,7 +751,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -811,7 +799,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -856,7 +844,7 @@ mod tests {
             MockCtx::with_sync_ctx(MockSyncCtx::default());
         // This seed was carefully chosen to produce a substantial duration
         // value below.
-        sync_ctx.seed_rng(123456);
+        non_sync_ctx.seed_rng(123456);
         assert_eq!(
             sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
             GroupJoinResult::Joined(())
@@ -896,7 +884,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -943,7 +931,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -979,7 +967,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             sync_ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
             assert_eq!(
@@ -1041,7 +1029,7 @@ mod tests {
 
             let new_ctx = || {
                 let mut ctx = MockCtx::with_sync_ctx(MockSyncCtx::default());
-                ctx.sync_ctx.seed_rng(seed);
+                ctx.non_sync_ctx.seed_rng(seed);
                 ctx
             };
 
@@ -1073,7 +1061,7 @@ mod tests {
             // multicast join and leave functions, MLD is performed.
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
 
             assert_eq!(
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -1121,7 +1109,7 @@ mod tests {
         run_with_many_seeds(|seed| {
             let MockCtx { mut sync_ctx, mut non_sync_ctx } =
                 MockCtx::with_sync_ctx(MockSyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
             assert_eq!(sync_ctx.take_frames(), []);
 
             // Should not perform MLD for the all-nodes address.

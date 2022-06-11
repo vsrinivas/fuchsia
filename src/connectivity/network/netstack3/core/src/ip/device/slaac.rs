@@ -172,7 +172,7 @@ pub(super) trait SlaacStateContext<C>: IpDeviceIdContext<Ipv6> + InstantContext 
 ///
 /// May panic if `addr` is not an address configured via SLAAC on
 /// `device_id`.
-fn update_slaac_addr_valid_until<C, SC: SlaacStateContext<C>>(
+fn update_slaac_addr_valid_until<C: SlaacNonSyncContext, SC: SlaacStateContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -201,18 +201,18 @@ fn update_slaac_addr_valid_until<C, SC: SlaacStateContext<C>>(
     };
 }
 
+pub(super) trait SlaacNonSyncContext: RngContext {}
+impl<C: RngContext> SlaacNonSyncContext for C {}
+
 /// The execution context for SLAAC.
 trait SlaacContext<C>:
-    SlaacStateContext<C> + TimerContext<SlaacTimerId<Self::DeviceId>> + CounterContext + RngContext
+    SlaacStateContext<C> + TimerContext<SlaacTimerId<Self::DeviceId>> + CounterContext
 {
 }
 
 impl<
-        C,
-        SC: SlaacStateContext<C>
-            + TimerContext<SlaacTimerId<Self::DeviceId>>
-            + CounterContext
-            + RngContext,
+        C: SlaacNonSyncContext,
+        SC: SlaacStateContext<C> + TimerContext<SlaacTimerId<Self::DeviceId>> + CounterContext,
     > SlaacContext<C> for SC
 {
 }
@@ -253,7 +253,7 @@ pub(crate) trait SlaacHandler<C>: IpDeviceIdContext<Ipv6> + InstantContext {
     fn remove_all_slaac_addresses(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 }
 
-impl<C, SC: SlaacContext<C>> SlaacHandler<C> for SC {
+impl<C: SlaacNonSyncContext, SC: SlaacContext<C>> SlaacHandler<C> for SC {
     fn apply_slaac_update(
         &mut self,
         ctx: &mut C,
@@ -760,7 +760,9 @@ impl<C, SC: SlaacContext<C>> SlaacHandler<C> for SC {
     }
 }
 
-impl<C, SC: SlaacContext<C>> TimerHandler<C, SlaacTimerId<SC::DeviceId>> for SC {
+impl<C: SlaacNonSyncContext, SC: SlaacContext<C>> TimerHandler<C, SlaacTimerId<SC::DeviceId>>
+    for SC
+{
     fn handle_timer(
         &mut self,
         ctx: &mut C,
@@ -856,7 +858,7 @@ impl<'a, Instant> From<&'a SlaacConfig<Instant>> for SlaacType {
     }
 }
 
-fn set_deprecated_slaac_addr<C, SC: SlaacContext<C>>(
+fn set_deprecated_slaac_addr<C: SlaacNonSyncContext, SC: SlaacContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -943,7 +945,7 @@ fn desync_factor<R: RngCore>(
     })
 }
 
-fn regenerate_temporary_slaac_addr<C, SC: SlaacContext<C>>(
+fn regenerate_temporary_slaac_addr<C: SlaacNonSyncContext, SC: SlaacContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -1152,7 +1154,7 @@ fn generate_global_temporary_address(
     address
 }
 
-fn add_slaac_addr_sub<C, SC: SlaacContext<C>>(
+fn add_slaac_addr_sub<C: SlaacNonSyncContext, SC: SlaacContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -1213,7 +1215,7 @@ fn add_slaac_addr_sub<C, SC: SlaacContext<C>>(
                 }
             };
 
-            let per_attempt_random_seed = sync_ctx.rng_mut().next_u64();
+            let per_attempt_random_seed = ctx.rng_mut().next_u64();
             let dad_transmits = sync_ctx.dad_transmits(ctx, device_id);
 
             // Per RFC 8981 Section 3.4.4:
@@ -1266,7 +1268,7 @@ fn add_slaac_addr_sub<C, SC: SlaacContext<C>>(
             let valid_until = now.checked_add(valid_for.get()).unwrap();
 
             let desync_factor = if let Some(d) = desync_factor(
-                sync_ctx.rng_mut(),
+                ctx.rng_mut(),
                 temporary_address_config.temp_preferred_lifetime,
                 regen_advance,
             ) {
@@ -2332,7 +2334,7 @@ mod tests {
             }));
         let sync_ctx = &mut sync_ctx;
 
-        let mut dup_rng = sync_ctx.rng().clone();
+        let mut dup_rng = non_sync_ctx.rng().clone();
 
         struct AddrProps {
             desync_factor: Duration,

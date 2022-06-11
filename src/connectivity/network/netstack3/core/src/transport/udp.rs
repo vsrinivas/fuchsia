@@ -37,7 +37,7 @@ use thiserror::Error;
 
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId},
-    context::{CounterContext, DualStateContext, RngStateContext, RngStateContextExt},
+    context::{CounterContext, RngContext, StateContext},
     data_structures::{
         id_map::Entry as IdMapEntry,
         socketmap::{IterShadows as _, SocketMap, Tagged as _},
@@ -542,27 +542,27 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
 ///
 /// Attempts to allocate a new unused local port with the given flow identifier
 /// `id`.
-fn try_alloc_local_port<I: IpExt, C, SC: UdpStateContext<I, C>>(
+fn try_alloc_local_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     id: &ProtocolFlowId<I::Addr>,
 ) -> Option<NonZeroU16> {
-    let (state, rng) = sync_ctx.get_state_rng();
+    let state = sync_ctx.get_state_mut();
     // Lazily init port_alloc if it hasn't been inited yet.
-    let port_alloc = state.lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(rng));
+    let port_alloc = state.lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(ctx.rng_mut()));
     port_alloc.try_alloc(&id, &state.conn_state).and_then(NonZeroU16::new)
 }
 
 /// Helper function to allocate a listen port.
 ///
 /// Finds a random ephemeral port that is not in the provided `used_ports` set.
-fn try_alloc_listen_port<I: IpExt, C, SC: UdpStateContext<I, C>>(
-    sync_ctx: &mut SC,
-    _ctx: &mut C,
+fn try_alloc_listen_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+    _sync_ctx: &mut SC,
+    ctx: &mut C,
     used_ports: &HashSet<NonZeroU16>,
 ) -> Option<NonZeroU16> {
     let mut port = UdpConnectionState::<I, SC::DeviceId, IpSock<I, SC::DeviceId>>::rand_ephemeral(
-        sync_ctx.rng_mut(),
+        ctx.rng_mut(),
     );
     for _ in UdpConnectionState::<I, SC::DeviceId, IpSock<I, SC::DeviceId>>::EPHEMERAL_RANGE {
         // We can unwrap here because we know that the EPHEMERAL_RANGE doesn't
@@ -867,22 +867,26 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> UdpC
     }
 }
 
+/// The non-synchronized context for UDP.
+pub trait UdpStateNonSyncContext: RngContext {}
+impl<C: RngContext> UdpStateNonSyncContext for C {}
+
 /// An execution context for the UDP protocol which also provides access to state.
-pub trait UdpStateContext<I: IpExt, C>:
+pub trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext>:
     UdpContext<I>
     + CounterContext
     + TransportIpContext<I, C>
-    + RngStateContext<UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
+    + StateContext<UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
 {
 }
 
 impl<
         I: IpExt,
-        C,
+        C: UdpStateNonSyncContext,
         SC: UdpContext<I>
             + CounterContext
             + TransportIpContext<I, C>
-            + RngStateContext<UdpState<I, SC::DeviceId>>,
+            + StateContext<UdpState<I, SC::DeviceId>>,
     > UdpStateContext<I, C> for SC
 {
 }
@@ -986,7 +990,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: No
 
 /// An execution context for the UDP protocol when a buffer is provided which
 /// also provides access to state.
-pub trait BufferUdpStateContext<I: IpExt, C, B: BufferMut>:
+pub trait BufferUdpStateContext<I: IpExt, C: UdpStateNonSyncContext, B: BufferMut>:
     BufferUdpContext<I, B> + BufferTransportIpContext<I, C, B> + UdpStateContext<I, C>
 {
 }
@@ -994,16 +998,16 @@ pub trait BufferUdpStateContext<I: IpExt, C, B: BufferMut>:
 impl<
         I: IpExt,
         B: BufferMut,
-        C,
+        C: UdpStateNonSyncContext,
         SC: BufferUdpContext<I, B> + BufferTransportIpContext<I, C, B> + UdpStateContext<I, C>,
     > BufferUdpStateContext<I, C, B> for SC
 {
 }
 
 impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    DualStateContext<UdpState<I, DeviceId>, C::Rng> for SyncCtx<D, C, NonSyncCtx>
+    StateContext<UdpState<I, DeviceId>> for SyncCtx<D, C, NonSyncCtx>
 {
-    fn get_states_with(&self, _id0: (), _id1: ()) -> (&UdpState<I, DeviceId>, &C::Rng) {
+    fn get_state_with(&self, _id0: ()) -> &UdpState<I, DeviceId> {
         // Since `specialize_ip` doesn't support multiple trait bounds (ie, `I:
         // Ip + IpExt`) and requires that the single trait bound is named `Ip`,
         // introduce this trait - effectively an alias for `IpExt`.
@@ -1012,21 +1016,17 @@ impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncCon
         #[specialize_ip]
         fn get<I: Ip, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
             ctx: &SyncCtx<D, C, NonSyncCtx>,
-        ) -> (&UdpState<I, DeviceId>, &C::Rng) {
+        ) -> &UdpState<I, DeviceId> {
             #[ipv4]
-            return (&ctx.state.transport.udpv4, ctx.ctx.rng());
+            return &ctx.state.transport.udpv4;
             #[ipv6]
-            return (&ctx.state.transport.udpv6, ctx.ctx.rng());
+            return &ctx.state.transport.udpv6;
         }
 
         get(self)
     }
 
-    fn get_states_mut_with(
-        &mut self,
-        _id0: (),
-        _id1: (),
-    ) -> (&mut UdpState<I, DeviceId>, &mut C::Rng) {
+    fn get_state_mut_with(&mut self, _id0: ()) -> &mut UdpState<I, DeviceId> {
         // Since `specialize_ip` doesn't support multiple trait bounds (ie, `I:
         // Ip + IpExt`) and requires that the single trait bound is named `Ip`,
         // introduce this trait - effectively an alias for `IpExt`.
@@ -1035,11 +1035,11 @@ impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncCon
         #[specialize_ip]
         fn get<I: Ip, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
             ctx: &mut SyncCtx<D, C, NonSyncCtx>,
-        ) -> (&mut UdpState<I, DeviceId>, &mut C::Rng) {
+        ) -> &mut UdpState<I, DeviceId> {
             #[ipv4]
-            return (&mut ctx.state.transport.udpv4, ctx.ctx.rng_mut());
+            return &mut ctx.state.transport.udpv4;
             #[ipv6]
-            return (&mut ctx.state.transport.udpv6, ctx.ctx.rng_mut());
+            return &mut ctx.state.transport.udpv6;
         }
 
         get(self)
@@ -1049,7 +1049,7 @@ impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncCon
 /// An implementation of [`IpTransportContext`] for UDP.
 pub(crate) enum UdpIpTransportContext {}
 
-impl<I: IpExt, C, SC: UdpStateContext<I, C>> IpTransportContext<I, C, SC>
+impl<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>> IpTransportContext<I, C, SC>
     for UdpIpTransportContext
 {
     fn receive_icmp_error(
@@ -1077,7 +1077,7 @@ impl<I: IpExt, C, SC: UdpStateContext<I, C>> IpTransportContext<I, C, SC>
             (src_ip, udp_packet.src_port(), udp_packet.dst_port())
         {
             let receiver = sync_ctx
-                .get_first_state()
+                .get_state()
                 .conn_state
                 .lookup(src_ip, dst_ip, src_port, dst_port, device)
                 .next();
@@ -1097,7 +1097,7 @@ impl<I: IpExt, C, SC: UdpStateContext<I, C>> IpTransportContext<I, C, SC>
     }
 }
 
-impl<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, B>>
+impl<I: IpExt, B: BufferMut, C: UdpStateNonSyncContext, SC: BufferUdpStateContext<I, C, B>>
     BufferIpTransportContext<I, C, SC, B> for UdpIpTransportContext
 {
     fn receive_ip_packet(
@@ -1119,7 +1119,7 @@ impl<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, B>>
             return Ok(());
         };
 
-        let state = sync_ctx.get_first_state();
+        let state = sync_ctx.get_state();
 
         let recipients: Vec<LookupResult<_, _, _>> = SpecifiedAddr::new(src_ip)
             .and_then(|src_ip| {
@@ -1201,7 +1201,12 @@ pub enum UdpSendError {
 ///
 // TODO(brunodalbo): We may need more arguments here to express REUSEADDR and
 // BIND_TO_DEVICE options.
-pub fn send_udp<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, B>>(
+pub fn send_udp<
+    I: IpExt,
+    B: BufferMut,
+    C: UdpStateNonSyncContext,
+    SC: BufferUdpStateContext<I, C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -1256,13 +1261,18 @@ pub fn send_udp<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, B>>(
 /// # Panics
 ///
 /// Panics if `conn` is not a valid UDP connection identifier.
-pub fn send_udp_conn<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, B>>(
+pub fn send_udp_conn<
+    I: IpExt,
+    B: BufferMut,
+    C: UdpStateNonSyncContext,
+    SC: BufferUdpStateContext<I, C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     conn: UdpConnId<I>,
     body: B,
 ) -> Result<(), (B, IpSockSendError)> {
-    let state = sync_ctx.get_first_state();
+    let state = sync_ctx.get_state();
     let UdpConnectionState { ref bound } = state.conn_state;
     let ((ConnState { socket }, _sharing), addr) =
         bound.get_conn_by_id(&conn).expect("no such connection");
@@ -1311,7 +1321,12 @@ pub enum UdpSendListenerError {
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-pub fn send_udp_listener<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, B>>(
+pub fn send_udp_listener<
+    I: IpExt,
+    B: BufferMut,
+    C: UdpStateNonSyncContext,
+    SC: BufferUdpStateContext<I, C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     listener: UdpListenerId<I>,
@@ -1326,7 +1341,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I,
     //
     // Also, if the local IP address is a multicast address this function should
     // probably fail and `send_udp` must be used instead.
-    let state = sync_ctx.get_first_state();
+    let state = sync_ctx.get_state();
     let UdpConnectionState { ref bound } = state.conn_state;
     let (_, addr): &((ListenerState, PosixSharingOptions), _) =
         bound.get_listener_by_id(&listener).expect("specified listener not found");
@@ -1361,10 +1376,10 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I,
 /// `create_udp_unbound` creates a new unbound UDP socket and returns an
 /// identifier for it. The ID can be used to connect the socket to a remote
 /// address or to listen for incoming packets.
-pub fn create_udp_unbound<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn create_udp_unbound<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
 ) -> UdpUnboundId<I> {
-    let state = sync_ctx.get_first_state_mut();
+    let state = sync_ctx.get_state_mut();
     UdpUnboundId::new(state.unbound.push(UnboundSocketState::default()))
 }
 
@@ -1374,11 +1389,11 @@ pub fn create_udp_unbound<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// but not bound.
 ///
 /// # Panics if `id` is not a valid [`UdpUnboundId`].
-pub fn remove_udp_unbound<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn remove_udp_unbound<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     id: UdpUnboundId<I>,
 ) {
-    let state = sync_ctx.get_first_state_mut();
+    let state = sync_ctx.get_state_mut();
     let _: UnboundSocketState<_> = state.unbound.remove(id.into()).expect("invalid UDP unbound ID");
 }
 
@@ -1404,7 +1419,7 @@ pub fn remove_udp_unbound<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// `connect_udp` panics if `id` is not a valid [`UdpUnboundId`].
-pub fn connect_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpUnboundId<I>,
@@ -1415,7 +1430,7 @@ pub fn connect_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
     // First remove the unbound socket being promoted.
     let UdpState { conn_state: _, unbound, lazy_port_alloc: _, send_port_unreachable: _ } =
-        sync_ctx.get_first_state_mut();
+        sync_ctx.get_state_mut();
     let UnboundSocketState { device, sharing } =
         unbound.remove(id.into()).unwrap_or_else(|| panic!("unbound socket {:?} not found", id));
 
@@ -1423,7 +1438,7 @@ pub fn connect_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
         .map_err(|e| {
             assert_matches::assert_matches!(
                 sync_ctx
-                    .get_first_state_mut()
+                    .get_state_mut()
                     .unbound
                     .insert(id.into(), UnboundSocketState { device, sharing }),
                 None,
@@ -1434,7 +1449,7 @@ pub fn connect_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
         })
 }
 
-fn create_udp_conn<I: IpExt, C, SC: UdpStateContext<I, C>>(
+fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -1457,7 +1472,7 @@ fn create_udp_conn<I: IpExt, C, SC: UdpStateContext<I, C>>(
         try_alloc_local_port(sync_ctx, ctx, &ProtocolFlowId::new(local_ip, remote_ip, remote_port))
             .ok_or(UdpSockCreationError::CouldNotAllocateLocalPort)?
     };
-    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
 
     let c = ConnAddr {
         ip: ConnIpAddr { local_ip, local_identifier: local_port, remote: (remote_ip, remote_port) },
@@ -1473,17 +1488,14 @@ fn create_udp_conn<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// `set_unbound_udp_device` panics if `id` is not a valid [`UdpUnboundId`].
-pub fn set_unbound_udp_device<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn set_unbound_udp_device<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpUnboundId<I>,
     device_id: Option<SC::DeviceId>,
 ) {
-    let UnboundSocketState { ref mut device, sharing: _ } = sync_ctx
-        .get_first_state_mut()
-        .unbound
-        .get_mut(id.into())
-        .expect("unbound UDP socket not found");
+    let UnboundSocketState { ref mut device, sharing: _ } =
+        sync_ctx.get_state_mut().unbound.get_mut(id.into()).expect("unbound UDP socket not found");
     *device = device_id;
 }
 
@@ -1495,13 +1507,13 @@ pub fn set_unbound_udp_device<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// `set_bound_udp_device` panics if `id` is not a valid [`UdpBoundId`].
-pub fn set_bound_udp_device<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpBoundId<I>,
     device_id: Option<SC::DeviceId>,
 ) -> Result<(), LocalAddressError> {
-    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
     match id {
         UdpBoundId::Listening(id) => bound
             .try_update_listener_addr(&id, |ListenerAddr { ip, device: _ }| ListenerAddr {
@@ -1523,22 +1535,19 @@ pub fn set_bound_udp_device<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// Panics if `id` is not a valid socket ID.
-pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C>(
+pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonSyncContext>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpSocketId<I>,
 ) -> Option<SC::DeviceId> {
     match id {
         UdpSocketId::Unbound(id) => {
-            let UnboundSocketState { device, sharing: _ } = sync_ctx
-                .get_first_state()
-                .unbound
-                .get(id.into())
-                .expect("unbound UDP socket not found");
+            let UnboundSocketState { device, sharing: _ } =
+                sync_ctx.get_state().unbound.get(id.into()).expect("unbound UDP socket not found");
             *device
         }
         UdpSocketId::Bound(id) => {
-            let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
+            let UdpConnectionState { ref bound } = sync_ctx.get_state().conn_state;
             match id {
                 UdpBoundId::Listening(id) => {
                     let (_, addr): &((ListenerState, PosixSharingOptions), _) =
@@ -1562,13 +1571,13 @@ pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C>(
 /// # Panics
 ///
 /// `set_udp_posix_reuse_port` panics if `id` is not a valid `UdpUnboundId`.
-pub fn set_udp_posix_reuse_port<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn set_udp_posix_reuse_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpUnboundId<I>,
     reuse_port: bool,
 ) {
-    let unbound = &mut sync_ctx.get_first_state_mut().unbound;
+    let unbound = &mut sync_ctx.get_state_mut().unbound;
     let UnboundSocketState { device: _, sharing } =
         unbound.get_mut(id.into()).expect("unbound UDP socket not found");
     *sharing =
@@ -1580,20 +1589,20 @@ pub fn set_udp_posix_reuse_port<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// Panics if `id` is not a valid `UdpSocketId`.
-pub fn get_udp_posix_reuse_port<I: IpExt, SC: UdpStateContext<I, C>, C>(
+pub fn get_udp_posix_reuse_port<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonSyncContext>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpSocketId<I>,
 ) -> bool {
     match id {
         UdpSocketId::Unbound(id) => {
-            let unbound = &sync_ctx.get_first_state().unbound;
+            let unbound = &sync_ctx.get_state().unbound;
             let UnboundSocketState { device: _, sharing } =
                 unbound.get(id.into()).expect("unbound UDP socket not found");
             sharing
         }
         UdpSocketId::Bound(id) => {
-            let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
+            let UdpConnectionState { ref bound } = sync_ctx.get_state().conn_state;
             match id {
                 UdpBoundId::Listening(id) => {
                     let (state, _): &(_, ListenerAddr<_>) =
@@ -1621,12 +1630,12 @@ pub fn get_udp_posix_reuse_port<I: IpExt, SC: UdpStateContext<I, C>, C>(
 /// # Panics
 ///
 /// `remove_udp_conn` panics if `id` is not a valid `UdpConnId`.
-pub fn remove_udp_conn<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn remove_udp_conn<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
     let (_state, addr) = bound.remove_conn_by_id(id.into()).expect("UDP connection not found");
     let ConnAddr { ip, device: _ } = addr;
     ip.clone().into()
@@ -1637,12 +1646,12 @@ pub fn remove_udp_conn<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpConnId`.
-pub fn get_udp_conn_info<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
+    let UdpConnectionState { ref bound } = sync_ctx.get_state().conn_state;
     let (_state, addr) = bound.get_conn_by_id(&id).expect("UDP connection not found");
     let ConnAddr { ip, device: _ } = addr;
     ip.clone().into()
@@ -1664,7 +1673,7 @@ pub fn get_udp_conn_info<I: IpExt, C, SC: UdpStateContext<I, C>>(
 ///
 /// `listen_udp` panics if `listener` is already in use, or if `id` is not a
 /// valid [`UdpUnboundId`].
-pub fn listen_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpUnboundId<I>,
@@ -1680,7 +1689,7 @@ pub fn listen_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
         Some(p) => p,
         None => {
             let used_ports = &mut sync_ctx
-                .get_first_state_mut()
+                .get_state_mut()
                 .conn_state
                 .collect_used_local_ports(addr.as_ref().into_iter());
             try_alloc_listen_port(sync_ctx, ctx, &used_ports)
@@ -1688,7 +1697,7 @@ pub fn listen_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
         }
     };
     let UdpState { unbound, conn_state, lazy_port_alloc: _, send_port_unreachable: _ } =
-        sync_ctx.get_first_state_mut();
+        sync_ctx.get_state_mut();
     let unbound_entry = match unbound.entry(id.into()) {
         IdMapEntry::Vacant(_) => panic!("unbound ID {:?} is invalid", id),
         IdMapEntry::Occupied(o) => o,
@@ -1717,12 +1726,12 @@ pub fn listen_udp<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// `remove_listener` panics if `id` is not a valid `UdpListenerId`.
-pub fn remove_udp_listener<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
     let (_state, addr) = bound.remove_listener_by_id(id).expect("Invalid UDP listener ID");
     addr.into()
 }
@@ -1733,12 +1742,12 @@ pub fn remove_udp_listener<I: IpExt, C, SC: UdpStateContext<I, C>>(
 /// # Panics
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpListenerId`.
-pub fn get_udp_listener_info<I: IpExt, C, SC: UdpStateContext<I, C>>(
+pub fn get_udp_listener_info<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
+    let UdpConnectionState { ref bound } = sync_ctx.get_state().conn_state;
     let (_, addr): &((ListenerState, PosixSharingOptions), _) =
         bound.get_listener_by_id(&id).expect("UDP listener not found");
     addr.clone().into()
@@ -1776,7 +1785,6 @@ mod tests {
         ipv4::{Ipv4Header, Ipv4PacketRaw},
         ipv6::{Ipv6Header, Ipv6PacketRaw},
     };
-    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
@@ -1792,7 +1800,7 @@ mod tests {
             },
             DummyDeviceId, SendIpPacketMeta,
         },
-        testutil::{assert_empty, set_logger_for_test, FakeCryptoRng, TestIpExt as _},
+        testutil::{assert_empty, set_logger_for_test, TestIpExt as _},
     };
 
     /// The listener data sent through a [`DummyUdpCtx`].
@@ -1952,27 +1960,15 @@ mod tests {
     }
 
     impl<I: TestIpExt, D: IpDeviceId + 'static>
-        DualStateContext<
-            UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>,
-            FakeCryptoRng<XorShiftRng>,
-        > for DummyDeviceSyncCtx<I, D>
+        StateContext<UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
+        for DummyDeviceSyncCtx<I, D>
     {
-        fn get_states_with(
-            &self,
-            _id0: (),
-            _id1: (),
-        ) -> (&UdpState<I, D>, &FakeCryptoRng<XorShiftRng>) {
-            let (state, rng): (&DummyUdpCtx<I, D>, _) = self.get_states();
-            (&state.state, rng)
+        fn get_state_with(&self, _id0: ()) -> &UdpState<I, D> {
+            &self.get_ref().state
         }
 
-        fn get_states_mut_with(
-            &mut self,
-            _id0: (),
-            _id1: (),
-        ) -> (&mut UdpState<I, D>, &mut FakeCryptoRng<XorShiftRng>) {
-            let (state, rng): (&mut DummyUdpCtx<I, D>, _) = self.get_states_mut();
-            (&mut state.state, rng)
+        fn get_state_mut_with(&mut self, _id0: ()) -> &mut UdpState<I, D> {
+            &mut self.get_mut().state
         }
     }
 
@@ -2515,7 +2511,7 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
 
-        fn connect_unbound<I: Ip + TestIpExt, C>(
+        fn connect_unbound<I: Ip + TestIpExt, C: UdpStateNonSyncContext>(
             sync_ctx: &mut impl UdpStateContext<I, C>,
             non_sync_ctx: &mut C,
             unbound: UdpUnboundId<I>,
@@ -2565,7 +2561,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_empty(
-            DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
+            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -2585,7 +2581,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_empty(
-            DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
+            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -2661,7 +2657,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_empty(
-            DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
+            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -2688,7 +2684,7 @@ mod tests {
         // UDP connection count should be zero before and after `send_udp` call
         // (even in the case of errors).
         assert_empty(
-            DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
+            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -3616,8 +3612,7 @@ mod tests {
         );
 
         let conn_state =
-            &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
-                .conn_state;
+            &StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
 
         // Collect all used local ports.
         assert_eq!(
@@ -3651,7 +3646,7 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
 
-        fn listen_unbound<I: Ip + TestIpExt, C>(
+        fn listen_unbound<I: Ip + TestIpExt, C: UdpStateNonSyncContext>(
             sync_ctx: &mut impl UdpStateContext<I, C>,
             non_sync_ctx: &mut C,
             unbound: UdpUnboundId<I>,
@@ -3708,8 +3703,7 @@ mod tests {
                 .expect("listen_udp failed");
 
         let conn_state =
-            &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
-                .conn_state;
+            &StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
         let wildcard_port = assert_matches!(conn_state.bound.get_listener_by_id(&wildcard_list),
             Some((
                 (ListenerState, _),
@@ -3748,8 +3742,7 @@ mod tests {
             device: None,
         };
         let conn_state =
-            &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
-                .conn_state;
+            &StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
         for listener in listeners {
             assert_matches!(conn_state.bound.get_listener_by_id(&listener),
                 Some(((ListenerState, _), addr)) => assert_eq!(addr, &expected_addr));
@@ -3817,7 +3810,7 @@ mod tests {
         // Assert that that connection id was removed from the connections
         // state.
         assert_eq!(
-            DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
+            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
                 .get_conn_by_id(&conn),
@@ -3850,7 +3843,7 @@ mod tests {
         assert_eq!(info.local_ip.unwrap(), local_ip);
         assert_eq!(info.local_port, local_port);
         assert_eq!(
-            DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
+            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
                 .get_listener_by_id(&list),
@@ -3871,7 +3864,7 @@ mod tests {
         assert_eq!(info.local_ip, None);
         assert_eq!(info.local_port, local_port);
         assert_eq!(
-            DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&sync_ctx)
+            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
                 .get_listener_by_id(&list),
@@ -4113,13 +4106,12 @@ mod tests {
         let unbound = create_udp_unbound(&mut sync_ctx);
         remove_udp_unbound(&mut sync_ctx, unbound);
 
-        let (udp_state, _rng): (_, &FakeCryptoRng<_>) = sync_ctx.get_states();
         let UdpState {
             conn_state: _,
             unbound: unbound_sockets,
             lazy_port_alloc: _,
             send_port_unreachable: _,
-        } = udp_state;
+        } = &sync_ctx.get_ref().state;
         assert_eq!(unbound_sockets.get(unbound.into()), None)
     }
 

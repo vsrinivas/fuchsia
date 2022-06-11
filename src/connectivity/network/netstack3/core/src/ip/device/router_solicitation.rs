@@ -77,21 +77,18 @@ pub(super) trait Ipv6LayerRsContext<C>: IpDeviceIdContext<Ipv6> {
     ) -> Result<(), S>;
 }
 
+pub(super) trait RsNonSyncContext: RngContext {}
+impl<C: RngContext> RsNonSyncContext for C {}
+
 /// The execution context for RS
-pub(super) trait RsContext<C>:
-    Ipv6DeviceRsContext<C>
-    + Ipv6LayerRsContext<C>
-    + TimerContext<RsTimerId<Self::DeviceId>>
-    + RngContext
+pub(super) trait RsContext<C: RsNonSyncContext>:
+    Ipv6DeviceRsContext<C> + Ipv6LayerRsContext<C> + TimerContext<RsTimerId<Self::DeviceId>>
 {
 }
 
 impl<
-        C,
-        SC: Ipv6DeviceRsContext<C>
-            + Ipv6LayerRsContext<C>
-            + TimerContext<RsTimerId<SC::DeviceId>>
-            + RngContext,
+        C: RsNonSyncContext,
+        SC: Ipv6DeviceRsContext<C> + Ipv6LayerRsContext<C> + TimerContext<RsTimerId<SC::DeviceId>>,
     > RsContext<C> for SC
 {
 }
@@ -111,8 +108,8 @@ pub(crate) trait RsHandler<C>: IpDeviceIdContext<Ipv6> {
     fn handle_timer(&mut self, ctx: &mut C, id: RsTimerId<Self::DeviceId>);
 }
 
-impl<C, SC: RsContext<C>> RsHandler<C> for SC {
-    fn start_router_solicitation(&mut self, _ctx: &mut C, device_id: Self::DeviceId) {
+impl<C: RsNonSyncContext, SC: RsContext<C>> RsHandler<C> for SC {
+    fn start_router_solicitation(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
         let max_router_solicitations = self.get_max_router_solicitations(device_id);
         *self.get_router_soliciations_remaining_mut(device_id) = max_router_solicitations;
 
@@ -124,7 +121,7 @@ impl<C, SC: RsContext<C>> RsHandler<C> for SC {
                 // alleviate congestion when many hosts start up on a link at the same
                 // time.
                 let delay =
-                    self.rng_mut().gen_range(Duration::new(0, 0)..MAX_RTR_SOLICITATION_DELAY);
+                    ctx.rng_mut().gen_range(Duration::new(0, 0)..MAX_RTR_SOLICITATION_DELAY);
                 assert_eq!(self.schedule_timer(delay, RsTimerId { device_id },), None);
             }
         }
@@ -140,7 +137,7 @@ impl<C, SC: RsContext<C>> RsHandler<C> for SC {
 }
 
 /// Solicit routers once and schedule next message.
-fn do_router_solicitation<C, SC: RsContext<C>>(
+fn do_router_solicitation<C: RsNonSyncContext, SC: RsContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,

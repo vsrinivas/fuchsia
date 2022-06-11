@@ -33,8 +33,8 @@ use zerocopy::ByteSlice;
 
 use crate::{
     context::{
-        CounterContext, DualStateContext, EventContext, FrameContext, InstantContext,
-        NonTestCtxMarker, RecvFrameContext, RngContext, TimerContext,
+        CounterContext, EventContext, FrameContext, InstantContext, NonTestCtxMarker,
+        RecvFrameContext, StateContext, TimerContext,
     },
     data_structures::{IdMap, IdMapCollectionKey},
     device::{
@@ -86,10 +86,8 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 pub(crate) trait IpLinkDeviceContext<D: LinkDevice, C, TimerId>:
     DeviceIdContext<D>
     + CounterContext
-    + RngContext
-    + DualStateContext<
+    + StateContext<
         IpLinkDeviceState<<Self as InstantContext>::Instant, D::State>,
-        <Self as RngContext>::Rng,
         <Self as DeviceIdContext<D>>::DeviceId,
     > + TimerContext<TimerId>
     + FrameContext<C, EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
@@ -104,10 +102,8 @@ impl<
         SC: NonTestCtxMarker
             + DeviceIdContext<D>
             + CounterContext
-            + RngContext
-            + DualStateContext<
+            + StateContext<
                 IpLinkDeviceState<<Self as InstantContext>::Instant, D::State>,
-                <Self as RngContext>::Rng,
                 <Self as DeviceIdContext<D>>::DeviceId,
             > + TimerContext<TimerId>
             + FrameContext<C, EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
@@ -181,23 +177,21 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: No
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    DualStateContext<IpLinkDeviceState<C::Instant, EthernetDeviceState>, C::Rng, EthernetDeviceId>
+    StateContext<IpLinkDeviceState<C::Instant, EthernetDeviceState>, EthernetDeviceId>
     for SyncCtx<D, C, NonSyncCtx>
 {
-    fn get_states_with(
+    fn get_state_with(
         &self,
         id0: EthernetDeviceId,
-        _id1: (),
-    ) -> (&IpLinkDeviceState<C::Instant, EthernetDeviceState>, &C::Rng) {
-        (&self.state.device.ethernet.get(id0.0).unwrap(), self.ctx.rng())
+    ) -> &IpLinkDeviceState<C::Instant, EthernetDeviceState> {
+        &self.state.device.ethernet.get(id0.0).unwrap()
     }
 
-    fn get_states_mut_with(
+    fn get_state_mut_with(
         &mut self,
         id0: EthernetDeviceId,
-        _id1: (),
-    ) -> (&mut IpLinkDeviceState<C::Instant, EthernetDeviceState>, &mut C::Rng) {
-        (self.state.device.ethernet.get_mut(id0.0).unwrap(), self.ctx.rng_mut())
+    ) -> &mut IpLinkDeviceState<C::Instant, EthernetDeviceState> {
+        self.state.device.ethernet.get_mut(id0.0).unwrap()
     }
 }
 
@@ -213,22 +207,20 @@ fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 }
 
-fn get_ip_device_state_mut_and_rng<
+fn get_ip_device_state_mut<
     D: EventDispatcher,
     C: BlanketCoreContext,
     NonSyncCtx: NonSyncContext,
 >(
     ctx: &mut SyncCtx<D, C, NonSyncCtx>,
     device: DeviceId,
-) -> (&mut DualStackIpDeviceState<C::Instant>, &mut C::Rng) {
-    let state = match device.inner() {
+) -> &mut DualStackIpDeviceState<C::Instant> {
+    match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
             &mut ctx.state.device.ethernet.get_mut(id).unwrap().ip
         }
         DeviceIdInner::Loopback => &mut ctx.state.device.loopback.as_mut().unwrap().ip,
-    };
-
-    (state, ctx.ctx.rng_mut())
+    }
 }
 
 fn iter_devices<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
@@ -313,12 +305,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
         &get_ip_device_state(self, device).ipv4
     }
 
-    fn get_ip_device_state_mut_and_rng(
-        &mut self,
-        device: DeviceId,
-    ) -> (&mut Ipv4DeviceState<Self::Instant>, &mut C::Rng) {
-        let (state, rng) = get_ip_device_state_mut_and_rng(self, device);
-        (&mut state.ipv4, rng)
+    fn get_ip_device_state_mut(&mut self, device: DeviceId) -> &mut Ipv4DeviceState<Self::Instant> {
+        &mut get_ip_device_state_mut(self, device).ipv4
     }
 
     fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {
@@ -391,12 +379,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
         &get_ip_device_state(self, device).ipv6
     }
 
-    fn get_ip_device_state_mut_and_rng(
-        &mut self,
-        device: DeviceId,
-    ) -> (&mut Ipv6DeviceState<Self::Instant>, &mut C::Rng) {
-        let (state, rng) = get_ip_device_state_mut_and_rng(self, device);
-        (&mut state.ipv6, rng)
+    fn get_ip_device_state_mut(&mut self, device: DeviceId) -> &mut Ipv6DeviceState<Self::Instant> {
+        &mut get_ip_device_state_mut(self, device).ipv6
     }
 
     fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {

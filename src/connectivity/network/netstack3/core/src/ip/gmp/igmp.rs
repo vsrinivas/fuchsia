@@ -62,12 +62,14 @@ impl<D> IgmpPacketMetadata<D> {
     }
 }
 
+pub(crate) trait IgmpNonSyncContext: RngContext {}
+impl<C: RngContext> IgmpNonSyncContext for C {}
+
 /// The execution context for the Internet Group Management Protocol (IGMP).
-pub(crate) trait IgmpContext<C>:
+pub(crate) trait IgmpContext<C: IgmpNonSyncContext>:
     IpDeviceIdContext<Ipv4>
     + TimerContext<IgmpTimerId<Self::DeviceId>>
     + FrameContext<C, EmptyBuf, IgmpPacketMetadata<Self::DeviceId>>
-    + RngContext
 {
     /// Gets an IP address and subnet associated with this device.
     fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
@@ -80,23 +82,11 @@ pub(crate) trait IgmpContext<C>:
     /// will be installed, and no outbound IGMP traffic will be generated.
     fn igmp_enabled(&self, device: Self::DeviceId) -> bool;
 
-    /// Gets mutable access to the device's IGMP state and RNG.
-    fn get_state_mut_and_rng(
-        &mut self,
-        device: Self::DeviceId,
-    ) -> (
-        &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>,
-        &mut Self::Rng,
-    );
-
     /// Gets mutable access to the device's IGMP state.
     fn get_state_mut(
         &mut self,
         device: Self::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>> {
-        let (state, _rng): (_, &mut Self::Rng) = self.get_state_mut_and_rng(device);
-        state
-    }
+    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>;
 
     /// Gets immutable access to the device's IGMP state.
     fn get_state(
@@ -105,7 +95,7 @@ pub(crate) trait IgmpContext<C>:
     ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>;
 }
 
-impl<C, SC: IgmpContext<C>> GmpHandler<Ipv4, C> for SC {
+impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> GmpHandler<Ipv4, C> for SC {
     fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
         gmp_handle_maybe_enabled(self, ctx, device)
     }
@@ -148,7 +138,9 @@ pub(crate) trait IgmpPacketHandler<C, DeviceId, B: BufferMut> {
     );
 }
 
-impl<C, SC: IgmpContext<C>, B: BufferMut> IgmpPacketHandler<C, SC::DeviceId, B> for SC {
+impl<C: IgmpNonSyncContext, SC: IgmpContext<C>, B: BufferMut> IgmpPacketHandler<C, SC::DeviceId, B>
+    for SC
+{
     fn receive_igmp_packet(
         &mut self,
         ctx: &mut C,
@@ -216,7 +208,7 @@ impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> GmpMessage<Ipv4>
     }
 }
 
-impl<C, SC: IgmpContext<C>> GmpContext<Ipv4, C, Igmpv2ProtocolSpecific> for SC {
+impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> GmpContext<Ipv4, C, Igmpv2ProtocolSpecific> for SC {
     type Err = IgmpError;
     type GroupState = IgmpGroupState<Self::Instant>;
 
@@ -285,11 +277,11 @@ impl<C, SC: IgmpContext<C>> GmpContext<Ipv4, C, Igmpv2ProtocolSpecific> for SC {
         Self::Err::NotAMember { addr }
     }
 
-    fn get_state_mut_and_rng(
+    fn get_state_mut(
         &mut self,
         device: SC::DeviceId,
-    ) -> (&mut MulticastGroupSet<Ipv4Addr, Self::GroupState>, &mut Self::Rng) {
-        self.get_state_mut_and_rng(device)
+    ) -> &mut MulticastGroupSet<Ipv4Addr, Self::GroupState> {
+        self.get_state_mut(device)
     }
 
     fn get_state(&self, device: SC::DeviceId) -> &MulticastGroupSet<Ipv4Addr, Self::GroupState> {
@@ -340,7 +332,7 @@ impl<DeviceId> IgmpTimerId<DeviceId> {
     }
 }
 
-impl<C, SC: IgmpContext<C>> TimerHandler<C, IgmpTimerId<SC::DeviceId>> for SC {
+impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> TimerHandler<C, IgmpTimerId<SC::DeviceId>> for SC {
     fn handle_timer(&mut self, ctx: &mut C, timer: IgmpTimerId<SC::DeviceId>) {
         match timer {
             IgmpTimerId::Gmp(id) => gmp_handle_timer(self, ctx, id),
@@ -353,7 +345,7 @@ impl<C, SC: IgmpContext<C>> TimerHandler<C, IgmpTimerId<SC::DeviceId>> for SC {
     }
 }
 
-fn send_igmp_message<C, SC: IgmpContext<C>, M>(
+fn send_igmp_message<C: IgmpNonSyncContext, SC: IgmpContext<C>, M>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -543,15 +535,11 @@ mod tests {
         igmp::messages::IgmpMembershipQueryV2,
         testutil::{parse_ip_packet, parse_ip_packet_in_ethernet_frame},
     };
-    use rand_xorshift::XorShiftRng;
     use test_case::test_case;
 
     use super::*;
     use crate::{
-        context::{
-            testutil::{DummyInstant, DummyTimerCtxExt},
-            DualStateContext,
-        },
+        context::testutil::{DummyInstant, DummyTimerCtxExt},
         ip::{
             gmp::{
                 MemberState, QueryReceivedActions, ReportReceivedActions, ReportTimerExpiredActions,
@@ -560,7 +548,7 @@ mod tests {
         },
         testutil::{
             assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcher,
-            DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _,
+            DummyEventDispatcherConfig, TestIpExt as _,
         },
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
@@ -611,23 +599,18 @@ mod tests {
             self.get_ref().igmp_enabled
         }
 
-        fn get_state_mut_and_rng(
+        fn get_state_mut(
             &mut self,
-            _id0: DummyDeviceId,
-        ) -> (
-            &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
-            &mut FakeCryptoRng<XorShiftRng>,
-        ) {
-            let (state, rng) = self.get_states_mut();
-            (&mut state.groups, rng)
+            DummyDeviceId: DummyDeviceId,
+        ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>> {
+            &mut self.get_mut().groups
         }
 
         fn get_state(
             &self,
             DummyDeviceId: DummyDeviceId,
         ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>> {
-            let (state, _rng) = self.get_states();
-            &state.groups
+            &self.get_ref().groups
         }
     }
 
@@ -760,7 +743,7 @@ mod tests {
         a: Option<AddrSubnet<Ipv4Addr>>,
     ) -> DummyCtx {
         let mut ctx = DummyCtx::with_sync_ctx(DummySyncCtx::default());
-        ctx.sync_ctx.seed_rng(seed);
+        ctx.non_sync_ctx.seed_rng(seed);
         ctx.sync_ctx.get_mut().addr_subnet = a;
         ctx
     }
@@ -1104,7 +1087,7 @@ mod tests {
 
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
                 DummyCtx::with_sync_ctx(DummySyncCtx::default());
-            sync_ctx.seed_rng(seed);
+            non_sync_ctx.seed_rng(seed);
             sync_ctx.get_mut().igmp_enabled = false;
 
             // Assert that no observable effects have taken place.

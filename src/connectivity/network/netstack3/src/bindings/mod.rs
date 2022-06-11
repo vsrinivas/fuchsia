@@ -142,9 +142,9 @@ impl DeviceStatusNotifier for BindingsDispatcher {
 
 /// Provides an implementation of [`NonSyncContext`].
 #[derive(Default)]
-pub(crate) struct BindingsNonSyncCtxImpl;
-
-impl NonSyncContext for BindingsNonSyncCtxImpl {}
+pub(crate) struct BindingsNonSyncCtxImpl {
+    rng: OsRng,
+}
 
 /// Provides context implementations which satisfy [`BlanketCoreContext`].
 ///
@@ -152,7 +152,6 @@ impl NonSyncContext for BindingsNonSyncCtxImpl {}
 #[derive(Default)]
 pub(crate) struct BindingsContextImpl {
     timers: timers::TimerDispatcher<TimerId>,
-    rng: OsRng,
 }
 
 impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsContextImpl {
@@ -280,7 +279,7 @@ impl InstantContext for BindingsContextImpl {
     }
 }
 
-impl RngContext for BindingsContextImpl {
+impl RngContext for BindingsNonSyncCtxImpl {
     type Rng = OsRng;
 
     fn rng(&self) -> &OsRng {
@@ -802,7 +801,7 @@ impl NetstackSeed {
             let SyncCtx {
                 state: _,
                 dispatcher: BindingsDispatcher { devices: _, icmp_echo_sockets: _, udp_sockets: _ },
-                ctx: BindingsContextImpl { rng: _, timers },
+                ctx: BindingsContextImpl { timers },
                 non_sync_ctx_marker: _,
             } = sync_ctx;
             timers.spawn(netstack.clone());

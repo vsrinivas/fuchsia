@@ -47,7 +47,8 @@ use specialize_ip_macro::specialize_ip;
 
 use crate::{
     context::{
-        CounterContext, EventContext, InstantContext, NonTestCtxMarker, StateContext, TimerHandler,
+        CounterContext, EventContext, InstantContext, NonTestCtxMarker, RngContext, StateContext,
+        TimerHandler,
     },
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
@@ -55,6 +56,7 @@ use crate::{
         device::{
             get_ipv4_device_state, get_ipv6_device_state, iter_ipv4_devices, iter_ipv6_devices,
             state::{AssignedAddress as _, IpDeviceState},
+            IpDeviceNonSyncContext,
         },
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
@@ -261,8 +263,8 @@ trait IpTransportLayerContext<I: IpExt, C>: IpDeviceIdContext<I> {
     type Udp: IpTransportContext<I, C, Self>;
 }
 
-impl<I: IpExt, C, SC: crate::transport::udp::UdpStateContext<I, C>> IpTransportLayerContext<I, C>
-    for SC
+impl<I: IpExt, C: RngContext, SC: crate::transport::udp::UdpStateContext<I, C>>
+    IpTransportLayerContext<I, C> for SC
 {
     type Tcp = ();
     type Udp = crate::transport::udp::UdpIpTransportContext;
@@ -274,7 +276,7 @@ trait BufferIpTransportLayerContext<I: IpExt, C, B: BufferMut>: IpTransportLayer
     type Udp: BufferIpTransportContext<I, C, Self, B>;
 }
 
-impl<I: IpExt, B: BufferMut, C, SC: IpTransportLayerContext<I, C>>
+impl<I: IpExt, B: BufferMut, C: RngContext, SC: IpTransportLayerContext<I, C>>
     BufferIpTransportLayerContext<I, C, B> for SC
 where
     SC::Tcp: BufferIpTransportContext<I, C, SC, B>,
@@ -468,8 +470,8 @@ impl<
 {
 }
 
-impl<C, SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C>> IpSocketContext<Ipv4, C>
-    for SC
+impl<C: IpDeviceNonSyncContext, SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C>>
+    IpSocketContext<Ipv4, C> for SC
 {
     fn lookup_route(
         &self,
@@ -527,8 +529,8 @@ impl<C, SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C>> IpSocket
     }
 }
 
-impl<C, SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>> IpSocketContext<Ipv6, C>
-    for SC
+impl<C: IpDeviceNonSyncContext, SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>>
+    IpSocketContext<Ipv6, C> for SC
 {
     fn lookup_route(
         &self,

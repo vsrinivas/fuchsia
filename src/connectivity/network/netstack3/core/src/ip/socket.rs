@@ -16,7 +16,7 @@ use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
 use thiserror::Error;
 
 use crate::{
-    context::{CounterContext, InstantContext, RngContext},
+    context::{CounterContext, InstantContext},
     ip::{
         device::state::{IpDeviceStateIpExt, Ipv6AddressEntry},
         forwarding::Destination,
@@ -341,7 +341,7 @@ pub(super) struct IpSockRoute<I: Ip, D> {
 /// Blanket impls of `IpSocketHandler` are provided in terms of
 /// `IpSocketContext`.
 pub(super) trait IpSocketContext<I, C>:
-    IpDeviceIdContext<I> + InstantContext + CounterContext + RngContext
+    IpDeviceIdContext<I> + InstantContext + CounterContext
 where
     I: IpDeviceStateIpExt<<Self as InstantContext>::Instant>,
 {

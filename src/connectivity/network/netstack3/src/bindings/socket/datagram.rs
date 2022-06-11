@@ -41,7 +41,7 @@ use netstack3_core::{
     IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError,
     LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId,
     UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-    UdpSockCreationError, UdpSocketId, UdpStateContext, UdpUnboundId,
+    UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -343,7 +343,9 @@ impl OptionFromU16 for NonZeroU16 {
     }
 }
 
-impl<I: IpExt, C, SC: UdpStateContext<I, C>> TransportState<I, C, SC> for Udp {
+impl<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>> TransportState<I, C, SC>
+    for Udp
+{
     type CreateConnError = UdpSockCreationError;
     type CreateListenerError = LocalAddressError;
     type SetSocketDeviceError = LocalAddressError;
@@ -456,7 +458,7 @@ impl<I: IpExt, C, SC: UdpStateContext<I, C>> TransportState<I, C, SC> for Udp {
     }
 }
 
-impl<I: IpExt, B: BufferMut, C, SC: BufferUdpStateContext<I, C, B>>
+impl<I: IpExt, B: BufferMut, C: UdpStateNonSyncContext, SC: BufferUdpStateContext<I, C, B>>
     BufferTransportState<I, B, C, SC> for Udp
 {
     type SendError = UdpSendError;

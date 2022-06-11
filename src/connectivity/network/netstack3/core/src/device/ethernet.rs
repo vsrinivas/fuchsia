@@ -28,7 +28,7 @@ use packet_formats::{
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::{
-    context::{DualStateContext, FrameContext, InstantContext, RngContext, StateContext},
+    context::{FrameContext, InstantContext, RngContext, StateContext},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
         arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
@@ -58,8 +58,11 @@ impl From<Mac> for FrameDestination {
     }
 }
 
+pub(crate) trait EthernetIpLinkDeviceNonSyncContext: RngContext {}
+impl<C: RngContext> EthernetIpLinkDeviceNonSyncContext for C {}
+
 /// The execution context for an Ethernet device.
-pub(crate) trait EthernetIpLinkDeviceContext<C>:
+pub(crate) trait EthernetIpLinkDeviceContext<C: EthernetIpLinkDeviceNonSyncContext>:
     IpLinkDeviceContext<
     EthernetLinkDevice,
     C,
@@ -142,7 +145,10 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
 
 /// A shorthand for `BufferIpLinkDeviceContext` with all of the appropriate type
 /// arguments fixed to their Ethernet values.
-pub(super) trait BufferEthernetIpLinkDeviceContext<C, B: BufferMut>:
+pub(super) trait BufferEthernetIpLinkDeviceContext<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    B: BufferMut,
+>:
     EthernetIpLinkDeviceContext<C>
     + BufferIpLinkDeviceContext<
         EthernetLinkDevice,
@@ -154,7 +160,7 @@ pub(super) trait BufferEthernetIpLinkDeviceContext<C, B: BufferMut>:
 }
 
 impl<
-        C,
+        C: EthernetIpLinkDeviceNonSyncContext,
         B: BufferMut,
         SC: EthernetIpLinkDeviceContext<C>
             + BufferIpLinkDeviceContext<
@@ -317,7 +323,10 @@ impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
 }
 
 /// Handle an Ethernet timer firing.
-pub(super) fn handle_timer<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn handle_timer<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: EthernetTimerId<SC::DeviceId>,
@@ -355,7 +364,7 @@ impl_timer_context!(
 #[specialize_ip_address]
 pub(super) fn send_ip_frame<
     B: BufferMut,
-    C,
+    C: EthernetIpLinkDeviceNonSyncContext,
     SC: EthernetIpLinkDeviceContext<C>
         + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     A: IpAddress,
@@ -430,7 +439,11 @@ pub(super) fn send_ip_frame<
 }
 
 /// Receive an Ethernet frame from the network.
-pub(super) fn receive_frame<C, B: BufferMut, SC: BufferEthernetIpLinkDeviceContext<C, B>>(
+pub(super) fn receive_frame<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    B: BufferMut,
+    SC: BufferEthernetIpLinkDeviceContext<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -493,7 +506,10 @@ pub(super) fn receive_frame<C, B: BufferMut, SC: BufferEthernetIpLinkDeviceConte
 }
 
 /// Set the promiscuous mode flag on `device_id`.
-pub(super) fn set_promiscuous_mode<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn set_promiscuous_mode<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -517,7 +533,10 @@ pub(super) fn set_promiscuous_mode<C, SC: EthernetIpLinkDeviceContext<C>>(
 /// `join_link_multicast` is different from [`join_ip_multicast`] as
 /// `join_link_multicast` joins an L2 multicast group, whereas
 /// `join_ip_multicast` joins an L3 multicast group.
-pub(super) fn join_link_multicast<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn join_link_multicast<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -558,7 +577,10 @@ pub(super) fn join_link_multicast<C, SC: EthernetIpLinkDeviceContext<C>>(
 /// # Panics
 ///
 /// If `device_id` is not in the multicast group `multicast_addr`.
-pub(super) fn leave_link_multicast<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn leave_link_multicast<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -589,7 +611,7 @@ pub(super) fn leave_link_multicast<C, SC: EthernetIpLinkDeviceContext<C>>(
 }
 
 /// Get the MTU associated with this device.
-pub(super) fn get_mtu<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn get_mtu<C: EthernetIpLinkDeviceNonSyncContext, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &SC,
     device_id: SC::DeviceId,
 ) -> u32 {
@@ -603,7 +625,10 @@ pub(super) fn get_mtu<C, SC: EthernetIpLinkDeviceContext<C>>(
 // TODO(rheacock): remove `cfg(test)` when this is used. Will probably be called
 // by a pub fn in the device mod.
 #[cfg(test)]
-pub(super) fn insert_static_arp_table_entry<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn insert_static_arp_table_entry<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -620,7 +645,10 @@ pub(super) fn insert_static_arp_table_entry<C, SC: EthernetIpLinkDeviceContext<C
 /// resolution.
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
-pub(super) fn insert_ndp_table_entry<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn insert_ndp_table_entry<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -634,7 +662,10 @@ pub(super) fn insert_ndp_table_entry<C, SC: EthernetIpLinkDeviceContext<C>>(
 ///
 /// After this function is called, the ethernet device should not be used and
 /// nothing else should be done with the state.
-pub(super) fn deinitialize<C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn deinitialize<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -645,11 +676,9 @@ pub(super) fn deinitialize<C, SC: EthernetIpLinkDeviceContext<C>>(
 
 impl<
         SC: InstantContext
-            + RngContext
             + DeviceIdContext<EthernetLinkDevice>
-            + DualStateContext<
+            + StateContext<
                 IpLinkDeviceState<<SC as InstantContext>::Instant, EthernetDeviceState>,
-                <SC as RngContext>::Rng,
                 <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId,
             >,
     > StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, SC::DeviceId> for SC
@@ -667,7 +696,7 @@ impl<
 }
 
 impl<
-        C,
+        C: EthernetIpLinkDeviceNonSyncContext,
         B: BufferMut,
         SC: EthernetIpLinkDeviceContext<C>
             + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
@@ -693,7 +722,9 @@ impl<C: DeviceIdContext<EthernetLinkDevice>> ArpDeviceIdContext<EthernetLinkDevi
     type DeviceId = <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId;
 }
 
-impl<C, SC: EthernetIpLinkDeviceContext<C>> ArpContext<EthernetLinkDevice, Ipv4Addr, C> for SC {
+impl<C: EthernetIpLinkDeviceNonSyncContext, SC: EthernetIpLinkDeviceContext<C>>
+    ArpContext<EthernetLinkDevice, Ipv4Addr, C> for SC
+{
     fn get_protocol_addr(
         &self,
         _ctx: &mut C,
@@ -744,11 +775,9 @@ impl<C, SC: EthernetIpLinkDeviceContext<C>> ArpContext<EthernetLinkDevice, Ipv4A
 
 impl<
         SC: InstantContext
-            + RngContext
             + DeviceIdContext<EthernetLinkDevice>
-            + DualStateContext<
+            + StateContext<
                 IpLinkDeviceState<<SC as InstantContext>::Instant, EthernetDeviceState>,
-                <SC as RngContext>::Rng,
                 <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId,
             >,
     > StateContext<NdpState<EthernetLinkDevice>, SC::DeviceId> for SC
@@ -762,14 +791,20 @@ impl<
     }
 }
 
-pub(super) fn get_mac<'a, C, SC: EthernetIpLinkDeviceContext<C>>(
+pub(super) fn get_mac<
+    'a,
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &'a SC,
     device_id: SC::DeviceId,
 ) -> &'a UnicastAddr<Mac> {
     &sync_ctx.get_state_with(device_id).link.mac
 }
 
-impl<C, SC: EthernetIpLinkDeviceContext<C>> NdpContext<EthernetLinkDevice, C> for SC {
+impl<C: EthernetIpLinkDeviceNonSyncContext, SC: EthernetIpLinkDeviceContext<C>>
+    NdpContext<EthernetLinkDevice, C> for SC
+{
     fn get_retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration {
         self.get_state_with(device_id).ip.ipv6.retrans_timer
     }
@@ -857,7 +892,7 @@ impl LinkDevice for EthernetLinkDevice {
 ///
 /// `mac_resolved` is the common logic used when a link layer address is
 /// resolved either by ARP or NDP.
-fn mac_resolved<C, SC: EthernetIpLinkDeviceContext<C>>(
+fn mac_resolved<C: EthernetIpLinkDeviceNonSyncContext, SC: EthernetIpLinkDeviceContext<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -896,7 +931,10 @@ fn mac_resolved<C, SC: EthernetIpLinkDeviceContext<C>>(
 ///
 /// `mac_resolution_failed` is the common logic used when a link layer address
 /// fails to resolve either by ARP or NDP.
-fn mac_resolution_failed<C, SC: EthernetIpLinkDeviceContext<C>>(
+fn mac_resolution_failed<
+    C: EthernetIpLinkDeviceNonSyncContext,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
@@ -933,12 +971,11 @@ mod tests {
         },
     };
     use rand::Rng;
-    use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
     use crate::{
-        context::{testutil::DummyInstant, DualStateContext},
+        context::testutil::DummyInstant,
         device::{
             arp::ArpHandler, testutil::DeviceTestIpExt, DeviceId, DeviceIdInner, EthernetDeviceId,
             IpLinkDeviceState,
@@ -953,7 +990,7 @@ mod tests {
         },
         testutil::{
             add_arp_or_ndp_table_entry, assert_empty, get_counter_val, new_rng,
-            DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
+            DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
         },
         Ctx,
     };
@@ -980,33 +1017,21 @@ mod tests {
         DummyDeviceId,
     >;
 
-    impl
-        DualStateContext<
-            IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
-            FakeCryptoRng<XorShiftRng>,
-            DummyDeviceId,
-        > for DummyCtx
+    impl StateContext<IpLinkDeviceState<DummyInstant, EthernetDeviceState>, DummyDeviceId>
+        for DummyCtx
     {
-        fn get_states_with(
+        fn get_state_with(
             &self,
             _id0: DummyDeviceId,
-            _id1: (),
-        ) -> (&IpLinkDeviceState<DummyInstant, EthernetDeviceState>, &FakeCryptoRng<XorShiftRng>)
-        {
-            let (state, rng) = self.get_states_with((), ());
-            (&state.state, rng)
+        ) -> &IpLinkDeviceState<DummyInstant, EthernetDeviceState> {
+            &self.get_ref().state
         }
 
-        fn get_states_mut_with(
+        fn get_state_mut_with(
             &mut self,
             _id0: DummyDeviceId,
-            _id1: (),
-        ) -> (
-            &mut IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
-            &mut FakeCryptoRng<XorShiftRng>,
-        ) {
-            let (state, rng) = self.get_states_mut_with((), ());
-            (&mut state.state, rng)
+        ) -> &mut IpLinkDeviceState<DummyInstant, EthernetDeviceState> {
+            &mut self.get_mut().state
         }
     }
 

@@ -76,7 +76,8 @@ pub use crate::{
             set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device,
             BufferUdpContext, BufferUdpStateContext, UdpBoundId, UdpConnId, UdpConnInfo,
             UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-            UdpSockCreationError, UdpSocketId, UdpStateContext, UdpUnboundId,
+            UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext,
+            UdpUnboundId,
         },
         TransportStateBuilder,
     },
@@ -223,7 +224,8 @@ impl<I: Instant> Default for StackState<I> {
 }
 
 /// The non-synchronized context for the stack.
-pub trait NonSyncContext {}
+pub trait NonSyncContext: RngContext {}
+impl<C: RngContext> NonSyncContext for C {}
 
 /// The synchronized context.
 pub struct SyncCtx<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> {
@@ -457,8 +459,8 @@ impl<
 // allocate internally-generated buffers?
 
 /// The execution context required by the Netstack3 Core.
-pub trait BlanketCoreContext: InstantContext + RngContext + TimerContext<TimerId> {}
-impl<C: InstantContext + RngContext + TimerContext<TimerId>> BlanketCoreContext for C {}
+pub trait BlanketCoreContext: InstantContext + TimerContext<TimerId> {}
+impl<C: InstantContext + TimerContext<TimerId>> BlanketCoreContext for C {}
 
 /// An object which can dispatch events to a real system.
 ///

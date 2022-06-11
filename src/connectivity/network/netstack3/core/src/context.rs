@@ -261,52 +261,6 @@ pub trait RngContext {
     fn rng_mut(&mut self) -> &mut Self::Rng;
 }
 
-/// A context that provides access to a random number generator (RNG) and a
-/// state at the same time.
-///
-/// `RngStateContext<State, Id>` is more powerful than `C: RngContext +
-/// StateContext<State, Id>` because the latter only allows accessing either the
-/// RNG or the state at a time, but not both due to lifetime restrictions.
-pub trait RngStateContext<State, Id = ()>:
-    RngContext + DualStateContext<State, <Self as RngContext>::Rng, Id, ()>
-{
-    /// Gets the state and the random number generator (RNG).
-    fn get_state_rng_with(&mut self, id: Id) -> (&mut State, &mut Self::Rng) {
-        self.get_states_mut_with(id, ())
-    }
-}
-
-impl<State, Id, C: RngContext + DualStateContext<State, <Self as RngContext>::Rng, Id, ()>>
-    RngStateContext<State, Id> for C
-{
-}
-
-/// An extension trait for [`RngStateContext`] where `Id = ()`.
-pub trait RngStateContextExt<State>: RngStateContext<State> {
-    /// Gets the state and the random number generator (RNG).
-    fn get_state_rng(&mut self) -> (&mut State, &mut Self::Rng) {
-        self.get_state_rng_with(())
-    }
-}
-
-impl<State, C: RngStateContext<State>> RngStateContextExt<State> for C {}
-
-// Temporary blanket impl until we switch over entirely to the traits defined in
-// this module.
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> RngContext
-    for SyncCtx<D, C, NonSyncCtx>
-{
-    type Rng = C::Rng;
-
-    fn rng(&self) -> &C::Rng {
-        self.ctx.rng()
-    }
-
-    fn rng_mut(&mut self) -> &mut C::Rng {
-        self.ctx.rng_mut()
-    }
-}
-
 /// A context that provides access to state.
 ///
 /// `StateContext` stores instances of `State` keyed by `Id`, and provides
@@ -353,125 +307,6 @@ pub trait StateContext<State, Id = ()> {
         Self: StateContext<State>,
     {
         self.get_state_mut_with(())
-    }
-}
-
-// NOTE(joshlf): I experimented with a generic `MultiStateContext` trait which
-// could be invoked as `MultiStateContext<(T,)>`, `MultiStateContext<(T, U)>`,
-// etc. It proved difficult to use in practice, as implementations often
-// required a lot of boilerplate. See this issue for detail:
-// https://users.rust-lang.org/t/why-doesnt-rust-know-the-concrete-type-in-this-trait-impl/39498.
-// In practice, having a `DualStateContext` trait which only supports two state
-// types results in a much simpler and easier to use API.
-
-/// A context that provides access to two states at once.
-///
-/// Unlike [`StateContext`], `DualStateContext` provides access to two different
-/// states at once. `C: DualStateContext<T, U>` is more powerful than `C:
-/// StateContext<T> + StateContext<U>` because the latter only allows accessing
-/// either `T` or `U` at a time, but not both due to lifetime restrictions.
-pub trait DualStateContext<State0, State1, Id0 = (), Id1 = ()> {
-    /// Gets the states immutably.
-    ///
-    /// # Panics
-    ///
-    /// `get_states_with` panics if `id0` or `id1` are not valid identifiers.
-    /// (e.g., an out-of-bounds index, a reference to an object that has been
-    /// removed from a map, etc).
-    fn get_states_with(&self, id0: Id0, id1: Id1) -> (&State0, &State1);
-
-    /// Gets the states mutably.
-    ///
-    /// # Panics
-    ///
-    /// `get_states_mut_with` panics if `id0` or `id1` are not valid
-    /// identifiers. (e.g., an out-of-bounds index, a reference to an object
-    /// that has been removed from a map, etc).
-    fn get_states_mut_with(&mut self, id0: Id0, id1: Id1) -> (&mut State0, &mut State1);
-
-    // TODO(joshlf): Once equality `where` bounds are supported, use those
-    // instead of these `where Self: DualStateContext<...>` bounds
-    // (https://github.com/rust-lang/rust/issues/20041).
-
-    /// Get the first state (`State0`) immutably when the `Id1` type is `()`.
-    ///
-    /// `x.get_state_with(id)` is shorthand for `x.get_states_with(id, ()).0`.
-    ///
-    /// # Panics
-    ///
-    /// `get_state_with` panics if `id0` is not a valid identifier. (e.g., an
-    /// out-of-bounds index, a reference to an object that has been removed from
-    /// a map, etc).
-    fn get_state_with<'a>(&'a self, id: Id0) -> &'a State0
-    where
-        Self: DualStateContext<State0, State1, Id0>,
-        State1: 'a,
-    {
-        let (state0, _state1) = self.get_states_with(id, ());
-        state0
-    }
-
-    /// Get the first state (`State0`) mutably when the `Id1` type is `()`.
-    ///
-    /// `x.get_state_mut_with(id)` is shorthand for `x.get_states_mut_with(id,
-    /// ()).0`.
-    ///
-    /// # Panics
-    ///
-    /// `get_state_mut_with` panics if `id0` is not a valid identifier. (e.g.,
-    /// an out-of-bounds index, a reference to an object that has been removed
-    /// from a map, etc).
-    fn get_state_mut_with<'a>(&'a mut self, id: Id0) -> &'a mut State0
-    where
-        Self: DualStateContext<State0, State1, Id0>,
-        State1: 'a,
-    {
-        let (state0, _state1) = self.get_states_mut_with(id, ());
-        state0
-    }
-
-    /// Get the states immutably when both ID types are `()`.
-    ///
-    /// `x.get_states()` is shorthand for `x.get_states_with((), ())`.
-    fn get_states(&self) -> (&State0, &State1)
-    where
-        Self: DualStateContext<State0, State1>,
-    {
-        self.get_states_with((), ())
-    }
-
-    /// Get the state mutably when both ID types are `()`.
-    ///
-    /// `x.get_states_mut()` is shorthand for `x.get_states_mut_with((), ())`.
-    fn get_states_mut(&mut self) -> (&mut State0, &mut State1)
-    where
-        Self: DualStateContext<State0, State1>,
-    {
-        self.get_states_mut_with((), ())
-    }
-
-    /// Get the first state (`State0`) immutably when both ID types are `()`.
-    ///
-    /// `x.get_first_state()` is shorthand for `x.get_states().0`.
-    fn get_first_state<'a>(&'a self) -> &'a State0
-    where
-        Self: DualStateContext<State0, State1>,
-        State1: 'a,
-    {
-        let (state0, _state1) = self.get_states_with((), ());
-        state0
-    }
-
-    /// Get the first state (`State0`) mutably when both ID types are `()`.
-    ///
-    /// `x.get_first_state_mut()` is shorthand for `x.get_states_mut().0`.
-    fn get_first_state_mut<'a>(&'a mut self) -> &'a mut State0
-    where
-        Self: DualStateContext<State0, State1>,
-        State1: 'a,
-    {
-        let (state0, _state1) = self.get_states_mut_with((), ());
-        state0
     }
 }
 
@@ -1215,8 +1050,34 @@ pub(crate) mod testutil {
         }
     }
 
-    #[derive(Default)]
-    pub(crate) struct DummyNonSyncCtx;
+    pub(crate) struct DummyNonSyncCtx {
+        rng: FakeCryptoRng<XorShiftRng>,
+    }
+
+    impl Default for DummyNonSyncCtx {
+        fn default() -> Self {
+            Self { rng: FakeCryptoRng::new_xorshift(0) }
+        }
+    }
+
+    impl DummyNonSyncCtx {
+        /// Seed the testing RNG with a specific value.
+        pub(crate) fn seed_rng(&mut self, seed: u128) {
+            self.rng = FakeCryptoRng::new_xorshift(seed);
+        }
+    }
+
+    impl RngContext for DummyNonSyncCtx {
+        type Rng = FakeCryptoRng<XorShiftRng>;
+
+        fn rng(&self) -> &Self::Rng {
+            &self.rng
+        }
+
+        fn rng_mut(&mut self) -> &mut Self::Rng {
+            &mut self.rng
+        }
+    }
 
     pub(crate) struct DummyCtx<S, TimerId, Meta, Event: Debug, DeviceId> {
         pub(crate) sync_ctx: DummySyncCtx<S, TimerId, Meta, Event, DeviceId>,
@@ -1288,7 +1149,6 @@ pub(crate) mod testutil {
                     timers: DummyTimerCtx::default(),
                     frames: DummyFrameCtx::default(),
                     counters: DummyCounterCtx::default(),
-                    rng: FakeCryptoRng::new_xorshift(0),
                     events: DummyEventCtx::default(),
                     _devices_marker: PhantomData,
                 },
@@ -1316,7 +1176,6 @@ pub(crate) mod testutil {
         timers: DummyTimerCtx<TimerId>,
         frames: DummyFrameCtx<Meta>,
         counters: DummyCounterCtx,
-        rng: FakeCryptoRng<XorShiftRng>,
         events: DummyEventCtx<Event>,
         _devices_marker: PhantomData<DeviceId>,
     }
@@ -1338,15 +1197,9 @@ pub(crate) mod testutil {
                 timers: DummyTimerCtx::default(),
                 frames: DummyFrameCtx::default(),
                 counters: DummyCounterCtx::default(),
-                rng: FakeCryptoRng::new_xorshift(0),
                 events: DummyEventCtx::default(),
                 _devices_marker: PhantomData,
             }
-        }
-
-        /// Seed the testing RNG with a specific value.
-        pub(crate) fn seed_rng(&mut self, seed: u128) {
-            self.rng = FakeCryptoRng::new_xorshift(seed);
         }
 
         /// Move the clock forward by the given duration without firing any
@@ -1482,36 +1335,6 @@ pub(crate) mod testutil {
             frame: SS,
         ) -> Result<(), SS> {
             self.frames.send_frame(ctx, metadata, frame)
-        }
-    }
-
-    impl<S, Id, Meta, Event: Debug, DeviceId> RngContext
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        type Rng = FakeCryptoRng<XorShiftRng>;
-
-        fn rng(&self) -> &Self::Rng {
-            &self.rng
-        }
-
-        fn rng_mut(&mut self) -> &mut Self::Rng {
-            &mut self.rng
-        }
-    }
-
-    impl<S, Id, Meta, Event: Debug, DeviceId> DualStateContext<S, FakeCryptoRng<XorShiftRng>>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        fn get_states_with(&self, _id0: (), _id1: ()) -> (&S, &FakeCryptoRng<XorShiftRng>) {
-            (&self.state, &self.rng)
-        }
-
-        fn get_states_mut_with(
-            &mut self,
-            _id0: (),
-            _id1: (),
-        ) -> (&mut S, &mut FakeCryptoRng<XorShiftRng>) {
-            (&mut self.state, &mut self.rng)
         }
     }
 
