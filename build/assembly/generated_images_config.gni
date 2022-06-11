@@ -198,6 +198,9 @@ template("generated_images_config") {
     if (defined(invoker.blobfs_minimum_inodes)) {
       minimum_inodes = invoker.blobfs_minimum_inodes
     }
+    if (defined(invoker.blobfs_maximum_contents_size)) {
+      maximum_contents_size = invoker.blobfs_maximum_contents_size
+    }
   }
   fvm_filesystems += [ blobfs ]
 

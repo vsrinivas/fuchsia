@@ -613,6 +613,7 @@ mod tests {
             maximum_bytes: None,
             minimum_data_bytes: None,
             minimum_inodes: None,
+            maximum_contents_size: None,
         }));
         builder.filesystem(FvmFilesystem::MinFS(MinFS {
             name: "data".into(),
@@ -733,6 +734,7 @@ mod tests {
             maximum_bytes: None,
             minimum_data_bytes: None,
             minimum_inodes: None,
+            maximum_contents_size: None,
         }));
         builder.filesystem(FvmFilesystem::MinFS(MinFS {
             name: "data".into(),

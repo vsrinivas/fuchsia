@@ -233,6 +233,10 @@ pub struct BlobFS {
     /// Reserved space for this many inodes.
     #[serde(default)]
     pub minimum_inodes: Option<u64>,
+
+    /// Maximum amount of contents for an assembled blobfs.
+    #[serde(default)]
+    pub maximum_contents_size: Option<u64>,
 }
 
 fn default_blobfs_name() -> String {

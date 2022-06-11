@@ -138,7 +138,7 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #
 # Board: BlobFS parameters
 #
-#   blobfs_minimum_inodes, blobfs_minimum_data_bytes, blobfs_maximum_bytes (optional)
+#   blobfs_minimum_inodes, blobfs_minimum_data_bytes, blobfs_maximum_bytes, blobfs_maximum_contents_size (optional)
 #     [int] Size options for blobfs to pass to the fvm tool.
 #
 # Board: FVM parameters
@@ -551,6 +551,7 @@ template("assembled_system") {
                              "minfs_minimum_data_bytes",
                              "blobfs_maximum_bytes",
                              "blobfs_minimum_data_bytes",
+                             "blobfs_maximum_contents_size",
                              "blobfs_minimum_inodes",
                              "fvm_truncate_to_length",
                            ])

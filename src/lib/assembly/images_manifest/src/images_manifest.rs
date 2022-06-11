@@ -189,6 +189,8 @@ impl Serialize for Image {
 pub struct BlobfsContents {
     /// Information about packages included in the image.
     pub packages: PackagesMetadata,
+    /// Maximum total size of all the blobs stored in this image.
+    pub maximum_contents_size: Option<u64>,
 }
 
 /// Metadata on packages included in a given image.
@@ -402,6 +404,7 @@ mod tests {
                         "base": [],
                         "cache": [],
                     },
+                    "maximum_contents_size": None::<u64>,
                 },
             },
             {

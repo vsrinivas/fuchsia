@@ -23,6 +23,7 @@ pub fn construct_blobfs(
     let mut contents = BlobfsContents::default();
     let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, blobfs_config.layout.to_string());
     blobfs_builder.set_compressed(blobfs_config.compress);
+    contents.maximum_contents_size = blobfs_config.maximum_contents_size.clone();
 
     // Add the base and cache packages.
     for package_manifest_path in &image_config.base {
@@ -70,6 +71,7 @@ mod tests {
             maximum_bytes: None,
             minimum_data_bytes: None,
             minimum_inodes: None,
+            maximum_contents_size: None,
         };
 
         // Create a fake base package.
