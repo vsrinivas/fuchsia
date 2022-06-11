@@ -60,7 +60,6 @@ group("tests") {
     "refcount:tests",
     "region-alloc:tests",
     "runtests-utils:tests",
-    "simplehid:tests",
     "smbios:tests",
     "storage-metrics:tests",
     "storage/buffer:tests",

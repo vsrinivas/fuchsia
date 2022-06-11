@@ -307,7 +307,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/runtests-utils/*",
     "//zircon/system/ulib/runtime/*",
     "//zircon/system/ulib/service/*",
-    "//zircon/system/ulib/simplehid/*",
     "//zircon/system/ulib/smbios/*",
     "//zircon/system/ulib/spi/*",
     "//zircon/system/ulib/statusor/*",
