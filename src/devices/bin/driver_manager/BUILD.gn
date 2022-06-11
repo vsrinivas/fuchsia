@@ -258,6 +258,8 @@ fuchsia_unittest_component("driver-host-loader-service-test") {
 
 source_set("driver_runner") {
   sources = [
+    "v2/driver_component.cc",
+    "v2/driver_component.h",
     "v2/driver_runner.cc",
     "v2/driver_runner.h",
   ]
