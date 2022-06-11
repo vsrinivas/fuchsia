@@ -213,7 +213,8 @@ DriverHostComponent::DriverHostComponent(
                    fidl::ObserveTeardown([this, driver_hosts] { driver_hosts->erase(*this); })) {}
 
 zx::status<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
-    fidl::ClientEnd<fdf::Node> client_end, const Node& node,
+    fidl::ClientEnd<fdf::Node> client_end,
+    fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
     frunner::wire::ComponentStartInfo start_info) {
   auto endpoints = fidl::CreateEndpoints<fdh::Driver>();
   if (endpoints.is_error()) {
@@ -250,7 +251,7 @@ zx::status<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
   }
-  if (auto symbols = node.symbols(); !symbols.empty()) {
+  if (!symbols.empty()) {
     args.set_symbols(arena, symbols);
   }
   auto start = driver_host_->Start(args, std::move(endpoints->server));
@@ -894,8 +895,8 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 
   LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), node.name().c_str());
   // Start the driver within the driver host.
-  auto start =
-      node.driver_host()->Start(std::move(endpoints->client), node, std::move(request->start_info));
+  auto start = node.driver_host()->Start(std::move(endpoints->client), node.symbols(),
+                                         std::move(request->start_info));
   if (start.is_error()) {
     completer.Close(start.error_value());
     return;

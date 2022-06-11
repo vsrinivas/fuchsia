@@ -46,7 +46,8 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
                       fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts);
 
   zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
-      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end, const Node& node,
+      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
+      fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
       fuchsia_component_runner::wire::ComponentStartInfo start_info);
 
   zx::status<uint64_t> GetProcessKoid();
