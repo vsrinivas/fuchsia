@@ -140,6 +140,12 @@ impl DeviceStatusNotifier for BindingsDispatcher {
     }
 }
 
+/// Provides an implementation of [`NonSyncContext`].
+#[derive(Default)]
+pub(crate) struct BindingsNonSyncCtxImpl;
+
+impl NonSyncContext for BindingsNonSyncCtxImpl {}
+
 /// Provides context implementations which satisfy [`BlanketCoreContext`].
 ///
 /// `BindingsContext` provides time, timers, and random numbers to the Core.
@@ -161,9 +167,17 @@ impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsContextImpl {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsContextImpl, ()>> for Netstack {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher, BindingsContextImpl, ()>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher, BindingsContextImpl, ()>>;
+impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>>
+    for Netstack
+{
+    type Guard = futures::lock::MutexGuard<
+        'a,
+        Ctx<BindingsDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
+    >;
+    type Fut = futures::lock::MutexLockFuture<
+        'a,
+        Ctx<BindingsDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
+    >;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -600,7 +614,8 @@ where
     }
 }
 
-type NetstackContext = Arc<Mutex<Ctx<BindingsDispatcher, BindingsContextImpl, ()>>>;
+type NetstackContext =
+    Arc<Mutex<Ctx<BindingsDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>>>;
 
 /// The netstack.
 ///
@@ -634,7 +649,7 @@ impl Default for NetstackSeed {
 impl LockableContext for Netstack {
     type Dispatcher = BindingsDispatcher;
     type Context = BindingsContextImpl;
-    type NonSyncCtx = ();
+    type NonSyncCtx = BindingsNonSyncCtxImpl;
 }
 
 impl InterfaceEventProducerFactory for Netstack {

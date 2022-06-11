@@ -225,8 +225,6 @@ impl<I: Instant> Default for StackState<I> {
 /// The non-synchronized context for the stack.
 pub trait NonSyncContext {}
 
-impl NonSyncContext for () {}
-
 /// The synchronized context.
 pub struct SyncCtx<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> {
     /// Contains the state of the stack.

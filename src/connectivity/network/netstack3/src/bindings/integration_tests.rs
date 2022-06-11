@@ -39,8 +39,8 @@ use crate::bindings::{
     },
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsContextImpl, BindingsDispatcher, DeviceStatusNotifier, LockableContext,
-    RequestStreamExt as _, DEFAULT_LOOPBACK_MTU,
+    BindingsContextImpl, BindingsDispatcher, BindingsNonSyncCtxImpl, DeviceStatusNotifier,
+    LockableContext, RequestStreamExt as _, DEFAULT_LOOPBACK_MTU,
 };
 
 /// log::Log implementation that uses stdout.
@@ -206,7 +206,7 @@ impl<T: 'static + Send> EventContext<T> for TestDispatcher {
 #[derive(Clone)]
 /// A netstack context for testing.
 pub(crate) struct TestContext {
-    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsContextImpl, ()>>>,
+    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>>>,
     _interfaces_worker: Arc<super::interfaces_watcher::Worker>,
     interfaces_sink: super::interfaces_watcher::WorkerInterfaceSink,
 }
@@ -232,9 +232,17 @@ impl super::InterfaceEventProducerFactory for TestContext {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl, ()>> for TestContext {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher, BindingsContextImpl, ()>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher, BindingsContextImpl, ()>>;
+impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>>
+    for TestContext
+{
+    type Guard = futures::lock::MutexGuard<
+        'a,
+        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
+    >;
+    type Fut = futures::lock::MutexLockFuture<
+        'a,
+        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
+    >;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -243,7 +251,7 @@ impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl, ()>> for TestCont
 impl LockableContext for TestContext {
     type Dispatcher = TestDispatcher;
     type Context = BindingsContextImpl;
-    type NonSyncCtx = ();
+    type NonSyncCtx = BindingsNonSyncCtxImpl;
 }
 
 /// A holder for a [`TestContext`].
@@ -364,7 +372,7 @@ impl TestStack {
     /// [`Ctx<TestDispatcher, BindingsContext>`] provided by this `TestStack`.
     pub(crate) async fn with_ctx<
         R,
-        F: FnOnce(&mut Ctx<TestDispatcher, BindingsContextImpl, ()>) -> R,
+        F: FnOnce(&mut Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>) -> R,
     >(
         &mut self,
         f: F,
@@ -376,7 +384,10 @@ impl TestStack {
     /// Acquire a lock on this `TestStack`'s context.
     pub(crate) async fn ctx(
         &self,
-    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl, ()>>>::Guard {
+    ) -> <TestContext as Lockable<
+        '_,
+        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
+    >>::Guard {
         self.ctx.lock().await
     }
 
@@ -427,7 +438,10 @@ impl TestSetup {
     pub(crate) async fn ctx(
         &mut self,
         i: usize,
-    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsContextImpl, ()>>>::Guard {
+    ) -> <TestContext as Lockable<
+        '_,
+        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
+    >>::Guard {
         self.get(i).ctx.lock().await
     }
 
