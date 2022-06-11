@@ -23,6 +23,10 @@ import("//build/sdk/config.gni")
 #     - Required: A human-readable library name for debugging purposes.
 #     - Type: string
 #
+#   * ifs_args
+#     - Optional: list of args to pass to llvm-ifs.
+#     - Type: list of string
+#
 #   * testonly, visibility
 #     - Optional: As for action().
 #
@@ -61,8 +65,13 @@ template("verify_public_symbols") {
       rebase_path(abi_file, root_build_dir),
     ]
 
-    # TODO(fxbug.dev/99723): This will not be necessary when libraries end
-    # up linking against libc's ifs generated stub.
+    if (defined(invoker.ifs_args)) {
+      args += invoker.ifs_args
+    }
+
+    # Libraries linked with gnu linkers get these symbols implicitly. They aren't
+    # part of the abi that is worth tracking, nor do we want to exporting them in shared
+    # object stubs.
     if (select_variant + [ "gcc" ] - [ "gcc" ] != select_variant) {
       args += [
         "--exclude=__bss_start",
@@ -70,10 +79,6 @@ template("verify_public_symbols") {
         "--exclude=_end",
       ]
     }
-    args += [
-      "--exclude=__asan*",
-      "--exclude=__ubsan*",
-    ]
 
     # TODO(fxbug.dev/101255): lprofDirMode should be hidden from profile
     args += [ "--exclude=lprofDirMode" ]
