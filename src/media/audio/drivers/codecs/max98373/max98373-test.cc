@@ -83,7 +83,7 @@ TEST_F(Max98373Test, GetDaiFormats) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
   ddk::GpioProtocolClient unused_gpio;
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
-      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+      GetI2cClient(), std::move(unused_gpio), fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   auto codec = child_dev->GetDeviceContext<Max98373Codec>();
   auto codec_proto = codec->GetProto();
