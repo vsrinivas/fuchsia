@@ -358,7 +358,12 @@ impl ProcessBuilder {
                     self.set_loader_service(ClientEnd::from(h.handle))?;
                 }
                 HandleType::VdsoVmo => {
-                    self.set_vdso_vmo(h.handle.into());
+                    if h.info.arg() == 0 {
+                        self.set_vdso_vmo(h.handle.into());
+                    } else {
+                        // Pass any additional vDSOs.
+                        self.msg_contents.handles.push(h);
+                    }
                 }
                 _ => {
                     self.msg_contents.handles.push(h);
@@ -1350,6 +1355,35 @@ mod tests {
             Ok(_) => {
                 panic!("Unexpectedly succeeded to build process with invalid vDSO");
             }
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn add_additional_vdso() -> Result<(), Error> {
+        let mut builder = create_test_util_builder()?;
+        builder.set_loader_service(clone_loader_service()?)?;
+        builder.add_handles(vec![StartupHandle {
+            handle: get_system_vdso_vmo().unwrap().into_handle(),
+            info: HandleInfo::new(HandleType::VdsoVmo, 1),
+        }])?;
+        let built = builder.build().await?;
+
+        // Ignore linker message handles.
+        let mut msg_buf = zx::MessageBuf::new();
+        built.bootstrap.read(&mut msg_buf)?;
+
+        // Validate main message handles.
+        let mut msg_buf = zx::MessageBuf::new();
+        built.bootstrap.read(&mut msg_buf)?;
+        let handle_info = parse_handle_info_from_message(&msg_buf)?
+            .drain(..)
+            .filter(|info| info.handle_type() == HandleType::VdsoVmo)
+            .collect::<Vec<_>>();
+        assert_eq!(2, handle_info.len());
+        for (i, info) in handle_info.iter().rev().enumerate() {
+            assert_eq!(HandleType::VdsoVmo, info.handle_type());
+            assert_eq!(i as u16, info.arg());
         }
         Ok(())
     }
