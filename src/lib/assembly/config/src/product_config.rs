@@ -41,11 +41,18 @@ pub struct PlatformConfig {
 ///
 /// These control security and behavioral settings within the platform.
 ///
-/// Not presently used.
+/// Not presently used to control the platform's contents, but available for
+/// configuring platform components via StructuredConfiguration.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum BuildType {
     #[serde(rename = "eng")]
     Eng,
+
+    #[serde(rename = "userdebug")]
+    UserDebug,
+
+    #[serde(rename = "user")]
+    User,
 }
 
 impl Default for BuildType {
@@ -256,6 +263,38 @@ mod tests {
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
         assert_eq!(config.platform.build_type, BuildType::Eng);
+    }
+
+    #[test]
+    fn test_buildtype_deserialization_userdebug() {
+        let json5 = r#"
+            {
+              platform: {
+                build_type: "userdebug",
+              },
+              product: {},
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json5);
+        let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(config.platform.build_type, BuildType::UserDebug);
+    }
+
+    #[test]
+    fn test_buildtype_deserialization_user() {
+        let json5 = r#"
+            {
+              platform: {
+                build_type: "user",
+              },
+              product: {},
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json5);
+        let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(config.platform.build_type, BuildType::User);
     }
 
     #[test]
