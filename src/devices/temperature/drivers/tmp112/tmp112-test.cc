@@ -4,6 +4,8 @@
 
 #include "tmp112.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
@@ -21,23 +23,32 @@ using TemperatureClient = fidl::WireSyncClient<fuchsia_hardware_temperature::Dev
 
 class Tmp112DeviceTest : public zxtest::Test {
  public:
-  Tmp112DeviceTest() {}
+  Tmp112DeviceTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    EXPECT_TRUE(endpoints.is_ok());
+
+    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
+                                        &mock_i2c_);
+
     dev_ = std::make_unique<Tmp112Device>(fake_ddk::kFakeParent,
-                                          ddk::I2cChannel(mock_i2c_.GetProto()));
+                                          ddk::I2cChannel(std::move(endpoints->client)));
 
     const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
                                fidl_txn_t* txn) -> zx_status_t {
       return static_cast<Tmp112Device*>(ctx)->ddk_device_proto_.message(ctx, msg, txn);
     };
     ASSERT_OK(messenger_.SetMessageOp(dev_.get(), message_op));
+
+    EXPECT_OK(loop_.StartThread());
   }
 
  protected:
   mock_i2c::MockI2c mock_i2c_;
   std::unique_ptr<Tmp112Device> dev_;
   fake_ddk::FidlMessenger messenger_;
+  async::Loop loop_;
 };
 
 TEST_F(Tmp112DeviceTest, Init) {

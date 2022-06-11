@@ -13,6 +13,7 @@ driver_bind_rules("tmp112-bind") {
   tests = "tmp112-bind-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.ti.platform",
   ]
 }
@@ -56,6 +57,8 @@ test("tmp112-test-bin") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
 
