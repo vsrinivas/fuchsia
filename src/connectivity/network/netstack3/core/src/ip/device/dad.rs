@@ -414,7 +414,10 @@ mod tests {
                 RETRANS_TIMER,
                 expected_sll_bytes,
             );
-            assert_eq!(sync_ctx.trigger_next_timer(DadHandler::handle_timer), Some(DAD_TIMER_ID));
+            assert_eq!(
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, DadHandler::handle_timer),
+                Some(DAD_TIMER_ID)
+            );
         }
         let MockDadContext { addr: _, state, retrans_timer: _, link_layer_bytes: _ } =
             sync_ctx.get_ref();

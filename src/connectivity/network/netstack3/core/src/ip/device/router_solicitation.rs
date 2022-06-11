@@ -306,7 +306,10 @@ mod tests {
             let now = sync_ctx.now();
             sync_ctx.timer_ctx().assert_timers_installed([(RS_TIMER_ID, now..=now + duration)]);
 
-            assert_eq!(sync_ctx.trigger_next_timer(RsHandler::handle_timer), Some(RS_TIMER_ID));
+            assert_eq!(
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, RsHandler::handle_timer),
+                Some(RS_TIMER_ID)
+            );
             let frames = sync_ctx.frames();
             assert_eq!(frames.len(), usize::from(i + 1), "frames = {:?}", frames);
             let (RsMessageMeta { message }, frame) =

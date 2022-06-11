@@ -3082,7 +3082,7 @@ mod tests {
             u32::from(fragment_id),
         );
         assert_eq!(
-            sync_ctx.trigger_next_timer(crate::handle_timer).unwrap(),
+            sync_ctx.trigger_next_timer(&mut non_sync_ctx, crate::handle_timer).unwrap(),
             IpLayerTimerId::from(key.into()).into(),
         );
 
@@ -3811,6 +3811,7 @@ mod tests {
         // more precise condition to ensure that DAD is complete.
         let now = sync_ctx.now();
         let _: Vec<_> = sync_ctx.trigger_timers_until_instant(
+            &mut non_sync_ctx,
             now + Duration::from_secs(60 * 60 * 24 * 365),
             crate::handle_timer,
         );
@@ -3844,8 +3845,11 @@ mod tests {
         //
         // TODO(https://fxbug.dev/48578): Once this test is contextified, use a
         // more precise condition to ensure that DAD is complete.
-        let _: Vec<_> =
-            sync_ctx.trigger_timers_until_instant(DummyInstant::LATEST, crate::handle_timer);
+        let _: Vec<_> = sync_ctx.trigger_timers_until_instant(
+            &mut non_sync_ctx,
+            DummyInstant::LATEST,
+            crate::handle_timer,
+        );
 
         // Received packet should have been dispatched.
         receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);

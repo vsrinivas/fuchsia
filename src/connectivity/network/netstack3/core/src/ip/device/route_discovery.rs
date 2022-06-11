@@ -323,7 +323,7 @@ mod tests {
 
     fn assert_single_invalidation_timer(sync_ctx: &mut MockCtx, route: Ipv6DiscoveredRoute) {
         assert_eq!(
-            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(&mut (), TimerHandler::handle_timer),
             Some(Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route })
         );
         assert_eq!(

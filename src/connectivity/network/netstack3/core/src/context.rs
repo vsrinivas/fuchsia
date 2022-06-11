@@ -942,10 +942,14 @@ pub(crate) mod testutil {
         ///
         /// `trigger_next_timer` triggers the next timer, if any, advances the
         /// internal clock to the timer's scheduled time, and returns its ID.
-        fn trigger_next_timer<F: FnMut(&mut Self, &mut (), Id)>(&mut self, mut f: F) -> Option<Id> {
+        fn trigger_next_timer<C, F: FnMut(&mut Self, &mut C, Id)>(
+            &mut self,
+            ctx: &mut C,
+            mut f: F,
+        ) -> Option<Id> {
             self.as_mut().timers.pop().map(|InstantAndData(t, id)| {
                 self.as_mut().instant.time = t;
-                f(self, &mut (), id.clone());
+                f(self, ctx, id.clone());
                 id
             })
         }
@@ -958,8 +962,9 @@ pub(crate) mod testutil {
         /// # Panics
         ///
         /// Panics if `instant` is in the past.
-        fn trigger_timers_until_instant<F: FnMut(&mut Self, &mut (), Id)>(
+        fn trigger_timers_until_instant<C, F: FnMut(&mut Self, &mut C, Id)>(
             &mut self,
+            ctx: &mut C,
             instant: DummyInstant,
             mut f: F,
         ) -> Vec<Id> {
@@ -973,7 +978,7 @@ pub(crate) mod testutil {
                 .map(|InstantAndData(i, _id)| i <= &instant)
                 .unwrap_or(false)
             {
-                timers.push(self.trigger_next_timer(&mut f).unwrap())
+                timers.push(self.trigger_next_timer(ctx, &mut f).unwrap())
             }
 
             assert!(self.as_mut().now() <= instant);
@@ -986,8 +991,9 @@ pub(crate) mod testutil {
         /// until then, inclusive, by calling `f` on them.
         ///
         /// Returns the timers which were triggered.
-        fn trigger_timers_for<F: FnMut(&mut Self, &mut (), Id)>(
+        fn trigger_timers_for<C, F: FnMut(&mut Self, &mut C, Id)>(
             &mut self,
+            ctx: &mut C,
             duration: Duration,
             f: F,
         ) -> Vec<Id> {
@@ -995,7 +1001,7 @@ pub(crate) mod testutil {
             // We know the call to `self.trigger_timers_until_instant` will not
             // panic because we provide an instant that is greater than or equal
             // to the current time.
-            self.trigger_timers_until_instant(instant, f)
+            self.trigger_timers_until_instant(ctx, instant, f)
         }
 
         /// Triggers timers and expects them to be the given timers.
@@ -1011,10 +1017,12 @@ pub(crate) mod testutil {
         /// - Timers that were expected were not triggered
         #[track_caller]
         fn trigger_timers_and_expect_unordered<
+            C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, &mut (), Id),
+            F: FnMut(&mut Self, &mut C, Id),
         >(
             &mut self,
+            ctx: &mut C,
             timers: I,
             mut f: F,
         ) where
@@ -1023,7 +1031,8 @@ pub(crate) mod testutil {
             let mut timers = RefCountedHashSet::from_iter(timers);
 
             for _ in 0..timers.len() {
-                let id = self.trigger_next_timer(&mut f).expect("ran out of timers to trigger");
+                let id =
+                    self.trigger_next_timer(ctx, &mut f).expect("ran out of timers to trigger");
                 match timers.remove(id.clone()) {
                     RemoveResult::Removed(()) | RemoveResult::StillPresent => {}
                     RemoveResult::NotPresent => panic!("triggered unexpected timer: {:?}", id),
@@ -1045,10 +1054,12 @@ pub(crate) mod testutil {
         /// Like `trigger_timers_and_expect_unordered`, except that timers will
         /// only be triggered until `instant` (inclusive).
         fn trigger_timers_until_and_expect_unordered<
+            C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, &mut (), Id),
+            F: FnMut(&mut Self, &mut C, Id),
         >(
             &mut self,
+            ctx: &mut C,
             instant: DummyInstant,
             timers: I,
             f: F,
@@ -1057,7 +1068,7 @@ pub(crate) mod testutil {
         {
             let mut timers = RefCountedHashSet::from_iter(timers);
 
-            let triggered_timers = self.trigger_timers_until_instant(instant, f);
+            let triggered_timers = self.trigger_timers_until_instant(ctx, instant, f);
 
             for id in triggered_timers {
                 match timers.remove(id.clone()) {
@@ -1081,10 +1092,12 @@ pub(crate) mod testutil {
         /// Like `trigger_timers_and_expect_unordered`, except that timers will
         /// only be triggered for `duration` (inclusive).
         fn trigger_timers_for_and_expect<
+            C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, &mut (), Id),
+            F: FnMut(&mut Self, &mut C, Id),
         >(
             &mut self,
+            ctx: &mut C,
             duration: Duration,
             timers: I,
             f: F,
@@ -1092,7 +1105,7 @@ pub(crate) mod testutil {
             Id: Debug + Hash + Eq,
         {
             let instant = self.as_mut().now().saturating_add(duration);
-            self.trigger_timers_until_and_expect_unordered(instant, timers, f);
+            self.trigger_timers_until_and_expect_unordered(ctx, instant, timers, f);
         }
     }
 
@@ -1965,97 +1978,130 @@ pub(crate) mod testutil {
                 }
             }
 
-            let mut ctx =
-                DummySyncCtx::<Vec<(usize, DummyInstant)>, usize, (), (), DummyDeviceId>::default();
+            let new_ctx = || {
+                DummyCtx::with_sync_ctx(DummySyncCtx::<
+                    Vec<(usize, DummyInstant)>,
+                    usize,
+                    (),
+                    (),
+                    DummyDeviceId,
+                >::default())
+            };
+
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
 
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.
-            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
-            assert_eq!(ctx.get_ref().as_slice(), []);
+            assert_eq!(
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                None
+            );
+            assert_eq!(sync_ctx.get_ref().as_slice(), []);
 
             // When one timer is installed, it should be triggered.
-            ctx = Default::default();
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
 
             // No timer with id `0` exists yet.
-            assert_eq!(ctx.scheduled_instant(0), None);
+            assert_eq!(sync_ctx.scheduled_instant(0), None);
 
-            assert_eq!(ctx.schedule_timer(ONE_SEC, 0), None);
+            assert_eq!(sync_ctx.schedule_timer(ONE_SEC, 0), None);
 
             // Timer with id `0` scheduled to execute at `ONE_SEC_INSTANT`.
-            assert_eq!(ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
+            assert_eq!(sync_ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
 
-            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(0));
-            assert_eq!(ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
+            assert_eq!(
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                Some(0)
+            );
+            assert_eq!(sync_ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
 
             // After the timer fires, it should not still be scheduled at some
             // instant.
-            assert_eq!(ctx.scheduled_instant(0), None);
+            assert_eq!(sync_ctx.scheduled_instant(0), None);
 
             // The time should have been advanced.
-            assert_eq!(ctx.now(), ONE_SEC_INSTANT);
+            assert_eq!(sync_ctx.now(), ONE_SEC_INSTANT);
 
             // Once it's been triggered, it should be canceled and not
             // triggerable again.
-            ctx = Default::default();
-            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
-            assert_eq!(ctx.get_ref().as_slice(), []);
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+            assert_eq!(
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                None
+            );
+            assert_eq!(sync_ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then cancel it, it shouldn't fire.
-            ctx = Default::default();
-            assert_eq!(ctx.schedule_timer(ONE_SEC, 0), None);
-            assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
-            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
-            assert_eq!(ctx.get_ref().as_slice(), []);
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+
+            assert_eq!(sync_ctx.schedule_timer(ONE_SEC, 0), None);
+            assert_eq!(sync_ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
+            assert_eq!(
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                None
+            );
+            assert_eq!(sync_ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then schedule the same ID again, the
             // second timer should overwrite the first one.
-            ctx = Default::default();
-            assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None);
-            assert_eq!(ctx.schedule_timer(ONE_SEC, 0), Some(Duration::from_secs(0).into()));
-            assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
+            let DummyCtx { mut sync_ctx, non_sync_ctx: _ } = new_ctx();
+            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
+            assert_eq!(sync_ctx.schedule_timer(ONE_SEC, 0), Some(Duration::from_secs(0).into()));
+            assert_eq!(sync_ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
 
             // If we schedule three timers and then run `trigger_timers_until`
             // with the appropriate value, only two of them should fire.
-            ctx = Default::default();
-            assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None,);
-            assert_eq!(ctx.schedule_timer(Duration::from_secs(1), 1), None,);
-            assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 2), None,);
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(0), 0), None,);
+            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(1), 1), None,);
+            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(2), 2), None,);
             assert_eq!(
-                ctx.trigger_timers_until_instant(ONE_SEC_INSTANT, TimerHandler::handle_timer),
+                sync_ctx.trigger_timers_until_instant(
+                    &mut non_sync_ctx,
+                    ONE_SEC_INSTANT,
+                    TimerHandler::handle_timer
+                ),
                 vec![0, 1],
             );
 
             // The first two timers should have fired.
             assert_eq!(
-                ctx.get_ref().as_slice(),
+                sync_ctx.get_ref().as_slice(),
                 [(0, DummyInstant::from(Duration::from_secs(0))), (1, ONE_SEC_INSTANT)]
             );
 
             // They should be canceled now.
-            assert_eq!(ctx.cancel_timer(0), None);
-            assert_eq!(ctx.cancel_timer(1), None);
+            assert_eq!(sync_ctx.cancel_timer(0), None);
+            assert_eq!(sync_ctx.cancel_timer(1), None);
 
             // The clock should have been updated.
-            assert_eq!(ctx.now(), ONE_SEC_INSTANT);
+            assert_eq!(sync_ctx.now(), ONE_SEC_INSTANT);
 
             // The last timer should not have fired.
-            assert_eq!(ctx.cancel_timer(2), Some(DummyInstant::from(Duration::from_secs(2))));
+            assert_eq!(sync_ctx.cancel_timer(2), Some(DummyInstant::from(Duration::from_secs(2))));
         }
 
         #[test]
         fn test_trigger_timers_until_and_expect_unordered() {
             // If the requested instant does not coincide with a timer trigger
             // point, the time should still be advanced.
-            let mut ctx =
-                DummySyncCtx::<Vec<(usize, DummyInstant)>, usize, (), (), DummyDeviceId>::default();
-            assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None);
-            assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 1), None);
-            ctx.trigger_timers_until_and_expect_unordered(
+            let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+                DummyCtx::with_sync_ctx(DummySyncCtx::<
+                    Vec<(usize, DummyInstant)>,
+                    usize,
+                    (),
+                    (),
+                    DummyDeviceId,
+                >::default());
+            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
+            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(2), 1), None);
+            sync_ctx.trigger_timers_until_and_expect_unordered(
+                &mut non_sync_ctx,
                 ONE_SEC_INSTANT,
                 vec![0],
                 TimerHandler::handle_timer,
             );
-            assert_eq!(ctx.now(), ONE_SEC_INSTANT);
+            assert_eq!(sync_ctx.now(), ONE_SEC_INSTANT);
         }
     }
 }

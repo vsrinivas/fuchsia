@@ -317,7 +317,8 @@ fn dispatch(
                 .expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
-            let _: Vec<TimerId> = sync_ctx.trigger_timers_for(duration, crate::handle_timer);
+            let _: Vec<TimerId> =
+                sync_ctx.trigger_timers_for(non_sync_ctx, duration, crate::handle_timer);
         }
     }
 }

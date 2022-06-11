@@ -812,7 +812,7 @@ mod tests {
             // Should send a report after a query.
             receive_igmp_query(&mut sync_ctx, Duration::from_secs(10));
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             check_report(&mut sync_ctx);
@@ -830,7 +830,7 @@ mod tests {
             assert_eq!(sync_ctx.frames().len(), 1);
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             assert_eq!(sync_ctx.frames().len(), 2);
@@ -847,7 +847,7 @@ mod tests {
             }
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             assert_eq!(sync_ctx.frames().len(), 3);
@@ -897,7 +897,7 @@ mod tests {
             assert_eq!(instant1, instant2);
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             // After the first timer, we send out our V1 report.
@@ -909,7 +909,7 @@ mod tests {
             assert_eq!(frame[24], 0x12);
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(V1_ROUTER_PRESENT_TIMER_ID)
             );
             // After the second timer, we should reset our flag for v1 routers.
@@ -924,7 +924,7 @@ mod tests {
 
             receive_igmp_query(&mut sync_ctx, Duration::from_secs(10));
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             assert_eq!(sync_ctx.frames().len(), 3);
@@ -961,7 +961,7 @@ mod tests {
         // Because of the message, our timer should be reset to a nearer future.
         assert!(instant2 <= instant1);
         assert_eq!(
-            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
             Some(REPORT_DELAY_TIMER_ID)
         );
         assert!(sync_ctx.now() - start <= duration);
@@ -987,7 +987,7 @@ mod tests {
             // The initial unsolicited report.
             assert_eq!(sync_ctx.frames().len(), 1);
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             // The report after the delay.
@@ -1062,6 +1062,7 @@ mod tests {
             // The initial unsolicited report.
             assert_eq!(sync_ctx.frames().len(), 2);
             sync_ctx.trigger_timers_and_expect_unordered(
+                &mut non_sync_ctx,
                 [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
                 TimerHandler::handle_timer,
             );
@@ -1076,6 +1077,7 @@ mod tests {
                 (REPORT_DELAY_TIMER_ID_2, range),
             ]);
             sync_ctx.trigger_timers_and_expect_unordered(
+                &mut non_sync_ctx,
                 [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
                 TimerHandler::handle_timer,
             );

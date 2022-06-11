@@ -1715,7 +1715,7 @@ mod tests {
 
             // Trigger the deprecation timer.
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(deprecate_timer_id)
             );
             let entry = SlaacAddressEntry { deprecated: true, ..entry };
@@ -1728,7 +1728,7 @@ mod tests {
 
         // Trigger the invalidation timer.
         assert_eq!(
-            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
             Some(invalidate_timer_id)
         );
         assert_empty(sync_ctx.iter_slaac_addrs(&mut non_sync_ctx, DummyDeviceId));
@@ -2407,7 +2407,7 @@ mod tests {
         // Trigger the regenerate timer to generate the second temporary SLAAC
         // address.
         assert_eq!(
-            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
             Some(first_regenerate_timer_id),
         );
         let AddrProps {
@@ -2434,7 +2434,7 @@ mod tests {
 
         // Deprecate first address.
         assert_eq!(
-            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
             Some(first_deprecate_timer_id),
         );
         let first_entry = SlaacAddressEntry { deprecated: true, ..first_entry };
@@ -2460,7 +2460,10 @@ mod tests {
             for timer_id in expected_timer_order.iter() {
                 let timer_id = *timer_id;
 
-                assert_eq!(sync_ctx.trigger_next_timer(TimerHandler::handle_timer), Some(timer_id),);
+                assert_eq!(
+                    sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                    Some(timer_id),
+                );
 
                 if timer_id == second_regenerate_timer_id {
                     assert_eq!(third_created_at, None);

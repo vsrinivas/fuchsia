@@ -1238,7 +1238,7 @@ mod tests {
 
             // Trigger the ARP request retry timer.
             assert_eq!(
-                sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
                 Some(TEST_REQUEST_RETRY_TIMER_ID)
             );
         }
@@ -1676,7 +1676,7 @@ mod tests {
         // Test that, if a dynamic entry is installed, it is removed after the
         // appropriate amount of time.
 
-        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::default());
 
         insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
@@ -1695,7 +1695,7 @@ mod tests {
 
         // Trigger the entry expiration timer.
         assert_eq!(
-            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
             Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
         );
 
@@ -1720,13 +1720,14 @@ mod tests {
         // 4. Check whether the entry disappears at instant
         //    (DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD + 5)
 
-        let DummyCtx { mut sync_ctx, non_sync_ctx: _ } =
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::default());
 
         insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // Let 5 seconds elapse.
         assert_empty(sync_ctx.trigger_timers_until_instant(
+            &mut non_sync_ctx,
             DummyInstant::from(Duration::from_secs(5)),
             TimerHandler::handle_timer,
         ));
@@ -1749,6 +1750,7 @@ mod tests {
 
         // Let the remaining time elapse to the first entry expiration timer.
         assert_empty(sync_ctx.trigger_timers_until_instant(
+            &mut non_sync_ctx,
             DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD),
             TimerHandler::handle_timer,
         ));
@@ -1760,7 +1762,7 @@ mod tests {
 
         // Trigger the entry expiration timer.
         assert_eq!(
-            sync_ctx.trigger_next_timer(TimerHandler::handle_timer),
+            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
             Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
         );
         // The right amount of time should have elapsed.
