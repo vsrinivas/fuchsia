@@ -444,11 +444,11 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
   }
 
   if (input.is_transactional()) {
-    return fidl::IncomingMessage::Create(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
-                                         buf_handle_metadata.get(), num_handles);
+    return fidl::IncomingMessage::Create(buf_bytes.data(), static_cast<uint32_t>(buf_bytes.size()),
+                                         buf_handles.get(), buf_handle_metadata.get(), num_handles);
   }
-  return fidl::IncomingMessage::Create(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
-                                       buf_handle_metadata.get(), num_handles,
+  return fidl::IncomingMessage::Create(buf_bytes.data(), static_cast<uint32_t>(buf_bytes.size()),
+                                       buf_handles.get(), buf_handle_metadata.get(), num_handles,
                                        fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }
 
