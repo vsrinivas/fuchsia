@@ -147,7 +147,6 @@ framework.
 Examples:
 
 * [fuchsia.ui.input](/sdk/fidl/fuchsia.ui.input/)
-* [fuchsia.ui.text](/sdk/fidl/fuchsia.ui.text/)
 * [fuchsia.ui.pointer](/sdk/fidl/fuchsia.ui.pointer/)
 * [fuchsia.ui.input.accessibility](/sdk/fidl/fuchsia.ui.input.accessibility/)
 * [fuchsia.accessibility.semantics](/sdk/fidl/fuchsia.accessibility.semantics/)
