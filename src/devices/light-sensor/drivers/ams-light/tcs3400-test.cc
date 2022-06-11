@@ -5,6 +5,8 @@
 #include "tcs3400.h"
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-i2c/fake-i2c.h>
@@ -97,6 +99,8 @@ class FakeLightSensor : public fake_i2c::FakeI2c {
 
 class Tcs3400Test : public zxtest::Test {
  public:
+  Tcs3400Test() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override {
     constexpr metadata::LightSensorParams kLightSensorMetadata = {
         .gain = 16,
@@ -108,8 +112,16 @@ class Tcs3400Test : public zxtest::Test {
     fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kLightSensorMetadata,
                               sizeof(kLightSensorMetadata));
 
-    fake_parent_->AddProtocol(ZX_PROTOCOL_I2C, fake_i2c_.GetProto()->ops, fake_i2c_.GetProto()->ctx,
-                              "i2c");
+    fake_parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
+        [&](zx::channel channel) {
+          fidl::BindServer(loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
+                           &fake_i2c_);
+          return ZX_OK;
+        },
+        "i2c");
+
     fake_parent_->AddProtocol(ZX_PROTOCOL_GPIO, mock_gpio_.GetProto()->ops,
                               mock_gpio_.GetProto()->ctx, "gpio");
 
@@ -121,6 +133,8 @@ class Tcs3400Test : public zxtest::Test {
 
     mock_gpio_.ExpectConfigIn(ZX_OK, GPIO_NO_PULL);
     mock_gpio_.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(gpio_interrupt));
+
+    EXPECT_OK(loop_.StartThread());
 
     const auto status = Tcs3400Device::CreateAndGetDevice(nullptr, fake_parent_.get());
     ASSERT_TRUE(status.is_ok());
@@ -229,6 +243,7 @@ class Tcs3400Test : public zxtest::Test {
  private:
   ddk::MockGpio mock_gpio_;
   std::shared_ptr<MockDevice> fake_parent_;
+  async::Loop loop_;
 };
 
 TEST_F(Tcs3400Test, GetInputReport) {
@@ -850,8 +865,18 @@ class Tcs3400MetadataTest : public zxtest::Test {
     FakeLightSensor fake_i2c;
     ddk::MockGpio mock_gpio;
 
-    fake_parent->AddProtocol(ZX_PROTOCOL_I2C, fake_i2c.GetProto()->ops, fake_i2c.GetProto()->ctx,
-                             "i2c");
+    async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+    fake_parent->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
+        [&](zx::channel channel) {
+          fidl::BindServer(loop.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_i2c::Device>(std::move(channel)),
+                           &fake_i2c);
+          return ZX_OK;
+        },
+        "i2c");
+
     fake_parent->AddProtocol(ZX_PROTOCOL_GPIO, mock_gpio.GetProto()->ops, mock_gpio.GetProto()->ctx,
                              "gpio");
 
@@ -867,6 +892,8 @@ class Tcs3400MetadataTest : public zxtest::Test {
 
     fake_i2c.SetRegister(TCS_I2C_ATIME, 0xff);
     fake_i2c.SetRegister(TCS_I2C_CONTROL, 0xff);
+
+    EXPECT_OK(loop.StartThread());
 
     const auto status = Tcs3400Device::CreateAndGetDevice(nullptr, fake_parent.get());
     ASSERT_TRUE(status.is_ok());
@@ -910,11 +937,18 @@ TEST(Tcs3400Test, TooManyI2cErrors) {
       .ExpectWriteStop({0x81, 0x01}, ZX_ERR_INTERNAL)   // error, will retry.
       .ExpectWriteStop({0x81, 0x01}, ZX_ERR_INTERNAL);  // error, we are done.
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
   ddk::GpioProtocolClient gpio;
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
-  Tcs3400Device device(fake_parent.get(), std::move(i2c), gpio, std::move(port));
+
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  EXPECT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+
+  EXPECT_OK(loop.StartThread());
+  Tcs3400Device device(fake_parent.get(), std::move(endpoints->client), gpio, std::move(port));
 
   fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &parameters,
                            sizeof(metadata::LightSensorParams));

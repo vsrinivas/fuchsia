@@ -108,6 +108,7 @@ driver_bind_rules("nelson_tcs3400_light_bind") {
     "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
   ]
 }
 
