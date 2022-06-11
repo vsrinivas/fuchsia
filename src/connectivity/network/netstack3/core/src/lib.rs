@@ -390,7 +390,7 @@ pub fn handle_timer<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSy
             transport::handle_timer(sync_ctx, x);
         }
         TimerId(TimerIdInner::IpLayer(x)) => {
-            ip::handle_timer(sync_ctx, x);
+            ip::handle_timer(sync_ctx, ctx, x);
         }
         TimerId(TimerIdInner::Ipv4Device(x)) => {
             ip::device::handle_ipv4_timer(sync_ctx, ctx, x);

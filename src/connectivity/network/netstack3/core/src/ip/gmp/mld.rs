@@ -1228,7 +1228,7 @@ mod tests {
             gmp_enabled: bool,
         }
         let set_config = |sync_ctx: &mut crate::testutil::DummySyncCtx,
-                          non_sync_ctx: &mut (),
+                          non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
             crate::ip::device::update_ipv6_configuration(
                 sync_ctx,

@@ -1024,17 +1024,14 @@ pub(crate) fn handle_timer<
     NonSyncCtx: NonSyncContext,
 >(
     sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    ctx: &mut NonSyncCtx,
     id: IpLayerTimerId,
 ) {
     match id {
-        IpLayerTimerId::ReassemblyTimeoutv4(key) => {
-            TimerHandler::handle_timer(sync_ctx, &mut (), key)
-        }
-        IpLayerTimerId::ReassemblyTimeoutv6(key) => {
-            TimerHandler::handle_timer(sync_ctx, &mut (), key)
-        }
-        IpLayerTimerId::PmtuTimeoutv4(id) => TimerHandler::handle_timer(sync_ctx, &mut (), id),
-        IpLayerTimerId::PmtuTimeoutv6(id) => TimerHandler::handle_timer(sync_ctx, &mut (), id),
+        IpLayerTimerId::ReassemblyTimeoutv4(key) => TimerHandler::handle_timer(sync_ctx, ctx, key),
+        IpLayerTimerId::ReassemblyTimeoutv6(key) => TimerHandler::handle_timer(sync_ctx, ctx, key),
+        IpLayerTimerId::PmtuTimeoutv4(id) => TimerHandler::handle_timer(sync_ctx, ctx, id),
+        IpLayerTimerId::PmtuTimeoutv6(id) => TimerHandler::handle_timer(sync_ctx, ctx, id),
     }
 }
 

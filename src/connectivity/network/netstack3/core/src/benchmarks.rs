@@ -38,7 +38,7 @@ use crate::{
     ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     testutil::{
         benchmarks::{black_box, Bencher},
-        DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4,
+        DummyEventDispatcherBuilder, DummyNonSyncCtx, FakeCryptoRng, DUMMY_CONFIG_V4,
     },
     transport::udp::{BufferUdpContext, UdpContext},
     Ctx, StackStateBuilder, TimerId,
@@ -156,11 +156,12 @@ impl TimerContext<TimerId> for BenchmarkCoreContext {
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let Ctx { mut sync_ctx, mut non_sync_ctx } =
-        DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build_with::<_, _, ()>(
-            StackStateBuilder::default(),
-            BenchmarkEventDispatcher::default(),
-            BenchmarkCoreContext::default(),
-        );
+        DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+            .build_with::<_, _, DummyNonSyncCtx>(
+                StackStateBuilder::default(),
+                BenchmarkEventDispatcher::default(),
+                BenchmarkCoreContext::default(),
+            );
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut sync_ctx,
         &mut non_sync_ctx,

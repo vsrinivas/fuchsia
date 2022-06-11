@@ -1581,7 +1581,7 @@ mod tests {
 
     fn receive_simple_ip_packet_test<A: IpAddress>(
         sync_ctx: &mut crate::testutil::DummySyncCtx,
-        non_sync_ctx: &mut (),
+        non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
         device: DeviceId,
         src_ip: A,
         dst_ip: A,

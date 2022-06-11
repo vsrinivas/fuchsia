@@ -1837,7 +1837,7 @@ mod tests {
             );
         });
 
-        assert!(NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(
+        assert!(NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
             net.sync_ctx("local"),
             device_id.try_into().expect("expected ethernet ID")
         )
@@ -1861,7 +1861,7 @@ mod tests {
 
         assert_eq!(get_assigned_ipv6_addr_subnets(net.sync_ctx("remote"), device_id).count(), 1);
         // Let's make sure that our local node still can use that address.
-        assert!(NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(
+        assert!(NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
             net.sync_ctx("local"),
             device_id.try_into().expect("expected ethernet ID")
         )
@@ -1909,7 +1909,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
                 &sync_ctx,
                 dev_id.try_into().expect("expected ethernet ID")
             )
@@ -1920,7 +1920,7 @@ mod tests {
         );
         let addr = remote_ip();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
                 &sync_ctx,
                 dev_id.try_into().expect("expected ethernet ID")
             )
@@ -1935,7 +1935,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
                 &sync_ctx,
                 dev_id.try_into().expect("expected ethernet ID")
             )
@@ -1980,7 +1980,7 @@ mod tests {
                 dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), local_ip())
             );
         }
-        assert!(NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(
+        assert!(NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
             &sync_ctx,
             dev_id.try_into().expect("expected ethernet ID")
         )
@@ -2423,6 +2423,7 @@ mod tests {
         // make sure the packet uses the new hop limit.
         fn inner_test(
             sync_ctx: &mut crate::testutil::DummySyncCtx,
+            ctx: &mut crate::testutil::DummyNonSyncCtx,
             hop_limit: u8,
             frame_offset: usize,
         ) {
@@ -2444,7 +2445,7 @@ mod tests {
                 .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
                 .unwrap();
             sync_ctx.receive_ndp_packet(
-                &mut (),
+                ctx,
                 device_id,
                 Ipv6SourceAddr::from_witness(src_ip).unwrap(),
                 config.local_ip,
@@ -2453,7 +2454,7 @@ mod tests {
             assert_eq!(get_ipv6_hop_limit(sync_ctx, device_id).get(), hop_limit);
             crate::ip::send_ipv6_packet_from_device(
                 sync_ctx,
-                &mut (),
+                ctx,
                 SendIpPacketMeta {
                     device: device_id,
                     src_ip: Some(config.local_ip),
@@ -2473,14 +2474,14 @@ mod tests {
             assert_eq!(buf[7], hop_limit);
         }
 
-        let Ctx { mut sync_ctx, non_sync_ctx: _ } =
+        let Ctx { mut sync_ctx, mut non_sync_ctx } =
             DummyEventDispatcherBuilder::from_config(Ipv6::DUMMY_CONFIG).build();
 
         // Set hop limit to 100.
-        inner_test(&mut sync_ctx, 100, 0);
+        inner_test(&mut sync_ctx, &mut non_sync_ctx, 100, 0);
 
         // Set hop limit to 30.
-        inner_test(&mut sync_ctx, 30, 1);
+        inner_test(&mut sync_ctx, &mut non_sync_ctx, 30, 1);
     }
 
     #[test]
@@ -2664,7 +2665,8 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
 
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = Ctx::<DummyEventDispatcher, _, ()>::default();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } =
+            Ctx::<DummyEventDispatcher, _, crate::testutil::DummyNonSyncCtx>::default();
 
         assert_empty(sync_ctx.dispatcher.frames_sent());
         let device_id = crate::add_ethernet_device(
@@ -2756,7 +2758,8 @@ mod tests {
         // Should have only sent 3 packets (Router solicitations).
         assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 3);
 
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = Ctx::<DummyEventDispatcher, _, ()>::default();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } =
+            Ctx::<DummyEventDispatcher, _, crate::testutil::DummyNonSyncCtx>::default();
         assert_empty(sync_ctx.dispatcher.frames_sent());
         let device_id = crate::add_ethernet_device(
             &mut sync_ctx,
@@ -2932,7 +2935,7 @@ mod tests {
         .unwrap();
         let device_id = device.try_into().unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(&sync_ctx, device_id)
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&dummy_config.local_ip.try_into().unwrap())
                 .unwrap()
                 .state,
@@ -2962,14 +2965,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(&sync_ctx, device_id)
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&dummy_config.local_ip.try_into().unwrap())
                 .unwrap()
                 .state,
             AddressState::Assigned
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(&sync_ctx, device_id)
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&dummy_config.remote_ip.try_into().unwrap())
                 .unwrap()
                 .state,
@@ -3007,7 +3010,7 @@ mod tests {
         );
         assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 3);
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(&sync_ctx, device_id)
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&dummy_config.remote_ip.try_into().unwrap())
                 .unwrap()
                 .state,
@@ -3025,21 +3028,21 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(&sync_ctx, device_id)
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&dummy_config.local_ip.try_into().unwrap())
                 .unwrap()
                 .state,
             AddressState::Assigned
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(&sync_ctx, device_id)
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&dummy_config.remote_ip.try_into().unwrap())
                 .unwrap()
                 .state,
             AddressState::Assigned
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, ()>::get_ip_device_state(&sync_ctx, device_id)
+            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&new_ip.try_into().unwrap())
                 .unwrap()
                 .state,
@@ -3051,6 +3054,7 @@ mod tests {
     fn test_receiving_neighbor_advertisements() {
         fn test_receiving_na_from_known_neighbor(
             sync_ctx: &mut crate::testutil::DummySyncCtx,
+            ctx: &mut crate::testutil::DummyNonSyncCtx,
             src_ip: Ipv6Addr,
             dst_ip: SpecifiedAddr<Ipv6Addr>,
             device: DeviceId,
@@ -3072,7 +3076,7 @@ mod tests {
             let packet =
                 buf.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
             sync_ctx.receive_ndp_packet(
-                &mut (),
+                ctx,
                 device,
                 src_ip.try_into().unwrap(),
                 dst_ip,
@@ -3202,6 +3206,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3220,6 +3225,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3238,6 +3244,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3256,6 +3263,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3275,6 +3283,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3293,6 +3302,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3310,6 +3320,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3328,6 +3339,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3346,6 +3358,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3364,6 +3377,7 @@ mod tests {
 
         test_receiving_na_from_known_neighbor(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             neighbor_ip.get(),
             config.local_ip,
             device,
@@ -3499,12 +3513,13 @@ mod tests {
         fn send_prefix_update(
             &self,
             sync_ctx: &mut crate::testutil::DummySyncCtx,
+            ctx: &mut crate::testutil::DummyNonSyncCtx,
             device: DeviceId,
             src_ip: Ipv6Addr,
         ) {
             let Self { prefix, valid_for, preferred_for } = *self;
 
-            receive_prefix_update(sync_ctx, device, src_ip, prefix, preferred_for, valid_for);
+            receive_prefix_update(sync_ctx, ctx, device, src_ip, prefix, preferred_for, valid_for);
         }
 
         fn valid_until<I: Instant>(&self, now: I) -> I {
@@ -3633,7 +3648,7 @@ mod tests {
 
         // After the RA for the first prefix, we should have two addresses, one
         // static and one temporary.
-        prefix1.send_prefix_update(&mut sync_ctx, device, src_ip);
+        prefix1.send_prefix_update(&mut sync_ctx, &mut non_sync_ctx, device, src_ip);
 
         let (prefix_1_static, prefix_1_temporary) = {
             let slaac_configs = iter_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap())
@@ -3662,7 +3677,7 @@ mod tests {
 
         // When the RA for the second prefix comes in, we should leave the entries for the addresses
         // in the first prefix alone.
-        prefix2.send_prefix_update(&mut sync_ctx, device, src_ip);
+        prefix2.send_prefix_update(&mut sync_ctx, &mut non_sync_ctx, device, src_ip);
 
         {
             // Check prefix 1 addresses again.
@@ -3711,7 +3726,7 @@ mod tests {
     ) -> (crate::testutil::DummyCtx, DeviceId, UnicastAddr<Ipv6Addr>) {
         set_logger_for_test();
         let (mut ctx, device, slaac_config) = initialize_with_temporary_addresses_enabled();
-        let Ctx { sync_ctx, non_sync_ctx: _ } = &mut ctx;
+        let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let max_valid_lifetime =
             slaac_config.temporary_address_configuration.unwrap().temp_valid_lifetime.get();
@@ -3741,6 +3756,7 @@ mod tests {
 
         receive_prefix_update(
             sync_ctx,
+            non_sync_ctx,
             device,
             src_ip,
             subnet,
@@ -3790,13 +3806,21 @@ mod tests {
 
         // Receive an RA to figure out the temporary address that is assigned.
         let conflicted_addr = {
-            let (Ctx { mut sync_ctx, non_sync_ctx: _ }, device, _config) =
+            let (Ctx { mut sync_ctx, mut non_sync_ctx }, device, _config) =
                 initialize_with_temporary_addresses_enabled();
 
             *sync_ctx.ctx.rng_mut() = rand::SeedableRng::from_seed(RNG_SEED);
 
             // Receive an RA and determine what temporary address was assigned, then return it.
-            receive_prefix_update(&mut sync_ctx, device, src_ip, subnet, 9000, 10000);
+            receive_prefix_update(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                device,
+                src_ip,
+                subnet,
+                9000,
+                10000,
+            );
             *get_matching_slaac_address_entry(&sync_ctx, device, |entry| match entry.config {
                 AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
                 AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
@@ -3835,7 +3859,15 @@ mod tests {
         // a temporary and static SLAAC address. The first temporary address
         // tried will conflict with `conflicted_addr` assigned above, so a
         // different one will be generated.
-        receive_prefix_update(&mut sync_ctx, device, src_ip, subnet, 9000, 10000);
+        receive_prefix_update(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            9000,
+            10000,
+        );
 
         // Verify that `conflicted_addr` was generated and rejected.
         assert_eq!(get_counter_val(&mut sync_ctx, "generated_slaac_addr_exists"), 1);
@@ -3958,6 +3990,7 @@ mod tests {
 
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             src_ip,
             prefix,
@@ -4003,6 +4036,7 @@ mod tests {
 
     fn receive_prefix_update(
         sync_ctx: &mut crate::testutil::DummySyncCtx,
+        ctx: &mut crate::testutil::DummyNonSyncCtx,
         device: DeviceId,
         src_ip: Ipv6Addr,
         subnet: Subnet<Ipv6Addr>,
@@ -4022,13 +4056,7 @@ mod tests {
             valid_lifetime,
             preferred_lifetime,
         );
-        receive_ipv6_packet(
-            sync_ctx,
-            &mut (),
-            device,
-            FrameDestination::Multicast,
-            icmpv6_packet_buf,
-        );
+        receive_ipv6_packet(sync_ctx, ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
     }
 
     fn get_matching_slaac_address_entries<F: FnMut(&&Ipv6AddressEntry<DummyInstant>) -> bool>(
@@ -4103,6 +4131,7 @@ mod tests {
         set_logger_for_test();
         fn inner_test(
             sync_ctx: &mut crate::testutil::DummySyncCtx,
+            ctx: &mut crate::testutil::DummyNonSyncCtx,
             device: DeviceId,
             src_ip: Ipv6Addr,
             subnet: Subnet<Ipv6Addr>,
@@ -4113,6 +4142,7 @@ mod tests {
         ) {
             receive_prefix_update(
                 sync_ctx,
+                ctx,
                 device,
                 src_ip,
                 subnet,
@@ -4166,15 +4196,45 @@ mod tests {
         // Should get a new IP and set preferred lifetime to 1s.
 
         // Make sure deprecate and invalidation timers are set.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 30, 60, 60);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            30,
+            60,
+            60,
+        );
 
         // If the valid lifetime is greater than the remaining lifetime, update
         // the valid lifetime.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 70, 70, 70);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            70,
+            70,
+            70,
+        );
 
         // If the valid lifetime is greater than 2 hrs, update the valid
         // lifetime.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1001, 7201, 7201);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1001,
+            7201,
+            7201,
+        );
 
         // Make remaining lifetime < 2 hrs.
         assert_eq!(
@@ -4188,22 +4248,82 @@ mod tests {
 
         // If the remaining lifetime is <= 2 hrs & valid lifetime is less than
         // that, don't update valid lifetime.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1000, 2000, 6201);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1000,
+            2000,
+            6201,
+        );
 
         // Make the remaining lifetime > 2 hours.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1000, 10800, 10800);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1000,
+            10800,
+            10800,
+        );
 
         // If the remaining lifetime is > 2 hours, and new valid lifetime is < 2
         // hours, set the valid lifetime to 2 hours.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1000, 1000, 7200);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1000,
+            1000,
+            7200,
+        );
 
         // If the remaining lifetime is <= 2 hrs & valid lifetime is less than
         // that, don't update valid lifetime.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1000, 2000, 7200);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1000,
+            2000,
+            7200,
+        );
 
         // Increase valid lifetime twice while it is greater than 2 hours.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1001, 7201, 7201);
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1001, 7202, 7202);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1001,
+            7201,
+            7201,
+        );
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1001,
+            7202,
+            7202,
+        );
 
         // Make remaining lifetime < 2 hrs.
         assert_eq!(
@@ -4217,11 +4337,41 @@ mod tests {
 
         // If the remaining lifetime is <= 2 hrs & valid lifetime is less than
         // that, don't update valid lifetime.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1001, 6202, 6202);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1001,
+            6202,
+            6202,
+        );
 
         // Increase valid lifetime twice while it is less than 2 hours.
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1001, 6203, 6203);
-        inner_test(&mut sync_ctx, device, src_ip, subnet, expected_addr_sub, 1001, 6204, 6204);
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1001,
+            6203,
+            6203,
+        );
+        inner_test(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device,
+            src_ip,
+            subnet,
+            expected_addr_sub,
+            1001,
+            6204,
+            6204,
+        );
     }
 
     #[test]
@@ -4276,6 +4426,7 @@ mod tests {
         let preferred_lifetime = 4000;
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             router_ip,
             subnet,
@@ -4299,6 +4450,7 @@ mod tests {
 
         receive_neighbor_advertisement_for_duplicate_address(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             first_addr_entry.addr_sub().addr(),
         );
@@ -4336,6 +4488,7 @@ mod tests {
 
     fn receive_neighbor_advertisement_for_duplicate_address(
         sync_ctx: &mut crate::testutil::DummySyncCtx,
+        ctx: &mut crate::testutil::DummyNonSyncCtx,
         device: DeviceId,
         source_ip: UnicastAddr<Ipv6Addr>,
     ) {
@@ -4348,7 +4501,7 @@ mod tests {
         let src_ip = source_ip.get();
         receive_ipv6_packet(
             sync_ctx,
-            &mut (),
+            ctx,
             device,
             FrameDestination::Multicast,
             Buf::new(
@@ -4422,6 +4575,7 @@ mod tests {
 
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             router_ip,
             subnet,
@@ -4458,6 +4612,7 @@ mod tests {
                 // is a duplicate.
                 receive_neighbor_advertisement_for_duplicate_address(
                     &mut sync_ctx,
+                    &mut non_sync_ctx,
                     device,
                     addr_entry.addr_sub().addr(),
                 );
@@ -4548,6 +4703,7 @@ mod tests {
         let prefix_preferred_for: Duration = MAX_PREFERRED_LIFETIME * 2 / 3;
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             router_ip,
             subnet,
@@ -4593,6 +4749,7 @@ mod tests {
         // of addresses.
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             router_ip,
             subnet,
@@ -4746,6 +4903,7 @@ mod tests {
 
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             router_ip,
             subnet,
@@ -4816,6 +4974,7 @@ mod tests {
 
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             router_ip,
             subnet,
@@ -4889,6 +5048,7 @@ mod tests {
         assert!(u64::from(preferred_lifetime) < max_preferred_lifetime.get().as_secs());
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             src_ip,
             subnet,
@@ -4941,6 +5101,7 @@ mod tests {
 
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device,
             src_ip,
             subnet,
@@ -5006,6 +5167,7 @@ mod tests {
 
         receive_prefix_update(
             &mut sync_ctx,
+            &mut non_sync_ctx,
             device.try_into().unwrap(),
             src_ip,
             subnet,

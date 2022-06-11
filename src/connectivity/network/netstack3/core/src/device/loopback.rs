@@ -72,7 +72,8 @@ mod tests {
         error::NotFoundError,
         ip::device::state::{AssignedAddress, IpDeviceState, IpDeviceStateIpExt},
         testutil::{
-            DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DummySyncCtx, TestIpExt,
+            DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DummyNonSyncCtx, DummySyncCtx,
+            TestIpExt,
         },
         BlanketCoreContext, Ctx, EventDispatcher, NonSyncContext, SyncCtx,
     };
@@ -148,13 +149,13 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,
-            crate::ip::device::get_ipv4_device_state::<(), DummySyncCtx>,
+            crate::ip::device::get_ipv4_device_state::<DummyNonSyncCtx, DummySyncCtx>,
         );
         test::<Ipv6, _, _, _>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,
-            crate::ip::device::get_ipv6_device_state::<(), DummySyncCtx>,
+            crate::ip::device::get_ipv6_device_state::<DummyNonSyncCtx, DummySyncCtx>,
         );
     }
 }

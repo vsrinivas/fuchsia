@@ -2585,17 +2585,18 @@ mod tests {
             },
         );
 
-        let set_ip_enabled =
-            |sync_ctx: &mut crate::testutil::DummySyncCtx, non_sync_ctx: &mut (), enabled| {
-                crate::ip::device::update_ipv6_configuration(
-                    sync_ctx,
-                    non_sync_ctx,
-                    device_id,
-                    |config| {
-                        config.ip_config.ip_enabled = enabled;
-                    },
-                )
-            };
+        let set_ip_enabled = |sync_ctx: &mut crate::testutil::DummySyncCtx,
+                              non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
+                              enabled| {
+            crate::ip::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                device_id,
+                |config| {
+                    config.ip_config.ip_enabled = enabled;
+                },
+            )
+        };
         set_ip_enabled(&mut sync_ctx, &mut non_sync_ctx, true /* enabled */);
         sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
 

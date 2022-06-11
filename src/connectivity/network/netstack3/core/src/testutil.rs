@@ -111,14 +111,17 @@ pub(crate) mod benchmarks {
 pub(crate) type DummyCtx = Ctx<
     DummyEventDispatcher,
     crate::context::testutil::DummySyncCtx<(), TimerId, Never, (), DummyDeviceId>,
-    (),
+    DummyNonSyncCtx,
 >;
 
 pub(crate) type DummySyncCtx = SyncCtx<
     DummyEventDispatcher,
     crate::context::testutil::DummySyncCtx<(), TimerId, Never, (), DummyDeviceId>,
-    (),
+    DummyNonSyncCtx,
 >;
+pub(crate) type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
+
+impl NonSyncContext for DummyNonSyncCtx {}
 
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
 ///
@@ -825,29 +828,31 @@ mod tests {
 
         // Alice sends Bob a ping.
 
-        BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
-            net.sync_ctx("alice"),
-            &mut (),
-            None, // device
-            None, // local_ip
-            DUMMY_CONFIG_V4.remote_ip,
-            Ipv4Proto::Icmp,
-            None, // builder
-            |_| {
-                let req = IcmpEchoRequest::new(0, 0);
-                let req_body = &[1, 2, 3, 4];
-                Buf::new(req_body.to_vec(), ..).encapsulate(
-                    IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                        DUMMY_CONFIG_V4.local_ip,
-                        DUMMY_CONFIG_V4.remote_ip,
-                        IcmpUnusedCode,
-                        req,
-                    ),
-                )
-            },
-            None,
-        )
-        .unwrap();
+        net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
+            BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
+                sync_ctx,
+                non_sync_ctx,
+                None, // device
+                None, // local_ip
+                DUMMY_CONFIG_V4.remote_ip,
+                Ipv4Proto::Icmp,
+                None, // builder
+                |_| {
+                    let req = IcmpEchoRequest::new(0, 0);
+                    let req_body = &[1, 2, 3, 4];
+                    Buf::new(req_body.to_vec(), ..).encapsulate(
+                        IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                            DUMMY_CONFIG_V4.local_ip,
+                            DUMMY_CONFIG_V4.remote_ip,
+                            IcmpUnusedCode,
+                            req,
+                        ),
+                    )
+                },
+                None,
+            )
+            .unwrap();
+        });
 
         // Send from Alice to Bob.
         assert_eq!(net.step(receive_frame_or_panic, handle_timer).frames_sent, 1);
@@ -993,29 +998,31 @@ mod tests {
         );
 
         // Alice sends Bob a ping.
-        BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
-            net.sync_ctx("alice"),
-            &mut (),
-            None, // device
-            None, // local_ip
-            DUMMY_CONFIG_V4.remote_ip,
-            Ipv4Proto::Icmp,
-            None, // builder
-            |_| {
-                let req = IcmpEchoRequest::new(0, 0);
-                let req_body = &[1, 2, 3, 4];
-                Buf::new(req_body.to_vec(), ..).encapsulate(
-                    IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                        DUMMY_CONFIG_V4.local_ip,
-                        DUMMY_CONFIG_V4.remote_ip,
-                        IcmpUnusedCode,
-                        req,
-                    ),
-                )
-            },
-            None,
-        )
-        .unwrap();
+        net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
+            BufferIpSocketHandler::<Ipv4, _, _>::send_oneshot_ip_packet(
+                sync_ctx,
+                non_sync_ctx,
+                None, // device
+                None, // local_ip
+                DUMMY_CONFIG_V4.remote_ip,
+                Ipv4Proto::Icmp,
+                None, // builder
+                |_| {
+                    let req = IcmpEchoRequest::new(0, 0);
+                    let req_body = &[1, 2, 3, 4];
+                    Buf::new(req_body.to_vec(), ..).encapsulate(
+                        IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                            DUMMY_CONFIG_V4.local_ip,
+                            DUMMY_CONFIG_V4.remote_ip,
+                            IcmpUnusedCode,
+                            req,
+                        ),
+                    )
+                },
+                None,
+            )
+            .unwrap();
+        });
 
         assert_eq!(
             net.sync_ctx("alice")
@@ -1081,7 +1088,8 @@ mod tests {
     fn test_send_to_many<I: Ip + TestIpExt>() {
         #[specialize_ip_address]
         fn send_packet<A: IpAddress>(
-            ctx: &mut DummySyncCtx,
+            sync_ctx: &mut DummySyncCtx,
+            ctx: &mut DummyNonSyncCtx,
             src_ip: SpecifiedAddr<A>,
             dst_ip: SpecifiedAddr<A>,
             device: DeviceId,
@@ -1097,8 +1105,8 @@ mod tests {
             };
             #[ipv4addr]
             crate::ip::send_ipv4_packet_from_device(
+                sync_ctx,
                 ctx,
-                &mut (),
                 meta,
                 Buf::new(vec![1, 2, 3, 4], ..),
             )
@@ -1106,8 +1114,8 @@ mod tests {
 
             #[ipv6addr]
             crate::ip::send_ipv6_packet_from_device(
+                sync_ctx,
                 ctx,
-                &mut (),
                 meta,
                 Buf::new(vec![1, 2, 3, 4], ..),
             )
@@ -1153,7 +1161,9 @@ mod tests {
 
         // Bob and Calvin should get any packet sent by Alice.
 
-        send_packet(net.sync_ctx("alice"), ip_a, ip_b, device);
+        net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
+            send_packet(sync_ctx, non_sync_ctx, ip_a, ip_b, device);
+        });
         assert_eq!(net.sync_ctx("alice").dispatcher.frames_sent().len(), 1);
         assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
         assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
@@ -1173,7 +1183,9 @@ mod tests {
         // Only Alice should get packets sent by Bob.
 
         net.drop_pending_frames();
-        send_packet(net.sync_ctx("bob"), ip_b, ip_a, device);
+        net.with_context("bob", |Ctx { sync_ctx, non_sync_ctx }| {
+            send_packet(sync_ctx, non_sync_ctx, ip_b, ip_a, device);
+        });
         assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
         assert_eq!(net.sync_ctx("bob").dispatcher.frames_sent().len(), 1);
         assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
@@ -1190,7 +1202,9 @@ mod tests {
         // No one gets packets sent by Calvin.
 
         net.drop_pending_frames();
-        send_packet(net.sync_ctx("calvin"), ip_c, ip_a, device);
+        net.with_context("calvin", |Ctx { sync_ctx, non_sync_ctx }| {
+            send_packet(sync_ctx, non_sync_ctx, ip_c, ip_a, device);
+        });
         assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
         assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
         assert_eq!(net.sync_ctx("calvin").dispatcher.frames_sent().len(), 1);

@@ -1093,36 +1093,40 @@ mod tests {
             test_case;
 
         #[ipv4]
-        let remove_all_local_addrs = |sync_ctx: &mut crate::testutil::DummySyncCtx,
-                                      ctx: &mut ()| {
-            let devices = crate::ip::device::iter_ipv4_devices(sync_ctx)
-                .map(|(device, _state)| device)
-                .collect::<Vec<_>>();
-            for device in devices {
-                let subnets = crate::ip::device::get_assigned_ipv4_addr_subnets(sync_ctx, device)
+        let remove_all_local_addrs =
+            |sync_ctx: &mut crate::testutil::DummySyncCtx,
+             ctx: &mut crate::testutil::DummyNonSyncCtx| {
+                let devices = crate::ip::device::iter_ipv4_devices(sync_ctx)
+                    .map(|(device, _state)| device)
                     .collect::<Vec<_>>();
-                for subnet in subnets {
-                    crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
-                        .expect("failed to remove addr from device");
+                for device in devices {
+                    let subnets =
+                        crate::ip::device::get_assigned_ipv4_addr_subnets(sync_ctx, device)
+                            .collect::<Vec<_>>();
+                    for subnet in subnets {
+                        crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
+                            .expect("failed to remove addr from device");
+                    }
                 }
-            }
-        };
+            };
 
         #[ipv6]
-        let remove_all_local_addrs = |sync_ctx: &mut crate::testutil::DummySyncCtx,
-                                      ctx: &mut ()| {
-            let devices = crate::ip::device::iter_ipv6_devices(sync_ctx)
-                .map(|(device, _state)| device)
-                .collect::<Vec<_>>();
-            for device in devices {
-                let subnets = crate::ip::device::get_assigned_ipv6_addr_subnets(sync_ctx, device)
+        let remove_all_local_addrs =
+            |sync_ctx: &mut crate::testutil::DummySyncCtx,
+             ctx: &mut crate::testutil::DummyNonSyncCtx| {
+                let devices = crate::ip::device::iter_ipv6_devices(sync_ctx)
+                    .map(|(device, _state)| device)
                     .collect::<Vec<_>>();
-                for subnet in subnets {
-                    crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
-                        .expect("failed to remove addr from device");
+                for device in devices {
+                    let subnets =
+                        crate::ip::device::get_assigned_ipv6_addr_subnets(sync_ctx, device)
+                            .collect::<Vec<_>>();
+                    for subnet in subnets {
+                        crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
+                            .expect("failed to remove addr from device");
+                    }
                 }
-            }
-        };
+            };
 
         const LOCAL_DEVICE: DeviceId = DeviceId::new_ethernet(0);
         const OTHER_DEVICE: DeviceId = DeviceId::new_ethernet(1);

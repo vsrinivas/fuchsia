@@ -1089,7 +1089,10 @@ mod tests {
 
     use crate::{
         ip::gmp::GmpDelayedReportTimerId,
-        testutil::{assert_empty, DummyCtx, DummyEventDispatcher, DummySyncCtx, TestIpExt as _},
+        testutil::{
+            assert_empty, DummyCtx, DummyEventDispatcher, DummyNonSyncCtx, DummySyncCtx,
+            TestIpExt as _,
+        },
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
 
@@ -1120,13 +1123,13 @@ mod tests {
         // router solicitation and DAD for the auto-generated address.
         let test_enable_device =
             |sync_ctx: &mut DummySyncCtx,
-             non_sync_ctx: &mut (),
+             non_sync_ctx: &mut DummyNonSyncCtx,
              extra_group: Option<MulticastAddr<Ipv6Addr>>| {
                 update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
                     config.ip_config.ip_enabled = true;
                 });
                 assert_eq!(
-                    IpDeviceContext::<Ipv6, ()>::get_ip_device_state(sync_ctx, device_id)
+                    IpDeviceContext::<Ipv6, _>::get_ip_device_state(sync_ctx, device_id)
                         .ip_state
                         .iter_addrs()
                         .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
@@ -1180,15 +1183,16 @@ mod tests {
             };
         test_enable_device(&mut sync_ctx, &mut non_sync_ctx, None);
 
-        let test_disable_device = |sync_ctx: &mut DummySyncCtx, non_sync_ctx: &mut ()| {
-            update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
-                config.ip_config.ip_enabled = false;
-            });
-            sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
-        };
+        let test_disable_device =
+            |sync_ctx: &mut DummySyncCtx, non_sync_ctx: &mut DummyNonSyncCtx| {
+                update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, |config| {
+                    config.ip_config.ip_enabled = false;
+                });
+                sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+            };
         test_disable_device(&mut sync_ctx, &mut non_sync_ctx);
         assert_empty(
-            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
+            IpDeviceContext::<Ipv6, _>::get_ip_device_state(&sync_ctx, device_id)
                 .ip_state
                 .iter_addrs(),
         );
@@ -1209,7 +1213,7 @@ mod tests {
         )
         .expect("add MAC based IPv6 link-local address");
         assert_eq!(
-            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
+            IpDeviceContext::<Ipv6, _>::get_ip_device_state(&sync_ctx, device_id)
                 .ip_state
                 .iter_addrs()
                 .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
@@ -1222,7 +1226,7 @@ mod tests {
         test_enable_device(&mut sync_ctx, &mut non_sync_ctx, Some(multicast_addr));
         test_disable_device(&mut sync_ctx, &mut non_sync_ctx);
         assert_eq!(
-            IpDeviceContext::<Ipv6, ()>::get_ip_device_state(&sync_ctx, device_id)
+            IpDeviceContext::<Ipv6, _>::get_ip_device_state(&sync_ctx, device_id)
                 .ip_state
                 .iter_addrs()
                 .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
