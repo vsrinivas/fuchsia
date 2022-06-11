@@ -43,6 +43,7 @@ driver_bind_rules("nelson_backlight_bind") {
   tests = "bind-tests/nelson_backlight-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.ti.platform",
   ]

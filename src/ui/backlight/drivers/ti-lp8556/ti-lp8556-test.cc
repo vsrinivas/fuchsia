@@ -38,14 +38,18 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
   Lp8556DeviceTest()
       : mock_regs_(ddk_mock::MockMmioRegRegion(mock_reg_array_, kMmioRegSize, kMmioRegCount)),
         fake_parent_(MockDevice::FakeRootParent()),
-        loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
+        loop_(&kAsyncLoopConfigNeverAttachToThread),
+        i2c_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
-  void SetUp() {
+  void SetUp() override {
     fdf::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
+
+    auto i2c_endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    fidl::BindServer(i2c_loop_.dispatcher(), std::move(i2c_endpoints->server), &mock_i2c_);
 
     fbl::AllocChecker ac;
     dev_ = fbl::make_unique_checked<Lp8556Device>(
-        &ac, fake_parent_.get(), ddk::I2cChannel(mock_i2c_.GetProto()), std::move(mmio));
+        &ac, fake_parent_.get(), std::move(i2c_endpoints->client), std::move(mmio));
     ASSERT_TRUE(ac.check());
 
     auto backlight_endpoints = fidl::CreateEndpoints<fuchsia_hardware_backlight::Device>();
@@ -61,6 +65,7 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
     power_sensor_client_ = std::move(power_sensor_endpoints->client);
 
     ASSERT_OK(loop_.StartThread("lp8556-client-thread"));
+    ASSERT_OK(i2c_loop_.StartThread("mock-i2c-driver-thread"));
   }
 
   void TestLifecycle() {
@@ -134,6 +139,7 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
   fidl::ClientEnd<fuchsia_hardware_backlight::Device> backlight_client_;
   fidl::ClientEnd<fuchsia_hardware_power_sensor::Device> power_sensor_client_;
   async::Loop loop_;
+  async::Loop i2c_loop_;
 };
 
 TEST_F(Lp8556DeviceTest, DdkLifecycle) { TestLifecycle(); }

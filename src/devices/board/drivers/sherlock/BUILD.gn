@@ -113,6 +113,7 @@ driver_bind_rules("sherlock-backlight-bind") {
   tests = "bind-tests/sherlock-backlight-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.misc",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.ti.platform",
   ]
