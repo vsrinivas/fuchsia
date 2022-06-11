@@ -12,7 +12,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 )
 
-// Organize the license texts based on the project they were found in.
+// TODO(fxb/102344): Organize the license texts based on the project they were found in.
 //
 // This is the default mode and can be a simple aggregation of all license
 // texts. But that strategy for fuchsia.git can result in an extremely large
@@ -73,7 +73,9 @@ func (w *World) GroupByProject() []*ByProject {
 		sort.Slice(bp.SearchResults, func(i, j int) bool {
 			return string(bp.SearchResults[i].Data) < string(bp.SearchResults[j].Data)
 		})
-		byProjects = append(byProjects, bp)
+		if len(bp.SearchResults) > 0 {
+			byProjects = append(byProjects, bp)
+		}
 	}
 	sort.Slice(byProjects, func(i, j int) bool {
 		return byProjects[i].Name < byProjects[j].Name

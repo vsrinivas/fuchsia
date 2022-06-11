@@ -177,6 +177,21 @@ sdk_documentation("musl_license") {
   ]
 }
 
+# Notice file for all contents in the Fuchsia SDK.
+# TODO(fxb/102264): Replace this with individual notices for each SDK element.
+sdk_documentation("sdk_notice") {
+  name = "sdk_notice"
+
+  category = "public"
+
+  files = [
+    {
+      source = "//tools/check-licenses/golden/sdk/NOTICE.fuchsia"
+      dest = "NOTICE.fuchsia"
+    },
+  ]
+}
+
 cts_sdk("cts") {
   testonly = true
   category = "cts"
@@ -193,6 +208,7 @@ sdk_molecule("license") {
   deps = [
     ":musl_license",
     ":open_source",
+    ":sdk_notice",
   ]
 }
 
