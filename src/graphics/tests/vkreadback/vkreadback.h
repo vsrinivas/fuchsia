@@ -5,19 +5,20 @@
 #ifndef SRC_GRAPHICS_TESTS_VKREADBACK_VKREADBACK_H_
 #define SRC_GRAPHICS_TESTS_VKREADBACK_VKREADBACK_H_
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include <cstdint>
+#include <optional>
 #include <unordered_map>
-#include <vector>
 
 #include <gtest/gtest.h>
-#include <vulkan/vulkan.h>
 
 #include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
+
+#include <vulkan/vulkan.hpp>
+
+#ifdef __Fuchsia__
+#include <lib/zx/vmo.h>
+#endif
 
 struct VkReadbackSubmitOptions {
   // The first submission must include an image transition.
@@ -42,8 +43,8 @@ inline bool operator==(const VkReadbackSubmitOptions& lhs, const VkReadbackSubmi
 // Supports Fuchsia external memory extension.
 class VkReadbackTest {
  public:
-  static constexpr uint32_t kWidth = 64;
-  static constexpr uint32_t kHeight = 64;
+  static constexpr int kWidth = 64;
+  static constexpr int kHeight = 64;
 
   enum Extension { NONE, VK_FUCHSIA_EXTERNAL_MEMORY };
 
@@ -56,23 +57,26 @@ class VkReadbackTest {
   // its external memory handle.
   explicit VkReadbackTest(Extension ext = NONE);
 
-  // Constructor for an instance that imports an external memory handle.
-  explicit VkReadbackTest(uint32_t exported_memory_handle);
+#ifdef __Fuchsia__
+  // Constructor for an instance that imports an external memory VMO.
+  explicit VkReadbackTest(zx::vmo exported_memory_vmo);
+#endif
 
   virtual ~VkReadbackTest();
 
-  bool Initialize(uint32_t vk_api_verison);
+  [[nodiscard]] bool Initialize(uint32_t vk_api_verison);
 
-  bool Exec(vk::Fence fence = {});
-  bool Submit(VkReadbackSubmitOptions options, vk::Fence fence = {});
-  bool Submit(VkReadbackSubmitOptions options, vk::Semaphore semaphore, uint64_t signal);
-  bool Wait();
+  [[nodiscard]] bool Exec(vk::Fence fence = {});
+  [[nodiscard]] bool Submit(VkReadbackSubmitOptions options, vk::Fence fence = {});
+  [[nodiscard]] bool Submit(VkReadbackSubmitOptions options, vk::Semaphore semaphore,
+                            uint64_t signal);
+  [[nodiscard]] bool Wait();
 
   // Reflects a Submit() executed by the VkReadbackTest that exported the memory
   // handle imported by this test.
   void TransferSubmittedStateFrom(const VkReadbackTest& export_source);
 
-  bool Readback();
+  [[nodiscard]] bool Readback();
 
   vk::Device vulkan_device() const { return ctx_->device().get(); }
   const vk::DispatchLoaderDynamic& vulkan_loader() const { return ctx_->loader(); }
@@ -81,14 +85,17 @@ class VkReadbackTest {
     return timeline_semaphore_support_;
   }
 
-  uint32_t get_exported_memory_handle() const { return exported_memory_handle_; }
+#ifdef __Fuchsia__
+  [[nodiscard]] zx::vmo TakeExportedMemoryVmo();
+#endif
 
  private:
-  bool InitVulkan(uint32_t vk_api_version);
-  bool InitImage();
-  bool InitCommandBuffers();
+  [[nodiscard]] bool InitVulkan(uint32_t vk_api_version);
+  [[nodiscard]] bool InitImage();
+  [[nodiscard]] bool InitCommandBuffers();
 
-  bool FillCommandBuffer(VkReadbackSubmitOptions options, vk::UniqueCommandBuffer command_buffer);
+  [[nodiscard]] bool FillCommandBuffer(VkReadbackSubmitOptions options,
+                                       vk::UniqueCommandBuffer command_buffer);
 
   // Must be called by each Submit() variant exactly once.
   //
@@ -97,7 +104,7 @@ class VkReadbackTest {
 
   // Finds the first device memory type that can be read by the host.
   //
-  // Returns VK_MAX_MEMORY_TYPES if no suitable memory type exists.
+  // Returns nullopt if no suitable memory type exists.
   //
   // `allocation_size` is the amount of memory that will be allocated. Only
   // memory types whose backing heaps support allocations of the given size will
@@ -107,11 +114,12 @@ class VkReadbackTest {
   // iff memory type i is an acceptable return value. This is intended to
   // receive the value of a `memoryTypeBits` member in a structure such as
   // VkMemoryRequirements.
-  uint32_t FindReadableMemoryType(vk::DeviceSize allocation_size, uint32_t memory_type_bits);
+  std::optional<uint32_t> FindReadableMemoryType(vk::DeviceSize allocation_size,
+                                                 uint32_t memory_type_bits);
 
 #ifdef __Fuchsia__
-  bool AllocateFuchsiaImportedMemory(uint32_t device_memory_handle);
-  bool AssignExportedMemoryHandle();
+  [[nodiscard]] bool AllocateFuchsiaImportedMemory(zx::vmo exported_memory_vmo);
+  [[nodiscard]] bool AssignExportedMemoryHandle();
   void VerifyExpectedImageFormats() const;
 #endif
 
@@ -123,12 +131,14 @@ class VkReadbackTest {
   bool use_dedicated_memory_ = false;
   std::unique_ptr<VulkanContext> ctx_;
   vk::UniqueImage image_;
-  vk::DeviceMemory device_memory_;
+  vk::UniqueDeviceMemory device_memory_;
 
   // Import/export
-  vk::DeviceMemory imported_device_memory_;
-  uint32_t exported_memory_handle_ = 0;
+  vk::UniqueDeviceMemory imported_device_memory_;
   ImportExport import_export_;
+#ifdef __Fuchsia__
+  zx::vmo exported_memory_vmo_;
+#endif
 
   vk::UniqueCommandPool command_pool_;
   std::unordered_map<VkReadbackSubmitOptions, vk::UniqueCommandBuffer> command_buffers_;
@@ -141,11 +151,6 @@ class VkReadbackTest {
   // Submit() validation state.
   bool submit_called_with_transition_ = false;
   bool submit_called_with_barrier_ = false;
-
-#ifdef __Fuchsia__
-  PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA_{};
-  PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA vkGetMemoryZirconHandlePropertiesFUCHSIA_{};
-#endif
 };
 
 #endif  // SRC_GRAPHICS_TESTS_VKREADBACK_VKREADBACK_H_

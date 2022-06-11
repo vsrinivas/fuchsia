@@ -12,7 +12,7 @@ TEST(VulkanExtension, ExternalMemoryFuchsia) {
   VkReadbackTest exported_test(VkReadbackTest::VK_FUCHSIA_EXTERNAL_MEMORY);
   ASSERT_TRUE(exported_test.Initialize(VK_API_VERSION_1_1));
 
-  VkReadbackTest imported_test(exported_test.get_exported_memory_handle());
+  VkReadbackTest imported_test(exported_test.TakeExportedMemoryVmo());
   ASSERT_TRUE(imported_test.Initialize(VK_API_VERSION_1_1));
   ASSERT_TRUE(exported_test.Exec());
   imported_test.TransferSubmittedStateFrom(exported_test);
