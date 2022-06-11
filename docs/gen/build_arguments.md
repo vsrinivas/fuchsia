@@ -4709,20 +4709,28 @@ From //src/media/codec/codecs/vaapi/BUILD.gn:11
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
 //src/media/lib/ffmpeg/README.md for details.  This is ignored when
-building in variant builds for which there is no prebuilt.  In that
-case, ffmpeg is always built from source so as to be built with the
-selected variant's config.  When this is false (either explicitly or in
-a variant build) then //third_party/ffmpeg must be in the source tree,
-which requires:
-`jiri import -name third_party/ffmpeg -revision HEAD third_party/ffmpeg http://fuchsia.googlesource.com/integration`
-or, if already importing a different manifest from there, resulting in errors from jiri update,
-it can work to just git clone (but jiri update won't manage third_party/ffmpeg in this case):
+building in variant builds for which there is no prebuilt.  In that case,
+ffmpeg is always built from source so as to be built with the selected
+variant's config.  When this is false (either explicitly or in a variant
+build) then //third_party/ffmpeg must be in the source tree, which
+requires:
+
+```
+jiri import -name third_party/ffmpeg -revision HEAD third_party/ffmpeg http://fuchsia.googlesource.com/integration
+```
+
+Or, if already importing a different manifest from there, resulting in
+errors from jiri update, it can work to just git clone (but jiri update
+won't manage third_party/ffmpeg in this case):
+
+```
 mkdir third_party/ffmpeg
-git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
+git clone "https://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
+```
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:21
+From //src/media/lib/ffmpeg/BUILD.gn:28
 
 ### use_reclient_cxx_experimental
 Set to true to distribute C++ compiles remotely using RBE.
@@ -4988,7 +4996,7 @@ Whether protocol logging should be enabled
 
 **Current value (from the default):** `false`
 
-From //src/ui/wayland/bin/bridge/BUILD.gn:12
+From //src/ui/wayland/bin/bridge/BUILD.gn:13
 
 ### wayland_server_fatal_object_lookup_failures
 Enable this to make object lookup failures fatal for debugging.
