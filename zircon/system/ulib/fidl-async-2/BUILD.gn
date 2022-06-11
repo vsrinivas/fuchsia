@@ -7,11 +7,7 @@ import("//build/zircon/zx_library.gni")
 zx_library("fidl-async-2") {
   sdk = "source"
 
-  sdk_headers = [
-    "lib/fidl-async-2/fidl_server.h",
-    "lib/fidl-async-2/fidl_struct.h",
-    "lib/fidl-async-2/simple_binding.h",
-  ]
+  sdk_headers = [ "lib/fidl-async-2/fidl_struct.h" ]
 
   sources = []
   public_deps = []
