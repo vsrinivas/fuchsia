@@ -1,0 +1,70 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":fidlc-test($host_toolchain)" ]
+}
+
+test("fidlc-test") {
+  sources = [
+    "alias_tests.cc",
+    "array_tests.cc",
+    "attributes_tests.cc",
+    "availability_interleaving_tests.cc",
+    "bits_tests.cc",
+    "c_generator_tests.cc",
+    "canonical_names_tests.cc",
+    "coded_types_generator_tests.cc",
+    "consts_tests.cc",
+    "declaration_order_tests.cc",
+    "decomposition_tests.cc",
+    "direct_dependencies_tests.cc",
+    "enums_tests.cc",
+    "errors_tests.cc",
+    "flat_ast_tests.cc",
+    "flexible_tests.cc",
+    "formatter_tests.cc",
+    "generated_name_tests.cc",
+    "handle_tests.cc",
+    "json_diagnostics_tests.cc",
+    "json_findings_tests.cc",
+    "lint_findings_tests.cc",
+    "lint_tests.cc",
+    "method_tests.cc",
+    "ordinals_tests.cc",
+    "parsing_tests.cc",
+    "protocol_tests.cc",
+    "recoverable_compilation_tests.cc",
+    "recoverable_parsing_tests.cc",
+    "recursion_detector_tests.cc",
+    "reporter_tests.cc",
+    "resource_tests.cc",
+    "resourceness_tests.cc",
+    "service_tests.cc",
+    "span_tests.cc",
+    "strictness_tests.cc",
+    "structs_tests.cc",
+    "table_tests.cc",
+    "test_library.cc",
+    "transport_tests.cc",
+    "types_tests.cc",
+    "typeshape_tests.cc",
+    "union_tests.cc",
+    "using_tests.cc",
+    "utils_tests.cc",
+    "versioning_tests.cc",
+    "versioning_types_tests.cc",
+    "virtual_source_tests.cc",
+    "visitor_unittests.cc",
+  ]
+  deps = [
+    "//third_party/boringssl",
+    "//tools/fidl/fidlc:fidl",
+    "//zircon/system/ulib/zxtest",
+  ]
+}

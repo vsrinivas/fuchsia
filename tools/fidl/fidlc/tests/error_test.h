@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_ERROR_TEST_H_
-#define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_ERROR_TEST_H_
+#ifndef TOOLS_FIDL_FIDLC_TESTS_ERROR_TEST_H_
+#define TOOLS_FIDL_FIDLC_TESTS_ERROR_TEST_H_
 
 #define ASSERT_COMPILED(library)                         \
   {                                                      \
@@ -87,4 +87,4 @@
     EXPECT_TRUE(actual_err->span.valid());                                       \
   }
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_ERROR_TEST_H_
+#endif  // TOOLS_FIDL_FIDLC_TESTS_ERROR_TEST_H_

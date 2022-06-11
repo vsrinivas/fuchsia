@@ -117,7 +117,7 @@ def print_color(s, color):
 
 
 def get_all_test_files():
-    test_dir = Path(FUCHSIA_DIR) / 'zircon/system/utest/fidl-compiler'
+    test_dir = Path(FUCHSIA_DIR) / 'tools/fidl/fidlc/tests'
     for file in test_dir.iterdir():
         if file.suffix == '.cc' and file.name not in IGNORED_FILES:
             yield file

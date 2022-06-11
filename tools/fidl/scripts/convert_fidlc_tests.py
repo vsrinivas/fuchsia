@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 FUCHSIA_DIR = os.environ['FUCHSIA_DIR']
-TEST_DIR = 'zircon/system/utest/fidl-compiler'
+TEST_DIR = 'tools/fidl/fidlc/tests'
 EXPERIMENTAL_FLAG_INIT = '  fidl::ExperimentalFlags experimental_flags;\n  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);\n'
 EXPERIMENTAL_FLAG_ARG = ',\n                      experimental_flags'
 

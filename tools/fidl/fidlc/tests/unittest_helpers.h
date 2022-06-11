@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_UNITTEST_HELPERS_H_
-#define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_UNITTEST_HELPERS_H_
+#ifndef TOOLS_FIDL_FIDLC_TESTS_UNITTEST_HELPERS_H_
+#define TOOLS_FIDL_FIDLC_TESTS_UNITTEST_HELPERS_H_
 
 #include <zxtest/zxtest.h>
 
@@ -21,4 +21,4 @@
 
 #define EXPECT_NOT_NULLPTR(value, ...) EXPECT_NE(value, nullptr, ##__VA_ARGS__)
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_UNITTEST_HELPERS_H_
+#endif  // TOOLS_FIDL_FIDLC_TESTS_UNITTEST_HELPERS_H_

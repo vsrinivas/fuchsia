@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/recursion_detector.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {

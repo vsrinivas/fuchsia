@@ -22,7 +22,7 @@ The [FIDL][fidl-readme] toolchain is composed of roughly three parts:
 #### Compiler front-end
 
 The front-end lives at [//tools/fidl/fidlc/][fidlc-source],
-with tests in [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
+with tests in [//tools/fidl/fidlc/tests][fidlc-compiler-tests].
 
 #### Compiler back-ends {#compiler-backends}
 
@@ -269,22 +269,19 @@ git update-index --no-skip-worktree zircon/public/gn/config/levels.gni
 
 `fidlc` tests are at:
 
-* [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
-* [//src/lib/fidl/c/walker_tests/][walker-tests].
-* [//src/lib/fidl/c/coding_tables_tests/][fidlc-coding-tables-tests].
-* [//src/lib/fidl/c/simple_tests][fidl-simple] (C runtime tests).
+* [//tools/fidl/fidlc/{tests,goldens,testdata}][fidlc-compiler].
 
 To build and run `fidlc` tests:
 
 ```sh
-fidldev test fidlc
+fx test //tools/fidl/fidlc
 ```
 
 If you prefer to use `ninja` directly:
 
 ```sh
 fx_build_dir=$(cat .fx-build-dir) \
-    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
+    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidlc-test:' | awk -F : '{ print $1; }') \
     fx ninja -C $fx_build_dir $fidlc_tests_target && ./$fx_build_dir/$fidlc_tests_target
 ```
 
@@ -293,7 +290,7 @@ pattern. For instance:
 
 ```sh
 fx_build_dir=$(cat .fx-build-dir) \
-    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
+    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidlc-test:' | awk -F : '{ print $1; }') \
     fx ninja -C $fx_build_dir $fidlc_tests_target && ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'EnumsTests.*'
 ```
 
@@ -313,7 +310,7 @@ To step through a test, you can use [GDB](#gdb):
 
 ```sh
 fx_build_dir=$(cat .fx-build-dir) \
-    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
+    fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidlc-test:' | awk -F : '{ print $1; }') \
     fx ninja -C $fx_build_dir $fidlc_tests_target && fx gdb --args ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'AliasTests.invalid_recursive_alias'
 ```
 
@@ -526,7 +523,7 @@ for test failures. To see those, look at the `fx qemu` or `ffx log` output.
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
-| fidlc compiler           | `fx test fidl-compiler`<br>`fx test fidlc_golden_tests` | //tools/fidl/fidlc
+| fidlc compiler           | `fx test fidlc-test`<br>`fx test fidlc_golden_tests` | //tools/fidl/fidlc
 | gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser
 | measure tape test        | `fx test measure-tape_test`         | //tools/fidl/measure-tape
 | Rust IR parser           | `fx build`                          | //src/devices/tools/fidlgen_banjo/tests/parser
@@ -712,7 +709,8 @@ fidl fmt --library my_library.fidl -i
 [fidlc-source]: /tools/fidl/fidlc/
 [fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
 [fidl-simple]: /src/lib/fidl/c/simple_tests/
-[fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
+[fidlc-compiler]: /tools/fidl/fidlc/
+[fidlc-compiler-tests]: /tools/fidl/fidlc/tests/
 [walker-tests]: /src/lib/fidl/c/walker_tests/
 [jsonir]: /docs/reference/fidl/language/json-ir.md
 [getting_started]: /docs/get-started/README.md

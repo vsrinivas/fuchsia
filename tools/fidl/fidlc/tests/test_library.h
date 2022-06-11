@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
-#define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
+#ifndef TOOLS_FIDL_FIDLC_TESTS_TEST_LIBRARY_H_
+#define TOOLS_FIDL_FIDLC_TESTS_TEST_LIBRARY_H_
 
 #include <fidl/flat/compiler.h>
 #include <fidl/flat_ast.h>
@@ -389,4 +389,4 @@ class TestLibrary final : public SharedInterface {
   std::unique_ptr<fidl::flat::Compilation> compilation_;
 };
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
+#endif  // TOOLS_FIDL_FIDLC_TESTS_TEST_LIBRARY_H_

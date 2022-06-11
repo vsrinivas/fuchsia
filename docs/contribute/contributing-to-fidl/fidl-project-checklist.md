@@ -25,7 +25,7 @@ semantics changes.
 * Update FIDL files. For syntax changes, update existing FIDL source including:
   * Actual FIDL source files in tree (and out of tree, if required).
   * FIDL source specified as strings in test source code, such as the
-    [compiler unit tests][compiler-test] and the [fidlgen end-to-end tests][fidlgen-tests].
+    [compiler unit tests][fidlc-tests] and the [fidlgen end-to-end tests][fidlgen-tests].
   * FIDL snippets in documentation.
 * Ensure that interactions with attributes are handled.
   * For example, does the feature require a new placement?
@@ -99,7 +99,7 @@ Add coverage to:
 [dynamic compatibility suite]: /src/tests/fidl/compatibility/
 [editors]: /docs/development/languages/fidl/guides/editors.md
 [fidl-codec]: /src/lib/fidl_codec
-[fidl-compiler]: /zircon/system/utest/fidl-compiler
+[fidlc-tests]: /tools/fidl/fidlc/tests
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
 [fidl-ref]: /docs/reference/fidl/language/language.md
 [fidldoc]: /tools/fidl/fidldoc
@@ -112,5 +112,5 @@ Add coverage to:
 [llcpp-allocators]: /docs/development/languages/fidl/tutorials/llcpp/topics/memory-ownership.md
 [measure-tape]: /tools/fidl/measure-tape
 [source compatibility suite]: /src/tests/fidl/source_compatibility/
-[span-tests]: /zircon/system/utest/fidl-compiler/span_tests.cc
-[table-tests]: /zircon/system/utest/fidl-compiler/table_tests.cc
+[span-tests]: /tools/fidl/fidlc/tests/span_tests.cc
+[table-tests]: /tools/fidl/fidlc/tests/table_tests.cc
