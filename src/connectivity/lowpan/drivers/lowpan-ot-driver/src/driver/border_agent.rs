@@ -227,7 +227,7 @@ impl<OT: ot::InstanceInterface, NI, BI> OtDriver<OT, NI, BI> {
         };
 
         let (txt, port) = {
-            let mut txt = self.border_agent_txt_entries.lock().await.clone();
+            let mut txt = self.border_agent_vendor_txt_entries.lock().await.clone();
 
             let driver_state = self.driver_state.lock();
             let ot_instance = &driver_state.ot_instance;
@@ -248,21 +248,30 @@ impl<OT: ot::InstanceInterface, NI, BI> OtDriver<OT, NI, BI> {
             (txt, port)
         };
 
-        debug!(
-            "meshcop: update_border_agent_service: Updating meshcop dns-sd: port={} txt={:?}",
-            port, txt
-        );
+        let border_agent_current_txt_entries = self.border_agent_current_txt_entries.clone();
+        let mut last_txt_entries = border_agent_current_txt_entries.lock().await;
 
-        let task = publish_border_agent_service(service_instance_name, txt, port);
+        if txt == *last_txt_entries {
+            debug!("meshcop: update_border_agent_service: No changes.");
+        } else {
+            debug!(
+                "meshcop: update_border_agent_service: Updating meshcop dns-sd: port={} txt={:?}",
+                port, txt
+            );
 
-        if let Err(err) = self
-            .border_agent_service
-            .lock()
-            .replace(fasync::Task::spawn(task))
-            .and_then(|x| x.cancel().now_or_never().flatten())
-            .transpose()
-        {
-            warn!("meshcop: update_border_agent_service: Previous publication task ended with an error: {:?}", err);
+            *last_txt_entries = txt.clone();
+
+            let task = publish_border_agent_service(service_instance_name, txt, port);
+
+            if let Err(err) = self
+                .border_agent_service
+                .lock()
+                .replace(fasync::Task::spawn(task))
+                .and_then(|x| x.cancel().now_or_never().flatten())
+                .transpose()
+            {
+                warn!("meshcop: update_border_agent_service: Previous publication task ended with an error: {:?}", err);
+            }
         }
     }
 }

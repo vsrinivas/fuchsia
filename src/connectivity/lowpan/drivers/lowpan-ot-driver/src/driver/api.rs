@@ -758,7 +758,7 @@ where
     }
 
     async fn meshcop_update_txt_entries(&self, txt_entries: Vec<(String, Vec<u8>)>) -> ZxResult {
-        *self.border_agent_txt_entries.lock().await = txt_entries;
+        *self.border_agent_vendor_txt_entries.lock().await = txt_entries;
         self.update_border_agent_service().await;
 
         Ok(())

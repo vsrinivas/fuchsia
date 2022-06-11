@@ -80,8 +80,11 @@ pub struct OtDriver<OT, NI, BI> {
     /// Task for updating mDNS service for border agent
     border_agent_service: parking_lot::Mutex<Option<fasync::Task<Result<(), anyhow::Error>>>>,
 
+    /// The current meshcop TXT records.
+    border_agent_current_txt_entries: std::sync::Arc<futures::lock::Mutex<Vec<(String, Vec<u8>)>>>,
+
     /// Additional TXT records set by `meshcop_update_txt_entries`.
-    border_agent_txt_entries: futures::lock::Mutex<Vec<(String, Vec<u8>)>>,
+    border_agent_vendor_txt_entries: futures::lock::Mutex<Vec<(String, Vec<u8>)>>,
 }
 
 impl<OT: ot::Cli, NI, BI> OtDriver<OT, NI, BI> {
@@ -99,7 +102,10 @@ impl<OT: ot::Cli, NI, BI> OtDriver<OT, NI, BI> {
             backbone_if,
             cli_output_receiver: futures::lock::Mutex::new(cli_output_receiver),
             border_agent_service: parking_lot::Mutex::new(None),
-            border_agent_txt_entries: futures::lock::Mutex::new(vec![]),
+            border_agent_current_txt_entries: std::sync::Arc::new(futures::lock::Mutex::new(
+                vec![],
+            )),
+            border_agent_vendor_txt_entries: futures::lock::Mutex::new(vec![]),
         }
     }
 
