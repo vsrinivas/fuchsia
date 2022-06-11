@@ -62,8 +62,13 @@ config("musl_internal.config") {
   cflags_c = [ "-Werror=incompatible-pointer-types" ]
 
   if (is_gcc) {
-    # Some dubious but working musl code elicits GCC's pointer usage warnings.
-    cflags += [ "-Wno-dangling-pointer" ]
+    cflags += [
+      # Some dubious but working musl code elicits GCC's pointer usage warnings.
+      "-Wno-dangling-pointer",
+
+      # Some of the math code gets false-positive warnings.
+      "-Wno-maybe-uninitialized",
+    ]
   }
 
   if (!is_gcc) {
