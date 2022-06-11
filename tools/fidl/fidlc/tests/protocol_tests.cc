@@ -864,9 +864,7 @@ type MyStruct = resource struct {
 @max_handles("0") @max_bytes("1")
 protocol MyProtocol {
   MyMethod(MyStruct) -> (MyStruct) error uint32;
-  -> OnMyEvent(struct {
-    b uint16;
-  }) error uint32;
+  -> OnMyEvent(struct { b uint16; });
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
@@ -974,7 +972,6 @@ type MyStruct = struct{
 
 protocol MyProtocol {
   MyMethod() -> (MyStruct) error uint32;
-  -> OnMyEvent(MyStruct) error uint32;
 };
 )FIDL");
   ASSERT_COMPILED(library);
@@ -1135,7 +1132,7 @@ protocol MyProtocol {
   MyMethod(MyTable) -> (MyTable) error uint32;
   -> OnMyEvent(table {
     1: b bool;
-  }) error uint32;
+  });
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
@@ -1216,7 +1213,7 @@ type MyTable = resource table {
 
 protocol MyProtocol {
   MyMethod() -> (MyTable) error uint32;
-  -> OnMyEvent(table {
+  MyAnonResponseMethod() -> (table {
     1: b bool;
   }) error uint32;
 };
@@ -1276,7 +1273,7 @@ type MyUnion = strict resource union {
 
 protocol MyProtocol {
   MyMethod() -> (MyUnion) error uint32;
-  -> OnMyEvent(flexible union {
+  MyAnonResponseMethod() -> (flexible union {
     1: b bool;
   }) error uint32;
 };
@@ -1297,9 +1294,7 @@ type MyUnion = strict resource union {
 @max_handles("0") @max_bytes("1")
 protocol MyProtocol {
   MyMethod(MyUnion) -> (MyUnion) error uint32;
-  -> OnMyEvent(flexible union {
-    1: b bool;
-  }) error uint32;
+  -> OnMyEvent(flexible union { 1: b bool; });
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
@@ -1326,6 +1321,17 @@ protocol MyProtocol {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnionCannotBeSimple);
+}
+
+TEST(ProtocolTests, BadEventErrorSyntax) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  -> OnMyEvent(struct {}) error int32;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEventErrorSyntaxDeprecated);
 }
 
 // TODO(fxbug.dev/93542): add bad `:optional` message body tests here.

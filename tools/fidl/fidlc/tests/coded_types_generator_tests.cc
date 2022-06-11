@@ -271,22 +271,17 @@ TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocolErrorSyntax) {
 
 protocol SomeProtocol {};
 
-type OnReceivePayload = resource struct {
-    server server_end:SomeProtocol;
-};
-
 protocol UseOfProtocol {
     Method() -> (resource struct {
         client client_end:SomeProtocol;
     }) error uint32;
-    -> OnReceive(OnReceivePayload) error uint32;
 };
 )FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  ASSERT_EQ(7, gen.coded_types().size());
+  ASSERT_EQ(4, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STREQ("example_UseOfProtocol_Method_ResultNullableRef", type0->coded_name.c_str());
@@ -301,20 +296,7 @@ protocol UseOfProtocol {
   auto type0_field1 = type0_union->fields.at(1);
   EXPECT_STREQ("uint32", type0_field1.type->coded_name.c_str());
 
-  auto type1 = gen.coded_types().at(1).get();
-  EXPECT_STREQ("example_UseOfProtocol_OnReceive_ResultNullableRef", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->is_coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type1->kind);
-  auto type1_union = static_cast<const fidl::coded::XUnionType*>(type1);
-  ASSERT_EQ(fidl::types::Nullability::kNullable, type1_union->nullability);
-  EXPECT_EQ(16, type1->size_v2);
-  ASSERT_EQ(2, type1_union->fields.size());
-  auto type1_field0 = type1_union->fields.at(0);
-  EXPECT_STREQ("example_OnReceivePayload", type1_field0.type->coded_name.c_str());
-  auto type1_field1 = type1_union->fields.at(1);
-  EXPECT_STREQ("uint32", type1_field1.type->coded_name.c_str());
-
-  auto type2 = gen.coded_types().at(2).get();
+  auto type2 = gen.coded_types().at(1).get();
   EXPECT_STREQ("Protocol20example_SomeProtocolnonnullable", type2->coded_name.c_str());
   EXPECT_TRUE(type2->is_coding_needed);
   EXPECT_EQ(4, type2->size_v2);
@@ -322,18 +304,10 @@ protocol UseOfProtocol {
   auto type2_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type2);
   ASSERT_EQ(fidl::types::Nullability::kNonnullable, type2_ihandle->nullability);
 
-  auto type3 = gen.coded_types().at(3).get();
+  auto type3 = gen.coded_types().at(2).get();
   EXPECT_STREQ("uint32", type3->coded_name.c_str());
 
-  auto type4 = gen.coded_types().at(4).get();
-  EXPECT_STREQ("Request20example_SomeProtocolnonnullable", type4->coded_name.c_str());
-  EXPECT_TRUE(type4->is_coding_needed);
-  EXPECT_EQ(4, type4->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type4->kind);
-  auto type4_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type4);
-  ASSERT_EQ(fidl::types::Nullability::kNonnullable, type4_ihandle->nullability);
-
-  auto type5 = gen.coded_types().at(5).get();
+  auto type5 = gen.coded_types().at(3).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type5->coded_name.c_str());
   EXPECT_TRUE(type5->is_coding_needed);
   EXPECT_EQ(16, type5->size_v2);
@@ -342,16 +316,6 @@ protocol UseOfProtocol {
   EXPECT_TRUE(type5_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolMethodResponseMessage", type5_message->qname.c_str());
   EXPECT_EQ(1, type5_message->elements.size());
-
-  auto type6 = gen.coded_types().at(6).get();
-  EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type6->coded_name.c_str());
-  EXPECT_TRUE(type6->is_coding_needed);
-  EXPECT_EQ(16, type6->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type6->kind);
-  auto type6_message = static_cast<const fidl::coded::StructType*>(type6);
-  EXPECT_TRUE(type6_message->contains_envelope);
-  EXPECT_STREQ("example/UseOfProtocolOnReceiveEventMessage", type6_message->qname.c_str());
-  EXPECT_EQ(1, type6_message->elements.size());
 
   auto anon_payload_name =
       fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
@@ -369,23 +333,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(1, type_anon_payload_message->elements.size());
   EXPECT_EQ(0, field(type_anon_payload_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type2, field(type_anon_payload_message->elements.at(0)).type);
-
-  auto named_payload_name =
-      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
-  auto type_named_payload = gen.CodedTypeFor(named_payload_name);
-  ASSERT_NOT_NULL(type_named_payload);
-  EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
-  EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(4, type_named_payload->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_named_payload->kind);
-  auto type_named_payload_message = static_cast<const fidl::coded::StructType*>(type_named_payload);
-  ASSERT_FALSE(type_named_payload_message->is_empty);
-  EXPECT_FALSE(type_named_payload_message->contains_envelope);
-  EXPECT_NULL(type_named_payload_message->maybe_reference_type);
-  EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
-  ASSERT_EQ(1, type_named_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v2);
-  EXPECT_EQ(type4, field(type_named_payload_message->elements.at(0)).type);
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesGeneratedWrappers) {
@@ -1446,23 +1393,18 @@ protocol UseOfProtocol {
 TEST(CodedTypesGeneratorTests, GoodCodedTypesStructMessageErrorSyntax) {
   TestLibrary library(R"FIDL(library example;
 
-type OnReceivePayload = struct {
-    arg bool;
-};
-
 protocol UseOfProtocol {
     Method() -> (struct {
         arg1 bool;
         arg2 bool;
     }) error uint32;
-    -> OnReceive(OnReceivePayload) error uint32;
 };
 )FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  ASSERT_EQ(6, gen.coded_types().size());
+  ASSERT_EQ(4, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STREQ("example_UseOfProtocol_Method_ResultNullableRef", type0->coded_name.c_str());
@@ -1477,26 +1419,13 @@ protocol UseOfProtocol {
   auto type0_field1 = type0_union->fields.at(1);
   EXPECT_STREQ("uint32", type0_field1.type->coded_name.c_str());
 
-  auto type1 = gen.coded_types().at(1).get();
-  EXPECT_STREQ("example_UseOfProtocol_OnReceive_ResultNullableRef", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->is_coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type1->kind);
-  auto type1_union = static_cast<const fidl::coded::XUnionType*>(type1);
-  ASSERT_EQ(fidl::types::Nullability::kNullable, type1_union->nullability);
-  EXPECT_EQ(16, type1->size_v2);
-  ASSERT_EQ(2, type1_union->fields.size());
-  auto type1_field0 = type1_union->fields.at(0);
-  EXPECT_STREQ("example_OnReceivePayload", type1_field0.type->coded_name.c_str());
-  auto type1_field1 = type1_union->fields.at(1);
-  EXPECT_STREQ("uint32", type1_field1.type->coded_name.c_str());
-
-  auto type2 = gen.coded_types().at(2).get();
+  auto type2 = gen.coded_types().at(1).get();
   EXPECT_STREQ("bool", type2->coded_name.c_str());
 
-  auto type3 = gen.coded_types().at(3).get();
+  auto type3 = gen.coded_types().at(2).get();
   EXPECT_STREQ("uint32", type3->coded_name.c_str());
 
-  auto type4 = gen.coded_types().at(4).get();
+  auto type4 = gen.coded_types().at(3).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type4->coded_name.c_str());
   EXPECT_TRUE(type4->is_coding_needed);
   EXPECT_EQ(16, type4->size_v2);
@@ -1507,18 +1436,6 @@ protocol UseOfProtocol {
   EXPECT_NULL(type4_message->maybe_reference_type);
   EXPECT_STREQ("example/UseOfProtocolMethodResponseMessage", type4_message->qname.c_str());
   ASSERT_EQ(1, type4_message->elements.size());
-
-  auto type5 = gen.coded_types().at(5).get();
-  EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type5->coded_name.c_str());
-  EXPECT_TRUE(type5->is_coding_needed);
-  EXPECT_EQ(16, type5->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type5->kind);
-  auto type5_message = static_cast<const fidl::coded::StructType*>(type5);
-  ASSERT_FALSE(type5_message->is_empty);
-  EXPECT_TRUE(type5_message->contains_envelope);
-  EXPECT_NULL(type5_message->maybe_reference_type);
-  EXPECT_STREQ("example/UseOfProtocolOnReceiveEventMessage", type5_message->qname.c_str());
-  ASSERT_EQ(1, type5_message->elements.size());
 
   auto anon_payload_name =
       fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
@@ -1536,22 +1453,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(2, type_anon_payload_message->elements.size());
   EXPECT_EQ(0, field(type_anon_payload_message->elements.at(0)).offset_v2);
   EXPECT_EQ(1, field(type_anon_payload_message->elements.at(1)).offset_v2);
-
-  auto named_payload_name =
-      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
-  auto type_named_payload = gen.CodedTypeFor(named_payload_name);
-  ASSERT_NOT_NULL(type_named_payload);
-  EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
-  EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(1, type_named_payload->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_named_payload->kind);
-  auto type_named_payload_message = static_cast<const fidl::coded::StructType*>(type_named_payload);
-  ASSERT_FALSE(type_named_payload_message->is_empty);
-  EXPECT_FALSE(type_named_payload_message->contains_envelope);
-  EXPECT_NULL(type_named_payload_message->maybe_reference_type);
-  EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
-  ASSERT_EQ(1, type_named_payload_message->elements.size());
-  EXPECT_EQ(0, field(type_named_payload_message->elements.at(0)).offset_v2);
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesTableMessage) {
@@ -1608,23 +1509,18 @@ protocol UseOfProtocol {
 TEST(CodedTypesGeneratorTests, GoodCodedTypesTableMessageErrorSyntax) {
   TestLibrary library(R"FIDL(library example;
 
-type OnReceivePayload = table {
-    1: arg bool;
-};
-
 protocol UseOfProtocol {
     Method() -> (table {
         1: arg1 bool;
         2: arg2 bool;
     }) error uint32;
-    -> OnReceive(OnReceivePayload) error uint32;
 };
 )FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  ASSERT_EQ(6, gen.coded_types().size());
+  ASSERT_EQ(4, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STREQ("example_UseOfProtocol_Method_ResultNullableRef", type0->coded_name.c_str());
@@ -1639,26 +1535,13 @@ protocol UseOfProtocol {
   auto type0_field1 = type0_union->fields.at(1);
   EXPECT_STREQ("uint32", type0_field1.type->coded_name.c_str());
 
-  auto type1 = gen.coded_types().at(1).get();
-  EXPECT_STREQ("example_UseOfProtocol_OnReceive_ResultNullableRef", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->is_coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type1->kind);
-  auto type1_union = static_cast<const fidl::coded::XUnionType*>(type1);
-  ASSERT_EQ(fidl::types::Nullability::kNullable, type1_union->nullability);
-  EXPECT_EQ(16, type1->size_v2);
-  ASSERT_EQ(2, type1_union->fields.size());
-  auto type1_field0 = type1_union->fields.at(0);
-  EXPECT_STREQ("example_OnReceivePayload", type1_field0.type->coded_name.c_str());
-  auto type1_field1 = type1_union->fields.at(1);
-  EXPECT_STREQ("uint32", type1_field1.type->coded_name.c_str());
-
-  auto type2 = gen.coded_types().at(2).get();
+  auto type2 = gen.coded_types().at(1).get();
   EXPECT_STREQ("bool", type2->coded_name.c_str());
 
-  auto type3 = gen.coded_types().at(3).get();
+  auto type3 = gen.coded_types().at(2).get();
   EXPECT_STREQ("uint32", type3->coded_name.c_str());
 
-  auto type4 = gen.coded_types().at(4).get();
+  auto type4 = gen.coded_types().at(3).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type4->coded_name.c_str());
   EXPECT_TRUE(type4->is_coding_needed);
   EXPECT_EQ(16, type4->size_v2);
@@ -1667,16 +1550,6 @@ protocol UseOfProtocol {
   EXPECT_TRUE(type4_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolMethodResponseMessage", type4_message->qname.c_str());
   ASSERT_EQ(1, type4_message->elements.size());
-
-  auto type5 = gen.coded_types().at(5).get();
-  EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type5->coded_name.c_str());
-  EXPECT_TRUE(type5->is_coding_needed);
-  EXPECT_EQ(16, type5->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type5->kind);
-  auto type5_message = static_cast<const fidl::coded::StructType*>(type5);
-  EXPECT_TRUE(type5_message->contains_envelope);
-  EXPECT_STREQ("example/UseOfProtocolOnReceiveEventMessage", type5_message->qname.c_str());
-  ASSERT_EQ(1, type5_message->elements.size());
 
   auto anon_payload_name =
       fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
@@ -1692,20 +1565,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(2, type_anon_payload_message->fields.size());
   EXPECT_EQ(1, type_anon_payload_message->fields.at(0).type->size_v2);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v2);
-
-  auto named_payload_name =
-      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
-  auto type_named_payload = gen.CodedTypeFor(named_payload_name);
-  ASSERT_NOT_NULL(type_named_payload);
-  EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
-  EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(16, type_named_payload->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kTable, type_named_payload->kind);
-  auto type_named_payload_message = static_cast<const fidl::coded::TableType*>(type_named_payload);
-  EXPECT_EQ(fidl::types::Resourceness::kValue, type_named_payload_message->resourceness);
-  EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
-  ASSERT_EQ(1, type_named_payload_message->fields.size());
-  EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v2);
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesUnionMessage) {
@@ -1764,23 +1623,18 @@ protocol UseOfProtocol {
 TEST(CodedTypesGeneratorTests, GoodCodedTypesUnionMessageErrorSyntax) {
   TestLibrary library(R"FIDL(library example;
 
-type OnReceivePayload = flexible union {
-    1: arg bool;
-};
-
 protocol UseOfProtocol {
     Method() -> (strict union {
         1: arg1 bool;
         2: arg2 bool;
     }) error uint32;
-    -> OnReceive(OnReceivePayload) error uint32;
 };
 )FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.compilation());
   gen.CompileCodedTypes();
 
-  ASSERT_EQ(8, gen.coded_types().size());
+  ASSERT_EQ(5, gen.coded_types().size());
 
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STREQ("example_UseOfProtocol_Method_ResultNullableRef", type1->coded_name.c_str());
@@ -1795,26 +1649,13 @@ protocol UseOfProtocol {
   auto type1_field1 = type1_union->fields.at(1);
   EXPECT_STREQ("uint32", type1_field1.type->coded_name.c_str());
 
-  auto type3 = gen.coded_types().at(3).get();
-  EXPECT_STREQ("example_UseOfProtocol_OnReceive_ResultNullableRef", type3->coded_name.c_str());
-  EXPECT_TRUE(type3->is_coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type3->kind);
-  auto type3_union = static_cast<const fidl::coded::XUnionType*>(type3);
-  ASSERT_EQ(fidl::types::Nullability::kNullable, type3_union->nullability);
-  EXPECT_EQ(16, type3->size_v2);
-  ASSERT_EQ(2, type3_union->fields.size());
-  auto type3_field0 = type3_union->fields.at(0);
-  EXPECT_STREQ("example_OnReceivePayload", type3_field0.type->coded_name.c_str());
-  auto type3_field1 = type3_union->fields.at(1);
-  EXPECT_STREQ("uint32", type3_field1.type->coded_name.c_str());
-
-  auto type4 = gen.coded_types().at(4).get();
+  auto type4 = gen.coded_types().at(2).get();
   EXPECT_STREQ("bool", type4->coded_name.c_str());
 
-  auto type5 = gen.coded_types().at(5).get();
+  auto type5 = gen.coded_types().at(3).get();
   EXPECT_STREQ("uint32", type5->coded_name.c_str());
 
-  auto type6 = gen.coded_types().at(6).get();
+  auto type6 = gen.coded_types().at(4).get();
   EXPECT_STREQ("example_UseOfProtocolMethodResponseMessage", type6->coded_name.c_str());
   EXPECT_TRUE(type6->is_coding_needed);
   EXPECT_EQ(16, type6->size_v2);
@@ -1823,16 +1664,6 @@ protocol UseOfProtocol {
   EXPECT_TRUE(type6_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolMethodResponseMessage", type6_message->qname.c_str());
   ASSERT_EQ(1, type6_message->elements.size());
-
-  auto type7 = gen.coded_types().at(7).get();
-  EXPECT_STREQ("example_UseOfProtocolOnReceiveEventMessage", type7->coded_name.c_str());
-  EXPECT_TRUE(type7->is_coding_needed);
-  EXPECT_EQ(16, type7->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type7->kind);
-  auto type7_message = static_cast<const fidl::coded::StructType*>(type7);
-  EXPECT_TRUE(type7_message->contains_envelope);
-  EXPECT_STREQ("example/UseOfProtocolOnReceiveEventMessage", type7_message->qname.c_str());
-  ASSERT_EQ(1, type7_message->elements.size());
 
   auto anon_payload_name =
       fidl::flat::Name::Key(library.LookupLibrary("example"), "UseOfProtocol_Method_Response");
@@ -1849,21 +1680,6 @@ protocol UseOfProtocol {
   ASSERT_EQ(2, type_anon_payload_message->fields.size());
   EXPECT_EQ(1, type_anon_payload_message->fields.at(0).type->size_v2);
   EXPECT_EQ(1, type_anon_payload_message->fields.at(1).type->size_v2);
-
-  auto named_payload_name =
-      fidl::flat::Name::Key(library.LookupLibrary("example"), "OnReceivePayload");
-  auto type_named_payload = gen.CodedTypeFor(named_payload_name);
-  ASSERT_NOT_NULL(type_named_payload);
-  EXPECT_STREQ("example_OnReceivePayload", type_named_payload->coded_name.c_str());
-  EXPECT_TRUE(type_named_payload->is_coding_needed);
-  EXPECT_EQ(16, type_named_payload->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_named_payload->kind);
-  auto type_named_payload_message = static_cast<const fidl::coded::XUnionType*>(type_named_payload);
-  EXPECT_EQ(fidl::types::Nullability::kNonnullable, type_named_payload_message->nullability);
-  EXPECT_EQ(fidl::types::Resourceness::kValue, type_named_payload_message->resourceness);
-  EXPECT_STREQ("example/OnReceivePayload", type_named_payload_message->qname.c_str());
-  ASSERT_EQ(1, type_named_payload_message->fields.size());
-  EXPECT_EQ(1, type_named_payload_message->fields.at(0).type->size_v2);
 }
 
 }  // namespace

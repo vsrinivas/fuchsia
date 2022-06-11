@@ -1112,6 +1112,35 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       }
     }
   }
+
+  // Ensure that events do not use the error syntax except those in an allowlist.
+  // TODO(fxbug.dev/98319): Error syntax in events should not parse.
+  auto CheckNoEventErrorSyntax = [this](const Protocol::Method& event) -> void {
+    if (!event.maybe_response)
+      return;
+    if (!event.HasResultUnion())
+      return;
+    const auto& protocol = *event.owning_protocol;
+    const Library& library = *protocol.name.library();
+    // TODO(fxbug.dev/98319): Migrate test libraries.
+    ZX_ASSERT(library.name.size() > 0);
+    if (library.name[0] == "test" || library.name[0] == "fidl") {
+      return;
+    }
+    // TODO(fxbug.dev/99924): Migrate fuchsia.hardware.radar.
+    if (library.name.size() == 3) {
+      if (library.name[0] == "fuchsia" && library.name[1] == "hardware" &&
+          library.name[2] == "radar") {
+        return;
+      }
+    }
+    Fail(ErrEventErrorSyntaxDeprecated, event.name, event.name.data());
+  };
+  for (auto& method : protocol_declaration->methods) {
+    if (method.has_response && !method.has_request) {
+      CheckNoEventErrorSyntax(method);
+    }
+  }
 }
 
 void CompileStep::CompileService(Service* service_decl) {

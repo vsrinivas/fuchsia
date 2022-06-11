@@ -523,11 +523,11 @@ type Payload = struct {
 };
 protocol P {
     M1(Payload);
-    -> M2(Payload) error uint32;
+    M2() -> (Payload) error uint32;
 };
 `,
 			expected: `protocol/member l/P.M1(bool a)
-protocol/member l/P.M2 -> (l/P_M2_Result result)
+protocol/member l/P.M2() -> (l/P_M2_Result result)
 protocol l/P
 union/member l/P_M2_Result.err uint32
 union/member l/P_M2_Result.response l/Payload
@@ -574,12 +574,12 @@ type T = table {
     1: b string;
 };
 protocol P {
-    -> M1(flexible union { 1: a bool; }) error uint32;
-    -> M2(T) error int32;
+    M1() -> (flexible union { 1: a bool; }) error uint32;
+    M2() -> (T) error int32;
 };
 `,
-			expected: `protocol/member l/P.M1 -> (l/P_M1_Result result)
-protocol/member l/P.M2 -> (l/P_M2_Result result)
+			expected: `protocol/member l/P.M1() -> (l/P_M1_Result result)
+protocol/member l/P.M2() -> (l/P_M2_Result result)
 protocol l/P
 union/member l/P_M1_Response.a bool
 flexible union l/P_M1_Response
@@ -1522,18 +1522,18 @@ type Payload = struct {
     a bool;
 };
 protocol P {
-    M1(Payload);
-    -> M2(Payload) error uint32;
+    -> M1(Payload);
+    M2() -> (Payload) error uint32;
 };
 `,
 			expected: `[
     {
-        "declaration": "(bool a)",
+        "declaration": " -> (bool a)",
         "kind": "protocol/member",
         "name": "l/P.M1"
     },
     {
-        "declaration": " -> (l/P_M2_Result result)",
+        "declaration": "() -> (l/P_M2_Result result)",
         "kind": "protocol/member",
         "name": "l/P.M2"
     },
@@ -1655,18 +1655,18 @@ type T = table {
     1: b string;
 };
 protocol P {
-    -> M1(flexible union { 1: a bool; }) error uint32;
-    -> M2(T) error int32;
+    M1() -> (flexible union { 1: a bool; }) error uint32;
+    M2() -> (T) error int32;
 };
 `,
 			expected: `[
     {
-        "declaration": " -> (l/P_M1_Result result)",
+        "declaration": "() -> (l/P_M1_Result result)",
         "kind": "protocol/member",
         "name": "l/P.M1"
     },
     {
-        "declaration": " -> (l/P_M2_Result result)",
+        "declaration": "() -> (l/P_M2_Result result)",
         "kind": "protocol/member",
         "name": "l/P.M2"
     },

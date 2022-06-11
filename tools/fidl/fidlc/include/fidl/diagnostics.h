@@ -293,6 +293,8 @@ constexpr ErrorDef<std::string_view, std::string_view, const flat::Decl *>
     ErrTransportEndUsedInIncompatibleTransport(
         "client_end / server_end of transport type {} may not be sent over transport {} used by "
         "{}");
+constexpr ErrorDef<std::string_view> ErrEventErrorSyntaxDeprecated(
+    "Event '{}' uses the error syntax. This is deprecated (see fxbug.dev/99924)");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints

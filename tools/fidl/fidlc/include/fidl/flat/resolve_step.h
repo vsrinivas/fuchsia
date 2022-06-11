@@ -13,7 +13,7 @@ namespace fidl::flat {
 //
 // 1. Parse the structure of each reference. For example, given `foo.bar`, this
 //    means choosing between "library foo, decl bar" and "decl foo, member bar".
-//    This step does not consult availabilties nor the version selection.
+//    This step does not consult availabilities nor the version selection.
 // 2. Perform temporal decomposition, splitting declarations into finer-grained
 //    pieces such that for each one, nothing changes over its availability.
 // 3. Resolve all references in the decomposed AST, linking each one to the
