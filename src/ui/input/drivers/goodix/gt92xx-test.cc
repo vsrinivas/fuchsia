@@ -6,6 +6,8 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
@@ -80,10 +82,17 @@ TEST(GoodixTest, Init) {
   const gpio_protocol_t* reset = reset_mock.GetProto();
   const gpio_protocol_t* intr = intr_mock.GetProto();
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  EXPECT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+
+  EXPECT_OK(loop.StartThread());
 
   auto fake_parent = MockDevice::FakeRootParent();
-  Gt92xxTest device(std::move(i2c), intr, reset, fake_parent.get());
+  Gt92xxTest device(std::move(endpoints->client), intr, reset, fake_parent.get());
 
   mock_i2c
       .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
@@ -119,10 +128,17 @@ TEST(GoodixTest, InitForceConfig) {
   const gpio_protocol_t* reset = reset_mock.GetProto();
   const gpio_protocol_t* intr = intr_mock.GetProto();
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  EXPECT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+
+  EXPECT_OK(loop.StartThread());
 
   auto fake_parent = MockDevice::FakeRootParent();
-  Gt92xxTest device(std::move(i2c), intr, reset, fake_parent.get());
+  Gt92xxTest device(std::move(endpoints->client), intr, reset, fake_parent.get());
 
   fbl::Vector conf_data = Gt92xxDevice::GetConfData();
   EXPECT_NE(conf_data[sizeof(uint16_t)], 0x00);
@@ -165,10 +181,18 @@ TEST(GoodixTest, TestReport) {
       .ExpectWriteStop({static_cast<uint8_t>(GT_REG_TOUCH_STATUS >> 8),
                         static_cast<uint8_t>(GT_REG_TOUCH_STATUS & 0xff), 0x00});
 
-  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  EXPECT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+
+  EXPECT_OK(loop.StartThread());
 
   auto fake_parent = MockDevice::FakeRootParent();
-  Gt92xxTest device(std::move(i2c), intr_mock.GetProto(), reset_mock.GetProto(), fake_parent.get());
+  Gt92xxTest device(std::move(endpoints->client), intr_mock.GetProto(), reset_mock.GetProto(),
+                    fake_parent.get());
   EXPECT_OK(device.StartThread());
   zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
