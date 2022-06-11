@@ -3,21 +3,28 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/media/lib/ffmpeg/ffmpeg_prebuilt_variants.gni")
 
 declare_args() {
   # Use a prebuilt ffmpeg binary rather than building it locally.  See
   # //src/media/lib/ffmpeg/README.md for details.  This is ignored when
-  # building in variant builds for which there is no prebuilt.  In that
-  # case, ffmpeg is always built from source so as to be built with the
-  # selected variant's config.  When this is false (either explicitly or in
-  # a variant build) then //third_party/ffmpeg must be in the source tree,
-  # which requires:
-  # `jiri import -name third_party/ffmpeg -revision HEAD third_party/ffmpeg http://fuchsia.googlesource.com/integration`
-  # or, if already importing a different manifest from there, resulting in errors from jiri update,
-  # it can work to just git clone (but jiri update won't manage third_party/ffmpeg in this case):
+  # building in variant builds for which there is no prebuilt.  In that case,
+  # ffmpeg is always built from source so as to be built with the selected
+  # variant's config.  When this is false (either explicitly or in a variant
+  # build) then //third_party/ffmpeg must be in the source tree, which
+  # requires:
+  #
+  # ```
+  # jiri import -name third_party/ffmpeg -revision HEAD third_party/ffmpeg http://fuchsia.googlesource.com/integration
+  # ```
+  #
+  # Or, if already importing a different manifest from there, resulting in
+  # errors from jiri update, it can work to just git clone (but jiri update
+  # won't manage third_party/ffmpeg in this case):
+  #
+  # ```
   # mkdir third_party/ffmpeg
-  # git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
+  # git clone "https://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
+  # ```
   use_prebuilt_ffmpeg = true
 }
 
@@ -44,25 +51,32 @@ if (use_prebuilt_ffmpeg) {
     public_configs = [ ":prebuilt_ffmpeg_config" ]
   }
 
-  variant_prefix = toolchain_variant.name
-  has_prebuilt_ffmpeg_variant = ffmpeg_prebuilt_variants + [ variant_prefix ] -
-                                [ variant_prefix ] != ffmpeg_prebuilt_variants
+  prebuilt_dir = "//prebuilt/third_party/ffmpeg"
+  prebuilt_lib_dir = "$prebuilt_dir/arch/$current_cpu/lib"
+  prebuilt_include_dir = "$prebuilt_dir/pkg/ffmpeg/include"
 
-  # If there is an ffmpeg build variant, use that variant as a prefix.
-  # Otherwise, do not use a prefix.
-  if (has_prebuilt_ffmpeg_variant) {
-    variant_prefix += "/"
+  # This file is produced by the ffmpeg prebuilt recipe, defining the list of
+  # all the variants for which prebuilt ffmpeg binaries are available.  Each
+  # of these corresponds to a subdirectory of $prebuilt_dir containing a
+  # libffmpeg.so file.
+  forward_variables_from(
+      read_file("$prebuilt_dir/prebuilt_variants.json", "json"),
+      [ "prebuilt_variants" ])
+
+  # If there is a variant prebuilt, use it from the variant-named subdirectory.
+  # Otherwise use the vanilla build in the main directory.
+  if (prebuilt_variants + [ toolchain_variant.name ] -
+      [ toolchain_variant.name ] != prebuilt_variants) {
+    ffmpeg_lib_dir = "$prebuilt_lib_dir/${toolchain_variant.name}/"
   } else {
-    variant_prefix = ""
+    ffmpeg_lib_dir = prebuilt_lib_dir
   }
 
-  prebuilt_dir = "//prebuilt/third_party/ffmpeg/arch/$current_cpu"
-  lib_dir = "$prebuilt_dir/lib/"
+  ffmpeg_so = "$ffmpeg_lib_dir/libffmpeg.so"
 
   config("prebuilt_ffmpeg_config") {
     visibility = [ ":prebuilt_ffmpeg" ]
 
-    ffmpeg_include = "//prebuilt/third_party/ffmpeg/pkg/ffmpeg/include"
     if (current_cpu == "x64") {
       ffmpeg_config = "max"
     } else {
@@ -70,20 +84,15 @@ if (use_prebuilt_ffmpeg) {
     }
 
     include_dirs = [
-      ffmpeg_include,
-      "$ffmpeg_include/fuchsia/config/$ffmpeg_config/$current_cpu",
+      prebuilt_include_dir,
+      "$prebuilt_include_dir/fuchsia/config/$ffmpeg_config/$current_cpu",
     ]
 
-    libs = [ "$lib_dir/${variant_prefix}libffmpeg.so" ]
-    lib_dirs = [ lib_dir ]
+    libs = [ ffmpeg_so ]
   }
 
   resource("prebuilt_ffmpeg_shared_library") {
-    sources = [ "$lib_dir/${variant_prefix}libffmpeg.so" ]
-
-    # NOTE: prebuilt shared libraries for instrumented variants should be
-    # installed into lib/<variant>/, and lib/ for non-instrumented ones
-    # (e.g. thinlto).
-    outputs = [ "lib/${toolchain_variant.libprefix}libffmpeg.so" ]
+    sources = [ ffmpeg_so ]
+    outputs = [ "lib/${toolchain_variant.libprefix}{{source_file_part}}" ]
   }
 }
