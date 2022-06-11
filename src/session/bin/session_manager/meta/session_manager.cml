@@ -38,12 +38,6 @@
             protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "parent",
         },
-        {
-            directory: "config-data",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/config/data",
-        },
     ],
     offer: [
         {
