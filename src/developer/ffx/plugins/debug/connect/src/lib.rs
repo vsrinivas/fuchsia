@@ -46,6 +46,11 @@ pub async fn connect(
         socket.unix_socket_path().as_ref(),
         "--quit-agent-on-exit".as_ref(),
     ];
+
+    if cmd.no_auto_attach_limbo {
+        args.push("--no-auto-attach-limbo".as_ref());
+    }
+
     args.extend(cmd.zxdb_args.iter().map(|s| AsRef::<OsStr>::as_ref(s)));
 
     let mut zxdb = match cmd.debugger {

@@ -18,6 +18,11 @@ pub struct ConnectCommand {
     #[argh(switch)]
     pub agent_only: bool,
 
+    /// do not automatically attach to processes found in Process Limbo upon successful connection.
+    /// convenience switch for the zxdb option of the same name.
+    #[argh(switch, short = 'n')]
+    pub no_auto_attach_limbo: bool,
+
     /// extra arguments passed to zxdb. Any arguments starting with "-" must be after a "--" separator.
     #[argh(positional)]
     pub zxdb_args: Vec<String>,
