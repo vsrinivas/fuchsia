@@ -16,6 +16,7 @@ import 'package:test/test.dart';
 import 'helpers.dart';
 
 enum Protocol { udp, tcp }
+
 enum Direction { send, recv }
 
 // This test adds e2e performance benchmarks using iperf3 for TCP and UDP
@@ -31,7 +32,6 @@ enum Direction { send, recv }
 // CPU usage  - Avg CPU usage during the iperf3 sessions.
 void main(List<String> args) {
   enableLoggingOutput();
-  const componentUrl = 'fuchsia-pkg://fuchsia.com/iperf3#meta/iperf3.cmx';
   // TCP/UDP port number that the Fuchsia side will listen on.
   const port = 9001;
   // systemMetricsStarted indicates if we have waited for system_metrics
@@ -155,8 +155,7 @@ void main(List<String> args) {
 
   Future<void> startIperfServer(PerfTestHelper helper) async {
     // Start iperf server on the target device.
-    await helper.sl4fDriver.ssh.start(
-        '/bin/run $componentUrl --server --port $port --json',
+    await helper.sl4fDriver.ssh.start('iperf3 --server --port $port --json',
         mode: ProcessStartMode.detached);
 
     // Poll for the server to have started listening for client
@@ -288,8 +287,8 @@ void main(List<String> args) {
         if (deviceLocal) {
           resultsFile = '/tmp/iperf_results.json';
           var args = cmdArgs.join(' ');
-          final result = await helper.sl4fDriver.ssh
-              .run('/bin/run $componentUrl $args > $resultsFile');
+          final result =
+              await helper.sl4fDriver.ssh.run('iperf3 $args > $resultsFile');
           expect(result.exitCode, equals(0));
         } else {
           // Run iperf3 client from the host-tools.
@@ -314,7 +313,7 @@ void main(List<String> args) {
             recv: recv,
             deviceLocal: deviceLocal);
       } finally {
-        await helper.sl4fDriver.ssh.run('killall iperf3.cmx');
+        await helper.sl4fDriver.ssh.run('killall iperf3');
       }
     }
   }
@@ -331,7 +330,7 @@ void main(List<String> args) {
               send: send, recv: recv, deviceLocal: deviceLocal);
         } finally {
           // Kill the iperf3 server process.
-          await helper.sl4fDriver.ssh.run('killall iperf3.cmx');
+          await helper.sl4fDriver.ssh.run('killall iperf3');
         }
       }, timeout: Timeout.none);
     });
