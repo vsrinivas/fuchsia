@@ -62,8 +62,6 @@ group("cmx_allowlist") {
     "//examples/fuzzers/rust:*",
     "//examples/hello_world/dart:*",
     "//examples/isolated_cache:*",
-    "//garnet/examples/http/httpget_cpp:*",
-    "//garnet/examples/http/httpget_rust:*",
     "//sdk/cts/examples/hello_world:*",
     "//sdk/cts/tests/pkg/fdio:*",
     "//sdk/cts/tests/pkg/memfs:*",
