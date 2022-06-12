@@ -318,7 +318,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         List<String> channels;
         if (currentChannel.isNotEmpty) {
           if (channelService.channels.contains(currentChannel)) {
-            channels = channelService.channels;
+            // FIDL messages are unmodifiable so we need to copy the list of
+            // channels here.
+            channels = List.from(channelService.channels);
+
             int index = channels.indexOf(currentChannel);
             if (index != 0) {
               channels
