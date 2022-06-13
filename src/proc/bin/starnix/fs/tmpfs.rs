@@ -7,6 +7,7 @@ use std::sync::Arc;
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
 use crate::lock::{Mutex, MutexGuard};
+use crate::logging::not_implemented;
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -60,8 +61,57 @@ impl FileSystemOps for Arc<TmpFs> {
 
 impl TmpFs {
     pub fn new() -> FileSystemHandle {
+        Self::new_with_data(b"")
+    }
+
+    pub fn new_with_data(data: &FsStr) -> FileSystemHandle {
         let fs = FileSystem::new_with_permanent_entries(Arc::new(TmpFs(())));
         fs.set_root(TmpfsDirectory::new());
+        let root_node = &fs.root().node;
+        if data.len() > 0 {
+            for option in data.split(|c| *c == b',') {
+                let mut splitted_option = option.split(|c| *c == b'=');
+                match splitted_option.next() {
+                    Some(b"mode") => {
+                        if let Some(mode) = splitted_option.next() {
+                            if splitted_option.next().is_none() {
+                                if let Ok(mode) = FileMode::from_string(mode) {
+                                    root_node.chmod(mode);
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    Some(b"uid") => {
+                        if let Some(uid) = splitted_option.next() {
+                            if splitted_option.next().is_none() {
+                                if let Ok(uid) = std::str::from_utf8(uid) {
+                                    if let Ok(uid) = uid.parse::<uid_t>() {
+                                        root_node.chown(Some(uid), None);
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Some(b"gid") => {
+                        if let Some(gid) = splitted_option.next() {
+                            if splitted_option.next().is_none() {
+                                if let Ok(gid) = std::str::from_utf8(gid) {
+                                    if let Ok(gid) = gid.parse::<gid_t>() {
+                                        root_node.chown(None, Some(gid));
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+                // Overall fallback. All matched option ended up in a continue.
+                not_implemented!("Unknown tmpfs option: {}", String::from_utf8_lossy(option));
+            }
+        }
         fs
     }
 }

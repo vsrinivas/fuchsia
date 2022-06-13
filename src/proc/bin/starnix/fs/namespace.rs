@@ -194,7 +194,7 @@ pub fn create_filesystem(
     kernel: &Arc<Kernel>,
     _source: &FsStr,
     fs_type: &FsStr,
-    _data: &FsStr,
+    data: &FsStr,
 ) -> Result<WhatToMount, Errno> {
     let fs = match fs_type {
         b"devtmpfs" => dev_tmp_fs(kernel).clone(),
@@ -202,7 +202,7 @@ pub fn create_filesystem(
         b"proc" => proc_fs(kernel.clone()),
         b"selinuxfs" => selinux_fs(kernel).clone(),
         b"sysfs" => sys_fs(kernel).clone(),
-        b"tmpfs" => TmpFs::new(),
+        b"tmpfs" => TmpFs::new_with_data(data),
         b"binder" => BinderFs::new(kernel)?,
         _ => return error!(ENODEV, String::from_utf8_lossy(fs_type)),
     };

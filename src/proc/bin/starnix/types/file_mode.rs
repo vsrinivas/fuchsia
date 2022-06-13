@@ -48,6 +48,15 @@ impl FileMode {
         FileMode(mask)
     }
 
+    pub fn from_string(mask: &[u8]) -> Result<FileMode, Errno> {
+        if mask[0] != b'0' {
+            return error!(EINVAL);
+        }
+        let mask = std::str::from_utf8(mask).map_err(|_| EINVAL)?;
+        let mask = u32::from_str_radix(mask, 8).map_err(|_| EINVAL)?;
+        Ok(Self::from_bits(mask))
+    }
+
     pub fn bits(&self) -> u32 {
         self.0
     }
