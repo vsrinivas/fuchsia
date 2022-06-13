@@ -1480,7 +1480,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C
     };
     bound
         .try_insert_conn_with_sharing(c, ConnState { socket: ip_sock }, sharing)
-        .map_err(|_: InsertError| UdpSockCreationError::SockAddrConflict)
+        .map_err(|_: (InsertError, ConnState<_>)| UdpSockCreationError::SockAddrConflict)
 }
 
 /// Sets the device to be bound to for an unbound socket.
@@ -1711,7 +1711,7 @@ pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>
             ListenerState,
             *sharing,
         )
-        .map_err(|_: InsertError| LocalAddressError::AddressInUse)?;
+        .map_err(|_: (InsertError, ListenerState)| LocalAddressError::AddressInUse)?;
 
     let _: UnboundSocketState<_> = unbound_entry.remove();
     Ok(listener)

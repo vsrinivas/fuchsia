@@ -250,7 +250,7 @@ where
         &mut self,
         listener_addr: S::ListenerAddr,
         state: S::ListenerState,
-    ) -> Result<S::ListenerId, InsertError> {
+    ) -> Result<S::ListenerId, (InsertError, S::ListenerState)> {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state } = self;
 
         Self::try_insert(
@@ -271,7 +271,7 @@ where
         &mut self,
         conn_addr: S::ConnAddr,
         state: S::ConnState,
-    ) -> Result<S::ConnId, InsertError> {
+    ) -> Result<S::ConnId, (InsertError, S::ConnState)> {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state } = self;
 
         Self::try_insert(
@@ -296,27 +296,30 @@ where
         state_to_bound: impl FnOnce(St) -> Bound<S>,
         addr_to_addr_vec: impl FnOnce(A) -> AddrVec<S>,
         unwrap_bound: impl FnOnce(&mut Bound<S>) -> &mut St,
-    ) -> Result<I, InsertError>
+    ) -> Result<I, (InsertError, V)>
     where
         St: SocketMapAddrStateSpec<A, V, I, S>,
         A: Clone,
         I: Clone + From<usize>,
     {
-        St::check_for_conflicts(&state, &socket_addr, &addr_to_state)?;
+        match St::check_for_conflicts(&state, &socket_addr, &addr_to_state) {
+            Err(e) => return Err((e, state)),
+            Ok(()) => (),
+        };
 
         let addr: AddrVec<S> = addr_to_addr_vec(socket_addr.clone());
 
         match addr_to_state.entry(addr) {
             Entry::Occupied(mut o) => {
-                let id = o
-                    .map_mut(|bound| {
-                        St::try_get_dest(unwrap_bound(bound), &state).map(|v| {
+                let id =
+                    o.map_mut(|bound| match St::try_get_dest(unwrap_bound(bound), &state) {
+                        Ok(v) => {
                             let index = id_to_sock.push((state, socket_addr));
                             v.push(index.into());
-                            index
-                        })
-                    })
-                    .map_err(|IncompatibleError| InsertError::Exists)?;
+                            Ok(index)
+                        }
+                        Err(IncompatibleError) => Err((InsertError::Exists, state)),
+                    })?;
                 Ok(id.into())
             }
             Entry::Vacant(v) => {
@@ -676,7 +679,7 @@ mod tests {
         let addr = (1, None);
 
         let _id = bound.try_insert_listener(addr, 'a').unwrap();
-        assert_eq!(bound.try_insert_listener(addr, 'b'), Err(InsertError::Exists));
+        assert_eq!(bound.try_insert_listener(addr, 'b'), Err((InsertError::Exists, 'b')));
     }
 
     #[test]
@@ -689,7 +692,7 @@ mod tests {
         let _id = bound.try_insert_listener(addr, 'a').unwrap();
         assert_eq!(
             bound.try_insert_listener(shadows_addr, 'b'),
-            Err(InsertError::ShadowAddrExists)
+            Err((InsertError::ShadowAddrExists, 'b'))
         );
     }
 
@@ -701,7 +704,10 @@ mod tests {
         let shadows_addr = (1, "abc", "remote");
 
         let _id = bound.try_insert_listener(addr, 'a').unwrap();
-        assert_eq!(bound.try_insert_conn(shadows_addr, 'b'), Err(InsertError::ShadowAddrExists));
+        assert_eq!(
+            bound.try_insert_conn(shadows_addr, 'b'),
+            Err((InsertError::ShadowAddrExists, 'b'))
+        );
     }
 
     #[test]

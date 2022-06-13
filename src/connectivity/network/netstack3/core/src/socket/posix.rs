@@ -477,8 +477,9 @@ impl<P: PosixSocketMapSpec> BoundSocketMap<P> {
         listener_addr: ListenerAddr<P>,
         state: P::ListenerState,
         sharing: PosixSharingOptions,
-    ) -> Result<P::ListenerId, InsertError> {
+    ) -> Result<P::ListenerId, (InsertError, P::ListenerState)> {
         self.try_insert_listener(listener_addr, (state, sharing))
+            .map_err(|(e, (state, _sharing)): (_, (_, PosixSharingOptions))| (e, state))
     }
 
     pub(crate) fn try_insert_conn_with_sharing(
@@ -486,8 +487,9 @@ impl<P: PosixSocketMapSpec> BoundSocketMap<P> {
         conn_addr: ConnAddr<P>,
         state: P::ConnState,
         sharing: PosixSharingOptions,
-    ) -> Result<P::ConnId, InsertError> {
+    ) -> Result<P::ConnId, (InsertError, P::ConnState)> {
         self.try_insert_conn(conn_addr, (state, sharing))
+            .map_err(|(e, (state, _)): (_, (_, PosixSharingOptions))| (e, state))
     }
 
     #[todo_unused("https://fxbug.dev/95688")]
@@ -692,9 +694,14 @@ mod tests {
     ) {
         let mut map = BoundSocketMap::<TransportSocketPosixSpec<Ipv4>>::default();
         let mut spec = spec.into_iter().peekable();
-        let mut try_insert = |(addr, options)| match addr {
-            AddrVec::Conn(c) => map.try_insert_conn_with_sharing(c, (), options).map(|_| ()),
-            AddrVec::Listen(l) => map.try_insert_listener_with_sharing(l, (), options).map(|_| ()),
+        let mut try_insert = |(addr, options)| {
+            match addr {
+                AddrVec::Conn(c) => map.try_insert_conn_with_sharing(c, (), options).map(|_| ()),
+                AddrVec::Listen(l) => {
+                    map.try_insert_listener_with_sharing(l, (), options).map(|_| ())
+                }
+            }
+            .map_err(|(e, ())| e)
         };
         let last = loop {
             let one_spec = spec.next().expect("empty list of test cases");

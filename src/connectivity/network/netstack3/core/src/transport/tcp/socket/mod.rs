@@ -284,7 +284,7 @@ where
             PosixSharingOptions::Exclusive,
         )
         .map(|MaybeListenerId(x)| BoundId(x))
-        .map_err(|err| {
+        .map_err(|(err, _): (_, MaybeListener)| {
             assert_eq!(sync_ctx.as_mut().inactive.insert(idmap_key, inactive), None);
             BindError::Conflict(err)
         })
