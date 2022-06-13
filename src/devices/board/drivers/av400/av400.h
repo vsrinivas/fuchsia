@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_AV400_AV400_H_
 #define SRC_DEVICES_BOARD_DRIVERS_AV400_AV400_H_
 
+#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
-#include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <threads.h>
 
@@ -64,6 +64,7 @@ class Av400 : public Av400Type {
   zx_status_t PwmInit();
   zx_status_t ClkInit();
   zx_status_t I2cInit();
+  zx_status_t RegistersInit();
 
   int Thread();
 

@@ -28,6 +28,7 @@ constexpr uint32_t USB_RESET1_LEVEL_MASK = 0x3'0000;
 
 // REGISTER_NNA_RESET_LEVEL2 constants
 constexpr uint32_t NNA_RESET2_LEVEL_MASK = 0x1000;
+constexpr uint32_t A5_NNA_RESET1_LEVEL_MASK = 0x8000;
 
 // REGISTER_MALI_RESET constants
 constexpr uint32_t MALI_RESET0_MASK = 0x100000;

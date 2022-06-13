@@ -39,6 +39,27 @@
 // Memory Power Domain
 
 // Reset
+#define A5_RESET_BASE 0xfe002000
+#define A5_RESET_LENGTH 0x2000
+
+#define A5_RESET0_REGISTER 0x0
+#define A5_RESET1_REGISTER 0x4
+#define A5_RESET2_REGISTER 0x8
+#define A5_RESET3_REGISTER 0xc
+#define A5_RESET4_REGISTER 0x10
+#define A5_RESET5_REGISTER 0x14
+#define A5_RESET0_LEVEL 0x40
+#define A5_RESET1_LEVEL 0x44
+#define A5_RESET2_LEVEL 0x48
+#define A5_RESET3_LEVEL 0x4c
+#define A5_RESET4_LEVEL 0x50
+#define A5_RESET5_LEVEL 0x54
+#define A5_RESET0_MASK 0x80
+#define A5_RESET1_MASK 0x84
+#define A5_RESET2_MASK 0x88
+#define A5_RESET3_MASK 0x8c
+#define A5_RESET4_MASK 0x90
+#define A5_RESET5_MASK 0x94
 
 // IRQs
 #define A5_GPIO_IRQ_0 42   // 32+10
