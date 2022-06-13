@@ -48,15 +48,15 @@ Inspect. Some examples include:
 
 ### API Reference
 
-- {C++}
+* {C++}
 
 [Inspect library documentation](https://fuchsia-docs.firebaseapp.com/cpp/inspect/index.html)
 
-- {Rust}
+* {Rust}
 
 [fuchsia-inspect crate documentation](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html)
 
-- {Dart}
+* {Dart}
 
 [fuchsia_inspect dart package documentation](https://fuchsia.dev/reference/dart/package-fuchsia_inspect_inspect/package-fuchsia_inspect_inspect-library)
 
