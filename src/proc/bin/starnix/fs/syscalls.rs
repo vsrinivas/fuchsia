@@ -1453,6 +1453,16 @@ pub fn sys_flock(current_task: &CurrentTask, fd: FdNumber, operation: u32) -> Re
     file.name.entry.node.flock(current_task, &file, operation)
 }
 
+pub fn sys_fsync(_current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
+    not_implemented!("fsync");
+    Ok(())
+}
+
+pub fn sys_fdatasync(_current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
+    not_implemented!("fdatasync");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
