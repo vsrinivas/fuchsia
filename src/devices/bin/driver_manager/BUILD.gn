@@ -260,6 +260,8 @@ source_set("driver_runner") {
   sources = [
     "v2/driver_component.cc",
     "v2/driver_component.h",
+    "v2/driver_host.cc",
+    "v2/driver_host.h",
     "v2/driver_runner.cc",
     "v2/driver_runner.h",
   ]

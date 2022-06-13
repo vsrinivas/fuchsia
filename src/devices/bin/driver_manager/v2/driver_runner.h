@@ -24,6 +24,7 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/devices/bin/driver_manager/v2/driver_component.h"
+#include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 using NodeBindingInfoResultCallback =
@@ -38,23 +39,6 @@ std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeDirOffer(
     std::string_view parents_name);
 
 class Node;
-
-class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
- public:
-  DriverHostComponent(fidl::ClientEnd<fuchsia_driver_host::DriverHost> driver_host,
-                      async_dispatcher_t* dispatcher,
-                      fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts);
-
-  zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
-      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
-      fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
-      fuchsia_component_runner::wire::ComponentStartInfo start_info);
-
-  zx::status<uint64_t> GetProcessKoid();
-
- private:
-  fidl::WireSharedClient<fuchsia_driver_host::DriverHost> driver_host_;
-};
 
 enum class Collection {
   kNone,
