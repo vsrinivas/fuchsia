@@ -845,6 +845,10 @@ impl UnixSocketInner {
             present_events = FdEvents::POLLIN;
         }
 
+        if self.is_shutdown {
+            present_events |= FdEvents::POLLHUP;
+        }
+
         match &self.state {
             UnixSocketState::Listening(queue) => {
                 if queue.sockets.len() > 0 {
