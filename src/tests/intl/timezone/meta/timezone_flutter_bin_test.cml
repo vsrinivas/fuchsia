@@ -195,6 +195,7 @@
             ],
             from: "#scenic",
             to: [
+                "#a11y",
                 "#flutter_aot_runner",
                 "#flutter_jit_runner",
             ],
