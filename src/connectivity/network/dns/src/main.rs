@@ -92,34 +92,36 @@ impl QueryStats {
     }
 
     async fn finish_query(&self, start_time: fasync::Time, result: QueryResult<'_>) {
-        let now = fasync::Time::now();
+        let end_time = fasync::Time::now();
+        let finish = move |window: &mut QueryWindow| {
+            let elapsed_time = end_time - start_time;
+            match result {
+                Ok(num_addrs) => window.succeed(elapsed_time, num_addrs),
+                Err(e) => window.fail(elapsed_time, e),
+            }
+        };
+
         let Self { inner } = self;
         let past_queries = &mut *inner.lock().await;
 
-        let current_window = if let Some(window) = past_queries.back_mut() {
-            if now - window.start >= STAT_WINDOW_DURATION {
-                past_queries.push_back(QueryWindow::new(now));
-                if past_queries.len() > STAT_WINDOW_COUNT {
+        let current_window = past_queries.back_mut().and_then(|window| {
+            let QueryWindow { start, .. } = window;
+            (end_time - *start < STAT_WINDOW_DURATION).then(|| window)
+        });
+
+        match current_window {
+            Some(window) => finish(window),
+            None => {
+                if past_queries.len() == STAT_WINDOW_COUNT {
                     // Remove the oldest window of query stats.
                     let _: QueryWindow = past_queries
                         .pop_front()
                         .expect("there should be at least one element in `past_queries`");
                 }
-                // This is safe because we've just pushed an element to `past_queries`.
-                past_queries.back_mut().unwrap()
-            } else {
-                window
+                let mut window = QueryWindow::new(end_time);
+                finish(&mut window);
+                past_queries.push_back(window);
             }
-        } else {
-            past_queries.push_back(QueryWindow::new(now));
-            // This is safe because we've just pushed an element to `past_queries`.
-            past_queries.back_mut().unwrap()
-        };
-
-        let elapsed_time = now - start_time;
-        match result {
-            Ok(num_addrs) => current_window.succeed(elapsed_time, num_addrs),
-            Err(e) => current_window.fail(elapsed_time, e),
         }
     }
 }
