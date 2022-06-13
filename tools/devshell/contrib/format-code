@@ -29,6 +29,12 @@
 ##             (currently, just C++). Unsupported languages will continue to have
 ##             the entire file formatted. "Changes" are relative to the git
 ##             commit that would be used by "--git".
+##   --parallel
+##             Formats all files in the background rather than waiting on each one
+##             before starting the next.
+##             WARNING: with this flag enabled, output from multiple formatters
+##             may be interleaved, and format-code will exit with status 0 even
+##             if some formatters failed.
 ##   --verbose Print all formatting commands prior to execution.
 ##    -- PATTERN
 ##             For --all or --git, passes along -- PATTERN to `git ls-files`
@@ -168,6 +174,7 @@ VERBOSE=
 CHANGED_LINES=
 ALL_FILES=0
 FILES_SPECIFIED=false
+PARALLEL=
 
 fx-config-read
 
@@ -176,6 +183,7 @@ while [ $# -gt 0 ]; do
   ARG="$1"
   case "$1" in
     --args) ARGS_GN="1" ;;
+    --parallel) PARALLEL="1" ;;
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
     --changed-lines) CHANGED_LINES="1" ;;
@@ -315,8 +323,14 @@ for file in "${FILES[@]}"; do
   fi
 
   # Format the file
-  format-file ${file}
+  if [[ -n "$PARALLEL" ]]; then
+    format-file "${file}" &
+  else
+    format-file "${file}"
+  fi
 done
+
+[[ -n "$PARALLEL" ]] && wait
 
 # If a Markdown change is present (including a deletion of a markdown file),
 # check the entire project.
