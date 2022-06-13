@@ -264,6 +264,8 @@ source_set("driver_runner") {
     "v2/driver_host.h",
     "v2/driver_runner.cc",
     "v2/driver_runner.h",
+    "v2/node.cc",
+    "v2/node.h",
   ]
 
   deps = [
