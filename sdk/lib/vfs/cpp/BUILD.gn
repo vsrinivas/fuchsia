@@ -89,5 +89,4 @@ test("vfs_cpp_unittests") {
 
 fuchsia_unittest_package("vfs_cpp_tests") {
   deps = [ ":vfs_cpp_unittests" ]
-  manifest = "meta/vfs_cpp_unittests.cmx"
 }
