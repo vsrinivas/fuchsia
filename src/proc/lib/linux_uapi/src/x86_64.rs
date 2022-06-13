@@ -1307,6 +1307,8 @@ pub const SCHED_FLAG_UTIL_CLAMP_MAX: u32 = 64;
 pub const SCHED_FLAG_KEEP_ALL: u32 = 24;
 pub const SCHED_FLAG_UTIL_CLAMP: u32 = 96;
 pub const SCHED_FLAG_ALL: u32 = 127;
+pub const SCHED_ATTR_SIZE_VER0: u32 = 48;
+pub const SCHED_ATTR_SIZE_VER1: u32 = 56;
 pub const SI_MAX_SIZE: u32 = 128;
 pub const SI_USER: u32 = 0;
 pub const SI_KERNEL: u32 = 128;
@@ -3222,6 +3224,25 @@ pub struct clone_args {
     pub set_tid: __u64,
     pub set_tid_size: __u64,
     pub cgroup: __u64,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sched_param {
+    pub sched_priority: crate::x86_64_types::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sched_attr {
+    pub size: __u32,
+    pub sched_policy: __u32,
+    pub sched_flags: __u64,
+    pub sched_nice: __s32,
+    pub sched_priority: __u32,
+    pub sched_runtime: __u64,
+    pub sched_deadline: __u64,
+    pub sched_period: __u64,
+    pub sched_util_min: __u32,
+    pub sched_util_max: __u32,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]

@@ -174,6 +174,7 @@ pub fn dispatch_syscall(
         rt_sigtimedwait[4],
         rt_tgsigqueueinfo[4],
         sched_getaffinity[3],
+        sched_getparam[2],
         sched_getscheduler[1],
         sched_setaffinity[3],
         sendmmsg[4],

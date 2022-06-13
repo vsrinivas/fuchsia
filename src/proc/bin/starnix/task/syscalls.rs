@@ -294,6 +294,17 @@ pub fn sys_sched_setaffinity(
     Ok(())
 }
 
+pub fn sys_sched_getparam(
+    current_task: &CurrentTask,
+    _pid: pid_t,
+    param: UserAddress,
+) -> Result<(), Errno> {
+    // Scheduling parameter cannot be changed right now. Always return 0.
+    let param_value = sched_param { sched_priority: 0 };
+    current_task.mm.write_object(param.into(), &param_value)?;
+    Ok(())
+}
+
 pub fn sys_getitimer(
     current_task: &CurrentTask,
     which: u32,
@@ -770,5 +781,15 @@ mod tests {
 
         current_task.mm.read_memory(mapped_address, &mut out_name).unwrap();
         assert_eq!(name.as_bytes(), &out_name);
+    }
+
+    #[::fuchsia::test]
+    fn test_sched_getparam() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        sys_sched_getparam(&current_task, 0, mapped_address).expect("sched_getparam");
+        let param_value: sched_param =
+            current_task.mm.read_object(mapped_address.into()).expect("read_object");
+        assert_eq!(param_value.sched_priority, 0);
     }
 }

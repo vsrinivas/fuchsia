@@ -33,6 +33,7 @@
 #include <linux/reboot.h>
 #include <linux/resource.h>
 #include <linux/sched.h>
+#include <linux/sched/types.h>
 #include <linux/signal.h>
 #include <linux/signalfd.h>
 #include <linux/socket.h>
