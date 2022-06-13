@@ -25,7 +25,6 @@ use packet_formats::{
     },
     utils::NonZeroDuration,
 };
-use specialize_ip_macro::specialize_ip_address;
 
 use crate::{
     context::{FrameContext, InstantContext, RngContext, StateContext},
@@ -361,7 +360,6 @@ impl_timer_context!(
 /// serializer. It computes the routing information, serializes
 /// the serializer, and sends the resulting buffer in a new Ethernet
 /// frame.
-#[specialize_ip_address]
 pub(super) fn send_ip_frame<
     B: BufferMut,
     C: EthernetIpLinkDeviceNonSyncContext,
@@ -383,19 +381,19 @@ pub(super) fn send_ip_frame<
     let state = &mut sync_ctx.get_state_mut_with(device_id).link;
     let (local_mac, mtu) = (state.mac, state.mtu);
 
-    #[ipv4addr]
-    let dst_mac = match MulticastAddr::from_witness(local_addr) {
-        Some(multicast) => Ok(Mac::from(&multicast)),
-        None => arp::lookup(sync_ctx, ctx, device_id, local_mac.get(), local_addr.get())
-            .ok_or(IpAddr::V4(local_addr)),
-    };
-    #[ipv6addr]
-    let dst_mac = match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
-        UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
-        UnicastOrMulticastIpv6Addr::Unicast(addr) => {
-            <SC as NdpHandler<_, _>>::lookup(sync_ctx, ctx, device_id, addr)
-                .ok_or(IpAddr::V6(local_addr))
-        }
+    let dst_mac = match local_addr.into() {
+        IpAddr::V4(local_addr) => match MulticastAddr::from_witness(local_addr) {
+            Some(multicast) => Ok(Mac::from(&multicast)),
+            None => arp::lookup(sync_ctx, ctx, device_id, local_mac.get(), local_addr.get())
+                .ok_or(IpAddr::V4(local_addr)),
+        },
+        IpAddr::V6(local_addr) => match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
+            UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
+            UnicastOrMulticastIpv6Addr::Unicast(addr) => {
+                <SC as NdpHandler<_, _>>::lookup(sync_ctx, ctx, device_id, addr)
+                    .ok_or(IpAddr::V6(local_addr))
+            }
+        },
     };
 
     match dst_mac {
@@ -428,7 +426,7 @@ pub(super) fn send_ip_frame<
                 .into_inner();
             let dropped = state
                 .add_pending_frame(local_addr.transpose::<SpecifiedAddr<IpAddr>>().get(), frame);
-            if let Some(dropped) = dropped {
+            if let Some(_dropped) = dropped {
                 // TODO(brunodalbo): Is it ok to silently just let this drop? Or
                 //  should the IP layer be notified in any way?
                 log_unimplemented!((), "Ethernet dropped frame because ran out of allowable space");
@@ -971,7 +969,7 @@ mod tests {
         },
     };
     use rand::Rng;
-    use specialize_ip_macro::{ip_test, specialize_ip};
+    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{
@@ -1158,8 +1156,7 @@ mod tests {
         assert_eq!(2, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
     }
 
-    #[specialize_ip]
-    fn test_receive_ip_frame<I: Ip>(enable: bool) {
+    fn test_receive_ip_frame<I: Ip + TestIpExt>(enable: bool) {
         // Should only receive a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
@@ -1171,11 +1168,12 @@ mod tests {
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
 
-        #[ipv4]
-        let mut bytes = dns_request_v4::ETHERNET_FRAME.bytes.to_vec();
-
-        #[ipv6]
-        let mut bytes = dns_request_v6::ETHERNET_FRAME.bytes.to_vec();
+        let mut bytes = match I::VERSION {
+            IpVersion::V4 => dns_request_v4::ETHERNET_FRAME,
+            IpVersion::V6 => dns_request_v6::ETHERNET_FRAME,
+        }
+        .bytes
+        .to_vec();
 
         let mac_bytes = config.local_mac.bytes();
         bytes[0..6].copy_from_slice(&mac_bytes);
@@ -1190,25 +1188,26 @@ mod tests {
         crate::device::receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, Buf::new(bytes, ..))
             .expect("error receiving frame");
 
-        #[ipv4]
-        assert_eq!(get_counter_val(&mut sync_ctx, "receive_ipv4_packet"), expected_received);
-
-        #[ipv6]
-        assert_eq!(get_counter_val(&mut sync_ctx, "receive_ipv6_packet"), expected_received);
+        let counter = match I::VERSION {
+            IpVersion::V4 => "receive_ipv4_packet",
+            IpVersion::V6 => "receive_ipv6_packet",
+        };
+        assert_eq!(get_counter_val(&mut sync_ctx, counter), expected_received);
     }
 
+    // TODO(https://fxbug.dev/102105): Unify these when #[ip_test] works with
+    // #[test_case].
     #[ip_test]
-    fn receive_frame_disabled<I: Ip>() {
+    fn receive_frame_disabled<I: Ip + TestIpExt>() {
         test_receive_ip_frame::<I>(false);
     }
 
     #[ip_test]
-    fn receive_frame_enabled<I: Ip>() {
+    fn receive_frame_enabled<I: Ip + TestIpExt>() {
         test_receive_ip_frame::<I>(true);
     }
 
-    #[specialize_ip]
-    fn test_send_ip_frame<I: Ip>(enable: bool) {
+    fn test_send_ip_frame<I: Ip + TestIpExt>(enable: bool) {
         // Should only send a frame if the device is enabled.
 
         let config = I::DUMMY_CONFIG;
@@ -1227,59 +1226,61 @@ mod tests {
             0
         };
 
-        #[ipv4]
-        {
-            let addr = SpecifiedAddr::new(dns_request_v4::IPV4_PACKET.metadata.dst_ip).unwrap();
-            crate::device::insert_static_arp_table_entry(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                device,
-                addr.get(),
-                config.remote_mac,
-            )
-            .expect("insert static ARP entry");
+        match I::VERSION {
+            IpVersion::V4 => {
+                let addr = SpecifiedAddr::new(dns_request_v4::IPV4_PACKET.metadata.dst_ip).unwrap();
+                crate::device::insert_static_arp_table_entry(
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
+                    device,
+                    addr.get(),
+                    config.remote_mac,
+                )
+                .expect("insert static ARP entry");
 
-            crate::ip::device::send_ip_frame::<Ipv4, _, _, _, _>(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                device,
-                addr,
-                Buf::new(dns_request_v4::IPV4_PACKET.bytes.to_vec(), ..),
-            )
-            .expect("error sending IPv4 frame")
-        };
+                crate::ip::device::send_ip_frame::<Ipv4, _, _, _, _>(
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
+                    device,
+                    addr,
+                    Buf::new(dns_request_v4::IPV4_PACKET.bytes.to_vec(), ..),
+                )
+                .expect("error sending IPv4 frame")
+            }
 
-        #[ipv6]
-        {
-            let addr = UnicastAddr::new(dns_request_v6::IPV6_PACKET.metadata.dst_ip).unwrap();
-            crate::device::insert_ndp_table_entry(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                device,
-                addr,
-                config.remote_mac.get(),
-            )
-            .expect("insert static NDP entry");
-            crate::ip::device::send_ip_frame::<Ipv6, _, _, _, _>(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                device,
-                addr.into_specified(),
-                Buf::new(dns_request_v6::IPV6_PACKET.bytes.to_vec(), ..),
-            )
-            .expect("error sending IPv6 frame")
-        };
+            IpVersion::V6 => {
+                let addr = UnicastAddr::new(dns_request_v6::IPV6_PACKET.metadata.dst_ip).unwrap();
+                crate::device::insert_ndp_table_entry(
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
+                    device,
+                    addr,
+                    config.remote_mac.get(),
+                )
+                .expect("insert static NDP entry");
+                crate::ip::device::send_ip_frame::<Ipv6, _, _, _, _>(
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
+                    device,
+                    addr.into_specified(),
+                    Buf::new(dns_request_v6::IPV6_PACKET.bytes.to_vec(), ..),
+                )
+                .expect("error sending IPv6 frame")
+            }
+        }
 
         assert_eq!(get_counter_val(&mut sync_ctx, "ethernet::send_ip_frame"), expected_sent);
     }
 
+    // TODO(https://fxbug.dev/102105): Unify these when #[ip_test] works with
+    // #[test_case].
     #[ip_test]
-    fn test_send_frame_disabled<I: Ip>() {
+    fn test_send_frame_disabled<I: Ip + TestIpExt>() {
         test_send_ip_frame::<I>(false);
     }
 
     #[ip_test]
-    fn test_send_frame_enabled<I: Ip>() {
+    fn test_send_frame_enabled<I: Ip + TestIpExt>() {
         test_send_ip_frame::<I>(true);
     }
 
@@ -1756,16 +1757,6 @@ mod tests {
         );
     }
 
-    /// Get a multicast address.
-    #[specialize_ip]
-    fn get_multicast_addr<I: Ip>() -> MulticastAddr<I::Addr> {
-        #[ipv4]
-        return MulticastAddr::new(Ipv4Addr::new([224, 0, 0, 3])).unwrap();
-
-        #[ipv6]
-        return MulticastAddr::new(Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 1])).unwrap();
-    }
-
     fn join_ip_multicast<
         A: IpAddress,
         D: EventDispatcher,
@@ -1837,7 +1828,7 @@ mod tests {
         );
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
 
-        let multicast_addr = get_multicast_addr::<I>();
+        let multicast_addr = I::get_multicast_addr(3);
 
         // Should not be in the multicast group yet.
         assert!(!is_in_ip_multicast(&sync_ctx, device, multicast_addr));
@@ -1886,7 +1877,7 @@ mod tests {
         );
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
 
-        let multicast_addr = get_multicast_addr::<I>();
+        let multicast_addr = I::get_multicast_addr(3);
 
         // Should not be in the multicast group yet.
         assert!(!is_in_ip_multicast(&sync_ctx, device, multicast_addr));

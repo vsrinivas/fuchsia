@@ -43,7 +43,6 @@ use packet_formats::{
     ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder},
     ipv6::{Ipv6Packet, Ipv6PacketBuilder},
 };
-use specialize_ip_macro::specialize_ip;
 
 use crate::{
     context::{
@@ -947,24 +946,40 @@ pub(crate) struct IpStateInner<I: Ip, Instant: crate::Instant, DeviceId> {
     pmtu_cache: PmtuCache<I, Instant>,
 }
 
-#[specialize_ip]
-fn get_state_inner<I: Ip, Instant: crate::Instant>(
-    state: &StackState<Instant>,
-) -> &IpStateInner<I, Instant, DeviceId> {
-    #[ipv4]
-    return &state.ipv4.inner;
-    #[ipv6]
-    return &state.ipv6.inner;
+pub(crate) trait GetStateIpExt: Ip {
+    fn get_state_inner<Instant: crate::Instant>(
+        state: &StackState<Instant>,
+    ) -> &IpStateInner<Self, Instant, DeviceId>;
+
+    fn get_state_inner_mut<Instant: crate::Instant>(
+        state: &mut StackState<Instant>,
+    ) -> &mut IpStateInner<Self, Instant, DeviceId>;
 }
 
-#[specialize_ip]
-fn get_state_inner_mut<I: Ip, Instant: crate::Instant>(
-    state: &mut StackState<Instant>,
-) -> &mut IpStateInner<I, Instant, DeviceId> {
-    #[ipv4]
-    return &mut state.ipv4.inner;
-    #[ipv6]
-    return &mut state.ipv6.inner;
+impl GetStateIpExt for Ipv4 {
+    fn get_state_inner<Instant: crate::Instant>(
+        state: &StackState<Instant>,
+    ) -> &IpStateInner<Self, Instant, DeviceId> {
+        return &state.ipv4.inner;
+    }
+    fn get_state_inner_mut<Instant: crate::Instant>(
+        state: &mut StackState<Instant>,
+    ) -> &mut IpStateInner<Self, Instant, DeviceId> {
+        return &mut state.ipv4.inner;
+    }
+}
+
+impl GetStateIpExt for Ipv6 {
+    fn get_state_inner<Instant: crate::Instant>(
+        state: &StackState<Instant>,
+    ) -> &IpStateInner<Self, Instant, DeviceId> {
+        return &state.ipv6.inner;
+    }
+    fn get_state_inner_mut<Instant: crate::Instant>(
+        state: &mut StackState<Instant>,
+    ) -> &mut IpStateInner<Self, Instant, DeviceId> {
+        return &mut state.ipv6.inner;
+    }
 }
 
 /// The identifier for timer events in the IP layer.
@@ -2139,8 +2154,11 @@ pub(crate) fn iter_all_routes<
     A: IpAddress,
 >(
     ctx: &SyncCtx<D, C, NonSyncCtx>,
-) -> Iter<'_, Entry<A, DeviceId>> {
-    get_state_inner::<A::Version, _>(&ctx.state).table.iter_table()
+) -> Iter<'_, Entry<A, DeviceId>>
+where
+    A::Version: GetStateIpExt,
+{
+    A::Version::get_state_inner(&ctx.state).table.iter_table()
 }
 
 /// The metadata associated with an outgoing IP packet.
@@ -2400,7 +2418,7 @@ impl<
 }
 
 // Used in testing in other modules.
-#[specialize_ip]
+#[cfg(test)]
 pub(crate) fn dispatch_receive_ip_packet_name<I: Ip>() -> &'static str {
     match I::VERSION {
         IpVersion::V4 => "dispatch_receive_ipv4_packet",
@@ -3293,7 +3311,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_update_pmtu<I: Ip + TestIpExt>() {
+    fn test_ip_update_pmtu<I: Ip + TestIpExt + GetStateIpExt>() {
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable
         // Fragmentation Required (IPv4) which should update the PMTU if it is
         // less than the current value.
@@ -3329,7 +3347,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_state_inner::<I, _>(&sync_ctx.state)
+            I::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3363,7 +3381,7 @@ mod tests {
 
         // The PMTU should not have updated to `new_mtu2`
         assert_eq!(
-            get_state_inner::<I, _>(&sync_ctx.state)
+            I::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3397,7 +3415,7 @@ mod tests {
 
         // The PMTU should have updated to 1900.
         assert_eq!(
-            get_state_inner::<I, _>(&sync_ctx.state)
+            I::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3406,7 +3424,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_update_pmtu_too_low<I: Ip + TestIpExt>() {
+    fn test_ip_update_pmtu_too_low<I: Ip + TestIpExt + GetStateIpExt>() {
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable
         // Fragmentation Required (IPv4) which should not update the PMTU if it
         // is less than the min MTU.
@@ -3442,7 +3460,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_state_inner::<I, _>(&sync_ctx.state)
+            I::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
@@ -3492,7 +3510,7 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&sync_ctx.state)
+            Ipv4::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3519,7 +3537,7 @@ mod tests {
         // Should not have updated PMTU as there is no other valid
         // lower PMTU value.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&sync_ctx.state)
+            Ipv4::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3546,7 +3564,7 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&sync_ctx.state)
+            Ipv4::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
@@ -3575,7 +3593,7 @@ mod tests {
 
         // Should not have updated the PMTU as the current PMTU is lower.
         assert_eq!(
-            get_state_inner::<Ipv4, _>(&sync_ctx.state)
+            Ipv4::get_state_inner(&sync_ctx.state)
                 .pmtu_cache
                 .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
