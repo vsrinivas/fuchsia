@@ -4,9 +4,12 @@
 
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/time.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 
 #include <limits>
@@ -1859,16 +1862,17 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
   parent_token.value.reset();
   RunLoopUntilIdle();
 
-  ViewCreationToken graph_token;
+  ViewCreationToken view_creation_token;
   // flatland->ReleaseView(
-  //     [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
+  //     [&view_creation_token](ViewCreationToken token) { view_creation_token = std::move(token);
+  //     });
   PRESENT(flatland, true);
 
-  EXPECT_TRUE(graph_token.value.is_valid());
+  EXPECT_TRUE(view_creation_token.value.is_valid());
 
   // But trying to link with that token will immediately fail because it is already orphaned.
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
-  flatland->CreateView2(std::move(graph_token), scenic::NewViewIdentityOnCreation(),
+  flatland->CreateView2(std::move(view_creation_token), scenic::NewViewIdentityOnCreation(),
                         NoViewProtocols(), parent_viewport_watcher2.NewRequest());
   PRESENT(flatland, true);
 
@@ -1890,16 +1894,17 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOriginalToken) {
                         NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
-  ViewCreationToken graph_token;
+  ViewCreationToken view_creation_token;
   // flatland->ReleaseView(
-  //     [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
+  //     [&view_creation_token](ViewCreationToken token) { view_creation_token = std::move(token);
+  //     });
 
   RunLoopUntilIdle();
 
   // Until Present() is called and the acquire fence is signaled, the previous ParentViewportWatcher
   // is not unbound.
   EXPECT_TRUE(parent_viewport_watcher.is_bound());
-  EXPECT_FALSE(graph_token.value.is_valid());
+  EXPECT_FALSE(view_creation_token.value.is_valid());
 
   PresentArgs args;
   args.acquire_fences = utils::CreateEventArray(1);
@@ -1908,7 +1913,7 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOriginalToken) {
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
   EXPECT_TRUE(parent_viewport_watcher.is_bound());
-  EXPECT_FALSE(graph_token.value.is_valid());
+  EXPECT_FALSE(view_creation_token.value.is_valid());
 
   // Signal the acquire fence to unbind the link.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
@@ -1917,8 +1922,8 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOriginalToken) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(parent_viewport_watcher.is_bound());
-  EXPECT_TRUE(graph_token.value.is_valid());
-  EXPECT_EQ(fsl::GetKoid(graph_token.value.get()), expected_koid);
+  EXPECT_TRUE(view_creation_token.value.is_valid());
+  EXPECT_EQ(fsl::GetKoid(view_creation_token.value.get()), expected_koid);
 }
 
 TEST_F(FlatlandTest, ChildViewWatcherUnbindsOnChildDeath) {
@@ -2487,87 +2492,6 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
   PresentArgs args;
   args.expected_error = FlatlandError::BAD_HANGING_GET;
   PRESENT_WITH_ARGS(child, std::move(args), false);
-}
-
-TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
-  ViewportCreationToken parent_token;
-  ViewCreationToken child_token;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
-
-  // Create the parent Flatland session using another loop.
-  async::TestLoop parent_loop;
-  auto session_id = scheduling::GetNextSessionId();
-  std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
-  importers.push_back(buffer_collection_importer_);
-  fuchsia::ui::composition::FlatlandPtr parent_ptr;
-  std::shared_ptr<Flatland> parent = Flatland::New(
-      std::make_shared<utils::UnownedDispatcherHolder>(parent_loop.dispatcher()),
-      parent_ptr.NewRequest(), session_id,
-      /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
-      uber_struct_system_->AllocateQueueForSession(session_id), importers, [](auto...) {},
-      [](auto...) {}, [](auto...) {}, [](auto...) {});
-
-  // Create parent link.
-  const ContentId kLinkId = {1};
-  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
-  ViewportProperties properties;
-  properties.set_logical_size({1, 2});
-  parent_ptr->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
-                             child_view_watcher.NewRequest());
-  EXPECT_TRUE(parent_loop.RunUntilIdle());
-
-  // Create the child Flatland session using another loop.
-  async::TestLoop child_loop;
-  session_id = scheduling::GetNextSessionId();
-  fuchsia::ui::composition::FlatlandPtr child_ptr;
-  std::shared_ptr<Flatland> child = Flatland::New(
-      std::make_shared<utils::UnownedDispatcherHolder>(child_loop.dispatcher()),
-      child_ptr.NewRequest(), session_id,
-      /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
-      uber_struct_system_->AllocateQueueForSession(session_id), importers, [](auto...) {},
-      [](auto...) {}, [](auto...) {}, [](auto...) {});
-  RegisterPresentError(child_ptr, session_id);
-
-  // Create child link. Use another loop for ParentViewportWatcher channel.
-  async::TestLoop parent_viewport_watcher_loop;
-  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child_ptr->CreateView2(
-      std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
-      parent_viewport_watcher.NewRequest(parent_viewport_watcher_loop.dispatcher()));
-  EXPECT_TRUE(child_loop.RunUntilIdle());
-
-  // Complete linking sessions.
-  UpdateLinks(parent->GetRoot());
-
-  // Send the first GetLayout hanging get which should have an immediate answer.
-  bool layout_updated = false;
-  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
-
-  // Process the callback on child's loop.
-  EXPECT_TRUE(child_loop.RunUntilIdle());
-  EXPECT_FALSE(layout_updated);
-
-  // Read the response on graph link's loop.
-  EXPECT_TRUE(parent_viewport_watcher_loop.RunUntilIdle());
-  EXPECT_TRUE(layout_updated);
-
-  // Send overwriting hanging gets that will cause an error on child's loop as we process the
-  // request.
-  layout_updated = false;
-  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
-  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
-  EXPECT_TRUE(parent_loop.RunUntilIdle());
-  EXPECT_TRUE(child_loop.RunUntilIdle());
-  fuchsia::ui::composition::PresentArgs present_args;
-  child->Present(std::move(present_args));
-  EXPECT_TRUE(child_loop.RunUntilIdle());
-  EXPECT_EQ(GetPresentError(child->GetSessionId()), FlatlandError::BAD_HANGING_GET);
-
-  // Cleanup. We need to run link_invalidated tasks on these loopers to clear the topology.
-  parent.reset();
-  child.reset();
-  EXPECT_TRUE(parent_loop.RunUntilIdle());
-  EXPECT_TRUE(child_loop.RunUntilIdle());
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
@@ -3740,15 +3664,16 @@ TEST_F(FlatlandTest, DISABLED_RelinkUnlinkedParentSameToken) {
   EXPECT_TRUE(parent_viewport_watcher_updated);
 
   // Unlink the parent on child.
-  ViewCreationToken graph_token;
-  // child->ReleaseView([&graph_token](ViewCreationToken token) { graph_token = std::move(token);
+  ViewCreationToken view_creation_token;
+  // child->ReleaseView([&view_creation_token](ViewCreationToken token) { view_creation_token =
+  // std::move(token);
   // });
   PRESENT(child, true);
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // The same token can be used to link a different instance.
   std::shared_ptr<Flatland> child2 = CreateFlatland();
-  child2->CreateView2(std::move(graph_token), scenic::NewViewIdentityOnCreation(),
+  child2->CreateView2(std::move(view_creation_token), scenic::NewViewIdentityOnCreation(),
                       NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(child2, true);
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child2->GetRoot()));
@@ -5278,6 +5203,104 @@ TEST_F(FlatlandTest, UnsquashableUpdates_ShouldBeReflectedInScheduleUpdates) {
     args.unsquashable = false;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
+}
+
+TEST_F(FlatlandTest, MultithreadedLinkResolution) {
+  auto parent_flatland = CreateFlatland();
+
+  std::shared_ptr<Flatland> child_flatland;
+  fuchsia::ui::composition::FlatlandPtr child_flatland_ptr;
+  auto child_flatland_thread_loop_holder =
+      std::make_shared<utils::LoopDispatcherHolder>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto& child_flatland_thread_loop = child_flatland_thread_loop_holder->loop();
+
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+
+  {
+    auto session_id = scheduling::GetNextSessionId();
+    std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
+    importers.push_back(buffer_collection_importer_);
+
+    child_flatland = Flatland::New(
+        child_flatland_thread_loop_holder, child_flatland_ptr.NewRequest(), session_id,
+        [](auto...) {}, flatland_presenter_, link_system_,
+        uber_struct_system_->AllocateQueueForSession(session_id), importers, [](auto...) {},
+        [](auto...) {}, [](auto...) {}, [](auto...) {});
+
+    auto status = child_flatland_thread_loop.StartThread();
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  auto creation_tokens = scenic::ViewCreationTokenPair::New();
+  const TransformId kRootTransform = {1};
+  const ContentId kLinkId = {1};
+
+  // One of the link ends needs to run first.  Here, we arbitrarily choose it to be the viewport
+  // end, and wait for it to finish.  Of course, the link is not yet resolved, because the view
+  // hasn't yet been created.
+  ViewportProperties properties;
+  properties.set_logical_size({kDefaultSize, kDefaultSize});
+  parent_flatland->CreateTransform(kRootTransform);
+  parent_flatland->SetRootTransform(kRootTransform);
+  parent_flatland->CreateViewport(kLinkId, std::move(creation_tokens.viewport_token),
+                                  std::move(properties), child_view_watcher.NewRequest());
+  parent_flatland->SetContent(kRootTransform, kLinkId);
+  PRESENT(parent_flatland, true);
+  RunLoopUntilIdle();
+
+  ApplySessionUpdatesAndSignalFences();
+  UpdateLinks(parent_flatland->GetRoot());
+  auto links = link_system_->GetResolvedTopologyLinks();
+  EXPECT_EQ(links.size(), 0U);
+
+  // We post this task onto the other Flatland's thread, so that we can have a *chance* of locking
+  // the LinkSystem mutex in between the execution of the two link-resolution closures (each of
+  // which also locks the LinkSystem mutex).
+  bool presented = false;
+  EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(child_flatland->GetSessionId(), _));
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
+  async::PostTask(child_flatland_thread_loop.dispatcher(), ([&]() {
+                    child_flatland->CreateView2(
+                        std::move(creation_tokens.view_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
+
+                    fuchsia::ui::composition::PresentArgs present_args;
+                    present_args.set_requested_presentation_time(0);
+                    present_args.set_acquire_fences({});
+                    present_args.set_release_fences({});
+                    present_args.set_unsquashable({});
+                    child_flatland->Present(std::move(present_args));
+
+                    // `Present()` puts the resulting UberStruct into the "acquire fence queue";
+                    // since there are no fences it is not-quite-immediately made available via a
+                    // posted task.  If we were to quit immediately, then this task wouldn't get a
+                    // chance to run.  So instead, we wrap `Quit()` in a task that will run after
+                    // UberStruct is made available.
+                    async::PostTask(child_flatland_thread_loop.dispatcher(),
+                                    [&]() { child_flatland_thread_loop.Quit(); });
+                  }));
+
+  // This runs "concurrently" with the task above.  Ideally, it will sometimes fall between the
+  // running the two ObjectLinker link-resolved closures.  Unfortunately this is unlikely, so we
+  // can't reliably ensure that this case is handled properly.  More often, this will occur either
+  // before both link-resolved closures, or after both of them (both of these situations are handled
+  // properly).
+  ApplySessionUpdatesAndSignalFences();
+  UpdateLinks(parent_flatland->GetRoot());
+  links = link_system_->GetResolvedTopologyLinks();
+  // One of these will be true, but we don't know which one.
+  // EXPECT_EQ(links.size(), 0U);
+  // EXPECT_EQ(links.size(), 1U);
+
+  // By waiting for the task to finish running, we know that the Present() has happened, and
+  // therefore both the parent and child Flatland sessions will have provided UberStructs, so
+  // that there will now be a resolved link between the viewport and the view.
+  child_flatland_thread_loop.JoinThreads();
+  ApplySessionUpdatesAndSignalFences();
+  UpdateLinks(parent_flatland->GetRoot());
+  links = link_system_->GetResolvedTopologyLinks();
+  EXPECT_EQ(links.size(), 1U);
 }
 
 TEST_F(FlatlandDisplayTest, SimpleSetContent) {

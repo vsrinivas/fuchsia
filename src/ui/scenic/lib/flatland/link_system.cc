@@ -78,8 +78,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
         FX_DCHECK(child_view_watcher_map_key || on_link_destruction);
         std::scoped_lock lock(ref->mutex_);
         ref->child_view_watcher_map_.erase(*child_view_watcher_map_key);
-      },
-      dispatcher_holder);
+      });
 
   return ChildLink({
       .parent_viewport_watcher_handle = parent_viewport_watcher_handle,
@@ -148,8 +147,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
 
         ref->link_topologies_.erase(*topology_map_key);
         ref->link_graph_.ReleaseTransform(*topology_map_key);
-      },
-      dispatcher_holder);
+      });
 
   return ParentLink({.child_view_watcher_handle = child_view_watcher_handle,
                      .exporter = std::move(exporter),
