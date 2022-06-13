@@ -1124,7 +1124,7 @@ pub fn sys_mount(
     target_addr: UserCString,
     filesystemtype_addr: UserCString,
     flags: u32,
-    _data_addr: UserAddress,
+    data_addr: UserCString,
 ) -> Result<(), Errno> {
     let flags = MountFlags::from_bits(flags).ok_or_else(|| {
         not_implemented!(
@@ -1150,14 +1150,21 @@ pub fn sys_mount(
         let source = current_task.mm.read_c_string(source_addr, &mut buf)?;
         let mut buf = [0u8; PATH_MAX as usize];
         let fs_type = current_task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
+        let mut buf = [0u8; PATH_MAX as usize];
+        let data = if data_addr.is_null() {
+            b""
+        } else {
+            current_task.mm.read_c_string(data_addr, &mut buf)?
+        };
         strace!(
             current_task,
-            "mount(source={:?}, type={:?})",
+            "mount(source={:?}, type={:?}, data={:?})",
             String::from_utf8_lossy(source),
-            String::from_utf8_lossy(fs_type)
+            String::from_utf8_lossy(fs_type),
+            String::from_utf8_lossy(data)
         );
 
-        let fs = create_filesystem(current_task.kernel(), source, fs_type, b"")?;
+        let fs = create_filesystem(current_task.kernel(), source, fs_type, data)?;
         target.mount(fs, flags)?;
     }
 
