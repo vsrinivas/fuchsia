@@ -1,3 +1,0 @@
-protocol/member fuchsia.debugdata/Publisher.Publish(string:255 data_sink,zx/handle:VMO data,zx/handle:EVENTPAIR vmo_token)
-protocol fuchsia.debugdata/Publisher
-library fuchsia.debugdata

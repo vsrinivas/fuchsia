@@ -1,3 +1,0 @@
-protocol/member fuchsia.ui.lifecycle/LifecycleController.Terminate()
-protocol fuchsia.ui.lifecycle/LifecycleController
-library fuchsia.ui.lifecycle

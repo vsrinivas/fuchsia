@@ -1,6 +1,0 @@
-protocol/member fuchsia.thermal/ClientStateConnector.Connect(string:8 client_type,server_end:fuchsia.thermal/ClientStateWatcher watcher)
-protocol fuchsia.thermal/ClientStateConnector
-protocol/member fuchsia.thermal/ClientStateWatcher.Watch() -> (uint64 state)
-protocol fuchsia.thermal/ClientStateWatcher
-const fuchsia.thermal/MAX_THERMAL_LOAD uint32 100
-library fuchsia.thermal

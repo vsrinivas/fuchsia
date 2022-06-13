@@ -1,3 +1,0 @@
-protocol/member fuchsia.sys.test/CacheControl.Clear() -> ()
-protocol fuchsia.sys.test/CacheControl
-library fuchsia.sys.test

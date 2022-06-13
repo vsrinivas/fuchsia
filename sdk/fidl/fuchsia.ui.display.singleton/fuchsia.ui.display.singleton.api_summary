@@ -1,7 +1,0 @@
-protocol/member fuchsia.ui.display.singleton/Info.GetMetrics() -> (fuchsia.ui.display.singleton/Metrics info)
-protocol fuchsia.ui.display.singleton/Info
-table/member fuchsia.ui.display.singleton/Metrics.extent_in_mm fuchsia.math/SizeU
-table/member fuchsia.ui.display.singleton/Metrics.extent_in_px fuchsia.math/SizeU
-table/member fuchsia.ui.display.singleton/Metrics.recommended_device_pixel_ratio fuchsia.math/VecF
-table fuchsia.ui.display.singleton/Metrics
-library fuchsia.ui.display.singleton

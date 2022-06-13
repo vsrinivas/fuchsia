@@ -1,3 +1,0 @@
-protocol/member fuchsia.recovery/FactoryReset.Reset() -> (int32 status)
-protocol fuchsia.recovery/FactoryReset
-library fuchsia.recovery

@@ -1,4 +1,0 @@
-protocol/member fuchsia.lowpan/DeviceWatcher.WatchDevices() -> (vector<string:32>:8 added,vector<string:32>:8 removed)
-protocol fuchsia.lowpan/DeviceWatcher
-const fuchsia.lowpan/MAX_LOWPAN_DEVICES uint32 8
-library fuchsia.lowpan

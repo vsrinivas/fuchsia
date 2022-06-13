@@ -1,3 +1,0 @@
-protocol/member fuchsia.process.lifecycle/Lifecycle.Stop()
-protocol fuchsia.process.lifecycle/Lifecycle
-library fuchsia.process.lifecycle
