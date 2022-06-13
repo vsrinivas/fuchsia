@@ -55,6 +55,8 @@
 
 #include "stress_test.h"
 
+#define VMSTRESS_DEBUG 0
+
 // Helper to generate values in the full inclusive range [a,b].
 template <typename IntType = uint64_t>
 static inline IntType uniform_rand_range(IntType a, IntType b, StressTest::Rng& rng) {
@@ -301,13 +303,17 @@ void SingleVmoTestInstance::CheckVmoThreadError(zx_status_t status, const char* 
         uint64_t actual, actual_count;
         status = zx_object_get_info(thread_handles_[i].get(), ZX_INFO_THREAD, &info, sizeof(info),
                                     &actual, &actual_count);
-        ZX_ASSERT_MSG(status == ZX_OK, "ZX_INFO_THREAD failed with %s\n",
-                      zx_status_get_string(status));
-        fprintf(stderr,
-                "[test instance 0x%zx]: pager thread %lu: state 0x%x, wait_exception_channel_type "
-                "0x%x\n",
-                test_instance_id_, i - kNumVmoThreads, info.state,
-                info.wait_exception_channel_type);
+        if (status != ZX_OK) {
+          fprintf(stderr,
+                  "[test instance 0x%zx]: ZX_INFO_THREAD on pager thread %zu failed with %s\n",
+                  test_instance_id_, i - kNumVmoThreads, zx_status_get_string(status));
+        } else {
+          fprintf(
+              stderr,
+              "[test instance 0x%zx]: pager thread %zu: state 0x%x, wait_exception_channel_type "
+              "0x%x\n",
+              test_instance_id_, i - kNumVmoThreads, info.state, info.wait_exception_channel_type);
+        }
       }
     }
   }
@@ -352,12 +358,15 @@ int SingleVmoTestInstance::pager_thread() {
 
   auto rng = RngGen();
 
+#if VMSTRESS_DEBUG
   // Counters to log pager thread progress for debugging stalls.
   zx::duration logging_interval = zx::duration(ZX_MIN(2));
   zx::time time_prev = zx::clock::get_monotonic();
   uint64_t ops_per_interval = 0;
+#endif  // VMSTRESS_DEBUG
 
   while (!shutdown_.load()) {
+#if VMSTRESS_DEBUG
     ++ops_per_interval;
     zx::time time_now = zx::clock::get_monotonic();
     if (time_now > time_prev + logging_interval) {
@@ -367,6 +376,7 @@ int SingleVmoTestInstance::pager_thread() {
       time_prev = time_now;
       ops_per_interval = 0;
     }
+#endif  // VMSTRESS_DEBUG
 
     zx::vmo tmp_vmo;
     uint64_t off, size;
