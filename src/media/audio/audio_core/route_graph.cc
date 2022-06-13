@@ -61,7 +61,15 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 void RouteGraph::AddDeviceToRoutes(AudioDevice* device) {
   TRACE_DURATION("audio", "RouteGraph::AddDeviceToRoutes");
 
+  // Add device, sorted with most-recently-plugged devices first. Use a stable sort so that ties are
+  // broken by most-recently-added device, which helps make unit tests deterministic.
   devices_.push_front(device);
+  std::stable_sort(devices_.begin(), devices_.end(), [](AudioDevice* a, AudioDevice* b) {
+    if (a->plugged() != b->plugged()) {
+      return a->plugged();
+    }
+    return a->plug_time() > b->plug_time();
+  });
 
   if constexpr (kLogRoutingChanges) {
     FX_LOGS(INFO) << "Added device " << device << " (" << (device->is_input() ? "input" : "output")

@@ -100,6 +100,8 @@ class FakeAudioOutput : public AudioOutput {
   void set_format(Format format) { format_ = format; }
   std::optional<Format> format() const override { return format_; }
 
+  using AudioDevice::UpdatePlugState;
+
  private:
   std::optional<Format> format_;
 };
@@ -186,6 +188,31 @@ TEST_F(RouteGraphTest, RenderersRouteToLastPluggedOutput) {
                                               &context().link_matrix(), context().clock_factory());
   under_test_.AddDeviceToRoutes(later_output.get());
   EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({later_output.get()}));
+}
+
+TEST_F(RouteGraphTest, RenderersRouteToLastPluggedOutputWithPlugTimes) {
+  auto renderer = FakeAudioObject::FakeRenderer();
+
+  under_test_.AddRenderer(renderer);
+  under_test_.SetRendererRoutingProfile(
+      *renderer, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
+
+  auto output1 = FakeAudioOutput::Create(context().process_config().device_config(),
+                                         &threading_model(), &context().device_manager(),
+                                         &context().link_matrix(), context().clock_factory());
+  auto output2 = FakeAudioOutput::Create(context().process_config().device_config(),
+                                         &threading_model(), &context().device_manager(),
+                                         &context().link_matrix(), context().clock_factory());
+
+  output1->UpdatePlugState(true, zx::time(100));
+  output2->UpdatePlugState(true, zx::time(99));
+
+  under_test_.AddDeviceToRoutes(output1.get());
+  EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output1.get()}));
+
+  // After adding output2, we should still route to output1 because its plug time is higher.
+  under_test_.AddDeviceToRoutes(output2.get());
+  EXPECT_THAT(DestLinks(*renderer), UnorderedElementsAreArray({output1.get()}));
 }
 
 TEST_F(RouteGraphTest, RenderersFallbackWhenOutputRemoved) {
