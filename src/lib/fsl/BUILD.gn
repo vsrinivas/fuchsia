@@ -48,6 +48,8 @@ executable("fsl_unittests") {
 }
 
 fuchsia_unittest_package("fsl_tests") {
-  manifest = "meta/fsl_unittests.cmx"
-  deps = [ ":fsl_unittests" ]
+  deps = [
+    ":fsl_unittests",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
