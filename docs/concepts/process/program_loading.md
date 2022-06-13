@@ -143,23 +143,22 @@ Three types of file are handled:
        it creates make system calls themselves
 
     The program loader then closes its end of the channel.
-   * The initial thread is launched with
-     the [`zx_process_start()`] system call:
+  * The initial thread is launched with the [`zx_process_start()`] system call:
 
-      * `entry` sets the new thread's PC to `e_entry` from the executable's
-        ELF header, adjusted by base address.
-      * `stack` sets the new thread's stack pointer to the top of the
-        stack mapping.
-      * `arg1` transfers the handle to the *bootstrap channel* into the
-        first argument register in the C ABI.
-      * `arg2` passes the base address of the vDSO into the second argument
-        register in the C ABI.
+     * `entry` sets the new thread's PC to `e_entry` from the executable's
+       ELF header, adjusted by base address.
+     * `stack` sets the new thread's stack pointer to the top of the
+       stack mapping.
+     * `arg1` transfers the handle to the *bootstrap channel* into the
+       first argument register in the C ABI.
+     * `arg2` passes the base address of the vDSO into the second argument
+       register in the C ABI.
 
-     Thus, the program entry point can be written as a C function:
+    Thus, the program entry point can be written as a C function:
 
-     ```c
-     noreturn void _start(zx_handle_t bootstrap_channel, uintptr_t vdso_base);
-     ```
+    ```c
+    noreturn void _start(zx_handle_t bootstrap_channel, uintptr_t vdso_base);
+    ```
 
 ### An ELF `ET_DYN` file with a `PT_INTERP` {#pt-interp}
 
