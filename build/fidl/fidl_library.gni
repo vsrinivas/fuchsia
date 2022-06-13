@@ -419,12 +419,16 @@ template("fidl_library") {
       if (defined(api_reference)) {
         api = api_reference
 
-        api_contents = [
-          {
-            source = summary_file
-            dest = "fidl/$library_name"
-          },
-        ]
+        # TODO(99634): Delete and uncomment the line below after non-json api
+        # summaries are removed.
+        current_api = api_reference
+
+        #  api_contents = [
+        #    {
+        #      source = summary_file
+        #      dest = "fidl/$library_name"
+        #    },
+        #  ]
       }
 
       meta = {
