@@ -3,16 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::blobfs::BlobFsReader,
+    crate::blobfs::{BlobFsReader, BlobFsReaderBuilder},
     anyhow::{anyhow, Context, Result},
     log::warn,
     pathdiff::diff_paths,
     std::{
-        collections::{HashMap, HashSet},
-        fs,
-        io::Read,
+        collections::HashSet,
+        fs::{self, File},
+        io::{BufReader, Read, Seek},
         path::{Path, PathBuf},
-        sync::Arc,
     },
 };
 
@@ -26,13 +25,15 @@ pub trait ArtifactReader: Send + Sync {
     fn get_deps(&self) -> HashSet<PathBuf>;
 }
 
-#[derive(Clone)]
-pub struct BlobFsArtifactReader {
+/// Implementation of `ArtifactReader` for blobfs archive files.
+pub struct BlobFsArtifactReader<RS: Read + Seek> {
     blobfs_dep_path: PathBuf,
-    blobs: Arc<HashMap<PathBuf, Vec<u8>>>,
+    blobfs_reader: BlobFsReader<RS>,
 }
 
-impl BlobFsArtifactReader {
+impl BlobFsArtifactReader<BufReader<File>> {
+    /// Try to construct an artifact reader rooted at `build_path` that loads
+    /// blobfs from the `build_path`-relative path `blobfs_path`.
     pub fn try_new<P1: AsRef<Path>, P2: AsRef<Path>>(
         build_path: P1,
         blobfs_path: P2,
@@ -76,23 +77,19 @@ impl BlobFsArtifactReader {
                 )
             })?;
 
-        let mut blobfs_file = fs::File::open(blobfs_path)
-            .context("Failed to open blobfs archive for artifact reader")?;
-        let mut blobfs_buffer = Vec::new();
-        blobfs_file
-            .read_to_end(&mut blobfs_buffer)
-            .context("Failed to read blobfs archive for artifact reader")?;
-        let mut blobfs_reader = BlobFsReader::new(blobfs_buffer);
-        let blobs =
-            blobfs_reader.parse().context("Failed to parse blobfs archive for artifact reader")?;
-        Ok(Self {
-            blobfs_dep_path,
-            blobs: Arc::new(
-                blobs.into_iter().map(|blob| (blob.merkle.into(), blob.buffer)).collect(),
-            ),
-        })
+        let blobfs_file = File::open(&blobfs_path)
+            .map_err(|err| anyhow!("Failed to open blobfs archive {:?}: {}", blobfs_path, err))?;
+        let blobfs_reader = BlobFsReaderBuilder::new()
+            .archive(BufReader::new(blobfs_file))
+            .context("Failed to prepare blobfs archive for artifact reader")?
+            .build()
+            .context("Failed to parse blobfs archive metadata for artifact reader")?;
+        Ok(Self { blobfs_dep_path, blobfs_reader })
     }
 
+    /// Try to construct a compound artifact reader that consults multiple
+    /// blobfs archives (in the order specified by `blobfs_paths`) when reading
+    /// artifacts.
     pub fn try_compound<P1: AsRef<Path>, P2: AsRef<Path>>(
         build_path: P1,
         blobfs_paths: &Vec<P2>,
@@ -110,13 +107,22 @@ impl BlobFsArtifactReader {
     }
 }
 
-impl ArtifactReader for BlobFsArtifactReader {
-    fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
-        if let Some(blob_contents) = self.blobs.get(path) {
-            Ok(blob_contents.clone())
-        } else {
-            Err(anyhow!("Blob {:?} not found in blobfs archive {:?}", path, self.blobfs_dep_path))
+// `BlobfsArtifactReader` cannot be cloned in general, but the
+// `<BufReader<File>>` must be clonable for some workflows.
+impl Clone for BlobFsArtifactReader<BufReader<File>> {
+    fn clone(&self) -> Self {
+        Self {
+            blobfs_dep_path: self.blobfs_dep_path.clone(),
+            blobfs_reader: self.blobfs_reader.clone(),
         }
+    }
+}
+
+impl<RS: Read + Seek + Send + Sync> ArtifactReader for BlobFsArtifactReader<RS> {
+    fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
+        self.blobfs_reader.read_blob(path).with_context(|| {
+            format!("Failed to read blob {:?} from blobfs via artifact reader", path)
+        })
     }
 
     fn get_deps(&self) -> HashSet<PathBuf> {
@@ -124,6 +130,10 @@ impl ArtifactReader for BlobFsArtifactReader {
     }
 }
 
+/// An artifact reader that consults a sequence of delegate readers, returning
+/// the first non-error result, or else an error describing all error results.
+/// The dependencies tracked by this implementation is the union of all
+/// delegates' dependencies.
 pub struct CompoundArtifactReader {
     delegates: Vec<Box<dyn ArtifactReader>>,
 }
@@ -166,8 +176,8 @@ impl ArtifactReader for CompoundArtifactReader {
     }
 }
 
-impl From<Vec<BlobFsArtifactReader>> for CompoundArtifactReader {
-    fn from(readers: Vec<BlobFsArtifactReader>) -> Self {
+impl From<Vec<BlobFsArtifactReader<BufReader<File>>>> for CompoundArtifactReader {
+    fn from(readers: Vec<BlobFsArtifactReader<BufReader<File>>>) -> Self {
         Self::new(
             readers
                 .iter()
@@ -177,6 +187,8 @@ impl From<Vec<BlobFsArtifactReader>> for CompoundArtifactReader {
     }
 }
 
+/// An `ArtifactReader` implementation that reads paths relative to a particular
+/// directory.
 #[derive(Clone)]
 pub struct FileArtifactReader {
     build_path: PathBuf,
@@ -184,9 +196,9 @@ pub struct FileArtifactReader {
     deps: HashSet<PathBuf>,
 }
 
-/// The FileArtifactLoader retrieves package data and blobs directly from the
-/// build artifacts on disk.
 impl FileArtifactReader {
+    /// Construct a new artifact reader that tracks dependencies relative to
+    /// `build_path` and reads artifacts relative to `artifact_path`.
     pub fn new(build_path: &Path, artifact_path: &Path) -> Self {
         let build_path = match build_path.canonicalize() {
             Ok(path) => path,

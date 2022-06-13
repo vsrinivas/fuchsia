@@ -4,14 +4,20 @@
 
 use {
     crate::zstd,
-    anyhow::{Error, Result},
+    anyhow::{anyhow, Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
     hex,
     log::warn,
     serde::Serialize,
     std::cmp,
     std::convert::{TryFrom, TryInto},
-    std::io::{Cursor, Read, Seek, SeekFrom},
+    std::{
+        collections::HashMap,
+        fs::File,
+        io::{BufReader, Cursor, Read, Seek, SeekFrom},
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
     thiserror::Error,
 };
 
@@ -71,17 +77,17 @@ pub struct BlobFsHeader {
 }
 
 impl BlobFsHeader {
-    pub fn parse(cursor: &mut Cursor<Vec<u8>>) -> Result<Self> {
-        let starting_pos: i64 = cursor.position().try_into()?;
-        let magic_0: u64 = cursor.read_u64::<LittleEndian>()?;
+    pub fn parse<RS: Read + Seek>(reader: &mut RS) -> Result<Self> {
+        let starting_pos: i64 = reader.stream_position()?.try_into()?;
+        let magic_0: u64 = reader.read_u64::<LittleEndian>()?;
         if magic_0 != BLOBFS_MAGIC_0 {
             return Err(Error::new(BlobFsError::InvalidHeaderMagic));
         }
-        let magic_1: u64 = cursor.read_u64::<LittleEndian>()?;
+        let magic_1: u64 = reader.read_u64::<LittleEndian>()?;
         if magic_1 != BLOBFS_MAGIC_1 {
             return Err(Error::new(BlobFsError::InvalidHeaderMagic));
         }
-        let version: u32 = cursor.read_u32::<LittleEndian>()?;
+        let version: u32 = reader.read_u32::<LittleEndian>()?;
         // BlobFS version 8 supports ZSTD_Seekable.
         // BlobFS version 9 removes support fo ZSTD_Seekable.
         // Scrutiny only supports ZSTD_CHUNK. So both versions are suitable
@@ -90,27 +96,27 @@ impl BlobFsHeader {
             return Err(Error::new(BlobFsError::UnsupportedVersion));
         }
 
-        let flags: u32 = cursor.read_u32::<LittleEndian>()?;
-        let block_size: u32 = cursor.read_u32::<LittleEndian>()?;
-        let reserved_1: u32 = cursor.read_u32::<LittleEndian>()?;
-        let data_block_count: u64 = cursor.read_u64::<LittleEndian>()?;
-        let journal_block_count: u64 = cursor.read_u64::<LittleEndian>()?;
-        let inode_count: u64 = cursor.read_u64::<LittleEndian>()?;
-        let alloc_block_count: u64 = cursor.read_u64::<LittleEndian>()?;
-        let alloc_inode_count: u64 = cursor.read_u64::<LittleEndian>()?;
-        let reserved_2: u64 = cursor.read_u64::<LittleEndian>()?;
+        let flags: u32 = reader.read_u32::<LittleEndian>()?;
+        let block_size: u32 = reader.read_u32::<LittleEndian>()?;
+        let reserved_1: u32 = reader.read_u32::<LittleEndian>()?;
+        let data_block_count: u64 = reader.read_u64::<LittleEndian>()?;
+        let journal_block_count: u64 = reader.read_u64::<LittleEndian>()?;
+        let inode_count: u64 = reader.read_u64::<LittleEndian>()?;
+        let alloc_block_count: u64 = reader.read_u64::<LittleEndian>()?;
+        let alloc_inode_count: u64 = reader.read_u64::<LittleEndian>()?;
+        let reserved_2: u64 = reader.read_u64::<LittleEndian>()?;
         // Fvm Fields
-        let slice_size: u64 = cursor.read_u64::<LittleEndian>()?;
-        let vslice_count: u64 = cursor.read_u64::<LittleEndian>()?;
-        let abm_slices: u32 = cursor.read_u32::<LittleEndian>()?;
-        let ino_slices: u32 = cursor.read_u32::<LittleEndian>()?;
-        let dat_slices: u32 = cursor.read_u32::<LittleEndian>()?;
-        let journal_slices: u32 = cursor.read_u32::<LittleEndian>()?;
-        let end_pos: i64 = cursor.position().try_into()?;
+        let slice_size: u64 = reader.read_u64::<LittleEndian>()?;
+        let vslice_count: u64 = reader.read_u64::<LittleEndian>()?;
+        let abm_slices: u32 = reader.read_u32::<LittleEndian>()?;
+        let ino_slices: u32 = reader.read_u32::<LittleEndian>()?;
+        let dat_slices: u32 = reader.read_u32::<LittleEndian>()?;
+        let journal_slices: u32 = reader.read_u32::<LittleEndian>()?;
+        let end_pos: i64 = reader.stream_position()?.try_into()?;
         let header_len: i64 = end_pos - starting_pos;
         if header_len < BLOBFS_BLOCK_SIZE.try_into()? {
             let padding: i64 = i64::try_from(BLOBFS_BLOCK_SIZE)? - header_len;
-            cursor.seek(SeekFrom::Current(padding))?;
+            reader.seek(SeekFrom::Current(padding))?;
         }
 
         Ok(Self {
@@ -259,7 +265,7 @@ pub struct NodePrelude {
 }
 
 impl NodePrelude {
-    pub fn parse(cursor: &mut Cursor<Vec<u8>>) -> Result<Self> {
+    pub fn parse<RS: Read + Seek>(cursor: &mut RS) -> Result<Self> {
         Ok(Self {
             flags: cursor.read_u16::<LittleEndian>()?,
             version: cursor.read_u16::<LittleEndian>()?,
@@ -312,7 +318,7 @@ pub struct Extent {
 }
 
 impl Extent {
-    pub fn parse(cursor: &mut Cursor<Vec<u8>>) -> Result<Self> {
+    pub fn parse<RS: Read + Seek>(cursor: &mut RS) -> Result<Self> {
         Ok(Self { data: cursor.read_u64::<LittleEndian>()? })
     }
 
@@ -347,14 +353,14 @@ pub struct Inode {
 impl Inode {
     /// Parses the Inode and the inline extent. This can only fail if the cursor
     /// reaches EOF before the expected 32 bytes have been read.
-    pub fn parse(cursor: &mut Cursor<Vec<u8>>) -> Result<Self> {
+    pub fn parse<RS: Read + Seek>(reader: &mut RS) -> Result<Self> {
         let mut merkle_root_hash = vec![0u8; BLOBFS_MERKLE_SIZE as usize];
-        cursor.read_exact(&mut merkle_root_hash)?;
-        let blob_size: u64 = cursor.read_u64::<LittleEndian>()?;
-        let block_count: u32 = cursor.read_u32::<LittleEndian>()?;
-        let extent_count: u16 = cursor.read_u16::<LittleEndian>()?;
-        let reserved: u16 = cursor.read_u16::<LittleEndian>()?;
-        let inline_extent = Extent::parse(cursor)?;
+        reader.read_exact(&mut merkle_root_hash)?;
+        let blob_size: u64 = reader.read_u64::<LittleEndian>()?;
+        let block_count: u32 = reader.read_u32::<LittleEndian>()?;
+        let extent_count: u16 = reader.read_u16::<LittleEndian>()?;
+        let reserved: u16 = reader.read_u16::<LittleEndian>()?;
+        let inline_extent = Extent::parse(reader)?;
         Ok(Inode {
             merkle_root_hash,
             blob_size,
@@ -374,13 +380,24 @@ pub struct ExtentContainer {
     extents: Vec<Extent>, // With a max of BLOBFS_CONTAINER_MAX_EXTENTS
 }
 
+/// Metadata about a blob loaded from a blobfs archive. Blob data is located in
+/// the blobfs archive at `[data_start..dat_start+data_length]`.
 #[derive(Debug)]
-pub struct Blob {
-    pub merkle: String,
-    pub buffer: Vec<u8>,
+struct BlobMetadata {
+    prelude: NodePrelude,
+    inode: Inode,
+    /// Absolute offset in blobfs archive to first byte of blob content. This is
+    /// included in addition to prelude and inode data because it depends on the
+    /// blobfs version located in the archive header.
+    data_start: u64,
+    /// Computed blob data length based on inode blob size and space occupied
+    /// by the blob merkle tree. This value represents the number of content
+    /// bytes in blobfs, regardless of whether those bytes are a compressed
+    /// representation of the blob returned by the blobfs API.
+    data_length: u64,
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum BlobFsError {
     #[error("Blobfs header magic value doesn't match expected value")]
     InvalidHeaderMagic,
@@ -388,95 +405,201 @@ pub enum BlobFsError {
     UnsupportedVersion,
 }
 
-pub struct BlobFsReader {
-    cursor: Cursor<Vec<u8>>,
+#[derive(Debug, Eq, PartialEq)]
+pub enum BlobFsVersion {
+    Version8,
+    Version9,
 }
 
-impl BlobFsReader {
-    /// Constructs a new reader from an existing fvm_buffer.
-    pub fn new(fvm_buffer: Vec<u8>) -> Self {
-        Self { cursor: Cursor::new(fvm_buffer) }
+/// A builder pattern implementation for`BlobFsReader`. Incremental builder
+/// operations consume the receiver and return a `Result<Self>` to facilitate
+/// `builder.op1(...)?.op2(...)?.build()?` patterns.
+pub struct BlobFsReaderBuilder<RS: Read + Seek> {
+    reader_seeker: Option<RS>,
+}
+
+impl<RS: Read + Seek + Send + Sync> BlobFsReaderBuilder<RS> {
+    /// Construct an empty `BlobFsReaderBuilder`.
+    pub fn new() -> Self {
+        Self { reader_seeker: None }
     }
 
-    /// Parses the FVM provided during construction returning the set of
-    /// partitions as buffers ordered by vslice.
-    pub fn parse(&mut self) -> Result<Vec<Blob>> {
-        let header = BlobFsHeader::parse(&mut self.cursor)?;
-        // Seek to the start of the node map and scan through the entire map
-        // for all allocated inodes (and their extents). Note each inode or
-        // extent is fixed at 256 bytes (32 per block). So we are scanning
-        // one at a time.
+    /// Set the blobfs archive that should be read by the built `BlobFsReader`.
+    pub fn archive(mut self, reader_seeker: RS) -> Result<Self> {
+        self.reader_seeker = Some(reader_seeker);
+        Ok(self)
+    }
+
+    /// Build a `BlobFsReader` by parsing all metadata in the blobfs archive and
+    /// injecting the metadata into a new `BlobFsReader` instance.
+    pub fn build(self) -> Result<BlobFsReader<RS>> {
+        let mut reader_seeker = self
+            .reader_seeker
+            .ok_or_else(|| anyhow!("Attempt to build blobfs reader with no archive reader"))?;
+        let header = BlobFsHeader::parse(&mut reader_seeker)?;
+        let metadata = Arc::new(Self::parse_metadata(header, &mut reader_seeker)?);
+        Ok(BlobFsReader { reader_seeker, metadata })
+    }
+
+    fn parse_metadata(
+        header: BlobFsHeader,
+        reader: &mut RS,
+    ) -> Result<HashMap<PathBuf, BlobMetadata>> {
+        let blobfs_version = match header.version {
+            BLOBFS_VERSION_8 => BlobFsVersion::Version8,
+            BLOBFS_VERSION_9 => BlobFsVersion::Version9,
+            _ => {
+                return Err(anyhow!("Unsupported blobfs version: {}", header.version));
+            }
+        };
         let node_map_offset = header.node_map_start_block() * BLOBFS_BLOCK_SIZE;
         let data_offset = header.data_blocks_start_block() * BLOBFS_BLOCK_SIZE;
 
-        let mut blobs = Vec::new();
+        let mut metadata = HashMap::new();
         for i in 0..header.inode_count {
-            self.cursor.seek(SeekFrom::Start(node_map_offset))?;
-            self.cursor.seek(SeekFrom::Current((i * BLOBFS_INODE_SIZE).try_into().unwrap()))?;
-            let prelude = NodePrelude::parse(&mut self.cursor)?;
+            reader.seek(SeekFrom::Start(node_map_offset))?;
+            reader.seek(SeekFrom::Current((i * BLOBFS_INODE_SIZE).try_into().unwrap()))?;
+            let prelude = NodePrelude::parse(reader)?;
 
             // We only care about allocated files.
             if prelude.is_inode() && prelude.is_allocated() {
-                let inode = Inode::parse(&mut self.cursor)?;
-                let merkle = hex::encode(inode.merkle_root_hash.clone());
+                let inode = Inode::parse(reader)?;
+                let merkle = PathBuf::from(hex::encode(inode.merkle_root_hash.clone()));
 
                 if inode.extent_count > 1 {
-                    warn!("Extended containers are not currently supported: {}", merkle);
+                    warn!(
+                        "Skipping blobfs blob {:?}: Extended containers are not currently supported",
+                        merkle
+                    );
                     continue;
                 }
                 if prelude.is_compressed() && !prelude.is_chunk_compressed() {
-                    warn!("This type of compression isn't supported for: {}", merkle);
+                    warn!("Skipping blobfs blob {:?}: Unsupported compression type", merkle);
                     continue;
                 }
 
-                // Skip forward to the data block map and read the data.
-                self.cursor.seek(SeekFrom::Start(data_offset))?;
-                self.cursor.seek(SeekFrom::Current(
-                    (inode.inline_extent.start() * BLOBFS_BLOCK_SIZE).try_into().unwrap(),
-                ))?;
+                // Compute offset beyond `data_offset` where merkle and data are stored.
+                let extent_offset =
+                    inode.inline_extent.start().checked_mul(BLOBFS_BLOCK_SIZE).ok_or_else(
+                        || {
+                            anyhow!(
+                                "Blobfs inode inline extent start too large: {}",
+                                inode.inline_extent.start()
+                            )
+                        },
+                    )?;
+                // Compute absolute offset where merkle and data are stored.
+                let blob_data_offset = data_offset.checked_add(extent_offset)
+                    .ok_or_else(|| anyhow!("Blobfs data + inode inline extent start overflowed: data_offset={} + extent_offset={}", data_offset, extent_offset))?;
 
-                // Skip over the merkle tree blocks. In version 8 these are padded
-                // at the front of the block.
-                let mut data_length = 0;
-                if header.version == BLOBFS_VERSION_8 {
-                    let merkle_tree_size = merkle_tree_block_count(&inode) * BLOBFS_BLOCK_SIZE;
-                    self.cursor.seek(SeekFrom::Current(merkle_tree_size.try_into().unwrap()))?;
-                    // Read the data blocks directly, accounting for the space taken up by the merkle
-                    // tree prefixing the blob.
-                    data_length =
-                        (inode.inline_extent.length() * BLOBFS_BLOCK_SIZE) - merkle_tree_size;
-                }
-                if header.version == BLOBFS_VERSION_9 {
-                    let merkle_tree_size = merkle_tree_byte_size(&inode, true);
-                    data_length =
-                        (inode.inline_extent.length() * BLOBFS_BLOCK_SIZE) - merkle_tree_size;
-                }
-                let mut buffer = vec![0u8; data_length as usize];
-                self.cursor.read_exact(&mut buffer)?;
-
-                // Perform zstd chunk decompression if required.
-                if prelude.is_chunk_compressed() {
-                    let mut decompressed =
-                        zstd::chunked_decompress(&buffer, inode.blob_size.try_into().unwrap());
-                    if decompressed.len() != 0 {
-                        decompressed.truncate(inode.blob_size as usize);
-                        blobs.push(Blob { merkle, buffer: decompressed });
-                    } else {
-                        warn!("Failed to decompress: {}", merkle);
+                let (data_start, merkle_tree_size) = match blobfs_version {
+                    BlobFsVersion::Version8 => {
+                        // Data begins with merkle tree. Skip passed merkle tree.
+                        let merkle_tree_block_count = merkle_tree_block_count(&inode);
+                        let merkle_tree_size = merkle_tree_block_count.checked_mul(BLOBFS_BLOCK_SIZE)
+                            .ok_or_else(|| anyhow!("Blobfs merkle tree block count overflows when multiplied by block size: block_count={}, block_size={}", merkle_tree_block_count, BLOBFS_BLOCK_SIZE))?;
+                        let data_start = blob_data_offset.checked_add(merkle_tree_size).ok_or_else(|| anyhow!("Malformed blobfs archive offset: data_offset={} + merkle_tree_size={}", blob_data_offset, merkle_tree_size))?;
+                        (data_start, merkle_tree_size)
                     }
-                } else {
-                    buffer.truncate(inode.blob_size as usize);
-                    blobs.push(Blob { merkle, buffer });
-                }
+                    BlobFsVersion::Version9 => {
+                        // Merkle tree appears at the end of data; no need to add more to offset.
+                        let data_start = blob_data_offset;
+                        let merkle_tree_size = merkle_tree_byte_size(&inode, true);
+                        (data_start, merkle_tree_size)
+                    }
+                };
+
+                let block_length = inode.inline_extent.length().checked_mul(BLOBFS_BLOCK_SIZE)
+                    .ok_or_else(|| anyhow!("Blobfs inode inline extent length overflows when multiplied by block size: block_count={}, block_size={}", inode.inline_extent.length(), BLOBFS_BLOCK_SIZE))?;
+                let data_length = block_length.checked_sub(merkle_tree_size)
+                    .ok_or_else(|| anyhow!("Blobfs content + merkle tree size is less than merkle tree size: total_size={}, merkle_tree_size={}", block_length, merkle_tree_size))?;
+
+                metadata.insert(merkle, BlobMetadata { prelude, inode, data_start, data_length });
             }
         }
-        Ok(blobs)
+        Ok(metadata)
+    }
+}
+
+/// Bespoke reader interface for blobfs that supports reading individual blobs
+/// named by hex-string paths, and iterating over all valid blob merkle root
+/// paths.
+pub struct BlobFsReader<RS: Read + Seek> {
+    reader_seeker: RS,
+    metadata: Arc<HashMap<PathBuf, BlobMetadata>>,
+}
+
+impl<RS: Read + Seek> BlobFsReader<RS> {
+    /// Read the blob with the merkle root described by `blob_path`. Blobs
+    /// identities as paths are lowercase hex-strings of the blob merkle root.
+    /// Note that this implementation does not check the integrity of merkle
+    /// roots; it trusts the metadata loaded from the underlying blobfs archive.
+    pub fn read_blob<P: AsRef<Path>>(&mut self, blob_path: P) -> Result<Vec<u8>> {
+        let metadata = self
+            .metadata
+            .get(blob_path.as_ref())
+            .ok_or_else(|| anyhow!("Blobfs blob not found: {:?}", blob_path.as_ref()))?;
+        let mut buffer = vec![0u8; metadata.data_length as usize];
+        self.reader_seeker.seek(SeekFrom::Start(metadata.data_start))?;
+        self.reader_seeker.read_exact(&mut buffer)?;
+
+        if metadata.prelude.is_chunk_compressed() {
+            let mut decompressed =
+                zstd::chunked_decompress(&buffer, metadata.inode.blob_size.try_into().unwrap());
+            if decompressed.len() != 0 {
+                decompressed.truncate(metadata.inode.blob_size as usize);
+                Ok(decompressed)
+            } else {
+                Err(anyhow!("Failed to decompress chunk-compressed blob: {:?}", blob_path.as_ref()))
+            }
+        } else {
+            buffer.truncate(metadata.inode.blob_size as usize);
+            Ok(buffer)
+        }
+    }
+
+    /// Construct an iterator of all known paths stored in the underlying blobfs
+    /// archive.
+    pub fn blob_paths<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PathBuf> + 'a> {
+        Box::new(self.metadata.keys())
+    }
+}
+
+// Clone file-backed readers by unwrapping the result of `File.try_clone()` on
+// the underlying file.
+impl Clone for BlobFsReader<BufReader<File>> {
+    fn clone(&self) -> Self {
+        let file = self
+            .reader_seeker
+            .get_ref()
+            .try_clone()
+            .map_err(|err| anyhow!("Failed to reopen blobfs archive for clone: {}", err))
+            .unwrap();
+        Self { reader_seeker: BufReader::new(file), metadata: self.metadata.clone() }
+    }
+}
+
+// Clone buffer-backed readers by cloning each property in the usual way.
+impl Clone for BlobFsReader<Cursor<Vec<u8>>> {
+    fn clone(&self) -> Self {
+        Self { reader_seeker: self.reader_seeker.clone(), metadata: self.metadata.clone() }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::{
+            calculate_hash_list_size, merkle_tree_block_count, round_up, BlobFsError, BlobFsHeader,
+            BlobFsReaderBuilder, Extent, Inode, NodePrelude, BLOBFS_FLAG_ALLOCATED, BLOBFS_MAGIC_0,
+            BLOBFS_MAGIC_1, BLOBFS_VERSION_8, BLOBFS_VERSION_9,
+        },
+        std::{
+            fs::{write, File},
+            io::{BufReader, Cursor, Read, Seek},
+        },
+        tempfile::tempdir,
+    };
 
     fn fake_blobfs_header() -> BlobFsHeader {
         BlobFsHeader {
@@ -518,15 +641,60 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_blobfs_empty_invalid() {
-        let blobfs_bytes = vec![0u8];
-        let mut reader = BlobFsReader::new(blobfs_bytes);
-        let result = reader.parse();
-        assert_eq!(result.is_err(), true);
+    fn file_and_buffer_test_from_buffer(
+        buffer: Vec<u8>,
+        file_test: Box<dyn Fn(BlobFsReaderBuilder<BufReader<File>>)>,
+        buffer_test: Box<dyn Fn(BlobFsReaderBuilder<Cursor<Vec<u8>>>)>,
+    ) {
+        let dir = tempdir().unwrap();
+        let blobfs_path = dir.path().join("blob.blk");
+        write(&blobfs_path, buffer.as_slice()).unwrap();
+        let builder = BlobFsReaderBuilder::new()
+            .archive(BufReader::new(File::open(&blobfs_path).unwrap()))
+            .unwrap();
+        file_test(builder);
+
+        let builder = BlobFsReaderBuilder::new().archive(Cursor::new(buffer)).unwrap();
+        buffer_test(builder);
     }
 
-    #[test]
+    fn blobfs_reader_builder_build_err<RS: Read + Seek + Send + Sync>(
+        builder: BlobFsReaderBuilder<RS>,
+    ) {
+        let result = builder.build();
+        assert!(result.is_err());
+    }
+
+    fn blobfs_reader_builder_build_err_eq<RS: Read + Seek + Send + Sync>(
+        err: BlobFsError,
+    ) -> Box<dyn Fn(BlobFsReaderBuilder<RS>)> {
+        Box::new(move |builder: BlobFsReaderBuilder<RS>| {
+            let result = builder.build();
+            assert!(result.is_err());
+            assert_eq!(err, result.err().unwrap().downcast::<BlobFsError>().unwrap());
+        })
+    }
+
+    fn blobfs_reader_builder_build_ok_num_blobs<RS: Read + Seek + Send + Sync>(
+        num_blobs: usize,
+    ) -> Box<dyn Fn(BlobFsReaderBuilder<RS>)> {
+        Box::new(move |builder: BlobFsReaderBuilder<RS>| {
+            let reader = builder.build().unwrap();
+            assert_eq!(num_blobs, reader.blob_paths().count());
+        })
+    }
+
+    #[fuchsia::test]
+    fn test_blobfs_empty_invalid() {
+        let blobfs_bytes = vec![0u8];
+        file_and_buffer_test_from_buffer(
+            blobfs_bytes,
+            Box::new(blobfs_reader_builder_build_err::<BufReader<File>>),
+            Box::new(blobfs_reader_builder_build_err::<Cursor<Vec<u8>>>),
+        );
+    }
+
+    #[fuchsia::test]
     fn test_round_up() {
         assert_eq!(round_up(10, 64), 64);
         assert_eq!(round_up(100, 64), 128);
@@ -536,7 +704,7 @@ mod tests {
         assert_eq!(round_up(5, 1), 5);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_calculate_hash_list_size() {
         assert_eq!(calculate_hash_list_size(32, 32), 32);
         assert_eq!(calculate_hash_list_size(64, 64), 32);
@@ -551,7 +719,7 @@ mod tests {
         assert_eq!(calculate_hash_list_size(81920, 8192), 320);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_merkle_tree_block_count() {
         let inode_0 = Inode {
             merkle_root_hash: vec![],
@@ -584,44 +752,45 @@ mod tests {
         assert_eq!(merkle_tree_block_count(&inode_2), 5);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_blobfs_reader_bad_magic_value() {
         let mut header = fake_blobfs_header();
         header.magic_0 = 0;
         let blobfs_bytes = bincode::serialize(&header).unwrap();
-        let mut reader = BlobFsReader::new(blobfs_bytes);
-        let result = reader.parse();
-        assert_eq!(
-            result.unwrap_err().downcast::<BlobFsError>().unwrap(),
-            BlobFsError::InvalidHeaderMagic
+
+        file_and_buffer_test_from_buffer(
+            blobfs_bytes,
+            blobfs_reader_builder_build_err_eq::<BufReader<File>>(BlobFsError::InvalidHeaderMagic),
+            blobfs_reader_builder_build_err_eq::<Cursor<Vec<u8>>>(BlobFsError::InvalidHeaderMagic),
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_blobfs_reader_bad_version_value() {
         let mut header = fake_blobfs_header();
         header.version = 500;
         let blobfs_bytes = bincode::serialize(&header).unwrap();
-        let mut reader = BlobFsReader::new(blobfs_bytes);
-        let result = reader.parse();
-        assert_eq!(
-            result.unwrap_err().downcast::<BlobFsError>().unwrap(),
-            BlobFsError::UnsupportedVersion
+        file_and_buffer_test_from_buffer(
+            blobfs_bytes,
+            blobfs_reader_builder_build_err_eq::<BufReader<File>>(BlobFsError::UnsupportedVersion),
+            blobfs_reader_builder_build_err_eq::<Cursor<Vec<u8>>>(BlobFsError::UnsupportedVersion),
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_blobfs_no_allocations() {
         let header = fake_blobfs_header();
         let mut blobfs_bytes = bincode::serialize(&header).unwrap();
         let mut empty_data = vec![0u8; 8192 * 20];
         blobfs_bytes.append(&mut empty_data);
-        let mut reader = BlobFsReader::new(blobfs_bytes);
-        let blobs = reader.parse().unwrap();
-        assert_eq!(blobs.len(), 0);
+        file_and_buffer_test_from_buffer(
+            blobfs_bytes,
+            blobfs_reader_builder_build_ok_num_blobs::<BufReader<File>>(0),
+            blobfs_reader_builder_build_ok_num_blobs::<Cursor<Vec<u8>>>(0),
+        );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_blobfs_allocations() {
         let block_size: usize = 8192;
         let mut header = fake_blobfs_header();
@@ -646,19 +815,24 @@ mod tests {
         let mut data_blocks = vec![0u8; 5 * block_size];
         blobfs_bytes.append(&mut data_blocks);
         // Verify we get a blob.
-        let mut reader = BlobFsReader::new(blobfs_bytes);
-        let blobs = reader.parse().unwrap();
-        assert_eq!(blobs.len(), 1);
+        file_and_buffer_test_from_buffer(
+            blobfs_bytes,
+            blobfs_reader_builder_build_ok_num_blobs::<BufReader<File>>(1),
+            blobfs_reader_builder_build_ok_num_blobs::<Cursor<Vec<u8>>>(1),
+        );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_blobfs_old_compat_version() {
         let mut header = fake_blobfs_header();
         header.version = BLOBFS_VERSION_8;
         let mut blobfs_bytes = bincode::serialize(&header).unwrap();
         let mut empty_data = vec![0u8; 8192 * 20];
         blobfs_bytes.append(&mut empty_data);
-        let mut reader = BlobFsReader::new(blobfs_bytes);
-        assert!(reader.parse().is_ok());
+        file_and_buffer_test_from_buffer(
+            blobfs_bytes,
+            blobfs_reader_builder_build_ok_num_blobs::<BufReader<File>>(0),
+            blobfs_reader_builder_build_ok_num_blobs::<Cursor<Vec<u8>>>(0),
+        );
     }
 }

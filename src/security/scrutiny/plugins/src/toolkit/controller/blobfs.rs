@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{anyhow, Result},
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::*,
@@ -12,7 +12,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::fs::{self, File},
-    std::io::prelude::*,
+    std::io::{prelude::*, BufReader},
     std::path::PathBuf,
     std::sync::Arc,
 };
@@ -31,19 +31,18 @@ pub struct BlobFsExtractController {}
 impl DataController for BlobFsExtractController {
     fn query(&self, _model: Arc<DataModel>, query: Value) -> Result<Value> {
         let request: BlobFsExtractRequest = serde_json::from_value(query)?;
-        let mut blobfs_file = File::open(request.input)?;
-        let output_path = PathBuf::from(request.output);
-        let mut blobfs_buffer = Vec::new();
-        blobfs_file.read_to_end(&mut blobfs_buffer)?;
-        let mut reader = BlobFsReader::new(blobfs_buffer);
-        let blobs = reader.parse()?;
+        let blobfs_path = PathBuf::from(request.input);
+        let blobfs_file = File::open(&blobfs_path)
+            .map_err(|err| anyhow!("Failed to open blbofs archive {:?}: {}", blobfs_path, err))?;
+        let mut reader =
+            BlobFsReaderBuilder::new().archive(BufReader::new(blobfs_file))?.build()?;
 
+        let output_path = PathBuf::from(request.output);
         fs::create_dir_all(&output_path)?;
-        for blob in blobs {
-            let mut path = output_path.clone();
-            path.push(blob.merkle.clone());
+        for blob_path in reader.clone().blob_paths() {
+            let path = output_path.join(blob_path);
             let mut file = File::create(path)?;
-            file.write_all(&blob.buffer)?;
+            file.write_all(reader.read_blob(blob_path)?.as_slice())?;
         }
         Ok(json!({"status": "ok"}))
     }

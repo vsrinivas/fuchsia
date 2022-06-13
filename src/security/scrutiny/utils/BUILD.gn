@@ -97,6 +97,7 @@ if (is_host) {
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
+      "//src/lib/fuchsia",
       "//src/security/scrutiny/utils/ffi",
       "//third_party/zstd",
     ]

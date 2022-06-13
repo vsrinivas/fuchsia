@@ -43,6 +43,8 @@ use {
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
+        fs::File,
+        io::BufReader,
         path::{Path, PathBuf},
         str,
         sync::Arc,
@@ -906,7 +908,7 @@ impl DataCollector for PackageDataCollector {
             .map(|blobfs_path| BlobFsArtifactReader::try_new(build_path, blobfs_path))
             // Use `collect(): Iterator<Result<_>> -> Result<Vec<_>>` to collect `Ok` values or else
             // first `Err` value.
-            .collect::<Result<Vec<BlobFsArtifactReader>>>()
+            .collect::<Result<Vec<BlobFsArtifactReader<BufReader<File>>>>>()
             .context("Failed to construct blobfs artifact readers for package collector")?;
 
         let artifact_reader_for_package_reader: CompoundArtifactReader =

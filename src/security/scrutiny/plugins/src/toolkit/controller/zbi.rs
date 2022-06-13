@@ -14,7 +14,7 @@ use {
     serde_json::{json, value::Value},
     std::collections::HashMap,
     std::fs::{self, File},
-    std::io::prelude::*,
+    std::io::{prelude::*, Cursor},
     std::path::PathBuf,
     std::sync::Arc,
 };
@@ -103,17 +103,16 @@ impl DataController for ZbiExtractController {
                         // Write out the blobfs data.
                         if partition.partition_type == FvmPartitionType::BlobFs {
                             info!("Extracting BlobFs FVM partiion");
-                            let mut blobfs_dir = fvm_dir.clone();
-                            blobfs_dir.push("blobfs");
-                            fs::create_dir_all(blobfs_dir.clone())?;
-                            let mut reader = BlobFsReader::new(partition.buffer.clone());
-                            let blobs = reader.parse()?;
+                            let blobfs_dir = fvm_dir.join("blobfs");
+                            fs::create_dir_all(&blobfs_dir)?;
 
-                            for blob in blobs {
-                                let mut path = blobfs_dir.clone();
-                                path.push(blob.merkle.clone());
+                            let mut reader = BlobFsReaderBuilder::new()
+                                .archive(Cursor::new(partition.buffer.clone()))?
+                                .build()?;
+                            for blob_path in reader.clone().blob_paths() {
+                                let path = blobfs_dir.join(blob_path);
                                 let mut file = File::create(path)?;
-                                file.write_all(&blob.buffer)?;
+                                file.write_all(reader.read_blob(blob_path)?.as_slice())?;
                             }
                         }
                     }
