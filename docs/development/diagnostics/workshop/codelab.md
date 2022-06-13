@@ -66,7 +66,8 @@ ffx component create /core/ffx-laboratory:profile_store fuchsia-pkg://fuchsia.co
 #setup first client
 ffx component create /core/ffx-laboratory:profile_store/clients:add_olive fuchsia-pkg://fuchsia.com/profile_store_example#meta/add_olive.cm
 
-ffx component show profile_store # to see the hierarchy
+# see the results of the previous two steps
+ffx component show profile_store
 
 # add a profile key and read it
 ffx component start /core/ffx-laboratory:profile_store/clients:add_olive
