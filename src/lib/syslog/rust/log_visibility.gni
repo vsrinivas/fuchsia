@@ -64,7 +64,6 @@ third_party_rust_crate_log_visibility = [
   "//src/connectivity/network/dhcp:*",
   "//src/connectivity/network/dhcpv6/client:*",
   "//src/connectivity/network/dhcpv6/core:*",
-  "//src/connectivity/network/dns:*",
   "//src/connectivity/network/net-cli:*",
   "//src/connectivity/network/net-cli/ffx:*",
   "//src/connectivity/network/net-cli/ffx:*",
