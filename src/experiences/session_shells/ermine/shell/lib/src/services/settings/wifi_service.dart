@@ -381,6 +381,8 @@ class NetworkInformation {
   bool credentialsFailed = false;
   // Network identifier (from scan results)
   policy.NetworkIdentifier? _networkIdentifier;
+  // Network comes from saved networks (via network config)
+  bool _isSaved = false;
 
   NetworkInformation();
 
@@ -403,6 +405,7 @@ class NetworkInformation {
         credentialsFailed = true;
       }
     }
+    _isSaved = true;
   }
 
   // Constructor for scan result
@@ -440,6 +443,8 @@ class NetworkInformation {
   bool get isWPA2 => _securityType == policy.SecurityType.wpa2;
 
   bool get isWPA3 => _securityType == policy.SecurityType.wpa3;
+
+  bool get isSaved => _isSaved;
 
   policy.SecurityType get securityType =>
       _securityType ?? policy.SecurityType.none;

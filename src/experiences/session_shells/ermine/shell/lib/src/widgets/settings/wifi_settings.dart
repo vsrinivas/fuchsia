@@ -144,8 +144,8 @@ class WiFiSettings extends StatelessWidget {
     if (state.targetNetwork.name == '') {
       return _buildSelectNetworkPrompt(context);
     } else {
-      if (state.targetNetwork.isOpen) {
-        return _buildOpenNetworkPrompt(context);
+      if (state.targetNetwork.isOpen || state.targetNetwork.isSaved) {
+        return _buildNoPasswordNetworkPrompt(context);
       } else {
         return _buildPasswordEntryPrompt(context);
       }
@@ -163,7 +163,7 @@ class WiFiSettings extends StatelessWidget {
     );
   }
 
-  Widget _buildOpenNetworkPrompt(BuildContext context) {
+  Widget _buildNoPasswordNetworkPrompt(BuildContext context) {
     return AppBar(
       elevation: 0,
       title: Text(
