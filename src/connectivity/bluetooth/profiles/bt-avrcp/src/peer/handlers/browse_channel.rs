@@ -90,11 +90,7 @@ impl BrowseChannelHandler {
                 // multiple players, so this value is irrelevant.
                 let uid_counter: u16 = 0x1234;
                 let media_player_items = folder_items.into_iter().map(|i| i.into()).collect();
-                let resp = GetFolderItemsResponse::new(
-                    StatusCode::Success,
-                    uid_counter,
-                    media_player_items,
-                );
+                let resp = GetFolderItemsResponse::new_success(uid_counter, media_player_items);
 
                 // Encode the result into the output buffer.
                 let mut buf = vec![0; resp.encoded_len()];

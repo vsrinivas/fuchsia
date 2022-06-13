@@ -24,6 +24,7 @@ pub_decodable_enum!(
         MediaPlayerList => 0x00,
         MediaPlayerVirtualFilesystem => 0x01,
         Search => 0x02,
+        NowPlaying => 0x03,
     }
 );
 

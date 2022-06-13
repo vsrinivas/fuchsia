@@ -73,6 +73,8 @@ pub type PacketResult<T> = result::Result<T, Error>;
 pub_decodable_enum! {
     /// Common charset IDs from the MIB Enum we may see in AVRCP. See:
     /// https://www.iana.org/assignments/character-sets/character-sets.xhtml
+    /// TODO(fxb/102060): we ideally would not want to return OutOfRange error
+    /// but instead return a default value (i.e. 0 => Unknown).
     CharsetId<u16, Error, OutOfRange> {
         Ascii => 3,
         Iso8859_1 => 4,
@@ -81,6 +83,15 @@ pub_decodable_enum! {
         Utf16be => 1013,
         Utf16le => 1014,
         Utf16 => 1015,
+    }
+}
+
+impl CharsetId {
+    pub fn is_utf8(&self) -> bool {
+        match &self {
+            Self::Utf8 | Self::Ascii => true,
+            _ => false,
+        }
     }
 }
 
@@ -159,6 +170,33 @@ pub_decodable_enum! {
         NoValidSearchResults => 0x14,
         NoAvailablePlayers => 0x15,
         AddressedPlayerChanged => 0x16,
+    }
+}
+
+pub_decodable_enum! {
+    ItemType<u8, Error, OutOfRange> {
+        MediaPlayer => 0x01,
+        Folder => 0x02,
+        MediaElement => 0x03,
+    }
+}
+
+pub_decodable_enum! {
+    FolderType<u8, Error, OutOfRange> {
+        Mixed => 0x00,
+        Titles => 0x01,
+        Albums => 0x02,
+        Artists => 0x03,
+        Genres => 0x04,
+        Playlists => 0x05,
+        Years => 0x06,
+    }
+}
+
+pub_decodable_enum! {
+    MediaType<u8, Error, OutOfRange> {
+        Audio => 0x00,
+        Video => 0x01,
     }
 }
 
