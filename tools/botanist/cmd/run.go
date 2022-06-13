@@ -107,6 +107,10 @@ type RunCommand struct {
 	// ConfigFile is the path to the target configurations.
 	configFile string
 
+	// DownloadManifest is the path we should write the package server's
+	// download manifest to.
+	downloadManifest string
+
 	// ImageManifest is a path to an image manifest.
 	imageManifest string
 
@@ -222,6 +226,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.localRepo, "local-repo", "", "path to a local package repository; the repo and blobs flags are ignored when this is set")
 	f.StringVar(&r.ffxPath, "ffx", "", "Path to the ffx tool.")
+	f.StringVar(&r.downloadManifest, "download-manifest", "", "Path to a manifest containing all package server downloads")
 	f.IntVar(&r.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
 	f.Var(&r.imageOverrides, "image-overrides", "A json struct following the ImageOverrides schema at //tools/build/tests.go with the names of the images to use from images.json.")
 }
@@ -251,14 +256,15 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return err
 			}
 		}
-		repoURL, blobURL, err := botanist.NewPackageServer(ctx, r.localRepo, r.repoURL, r.blobURL, port)
+		pkgSrv, err := botanist.NewPackageServer(ctx, r.localRepo, r.repoURL, r.blobURL, r.downloadManifest, port)
 		if err != nil {
 			return err
 		}
+		defer pkgSrv.Close()
 		// TODO(rudymathu): Once gcsproxy and remote package serving are deprecated, remove
 		// the repoURL and blobURL from the command line flags.
-		r.repoURL = repoURL
-		r.blobURL = blobURL
+		r.repoURL = pkgSrv.RepoURL
+		r.blobURL = pkgSrv.BlobURL
 	}
 	// Disable usb mass storage to determine if it affects NUC stability.
 	// TODO(rudymathu): Remove this once stability is achieved.

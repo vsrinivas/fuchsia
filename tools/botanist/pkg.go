@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -37,6 +38,16 @@ var (
 	getGCSReader = getGCSReaderImpl
 )
 
+// downloadRecord contains a path we fetched from the remote and how much data
+// we retrieved.
+type downloadRecord struct {
+	// Path is the path requested by the package resolver.
+	Path string `json:"path"`
+
+	// Size is the size of the blob.
+	Size int `json:"size"`
+}
+
 func getGCSReaderImpl(ctx context.Context, client *storage.Client, bucket, path string) (io.ReadCloser, error) {
 	bkt := client.Bucket(bucket)
 	obj := bkt.Object(path)
@@ -46,11 +57,12 @@ func getGCSReaderImpl(ctx context.Context, client *storage.Client, bucket, path 
 // cachedPkgRepo is a custom HTTP handler that acts as a GCS redirector with a
 // local filesystem cache.
 type cachedPkgRepo struct {
-	loggerCtx context.Context
-	gcsClient *storage.Client
-	repoPath  string
-	repoURL   *url.URL
-	blobURL   *url.URL
+	loggerCtx        context.Context
+	downloadManifest []downloadRecord
+	gcsClient        *storage.Client
+	repoPath         string
+	repoURL          *url.URL
+	blobURL          *url.URL
 }
 
 func newCachedPkgRepo(ctx context.Context, repoPath, repoURL, blobURL string) (*cachedPkgRepo, error) {
@@ -135,27 +147,65 @@ func (c *cachedPkgRepo) fetchFromGCS(ctx context.Context, resource *url.URL, loc
 	}
 	defer w.Close()
 
-	if _, err := io.Copy(w, r); err != nil {
+	size, err := io.Copy(w, r)
+	if err != nil {
 		return http.StatusInternalServerError, err
 	}
+	dr := downloadRecord{
+		Path: resourcePath,
+		Size: int(size),
+	}
+	c.downloadManifest = append(c.downloadManifest, dr)
 	return http.StatusOK, nil
 }
 
+func (c *cachedPkgRepo) writeDownloadManifest(path string) error {
+	b, err := json.Marshal(c.downloadManifest)
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write(b)
+	return err
+}
+
+// PackageServer is the HTTP server that serves packages.
+type PackageServer struct {
+	loggerCtx            context.Context
+	srv                  *http.Server
+	c                    *cachedPkgRepo
+	downloadManifestPath string
+	RepoURL              string
+	BlobURL              string
+}
+
+func (p *PackageServer) Close() error {
+	logger.Debugf(p.loggerCtx, "stopping package server")
+	if p.downloadManifestPath != "" {
+		p.c.writeDownloadManifest(p.downloadManifestPath)
+	}
+	return p.srv.Close()
+}
+
 // NewPackageServer creates and starts a local package server.
-func NewPackageServer(ctx context.Context, repoPath, remoteRepoURL, remoteBlobURL string, port int) (string, string, error) {
+func NewPackageServer(ctx context.Context, repoPath, remoteRepoURL, remoteBlobURL, downloadManifestPath string, port int) (*PackageServer, error) {
 	logger.Debugf(ctx, "creating package server serving from %s", repoPath)
 
 	// Create HTTP handlers for the package server.
 	rootJsonBytes, err := ioutil.ReadFile(filepath.Join(repoPath, "repository", "root.json"))
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	cs := pmhttp.NewConfigServerV2(func() []byte {
 		return rootJsonBytes
 	}, false)
 	cPkgRepo, err := newCachedPkgRepo(ctx, repoPath, remoteRepoURL, remoteBlobURL)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
 	// Register the handlers and create the server.
@@ -181,18 +231,16 @@ func NewPackageServer(ctx context.Context, repoPath, remoteRepoURL, remoteBlobUR
 			logger.Errorf(ctx, "package server failed: %s", err)
 		}
 	}()
-	go func() {
-		select {
-		case <-ctx.Done():
-			logger.Debugf(ctx, "stopping package server")
-			pkgSrv.Close()
-		}
-	}()
 
 	// Do not return until the package server has actually started serving.
 	<-pkgSrvStarted
 	logger.Debugf(ctx, "package server started")
-	repoURL := fmt.Sprintf("http://%s:%d/repository", localhostPlaceholder, port)
-	blobURL := fmt.Sprintf("http://%s:%d/blobs", localhostPlaceholder, port)
-	return repoURL, blobURL, nil
+	return &PackageServer{
+		loggerCtx:            ctx,
+		srv:                  pkgSrv,
+		c:                    cPkgRepo,
+		downloadManifestPath: downloadManifestPath,
+		RepoURL:              fmt.Sprintf("http://%s:%d/repository", localhostPlaceholder, port),
+		BlobURL:              fmt.Sprintf("http://%s:%d/blobs", localhostPlaceholder, port),
+	}, nil
 }

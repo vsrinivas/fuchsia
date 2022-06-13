@@ -120,9 +120,11 @@ func TestPackageServer(t *testing.T) {
 			// Start the package server.
 			// We ignore the returned repoURL and blobURL to make testing
 			// invalid endpoints easier.
-			if _, _, err := NewPackageServer(ctx, localRepo, "", "", 8080); err != nil {
+			pkgSrv, err := NewPackageServer(ctx, localRepo, "", "", "", 8080)
+			if err != nil {
 				t.Fatalf("NewPackageServer failed; got %s, want <nil> error", err)
 			}
+			defer pkgSrv.Close()
 
 			// Make a request to the endpoint and validate that we get the
 			// expected response.
