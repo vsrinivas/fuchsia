@@ -356,7 +356,7 @@ fuchsia_unittest_package("profile_store_unittests") {
   manifest = "meta/profile_store_unittests.cml"
 }
 
-## Update the existing group("tests") to include the new package as a dep
+# Update the existing group("tests") to include the new package as a dep
 group("tests") {
   testonly = true
   deps = [
