@@ -238,6 +238,16 @@ people making changes to fint).
 
 ## Development
 
+### Local testing
+
+fint has extensive unit tests, and changes to fint can be run directly using
+`fx set --dev ...` and `fx build --fint-params-path ...`.
+
+However, `fx` doesn't run all code paths in fint - some features such as
+affected tests analysis are only run in infrastructure. To test these code
+paths, you may run fint directly with inputs similar to what the infrastructure
+would use by using the `tools/integration/fint/integration-test.py` script.
+
 ### Making proto file changes
 
 #### Proto field numbers

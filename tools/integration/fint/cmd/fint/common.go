@@ -100,7 +100,12 @@ func defaultContextSpec() (*fintpb.Context, error) {
 }
 
 func writeJSONPB(pb proto.Message, path string) error {
-	b, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(pb)
+	b, err := protojson.MarshalOptions{
+		UseProtoNames: true,
+		// The proto can be pretty large, so it's helpful to consistently be
+		// able to ctrl-f for field names even when the field is unset.
+		EmitUnpopulated: true,
+	}.Marshal(pb)
 	if err != nil {
 		return err
 	}
