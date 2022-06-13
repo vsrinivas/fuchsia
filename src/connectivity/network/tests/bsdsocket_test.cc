@@ -1694,6 +1694,42 @@ TEST_P(SocketKindTest, IoctlInterfaceLookupRoundTrip) {
   }
 }
 
+TEST_P(SocketKindTest, IoctlFIONREAD) {
+  auto const& [domain, socket_type] = GetParam();
+
+  fbl::unique_fd recvfd;
+  fbl::unique_fd sendfd;
+  ASSERT_NO_FATAL_FAILURE(ConnectSocketsOverLoopback(domain, socket_type, sendfd, recvfd));
+
+  char sendbuf[1];
+  EXPECT_EQ(send(sendfd.get(), sendbuf, sizeof(sendbuf), 0), ssize_t(sizeof(sendbuf)))
+      << strerror(errno);
+
+  pollfd pfd = {
+      .fd = recvfd.get(),
+      .events = POLLIN,
+  };
+  int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+  ASSERT_GE(n, 0) << strerror(errno);
+  ASSERT_EQ(n, 1);
+
+  int num_readable;
+  int res = ioctl(recvfd.get(), FIONREAD, &num_readable);
+
+#ifdef __Fuchsia__
+  if (socket_type.which() == SocketType::Which::Dgram) {
+    // TODO(https://fxbug.dev/42040): Support FIONREAD on Fuchsia.
+    ASSERT_EQ(res, -1);
+    EXPECT_EQ(errno, ENOTTY) << strerror(errno);
+    return;
+  }
+#endif
+
+  ASSERT_EQ(res, 0) << strerror(errno);
+  ASSERT_GE(num_readable, 0);
+  EXPECT_EQ(static_cast<size_t>(num_readable), sizeof(sendbuf));
+}
+
 TEST_P(SocketKindTest, IoctlInterfaceNotFound) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = NewSocket()) << strerror(errno);

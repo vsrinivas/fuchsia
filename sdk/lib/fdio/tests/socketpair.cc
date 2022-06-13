@@ -430,6 +430,17 @@ TEST_P(SocketPair, SocketPairWithCloExecFlag) {
   ASSERT_EQ(0, close(fd[1]));
 }
 
+TEST_P(SocketPair, FIONREAD) {
+  char buf[1];
+
+  EXPECT_EQ(write(fds()[0].get(), buf, sizeof(buf)), ssize_t(sizeof(buf))) << strerror(errno);
+
+  int num_readable;
+  EXPECT_EQ(ioctl(fds()[1].get(), FIONREAD, &num_readable), 0) << strerror(errno);
+  EXPECT_GE(num_readable, 0);
+  EXPECT_EQ(static_cast<size_t>(num_readable), sizeof(buf));
+}
+
 // TODO(https://fxbug.dev/79231): These tests depend on Fuchsia specific primitives
 // to coordinate between threads. They should be modified to use cross-platform primitives
 // and run on other platforms as well, as demonstrated here:
