@@ -200,7 +200,7 @@ if (is_host) {
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = "llvm-profdata-rust"
           os = host_os
-          path = rebase_path("$rustc_prefix/llvm-profdata", root_build_dir)
+          path = rebase_path("$rustc_prefix/bin/llvm-profdata", root_build_dir)
         },
       ]
     }
