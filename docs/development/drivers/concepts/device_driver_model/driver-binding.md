@@ -511,19 +511,18 @@ With the new bind system, VIDs can be potentially represented by string values o
 The command `ffx driver list-devices -v` prints the properties of every device in the tree in the format:
 
 ```
-Name     : acpi-_TZ_
-Moniker  : root.sys.platform.platform-passthrough.acpi.acpi-_TZ_
+Name     : acpi-GFRO
+Moniker  : root.sys.platform.platform-passthrough.acpi.acpi-GFRO
 Driver   : None
 5 Properties
-[ 1/  5] : Key fuchsia.BIND_PROTOCOL Value 0x1F
-[ 2/  5] : Key fuchsia.BIND_PCI_VID Value 0x1AF4
-[ 3/  5] : Key fuchsia.BIND_PCI_DID Value 0x1052
-[ 4/  5] : Key fuchsia.COMPOSITE_BIND Value 1
-[ 5/  5] : Key "fuchsia.acpi.hid" Value "GFSH0005"
+[ 1/  5] : Key fuchsia.BIND_ACPI_ID           Value 0x000024
+[ 2/  5] : Key "fuchsia.acpi.hid"             Value "GFSH0008"
+[ 3/  5] : Key "fuchsia.hardware.acpi.Device" Value true
+[ 4/  5] : Key fuchsia.BIND_PROTOCOL          Value 0x00001e
+[ 5/  5] : Key "fuchsia.driver.framework.dfv2" Value true
 ```
 
 See the [drivers and nodes documentation](/docs/concepts/drivers/drivers_and_nodes.md) for more information on the printed topology.
-
 
 #####Driver properties in the driver source code
 

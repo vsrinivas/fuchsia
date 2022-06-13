@@ -26,8 +26,8 @@ extension, file systems must be unmounted before a block device is removed.
 Note that this requirement is likely to render a running system unusable, as
 the backing for the OS may be going away. Netboot may be the only viable option.
 
-Note that all other devices created by nandpart must also be removed. Use `dm
-dump` to inspect the device tree.
+Note that all other devices created by nandpart must also be removed. Use
+`driver dump` to inspect the device tree.
 
 ## Protocol testing
 

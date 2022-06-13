@@ -97,9 +97,10 @@ There are two ways to specify the device:
 
 Both of the paths are relative to /dev/.
 
-The topological path can be determined from the ouptut of `dm dump`. For example,
-tracing the path to the node `[bt_transport_usb]` in the output below gives the
-topological path `sys/platform/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
+The topological path can be determined from the output of `driver dump`. For
+example, tracing the path to the node `[bt_transport_usb]` in the output below
+gives the topological path
+`sys/platform/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
 
 ```
 [root]
@@ -136,6 +137,9 @@ topological path `sys/platform/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_trans
                                     [bt_hci_intel] pid=4384 /system/driver/bt-hci-intel.so
                                        [bt_host] pid=4384 /system/driver/bt-host.so
 ```
+
+It should be noted that if driver framework version 2 (DFv2) is enabled, the
+node's topological path can't be determined from its place in the node graph.
 
 ## Debugger output
 

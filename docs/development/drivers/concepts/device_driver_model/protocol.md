@@ -110,10 +110,9 @@ The protocol stack effectively allows the creation of a complete "driver" for
 a device, consisting of platform dependent and platform independent components,
 in a self-contained process container.
 
-For the advanced reader, take a look at the `dm dump` command available from
-the Fuchsia command line.
-It displays a tree of devices, and shows you the process ID, DSO name, and
-other useful information.
+For the advanced reader, take a look at the `driver dump` command available from
+the Fuchsia command line. It displays a tree of devices, and shows you the
+process ID, DSO name, and other useful information.
 
 Here's a highly-edited version showing just the PCI ethernet driver parts:
 
@@ -168,4 +167,30 @@ What's not shown by this chain is that the final DSO (`ethernet.so`) publishes
 a `ZX_PROTOCOL_ETHERNET` &mdash; that's the piece that clients can use, so of
 course there's no further "device" binding involved.
 
+### Driver Framework Version 2 (DFv2)
 
+If driver framework version 2 is enabled, `driver dump` will show a slightly
+different tree.
+
+```sh
+$ driver dump
+[root] pid=4766 fuchsia-boot:///#meta/platform-bus.cm
+   [sys] pid=4766
+      [platform] pid=4766
+         [platform-passthrough] pid=4766 fuchsia-boot:///#meta/platform-bus-x86.cm
+            [acpi] pid=4766
+               [acpi-pwrbtn] pid=4766 fuchsia-boot:///#meta/hid.cm
+               ...
+            [PCI0] pid=4766 fuchsia-boot:///#meta/bus-pci.cm
+               [bus] pid=4766
+                 ...
+                 [00_04_0] pid=4766 fuchsia-boot:///#meta/virtio_ethernet.cm
+                    [virtio-net] pid=4766 fuchsia-boot:///#meta/netdevice-migration.cm
+                       [netdevice-migration] pid=4766 fuchsia-boot:///#meta/network-device.cm
+                          [network-device] pid=4766
+        ...
+```
+
+It is important to point out that nodes (devices are referred to as nodes in
+DFv2) do not have an `.so` file associated with them. Instead, there is a URL of
+the component manifest of the driver that is attached to a given node.
