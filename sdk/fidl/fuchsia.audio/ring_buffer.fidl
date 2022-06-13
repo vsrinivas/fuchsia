@@ -143,7 +143,7 @@ type RingBuffer = resource table {
     /// Required.
     3: producer_bytes uint64;
 
-    /// The number of bytes allocated to the producer.
+    /// The number of bytes allocated to the consumer.
     ///
     /// For PCM encodings, C = consumer_bytes / BytesPerFrame(encoding), where
     /// C must be integral.
