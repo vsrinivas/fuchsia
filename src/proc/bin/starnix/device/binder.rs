@@ -369,15 +369,28 @@ impl BinderProcess {
 
 impl Drop for BinderProcess {
     fn drop(&mut self) {
-        // Notify any subscribers that the objects this process owned are now dead.
-        let death_subscribers = self.death_subscribers.lock();
-        for (proc, cookie) in &*death_subscribers {
-            if let Some(target_proc) = proc.upgrade() {
-                let thread_pool = target_proc.thread_pool.read();
-                if let Some(target_thread) = thread_pool.find_available_thread() {
-                    target_thread.write().enqueue_command(Command::DeadBinder(*cookie));
-                } else {
-                    target_proc.enqueue_command(Command::DeadBinder(*cookie));
+        {
+            // Notify any subscribers that the objects this process owned are now dead.
+            let death_subscribers = self.death_subscribers.lock();
+            for (proc, cookie) in &*death_subscribers {
+                if let Some(target_proc) = proc.upgrade() {
+                    let thread_pool = target_proc.thread_pool.read();
+                    if let Some(target_thread) = thread_pool.find_available_thread() {
+                        target_thread.write().enqueue_command(Command::DeadBinder(*cookie));
+                    } else {
+                        target_proc.enqueue_command(Command::DeadBinder(*cookie));
+                    }
+                }
+            }
+        }
+
+        // Notify all callers that had transactions scheduled for this process that the recipient is
+        // dead.
+        let command_queue = self.command_queue.lock();
+        for command in &*command_queue {
+            if let Command::Transaction { sender, .. } = command {
+                if let Some(sender_thread) = sender.thread.upgrade() {
+                    sender_thread.write().enqueue_command(Command::DeadReply);
                 }
             }
         }
@@ -576,10 +589,6 @@ impl ThreadPool {
         tid: pid_t,
     ) -> Arc<BinderThread> {
         self.0.entry(tid).or_insert_with(|| Arc::new(BinderThread::new(binder_proc, tid))).clone()
-    }
-
-    fn find_thread(&self, tid: pid_t) -> Result<Arc<BinderThread>, Errno> {
-        self.0.get(&tid).cloned().ok_or_else(|| errno!(ENOENT))
     }
 
     /// Finds the first available binder thread that is registered with the driver, is not in the
@@ -797,7 +806,7 @@ struct BinderThreadState {
     /// The registered state of the thread.
     registration: RegistrationState,
     /// The stack of transactions that are active for this thread.
-    transactions: Vec<Transaction>,
+    transactions: Vec<TransactionRole>,
     /// The binder driver uses this queue to communicate with a binder thread. When a binder thread
     /// issues a [`BINDER_IOCTL_WRITE_READ`] ioctl, it will read from this command queue.
     command_queue: VecDeque<Command>,
@@ -830,12 +839,45 @@ impl BinderThreadState {
         }
     }
 
-    /// Get the binder thread (pid and tid) to reply to, or fail if there is no ongoing transaction.
-    pub fn transaction_caller(&self) -> Result<(pid_t, pid_t), Errno> {
-        self.transactions
-            .last()
-            .map(|transaction| (transaction.peer_pid, transaction.peer_tid))
-            .ok_or_else(|| errno!(EINVAL))
+    /// Get the binder process and thread to reply to, or fail if there is no ongoing transaction or
+    /// the calling process/thread are dead.
+    pub fn transaction_caller(
+        &self,
+    ) -> Result<(Arc<BinderProcess>, Arc<BinderThread>), TransactionError> {
+        let transaction = self.transactions.last().ok_or_else(|| errno!(EINVAL))?;
+        match transaction {
+            TransactionRole::Receiver(peer) => peer.upgrade().ok_or(TransactionError::Dead),
+            TransactionRole::Sender => error!(EINVAL)?,
+        }
+    }
+}
+
+impl Drop for BinderThreadState {
+    fn drop(&mut self) {
+        // If there are any transactions queued, we need to tell the caller that this thread is now
+        // dead.
+        for command in &self.command_queue {
+            if let Command::Transaction { sender, .. } = command {
+                if let Some(sender_thread) = sender.thread.upgrade() {
+                    sender_thread.write().enqueue_command(Command::DeadReply);
+                }
+            }
+        }
+
+        // If there are any transactions that this thread was processing, we need to tell the caller
+        // that this thread is now dead and to not expect a reply.
+        for transaction in &self.transactions {
+            if let TransactionRole::Receiver(peer) = transaction {
+                match peer.thread.upgrade() {
+                    Some(peer_thread) => {
+                        peer_thread.write().enqueue_command(Command::DeadReply);
+                    }
+                    None => {
+                        // The caller is also dead, so no need to inform anyone.
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -850,8 +892,26 @@ bitflags! {
     }
 }
 
+/// A pair of weak references to the process and thread of a binder transaction peer.
+#[derive(Debug)]
+struct WeakBinderPeer {
+    proc: Weak<BinderProcess>,
+    thread: Weak<BinderThread>,
+}
+
+impl WeakBinderPeer {
+    fn new(proc: &Arc<BinderProcess>, thread: &Arc<BinderThread>) -> Self {
+        Self { proc: Arc::downgrade(proc), thread: Arc::downgrade(thread) }
+    }
+
+    /// Upgrades the process and thread weak references as a tuple.
+    fn upgrade(&self) -> Option<(Arc<BinderProcess>, Arc<BinderThread>)> {
+        self.proc.upgrade().zip(self.thread.upgrade())
+    }
+}
+
 /// Commands for a binder thread to execute.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 enum Command {
     /// Notifies a binder thread that a remote process acquired a strong reference to the specified
     /// binder object. The object should not be destroyed until a [`Command::ReleaseRef`] is
@@ -863,11 +923,19 @@ enum Command {
     ReleaseRef(LocalBinderObject),
     /// Notifies a binder thread that the last processed command contained an error.
     Error(i32),
-    /// Commands a binder thread to start processing an incoming transaction from another binder
-    /// process.
-    Transaction(Transaction),
+    /// Commands a binder thread to start processing an incoming oneway transaction, which requires
+    /// no reply.
+    OnewayTransaction(TransactionData),
+    /// Commands a binder thread to start processing an incoming synchronous transaction from
+    /// another binder process.
+    Transaction {
+        /// The binder peer that sent this transaction.
+        sender: WeakBinderPeer,
+        /// The transaction payload.
+        data: TransactionData,
+    },
     /// Commands a binder thread to process an incoming reply to its transaction.
-    Reply(Transaction),
+    Reply(TransactionData),
     /// Notifies a binder thread that a transaction has completed.
     TransactionComplete,
     /// The transaction was well formed but failed. Possible causes are a non-existant handle, no
@@ -886,7 +954,9 @@ impl Command {
             Command::AcquireRef(..) => binder_driver_return_protocol_BR_ACQUIRE,
             Command::ReleaseRef(..) => binder_driver_return_protocol_BR_RELEASE,
             Command::Error(..) => binder_driver_return_protocol_BR_ERROR,
-            Command::Transaction(..) => binder_driver_return_protocol_BR_TRANSACTION,
+            Command::OnewayTransaction(..) | Command::Transaction { .. } => {
+                binder_driver_return_protocol_BR_TRANSACTION
+            }
             Command::Reply(..) => binder_driver_return_protocol_BR_REPLY,
             Command::TransactionComplete => binder_driver_return_protocol_BR_TRANSACTION_COMPLETE,
             Command::FailedReply => binder_driver_return_protocol_BR_FAILED_REPLY,
@@ -933,22 +1003,21 @@ impl Command {
                     &ErrorData { command: self.driver_return_code(), error_val: *error_val },
                 )
             }
-            Command::Transaction(transaction) | Command::Reply(transaction) => {
+            Command::OnewayTransaction(data)
+            | Command::Transaction { data, .. }
+            | Command::Reply(data) => {
                 #[repr(C, packed)]
                 #[derive(AsBytes)]
                 struct TransactionData {
                     command: binder_driver_return_protocol,
-                    transaction: [u8; std::mem::size_of::<binder_transaction_data>()],
+                    data: [u8; std::mem::size_of::<binder_transaction_data>()],
                 }
                 if buffer.length < std::mem::size_of::<TransactionData>() {
                     return error!(ENOMEM);
                 }
                 mm.write_object(
                     UserRef::new(buffer.address),
-                    &TransactionData {
-                        command: self.driver_return_code(),
-                        transaction: transaction.as_bytes(),
-                    },
+                    &TransactionData { command: self.driver_return_code(), data: data.as_bytes() },
                 )
             }
             Command::TransactionComplete | Command::FailedReply | Command::DeadReply => {
@@ -997,7 +1066,7 @@ struct BinderObjectMutableState {
     /// Command queue for oneway transactions on this binder object. Oneway transactions are
     /// guaranteed to be dispatched in the order they are submitted to the driver, and one at a
     /// time.
-    oneway_transactions: VecDeque<Transaction>,
+    oneway_transactions: VecDeque<TransactionData>,
     /// Whether a binder thread is currently handling a oneway transaction. This will get cleared
     /// when there are no more transactions in the `oneway_transactions` and a binder thread freed
     /// the buffer associated with the last oneway transaction.
@@ -1039,7 +1108,7 @@ impl Drop for BinderObject {
 
 /// A binder object.
 /// All addresses are in the owning process' address space.
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 struct LocalBinderObject {
     /// Address to the weak ref-count structure. This uniquely identifies a binder object within
     /// a process. Guaranteed to exist.
@@ -1049,9 +1118,20 @@ struct LocalBinderObject {
     strong_ref_addr: UserAddress,
 }
 
+/// A binder thread's role (sender or receiver) in a synchronous transaction. Oneway transactions
+/// do not record roles, since they end as soon as they begin.
+#[derive(Debug)]
+enum TransactionRole {
+    /// The binder thread initiated the transaction and is awaiting a reply.
+    Sender,
+    /// The binder thread is receiving a transaction and is expected to reply to the peer binder
+    /// process and thread.
+    Receiver(WeakBinderPeer),
+}
+
 /// Non-union version of [`binder_transaction_data`].
 #[derive(Debug, PartialEq, Eq)]
-struct Transaction {
+struct TransactionData {
     peer_pid: pid_t,
     peer_tid: pid_t,
     peer_euid: u32,
@@ -1064,7 +1144,7 @@ struct Transaction {
     offsets_buffer: UserBuffer,
 }
 
-impl Transaction {
+impl TransactionData {
     fn as_bytes(&self) -> [u8; std::mem::size_of::<binder_transaction_data>()] {
         match self.object {
             FlatBinderObject::Remote { handle } => {
@@ -1225,6 +1305,7 @@ impl BinderDriver {
         Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) }
     }
 
+    #[cfg(test)]
     fn find_process(&self, pid: pid_t) -> Result<Arc<BinderProcess>, Errno> {
         self.procs.read().get(&pid).and_then(Weak::upgrade).ok_or_else(|| errno!(ENOENT))
     }
@@ -1338,8 +1419,8 @@ impl BinderDriver {
                     };
                     input.read_consumed = self.handle_thread_read(
                         current_task,
-                        &*binder_proc,
-                        &*binder_thread,
+                        binder_proc,
+                        binder_thread,
                         &read_buffer,
                     )? as u64;
                 }
@@ -1562,9 +1643,11 @@ impl BinderDriver {
 
                     // Find a thread to handle the transaction, or use the process' command queue.
                     if let Some(target_thread) = target_thread_pool.find_available_thread() {
-                        target_thread.write().enqueue_command(Command::Transaction(transaction));
+                        target_thread
+                            .write()
+                            .enqueue_command(Command::OnewayTransaction(transaction));
                     } else {
-                        binder_proc.enqueue_command(Command::Transaction(transaction));
+                        binder_proc.enqueue_command(Command::OnewayTransaction(transaction));
                     }
                 } else {
                     // No more oneway transactions queued, mark the queue handling as done.
@@ -1681,7 +1764,7 @@ impl BinderDriver {
             &data,
         )?;
 
-        let transaction = Transaction {
+        let transaction = TransactionData {
             peer_pid: binder_proc.pid,
             peer_tid: binder_thread.tid,
             peer_euid: current_task.read().creds.euid,
@@ -1701,7 +1784,7 @@ impl BinderDriver {
             offsets_buffer,
         };
 
-        if data.transaction_data.flags & transaction_flags_TF_ONE_WAY != 0 {
+        let command = if data.transaction_data.flags & transaction_flags_TF_ONE_WAY != 0 {
             // The caller is not expecting a reply.
             binder_thread.write().enqueue_command(Command::TransactionComplete);
 
@@ -1729,18 +1812,12 @@ impl BinderDriver {
             // freed, kicking off scheduling from the oneway queue. Instead, we must schedule
             // the transaction regularly, but mark the object as handling a oneway transaction.
             object_state.handling_oneway_transaction = true;
+
+            Command::OnewayTransaction(transaction)
         } else {
-            // Create a new transaction on the sender so that they can wait on a reply.
-            binder_thread.write().transactions.push(Transaction {
-                peer_pid: target_proc.pid,
-                peer_tid: 0,
-                peer_euid: 0,
-                object: FlatBinderObject::Remote { handle },
-                code: data.transaction_data.code,
-                flags: data.transaction_data.flags,
-                data_buffer: UserBuffer::default(),
-                offsets_buffer: UserBuffer::default(),
-            });
+            // Make the sender thread part of the transaction so it doesn't get scheduled to handle
+            // any other transactions.
+            binder_thread.write().transactions.push(TransactionRole::Sender);
 
             // Register the transaction buffer.
             target_proc.active_transactions.lock().insert(
@@ -1750,16 +1827,21 @@ impl BinderDriver {
                     _state: transaction_state.into(),
                 },
             );
-        }
+
+            Command::Transaction {
+                sender: WeakBinderPeer::new(binder_proc, binder_thread),
+                data: transaction,
+            }
+        };
 
         // Acquire an exclusive lock to prevent a thread from being scheduled twice.
         let target_thread_pool = target_proc.thread_pool.write();
 
         // Find a thread to handle the transaction, or use the process' command queue.
         if let Some(target_thread) = target_thread_pool.find_available_thread() {
-            target_thread.write().enqueue_command(Command::Transaction(transaction));
+            target_thread.write().enqueue_command(command);
         } else {
-            target_proc.enqueue_command(Command::Transaction(transaction));
+            target_proc.enqueue_command(command);
         }
         Ok(())
     }
@@ -1773,16 +1855,7 @@ impl BinderDriver {
         data: binder_transaction_data_sg,
     ) -> Result<(), TransactionError> {
         // Find the process and thread that initiated the transaction. This reply is for them.
-        let (target_proc, target_thread) = {
-            let (peer_pid, peer_tid) = binder_thread.read().transaction_caller()?;
-            let target_proc = self.find_process(peer_pid).map_err(|_| TransactionError::Dead)?;
-            let target_thread = target_proc
-                .thread_pool
-                .read()
-                .find_thread(peer_tid)
-                .map_err(|_| TransactionError::Dead)?;
-            (target_proc, target_thread)
-        };
+        let (target_proc, target_thread) = binder_thread.read().transaction_caller()?;
 
         let target_task = current_task
             .kernel()
@@ -1811,7 +1884,7 @@ impl BinderDriver {
         );
 
         // Schedule the transaction on the target process' command queue.
-        target_thread.write().enqueue_command(Command::Reply(Transaction {
+        target_thread.write().enqueue_command(Command::Reply(TransactionData {
             peer_pid: binder_proc.pid,
             peer_tid: binder_thread.tid,
             peer_euid: current_task.read().creds.euid,
@@ -1834,8 +1907,8 @@ impl BinderDriver {
     fn handle_thread_read(
         &self,
         current_task: &CurrentTask,
-        binder_proc: &BinderProcess,
-        binder_thread: &BinderThread,
+        binder_proc: &Arc<BinderProcess>,
+        binder_thread: &Arc<BinderThread>,
         read_buffer: &UserBuffer,
     ) -> Result<usize, Errno> {
         loop {
@@ -1860,18 +1933,17 @@ impl BinderDriver {
 
                 // SAFETY: There is an item in the queue since we're in the `Some` branch.
                 match command_queue.pop_front().unwrap() {
-                    Command::Transaction(t) => {
-                        // If the transaction is not oneway, we're expected to give a reply, so
+                    Command::Transaction { sender, .. } => {
+                        // The transaction is synchronous and we're expected to give a reply, so
                         // push the transaction onto the transaction stack.
-                        if t.flags & transaction_flags_TF_ONE_WAY == 0 {
-                            thread_state.transactions.push(t);
-                        }
+                        thread_state.transactions.push(TransactionRole::Receiver(sender));
                     }
                     Command::Reply(..) | Command::TransactionComplete => {
                         // A transaction is complete, pop it from the transaction stack.
                         thread_state.transactions.pop();
                     }
-                    Command::AcquireRef(..)
+                    Command::OnewayTransaction(..)
+                    | Command::AcquireRef(..)
                     | Command::ReleaseRef(..)
                     | Command::Error(..)
                     | Command::FailedReply
@@ -2763,22 +2835,18 @@ mod tests {
         let driver = BinderDriver::new();
         let proc = driver.create_process(1);
 
-        let object = Arc::new(BinderObject::new(
-            &proc,
-            LocalBinderObject {
-                weak_ref_addr: UserAddress::from(0x0000000000000010),
-                strong_ref_addr: UserAddress::from(0x0000000000000100),
-            },
-        ));
+        const LOCAL_BINDER_OBJECT: LocalBinderObject = LocalBinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000010),
+            strong_ref_addr: UserAddress::from(0x0000000000000100),
+        };
+
+        let object = Arc::new(BinderObject::new(&proc, LOCAL_BINDER_OBJECT));
 
         drop(object);
 
-        assert_eq!(
+        assert_matches!(
             proc.command_queue.lock().front(),
-            Some(&Command::ReleaseRef(LocalBinderObject {
-                weak_ref_addr: UserAddress::from(0x0000000000000010),
-                strong_ref_addr: UserAddress::from(0x0000000000000100),
-            }))
+            Some(Command::ReleaseRef(LOCAL_BINDER_OBJECT))
         );
     }
 
@@ -3218,7 +3286,7 @@ mod tests {
         let (_, _, mut sg_buffer) =
             receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
-        let binder_object = LocalBinderObject {
+        const BINDER_OBJECT: LocalBinderObject = LocalBinderObject {
             weak_ref_addr: UserAddress::from(0x0000000000000010),
             strong_ref_addr: UserAddress::from(0x0000000000000100),
         };
@@ -3231,8 +3299,8 @@ mod tests {
         transaction_data.extend(struct_with_union_into_bytes!(flat_binder_object {
             hdr.type_: BINDER_TYPE_BINDER,
             flags: 0,
-            cookie: binder_object.strong_ref_addr.ptr() as u64,
-            __bindgen_anon_1.binder: binder_object.weak_ref_addr.ptr() as u64,
+            cookie: BINDER_OBJECT.strong_ref_addr.ptr() as u64,
+            __bindgen_anon_1.binder: BINDER_OBJECT.weak_ref_addr.ptr() as u64,
         }));
 
         const EXPECTED_HANDLE: Handle = Handle::from_raw(1);
@@ -3274,13 +3342,13 @@ mod tests {
             .get(EXPECTED_HANDLE.object_index())
             .expect("expected handle not present");
         assert!(std::ptr::eq(object.owner.as_ptr(), Arc::as_ptr(&test.sender_proc)));
-        assert_eq!(object.local, binder_object);
+        assert_eq!(object.local, BINDER_OBJECT);
 
         // Verify that a strong acquire command is sent to the sender process (on the same thread
         // that sent the transaction).
-        assert_eq!(
+        assert_matches!(
             test.sender_thread.read().command_queue.front(),
-            Some(&Command::AcquireRef(binder_object))
+            Some(Command::AcquireRef(BINDER_OBJECT))
         );
     }
 
@@ -4063,7 +4131,7 @@ mod tests {
         // Insert a handle to the object in the client. This also retains a strong reference.
         let handle = client_proc.handles.lock().insert_for_transaction(object);
 
-        let death_notification_cookie = 0xDEADBEEF;
+        const DEATH_NOTIFICATION_COOKIE: binder_uintptr_t = 0xDEADBEEF;
 
         // Register a death notification handler.
         driver
@@ -4071,7 +4139,7 @@ mod tests {
                 &client_proc,
                 &client_thread,
                 handle,
-                death_notification_cookie,
+                DEATH_NOTIFICATION_COOKIE,
             )
             .expect("request death notification");
 
@@ -4086,9 +4154,9 @@ mod tests {
         drop(owner_proc);
 
         // The client thread should have a notification waiting.
-        assert_eq!(
+        assert_matches!(
             client_thread.read().command_queue.front(),
-            Some(&Command::DeadBinder(death_notification_cookie))
+            Some(Command::DeadBinder(DEATH_NOTIFICATION_COOKIE))
         );
     }
 
@@ -4111,7 +4179,7 @@ mod tests {
         // Now the owner process dies.
         drop(owner_proc);
 
-        let death_notification_cookie = 0xDEADBEEF;
+        const DEATH_NOTIFICATION_COOKIE: binder_uintptr_t = 0xDEADBEEF;
 
         // Register a death notification handler.
         driver
@@ -4119,16 +4187,16 @@ mod tests {
                 &client_proc,
                 &client_thread,
                 handle,
-                death_notification_cookie,
+                DEATH_NOTIFICATION_COOKIE,
             )
             .expect("request death notification");
 
         // The client thread should not have a notification, as the calling thread is not allowed
         // to receive it, or else a deadlock may occur if the thread is in the middle of a
         // transaction. Since there is only one thread, check the process command queue.
-        assert_eq!(
+        assert_matches!(
             client_proc.command_queue.lock().front(),
-            Some(&Command::DeadBinder(death_notification_cookie))
+            Some(Command::DeadBinder(DEATH_NOTIFICATION_COOKIE))
         );
     }
 
@@ -4312,19 +4380,16 @@ mod tests {
         let (_proc, thread) = driver.create_process_and_thread(1);
 
         TransactionError::Malformed(errno!(EINVAL)).dispatch(&thread).expect("no error");
-        assert_eq!(
-            thread.write().command_queue.pop_front().expect("command"),
-            Command::Error(-(EINVAL.value() as i32))
+        assert_matches!(
+            thread.write().command_queue.pop_front(),
+            Some(Command::Error(val)) if val == -(EINVAL.value() as i32)
         );
 
         TransactionError::Failure.dispatch(&thread).expect("no error");
-        assert_eq!(
-            thread.write().command_queue.pop_front().expect("command"),
-            Command::FailedReply
-        );
+        assert_matches!(thread.write().command_queue.pop_front(), Some(Command::FailedReply));
 
         TransactionError::Dead.dispatch(&thread).expect("no error");
-        assert_eq!(thread.write().command_queue.pop_front().expect("command"), Command::DeadReply);
+        assert_matches!(thread.write().command_queue.pop_front(), Some(Command::DeadReply));
     }
 
     #[fuchsia::test]
@@ -4364,7 +4429,7 @@ mod tests {
         // The thread is ineligible to take the command (not sleeping) so check the process queue.
         assert_matches!(
             receiver_proc.command_queue.lock().front(),
-            Some(Command::Transaction(Transaction { code: FIRST_TRANSACTION_CODE, .. }))
+            Some(Command::OnewayTransaction(TransactionData { code: FIRST_TRANSACTION_CODE, .. }))
         );
 
         // The object should not have the transaction queued on it, as it was immediately scheduled.
@@ -4399,8 +4464,10 @@ mod tests {
             .pop_front()
             .expect("the first oneway transaction should be queued on the process")
         {
-            Command::Transaction(Transaction {
-                code: FIRST_TRANSACTION_CODE, data_buffer, ..
+            Command::OnewayTransaction(TransactionData {
+                code: FIRST_TRANSACTION_CODE,
+                data_buffer,
+                ..
             }) => data_buffer.address,
             _ => panic!("unexpected command in process queue"),
         };
@@ -4422,7 +4489,7 @@ mod tests {
             .pop_front()
             .expect("the second oneway transaction should be queued on the process")
         {
-            Command::Transaction(Transaction {
+            Command::OnewayTransaction(TransactionData {
                 code: SECOND_TRANSACTION_CODE,
                 data_buffer,
                 ..
@@ -4481,7 +4548,7 @@ mod tests {
         // the process queue.
         assert_matches!(
             receiver_proc.command_queue.lock().pop_front(),
-            Some(Command::Transaction(Transaction { code: ONEWAY_TRANSACTION_CODE, .. }))
+            Some(Command::OnewayTransaction(TransactionData { code: ONEWAY_TRANSACTION_CODE, .. }))
         );
 
         // The object should also have the second transaction queued on it.
@@ -4518,8 +4585,195 @@ mod tests {
         // The process queue should now have the synchronous transaction queued.
         assert_matches!(
             receiver_proc.command_queue.lock().pop_front(),
-            Some(Command::Transaction(Transaction { code: SYNC_TRANSACTION_CODE, .. }))
+            Some(Command::Transaction {
+                data: TransactionData { code: SYNC_TRANSACTION_CODE, .. },
+                ..
+            })
         );
+    }
+
+    #[fuchsia::test]
+    fn dead_reply_when_transaction_recipient_proc_dies() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Insert a binder object for the receiver, and grab a handle to it in the sender.
+        const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
+        let object = register_binder_object(&test.receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(object.clone());
+
+        // Construct a synchronous transaction to send from the sender to the receiver.
+        const FIRST_TRANSACTION_CODE: u32 = 42;
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: FIRST_TRANSACTION_CODE,
+                target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+                ..binder_transaction_data::default()
+            },
+            buffers_size: 0,
+        };
+
+        // Submit the transaction.
+        test.driver
+            .handle_transaction(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                transaction,
+            )
+            .expect("failed to handle the transaction");
+
+        // Check that there are no commands waiting for the sending thread.
+        assert!(test.sender_thread.read().command_queue.is_empty());
+
+        // Check that the receiving process has a transaction scheduled.
+        assert_matches!(
+            test.receiver_proc.command_queue.lock().front(),
+            Some(Command::Transaction { .. })
+        );
+
+        // Drop the receiving process.
+        let TranslateHandlesTestFixture { sender_thread, receiver_proc, .. } = test;
+        drop(receiver_proc);
+
+        // Check that there is a dead reply command for the sending thread.
+        assert_matches!(sender_thread.read().command_queue.front(), Some(Command::DeadReply));
+    }
+
+    #[fuchsia::test]
+    fn dead_reply_when_transaction_recipient_thread_dies() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Insert a binder object for the receiver, and grab a handle to it in the sender.
+        const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
+        let object = register_binder_object(&test.receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(object.clone());
+
+        // Construct a synchronous transaction to send from the sender to the receiver.
+        const FIRST_TRANSACTION_CODE: u32 = 42;
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: FIRST_TRANSACTION_CODE,
+                target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+                ..binder_transaction_data::default()
+            },
+            buffers_size: 0,
+        };
+
+        // Create a thread for the receiver, and make it look eligible for transactions.
+        // Pretend the client thread is waiting for commands, so that it can be scheduled commands.
+        let receiver_thread = test
+            .receiver_proc
+            .thread_pool
+            .write()
+            .find_or_register_thread(&test.receiver_proc, test.receiver_proc.pid);
+        {
+            let mut thread_state = receiver_thread.write();
+            thread_state.registration = RegistrationState::MAIN;
+            thread_state.waiter = Some(Waiter::new());
+        }
+
+        // Submit the transaction.
+        test.driver
+            .handle_transaction(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                transaction,
+            )
+            .expect("failed to handle the transaction");
+
+        // Check that there are no commands waiting for the sending thread.
+        assert!(test.sender_thread.read().command_queue.is_empty());
+
+        // Check that the receiving thread has a transaction scheduled.
+        assert_matches!(
+            receiver_thread.read().command_queue.front(),
+            Some(Command::Transaction { .. })
+        );
+
+        // Drop the receiving process and thread.
+        let TranslateHandlesTestFixture { sender_thread, receiver_proc, .. } = test;
+        drop(receiver_thread);
+        drop(receiver_proc);
+
+        // Check that there is a dead reply command for the sending thread.
+        assert_matches!(sender_thread.read().command_queue.front(), Some(Command::DeadReply));
+    }
+
+    #[fuchsia::test]
+    fn dead_reply_when_transaction_recipient_thread_dies_while_processing_reply() {
+        let test = TranslateHandlesTestFixture::new();
+
+        // Insert a binder object for the receiver, and grab a handle to it in the sender.
+        const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
+        let object = register_binder_object(&test.receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(object.clone());
+
+        // Construct a synchronous transaction to send from the sender to the receiver.
+        const FIRST_TRANSACTION_CODE: u32 = 42;
+        let transaction = binder_transaction_data_sg {
+            transaction_data: binder_transaction_data {
+                code: FIRST_TRANSACTION_CODE,
+                target: binder_transaction_data__bindgen_ty_1 { handle: handle.into() },
+                ..binder_transaction_data::default()
+            },
+            buffers_size: 0,
+        };
+
+        // Create a thread for the receiver, and make it look eligible for transactions.
+        // Pretend the client thread is waiting for commands, so that it can be scheduled commands.
+        let receiver_thread = test
+            .receiver_proc
+            .thread_pool
+            .write()
+            .find_or_register_thread(&test.receiver_proc, test.receiver_proc.pid);
+        {
+            let mut thread_state = receiver_thread.write();
+            thread_state.registration = RegistrationState::MAIN;
+            thread_state.waiter = Some(Waiter::new());
+        }
+
+        // Submit the transaction.
+        test.driver
+            .handle_transaction(
+                &test.sender_task,
+                &test.sender_proc,
+                &test.sender_thread,
+                transaction,
+            )
+            .expect("failed to handle the transaction");
+
+        // Check that there are no commands waiting for the sending thread.
+        assert!(test.sender_thread.read().command_queue.is_empty());
+
+        // Check that the receiving thread has a transaction scheduled.
+        assert_matches!(
+            receiver_thread.read().command_queue.front(),
+            Some(Command::Transaction { .. })
+        );
+
+        // Have the thread dequeue the command.
+        let read_buffer_addr = map_memory(&test.receiver_task, UserAddress::default(), *PAGE_SIZE);
+        test.driver
+            .handle_thread_read(
+                &test.receiver_task,
+                &test.receiver_proc,
+                &receiver_thread,
+                &UserBuffer { address: read_buffer_addr, length: *PAGE_SIZE as usize },
+            )
+            .expect("read command");
+
+        // The thread should now have an empty command list and an ongoing transaction.
+        assert!(receiver_thread.read().command_queue.is_empty());
+        assert!(!receiver_thread.read().transactions.is_empty());
+
+        // Drop the receiving process and thread.
+        let TranslateHandlesTestFixture { sender_thread, receiver_proc, .. } = test;
+        drop(receiver_thread);
+        drop(receiver_proc);
+
+        // Check that there is a dead reply command for the sending thread.
+        assert_matches!(sender_thread.read().command_queue.front(), Some(Command::DeadReply));
     }
 
     // Simulates an mmap call on the binder driver, setting up shared memory between the driver and
