@@ -984,7 +984,8 @@ static void brcmf_sdio_rxfail(struct brcmf_sdio* bus, bool abort, bool rtx) {
   uint8_t hi, lo;
   zx_status_t err;
 
-  BRCMF_ERR("%sterminate frame%s", abort ? "abort command, " : "", rtx ? ", send NAK" : "");
+  BRCMF_ERR_THROTTLE("%sterminate frame%s", abort ? "abort command, " : "",
+                     rtx ? ", send NAK" : "");
 
   if (abort) {
     brcmf_sdiod_abort(bus->sdiodev, SDIO_FN_2);
@@ -1173,7 +1174,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
   rx_seq = (uint8_t)(swheader & SDPCM_SEQ_MASK);
   rd->channel = (swheader & SDPCM_CHANNEL_MASK) >> SDPCM_CHANNEL_SHIFT;
   if (len > MAX_RX_DATASZ && rd->channel != SDPCM_CONTROL_CHANNEL && type != BRCMF_SDIO_FT_SUPER) {
-    BRCMF_ERR("HW header length too long");
+    BRCMF_ERR_THROTTLE("HW header length too long");
     bus->sdcnt.rx_toolong++;
     brcmf_sdio_rxfail(bus, false, false);
     rd->len = 0;
@@ -1292,7 +1293,8 @@ static zx_status_t brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
   wlan::drivers::components::FrameContainer glom_frames =
       brcmf_sdio_acquire_rx_space(bus, num_entries);
   if (glom_frames.size() != num_entries) {
-    BRCMF_ERR("Failed to acquire RX space for %u glom entries", num_entries);
+    // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
+    BRCMF_ERR_THROTTLE("Failed to acquire RX space for %u glom entries", num_entries);
     ++bus->sdcnt.rx_outofbufs;
     return ZX_ERR_NO_RESOURCES;
   }
@@ -1611,7 +1613,8 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
 
       frame = brcmf_sdio_acquire_single_rx_space(bus);
       if (!frame) {
-        BRCMF_ERR("Failed to acquire frame for RX");
+      // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
+        BRCMF_ERR_THROTTLE("Failed to acquire frame for RX");
         ++bus->sdcnt.rx_hdrfail;
         ++bus->sdcnt.rx_outofbufs;
         brcmf_sdio_rxfail(bus, false, false);
@@ -1650,7 +1653,8 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       // We are going to read header and data all in one go, acquire a frame
       frame = brcmf_sdio_acquire_single_rx_space(bus);
       if (!frame) {
-        BRCMF_ERR("Failed to acquire rx frame");
+      // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
+        BRCMF_ERR_THROTTLE("Failed to acquire rx frame");
         brcmf_sdio_rxfail(bus, false, false);
         ++bus->sdcnt.rx_outofbufs;
         break;
@@ -1681,7 +1685,6 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       frame->GrowHead(head_read);
     } else {
       // We read both header and data in one operation.
-      BRCMF_ERR("We read both!");
       struct brcmf_sdio_hdrinfo rd_new;
       rd_new.seq_num = rd->seq_num;
       if (brcmf_sdio_hdparse(bus, frame->Data(), &rd_new, BRCMF_SDIO_FT_NORMAL) != ZX_OK) {
