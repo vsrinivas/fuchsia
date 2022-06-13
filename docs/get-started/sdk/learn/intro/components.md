@@ -71,28 +71,33 @@ underneath the root.
 
 The `component show` command provides more details about each component.
 
-Use this command to see the details of `fshost` — the Fuchsia filesystem manager:
+Use this command to see the details of `http-client` — a component that provides
+an HTTP request service:
 
 ```posix-terminal
-ffx component show fshost.cm
+ffx component show http-client.cm
 ```
 
 The command outputs the following report:
 
 ```none {:.devsite-disable-click-to-copy}
-               Moniker: /bootstrap/fshost
-                   URL: fuchsia-boot:///#meta/fshost.cm
+               Moniker: /core/network/http-client
+                   URL: #meta/http-client.cm
                   Type: CML static component
        Component State: Resolved
- Incoming Capabilities: ...
-  Exposed Capabilities: ...
-         Configuration: ...
+ Incoming Capabilities: config
+                        fuchsia.logger.LogSink
+                        fuchsia.net.name.Lookup
+                        fuchsia.posix.socket.Provider
+                        pkg
+  Exposed Capabilities: fuchsia.net.http.Loader
+           Merkle root: d9e73f5b061f2f227e596e2e0079ff3a095fc69e192cf85e0d7621826c76356c
        Execution State: Running
-          Start reason: '/bootstrap/base_resolver' requested capability 'pkgfs-packages-delayed'
-           Running for: 759834353 ticks
-                Job ID: 2933
-            Process ID: 2995
- Outgoing Capabilities: ...
+          Start reason: '/core/feedback' requested capability 'fuchsia.net.http.Loader'
+         Running since: ...
+                Job ID: 41268
+            Process ID: 41311
+ Outgoing Capabilities: fuchsia.net.http.Loader
 ```
 
 Notice a few of the details reported here:
@@ -115,33 +120,34 @@ In the previous output, there are three capability groups listed:
 * **Exposed Capabilities**: Capabilities the component declares with
   `expose`. These are the component's **exposed services**.
 
-One of the capabilities exposed by `fshost` to its parent **realm** is
-[fuchsia.fshost.Admin](https://fuchsia.dev/reference/fidl/fuchsia.fshost#Admin).
-This enables other components to access directories in the registered
-filesystems on the device.
+One of the capabilities exposed by `http-client` to its parent **realm** is
+[fuchsia.net.http.Loader](https://fuchsia.dev/reference/fidl/fuchsia.net.http#Loader).
+This enables other components to issue HTTP requests.
 
-Use the `component select` command determine how many components use this
-capability (i.e., have it listed under **Incoming Capabilities**):
+Use the `component select` command determine how many components interact with
+this capability:
 
 ```posix-terminal
-ffx component select moniker '*/*:in:fuchsia.fshost.Admin'
+ffx component select capability fuchsia.net.http.Loader
 ```
 
 The command lists all the matching components:
 
 
 ```none {:.devsite-disable-click-to-copy}
-bootstrap/driver_manager
-|
---in
-   |
-   --fuchsia.fshost.Admin
+Exposed:
+  /core/network/http-client
+  /core/network
+Used:
+  /core/cobalt
+  /core/feedback
+  /core
 ```
 
-
-Looks like this protocol is consumed by the `driver_manager` component. The
-common ancestor between these components is `bootstrap`, which handles the
-routing of this capability to the necessary children.
+This indicates that the `cobalt` and `feedback` components use this capability
+(i.e., have it listed under **Incoming Capabilities**). The common ancestor
+between these components is `core`, which handles the routing of this capability
+to the necessary children.
 
 
 <aside class="key-point">
