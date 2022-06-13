@@ -392,7 +392,7 @@ of our profile_store component in our output directory.
 find $(fx get-build-dir) -name profile_store.cm
 
 # generate integration tests.
-fx testgen --cm-location <result from find> --out-dir examples/diagnostics/workshop/tests -c
+fx testgen --cm-location {{ '<var>' }}find result{{ '</var>' }} --out-dir examples/diagnostics/workshop/tests -c
 ```
 
 This should generate a few files under `examples/diagnostics/workshop/tests`. Before running the
