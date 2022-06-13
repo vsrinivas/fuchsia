@@ -769,7 +769,6 @@ config("Wno-conversion") {
     "//src/media/audio/drivers/lib/intel-hda:*",
     "//src/media/drivers/amlogic_decoder:*",
     "//src/media/drivers/amlogic_decoder/third_party/libvpx:*",
-    "//src/media/lib/codec_impl:*",
     "//src/media/lib/codec_impl/unit_tests:*",
     "//src/media/lib/extend_bits/unit_tests:*",
     "//src/media/playback/mediaplayer:*",

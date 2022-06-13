@@ -14,6 +14,8 @@
 #include <cstdint>
 #include <limits>
 
+#include <safemath/safe_math.h>
+
 namespace {
 
 constexpr uint64_t kInputBufferConstraintsVersionOrdinal = 1;
@@ -469,15 +471,34 @@ void DecryptorAdapter::ProcessInput() {
 
     OutputBuffer output;
     if (is_secure()) {
+      auto checked_data_offset =
+          safemath::MakeCheckedNum(output_buffer->vmo_offset()).Cast<uint32_t>();
+      if (!checked_data_offset.IsValid()) {
+        events_->onCoreCodecFailCodec("Can not convert data offset to unsigned 32-bit value");
+        return;
+      }
+
+      auto checked_data_length = safemath::MakeCheckedNum(output_buffer->size()).Cast<uint32_t>();
+      if (!checked_data_length.IsValid()) {
+        events_->onCoreCodecFailCodec("Can not convert data length to unsigned 32-bit value");
+        return;
+      }
+
       SecureOutputBuffer secure_output;
       secure_output.vmo = zx::unowned_vmo(output_buffer->vmo());
-      secure_output.data_offset = output_buffer->vmo_offset();
-      secure_output.data_length = output_buffer->size();
+      secure_output.data_offset = checked_data_offset.ValueOrDie();
+      secure_output.data_length = checked_data_length.ValueOrDie();
       output = secure_output;
     } else if (IsCoreCodecMappedBufferUseful(kOutputPort)) {
+      auto checked_data_length = safemath::MakeCheckedNum(output_buffer->size()).Cast<uint32_t>();
+      if (!checked_data_length.IsValid()) {
+        events_->onCoreCodecFailCodec("Can not convert data length to unsigned 32-bit value");
+        return;
+      }
+
       ClearOutputBuffer clear_output;
       clear_output.data = output_buffer->base();
-      clear_output.data_length = output_buffer->size();
+      clear_output.data_length = checked_data_length.ValueOrDie();
       output = clear_output;
     } else {
       events_->onCoreCodecFailCodec("Unmapped clear output buffer is unsupported.");
