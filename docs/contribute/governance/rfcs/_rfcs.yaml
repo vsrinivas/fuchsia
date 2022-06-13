@@ -2152,3 +2152,17 @@
   reviewers: ['dschuyler@google.com', 'jamesr@google.com', 'jeremymanson@google.com', 'neelsa@google.com', 'sebmarchand@google.com', 'sethladd@google.com']
   submitted: '2022-05-13'
   reviewed: '2022-05-31'
+
+- name: 'RFC-0167'
+  title: 'Packages in early userspace bootstrapping'
+  short_description: 'Introduction of packages to BootFS and boot resolution.'
+  authors: ['lukenicholson@google.com']
+  file: '0167_early_boot_packages.md'
+  area: ['Component Framework']
+  issue: ['97517']
+  gerrit_change_id: ['677144']
+  status: 'Accepted'
+  reviewers: ['geb@google.com', 'mcgrathr@google.com', 'surajmalhotra@google.com', 'aaronwood@google.com', 'galbanum@google.com', 'wittrock@google.com', 'jfsulliv@google.com']
+  submitted: '2022-05-10'
+  reviewed: '2022-06-13'
+

@@ -346,3 +346,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0164_test_suite.md
   - title: "RFC-0165: SDK categories"
     path: /docs/contribute/governance/rfcs/0165_sdk_categories.md
+  - title: "RFC-0167: Packages in early userspace bootstrapping"
+    path: /docs/contribute/governance/rfcs/0167_early_boot_packages.md
