@@ -74,12 +74,6 @@ if (is_host) {
       "//src/developer/trace2json:bin",
       "//src/testing/catapult_converter:converter_bin",
     ]
-
-    # Host build for linux only
-    if (host_os == "linux") {
-      sources += [ "$root_out_dir/iperf3" ]
-      deps += [ "//third_party/iperf:bin" ]
-    }
   }
 }
 
