@@ -158,8 +158,8 @@ pub fn sys_nanosleep(
     Ok(())
 }
 
-pub fn sys_unknown(_ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {
-    warn!(target: "unknown_syscall", "UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
+pub fn sys_unknown(ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {
+    warn!(target: "unknown_syscall", "UNKNOWN pid: {}, syscall({}): {}", ctx.get_pid(), syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
     error!(ENOSYS)
 }
