@@ -30,7 +30,7 @@ use {
     anyhow::{anyhow, Context, Error},
     futures::try_join,
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, HashSet},
         iter::zip,
         ops::Bound,
         sync::{
@@ -107,6 +107,12 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let object_manager = filesystem.object_manager();
     let super_block = filesystem.super_block();
 
+    // Keep track of all things that might exist in journal checkpoints so we can check for
+    // unexpected entries.
+    let mut journal_checkpoint_ids: HashSet<u64> = HashSet::new();
+    journal_checkpoint_ids.insert(super_block.allocator_object_id);
+    journal_checkpoint_ids.insert(super_block.root_store_object_id);
+
     // Scan the root parent object store.
     let mut root_objects = vec![super_block.root_store_object_id, super_block.journal_object_id];
     root_objects.append(&mut object_manager.root_store().parent_objects());
@@ -132,6 +138,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
 
     // TODO(fxbug.dev/96076): We could maybe iterate over stores concurrently.
     while let Some((name, store_id, _)) = iter.get() {
+        journal_checkpoint_ids.insert(store_id);
         fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
         fsck.check_child_store(&filesystem, store_id, &mut root_store_root_objects, crypt.clone())
             .await
@@ -244,6 +251,16 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
             expected_owner_allocated_bytes.iter().map(|(k, v)| (*k, *v)).collect(),
             allocator.get_owner_allocated_bytes().iter().map(|(k, v)| (*k, *v)).collect(),
         ))?;
+    }
+
+    // Every key in journal_file_offsets should map to an lsm tree (ObjectStore or Allocator).
+    // Excess entries mean we won't be able to reap the journal to free space.
+    // Missing entries are OK. Entries only exist if there is data for the store that hasn't been
+    // flushed yet.
+    for object_id in super_block.journal_file_offsets.keys() {
+        if !journal_checkpoint_ids.contains(object_id) {
+            fsck.error(FsckError::UnexpectedJournalFileOffset(*object_id))?;
+        }
     }
 
     let errors = fsck.errors();

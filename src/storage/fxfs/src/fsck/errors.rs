@@ -163,6 +163,7 @@ pub enum FsckError {
     ExtentExceedsLength(u64, u64, u64, u64, Value),
     ExtraAllocations(Vec<Allocation>),
     FileHasChildren(u64, u64),
+    UnexpectedJournalFileOffset(u64),
     LinkCycle(u64, u64),
     MalformedAllocation(Allocation),
     MalformedExtent(u64, u64, Range<u64>, u64),
@@ -221,6 +222,12 @@ impl FsckError {
             }
             FsckError::FileHasChildren(store_id, object_id) => {
                 format!("Object {} in store {} has children", object_id, store_id)
+            }
+            FsckError::UnexpectedJournalFileOffset(object_id) => {
+                format!(
+                    "SuperBlock journal_file_offsets contains unexpected object_id ({:?}).",
+                    object_id
+                )
             }
             FsckError::LinkCycle(store_id, object_id) => {
                 format!("Detected cycle involving object {} in store {}", store_id, object_id)
