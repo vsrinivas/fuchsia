@@ -158,7 +158,7 @@ then run: `ffx log --tags workshop`.
 
 What other logs could we add that would help identify the log? Please experiment!
 
-A solution can be found in this patch: https://fuchsia-review.googlesource.com/c/fuchsia/+/684632
+A solution can be found in [this patch](https://fuchsia-review.googlesource.com/c/fuchsia/+/684632).
 
 ### Inspect
 
