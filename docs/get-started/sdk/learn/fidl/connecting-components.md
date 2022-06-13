@@ -346,11 +346,17 @@ used for development inside the product's **core realm**. Collections enable
 components to be dynamically created and destroyed at runtime.
 
 Create the component instances by passing the `echo-realm` component URL and
-an appropriate moniker inside `ffx-laboratory` to `ffx component run`:
+an appropriate moniker inside `ffx-laboratory` to `ffx component create`:
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm \
-    --name echo-realm
+ffx component create /core/ffx-laboratory:echo-realm \
+    fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm
+```
+
+Then, resolve the `echo-realm` component with `ffx component resolve`:
+
+```posix-terminal
+ffx component resolve /core/ffx-laboratory:echo-realm
 ```
 
 Verify that instances of the server and client were also created as child
@@ -377,7 +383,7 @@ ffx component show echo
                    URL: fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm
                   Type: CML dynamic component
        Component State: Resolved
-       Execution State: Running
+       Execution State: Stopped
            Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
 ```
 

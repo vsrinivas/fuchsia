@@ -515,6 +515,12 @@ ffx component create /core/ffx-laboratory:echo-realm \
     fuchsia-pkg://fuchsia.com/echo-realm#meta/echo_realm.cm
 ```
 
+Then, resolve the `echo-realm` component with `ffx component resolve`:
+
+```posix-terminal
+ffx component resolve /core/ffx-laboratory:echo-realm
+```
+
 Verify that instances of the server and client were also created as child
 components using `ffx component show`:
 
@@ -539,7 +545,7 @@ ffx component show echo
                    URL: fuchsia-pkg://fuchsia.com/echo-realm#meta/echo_realm.cm
                   Type: CML dynamic component
        Component State: Resolved
-       Execution State: Running
+       Execution State: Stopped
            Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
 ```
 
