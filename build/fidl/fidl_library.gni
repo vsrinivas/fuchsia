@@ -83,7 +83,6 @@ template("fidl_library") {
     fidl_deps += invoker.public_deps
   }
 
-  summary_file = "$target_gen_dir/$target_name.api_summary"
   summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
   fidl_ir(compilation_target_name) {
     forward_variables_from(invoker,
@@ -97,7 +96,6 @@ template("fidl_library") {
                            ])
     fidl_target_name = main_target_name
     fidl_library_name = library_name
-    out_summary = summary_file
     out_json_summary = summary_file_json
     deps += [ ":$lint_target_name" ] + non_fidl_deps
   }
@@ -418,17 +416,12 @@ template("fidl_library") {
 
       if (defined(api_reference)) {
         api = api_reference
-
-        # TODO(99634): Delete and uncomment the line below after non-json api
-        # summaries are removed.
-        current_api = api_reference
-
-        #  api_contents = [
-        #    {
-        #      source = summary_file
-        #      dest = "fidl/$library_name"
-        #    },
-        #  ]
+        api_contents = [
+          {
+            source = summary_file_json
+            dest = "fidl/$library_name"
+          },
+        ]
       }
 
       meta = {
