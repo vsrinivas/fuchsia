@@ -79,10 +79,15 @@ with a few different switches.
 First, discard any `-kernel ...`, `-initrd ...`, or `-append ...` switches, as
 these will not have any effect.  Replace them with the `-bios` switch giving
 the path to the UEFI firmware image:
-**TODO(fxbug.dev/99325):** Update prebuilt paths, give arm example
 
 ```
--bios prebuilt/third_party/ovmf/${HOST_PLATFORM}/OVMF.fd
+-bios prebuilt/third_party/edk2/x64/OVMF.fd
+```
+
+or
+
+```
+-bios prebuilt/third_party/edk2/arm64/QEMU_EFI.fd
 ```
 
 The QEMU virtual machine will attempt to boot from disk or network just like a
