@@ -2,11 +2,75 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/// The 3rd generation text editing API for Fuchsia.
+///
+/// Currently under development.
+@available(added=8)
 library fuchsia.input.text;
 
 // TODO(fxbug.dev/94006): Pick and justify limits.
 const MAX_STRING_LENGTH uint32 = 65536;
 const MAX_COMPOSITION_SEGMENTS uint32 = 8;
+
+
+type TextEditServerError = flexible enum : uint32 {
+    /// The given text field is already registered with the text edit server.
+    ALREADY_REGISTERED = 1;
+};
+
+type TextFieldError = flexible enum : uint32 {
+    /// An internal error that likely wasn't caused by the client.
+    INTERNAL_ERROR = 1;
+    /// The operation failed because the current state does not allow it (e.g. attempting a
+    /// non-composition action during an ongoing composition).
+    BAD_STATE = 2;
+    /// The server passed a revision ID that is stale or invalid.
+    BAD_REVISION_ID = 3;
+    /// The server passed a transaction ID that doesn't match the ongoing transaction.
+    BAD_TRANSACTION_ID = 4;
+    /// The server attempted to insert text that the text field does not allow.
+    INVALID_CONTENT = 5;
+    /// The server attempted to change the selection to an invalid range.
+    INVALID_SELECTION = 6;
+    /// Another argument with an invalid value, not covered by the specific cases above.
+    INVALID_ARGUMENT = 7;
+};
+
+/// Describes different input field types.
+///
+/// These can serve as hints for which keyboard layout (plain text, phone number, numeric,
+/// etc.) should be displayed.
+///
+/// See also:
+///
+/// * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types
+/// * https://api.flutter.dev/flutter/services/TextInputType-class.html#constants
+/// * https://developer.android.com/reference/android/text/InputType
+///
+/// TODO(fxbug.dev/94008): Date, time, password
+/// TODO(fxbug.dev/94008): Allow specifying number range, precision.
+type InputType = flexible enum : uint8 {
+    /// Free-form text.
+    TEXT = 1;
+    /// A number.
+    NUMBER = 2;
+    /// A phone number.
+    PHONE = 3;
+    /// A URL.
+    URL = 4;
+    /// An email address.
+    EMAIL_ADDRESS = 5;
+};
+
+/// Settings related to the text field that are important for the edit server to be aware of.
+///
+/// TODO(fxbug.dev/94008): Autocorrect options
+/// TODO(fxbug.dev/94008): Privacy options
+type TextFieldOptions = table {
+    /// The type of content expected in the text box. This may affect the appearance and behavior of
+    /// on-screen keyboards.
+    1: input_type InputType;
+};
 
 /// The read-only methods of a text-field.
 protocol ReadableTextField {

@@ -6,9 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.input.text") {
   sdk_category = "experimental"
-  sources = [
-    "editing.fidl",
-    "errors.fidl",
-    "field_options.fidl",
-  ]
+  sources = [ "text.fidl" ]
 }
