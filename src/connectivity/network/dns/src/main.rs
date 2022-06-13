@@ -20,7 +20,6 @@ use {
     futures::{
         channel::mpsc, lock::Mutex, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _,
     },
-    log::{debug, error, info, warn},
     net_declare::fidl_ip_v6,
     net_types::ip::IpAddress,
     parking_lot::RwLock,
@@ -31,6 +30,7 @@ use {
     std::num::NonZeroUsize,
     std::rc::Rc,
     std::sync::Arc,
+    tracing::{debug, error, info, warn},
     trust_dns_proto::{
         op::ResponseCode,
         rr::{domain::IntoName, TryParseIp},
@@ -1043,11 +1043,10 @@ fn add_query_stats_inspect(
     })
 }
 
-#[fasync::run_singlethreaded]
+// NB: We manually set tags so logs from trust-dns crates also get the same
+// tags as opposed to only the crate path.
+#[fuchsia::main(logging_tags = ["dns"])]
 async fn main() -> Result<(), Error> {
-    // NB: We manually set tags to syslog so logs from trust-dns crates also get
-    // the same tags as opposed to only the crate path.
-    let () = fuchsia_syslog::init_with_tags(&["dns"]).context("cannot init logger")?;
     info!("starting");
 
     let mut resolver_opts = ResolverOpts::default();
