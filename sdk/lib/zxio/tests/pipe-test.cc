@@ -125,9 +125,7 @@ TEST(Pipe, ShutdownRead) {
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
-  // TODO(https://fxbug.dev/79778): Reading from an empty pipe object with
-  // reading disabled returns ZX_OK, not ZX_ERR_BAD_STATE.
-  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_OK);
+  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 
@@ -196,9 +194,7 @@ TEST(Pipe, ShutdownReadWrite) {
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
-  // TODO(https://fxbug.dev/79778): Reading from an empty pipe object with
-  // reading disabled returns ZX_OK, not ZX_ERR_BAD_STATE.
-  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_OK);
+  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 

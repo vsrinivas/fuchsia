@@ -133,23 +133,6 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
   return ops;
 }();
 
-namespace {
-
-zx_status_t zxio_pipe_read_status(zx_status_t status, size_t* out_actual) {
-  // We've reached end-of-file, which is signaled by successfully reading zero
-  // bytes.
-  //
-  // If we see |ZX_ERR_BAD_STATE|, that implies reading has been disabled for
-  // this endpoint.
-  if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
-    *out_actual = 0;
-    status = ZX_OK;
-  }
-  return status;
-}
-
-}  // namespace
-
 static constexpr zxio_ops_t zxio_datagram_pipe_ops = []() {
   zxio_ops_t ops = zxio_pipe_ops;
   ops.readv = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
@@ -172,7 +155,7 @@ static constexpr zxio_ops_t zxio_datagram_pipe_ops = []() {
     size_t actual;
     zx_status_t status = zxio_get_pipe(io).socket.read(zx_flags, buf.get(), total, &actual);
     if (status != ZX_OK) {
-      return zxio_pipe_read_status(status, out_actual);
+      return status;
     }
 
     uint8_t* data = buf.get();
@@ -225,12 +208,10 @@ static constexpr zxio_ops_t zxio_stream_pipe_ops = []() {
 
     zx::socket& socket = zxio_get_pipe(io).socket;
 
-    return zxio_pipe_read_status(
-        zxio_do_vector(vector, vector_count, out_actual,
-                       [&](void* buffer, size_t capacity, size_t* out_actual) {
-                         return socket.read(0, buffer, capacity, out_actual);
-                       }),
-        out_actual);
+    return zxio_do_vector(vector, vector_count, out_actual,
+                          [&](void* buffer, size_t capacity, size_t* out_actual) {
+                            return socket.read(0, buffer, capacity, out_actual);
+                          });
   };
 
   ops.writev = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,

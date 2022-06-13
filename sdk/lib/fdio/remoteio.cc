@@ -61,7 +61,7 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
     case ZXIO_OBJECT_TYPE_PIPE:
-      io = fbl::MakeRefCounted<fdio_internal::zxio>();
+      io = fbl::MakeRefCounted<fdio_internal::pipe>();
       break;
     case ZXIO_OBJECT_TYPE_SERVICE:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
