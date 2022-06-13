@@ -47,6 +47,7 @@ rustc_binary("bin") {
     "src/gatt_service.rs",
     "src/host_watcher.rs",
     "src/main.rs",
+    "src/pairing.rs",
     "src/provider.rs",
     "src/types/error.rs",
     "src/types/keys.rs",

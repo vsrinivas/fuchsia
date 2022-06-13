@@ -9,6 +9,7 @@ mod advertisement;
 mod config;
 mod gatt_service;
 mod host_watcher;
+mod pairing;
 mod provider;
 mod types;
 
