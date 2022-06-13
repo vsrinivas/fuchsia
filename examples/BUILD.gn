@@ -16,7 +16,6 @@ group("examples") {
     "fuzzers",
     "hello_world",
     "intl",
-    "isolated_cache",
     "rust",
     "time",
   ]
@@ -33,7 +32,6 @@ group("tests") {
     "fuzzers:tests",
     "hello_world:tests",
     "intl:tests",
-    "isolated_cache:tests",
     "rust:tests",
   ]
 }

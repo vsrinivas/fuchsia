@@ -112,7 +112,6 @@
   except that the contents of a cache directory may be cleared by the system at any time, such as
   when the device is under storage pressure. Canonically mapped to <code>/cache</code> in the component
   instance’s <a href=\"/docs/glossary#namespace\">namespace</a>."
-  see_also: ["<a href=\"/docs/concepts/testing/testing_isolated_cache_storage.md\">Testing isolated cache storage</a>"]
   related_guides: [""]
   area: ["System", "Component Framework"]
 

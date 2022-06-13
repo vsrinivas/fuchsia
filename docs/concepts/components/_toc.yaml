@@ -67,8 +67,6 @@ toc:
     path: /docs/concepts/components/v1/sysmgr.md
   - title: "Test components"
     path: /docs/concepts/testing/v1_test_component.md
-  - title: "Testing isolated cache storage"
-    path: /docs/concepts/testing/testing_isolated_cache_storage.md
 
 # TODO(fxbug.dev/60771)
 # - title: "Overview"

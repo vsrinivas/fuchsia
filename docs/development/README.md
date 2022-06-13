@@ -47,7 +47,6 @@ operating system.
  - [Test environments](/docs/contribute/testing/environments.md)
  - [Testability rubrics](/docs/development/testing/testability_rubric.md)
  - [Test flake policy](/docs/development/testing/test_flake_policy.md)
- - [Testing Isolated Cache Storage](/docs/concepts/testing/testing_isolated_cache_storage.md)
  - [Host-target interaction tests](/docs/development/testing/host_target_interaction_tests.md)
  - [Testing for Flakiness in CQ](/docs/development/testing/testing_for_flakiness_in_cq.md)
  - [Testing a USB Device](/docs/development/testing/testing_usb_device.md)

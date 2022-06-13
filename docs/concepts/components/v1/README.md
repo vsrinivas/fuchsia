@@ -24,12 +24,9 @@ For more details, see the [Components overview][components-overview].
 
 - [Test components][test-component]: Implementing component tests with the
   legacy component framework.
-- [Testing isolated cache storage][test-isolated-cache]: Tips for using cache
-  storage in legacy component tests.
 
 [components-overview]: /docs/concepts/components/v2/introduction.md
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
 [migration]: /docs/contribute/open_projects/components/migration.md
 [test-component]: /docs/concepts/testing/v1_test_component.md
-[test-isolated-cache]: /docs/concepts/testing/testing_isolated_cache_storage.md
