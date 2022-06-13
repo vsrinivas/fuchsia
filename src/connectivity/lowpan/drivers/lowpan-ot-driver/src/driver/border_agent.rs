@@ -10,7 +10,9 @@ use fidl_fuchsia_net_mdns::*;
 use fuchsia_component::client::connect_to_protocol;
 
 const BORDER_AGENT_SERVICE_TYPE: &str = "_meshcop._udp.";
-const BORDER_AGENT_SERVICE_PLACEHOLDER_PORT: u16 = 49152;
+
+// Port 9 is the old-school discard port.
+const BORDER_AGENT_SERVICE_PLACEHOLDER_PORT: u16 = 9;
 
 // These flags are ultimately defined by table 8-5 of the Thread v1.1.1 specification.
 // Additional flags originate from the source code found [here][1].
