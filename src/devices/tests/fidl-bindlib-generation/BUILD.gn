@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":pkg",
+    "child-driver:child_driver_bind_test",
+  ]
+}
+
+group("drivers") {
+  testonly = true
+  deps = [
+    "child-driver",
+    "parent-driver",
+  ]
+}
+
+test("fidl-bindlib-generation-test") {
+  sources = [ "test.cc" ]
+  deps = [
+    "child-driver",
+    "parent-driver",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/driver_test_realm/simple",
+    "//src/devices/internal/drivers/fragment",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("pkg") {
+  package_name = "fidl-bindlib-generation-test"
+  deps = [ ":fidl-bindlib-generation-test" ]
+}

@@ -108,7 +108,7 @@ enum Command {
         /// The FIDL IR input file. This should be generated from a FIDL library
         /// by the FIDL compiler at //tools/fidl/fidlc using the $fidl_toolchain suffix.
         #[structopt(parse(from_os_str))]
-        input: Option<PathBuf>,
+        input: PathBuf,
 
         /// Output Bind Library file.
         #[structopt(short = "o", long = "output", parse(from_os_str))]
@@ -444,17 +444,15 @@ fn convert_to_bind_library_enum(
 fn generate_bind_library(input: &str) -> Result<String, Error> {
     let in_fidl_ir: FidlIr = serde_json::from_str(input)?;
 
-    // Use the FIDL library name as the bind library name and give it "bind" as a top level
-    // namespace.
-    let bind_name = &in_fidl_ir.get_library_name();
-    let library_name = format!("bind.{}", bind_name);
+    // Use the FIDL library name as the bind library name.
+    let library_name = in_fidl_ir.get_library_name();
 
     let bind_lib_content = in_fidl_ir
         .declarations
         .0
         .iter()
         .filter(|entry| matches!(entry.1, Declaration::Interface))
-        .map(|entry| convert_to_bind_library_enum(entry.0, bind_name))
+        .map(|entry| convert_to_bind_library_enum(entry.0, &library_name))
         .collect::<Result<Vec<String>, _>>()?
         .join("\n");
 
@@ -471,8 +469,7 @@ fn generate_bind_library(input: &str) -> Result<String, Error> {
     Ok(output.to_string())
 }
 
-fn handle_generate_bind(input: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> {
-    let input = input.ok_or(anyhow!("An input is required."))?;
+fn handle_generate_bind(input: PathBuf, output: Option<PathBuf>) -> Result<(), Error> {
     let input_content = read_file(&input)?;
 
     // Generate the bind library.

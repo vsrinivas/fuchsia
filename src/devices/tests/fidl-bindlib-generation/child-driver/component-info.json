@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework FIDL to Bind Library Generation test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

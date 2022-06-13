@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("parent_driver_bind") {
+  rules = "parent_driver.bind"
+  header_output = "parent_driver-bind.h"
+  bind_output = "parent_driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "fidl-bindlib-generation-parent"
+  sources = [ "parent_driver.cc" ]
+  deps = [
+    ":parent_driver_bind",
+    "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+    "//tools/bindc/src/tests/fidl:test_fidl_bindlib_cpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("parent-driver") {
+  component_name = "fidl-bindlib-generation-parent"
+  deps = [ ":driver" ]
+  info = "component-info.json"
+  colocate = true
+}

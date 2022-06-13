@@ -1,0 +1,65 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+
+# Declares the generated bind library invocation
+template("fidl_bind_library") {
+  library_name = "${target_name}"
+  if (defined(invoker.name)) {
+    library_name = "${invoker.name}"
+  }
+
+  bind_library_target_name = "${target_name}_bindlib"
+
+  fidl_library = ":$target_name($fidl_toolchain)"
+  ir_target_name = get_label_info(fidl_library, "name")
+  ir_gen_dir = get_label_info(fidl_library, "target_gen_dir")
+  ir_file = "$ir_gen_dir/$ir_target_name.fidl.json"
+  generation_target_name = "${target_name}_bind_lib_generate"
+
+  bind_library_file_name = "${library_name}.bind"
+  generated_bind_library =
+      "$target_gen_dir/${target_name}/fidl_bindlibs/$bind_library_file_name"
+
+  compiled_action(generation_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//tools/bindc:bin"
+    tool_output_name = "bindc"
+
+    inputs = [ ir_file ]
+
+    outputs = [ generated_bind_library ]
+
+    deps = [ fidl_library ]
+
+    args = [
+      "generate-bind",
+      "--output",
+      rebase_path("${generated_bind_library}", root_build_dir),
+      rebase_path("${ir_file}", root_build_dir),
+    ]
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
+  }
+
+  bind_library(bind_library_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    source_dep = ":$generation_target_name"
+    source = generated_bind_library
+    name = library_name
+  }
+}

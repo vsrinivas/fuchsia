@@ -518,28 +518,9 @@ template("driver_bind_rules") {
   }
 }
 
-# Declares a bind library.
-#
-# Declare a bind library that may be included by other libraries or bind rules. For more details,
-# refer to //tools/bindc/README.md.
-#
-# Parameters
-#
-#   source (required)
-#     [path]: Path to the library source file.
-#
-#   public_deps (optional)
-#     [list of labels]: List of other bind_library targets included by the library.
-#
-#   name (optional)
-#     [string] Name of the library. Defaults to the target's name.
-#
-#   testonly, visibility
-#     Forwarded from invoker.
-#
-template("bind_library") {
-  assert(defined(invoker.source), "Need a source file")
-
+# Generates a target for a bind library's C++ bindings.
+# Only for internal use by bind_library.
+template("_bind_library_cpp") {
   if (defined(invoker.name)) {
     library_name = invoker.name
   } else {
@@ -555,52 +536,6 @@ template("bind_library") {
     include_dirs = [ "${target_gen_dir}/${target_name}/bind_cpp" ]
   }
 
-  library_name_underscore = string_replace(library_name, ".", "_")
-  rust_file =
-      "${target_gen_dir}/${target_name}/rust/${library_name_underscore}_lib.rs"
-  crate_name = "bind_${library_name_underscore}"
-  rust_file_gen_target = "${target_name}_rust_file_gen"
-  rust_library_target = "${target_name}_rust"
-  crate_output_directory = "${target_out_dir}/${target_name}"
-
-  test_data_dir = "${target_out_dir}/${target_name}/test_data/bind-tests/"
-  test_data_target = "${target_name}_test_data"
-
-  copy(test_data_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    sources = [ invoker.source ]
-    outputs = [ "${test_data_dir}/{{source_file_part}}" ]
-  }
-
-  group(target_name) {
-    metadata = {
-      sources = [ rebase_path(invoker.source, root_build_dir) ]
-
-      # Adds metadata for test_spec().
-      test_runtime_deps = get_target_outputs(":${test_data_target}")
-
-      # Adds metadata for bind_test().
-      test_sources = rebase_path(get_target_outputs(":${test_data_target}"),
-                                 root_build_dir)
-    }
-
-    deps = [ ":${test_data_target}" ]
-
-    forward_variables_from(invoker,
-                           [
-                             "public_deps",
-                             "testonly",
-                             "visibility",
-                           ])
-  }
-
-  if (defined(invoker.sdk_category)) {
-    _bind_library_sdk("$target_name") {
-      forward_variables_from(invoker, "*")
-    }
-  }
-
   compiled_action(cpp_header_file_gen_target) {
     forward_variables_from(invoker,
                            [
@@ -613,6 +548,10 @@ template("bind_library") {
 
     sources = [ invoker.source ]
 
+    if (defined(invoker.source_dep)) {
+      deps = [ invoker.source_dep ]
+    }
+
     args = [
       "generate-cpp",
       "--lint",
@@ -622,29 +561,10 @@ template("bind_library") {
     ]
 
     outputs = [ cpp_header_file ]
-  }
 
-  compiled_action(rust_file_gen_target) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-
-    tool = "//tools/bindc:bin"
-    tool_output_name = "bindc"
-
-    sources = [ invoker.source ]
-
-    args = [
-      "generate-rust",
-      "--lint",
-      "--output",
-      rebase_path("${rust_file}", root_build_dir),
-      rebase_path("${invoker.source}", root_build_dir),
-    ]
-
-    outputs = [ rust_file ]
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
   }
 
   source_set(cpp_header_file_target) {
@@ -664,6 +584,55 @@ template("bind_library") {
       }
     }
   }
+}
+
+# Generates a target for a bind library's Rust bindings.
+# Only for internal use by bind_library.
+template("_bind_library_rust") {
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  } else {
+    library_name = target_name
+  }
+
+  library_name_underscore = string_replace(library_name, ".", "_")
+  rust_file =
+      "${target_gen_dir}/${target_name}/rust/${library_name_underscore}_lib.rs"
+  crate_name = "bind_${library_name_underscore}"
+  rust_file_gen_target = "${target_name}_rust_file_gen"
+  rust_library_target = "${target_name}_rust"
+  crate_output_directory = "${target_out_dir}/${target_name}"
+
+  compiled_action(rust_file_gen_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//tools/bindc:bin"
+    tool_output_name = "bindc"
+
+    sources = [ invoker.source ]
+
+    if (defined(invoker.source_dep)) {
+      deps = [ invoker.source_dep ]
+    }
+
+    args = [
+      "generate-rust",
+      "--lint",
+      "--output",
+      rebase_path("${rust_file}", root_build_dir),
+      rebase_path("${invoker.source}", root_build_dir),
+    ]
+
+    outputs = [ rust_file ]
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
+  }
 
   rustc_library(rust_library_target) {
     forward_variables_from(invoker,
@@ -676,12 +645,95 @@ template("bind_library") {
     non_rust_deps = [ ":${rust_file_gen_target}" ]
     sources = [ rust_file ]
     source_root = rust_file
+    configs -= [ "//build/config/rust:allow_unused_results" ]
     if (defined(invoker.public_deps)) {
       deps = []
       foreach(pub_dep, invoker.public_deps) {
         dep_full_label = get_label_info(pub_dep, "label_no_toolchain")
         deps += [ "${dep_full_label}_rust" ]
       }
+    }
+  }
+}
+
+# Declares a bind library.
+#
+# Declare a bind library that may be included by other libraries or bind rules. For more details,
+# refer to //tools/bindc/README.md.
+#
+# Parameters
+#
+#   source (required)
+#     [path]: Path to the library source file.
+#
+#   public_deps (optional)
+#     [list of labels]: List of other bind_library targets included by the library.
+#
+#   source_dep (optional)
+#     [label]: The label of a target that generates the source input.
+#
+#   name (optional)
+#     [string] Name of the library. Defaults to the target's name.
+#
+#   testonly, visibility
+#     Forwarded from invoker.
+#
+template("bind_library") {
+  assert(defined(invoker.source), "Need a source file")
+
+  _bind_library_cpp(target_name) {
+    forward_variables_from(invoker, "*", [ "sdk_category" ])
+  }
+
+  # Rust tools (eg. rust_rlib) are not defined in the Zircon toolchain.
+  if (zircon_toolchain == false) {
+    _bind_library_rust(target_name) {
+      forward_variables_from(invoker, "*", [ "sdk_category" ])
+    }
+  }
+
+  test_data_dir = "${target_out_dir}/${target_name}/test_data/bind-tests/"
+  test_data_target = "${target_name}_test_data"
+
+  copy(test_data_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    sources = [ invoker.source ]
+    outputs = [ "${test_data_dir}/{{source_file_part}}" ]
+    if (defined(invoker.source_dep)) {
+      deps = [ invoker.source_dep ]
+    }
+  }
+
+  group(target_name) {
+    metadata = {
+      sources = [ rebase_path(invoker.source, root_build_dir) ]
+
+      # Adds metadata for test_spec().
+      test_runtime_deps = get_target_outputs(":${test_data_target}")
+
+      # Adds metadata for bind_test().
+      test_sources = rebase_path(get_target_outputs(":${test_data_target}"),
+                                 root_build_dir)
+    }
+
+    deps = [ ":${test_data_target}" ]
+
+    if (defined(invoker.source_dep)) {
+      deps += [ invoker.source_dep ]
+    }
+
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  if (defined(invoker.sdk_category)) {
+    _bind_library_sdk("$target_name") {
+      forward_variables_from(invoker, "*")
     }
   }
 }

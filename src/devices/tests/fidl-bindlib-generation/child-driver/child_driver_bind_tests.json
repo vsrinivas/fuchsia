@@ -1,0 +1,10 @@
+[
+    {
+        "name": "TestDriver",
+        "expected": "match",
+        "device": {
+            "fuchsia.tools.bindc.test.Echo": "fuchsia.tools.bindc.test.Echo.Banjo",
+            "fuchsia.BIND_PROTOCOL": "80"
+        }
+    }
+]

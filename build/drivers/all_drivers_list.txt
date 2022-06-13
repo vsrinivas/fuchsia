@@ -218,6 +218,8 @@
 //src/devices/tests/driver-runtime:parent-driver
 //src/devices/tests/driver-transport:child-drv
 //src/devices/tests/driver-transport:parent-drv
+//src/devices/tests/fidl-bindlib-generation/child-driver:driver
+//src/devices/tests/fidl-bindlib-generation/parent-driver:driver
 //src/devices/tests/fidl-protocol:child-driver
 //src/devices/tests/fidl-protocol:parent-driver
 //src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver-driver
