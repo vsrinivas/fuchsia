@@ -63,7 +63,7 @@ components. In a different shell, run the toy components:
 # setup server
 ffx component create /core/ffx-laboratory:profile_store fuchsia-pkg://fuchsia.com/profile_store_example#meta/laboratory_server.cm
 
-#setup first client
+# setup first client
 ffx component create /core/ffx-laboratory:profile_store/clients:add_olive fuchsia-pkg://fuchsia.com/profile_store_example#meta/add_olive.cm
 
 # see the results of the previous two steps
