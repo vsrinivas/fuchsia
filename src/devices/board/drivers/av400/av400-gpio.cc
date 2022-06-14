@@ -45,6 +45,7 @@ static constexpr pbus_irq_t gpio_irqs[] = {
 static const gpio_pin_t gpio_pins[] = {
     {A5_GPIOB(12)},
     {A5_GPIOB(13)},
+    {A5_GPIOB(9)},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

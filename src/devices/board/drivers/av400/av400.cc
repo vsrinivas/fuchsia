@@ -87,6 +87,11 @@ int Av400::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
+  if ((status = EmmcInit()) != ZX_OK) {
+    zxlogf(ERROR, "EmmcInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+    return status;
+  }
   init_txn_->Reply(status);
   return ZX_OK;
 }

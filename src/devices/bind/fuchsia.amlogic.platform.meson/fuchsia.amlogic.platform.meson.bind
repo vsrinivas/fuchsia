@@ -51,3 +51,8 @@ uint AXG_CLK_ID {
   CLK_DOS_GCLK_VDEC = 0x1002e,
   CLK_AXG_DOS = 0x1002f,
 };
+
+// Values taken from <soc/aml-meson/a5-clk.h>
+uint A5_CLK_ID {
+  CLK_NAND_SEL = 0x4000b,
+};

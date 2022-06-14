@@ -152,6 +152,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:07:2c/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/00:00:29",  // registers device
+      "aml_emmc/aml-sd-emmc/sdmmc/sdmmc-mmc",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

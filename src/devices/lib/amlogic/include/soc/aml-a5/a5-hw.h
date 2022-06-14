@@ -31,6 +31,12 @@
 // Ethernet
 
 // eMMC
+#define A5_EMMC_A_BASE 0xfe088000
+#define A5_EMMC_A_LENGTH 0x2000
+#define A5_EMMC_B_BASE 0xfe08a000
+#define A5_EMMC_B_LENGTH 0x2000
+#define A5_EMMC_C_BASE 0xfe08c000
+#define A5_EMMC_C_LENGTH 0x2000
 
 // NNA
 
@@ -77,6 +83,10 @@
 
 #define A5_I2C_C_IRQ 194  // 162+32
 #define A5_I2C_D_IRQ 195  // 163+32
+
+#define A5_SD_EMMC_A_IRQ 208  // 176+32
+#define A5_SD_EMMC_B_IRQ 209  // 177+32
+#define A5_SD_EMMC_C_IRQ 210  // 178+32
 
 // PWM
 #define A5_PWM_LENGTH 0x2000  // applies to each PWM bank

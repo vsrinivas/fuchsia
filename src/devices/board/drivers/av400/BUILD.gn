@@ -5,6 +5,20 @@
 import("//build/bind/bind.gni")
 import("//build/drivers.gni")
 
+driver_bind_rules("av400-emmc-bind") {
+  rules = "av400-emmc.bind"
+  header_output = "av400-emmc-bind.h"
+  bind_output = "av400-emmc-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 driver_bind_rules("av400-bind") {
   rules = "av400.bind"
   header_output = "av400-bind.h"
@@ -23,6 +37,7 @@ fuchsia_driver("av400-driver") {
   ]
   sources = [
     "av400-clk.cc",
+    "av400-emmc.cc",
     "av400-gpio.cc",
     "av400-i2c.cc",
     "av400-pwm.cc",
@@ -31,11 +46,13 @@ fuchsia_driver("av400-driver") {
   ]
   deps = [
     ":av400-bind",
+    ":av400-emmc-bind_header",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.sdmmc:fuchsia.hardware.sdmmc_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/amlogic",

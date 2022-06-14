@@ -31,6 +31,7 @@ constexpr pbus_mmio_t clk_mmios[] = {
 
 constexpr clock_id_t clock_ids[] = {
     {a5_clk::CLK_ADC},  // PLACEHOLDER.
+    {a5_clk::CLK_NAND_SEL},
 };
 
 const pbus_metadata_t clock_metadata[] = {

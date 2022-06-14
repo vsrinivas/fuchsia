@@ -4,6 +4,7 @@
 
 #include "aml-sdmmc.h"
 
+#include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
@@ -1570,6 +1571,16 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
   if ((status = pdev.GetDeviceInfo(&dev_info)) != ZX_OK) {
     AML_SDMMC_ERROR("Failed to get device info: %d", status);
     return status;
+  }
+
+  // For AV400, the clock source was set to GP0_PLL(1152M) in bootloader,
+  // We should change to xtal(24M), then can divide to 400k for initial stage.
+  if (dev_info.pid == PDEV_PID_AMLOGIC_A5) {
+    ddk::ClockProtocolClient emmc_clk_sel(parent, "clk-emmc-sel");
+    if ((status = emmc_clk_sel.SetInput(AmlSdmmcClock::kCtsOscinClkSrc)) != ZX_OK) {
+      AML_SDMMC_ERROR("Could not SetInput clock for emmc: %d", status);
+      return status;
+    }
   }
 
   // Optional protocol.
