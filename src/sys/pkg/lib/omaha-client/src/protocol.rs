@@ -48,9 +48,18 @@ impl Cohort {
     }
 
     pub fn update_from_omaha(&mut self, omaha_cohort: Self) {
-        // Do not overwrite cohort hint, because Omaha should never send cohort hint back.
-        self.id = omaha_cohort.id;
-        self.name = omaha_cohort.name;
+        // From Omaha spec:
+        // If this attribute is transmitted in the response (even if the value is empty-string),
+        // the client should overwrite the current cohort of this app with the sent value.
+        if omaha_cohort.id != None {
+            self.id = omaha_cohort.id;
+        }
+        if omaha_cohort.hint != None {
+            self.hint = omaha_cohort.hint;
+        }
+        if omaha_cohort.name != None {
+            self.name = omaha_cohort.name;
+        }
     }
 
     /// A validation function to test that a given Cohort hint or name is valid per the Omaha spec:
@@ -82,6 +91,18 @@ mod tests {
         assert_eq!(Some("my_cohort".to_string()), cohort.id);
         assert_eq!(Some("hint".to_string()), cohort.hint);
         assert_eq!(None, cohort.name);
+    }
+
+    #[test]
+    fn test_cohort_update_from_omaha_none() {
+        let mut cohort = Cohort {
+            id: Some("id".to_string()),
+            hint: Some("hint".to_string()),
+            name: Some("name".to_string()),
+        };
+        let expected_cohort = cohort.clone();
+        cohort.update_from_omaha(Cohort::default());
+        assert_eq!(cohort, expected_cohort);
     }
 
     #[test]
