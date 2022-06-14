@@ -55,7 +55,7 @@ class PacketWriter {
   std::vector<uint8_t> GetResizedPacket();
 
   // Gets the unresized packet vector and resets this |PacketWriter|. To
-  // size the size of the written packet, call |position()| before calling this
+  // get the size of the written packet, call |position()| before calling this
   // method.
   std::vector<uint8_t> GetPacket();
 

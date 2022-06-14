@@ -16,9 +16,9 @@ PacketWriter::PacketWriter(std::vector<uint8_t> packet) : packet_(std::move(pack
 PacketWriter::~PacketWriter() {}
 
 std::vector<uint8_t> PacketWriter::GetResizedPacket() {
-  position_ = 0;
   positions_by_label_.clear();
   packet_.resize(position_);
+  position_ = 0;
   return std::move(packet_);
 }
 

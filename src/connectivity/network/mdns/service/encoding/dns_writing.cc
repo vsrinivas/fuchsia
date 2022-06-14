@@ -100,6 +100,10 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataPtr& value) 
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataTxt& value) {
+  if (value.strings_.empty()) {
+    return writer << static_cast<uint8_t>(0);
+  }
+
   for (const auto& string : value.strings_) {
     if (string.size() > std::numeric_limits<uint8_t>::max()) {
       continue;
@@ -109,7 +113,7 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataTxt& value) 
     writer.PutBytes(string.size(), string.data());
   }
 
-  return writer << static_cast<uint8_t>(0);
+  return writer;
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataAaaa& value) {
