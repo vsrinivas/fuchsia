@@ -175,12 +175,18 @@ class WiFiSettings extends StatelessWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
           child: ElevatedButton(
-            onPressed: state.connectToNetwork,
+            onPressed: _connectToNetwork,
             child: Text(Strings.connect),
           ),
         ),
       ],
     );
+  }
+
+  void _connectToNetwork() {
+    state
+      ..connectToNetwork()
+      ..clearTargetNetwork();
   }
 
   Widget _buildPasswordEntryPrompt(BuildContext context) {
@@ -209,7 +215,9 @@ class WiFiSettings extends StatelessWidget {
   }
 
   void _enterPassword(TextEditingController textController) {
-    state.connectToNetwork(textController.text);
+    state
+      ..connectToNetwork(textController.text)
+      ..clearTargetNetwork();
     textController.clear();
   }
 
