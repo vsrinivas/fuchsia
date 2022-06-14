@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventSource, EventSubscription, Purged, Started, Stopped},
+        events::{Destroyed, Event, EventSource, EventSubscription, Started, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -22,15 +22,15 @@ async fn test_stop_timeouts() {
     let event_stream_start =
         event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
     let event_stream_1 = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
         .await
         .unwrap();
     let event_stream_2 = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
         .await
         .unwrap();
     let event_stream_3 = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
         .await
         .unwrap();
     let collection_name = String::from("test-collection");
@@ -79,7 +79,7 @@ async fn test_stop_timeouts() {
                 EventMatcher::ok()
                     .moniker(custom_timeout_child.clone())
                     .stop(Some(ExitStatusMatcher::Clean)),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker(custom_timeout_child.clone()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker(custom_timeout_child.clone()),
             ],
             Ordering::Ordered,
         )
@@ -93,7 +93,7 @@ async fn test_stop_timeouts() {
                 EventMatcher::ok()
                     .moniker(inherited_timeout_child.clone())
                     .stop(Some(ExitStatusMatcher::Clean)),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker(inherited_timeout_child.clone()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker(inherited_timeout_child.clone()),
             ],
             Ordering::Ordered,
         )
@@ -105,7 +105,7 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok().moniker(parent.clone()).stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker(parent.clone()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker(parent.clone()),
             ],
             Ordering::Ordered,
         )

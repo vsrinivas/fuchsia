@@ -11,7 +11,7 @@ use {
 };
 
 // This test is identical to storage_realm_coll, but the storage routing to `storage_user` is
-// invalid. We want to confirm that the child is successfully stopped and purged in the situation
+// invalid. We want to confirm that the child is successfully stopped and destroyed in the situation
 // where component manager is unable to find the storage the component wanted to use.
 
 #[fasync::run_singlethreaded]
@@ -62,10 +62,10 @@ async fn main() {
     // Destroy the child
     realm.destroy_child(&mut child_ref).await.unwrap().unwrap();
 
-    // Expect the dynamic child to be purged
+    // Expect the dynamic child to be destroyed
     EventMatcher::ok()
         .moniker("./coll_bad_route:storage_user")
-        .wait::<Purged>(&mut event_stream)
+        .wait::<Destroyed>(&mut event_stream)
         .await
         .unwrap();
 }

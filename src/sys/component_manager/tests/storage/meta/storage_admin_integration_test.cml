@@ -34,13 +34,13 @@
             from: "parent",
         },
         {
-            event: [ "purged" ],
+            event: [ "destroyed" ],
             from: "framework",
         },
         {
-            event_stream_deprecated: "PurgedStorageEventStream",
+            event_stream_deprecated: "DestroyedStorageEventStream",
             subscriptions: [
-                { event: "purged" },
+                { event: "destroyed" },
             ],
         },
     ],

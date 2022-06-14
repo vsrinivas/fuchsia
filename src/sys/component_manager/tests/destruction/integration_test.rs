@@ -51,21 +51,21 @@ async fn destroy() {
         .all_of(
             vec![
                 EventMatcher::ok()
-                    .r#type(Purged::TYPE)
+                    .r#type(Destroyed::TYPE)
                     .moniker("./collection_realm/coll:parent/trigger_a"),
                 EventMatcher::ok()
-                    .r#type(Purged::TYPE)
+                    .r#type(Destroyed::TYPE)
                     .moniker("./collection_realm/coll:parent/trigger_b"),
             ],
             Ordering::Unordered,
         )
-        .then(EventMatcher::ok().r#type(Purged::TYPE).moniker("./collection_realm/coll:parent"))
+        .then(EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./collection_realm/coll:parent"))
         .subscribe_and_expect(&mut event_source)
         .await
         .unwrap();
     instance.start_component_tree().await.unwrap();
 
-    // Assert the expected lifecycle events. The leaves can be stopped/purged in either order.
+    // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
     expectation.await.unwrap();
 }
 
@@ -97,7 +97,7 @@ async fn destroy_and_recreate() {
     let event_source = EventSource::from_proxy(proxy);
 
     let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Destroyed::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Destroyed::NAME])])
         .await
         .unwrap();
 
@@ -121,7 +121,7 @@ async fn destroy_and_recreate() {
                     .r#type(Started::TYPE)
                     .moniker("./destroy_and_recreate/coll:trigger"),
                 EventMatcher::ok()
-                    .r#type(Purged::TYPE)
+                    .r#type(Destroyed::TYPE)
                     .moniker("./destroy_and_recreate/coll:trigger"),
             ],
             // The previous instance can be purged before/after the new instance is started.

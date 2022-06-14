@@ -138,7 +138,6 @@ impl TestHook {
             "TestHook",
             vec![
                 EventType::Discovered,
-                EventType::Purged,
                 EventType::Destroyed,
                 EventType::Started,
                 EventType::Stopped,

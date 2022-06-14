@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventSource, EventSubscription, Purged, Started, Stopped},
+        events::{Destroyed, Event, EventSource, EventSubscription, Started, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -20,15 +20,15 @@ async fn test_stop_timeouts() {
         event_source.subscribe(vec![EventSubscription::new(vec![Started::NAME])]).await.unwrap();
 
     let event_stream_root = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
         .await
         .unwrap();
     let event_stream_custom = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
         .await
         .unwrap();
     let event_stream_inherited = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME, Destroyed::NAME])])
         .await
         .unwrap();
 
@@ -77,7 +77,7 @@ async fn test_stop_timeouts() {
                 EventMatcher::ok()
                     .moniker(root_moniker.clone())
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker(root_moniker.clone()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker(root_moniker.clone()),
             ],
             Ordering::Ordered,
         )
@@ -91,7 +91,7 @@ async fn test_stop_timeouts() {
                 EventMatcher::ok()
                     .moniker(custom_moniker.clone())
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker(custom_moniker.clone()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker(custom_moniker.clone()),
             ],
             Ordering::Ordered,
         )
@@ -105,7 +105,7 @@ async fn test_stop_timeouts() {
                 EventMatcher::ok()
                     .moniker(inherited_moniker.clone())
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker(inherited_moniker.clone()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker(inherited_moniker.clone()),
             ],
             Ordering::Ordered,
         )

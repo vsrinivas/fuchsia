@@ -190,7 +190,7 @@ async fn multiple_storage_users() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn purged_storage_user() {
+async fn destroyed_storage_user() {
     let (mock, done_signal) = new_data_user_mock("file", "data");
     let builder = RealmBuilder::new().await.unwrap();
     let storage_user =
@@ -228,12 +228,12 @@ async fn purged_storage_user() {
 
     let source = EventSource::new().unwrap();
     let mut event_stream =
-        source.take_static_event_stream("PurgedStorageEventStream").await.unwrap();
+        source.take_static_event_stream("DestroyedStorageEventStream").await.unwrap();
     instance.destroy().await.unwrap();
 
     EventMatcher::ok()
         .moniker(storage_user_moniker)
-        .wait::<Purged>(&mut event_stream)
+        .wait::<Destroyed>(&mut event_stream)
         .await
         .unwrap();
 

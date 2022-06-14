@@ -155,9 +155,6 @@ events!([
     /// A capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
     (CapabilityRouted, capability_routed),
-    /// An instance was destroyed successfully. The instance is stopped and no longer
-    /// exists in the parent's realm.
-    (Purged, purged),
     /// A directory exposed to the framework by a component is available.
     (DirectoryReady, directory_ready),
     /// A component instance was discovered.
@@ -170,7 +167,7 @@ events!([
     /// An instance is about to be started.
     (Started, started),
     /// An instance was stopped successfully.
-    /// This event must occur before Purged.
+    /// This event must occur before Destroyed.
     (Stopped, stopped),
     /// A component is running.
     (Running, running),
@@ -206,7 +203,6 @@ pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityRequested { source_moniker: InstancedAbsoluteMoniker, name: String },
     CapabilityRouted,
-    Purged,
     DirectoryReady { name: String },
     Discovered,
     Destroyed,
@@ -235,7 +231,6 @@ impl fmt::Debug for EventErrorPayload {
                 formatter.field("name", &name).finish()
             }
             EventErrorPayload::CapabilityRouted
-            | EventErrorPayload::Purged
             | EventErrorPayload::Discovered
             | EventErrorPayload::Destroyed
             | EventErrorPayload::Resolved
@@ -296,7 +291,6 @@ pub enum EventPayload {
         // a Mutex.
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
-    Purged,
     DirectoryReady {
         name: String,
         node: fio::NodeProxy,
@@ -382,8 +376,7 @@ impl fmt::Debug for EventPayload {
                 formatter.field("config", config).finish()
             }
             EventPayload::Stopped { status } => formatter.field("status", status).finish(),
-            EventPayload::Purged
-            | EventPayload::Discovered
+            EventPayload::Discovered
             | EventPayload::Unresolved
             | EventPayload::Destroyed
             | EventPayload::Running { .. }
@@ -539,8 +532,7 @@ impl fmt::Display for Event {
                     EventPayload::Stopped { status } => {
                         format!("with status: {}", status.to_string())
                     }
-                    EventPayload::Purged
-                    | EventPayload::Discovered
+                    EventPayload::Discovered
                     | EventPayload::Destroyed
                     | EventPayload::Resolved { .. }
                     | EventPayload::Running { .. }

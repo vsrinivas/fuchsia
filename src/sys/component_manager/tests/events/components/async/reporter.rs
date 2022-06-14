@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventSource, EventSubscription, Purged, Started},
+        events::{Destroyed, Event, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
     },
     fuchsia_component_test::ScopedInstance,
@@ -15,7 +15,7 @@ async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Purged::NAME])])
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Destroyed::NAME])])
         .await
         .unwrap();
 
@@ -37,7 +37,7 @@ async fn main() {
     drop(instances);
 
     for _ in 1..=3 {
-        let event = EventMatcher::ok().expect_match::<Purged>(&mut event_stream).await;
+        let event = EventMatcher::ok().expect_match::<Destroyed>(&mut event_stream).await;
         assert_eq!(event.component_url(), url);
     }
 }

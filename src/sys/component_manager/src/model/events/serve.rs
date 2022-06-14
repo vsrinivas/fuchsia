@@ -253,9 +253,6 @@ fn create_debug_started_payload(
 
 fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult> {
     let result = match event_type {
-        EventType::Purged => {
-            fsys::EventResult::Payload(fsys::EventPayload::Purged(fsys::PurgedPayload::EMPTY))
-        }
         EventType::Discovered => fsys::EventResult::Payload(fsys::EventPayload::Discovered(
             fsys::DiscoveredPayload::EMPTY,
         )),
@@ -278,7 +275,6 @@ fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult
 
 fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventResult> {
     let error_payload = match error.event_type() {
-        EventType::Purged => fsys::EventErrorPayload::Purged(fsys::PurgedError::EMPTY),
         EventType::Discovered => fsys::EventErrorPayload::Discovered(fsys::DiscoveredError::EMPTY),
         EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError::EMPTY),
         EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError::EMPTY),

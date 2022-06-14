@@ -28,47 +28,39 @@ type EventType = strict enum {
     /// The event propagation system is used to supply the capability being requested.
     CAPABILITY_ROUTED = 2;
 
-    /// An instance was purged successfully. The instance is stopped and no longer
-    /// exists in the parent's realm.
-    PURGED = 3;
-
     /// A directory exposed to the framework by a component is available.
-    DIRECTORY_READY = 4;
+    DIRECTORY_READY = 3;
 
     /// A component instance was discovered. This is the first stage in the lifecycle
     /// of components. Dispatched for dynamic children when they're created, for static
     /// children when their parent is resolved, and for the root when the component manager
     /// starts.
-    DISCOVERED = 5;
+    DISCOVERED = 4;
 
-    /// Destruction of an instance has begun. The instance is guranteed to be shut down at
-    /// this point. The instance still exists in the parent's realm but will soon be removed.
-    /// The instance is considered destroyed when this event is received.
-    /// TODO(fxbug.dev/39417): Ensure the instance is stopped before this event.
-    DESTROYED = 6;
+    /// The instance is destroyed and no longer exists.
+    DESTROYED = 5;
 
     /// An instance's declaration was resolved successfully for the first time.
-    RESOLVED = 7;
+    RESOLVED = 6;
 
     /// This instance has started, according to component manager. However, if this is an
     /// executable component, the runner has further work to do to launch the component.
-    STARTED = 8;
+    STARTED = 7;
 
     /// An instance was stopped successfully.
-    /// This event must occur before Purged.
-    STOPPED = 9;
+    STOPPED = 8;
 
     /// If requested, this event is dispatched on subscription and indicates
     /// that the instance has already started and is still running.
-    RUNNING = 10;
+    RUNNING = 9;
 
     /// Similar to STARTED, except the payload will carry an eventpair that the subscriber
     /// could use to defer the launch of the component. This allows, e.g., a debugger to
     /// perform some setup before any processes are created.
-    DEBUG_STARTED = 11;
+    DEBUG_STARTED = 10;
 
     /// An instance was unresolved successfully.
-    UNRESOLVED = 12;
+    UNRESOLVED = 11;
 };
 
 /// Describes the result of a state transition.

@@ -57,10 +57,10 @@ async fn main() {
     // Destroy the child
     realm.destroy_child(&mut child_ref).await.unwrap().unwrap();
 
-    // Expect the dynamic child to be purged
+    // Expect the dynamic child to be destroyed
     EventMatcher::ok()
         .moniker("./coll:storage_user")
-        .wait::<Purged>(&mut event_stream)
+        .wait::<Destroyed>(&mut event_stream)
         .await
         .unwrap();
 

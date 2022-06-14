@@ -39,7 +39,7 @@
         },
         {
             event: [
-                "purged",
+                "destroyed",
                 "stopped",
             ],
             from: "framework",
@@ -48,7 +48,7 @@
             event_stream_deprecated: "TestEventStream",
             subscriptions: [
                 { event: "stopped" },
-                { event: "purged" },
+                { event: "destroyed" },
             ],
         },
         {

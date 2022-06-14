@@ -127,7 +127,6 @@ impl Hub {
             vec![
                 EventType::CapabilityRouted,
                 EventType::Discovered,
-                EventType::Purged,
                 EventType::Destroyed,
                 EventType::Started,
                 EventType::Resolved,
@@ -566,17 +565,6 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_purged_async(
-        &self,
-        target_moniker: &InstancedAbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let mut instance_map = self.instances.lock().await;
-        instance_map
-            .remove(&target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.without_instance_ids()))?;
-        Ok(())
-    }
-
     async fn on_stopped_async(
         &self,
         target_moniker: &InstancedAbsoluteMoniker,
@@ -628,6 +616,10 @@ impl Hub {
             );
             ModelError::remove_entry_error(child_entry)
         })?;
+        instance_map
+            .remove(&target_moniker)
+            .ok_or(ModelError::instance_not_found(target_moniker.without_instance_ids()))?;
+
         Ok(())
     }
 
@@ -672,9 +664,6 @@ impl Hook for Hub {
             Ok(EventPayload::CapabilityRouted { source, capability_provider }) => {
                 self.on_capability_routed_async(source.clone(), capability_provider.clone())
                     .await?;
-            }
-            Ok(EventPayload::Purged) => {
-                self.on_purged_async(target_moniker).await?;
             }
             Ok(EventPayload::Discovered) => {
                 self.on_discovered_async(target_moniker, event.component_url.to_string()).await?;

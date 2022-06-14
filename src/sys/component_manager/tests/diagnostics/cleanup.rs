@@ -44,7 +44,7 @@ async fn main() {
 
     let event_source = EventSource::new().expect("conenct to event source");
     let event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Purged::NAME])]).await.unwrap();
+        event_source.subscribe(vec![EventSubscription::new(vec![Destroyed::NAME])]).await.unwrap();
 
     // Destroy the parent component.
     let mut child_ref =
@@ -58,8 +58,8 @@ async fn main() {
     EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::default().r#type(Purged::TYPE).moniker("./coll:parent/child"),
-                EventMatcher::default().r#type(Purged::TYPE).moniker("./coll:parent"),
+                EventMatcher::default().r#type(Destroyed::TYPE).moniker("./coll:parent/child"),
+                EventMatcher::default().r#type(Destroyed::TYPE).moniker("./coll:parent"),
             ],
             Ordering::Unordered,
         )

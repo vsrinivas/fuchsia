@@ -26,7 +26,7 @@ impl EventLogger {
                 EventType::DirectoryReady,
                 EventType::CapabilityRequested,
                 EventType::CapabilityRouted,
-                EventType::Purged,
+                EventType::Destroyed,
                 EventType::Started,
                 EventType::Stopped,
             ],

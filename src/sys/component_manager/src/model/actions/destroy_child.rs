@@ -86,11 +86,8 @@ async fn do_destroy_child(
             }
         }
 
-        // TODO(fxbug.dev/100652): Replace Purged event with Destroyed
+        // Send the Destroyed event for the component
         let event = Event::new(&child, Ok(EventPayload::Destroyed));
-        component.hooks.dispatch(&event).await?;
-        // Send the Purged event for the component
-        let event = Event::new(&child, Ok(EventPayload::Purged));
         component.hooks.dispatch(&event).await?;
     }
 

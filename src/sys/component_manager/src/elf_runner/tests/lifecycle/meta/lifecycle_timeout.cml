@@ -22,7 +22,7 @@
     use: [
         {
             event: [
-                "purged",
+                "destroyed",
                 "started",
                 "stopped",
             ],

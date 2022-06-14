@@ -25,7 +25,6 @@ pub fn event_name(event_type: &fsys::EventType) -> String {
     match event_type {
         fsys::EventType::CapabilityRequested => "capability_requested",
         fsys::EventType::CapabilityRouted => "capability_routed",
-        fsys::EventType::Purged => "purged",
         fsys::EventType::DirectoryReady => "directory_ready",
         fsys::EventType::Discovered => "discovered",
         fsys::EventType::Destroyed => "destroyed",
@@ -429,7 +428,6 @@ macro_rules! create_event {
 }
 
 // To create a class for an event, use the above macro here.
-create_event!(Purged, purged);
 create_event!(Discovered, discovered);
 create_event!(Destroyed, destroyed);
 create_event!(Resolved, resolved);
