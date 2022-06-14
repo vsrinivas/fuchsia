@@ -362,7 +362,8 @@ needs may call for.
 
 The result union, which today has two variants (ordinal `1` for success
 response, ordinal `2` for error response) is expanded to have a third variant,
-ordinal `3`, to carry a `zx.status` indicating "transport level" errors.
+ordinal `3`, which will carry a new enum `fidl.TransportError` indicating
+"transport level" errors.
 
 As an example, the interaction:
 
@@ -378,7 +379,7 @@ Has a response payload:
 type result = union {
     1: response struct { pong Pong; };
     2: err uint32;
-    3: transport_err zx.status;
+    3: transport_err fidl.TransportError;
 };
 ```
 
@@ -399,22 +400,43 @@ Some precisions:
   "transport errors" is the set of all the kinds of errors which can occur in
   the framework (which includes many layers of software).
 
-* We are choosing the type `zx.status` since bindings today expose framework
-  level errors that way (e.g. a `zx_channel_write` failing). While we could
-  define a specific enum for the communication between peers, we would then have
-  to convert these enum into a `zx.status`.
+* We define the type `fidl.TransportErr` to be a strict `int32` enum with a
+  single variant, `UNKNOWN_METHOD`. The value for this variant is the same as
+  `ZX_ERR_NOT_SUPPORTED`; that is -2:
 
-  Another design point would be to change the bindings to expose a "FIDL errors
-  enum" instead of `zx.status`, but that is a much larger change.
+  ```fidl
+  type TransportErr = strict enum : int32 {
+    UNKNOWN_METHOD = -2;
+  };
+  ```
 
-* Note that this design uses only `ZX_ERR_NOT_SUPPORTED` in the `transport_err`
-  variant.
+  When presenting transport errors to the client, if the binding provides a way
+  to get a `zx.status` for an unknown interaction `transport_err`, the binding
+  is required to use `ZX_ERR_NOT_SUPPORTED`. However, bindings are not required
+  to map unknown interaction `transport_err` to `zx.status` if that does not fit
+  how they surface errors to the client.
+
+  An alternative approach would be to just use `zx.status`, and always use
+  `ZX_ERR_NOT_SUPPORTED` as the value to indicate an unknown method, but that
+  has two significant downsides:
+
+  * It requires a dependency on library `zx`, which may not be directly used by
+    many libraries. This makes it difficult to define the result union in the
+    IR, as we either need to auto-insert a dependency on `zx` or downgrade the
+    type to `int32` in the IR but have generated bindings treat it as
+    `zx.status`.
+
+  * It does not define how bindings should handle `transport_err` values which
+    are not `ZX_ERR_NOT_SUPPORTED`. By specifying that the type is a strict
+    enum, we clearly define the semantics for bindings which receive a
+    `transport_err` value which is not recognized; it is then treated as a
+    decode error.
 
 * We refer to "the result union" singular for simplicity when in fact we
   describe a class of union types which share a common structure, i.e. three
   ordinals, first variant is unconstrained (the success type can be anything),
   second variant must be `int32`, `uint32`, or an enum thereof, and the third
-  variant must be a `zx.status`.
+  variant must be a `fidl.transport_err`.
 
 ### Changes to the JSON IR
 
@@ -437,21 +459,27 @@ terminate the communication.
 
 **At rest concerns.**
 
-* In the case of flexible interactions, the result union should be presented
-  with all three variants. The result union may be presented with success or
-  error state, where an application error is folded into `zx.status` as
-  `ZX_ERR_INTERNAL`, i.e. if it is more ergonomic to present a two
-  state result object to applications, one branch is the success type, and the
-  other is `zx.status`. If `zx.status` indicates an application error, bindings
-  must provide an unwrapping mechanism to retrieve this application error.
-* Today, multiple bindings avoid folding, and prefer presenting errors
-  distinctly. For instance, the high-level C++ bindings expose a
-  `fit::result<Response, ApplicationError>`, and send transport errors to a
-  separate user-registered error handler. Rust exposes a
-  `Result<Result<Response, ApplicationError>, fidl::Error>`, where `fidl::Error`
-  is a custom error enum. However, from a specification standpoint, we prefer
-  keeping the door opened to this eventuality to give the choice to binding
-  authors.
+* In the case of flexible interactions, the bindings should present the
+  `transport_err` variant of the result union to the client through the same
+  mechanism that they use to present other transport-level errors such as errors
+  from [`zx_channel_write`] or errors during decoding. The `err` and `response`
+  variants of the result union should be presented to the client the same way
+  that the bindings would present those types if the method was declared as
+  strict.
+
+  * For example, in the Rust bindings, `Result<T, fidl::Error>` is used to
+    present other transport-level errors from calls, so `transport_err` should
+    be folded into `fidl::Error`. Similarly, in the low-level C++ bindings,
+    `fitx::result<fidl::Error>` is used to convey transport-level errors, so
+    `transport_err` should be merged into `fidl::Error`.  The `response` and
+    `err` variants would be conveyed the same way as for a strict method. In
+    Rust that would mean `Result<Result<T, ApplicationError>, fidl::Error>` for
+    a method with error syntax, or `Result<T, fidl::Error>` for a method without
+    error syntax, with the `response` value being `T` and the `err` value being
+    `ApplicationError`.
+
+  * For bindings which fold errors into a `zx.status`, the `transport_err` value
+    `UNKNOWN_METHOD` must be converted to `ZX_ERR_NOT_SUPPORTED`.
 
 **Dynamic concerns.**
 
@@ -485,7 +513,7 @@ terminate the communication.
         it is recommended for its use to be explicit.
       * If the interaction is two way, bindings must respond to the request by
         sending a result union with the third variant selected, and a
-        `zx.status` of `ZX_ERR_NOT_SUPPORTED`.
+        `fidl.TransportErr` of `UNKNOWN_METHOD`.
       * Bindings MAY choose to offer the option to the application to close the
         channel when handling unknown interactions.
 
@@ -508,11 +536,9 @@ All changes can be soft transitioned. Modifiers can
 #### Source compatibility
 
 Changing an interaction from `strict` to `flexible`, or `flexible` to `strict`
-is not source compatible. Bindings are encouraged to specialize the API they
-offer depending on the strictness of interactions. In particular, a flexible two
-way interaction (a "flexible method call") may present a specialized result
-union with application errors folded into a `zx.status` error branch, along with
-unwrapping ability to retrieve the application error payload.
+may be source compatible. Bindings are encouraged to offer the same API
+regardless of the strictness of interactions, by folding existing transport
+error apis.
 
 Changing a protocol mode (e.g. from `closed` to `ajar`) is not
 source compatible. Bindings are encouraged to specialize the API they offer
