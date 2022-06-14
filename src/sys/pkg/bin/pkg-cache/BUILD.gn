@@ -42,7 +42,6 @@ rustc_library("lib") {
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/package-directory",
-    "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/system-image",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",

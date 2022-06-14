@@ -26,7 +26,6 @@ use {
     fuchsia_trace as trace, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::{prelude::*, select_biased, stream::FuturesUnordered},
-    pkgfs::install::BlobKind,
     std::{
         collections::HashSet,
         sync::{
@@ -361,6 +360,12 @@ enum ServeNeededBlobsError {
 
     #[error("while updating package index with meta far info")]
     FulfillMetaFar(#[from] FulfillMetaFarError),
+}
+
+#[derive(Debug)]
+enum BlobKind {
+    Package,
+    Data,
 }
 
 #[derive(Debug)]
@@ -2292,7 +2297,7 @@ mod serve_write_blob_tests {
         o
     }
 
-    /// Verify that closing the proxy results in the pkgfs backing file being explicitly closed.
+    /// Verify that closing the proxy results in the blobfs backing file being explicitly closed.
     async fn verify_inner_blob_closes(proxy: fio::FileProxy, mut stream: fio::FileRequestStream) {
         drop(proxy);
         serve_fidl_stream!(stream, {
@@ -2303,7 +2308,7 @@ mod serve_write_blob_tests {
         .await;
     }
 
-    /// Verify that an explicit close() request is proxied through to the pkgfs backing file.
+    /// Verify that an explicit close() request is proxied through to the blobfs backing file.
     async fn verify_explicit_close(proxy: fio::FileProxy, mut stream: fio::FileRequestStream) {
         let ((), ()) = future::join(
             serve_fidl_stream!(stream, {
