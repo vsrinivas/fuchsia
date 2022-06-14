@@ -95,7 +95,7 @@ struct InternalSavedNetworkData {
 struct InternalBss<'a> {
     saved_network_info: InternalSavedNetworkData,
     scanned_bss: &'a types::Bss,
-    scanned_security_type_for_logging: types::SecurityTypeDetailed,
+    security_type_detailed: types::SecurityTypeDetailed,
     multiple_bss_candidates: bool,
     hasher: WlanHasher,
 }
@@ -174,7 +174,7 @@ impl InternalBss<'_> {
     }
 
     fn scanned_security_type_to_string(&self) -> String {
-        match self.scanned_security_type_for_logging {
+        match self.security_type_detailed {
             types::SecurityTypeDetailed::Unknown => "unknown",
             types::SecurityTypeDetailed::Open => "open",
             types::SecurityTypeDetailed::Wep => "WEP",
@@ -228,7 +228,7 @@ impl<'a> WriteInspect for InternalBss<'a> {
             rssi: self.scanned_bss.rssi,
             score: self.score(),
             security_type_saved: self.saved_security_type_to_string(),
-            security_type_scanned: format!("{}", wlan_common::bss::Protection::from(self.scanned_security_type_for_logging)),
+            security_type_scanned: format!("{}", wlan_common::bss::Protection::from(self.security_type_detailed)),
             channel: InspectWlanChan(&self.scanned_bss.channel.into()),
             compatible: self.scanned_bss.compatible,
             recent_failure_count: self.recent_failure_count(),
@@ -393,14 +393,16 @@ impl NetworkSelector {
                 let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
                 let result =
                     select_best_connection_candidate(networks, &ignore_list, &mut inspect_node)
-                        .map(|(candidate, _, _)| {
+                        .map(|(mut candidate, _, _)| {
                             // Strip out the information about passive vs active scan, because we can't know
                             // if this network would have been observed in a passive scan (since we never
                             // performed a passive scan).
-                            types::ConnectionCandidate {
-                                observed_in_passive_scan: None,
-                                ..candidate
+                            if let Some(types::ScannedCandidate { ref mut observation, .. }) =
+                                candidate.scanned
+                            {
+                                *observation = types::ScanObservation::Unknown;
                             }
+                            candidate
                         });
                 (result, num_candidates)
             }
@@ -433,7 +435,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
                 merged_networks.push(InternalBss {
                     scanned_bss: bss,
                     multiple_bss_candidates,
-                    scanned_security_type_for_logging: scan_result.security_type_detailed,
+                    security_type_detailed: scan_result.security_type_detailed,
                     saved_network_info: InternalSavedNetworkData {
                         network_id: types::NetworkIdentifier {
                             ssid: saved_config.ssid.clone(),
@@ -510,7 +512,7 @@ fn select_best_connection_candidate<'a>(
             }
             true
         })
-        .max_by(|bss_a, bss_b| bss_a.score().partial_cmp(&bss_b.score()).unwrap());
+        .max_by_key(|bss| bss.score());
 
     // Log the candidates into Inspect
     inspect_log!(inspect_node.get_mut(), candidates: InspectList(&bss_list), selected?: selected);
@@ -522,9 +524,12 @@ fn select_best_connection_candidate<'a>(
             types::ConnectionCandidate {
                 network: bss.saved_network_info.network_id.clone(),
                 credential: bss.saved_network_info.credential.clone(),
-                observed_in_passive_scan: Some(bss.scanned_bss.observed_in_passive_scan),
-                bss_description: Some(bss.scanned_bss.bss_description.clone()),
-                multiple_bss_candidates: Some(bss.multiple_bss_candidates),
+                scanned: Some(types::ScannedCandidate {
+                    bss_description: bss.scanned_bss.bss_description.clone(),
+                    observation: bss.scanned_bss.observation,
+                    has_multiple_bss_candidates: bss.multiple_bss_candidates,
+                    security_type_detailed: bss.security_type_detailed,
+                }),
             },
             bss.scanned_bss.channel,
             bss.scanned_bss.bssid,
@@ -535,7 +540,7 @@ fn select_best_connection_candidate<'a>(
 /// If a BSS was discovered via a passive scan, we need to perform an active scan on it to discover
 /// all the information potentially needed by the SME layer.
 async fn augment_bss_with_active_scan(
-    selected_network: types::ConnectionCandidate,
+    mut selected_network: types::ConnectionCandidate,
     channel: types::WlanChan,
     bssid: types::Bssid,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -548,15 +553,23 @@ async fn augment_bss_with_active_scan(
         bssid: types::Bssid,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     ) -> Result<fidl_internal::BssDescription, ()> {
-        // Make sure the scan is needed
-        match selected_network.observed_in_passive_scan {
-            Some(true) => info!("Performing directed active scan on selected network"),
-            Some(false) => {
+        // Ensure that a scan is necessary. If this expression returns `Unknown`, then either the
+        // network has been scanned but the observation is unknown or the network has not be
+        // scanned at all.
+        let observation = selected_network
+            .scanned
+            .as_ref()
+            .map_or(types::ScanObservation::Unknown, |scanned| scanned.observation);
+        match observation {
+            types::ScanObservation::Passive => {
+                info!("Performing directed active scan on selected network")
+            }
+            types::ScanObservation::Active => {
                 debug!("Network already discovered via active scan.");
                 return Err(());
             }
-            None => {
-                error!("Unexpected 'None' value for 'observed_in_passive_scan'.");
+            types::ScanObservation::Unknown => {
+                error!("Unexpected `Unknown` variant of network `observation`.");
                 return Err(());
             }
         }
@@ -600,8 +613,11 @@ async fn augment_bss_with_active_scan(
     }
 
     match get_enhanced_bss_description(&selected_network, channel, bssid, iface_manager).await {
-        Ok(new_bss_desc) => {
-            types::ConnectionCandidate { bss_description: Some(new_bss_desc), ..selected_network }
+        Ok(new_bss_description) => {
+            let combined_scanned = selected_network.scanned.take().map(|original_scanned| {
+                types::ScannedCandidate { bss_description: new_bss_description, ..original_scanned }
+            });
+            types::ConnectionCandidate { scanned: combined_scanned, ..selected_network }
         }
         Err(()) => selected_network,
     }
@@ -642,7 +658,10 @@ fn record_metrics_on_scan(
         cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, num_bss);
 
         // Check if the network was found via active scan.
-        if bsss.iter().any(|bss| bss.scanned_bss.observed_in_passive_scan == false) {
+        if bsss
+            .iter()
+            .any(|bss| matches!(bss.scanned_bss.observation, types::ScanObservation::Active))
+        {
             num_actively_scanned_networks += 1;
         };
     }
@@ -1011,28 +1030,28 @@ mod tests {
         };
         let expected_result = vec![
             InternalBss {
-                scanned_security_type_for_logging: test_security_1,
+                security_type_detailed: test_security_1,
                 saved_network_info: expected_internal_data_1.clone(),
                 scanned_bss: &mock_scan_results[0].entries[0],
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
             InternalBss {
-                scanned_security_type_for_logging: test_security_1,
+                security_type_detailed: test_security_1,
                 saved_network_info: expected_internal_data_1.clone(),
                 scanned_bss: &mock_scan_results[0].entries[1],
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
             InternalBss {
-                scanned_security_type_for_logging: test_security_1,
+                security_type_detailed: test_security_1,
                 saved_network_info: expected_internal_data_1,
                 scanned_bss: &mock_scan_results[0].entries[2],
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
             InternalBss {
-                scanned_security_type_for_logging: test_security_2,
+                security_type_detailed: test_security_2,
                 saved_network_info: InternalSavedNetworkData {
                     network_id: test_id_2.clone(),
                     credential: credential_2.clone(),
@@ -1085,7 +1104,7 @@ mod tests {
             security_type: types::SecurityType::Wpa3,
         };
         let internal_bss = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: network_id,
                 credential: Credential::None,
@@ -1116,14 +1135,14 @@ mod tests {
         internal_data.past_connections.add(bss_worse.bssid, short_uptime_data);
         internal_data.past_connections.add(bss_better.bssid, okay_uptime_data);
         let bss_worse = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
             scanned_bss: &bss_worse,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
             scanned_bss: &bss_better,
             multiple_bss_candidates: true,
@@ -1145,14 +1164,14 @@ mod tests {
         failures.push(connect_failure_with_bssid(bss_better.bssid));
         internal_data.recent_failures = failures;
         let bss_worse = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
             scanned_bss: &bss_worse,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
             scanned_bss: &bss_better,
             multiple_bss_candidates: true,
@@ -1175,14 +1194,14 @@ mod tests {
         // stronger BSS.
         internal_data.recent_failures = vec![connect_failure_with_bssid(bss_better.bssid); 2];
         let bss_worse = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
             scanned_bss: &bss_worse,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
             scanned_bss: &bss_better,
             multiple_bss_candidates: false,
@@ -1211,14 +1230,14 @@ mod tests {
         internal_data.recent_failures = failures;
 
         let bss_worse = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
             scanned_bss: &bss_worse,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
             scanned_bss: &bss_better,
             multiple_bss_candidates: true,
@@ -1247,7 +1266,7 @@ mod tests {
             internal_data.past_connections.add(bss.bssid, data);
         }
         let internal_bss = InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
             scanned_bss: &bss,
             multiple_bss_candidates: true,
@@ -1288,7 +1307,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1308,7 +1327,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1328,7 +1347,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
@@ -1348,9 +1367,12 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss_description: Some(bss_1.bss_description.clone()),
-                    observed_in_passive_scan: Some(bss_1.observed_in_passive_scan),
-                    multiple_bss_candidates: Some(true),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_1.bss_description.clone(),
+                        observation: bss_1.observation,
+                        has_multiple_bss_candidates: true,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                    }),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1371,11 +1393,12 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss_description: Some(networks[2].scanned_bss.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[2].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: networks[2].scanned_bss.bss_description.clone(),
+                        observation: networks[2].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                    }),
                 },
                 networks[2].scanned_bss.channel,
                 networks[2].scanned_bss.bssid
@@ -1414,8 +1437,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging:
-                types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1435,8 +1457,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging:
-                types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
@@ -1456,11 +1477,13 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss_description: Some(bss_1.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[0].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_1.bss_description.clone(),
+                        observation: networks[0].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed:
+                            types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+                    }),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1481,11 +1504,13 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss_description: Some(bss_2.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[1].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_2.bss_description.clone(),
+                        observation: networks[1].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed:
+                            types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+                    }),
                 },
                 bss_2.channel,
                 bss_2.bssid
@@ -1503,11 +1528,13 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss_description: Some(bss_1.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[0].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_1.bss_description.clone(),
+                        observation: networks[0].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed:
+                            types::SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly,
+                    }),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1546,7 +1573,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1566,7 +1593,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1586,7 +1613,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa1,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
@@ -1606,11 +1633,12 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss_description: Some(bss_3.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[2].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_3.bss_description.clone(),
+                        observation: networks[2].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa1,
+                    }),
                 },
                 bss_3.channel,
                 bss_3.bssid
@@ -1630,11 +1658,12 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss_description: Some(networks[0].scanned_bss.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[0].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(true),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: networks[0].scanned_bss.bss_description.clone(),
+                        observation: networks[0].scanned_bss.observation,
+                        has_multiple_bss_candidates: true,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                    }),
                 },
                 networks[0].scanned_bss.channel,
                 networks[0].scanned_bss.bssid
@@ -1668,7 +1697,7 @@ mod tests {
 
         let bss_1 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1683,7 +1712,7 @@ mod tests {
 
         let bss_2 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
@@ -1703,11 +1732,12 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss_description: Some(bss_2.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[1].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_2.bss_description.clone(),
+                        observation: networks[1].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                    }),
                 },
                 bss_2.channel,
                 bss_2.bssid
@@ -1725,11 +1755,12 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss_description: Some(bss_1.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[0].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_1.bss_description.clone(),
+                        observation: networks[0].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                    }),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1768,7 +1799,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1788,7 +1819,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
@@ -1808,7 +1839,7 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
@@ -1828,11 +1859,12 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss_description: Some(bss_3.bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        networks[2].scanned_bss.observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: bss_3.bss_description.clone(),
+                        observation: networks[2].scanned_bss.observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+                    }),
                 },
                 bss_3.channel,
                 bss_3.bssid
@@ -1861,7 +1893,7 @@ mod tests {
                         rssi: i64::from(networks[2].scanned_bss.rssi),
                         score: i64::from(networks[2].score()),
                         security_type_saved: networks[2].saved_security_type_to_string(),
-                        security_type_scanned: format!("{}", wlan_common::bss::Protection::from(networks[2].scanned_security_type_for_logging)),
+                        security_type_scanned: format!("{}", wlan_common::bss::Protection::from(networks[2].security_type_detailed)),
                         channel: {
                             cbw: inspect::testing::AnyProperty,
                             primary: u64::from(fidl_channel.primary),
@@ -2029,9 +2061,12 @@ mod tests {
         let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            bss_description: Some(bss_1.bss_description.clone()),
-            observed_in_passive_scan: Some(false), // was actively scanned
-            multiple_bss_candidates: Some(false),
+            scanned: Some(types::ScannedCandidate {
+                bss_description: bss_1.bss_description.clone(),
+                observation: types::ScanObservation::Active,
+                has_multiple_bss_candidates: false,
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+            }),
         };
 
         let fut = augment_bss_with_active_scan(
@@ -2067,9 +2102,12 @@ mod tests {
         let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            bss_description: Some(bss_1.bss_description.clone()),
-            observed_in_passive_scan: Some(true), // was passively scanned
-            multiple_bss_candidates: Some(true),
+            scanned: Some(types::ScannedCandidate {
+                bss_description: bss_1.bss_description.clone(),
+                observation: types::ScanObservation::Passive,
+                has_multiple_bss_candidates: true,
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+            }),
         };
 
         let fut = augment_bss_with_active_scan(
@@ -2127,13 +2165,16 @@ mod tests {
         assert_eq!(
             exec.run_singlethreaded(fut),
             types::ConnectionCandidate {
-                bss_description: Some(new_bss_desc),
-                // observed_in_passive_scan should still be true, since the network was found in a
-                // passive scan prior to the directed active scan augmentation.
-                observed_in_passive_scan: Some(true),
-                // multiple_bss_candidates should still be true, even if only one bss was found in
-                // the active scan, because we had found multiple BSSs prior to the active scan.
-                multiple_bss_candidates: Some(true),
+                scanned: Some(types::ScannedCandidate {
+                    bss_description: new_bss_desc,
+                    // The network was observed in a passive scan prior to the directed active
+                    // scan, so this should remain `Passive`.
+                    observation: types::ScanObservation::Passive,
+                    // Multiple BSSes were observed prior to the directed active scan, so this
+                    // field should remain `true`.
+                    has_multiple_bss_candidates: true,
+                    security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                }),
                 ..connect_req
             }
         );
@@ -2153,7 +2194,7 @@ mod tests {
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let bss_desc1 = random_fidl_bss_description!(
-            Wpa3Enterprise,
+            Wpa3,
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
@@ -2161,7 +2202,7 @@ mod tests {
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
         let bss_desc1_active = random_fidl_bss_description!(
-            Wpa3Enterprise,
+            Wpa3,
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
@@ -2280,9 +2321,12 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                bss_description: Some(bss_desc1_active.clone()),
-                observed_in_passive_scan: Some(true),
-                multiple_bss_candidates: Some(false)
+                scanned: Some(types::ScannedCandidate {
+                    bss_description: bss_desc1_active.clone(),
+                    observation: types::ScanObservation::Passive,
+                    has_multiple_bss_candidates: false,
+                    security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                }),
             })
         );
 
@@ -2338,9 +2382,12 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
-                bss_description: Some(bss_desc2_active.clone()),
-                observed_in_passive_scan: Some(true),
-                multiple_bss_candidates: Some(false)
+                scanned: Some(types::ScannedCandidate {
+                    bss_description: bss_desc2_active.clone(),
+                    observation: types::ScanObservation::Passive,
+                    has_multiple_bss_candidates: false,
+                    security_type_detailed: types::SecurityTypeDetailed::Wpa1,
+                }),
             })
         );
 
@@ -2455,7 +2502,7 @@ mod tests {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
             entries: vec![types::Bss {
                 compatible: true,
-                observed_in_passive_scan: false, // mark this as active, to avoid an additional scan
+                observation: types::ScanObservation::Active, // mark this as active, to avoid an additional scan
                 ..generate_random_bss()
             }],
             compatibility: types::Compatibility::Supported,
@@ -2482,11 +2529,12 @@ mod tests {
                     // The network ID should match network config for recording connect results.
                     network: wpa_network_id.clone(),
                     credential,
-                    bss_description: Some(wpa2_scan_result.entries[0].bss_description.clone()),
-                    observed_in_passive_scan: Some(
-                        wpa2_scan_result.entries[0].observed_in_passive_scan
-                    ),
-                    multiple_bss_candidates: Some(false),
+                    scanned: Some(types::ScannedCandidate {
+                        bss_description: wpa2_scan_result.entries[0].bss_description.clone(),
+                        observation: wpa2_scan_result.entries[0].observation,
+                        has_multiple_bss_candidates: false,
+                        security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
+                    }),
                 };
                 assert_eq!(connection_candidate, expected_candidate);
             }
@@ -2582,11 +2630,14 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                bss_description: Some(bss_desc_1),
-                // This code path can't know if the network would have been observed in a passive
-                // scan, since it never performs a passive scan.
-                observed_in_passive_scan: None,
-                multiple_bss_candidates: Some(false),
+                scanned: Some(types::ScannedCandidate {
+                    bss_description: bss_desc_1,
+                    // A passive scan is never performed in the tested code path, so the
+                    // observation mode cannot be known and this field should be `Unknown`.
+                    observation: types::ScanObservation::Unknown,
+                    has_multiple_bss_candidates: false,
+                    security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                }),
             })
         );
 
@@ -2681,18 +2732,20 @@ mod tests {
             recent_failures: Vec::new(),
             past_connections: PastConnectionsByBssid::new(),
         };
-        let test_bss_1 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
+        let test_bss_1 =
+            types::Bss { observation: types::ScanObservation::Passive, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
             scanned_bss: &test_bss_1,
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
 
-        let test_bss_2 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
+        let test_bss_2 =
+            types::Bss { observation: types::ScanObservation::Passive, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
             scanned_bss: &test_bss_2,
             multiple_bss_candidates: true,
@@ -2700,18 +2753,20 @@ mod tests {
         });
 
         // mark one BSS as found in active scan
-        let test_bss_3 = types::Bss { observed_in_passive_scan: false, ..generate_random_bss() };
+        let test_bss_3 =
+            types::Bss { observation: types::ScanObservation::Active, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
             scanned_bss: &test_bss_3,
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
 
-        let test_bss_4 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
+        let test_bss_4 =
+            types::Bss { observation: types::ScanObservation::Passive, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
-            scanned_security_type_for_logging: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
+            security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: Credential::Password("bar_pass".as_bytes().to_vec()),

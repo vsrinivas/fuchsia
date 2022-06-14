@@ -83,6 +83,7 @@ pub struct StateMachineMetadata {
 
 async fn create_client_state_machine(
     iface_id: u16,
+    has_wpa3_support: bool,
     dev_svc_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
@@ -116,6 +117,7 @@ async fn create_client_state_machine(
 
     let fut = client_fsm::serve(
         iface_id,
+        has_wpa3_support,
         sme_proxy,
         event_stream,
         receiver,
@@ -452,6 +454,7 @@ impl IfaceManagerService {
                 // Create the state machine and controller.
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
+                    wpa3_supported(client_iface.security_support),
                     &mut self.dev_svc_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
@@ -541,6 +544,7 @@ impl IfaceManagerService {
                 let (sender, _) = oneshot::channel();
                 let (new_client, fut) = create_client_state_machine(
                     client.iface_id,
+                    wpa3_supported(client.security_support),
                     &mut self.dev_svc_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
@@ -587,6 +591,7 @@ impl IfaceManagerService {
                 // monitor loop that the interface needs attention.
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
+                    wpa3_supported(client_iface.security_support),
                     &mut self.dev_svc_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
@@ -1395,9 +1400,12 @@ mod tests {
             target: client_types::ConnectionCandidate {
                 network,
                 credential,
-                observed_in_passive_scan: Some(true),
-                bss_description: Some(random_fidl_bss_description!(Wpa1, ssid: ssid.clone())),
-                multiple_bss_candidates: Some(true),
+                scanned: Some(client_types::ScannedCandidate {
+                    bss_description: random_fidl_bss_description!(Wpa1, ssid: ssid.clone()),
+                    observation: client_types::ScanObservation::Passive,
+                    has_multiple_bss_candidates: true,
+                    security_type_detailed: client_types::SecurityTypeDetailed::Wpa1,
+                }),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         }
@@ -2201,12 +2209,13 @@ mod tests {
                     target: client_types::ConnectionCandidate {
                         network: network_id.clone().into(),
                         credential,
-                        observed_in_passive_scan: Some(true),
-                        bss_description: Some(random_fidl_bss_description!(
-                            Wpa3,
-                            ssid: TEST_SSID.clone()
-                        )),
-                        multiple_bss_candidates: Some(true),
+                        scanned: Some(client_types::ScannedCandidate {
+                            bss_description: random_fidl_bss_description!(Wpa3, ssid: TEST_SSID.clone()),
+                            observation: client_types::ScanObservation::Passive,
+                            has_multiple_bss_candidates: true,
+                            security_type_detailed:
+                                client_types::SecurityTypeDetailed::Wpa3Personal,
+                        }),
                     },
                     reason: client_types::ConnectReason::FidlConnectRequest,
                 };
@@ -2302,9 +2311,12 @@ mod tests {
             target: client_types::ConnectionCandidate {
                 network,
                 credential,
-                observed_in_passive_scan: Some(true),
-                bss_description: Some(random_fidl_bss_description!(Wpa3, ssid: ssid.clone())),
-                multiple_bss_candidates: None,
+                scanned: Some(client_types::ScannedCandidate {
+                    bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
+                    observation: client_types::ScanObservation::Passive,
+                    has_multiple_bss_candidates: false,
+                    security_type_detailed: client_types::SecurityTypeDetailed::Wpa3Personal,
+                }),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };
@@ -2331,9 +2343,12 @@ mod tests {
             target: client_types::ConnectionCandidate {
                 network: network.clone(),
                 credential,
-                observed_in_passive_scan: Some(true),
-                bss_description: Some(random_fidl_bss_description!(Wpa3, ssid: ssid.clone())),
-                multiple_bss_candidates: Some(true),
+                scanned: Some(client_types::ScannedCandidate {
+                    bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
+                    observation: client_types::ScanObservation::Passive,
+                    has_multiple_bss_candidates: true,
+                    security_type_detailed: client_types::SecurityTypeDetailed::Wpa3Personal,
+                }),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };
@@ -5329,12 +5344,13 @@ mod tests {
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let network = Some(client_types::ConnectionCandidate {
             network: network_id.into(),
-            credential: credential,
-            bss_description: Some(
-                random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
-            ),
-            observed_in_passive_scan: Some(true),
-            multiple_bss_candidates: Some(true),
+            credential,
+            scanned: Some(client_types::ScannedCandidate {
+                bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
+                observation: client_types::ScanObservation::Passive,
+                has_multiple_bss_candidates: true,
+                security_type_detailed: client_types::SecurityTypeDetailed::Open,
+            }),
         });
 
         {
@@ -5350,7 +5366,6 @@ mod tests {
 
             // Expect a client SME proxy request
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
             let mut device_service_fut = test_values.device_service_stream.into_future();
             assert_variant!(
                 poll_device_service_req(&mut exec, &mut device_service_fut),
@@ -5401,12 +5416,13 @@ mod tests {
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let network = Some(client_types::ConnectionCandidate {
             network: network_id.into(),
-            credential: credential,
-            bss_description: Some(
-                random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
-            ),
-            observed_in_passive_scan: Some(true),
-            multiple_bss_candidates: Some(true),
+            credential,
+            scanned: Some(client_types::ScannedCandidate {
+                bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
+                observation: client_types::ScanObservation::Passive,
+                has_multiple_bss_candidates: true,
+                security_type_detailed: client_types::SecurityTypeDetailed::Open,
+            }),
         });
 
         {

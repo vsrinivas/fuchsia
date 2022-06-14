@@ -261,9 +261,7 @@ async fn handle_client_request_connect(
         target: client_types::ConnectionCandidate {
             network: network_id.into(),
             credential: network_config.credential,
-            bss_description: None,
-            observed_in_passive_scan: None,
-            multiple_bss_candidates: None,
+            scanned: None,
         },
         reason: client_types::ConnectReason::FidlConnectRequest,
     };
@@ -335,9 +333,7 @@ async fn handle_client_request_save_network(
         target: client_types::ConnectionCandidate {
             network: net_id,
             credential: credential,
-            bss_description: None,
-            observed_in_passive_scan: None,
-            multiple_bss_candidates: None,
+            scanned: None,
         },
         reason: client_types::ConnectReason::NewSavedNetworkAutoconnect,
     };
@@ -602,10 +598,10 @@ mod tests {
             // then static testing BSS information is used. Note that this differs from production
             // behavior where join scans are issued as needed and network information is aggregated
             // and stored.
-            let bss_description = connect_req
-                .target
-                .bss_description
-                .unwrap_or_else(|| random_fidl_bss_description!(Wpa2, ssid: ssid.clone()));
+            let bss_description = connect_req.target.scanned.map_or_else(
+                || random_fidl_bss_description!(Wpa2, ssid: ssid.clone()),
+                |scanned| scanned.bss_description,
+            );
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.to_vec(),
                 bss_description,

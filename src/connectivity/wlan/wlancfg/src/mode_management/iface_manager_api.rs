@@ -448,9 +448,7 @@ mod tests {
                     security_type: client_types::SecurityType::None,
                 },
                 credential: Credential::None,
-                bss_description: None,
-                observed_in_passive_scan: None,
-                multiple_bss_candidates: None,
+                scanned: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };
@@ -493,9 +491,7 @@ mod tests {
                     security_type: client_types::SecurityType::None,
                 },
                 credential: Credential::None,
-                bss_description: None,
-                observed_in_passive_scan: None,
-                multiple_bss_candidates: None,
+                scanned: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };

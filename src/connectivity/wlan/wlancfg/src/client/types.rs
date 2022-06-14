@@ -83,6 +83,13 @@ pub struct NetworkIdentifierDetailed {
     pub security_type: SecurityTypeDetailed,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ScanObservation {
+    Passive,
+    Active,
+    Unknown,
+}
+
 // An internal version of fidl_policy::Bss with extended information
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bss {
@@ -96,12 +103,20 @@ pub struct Bss {
     pub channel: WlanChan,
     /// Realtime timestamp for this scan result entry.
     pub timestamp: zx::Time,
-    /// Seen in a passive scan.
-    pub observed_in_passive_scan: bool,
+    /// The scanning mode used to observe the BSS.
+    pub observation: ScanObservation,
     /// Compatible with this device's network stack.
     pub compatible: bool,
     /// The BSS description with information that SME needs for connecting.
     pub bss_description: fidl_internal::BssDescription,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScannedCandidate {
+    pub bss_description: fidl_internal::BssDescription,
+    pub observation: ScanObservation,
+    pub has_multiple_bss_candidates: bool,
+    pub security_type_detailed: SecurityTypeDetailed,
 }
 
 /// Data for connecting to a specific network and keeping track of what is connected to.
@@ -109,13 +124,7 @@ pub struct Bss {
 pub struct ConnectionCandidate {
     pub network: NetworkIdentifier,
     pub credential: config_management::Credential,
-    // TODO(fxbug.dev/72906): Move these optional fields into a `struct` that makes it clear that
-    //                        this information is related and derived from latent scans. In
-    //                        `ConnectionCandidate`, replace these fields with a single optional
-    //                        field of the new `struct`.
-    pub bss_description: Option<fidl_internal::BssDescription>,
-    pub observed_in_passive_scan: Option<bool>,
-    pub multiple_bss_candidates: Option<bool>,
+    pub scanned: Option<ScannedCandidate>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

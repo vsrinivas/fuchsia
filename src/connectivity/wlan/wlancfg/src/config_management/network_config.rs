@@ -5,7 +5,8 @@
 use {
     crate::client::{bss_selection::SignalData, types as client_types},
     arbitrary::Arbitrary,
-    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_common_security as fidl_security, fidl_fuchsia_wlan_policy as fidl_policy,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     std::{
         collections::{HashMap, VecDeque},
         convert::TryFrom,
@@ -420,6 +421,30 @@ impl From<Credential> for fidl_policy::Credential {
     }
 }
 
+// TODO(fxbug.dev/95873): This code is temporary. It allows common FIDL credentials to be extracted
+//                        from an `Authentication` and converted back into the Policy `Credential`
+//                        type. This is used to discard the `Authentication` prior to changing the
+//                        SME FIDL APIs, which will directly accept it. Though `From`
+//                        implementations should generally not panic, this conversion panics if
+//                        unrecognized FIDL is encountered. This is very unlikely to occur, as this
+//                        code is used to roundtrip FIDL within the same binary.
+impl From<Option<fidl_security::Credentials>> for Credential {
+    fn from(credentials: Option<fidl_security::Credentials>) -> Self {
+        use fidl_security::{Credentials, WepCredentials, WpaCredentials};
+
+        match credentials {
+            None => Credential::None,
+            Some(Credentials::Wep(WepCredentials { key })) => Credential::Password(key.into()),
+            Some(Credentials::Wpa(credentials)) => match credentials {
+                WpaCredentials::Passphrase(passphrase) => Credential::Password(passphrase.into()),
+                WpaCredentials::Psk(psk) => Credential::Psk(psk.into()),
+                _ => panic!("unrecognized FIDL variant"),
+            },
+            Some(_) => panic!("unrecognized FIDL variant"),
+        }
+    }
+}
+
 #[derive(Arbitrary)] // Derive Arbitrary for fuzzer
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum SecurityType {
@@ -623,11 +648,105 @@ impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
     }
 }
 
+/// Creates an `Authentication` FIDL message based on the given criteria.
+///
+/// The criteria for a security protocol are typically derived from a target network. This
+/// includes information regarding protocols and credentials, but also includes information
+/// that is used to determine supported modes of operation. This is necessary, because while
+/// any filtering may discard incompatible target networks, it does not provide the specific
+/// supported modes of operation for compatible target networks. Transitional WPA2-WPA3
+/// networks in particular require this information, as it is generally not known whether WPA2
+/// or WPA3 features should be used, only that at least one set of features is compatible.
+///
+/// Returns `None` if no appropriate authentication method can be selected for the given criteria.
+/// This includes information about hardware support, so this function may return `None` if the
+/// only suitable protocol for a network is unsupported.
+pub fn select_authentication_method(
+    security_type_detailed: client_types::SecurityTypeDetailed,
+    credential: Credential,
+    has_wpa3_support: bool,
+) -> Option<fidl_security::Authentication> {
+    use {
+        client_types::SecurityTypeDetailed,
+        fidl_security::{Authentication, Credentials, Protocol, WepCredentials, WpaCredentials},
+    };
+
+    fn into_fidl_passphrase(passphrase: Vec<u8>) -> Option<Credentials> {
+        Some(Credentials::Wpa(WpaCredentials::Passphrase(passphrase)))
+    }
+
+    fn try_into_fidl_psk(psk: Vec<u8>) -> Option<Option<Credentials>> {
+        <[u8; WPA_PSK_BYTE_LEN]>::try_from(psk)
+            .ok()
+            .map(|psk| Some(Credentials::Wpa(WpaCredentials::Psk(psk))))
+    }
+
+    // TODO(fxbug.dev/98899): Hardware and driver features are not queried comprehensively for
+    //                        security protocol support. Once work on new interfaces for querying
+    //                        driver features tracked by fxbug.dev/88315 lands, use this
+    //                        information to refine the selection of a security protocol. With the
+    //                        exception of WPA3, support for security protocols is assumed.
+    // Select a security protocol based on the given network protection (the security protocols
+    // used by the AP), hardware support, and credential compatibility.
+    let (protocol, credentials) = match security_type_detailed {
+        SecurityTypeDetailed::Open => match credential {
+            Credential::None => Some((Protocol::Open, None)),
+            _ => None,
+        },
+        SecurityTypeDetailed::Wep => match credential {
+            Credential::Password(key) => {
+                Some((Protocol::Wep, Some(Credentials::Wep(WepCredentials { key }))))
+            }
+            _ => None,
+        },
+        SecurityTypeDetailed::Wpa1 => match credential {
+            Credential::Password(passphrase) => {
+                Some((Protocol::Wpa1, into_fidl_passphrase(passphrase)))
+            }
+            Credential::Psk(psk) => try_into_fidl_psk(psk).map(|psk| (Protocol::Wpa1, psk)),
+            _ => None,
+        },
+        SecurityTypeDetailed::Wpa1Wpa2PersonalTkipOnly
+        | SecurityTypeDetailed::Wpa1Wpa2Personal
+        | SecurityTypeDetailed::Wpa2PersonalTkipOnly
+        | SecurityTypeDetailed::Wpa2Personal => match credential {
+            Credential::Password(passphrase) => {
+                Some((Protocol::Wpa2Personal, into_fidl_passphrase(passphrase)))
+            }
+            Credential::Psk(psk) => try_into_fidl_psk(psk).map(|psk| (Protocol::Wpa2Personal, psk)),
+            _ => None,
+        },
+        // For WPA2-WPA3 transitional networks, consider both hardware support and
+        // authentication method support. If WPA3 is not compatible, use WPA2.
+        SecurityTypeDetailed::Wpa2Wpa3Personal => match credential {
+            Credential::Password(passphrase) => {
+                let passphrase = into_fidl_passphrase(passphrase);
+                let protocol =
+                    if has_wpa3_support { Protocol::Wpa3Personal } else { Protocol::Wpa2Personal };
+                Some((protocol, passphrase))
+            }
+            Credential::Psk(psk) => try_into_fidl_psk(psk).map(|psk| (Protocol::Wpa2Personal, psk)),
+            _ => None,
+        },
+        // For WPA3 networks, consider hardware support.
+        SecurityTypeDetailed::Wpa3Personal => match credential {
+            Credential::Password(passphrase) => has_wpa3_support
+                .then_some((Protocol::Wpa3Personal, into_fidl_passphrase(passphrase))),
+            _ => None,
+        },
+        // TODO(fxbug.dev/92693): Implement conversions for WPA Enterprise.
+        SecurityTypeDetailed::Wpa2Enterprise
+        | SecurityTypeDetailed::Wpa3Enterprise
+        | SecurityTypeDetailed::Unknown => None,
+    }?;
+    Some(Authentication { protocol, credentials: credentials.map(Box::new) })
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*, crate::util::testing::random_connection_data, std::iter::FromIterator,
-        wlan_common::assert_variant,
+        test_case::test_case, wlan_common::assert_variant,
     };
 
     #[fuchsia::test]
@@ -1225,5 +1344,110 @@ mod tests {
         // still reflect that we think the network is hidden after the connect.
         network_config.update_hidden_prob(HiddenProbEvent::NotSeenActive);
         assert_eq!(network_config.hidden_probability, PROB_HIDDEN_IF_CONNECT_ACTIVE);
+    }
+
+    fn policy_wep_key() -> Credential {
+        Credential::Password("abcdef0000".as_bytes().to_vec())
+    }
+
+    fn fidl_wep_key() -> Box<fidl_security::Credentials> {
+        Box::new(fidl_security::Credentials::Wep(fidl_security::WepCredentials {
+            key: "abcdef0000".as_bytes().to_vec(),
+        }))
+    }
+
+    fn policy_wpa_password() -> Credential {
+        Credential::Password("password".as_bytes().to_vec())
+    }
+
+    fn fidl_wpa_password() -> Box<fidl_security::Credentials> {
+        Box::new(fidl_security::Credentials::Wpa(fidl_security::WpaCredentials::Passphrase(
+            "password".as_bytes().to_vec(),
+        )))
+    }
+
+    fn policy_wpa_psk() -> Credential {
+        Credential::Psk(vec![0u8; WPA_PSK_BYTE_LEN])
+    }
+
+    fn fidl_wpa_psk() -> Box<fidl_security::Credentials> {
+        Box::new(fidl_security::Credentials::Wpa(fidl_security::WpaCredentials::Psk(
+            [0u8; WPA_PSK_BYTE_LEN],
+        )))
+    }
+
+    // Expect successful mapping in the following cases.
+    #[test_case(
+        client_types::SecurityTypeDetailed::Open,
+        Credential::None,
+        false
+        =>
+        Some(fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Open,
+            credentials: None,
+        })
+    )]
+    #[test_case(
+        client_types::SecurityTypeDetailed::Wep,
+        policy_wep_key(),
+        false
+        =>
+        Some(fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wep,
+            credentials: Some(fidl_wep_key()),
+        })
+    )]
+    #[test_case(
+        client_types::SecurityTypeDetailed::Wpa2Wpa3Personal,
+        policy_wpa_password(),
+        true
+        =>
+        Some(fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wpa3Personal,
+            credentials: Some(fidl_wpa_password()),
+        })
+    )]
+    #[test_case(
+        client_types::SecurityTypeDetailed::Wpa2Wpa3Personal,
+        policy_wpa_password(),
+        false
+        =>
+        Some(fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wpa2Personal,
+            credentials: Some(fidl_wpa_password()),
+        })
+    )]
+    #[test_case(
+        client_types::SecurityTypeDetailed::Wpa2Wpa3Personal,
+        policy_wpa_psk(),
+        true
+        =>
+        Some(fidl_security::Authentication {
+            protocol: fidl_security::Protocol::Wpa2Personal,
+            credentials: Some(fidl_wpa_psk()),
+        })
+    )]
+    // Expect failed mapping in the following cases.
+    #[test_case(
+        client_types::SecurityTypeDetailed::Wpa3Personal,
+        policy_wpa_password(),
+        false
+        =>
+        None
+    )]
+    #[test_case(
+        client_types::SecurityTypeDetailed::Wpa3Personal,
+        policy_wpa_psk(),
+        true
+        =>
+        None
+    )]
+    #[fuchsia::test(add_test_attr = false)]
+    fn select_authentication_method_matrix(
+        security_type_detailed: client_types::SecurityTypeDetailed,
+        credential: Credential,
+        has_wpa3_support: bool,
+    ) -> Option<fidl_security::Authentication> {
+        super::select_authentication_method(security_type_detailed, credential, has_wpa3_support)
     }
 }

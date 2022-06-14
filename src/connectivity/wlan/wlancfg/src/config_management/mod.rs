@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 mod config_manager;
-pub use config_manager::*;
 pub mod network_config;
-pub use network_config::*;
 mod stash_conversion;
+
+pub use config_manager::*;
+pub use network_config::*;

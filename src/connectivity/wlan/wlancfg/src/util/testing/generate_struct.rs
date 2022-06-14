@@ -60,7 +60,11 @@ pub fn generate_random_bss() -> types::Bss {
         channel,
         timestamp,
         snr_db,
-        observed_in_passive_scan: rng.gen::<bool>(),
+        observation: if rng.gen::<bool>() {
+            types::ScanObservation::Passive
+        } else {
+            types::ScanObservation::Active
+        },
         compatible: rng.gen::<bool>(),
         bss_description: random_fidl_bss_description!(
             bssid: bssid.0,
