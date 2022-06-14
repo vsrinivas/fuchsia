@@ -157,7 +157,8 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
       UberStructSystem::ExtractViewRefKoids(uber_struct_snapshot);
 
   return flatland::GlobalTopologyData::GenerateViewTreeSnapshot(
-      topology_data, unconnected_view_ref_koids, global_clip_regions, child_view_watcher_mapping);
+      topology_data, unconnected_view_ref_koids, global_clip_regions, matrix_vector,
+      child_view_watcher_mapping);
 }
 
 // TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread

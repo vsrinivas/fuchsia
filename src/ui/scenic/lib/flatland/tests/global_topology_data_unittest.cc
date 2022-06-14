@@ -18,6 +18,7 @@
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_access.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 
 using flatland::TransformGraph;
@@ -71,7 +72,7 @@ view_tree::SubtreeHitTester GenerateHitTester(
   gtd.hit_regions =
       ComputeGlobalHitRegions(gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
   auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
-      gtd, UberStructSystem::ExtractViewRefKoids(uber_structs), global_clip_regions,
+      gtd, UberStructSystem::ExtractViewRefKoids(uber_structs), global_clip_regions, matrix_vector,
       child_parent_viewport_watcher_mapping);
   auto& [root_koid, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
   return std::move(hit_tester);
@@ -1040,6 +1041,231 @@ TEST(GlobalTopologyDataTest, HitTest_NonRelevantClipRegions) {
   }
 }
 
+// TODO(fxbug.dev/95624): Test for orientation as well.
+//
+// This test ensures that snapshots containing non-full screen views have correct local from world
+// transforms.
+//
+// View topology:
+//
+//      A
+//     / \
+//    B   C
+//       / \
+//      D   E
+//
+// A is the full screen, with dimensions 20x10
+// B is the left half of A, with dimensions 10x10, scaled by a 3x2 vector.
+// C is the right half of A, with dimensions 10x10
+// D is the bottom-left quarter of C, with dimensions 5x5, scaled by a 4x3 vector.
+// E is the bottom-right quarter of C, with dimensions 5x5
+//
+// (A)
+// ---------------------------
+// |B          |C            |
+// |           |             |
+// |           |             |
+// |           |             |
+// |           |-------------|
+// |           |D    |E      |
+// |           |     |       |
+// |           |     |       |
+// |           |     |       |
+// ---------------------------
+TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::LinkTopologyMap links;
+
+  const auto link_2 = GetLinkHandle(2);
+  const auto link_3 = GetLinkHandle(3);
+  const auto link_3_4 = GetLinkHandle(4);
+  const auto link_3_5 = GetLinkHandle(5);
+
+  auto [control_ref1, view_ref_A] = scenic::ViewRefPair::New();
+  auto [control_ref2, view_ref_B] = scenic::ViewRefPair::New();
+  auto [control_ref3, view_ref_C] = scenic::ViewRefPair::New();
+  auto [control_ref4, view_ref_D] = scenic::ViewRefPair::New();
+  auto [control_ref5, view_ref_E] = scenic::ViewRefPair::New();
+  const zx_koid_t view_ref_A_koid = utils::ExtractKoid(view_ref_A);
+  const zx_koid_t view_ref_B_koid = utils::ExtractKoid(view_ref_B);
+  const zx_koid_t view_ref_C_koid = utils::ExtractKoid(view_ref_C);
+  const zx_koid_t view_ref_D_koid = utils::ExtractKoid(view_ref_D);
+  const zx_koid_t view_ref_E_koid = utils::ExtractKoid(view_ref_E);
+
+  const uint32_t kWidth = 20;
+  const uint32_t kHeight = 10;
+
+  const TransformHandle view_ref_A_root_transform = {1, 0};
+  const TransformHandle view_ref_B_root_transform = {2, 0};
+  const TransformHandle view_ref_C_root_transform = {3, 0};
+  const TransformHandle view_ref_D_root_transform = {4, 0};
+  const TransformHandle view_ref_E_root_transform = {5, 0};
+  const TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, 2}, {link_2, 0}, {link_3, 0}},      // 1:0 - 0:3
+                                                    //    \
+                                                    //     0:2
+                                                    // 2:0
+      {{{2, 0}, 0}},                                // 3:0 - 0:5
+                                                    //    |
+      {{{3, 0}, 2}, {link_3_4, 0}, {link_3_5, 0}},  //     0:4
+      {{{4, 0}, 0}},                                // 4:0
+      {{{5, 0}, 0}}                                 // 5:0
+  };
+
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[0];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_A));
+    TransformClipRegion clip_region = {.x = 0, .y = 0, .width = kWidth, .height = kHeight};
+    uber_struct->local_clip_regions.try_emplace(view_ref_A_root_transform, std::move(clip_region));
+    uber_struct->local_hit_regions_map[{1, 0}] = {{.region = {0, 0, kWidth, kHeight}}};
+
+    glm::mat3 translation_matrix = glm::mat3();
+    translation_matrix = glm::translate(translation_matrix, {0, 0});
+    uber_struct->local_matrices[view_ref_A_root_transform] = translation_matrix;
+
+    uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[1];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_B));
+    uber_struct->local_hit_regions_map[{2, 0}] = {{.region = {0, 0, kWidth, kHeight}}};
+
+    glm::mat3 translation_matrix = glm::mat3();
+    translation_matrix = glm::translate(translation_matrix, {0, 0});
+    translation_matrix = glm::scale(translation_matrix, {3, 2});
+    uber_struct->local_matrices[view_ref_B_root_transform] = translation_matrix;
+
+    uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[2];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_C));
+    uber_struct->local_hit_regions_map[{3, 0}] = {{.region = {0, 0, kWidth, kHeight}}};
+
+    glm::mat3 translation_matrix = glm::mat3();
+    translation_matrix = glm::translate(translation_matrix, {10, 0});
+    uber_struct->local_matrices[view_ref_C_root_transform] = translation_matrix;
+
+    uber_structs[vectors[2][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[3];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_D));
+    uber_struct->local_hit_regions_map[{4, 0}] = {{.region = {0, 0, kWidth, kHeight}}};
+
+    glm::mat3 translation_matrix = glm::mat3();
+    translation_matrix = glm::translate(translation_matrix, {0, 5});
+    translation_matrix = glm::scale(translation_matrix, {4, 3});
+    uber_struct->local_matrices[view_ref_D_root_transform] = translation_matrix;
+
+    uber_structs[vectors[3][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+  {
+    auto uber_struct = std::make_unique<UberStruct>();
+    uber_struct->local_topology = vectors[4];
+    uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_E));
+    uber_struct->local_hit_regions_map[{5, 0}] = {{.region = {0, 0, kWidth, kHeight}}};
+
+    glm::mat3 translation_matrix = glm::mat3();
+    translation_matrix = glm::translate(translation_matrix, {5, 5});
+    uber_struct->local_matrices[view_ref_E_root_transform] = translation_matrix;
+
+    uber_structs[vectors[4][0].handle.GetInstanceId()] = std::move(uber_struct);
+  }
+
+  MakeLink(links, 2);  // 0:2 - 2:0
+  MakeLink(links, 3);  // 0:3 - 3:0
+  MakeLink(links, 4);  // 0:4 - 4:0
+  MakeLink(links, 5);  // 0:5 - 5:0
+
+  // Generate snapshot.
+  auto gtd =
+      GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, links, kLinkInstanceId, {1, 0});
+  CHECK_GLOBAL_TOPOLOGY_DATA(gtd, 0u);
+
+  const auto matrix_vector =
+      flatland::ComputeGlobalMatrices(gtd.topology_vector, gtd.parent_indices, uber_structs);
+  const auto global_clip_regions = ComputeGlobalTransformClipRegions(
+      gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
+  gtd.hit_regions =
+      ComputeGlobalHitRegions(gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
+  auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
+      gtd, UberStructSystem::ExtractViewRefKoids(uber_structs), global_clip_regions, matrix_vector,
+      {});
+
+  int checksum = 0;
+
+  // Iterate through snapshot and confirm |local_from_world_transform|s look good.
+  for (auto const& view_kv : snapshot.view_tree) {
+    auto koid = view_kv.first;
+    glm::mat4 local_from_world_transform = view_kv.second.local_from_world_transform;
+
+    // The significant two values in the following expected arrays are the 4th and 3rd elements from
+    // the end. Those represent the translation in the X and Y directions respectively.
+
+    if (koid == view_ref_A_koid) {
+      glm::mat4 expected_local_from_world = glm::mat4(1.f);
+
+      for (size_t i = 0; i < 4; ++i) {
+        EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
+                                               local_from_world_transform[i], kEpsilon)));
+      }
+
+      checksum |= 1 << 0;
+    } else if (koid == view_ref_B_koid) {
+      glm::mat4 expected_local_from_world = glm::mat4(1.f);
+      expected_local_from_world = glm::scale(expected_local_from_world, glm::vec3(3, 2, 1));
+
+      for (size_t i = 0; i < 4; ++i) {
+        EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
+                                               local_from_world_transform[i], kEpsilon)));
+      }
+
+      checksum |= 1 << 1;
+    } else if (koid == view_ref_C_koid) {
+      glm::mat4 expected_local_from_world = glm::mat4(1.f);
+      expected_local_from_world = glm::translate(expected_local_from_world, glm::vec3(10, 0, 0));
+
+      for (size_t i = 0; i < 4; ++i) {
+        EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
+                                               local_from_world_transform[i], kEpsilon)));
+      }
+
+      checksum |= 1 << 2;
+    } else if (koid == view_ref_D_koid) {
+      glm::mat4 expected_local_from_world = glm::mat4(1.f);
+      expected_local_from_world = glm::scale(expected_local_from_world, glm::vec3(4, 3, 1));
+      expected_local_from_world = glm::translate(expected_local_from_world, glm::vec3(10, 5, 0));
+
+      for (size_t i = 0; i < 4; ++i) {
+        EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
+                                               local_from_world_transform[i], kEpsilon)));
+      }
+
+      checksum |= 1 << 3;
+    } else if (koid == view_ref_E_koid) {
+      glm::mat4 expected_local_from_world = glm::mat4(1.f);
+      expected_local_from_world = glm::translate(expected_local_from_world, glm::vec3(15, 5, 0));
+
+      for (size_t i = 0; i < 4; ++i) {
+        EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
+                                               local_from_world_transform[i], kEpsilon)));
+      }
+
+      checksum |= 1 << 4;
+    } else {
+      ASSERT_TRUE(false);
+    }
+  }
+
+  EXPECT_TRUE(snapshot.view_tree.size() == 5);
+  EXPECT_TRUE(checksum == 0b11111);
+}
+
 TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
@@ -1114,7 +1340,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
         gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
     auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
         gtd, UberStructSystem::ExtractViewRefKoids(uber_structs), global_clip_regions,
-        child_parent_viewport_watcher_mapping);
+        matrix_vector, child_parent_viewport_watcher_mapping);
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
     EXPECT_EQ(root, view_ref1_koid);
     EXPECT_EQ(view_tree.size(), 2u);

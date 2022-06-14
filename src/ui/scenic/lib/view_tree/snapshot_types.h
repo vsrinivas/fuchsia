@@ -108,7 +108,13 @@ class Snapshot {
   // Perform a hit test on |snapshot| starting from |start_node|.
   // Returns a list of hit views in order of increasing distance.
   // Recursively called on each tree boundary, so that the result is a full traversal of the tree.
+  //
   // |start_node| defines the root of the hit testing tree walk. It can be any arbitrary node.
+  //
+  // |world_space_point| defines the hit point in the coordinate space of the injector's |target|,
+  // which is a descendant of the |context|. |target| and |start_node| should refer to the same
+  // view.
+  //
   // |is_semantic| defines if this is a semantic hit test, and this if it should follow the special
   // accessibility hit testing rules or not.
   //

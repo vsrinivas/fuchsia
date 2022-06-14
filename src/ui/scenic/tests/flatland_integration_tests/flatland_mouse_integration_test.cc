@@ -15,6 +15,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/tests/utils/scenic_realm_builder.h"
 
 // These tests exercise the integration between Flatland and the InputSystem, including the
@@ -281,11 +282,14 @@ class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::R
   // This function assumes the parent_session was created via |CreateChildView()|. This assumption
   // means that the transform topology is a root transform with one level of N children. This
   // enables virtually every hit testing scenario with minimal test complexity.
-  fuv_ViewRef CreateAndAddChildView(fuc_FlatlandPtr& parent_session,
-                                    fuc_TransformId parent_transform, fuc_ContentId parent_content,
-                                    fuc_FlatlandPtr& child_session,
-                                    fidl::InterfaceRequest<fup_MouseSource> child_mouse_source,
-                                    fidl::InterfaceRequest<fuv_ViewRefFocused> child_focused_ptr) {
+  //
+  // Prereq: |parent_of_viewport_transform| is created and connected to the view's root.
+  fuv_ViewRef CreateAndAddChildView(
+      fuc_FlatlandPtr& parent_session, fuc_TransformId viewport_transform,
+      fuc_TransformId parent_of_viewport_transform, fuc_ContentId parent_content,
+      fuc_FlatlandPtr& child_session,
+      fidl::InterfaceRequest<fup_MouseSource> child_mouse_source = nullptr,
+      fidl::InterfaceRequest<fuv_ViewRefFocused> child_focused_ptr = nullptr) {
     child_session = realm_->Connect<fuc_Flatland>();
 
     // Set up the child view watcher.
@@ -294,12 +298,12 @@ class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::R
     fuc_ViewportProperties properties;
     properties.set_logical_size({kDefaultSize, kDefaultSize});
 
-    parent_session->CreateTransform(parent_transform);
+    parent_session->CreateTransform(viewport_transform);
 
     parent_session->CreateViewport(parent_content, std::move(parent_token), std::move(properties),
                                    child_view_watcher.NewRequest());
-    parent_session->SetContent(parent_transform, parent_content);
-    parent_session->AddChild(kDefaultRootTransform, parent_transform);
+    parent_session->SetContent(viewport_transform, parent_content);
+    parent_session->AddChild(parent_of_viewport_transform, viewport_transform);
 
     BlockingPresent(parent_session);
 
@@ -610,10 +614,10 @@ TEST_F(FlatlandMouseIntegrationTest, SimpleHitTest) {
     FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
   });
 
-  auto child_view_ref =
-      CreateAndAddChildView(parent_session, /*parent_transform=*/{.value = 2},
-                            /*parent_content=*/{.value = 2}, child_session,
-                            child_mouse_source.NewRequest(), child_focused_ptr.NewRequest());
+  auto child_view_ref = CreateAndAddChildView(
+      parent_session, /*parent_transform=*/{.value = 2}, kDefaultRootTransform,
+      /*parent_content=*/{.value = 2}, child_session, child_mouse_source.NewRequest(),
+      child_focused_ptr.NewRequest());
 
   // Place hit regions, overriding any default ones if they exist.
   parent_session->SetHitRegions(kDefaultRootTransform, {{.region = {0, 0, 10, 10}}});
@@ -688,10 +692,10 @@ TEST_F(FlatlandMouseIntegrationTest, SandwichTest) {
     FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
   });
 
-  auto child_view_ref =
-      CreateAndAddChildView(parent_session, /*parent_transform=*/{.value = 2},
-                            /*parent_content=*/{.value = 2}, child_session,
-                            child_mouse_source.NewRequest(), child_focused_ptr.NewRequest());
+  auto child_view_ref = CreateAndAddChildView(
+      parent_session, /*parent_transform=*/{.value = 2}, kDefaultRootTransform,
+      /*parent_content=*/{.value = 2}, child_session, child_mouse_source.NewRequest(),
+      child_focused_ptr.NewRequest());
 
   // After creating the child transform, create an additional transform representing the overlay.
   fuc_TransformId overlay_transform = {.value = 3};
@@ -755,6 +759,138 @@ TEST_F(FlatlandMouseIntegrationTest, SandwichTest) {
 
   // Parent should have received 0 additional events.
   EXPECT_EQ(parent_events.size(), 2u);
+}
+
+// In order to test that partial screen views work - this test establishes a context view that is
+// translated away from the root view.
+//
+// ------------------
+// |(Root)          |
+// |                |
+// |                |
+// |                |
+// |        --------|
+// |        |(C/T)  |
+// |        |       |
+// |        |       |
+// ------------------
+//
+// Root view: 10x10 with origin at (0,0)
+// Context and target views: 5x5 with origin at (5,5)
+//
+//
+// root parent context target
+TEST_F(FlatlandMouseIntegrationTest, PartialScreenViews) {
+  fuc_FlatlandPtr parent_session;
+  fup_MouseSourcePtr parent_mouse_source;
+  fuv_ViewRefFocusedPtr parent_focused_ptr;
+
+  parent_session.set_error_handler([](zx_status_t status) {
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
+  });
+  parent_mouse_source.set_error_handler([](zx_status_t status) {
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
+  });
+  parent_focused_ptr.set_error_handler([](zx_status_t status) {
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
+  });
+
+  auto parent_view_ref = CreateChildView(parent_session, parent_mouse_source.NewRequest(),
+                                         parent_focused_ptr.NewRequest());
+
+  fuc_FlatlandPtr context_session;
+  fup_MouseSourcePtr context_mouse_source;
+  fuv_ViewRefFocusedPtr context_focused_ptr;
+
+  context_session.set_error_handler([](zx_status_t status) {
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
+  });
+  context_mouse_source.set_error_handler([](zx_status_t status) {
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
+  });
+  context_focused_ptr.set_error_handler([](zx_status_t status) {
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
+  });
+
+  const fuc_TransformId viewport_transform = {.value = 2};
+  auto context_view_ref =
+      CreateAndAddChildView(parent_session, viewport_transform, kDefaultRootTransform,
+                            /*parent_content=*/{.value = 2}, context_session,
+                            context_mouse_source.NewRequest(), context_focused_ptr.NewRequest());
+
+  fuc_FlatlandPtr target_session;
+  fup_MouseSourcePtr target_mouse_source;
+  fuv_ViewRefFocusedPtr target_focused_ptr;
+
+  target_session.set_error_handler([](zx_status_t status) {
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
+  });
+  target_mouse_source.set_error_handler([](zx_status_t status) {
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
+  });
+  target_focused_ptr.set_error_handler([](zx_status_t status) {
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
+  });
+
+  auto target_view_ref =
+      CreateAndAddChildView(context_session, viewport_transform, kDefaultRootTransform,
+                            /*parent_content=*/{.value = 2}, target_session,
+                            target_mouse_source.NewRequest(), target_focused_ptr.NewRequest());
+
+  // Change the context view's origin from (0,0) to (5,5).
+  int x_translation = 5;
+  int y_translation = 5;
+  parent_session->SetTranslation(viewport_transform, {x_translation, y_translation});
+  fuchsia::math::Rect rect = {0, 0, 5, 5};
+  parent_session->SetClipBoundary(viewport_transform,
+                                  std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+
+  // Place hit regions, overriding any default ones if they exist.
+  parent_session->SetHitRegions(kDefaultRootTransform, {{.region = {0, 0, 10, 10}}});
+  context_session->SetHitRegions(kDefaultRootTransform, {{.region = {0, 0, 10, 10}}});
+  target_session->SetHitRegions(kDefaultRootTransform, {{.region = {0, 0, 10, 10}}});
+
+  BlockingPresent(parent_session);
+  BlockingPresent(context_session);
+  BlockingPresent(target_session);
+
+  // Listen for input events.
+  std::vector<fup_MouseEvent> context_events;
+  StartWatchLoop(context_mouse_source, context_events);
+
+  std::vector<fup_MouseEvent> target_events;
+  StartWatchLoop(target_mouse_source, target_events);
+
+  const std::vector<uint8_t> button_vec = {1};
+
+  // Creates this matrix which depicts a 5x5 translation from the input viewport to the context
+  // view:
+  // 1 0 5
+  // 0 1 5
+  // 0 0 1
+  std::array<float, 9> viewport_to_context_transform = {1, 0, 0, 0, 1, 0, 5, 5, 1};
+
+  RegisterInjector(fidl::Clone(context_view_ref), fidl::Clone(target_view_ref),
+                   fupi_DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET, button_vec,
+                   viewport_to_context_transform);
+
+  float x = 7;
+  float y = 9;
+
+  Inject(x, y, fupi_EventPhase::ADD, button_vec);
+  RunLoopUntil([&target_events] { return target_events.size() == 1u; });
+  ASSERT_TRUE(target_events[0].has_pointer_sample());
+
+  // Verify hit position in viewport.
+  {
+    std::array<float, 2> position = target_events[0].pointer_sample().position_in_viewport();
+
+    EXPECT_EQ(position[0], x);
+    EXPECT_EQ(position[1], y);
+  }
+
+  // Parent should have received 0 events.
+  EXPECT_EQ(context_events.size(), 0u);
 }
 
 }  // namespace integration_tests

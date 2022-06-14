@@ -6,8 +6,11 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/logging.h"
+
+#include <glm/gtc/type_ptr.hpp>
 
 namespace {
 
@@ -83,6 +86,27 @@ size_t GetSubtreeEndIndex(size_t start, const std::vector<flatland::TransformHan
   }
 
   return end;
+}
+// Converts a 3x3 (2D) matrix to its 4x4 (3D) analog.
+// S is for scale, and T for translation.
+//
+// SX 00 TX
+// 00 SY TY
+// 00 00 01
+//
+// ...becomes...
+//
+// SX 00 00 TX
+// 00 SY 00 TY
+// 00 00 SZ TZ
+// 00 00 00 01
+glm::mat4 Convert2DTransformTo3D(glm::mat3 in_matrix) {
+  glm::mat4 out_matrix = glm::mat4(1.f);
+
+  out_matrix = glm::scale(out_matrix, glm::vec3(in_matrix[0][0], in_matrix[1][1], 1));
+  out_matrix = glm::translate(out_matrix, glm::vec3(in_matrix[2][0], in_matrix[2][1], 0));
+
+  return out_matrix;
 }
 
 }  // namespace
@@ -310,6 +334,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     const GlobalTopologyData& data, const std::unordered_set<zx_koid_t>& unconnected_view_refs,
     const std::vector<TransformClipRegion>& global_clip_regions,
+    const std::vector<glm::mat3>& global_matrix_vector,
     const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
   // Find the first node with a ViewRef set. This is the root of the ViewTree.
   size_t root_index = 0;
@@ -371,13 +396,14 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
       }
     }
 
-    // TODO(fxbug.dev/82678): Add local_from_world_transform to the ViewNode.
     view_tree.emplace(
         view_ref_koid,
-        view_tree::ViewNode{.parent = parent_koid,
-                            .bounding_box = {.min = {0, 0}, .max = {max_width, max_height}},
-                            .view_ref = view_ref,
-                            .debug_name = debug_name});
+        view_tree::ViewNode{
+            .parent = parent_koid,
+            .bounding_box = {.min = {0, 0}, .max = {max_width, max_height}},
+            .local_from_world_transform = Convert2DTransformTo3D(global_matrix_vector[i]),
+            .view_ref = view_ref,
+            .debug_name = debug_name});
   }
 
   // Fill in the children by deriving it from the parents of each node.
@@ -412,6 +438,7 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
 
     const auto x = world_point[0];
     const auto y = world_point[1];
+
     std::vector<zx_koid_t> hits = {};
 
     for (size_t i = start; i < end; ++i) {

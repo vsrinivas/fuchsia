@@ -362,6 +362,7 @@ executable("flatland_mouse_integration_test_bin") {
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//src/ui/scenic/lib/utils",
   ]
 }
 
