@@ -104,8 +104,10 @@ VirtualAudioDeviceImpl::Config DefaultConfig(bool is_input) {
   VirtualAudioDeviceImpl::Config config;
   config.is_input = is_input;
 
-  // Arbitrary.
   config.device_name = "Virtual Audio Device";
+  // Sibling devices cannot have duplicate names, so differentiate them based on direction.
+  config.device_name += (is_input ? " (input)" : " (output)");
+
   config.manufacturer_name = "Fuchsia Virtual Audio Group";
   config.product_name = "Virgil v1, a Virtual Volume Vessel";
   config.unique_id = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0};
