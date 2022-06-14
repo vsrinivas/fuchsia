@@ -118,36 +118,36 @@ template("clang_toolchain") {
     # Configure Rust remote builds.
     _rustc_wrapper = ""
     _rust_concurrent_jobs = ""
-    if (enable_rbe || rbe_rust.enable) {
+    if (enable_rbe || rust_rbe_enable) {
       assert(
           !check_rustc_consistency || !check_rustc_determinism,
           "Only one of {check_rustc_consistency,check_rustc_determinism} may be true.")
       assert(
-          rbe_rust.check == "" || rbe_rust.check == "consistency" ||
-              rbe_rust.check == "determinism",
-          "rbe_rust.check must be one of {,consistency,determinism}, but got: ${rbe_rust.check}.")
-      if (check_rustc_consistency || rbe_rust.check == "consistency") {
+          rust_rbe_check == "" || rust_rbe_check == "consistency" ||
+              rust_rbe_check == "determinism",
+          "rust_rbe_check must be one of {,consistency,determinism}, but got: ${rust_rbe_check}.")
+      if (check_rustc_consistency || rust_rbe_check == "consistency") {
         # Compare local vs. remote build.
         # Allow caching.
         # Use local concurrency.
         _rewrapper_flags = " --compare --fsatrace --exec_strategy=remote"
-      } else if (check_rustc_determinism || rbe_rust.check == "determinism") {
+      } else if (check_rustc_determinism || rust_rbe_check == "determinism") {
         # Determinism check is run locally, and doesn't use RBE,
         # even though it uses the same wrapper script.
         _rewrapper_flags = " --local --check-determinism"
       } else {
         assert(
             rbe_exec_strategy == "",
-            "Please rename 'rbe_exec_strategy' to 'rbe_rust.exec_strategy' (value: \"$rbe_exec_strategy\")")
-        assert(rbe_rust.exec_strategy == "remote" ||
-                   rbe_rust.exec_strategy == "local",
-               "Unsupported RBE exec_strategy: \"$rbe_rust.exec_strategy\".")
-        if (rbe_rust.exec_strategy == "remote") {
+            "Please rename 'rbe_exec_strategy' to 'rust_rbe_exec_strategy' (value: \"$rbe_exec_strategy\")")
+        assert(rust_rbe_exec_strategy == "remote" ||
+                   rust_rbe_exec_strategy == "local",
+               "Unsupported RBE exec_strategy: \"$rust_rbe_exec_strategy\".")
+        if (rust_rbe_exec_strategy == "remote") {
           _rewrapper_flags = " --exec_strategy=remote"
 
           # Use remote-worker parallelism
           _rust_concurrent_jobs = concurrent_jobs.goma
-        } else if (rbe_rust.exec_strategy == "local") {
+        } else if (rust_rbe_exec_strategy == "local") {
           _rewrapper_flags =
               " --exec_strategy=local --remote_update_cache=false"
         }

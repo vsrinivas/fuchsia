@@ -108,7 +108,7 @@ import("//build/rust/rustc_test.gni")
 #
 #   disable_rbe (optional)
 #     Set to true to force this target to build locally, overriding the global
-#     `rbe_rust.enable`.
+#     `rust_rbe_enable`.
 #
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
