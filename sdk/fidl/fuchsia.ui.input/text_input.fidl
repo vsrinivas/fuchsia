@@ -46,14 +46,14 @@ protocol InputMethodEditor {
         state TextInputState;
     });
 
-    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
     // TODO(fxbug.dev/72752)
+    @available(deprecated=8, note="Instead, use `fuchsia.ui.input3.KeyEventInjector`")
     InjectInput(struct {
         event InputEvent;
     });
 
-    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
     // TODO(fxbug.dev/72752)
+    @available(deprecated=8, note="Instead, use `fuchsia.ui.input3.KeyEventInjector`")
     @transitional
     DispatchKey3(struct {
         event fuchsia.ui.input3.KeyEvent;
