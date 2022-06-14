@@ -28,7 +28,7 @@ TEST(UnixSocket, HupEvent) {
 
   no_ready = epoll_wait(epfd, &outev, 1, 0);
   ASSERT_EQ(1, no_ready);
-  ASSERT_EQ(EPOLLHUP, outev.events);
+  ASSERT_EQ(EPOLLIN | EPOLLHUP, outev.events);
   ASSERT_EQ(42ul, outev.data.u64);
 
   close(fds[0]);

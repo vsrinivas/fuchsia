@@ -846,7 +846,7 @@ impl UnixSocketInner {
         }
 
         if self.is_shutdown {
-            present_events |= FdEvents::POLLHUP;
+            present_events |= FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP;
         }
 
         match &self.state {

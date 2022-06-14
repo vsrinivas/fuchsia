@@ -401,7 +401,10 @@ mod tests {
         // The thread should finish now that messages have been written.
         handle.join().expect("failed to join thread");
 
-        assert_eq!(FdEvents::POLLHUP, server_socket.query_events(&current_task));
+        assert_eq!(
+            FdEvents::POLLHUP | FdEvents::POLLIN | FdEvents::POLLOUT,
+            server_socket.query_events(&current_task)
+        );
     }
 
     #[::fuchsia::test]
