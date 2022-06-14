@@ -26,3 +26,9 @@ sdk_source_set("cpp") {
 
   public_configs = [ "//sdk/config" ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [ "tests:sys_inspect_cpp_tests" ]
+}

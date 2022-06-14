@@ -17,6 +17,7 @@ group("tests") {
     "input_report_reader:test",
     "stdcompat:tests",
     "sys/component:tests",
+    "sys/inspect:tests",
     "syslog:tests",
     "zxio:tests",
   ]

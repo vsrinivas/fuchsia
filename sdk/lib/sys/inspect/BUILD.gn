@@ -13,3 +13,9 @@ sdk_source_set("tree_service_common") {
   sources = [ "tree_handler_settings.h" ]
   public_deps = [ "//sdk/lib/stdcompat" ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [ "cpp:tests" ]
+}
