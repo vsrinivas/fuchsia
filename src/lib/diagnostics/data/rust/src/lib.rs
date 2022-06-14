@@ -1105,7 +1105,7 @@ impl AsRef<str> for LogsField {
             Self::FilePath => FILE_PATH_LABEL,
             Self::LineNumber => LINE_NUMBER_LABEL,
             Self::MsgStructured => MESSAGE_LABEL_STRUCTURED,
-            Self::Args => MESSAGE_LABEL,
+            Self::Args => ARGS_LABEL,
             Self::Format => FORMAT_LABEL,
             Self::Other(str) => str.as_str(),
         }
@@ -1562,6 +1562,26 @@ mod tests {
         .build();
 
         assert_eq!("[00012.345678][123][456][moniker] INFO: some message", format!("{}", data))
+    }
+
+    #[fuchsia::test]
+    fn display_for_logs_with_args_no_printf() {
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: Timestamp::from(12345678000i64).into(),
+            component_url: Some(String::from("fake-url")),
+            moniker: String::from("moniker"),
+            severity: Severity::Info,
+        })
+        .set_pid(123)
+        .set_tid(456)
+        .set_message("some message".to_string())
+        .add_key(LogsProperty::String(LogsField::Other("args".to_string()), "value".to_string()))
+        .build();
+
+        assert_eq!(
+            "[00012.345678][123][456][moniker] INFO: some message args=value",
+            format!("{}", data)
+        )
     }
 
     #[fuchsia::test]
