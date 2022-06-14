@@ -188,8 +188,7 @@ impl AdvertisingProxyInner {
                     &local_name,
                     &mut addrs.iter_mut(),
                     ProxyHostPublicationOptions {
-                        ip_versions: Some(IpVersions::V6),
-                        perform_probe: Some(true),
+                        perform_probe: Some(false),
                         ..ProxyHostPublicationOptions::EMPTY
                     },
                     server,
@@ -293,9 +292,7 @@ impl AdvertisingProxyInner {
                     &local_service_name,
                     &local_instance_name,
                     ServiceInstancePublicationOptions {
-                        media: Some(Media::all()),
-                        ip_versions: Some(IpVersions::V6),
-                        perform_probe: Some(true),
+                        perform_probe: Some(false),
                         ..ServiceInstancePublicationOptions::EMPTY
                     },
                     client,
