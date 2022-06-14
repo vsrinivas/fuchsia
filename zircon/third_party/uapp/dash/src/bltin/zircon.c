@@ -793,13 +793,31 @@ int zxc_dm(int argc, char** argv) {
     return print_dm_help();
 
   } else if (command_cmp("dump", NULL, argv[1], &command_length)) {
-    return send_dump(fuchsia_device_manager_DebugDumperDumpTree);
+    // TODO(fxbug.dev/91515): Remove call to `send_dump`, leaving only the
+    // deprecation print statement once it is 2022-07-08.
+    int ret = send_dump(fuchsia_device_manager_DebugDumperDumpTree);
+    printf(
+        "`dm dump` is deprecated and will no longer work after 2022-07-08. Please use `driver "
+        "dump` instead\n");
+    return ret;
 
   } else if (command_cmp("drivers", NULL, argv[1], &command_length)) {
-    return send_dump(fuchsia_device_manager_DebugDumperDumpDrivers);
+    // TODO(fxbug.dev/91515): Remove call to `send_dump`, leaving only the
+    // deprecation print statement once it is 2022-07-08.
+    int ret = send_dump(fuchsia_device_manager_DebugDumperDumpDrivers);
+    printf(
+        "`dm drivers` is deprecated and will no longer work after 2022-07-08. Please use `driver "
+        "list --verbose` instead\n");
+    return ret;
 
   } else if (command_cmp("devprops", NULL, argv[1], &command_length)) {
-    return send_dump(fuchsia_device_manager_DebugDumperDumpBindingProperties);
+    // TODO(fxbug.dev/91515): Remove call to `send_dump`, leaving only the
+    // deprecation print statement once it is 2022-07-08.
+    int ret = send_dump(fuchsia_device_manager_DebugDumperDumpBindingProperties);
+    printf(
+        "`dm devprops` is deprecated and will no longer work after 2022-07-08. Please use `driver "
+        "list-devices --verbose` instead\n");
+    return ret;
 
   } else if (command_cmp("reboot", NULL, argv[1], &command_length)) {
     return send_Reboot();
