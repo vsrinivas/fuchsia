@@ -36,30 +36,44 @@ struct Tas58xxCodec : public Tas58xx {
   }
 };
 
-TEST(Tas58xxTest, GoodSetDai) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+class Tas58xxTest : public zxtest::Test {
+ public:
+  Tas58xxTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  void SetUp() override {
+    fake_parent_ = MockDevice::FakeRootParent();
 
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_OK);  // Check DIE ID, no error now.
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    ASSERT_TRUE(endpoints.is_ok());
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
+    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
+                                        &mock_i2c_);
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+    loop_.StartThread();
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_OK);  // Check DIE ID, no error now.
+    ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent_.get(),
+                                                                 std::move(endpoints->client)));
 
-  loop.StartThread();
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
+    auto* child_dev = fake_parent_->GetLatestChild();
+    ASSERT_NOT_NULL(child_dev);
+    auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
+    codec_proto_ = codec->GetProto();
+    client_.SetProtocol(&codec_proto_);
+  }
+  void TearDown() override { mock_i2c_.VerifyAndClear(); }
 
+ protected:
+  mock_i2c::MockI2c mock_i2c_;
+  SimpleCodecClient client_;
+
+ private:
+  std::shared_ptr<zx_device> fake_parent_;
+  async::Loop loop_;
+  codec_protocol_t codec_proto_;
+};
+
+TEST_F(Tas58xxTest, GoodSetDai) {
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 2;
@@ -69,11 +83,11 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.frame_rate = 48000;
     format.bits_per_slot = 32;
     format.bits_per_sample = 32;
-    mock_i2c.ExpectWriteStop({0x33, 0x03});  // 32 bits.
-    mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
-    auto formats = client.GetDaiFormats();
+    mock_i2c_.ExpectWriteStop({0x33, 0x03});  // 32 bits.
+    mock_i2c_.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
+    auto formats = client_.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    auto codec_format_info = client.SetDaiFormat(std::move(format));
+    auto codec_format_info = client_.SetDaiFormat(std::move(format));
     // 5ms turn on delay expected.
     ASSERT_OK(codec_format_info.status_value());
     EXPECT_EQ(zx::msec(5).get(), codec_format_info->turn_on_delay());
@@ -89,12 +103,12 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.frame_format = FrameFormat::I2S;
     format.frame_rate = 48000;
     format.bits_per_slot = 32;
-    mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
-    mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
+    mock_i2c_.ExpectWriteStop({0x33, 0x00});  // 16 bits.
+    mock_i2c_.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
     format.bits_per_sample = 16;
-    auto formats = client.GetDaiFormats();
+    auto formats = client_.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    ASSERT_OK(client_.SetDaiFormat(std::move(format)));
   }
 
   {
@@ -105,12 +119,12 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.frame_format = FrameFormat::I2S;
     format.frame_rate = 48000;
     format.bits_per_slot = 32;
-    mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
-    mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
+    mock_i2c_.ExpectWriteStop({0x33, 0x00});  // 16 bits.
+    mock_i2c_.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
     format.bits_per_sample = 16;
-    auto formats = client.GetDaiFormats();
+    auto formats = client_.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    ASSERT_OK(client_.SetDaiFormat(std::move(format)));
   }
 
   {
@@ -122,44 +136,21 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.frame_rate = 48000;
     format.bits_per_slot = 16;
     format.bits_per_sample = 16;
-    mock_i2c.ExpectWriteStop({0x33, 0x14});  // TDM/DSP, I2S_LRCLK_PULSE < 8 SCLK, 16 bits.
-    mock_i2c.ExpectWriteStop({0x34, 0x20});  // Data start sclk at 32 bits.
-    auto formats = client.GetDaiFormats();
+    mock_i2c_.ExpectWriteStop({0x33, 0x14});  // TDM/DSP, I2S_LRCLK_PULSE < 8 SCLK, 16 bits.
+    mock_i2c_.ExpectWriteStop({0x34, 0x20});  // Data start sclk at 32 bits.
+    auto formats = client_.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    ASSERT_OK(client_.SetDaiFormat(std::move(format)));
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, BadSetDai) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
+TEST_F(Tas58xxTest, BadSetDai) {
   // Blank format.
   {
     audio::DaiFormat format = {};
-    auto formats = client.GetDaiFormats();
+    auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, format_info.status_value());
   }
 
@@ -173,9 +164,9 @@ TEST(Tas58xxTest, BadSetDai) {
     format.frame_rate = 48000;
     format.bits_per_slot = 32;
     format.bits_per_sample = 32;
-    auto formats = client.GetDaiFormats();
+    auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
@@ -189,9 +180,9 @@ TEST(Tas58xxTest, BadSetDai) {
     format.frame_rate = 48000;
     format.bits_per_slot = 32;
     format.bits_per_sample = 32;
-    auto formats = client.GetDaiFormats();
+    auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
@@ -205,9 +196,9 @@ TEST(Tas58xxTest, BadSetDai) {
     format.frame_rate = 48000;
     format.bits_per_slot = 32;
     format.bits_per_sample = 32;
-    auto formats = client.GetDaiFormats();
+    auto formats = client_.GetDaiFormats();
     EXPECT_TRUE(IsDaiFormatSupported(format, formats.value()));  // bitmask not checked here.
-    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
@@ -221,38 +212,15 @@ TEST(Tas58xxTest, BadSetDai) {
     format.frame_rate = 1234;
     format.bits_per_slot = 32;
     format.bits_per_sample = 32;
-    auto formats = client.GetDaiFormats();
+    auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, GetDai) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  auto formats = client.GetDaiFormats();
+TEST_F(Tas58xxTest, GetDai) {
+  auto formats = client_.GetDaiFormats();
   EXPECT_EQ(formats.value().number_of_channels.size(), 2);
   EXPECT_EQ(formats.value().number_of_channels[0], 2);
   EXPECT_EQ(formats.value().number_of_channels[1], 4);
@@ -270,287 +238,187 @@ TEST(Tas58xxTest, GetDai) {
   EXPECT_EQ(formats.value().bits_per_sample.size(), 2);
   EXPECT_EQ(formats.value().bits_per_sample[0], 16);
   EXPECT_EQ(formats.value().bits_per_sample[1], 32);
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, GetInfo5805) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
+TEST_F(Tas58xxTest, GetInfo5805) {
   {
-    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-    auto info = client.GetInfo();
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+    auto info = client_.GetInfo();
     EXPECT_EQ(info.value().unique_id.compare(""), 0);
     EXPECT_EQ(info.value().manufacturer.compare("Texas Instruments"), 0);
     EXPECT_EQ(info.value().product_name.compare("TAS5805m"), 0);
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, GetInfo5825) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
+TEST_F(Tas58xxTest, GetInfo5825) {
   {
-    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-    auto info = client.GetInfo();
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+    auto info = client_.GetInfo();
     EXPECT_EQ(info.value().unique_id.compare(""), 0);
     EXPECT_EQ(info.value().manufacturer.compare("Texas Instruments"), 0);
     EXPECT_EQ(info.value().product_name.compare("TAS5825m"), 0);
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, CheckState) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+TEST_F(Tas58xxTest, CheckState) {
+  auto info = client_.IsBridgeable();
+  EXPECT_EQ(info.value(), false);
 
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  {
-    auto info = client.IsBridgeable();
-    EXPECT_EQ(info.value(), false);
-
-    auto format = client.GetGainFormat();
-    EXPECT_EQ(format.value().min_gain, -103.0);
-    EXPECT_EQ(format.value().max_gain, 24.0);
-    EXPECT_EQ(format.value().gain_step, 0.5);
-  }
-
-  mock_i2c.VerifyAndClear();
+  auto format = client_.GetGainFormat();
+  EXPECT_EQ(format.value().min_gain, -103.0);
+  EXPECT_EQ(format.value().max_gain, 24.0);
+  EXPECT_EQ(format.value().gain_step, 0.5);
 }
 
-TEST(Tas58xxTest, SetGain) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
+TEST_F(Tas58xxTest, SetGain) {
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x4c, 0x48})  // digital vol -12dB.
         .ExpectWrite({0x03})
         .ExpectReadStop({0x00})
         .ExpectWriteStop({0x03, 0x00});  // Muted = false.
     GainState gain({.gain = -12.f, .muted = false, .agc_enabled = false});
-    client.SetGainState(gain);
+    client_.SetGainState(gain);
   }
 
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x4c, 0x60})  // digital vol -24dB.
         .ExpectWrite({0x03})
         .ExpectReadStop({0x00})
         .ExpectWriteStop({0x03, 0x08});  // Muted = true.
     GainState gain({.gain = -24.f, .muted = true, .agc_enabled = false});
-    client.SetGainState(gain);
+    client_.SetGainState(gain);
   }
 
   // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-  auto unused = client.GetInfo();
+  mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+  auto unused = client_.GetInfo();
   static_cast<void>(unused);
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, SetAglSignalProcessing) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
+TEST_F(Tas58xxTest, SetAglSignalProcessing) {
   // AGL enabled.
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
         .ExpectWriteStop({0x00, 0x00})                    // page 0.
         .ExpectWriteStop({0x7f, 0x00});                   // book 0.
-    client.SetAgl(true);
+    client_.SetAgl(true);
   }
 
   // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
   {
-    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-    auto unused = client.GetInfo();
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+    auto unused = client_.GetInfo();
     static_cast<void>(unused);
   }
 
   // AGL disabled.
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
         .ExpectWriteStop({0x00, 0x00})                    // page 0.
         .ExpectWriteStop({0x7f, 0x00});                   // book 0.
-    client.SetAgl(false);
+    client_.SetAgl(false);
   }
 
   // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
   {
-    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-    auto unused = client.GetInfo();
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+    auto unused = client_.GetInfo();
     static_cast<void>(unused);
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, GetTopologySignalProcessing) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+class Tas58xxSignalProcessingTest : public zxtest::Test {
+ public:
+  Tas58xxSignalProcessingTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  void SetUp() override {
+    fake_parent_ = MockDevice::FakeRootParent();
 
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+    metadata::ti::TasConfig metadata = {};
+    metadata.bridged = true;
+    fake_parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    ASSERT_TRUE(endpoints.is_ok());
 
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
+    fidl::BindServer<mock_i2c::MockI2c>(loop_.dispatcher(), std::move(endpoints->server),
+                                        &mock_i2c_);
 
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
+    loop_.StartThread();
+    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_OK);  // Check DIE ID.
+    ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent_.get(),
+                                                                 std::move(endpoints->client)));
 
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+    auto* child_dev = fake_parent_->GetLatestChild();
+    ASSERT_NOT_NULL(child_dev);
+    codec_ = child_dev->GetDeviceContext<Tas58xxCodec>();
+    codec_proto_ = codec_->GetProto();
+    codec_client_.SetProtocol(&codec_proto_);
 
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
+    ddk::CodecProtocolClient codec_proto2(&codec_proto_);
+    zx::channel channel_remote, channel_local;
+    zx::channel::create(0, &channel_local, &channel_remote);
+    ddk::CodecProtocolClient proto_client;
+    codec_proto2.Connect(std::move(channel_remote));
+    audio_fidl::CodecSyncPtr codec_client;
+    codec_client.Bind(std::move(channel_local));
 
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
+    fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
+    fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
+        signal_processing_handle.NewRequest();
+    codec_client->SignalProcessingConnect(std::move(signal_processing_request));
+    signal_processing_client_ = signal_processing_handle.BindSync();
+  }
+  void TearDown() override { mock_i2c_.VerifyAndClear(); }
 
+ protected:
+  fidl::SynchronousInterfacePtr<signal_fidl::SignalProcessing> signal_processing_client_;
+  mock_i2c::MockI2c mock_i2c_;
+  SimpleCodecClient codec_client_;
+  Tas58xxCodec* codec_;
+
+ private:
+  async::Loop loop_;
+  codec_protocol_t codec_proto_;
+  std::shared_ptr<zx_device> fake_parent_;
+};
+
+TEST_F(Tas58xxSignalProcessingTest, GetTopologySignalProcessing) {
   // We should get one topology with an AGL processing element.
   signal_fidl::Reader_GetTopologies_Result result;
-  ASSERT_OK(signal_processing_client->GetTopologies(&result));
+  ASSERT_OK(signal_processing_client_->GetTopologies(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().topologies.size(), 1);
-  ASSERT_EQ(result.response().topologies[0].id(), codec->GetTopologyId());
+  ASSERT_EQ(result.response().topologies[0].id(), codec_->GetTopologyId());
   ASSERT_EQ(result.response().topologies[0].processing_elements_edge_pairs().size(), 1);
   ASSERT_EQ(result.response()
                 .topologies[0]
                 .processing_elements_edge_pairs()[0]
                 .processing_element_id_from,
-            codec->GetAglPeId());
+            codec_->GetAglPeId());
   ASSERT_EQ(
       result.response().topologies[0].processing_elements_edge_pairs()[0].processing_element_id_to,
-      codec->GetAglPeId());
+      codec_->GetAglPeId());
 
   // Set the only topology must work.
   signal_fidl::SignalProcessing_SetTopology_Result result2;
-  ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId(), &result2));
+  ASSERT_OK(signal_processing_client_->SetTopology(codec_->GetTopologyId(), &result2));
   ASSERT_FALSE(result2.is_err());
 
   // Set the an incorrect topology id must fail.
   signal_fidl::SignalProcessing_SetTopology_Result result3;
-  ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId() + 1, &result3));
+  ASSERT_OK(signal_processing_client_->SetTopology(codec_->GetTopologyId() + 1, &result3));
   ASSERT_TRUE(result3.is_err());
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, SignalProcessingConnectTooManyConnections) {
+TEST(Tas58xxSignalProcessingTest, SignalProcessingConnectTooManyConnections) {
   auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c;
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -607,48 +475,10 @@ TEST(Tas58xxTest, SignalProcessingConnectTooManyConnections) {
   mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, WatchAgl) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, WatchAgl) {
   // We should get 2 PEs one AGL and one EQUALIZER.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[0].type(),
@@ -657,7 +487,7 @@ TEST(Tas58xxTest, WatchAgl) {
 
   // AGL enabled.
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
@@ -668,20 +498,20 @@ TEST(Tas58xxTest, WatchAgl) {
     signal_fidl::SignalProcessing_SetElementState_Result result_enable;
     signal_fidl::ElementState state;
     state.set_enabled(true);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[0].id(), std::move(state), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client->WatchElementState(result.response().processing_elements[0].id(),
-                                                &state_received);
+    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
+                                                 &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_TRUE(state_received.enabled());
   }
 
   // AGL disabled.
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
@@ -692,60 +522,22 @@ TEST(Tas58xxTest, WatchAgl) {
     signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState state;
     state.set_enabled(false);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[0].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client->WatchElementState(result.response().processing_elements[0].id(),
-                                                &state_received);
+    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
+                                                 &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_FALSE(state_received.enabled());
   }
 }
 
-TEST(Tas58xxTest, WatchAglUpdates) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, WatchAglUpdates) {
   // We should get 2 PEs one AGL and one EQUALIZER.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[0].type(),
@@ -754,7 +546,7 @@ TEST(Tas58xxTest, WatchAglUpdates) {
 
   // A Watch after a SetPE disable must reply since the PE state changed.
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
@@ -765,20 +557,20 @@ TEST(Tas58xxTest, WatchAglUpdates) {
     signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState state;
     state.set_enabled(true);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[0].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client->WatchElementState(result.response().processing_elements[0].id(),
-                                                &state_received);
+    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
+                                                 &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_TRUE(state_received.enabled());
   }
 
   // A Watch potentially before a SetPE disable must reply since the PE state changed.
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
@@ -787,8 +579,8 @@ TEST(Tas58xxTest, WatchAglUpdates) {
 
     std::thread th([&]() {
       signal_fidl::ElementState state_received;
-      signal_processing_client->WatchElementState(result.response().processing_elements[0].id(),
-                                                  &state_received);
+      signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
+                                                   &state_received);
       ASSERT_TRUE(state_received.has_enabled());
       ASSERT_FALSE(state_received.enabled());
     });
@@ -801,7 +593,7 @@ TEST(Tas58xxTest, WatchAglUpdates) {
     signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState state;
     state.set_enabled(false);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[0].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
@@ -811,7 +603,7 @@ TEST(Tas58xxTest, WatchAglUpdates) {
   // A Watch after a previous watch with a reply triggered by SetPE must reply if we change the
   // PE state with a new SetPE.
   {
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
@@ -822,60 +614,22 @@ TEST(Tas58xxTest, WatchAglUpdates) {
     signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState state;
     state.set_enabled(true);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[0].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client->WatchElementState(result.response().processing_elements[0].id(),
-                                                &state_received);
+    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
+                                                 &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_TRUE(state_received.enabled());
   }
 }
 
-TEST(Tas58xxTest, WatchEqualizer) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, WatchEqualizer) {
   // We should get 2 PEs one AGL and one EQUALIZER.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[0].type(),
@@ -883,8 +637,8 @@ TEST(Tas58xxTest, WatchEqualizer) {
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   signal_fidl::ElementState state_received;
-  signal_processing_client->WatchElementState(result.response().processing_elements[1].id(),
-                                              &state_received);
+  signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
+                                               &state_received);
   ASSERT_TRUE(state_received.has_enabled());
   ASSERT_TRUE(state_received.enabled());
   ASSERT_TRUE(state_received.has_type_specific());
@@ -937,48 +691,10 @@ TEST(Tas58xxTest, WatchEqualizer) {
   ASSERT_FALSE(state_received.type_specific().equalizer().bands_state()[4].has_enabled());
 }
 
-TEST(Tas58xxTest, WatchEqualizerUpdates) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, WatchEqualizerUpdates) {
   // We should get 2 PEs one AGL and one EQUALIZER.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[0].type(),
@@ -986,8 +702,8 @@ TEST(Tas58xxTest, WatchEqualizerUpdates) {
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   signal_fidl::ElementState state_received;
-  signal_processing_client->WatchElementState(result.response().processing_elements[1].id(),
-                                              &state_received);
+  signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
+                                               &state_received);
   ASSERT_TRUE(state_received.has_enabled());
   ASSERT_TRUE(state_received.enabled());
   ASSERT_TRUE(state_received.has_type_specific());
@@ -997,17 +713,17 @@ TEST(Tas58xxTest, WatchEqualizerUpdates) {
   // A Watch after a SetPE disable must reply since the PE state changed.
   {
     // Control the EQ by disable the whole processing element.
-    mock_i2c.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
+    mock_i2c_.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
     signal_fidl::SignalProcessing_SetElementState_Result result_enable;
     signal_fidl::ElementState control;
     control.set_enabled(false);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client->WatchElementState(result.response().processing_elements[1].id(),
-                                                &state_received);
+    signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
+                                                 &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_FALSE(state_received.enabled());
   }
@@ -1016,8 +732,8 @@ TEST(Tas58xxTest, WatchEqualizerUpdates) {
   {
     std::thread th([&]() {
       signal_fidl::ElementState state_received;
-      signal_processing_client->WatchElementState(result.response().processing_elements[1].id(),
-                                                  &state_received);
+      signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
+                                                   &state_received);
       ASSERT_TRUE(state_received.has_enabled());
       ASSERT_FALSE(state_received.enabled());
     });
@@ -1026,11 +742,11 @@ TEST(Tas58xxTest, WatchEqualizerUpdates) {
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
 
     // Control the EQ by disable the whole processing element.
-    mock_i2c.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
+    mock_i2c_.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
     signal_fidl::SignalProcessing_SetElementState_Result result_enable;
     signal_fidl::ElementState control;
     control.set_enabled(false);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
 
@@ -1038,48 +754,10 @@ TEST(Tas58xxTest, WatchEqualizerUpdates) {
   }
 }
 
-TEST(Tas58xxTest, SetEqualizerBandDisabled) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandDisabled) {
   // We should get 2 PEs, one with AGL and one with EQ support and its parameters.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
@@ -1098,10 +776,10 @@ TEST(Tas58xxTest, SetEqualizerBandDisabled) {
 
   // Control the EQ by disable the first band.
 
-  mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
+  mock_i2c_.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
 
   // We expect reset of the hardware parameters for the band.
-  mock_i2c
+  mock_i2c_
       .ExpectWriteStop({0x00, 0x00})    // page 0.
       .ExpectWriteStop({0x7f, 0xaa})    // book 0xaa.
       .ExpectWriteStop({0x00, 0x24})    // page 0x24.
@@ -1134,65 +812,25 @@ TEST(Tas58xxTest, SetEqualizerBandDisabled) {
   eq_control.set_bands_state(std::move(bands_control));
   auto control_params = signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
   control.set_type_specific(std::move(control_params));
-  ASSERT_OK(signal_processing_client->SetElementState(result.response().processing_elements[1].id(),
-                                                      std::move(control), &result_enable));
+  ASSERT_OK(signal_processing_client_->SetElementState(
+      result.response().processing_elements[1].id(), std::move(control), &result_enable));
   ASSERT_FALSE(result_enable.is_err());
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, SetEqualizerDifferentRequests) {
   // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   // 1. Band does not have an enabled field. The processing element does, but not the band.
   {
-    mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
+    mock_i2c_.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
 
     // We expect reset of the hardware parameters for the band since we default to disabled.
-    mock_i2c
+    mock_i2c_
         .ExpectWriteStop({0x00, 0x00})    // page 0.
         .ExpectWriteStop({0x7f, 0xaa})    // book 0xaa.
         .ExpectWriteStop({0x00, 0x24})    // page 0x24.
@@ -1223,14 +861,14 @@ TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
     auto control_params =
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
   }
 
   // 2. Control a band with bad request. Band has a bad id.
   {
-    mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
+    mock_i2c_.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
     signal_fidl::SignalProcessing_SetElementState_Result result_enable;
     signal_fidl::ElementState control;
     control.set_enabled(true);
@@ -1244,14 +882,14 @@ TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
     auto control_params =
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_TRUE(result_enable.is_err());
   }
 
   // 3. Control a band with bad request. Band control requests an unsupported frequency.
   {
-    mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
+    mock_i2c_.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
     signal_fidl::SignalProcessing_SetElementState_Result result_enable;
     signal_fidl::ElementState control;
     control.set_enabled(true);
@@ -1272,66 +910,26 @@ TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
     auto control_params =
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_TRUE(result_enable.is_err());
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, SetEqualizerBandEnabledWithCodecStarted) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandEnabledWithCodecStarted) {
   // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   // We expect the start to first go to HiZ then to play mode.
-  mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop({0x03, 0x02});
-  mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop({0x03, 0x03});
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop({0x03, 0x02});
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop({0x03, 0x03});
 
   // We expect the +5dB band control to turn one filter up and the gain compensation down.
-  mock_i2c.ExpectWrite({0x03})
+  mock_i2c_.ExpectWrite({0x03})
       .ExpectReadStop({0x00})
       .ExpectWriteStop({0x03, 0x02})             // Codec is stated, first go to HiZ.
       .ExpectWriteStop({0x66, 0x06})             // Disable bypass EQ.
@@ -1355,8 +953,7 @@ TEST(Tas58xxTest, SetEqualizerBandEnabledWithCodecStarted) {
       .ExpectWriteStop({0x03, 0x03});  // Codec is stated, now go back to play mode.
 
   // Start the codec.
-  int64_t out_start_time = 0;
-  ASSERT_OK(codec_client->Start(&out_start_time));
+  ASSERT_OK(codec_client_.Start());
 
   // Control the band.
   signal_fidl::SignalProcessing_SetElementState_Result result_enable;
@@ -1378,61 +975,21 @@ TEST(Tas58xxTest, SetEqualizerBandEnabledWithCodecStarted) {
   eq_control.set_bands_state(std::move(bands_control));
   auto control_params = signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
   control.set_type_specific(std::move(control_params));
-  ASSERT_OK(signal_processing_client->SetElementState(result.response().processing_elements[1].id(),
-                                                      std::move(control), &result_enable));
+  ASSERT_OK(signal_processing_client_->SetElementState(
+      result.response().processing_elements[1].id(), std::move(control), &result_enable));
   ASSERT_FALSE(result_enable.is_err());
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, SetEqualizer2BandsEnabled) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, SetEqualizer2BandsEnabled) {
   // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   // For band 1.
-  mock_i2c
+  mock_i2c_
       .ExpectWriteStop({0x66, 0x06})             // Disable bypass EQ.
       .ExpectWriteStop({0x00, 0x00})             // page 0.
       .ExpectWriteStop({0x7f, 0xaa})             // book 0xaa.
@@ -1451,7 +1008,7 @@ TEST(Tas58xxTest, SetEqualizer2BandsEnabled) {
       .ExpectWriteStop({0x7f, 0x00});  // book 0.
 
   // For band 2.
-  mock_i2c
+  mock_i2c_
       .ExpectWriteStop({0x66, 0x06})             // Disable bypass EQ.
       .ExpectWriteStop({0x00, 0x00})             // page 0.
       .ExpectWriteStop({0x7f, 0xaa})             // book 0xaa.
@@ -1493,7 +1050,7 @@ TEST(Tas58xxTest, SetEqualizer2BandsEnabled) {
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
 
     control.set_type_specific(std::move(control_params));
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
   }
@@ -1522,62 +1079,22 @@ TEST(Tas58xxTest, SetEqualizer2BandsEnabled) {
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
 
     control.set_type_specific(std::move(control_params));
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, SetEqualizerOverflows) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, SetEqualizerOverflows) {
   // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   // Band setup 1.
-  mock_i2c
+  mock_i2c_
       .ExpectWriteStop({0x00, 0x00})             // page 0.
       .ExpectWriteStop({0x7f, 0xaa})             // book 0xaa.
       .ExpectWriteStop({0x00, 0x24})             // page 0x24.
@@ -1595,7 +1112,7 @@ TEST(Tas58xxTest, SetEqualizerOverflows) {
       .ExpectWriteStop({0x7f, 0x00});  // book 0.
 
   // Band setup 2.
-  mock_i2c
+  mock_i2c_
       .ExpectWriteStop({0x00, 0x00})             // page 0.
       .ExpectWriteStop({0x7f, 0xaa})             // book 0xaa.
       .ExpectWriteStop({0x00, 0x24})             // page 0x24.
@@ -1615,75 +1132,35 @@ TEST(Tas58xxTest, SetEqualizerOverflows) {
 
   // Control the first band directly to bypass +-6dB restriction.
   // Setup 1, will overflow in the band configuration.
-  codec->SetBand(true, 0, 100, 1.f, 25.);
+  codec_->SetBand(true, 0, 100, 1.f, 25.);
   // Setup 2, will overflow in the gain adjustment.
-  codec->SetBand(true, 0, 100, 1.f, -25.);
-
-  mock_i2c.VerifyAndClear();
+  codec_->SetBand(true, 0, 100, 1.f, -25.);
 }
 
-TEST(Tas58xxTest, SetEqualizerElementDisabled) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
-      signal_processing_handle.NewRequest();
-  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
-  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-
+TEST_F(Tas58xxSignalProcessingTest, SetEqualizerElementDisabled) {
   // We should get 2 PEs, one with AGL and one with EQ support and its parameters.
   signal_fidl::Reader_GetElements_Result result;
-  ASSERT_OK(signal_processing_client->GetElements(&result));
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 2);
   ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   // 1. Control the EQ by disable the whole processing element.
-  mock_i2c.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
+  mock_i2c_.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
 
   // Now we send the EQ control disabling the processing element.
   {
     signal_fidl::SignalProcessing_SetElementState_Result result_enable;
     signal_fidl::ElementState control;
     control.set_enabled(false);
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
   }
 
   // 2. Control the EQ by disable the whole processing element, still include configuration for a
   // band.
-  mock_i2c
+  mock_i2c_
       .ExpectWriteStop({0x66, 0x07})             // Enable bypass EQ.
       .ExpectWriteStop({0x00, 0x00})             // page 0.
       .ExpectWriteStop({0x7f, 0xaa})             // book 0xaa.
@@ -1723,12 +1200,10 @@ TEST(Tas58xxTest, SetEqualizerElementDisabled) {
     auto control_params =
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
-    ASSERT_OK(signal_processing_client->SetElementState(
+    ASSERT_OK(signal_processing_client_->SetElementState(
         result.response().processing_elements[1].id(), std::move(control), &result_enable));
     ASSERT_FALSE(result_enable.is_err());
   }
-
-  mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, Reset) {
@@ -1861,47 +1336,18 @@ TEST(Tas58xxTest, Bridged) {
   mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas58xxTest, StopStart) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  mock_i2c::MockI2c mock_i2c;
-  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
-  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  ASSERT_TRUE(endpoints.is_ok());
-
-  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
-  loop.StartThread();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(),
-                                                               std::move(endpoints->client)));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  {
-    // Reset with PBTL mode on.
-    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
-        {0x03, 0x02});  // Stop, first go to HiZ.
-    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
-        {0x03, 0x00});  // Stop, go to deep sleep.
-    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
-        {0x03, 0x02});  // Start, first go to HiZ.
-    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
-        {0x03, 0x03});  // Start, then go back to play mode.
-    ASSERT_OK(client.Stop());
-    ASSERT_OK(client.Start());
-  }
-
-  mock_i2c.VerifyAndClear();
+TEST_F(Tas58xxTest, StopStart) {
+  // Reset with PBTL mode on.
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+      {0x03, 0x02});  // Stop, first go to HiZ.
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+      {0x03, 0x00});  // Stop, go to deep sleep.
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+      {0x03, 0x02});  // Start, first go to HiZ.
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+      {0x03, 0x03});  // Start, then go back to play mode.
+  ASSERT_OK(client_.Stop());
+  ASSERT_OK(client_.Start());
 }
 
 TEST(Tas58xxTest, ExternalConfig) {
