@@ -23,20 +23,28 @@ pub(crate) struct TrelInstance {
     subscriber_request_stream: ServiceSubscriberRequestStream,
 }
 
-// Converts an optional vector of strings and to a single string.
+// Converts an optional vector of strings to a single DNS-compatible string.
 fn flatten_txt(txt: Option<Vec<Vec<u8>>>) -> Vec<u8> {
-    let txt: Vec<&[u8]> = txt.iter().flat_map(|x| x.iter()).map(Vec::as_slice).collect::<Vec<_>>();
+    let mut ret = vec![];
 
-    txt.join(&ot::DNSSD_TXT_SEPARATOR_BYTE)
+    for mut txt in txt.iter().flat_map(|x| x.iter()).map(Vec::as_slice) {
+        if txt.len() > u8::MAX as usize {
+            // Limit the size of the records to 255 characters.
+            txt = &txt[0..(u8::MAX as usize) + 1];
+        }
+        ret.push(u8::try_from(txt.len()).unwrap());
+        ret.extend_from_slice(txt);
+    }
+
+    ret
 }
 
 // Splits the TXT record into individual values.
 fn split_txt(txt: &[u8]) -> Vec<Vec<u8>> {
     info!("trel:split_txt: Splitting TXT record: {:?}", hex::encode(txt));
-    txt.split(|&x| x == ot::DNSSD_TXT_SEPARATOR_BYTE)
-        .filter(|x| !x.is_empty())
-        .map(|x| x.to_vec())
-        .collect::<Vec<_>>()
+    let txt =
+        ot::DnsTxtEntryIterator::try_new(txt).expect("can't parse TXT records from OpenThread");
+    txt.map(|x| x.expect("can't parse TXT records from OpenThread").to_vec()).collect::<Vec<_>>()
 }
 
 impl TrelInstance {
@@ -76,6 +84,7 @@ impl TrelInstance {
 
     fn register_service(&mut self, port: u16, txt: &[u8]) {
         let txt = split_txt(txt);
+
         let (client, server) =
             create_endpoints::<ServiceInstancePublicationResponder_Marker>().unwrap();
 
@@ -378,11 +387,7 @@ mod test {
     #[test]
     fn test_split_txt() {
         assert_eq!(
-            split_txt(b"\x0bxa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb"),
-            vec![b"xa=a7bfc4981f4e4d22".to_vec(), b"xp=029c6f4dbae059cb".to_vec()]
-        );
-        assert_eq!(
-            split_txt(b"xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb"),
+            split_txt(b"\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb"),
             vec![b"xa=a7bfc4981f4e4d22".to_vec(), b"xp=029c6f4dbae059cb".to_vec()]
         );
     }
@@ -393,14 +398,14 @@ mod test {
         assert_eq!(flatten_txt(Some(vec![])), vec![]);
         assert_eq!(
             flatten_txt(Some(vec![b"xa=a7bfc4981f4e4d22".to_vec()])),
-            b"xa=a7bfc4981f4e4d22".to_vec()
+            b"\x13xa=a7bfc4981f4e4d22".to_vec()
         );
         assert_eq!(
             flatten_txt(Some(vec![
                 b"xa=a7bfc4981f4e4d22".to_vec(),
                 b"xp=029c6f4dbae059cb".to_vec()
             ])),
-            b"xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb".to_vec()
+            b"\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb".to_vec()
         );
     }
 }

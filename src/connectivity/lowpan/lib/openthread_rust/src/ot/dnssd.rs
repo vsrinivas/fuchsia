@@ -2,26 +2,203 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::ot::WrongSize;
 use crate::prelude_internal::*;
 
-/// Value of the separator byte between TXT entries.
-pub const DNSSD_TXT_SEPARATOR_BYTE: u8 = 0x0b;
+/// Functional equivalent of [`otsys::otDnsTxtEntry`](crate::otsys::otDnsTxtEntry).
+#[derive(Default, Clone)]
+pub struct DnsTxtEntry<'a>(pub otDnsTxtEntry, PhantomData<&'a str>);
 
-/// Value of the separator character between TXT entries.
-pub const DNSSD_TXT_SEPARATOR_CHAR: char = '\x0b';
+impl_ot_castable!(lifetime DnsTxtEntry<'_>, otDnsTxtEntry, Default::default());
 
-/// String containing the separator character used between TXT entries.
-pub const DNSSD_TXT_SEPARATOR_STR: &str = "\x0b";
+impl<'a> DnsTxtEntry<'a> {
+    /// Tries to create a new `DnsTxtEntry` instance. Fails if value is too large.
+    pub fn try_new(
+        key: Option<&'a CStr>,
+        value: Option<&'a [u8]>,
+    ) -> Result<DnsTxtEntry<'a>, WrongSize> {
+        let mut ret = DnsTxtEntry::default();
+
+        ret.0.mKey = key.map(CStr::as_ptr).unwrap_or(std::ptr::null());
+
+        if let Some(value) = value {
+            ret.0.mValueLength = u16::try_from(value.len()).map_err(|_| WrongSize)?;
+            ret.0.mValue = value.as_ptr();
+        }
+
+        Ok(ret)
+    }
+
+    /// Accessor for the `mKey` field from [`otsys::otDnsTxtEntry`](crate::otsys::otDnsTxtEntry).
+    pub fn key_field(&self) -> Option<&'a CStr> {
+        if self.0.mKey.is_null() {
+            None
+        } else {
+            let cstr = unsafe { CStr::from_ptr(self.0.mKey) };
+            Some(cstr)
+        }
+    }
+
+    /// Accessor for the `mValue` field from [`otsys::otDnsTxtEntry`](crate::otsys::otDnsTxtEntry).
+    pub fn value_field(&self) -> Option<&'a [u8]> {
+        if self.0.mValue.is_null() {
+            None
+        } else {
+            let value =
+                unsafe { std::slice::from_raw_parts(self.0.mValue, self.0.mValueLength as usize) };
+            Some(value)
+        }
+    }
+
+    /// The key for this TXT entry.
+    ///
+    /// Will extract the key from the value field if `key_field()` returns `None`.
+    pub fn key(&self) -> Option<&'a str> {
+        if let Some(cstr) = self.key_field() {
+            match cstr.to_str() {
+                Ok(x) => Some(x),
+                Err(x) => {
+                    // We don't panic here because that would create a DoS
+                    // vulnerability. Instead we log the error and return None.
+                    warn!("Bad DNS TXT key {:?}: {:?}", cstr, x);
+                    None
+                }
+            }
+        } else if let Some(value) = self.value_field() {
+            let key_bytes = value.splitn(2, |x| *x == b'=').next().unwrap();
+            match std::str::from_utf8(key_bytes) {
+                Ok(x) => Some(x),
+                Err(x) => {
+                    // We don't panic here because that would create a DoS
+                    // vulnerability. Instead we log the error and return None.
+                    warn!("Bad DNS TXT key {:?}: {:?}", key_bytes, x);
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    /// The value for this TXT entry.
+    ///
+    /// Will only return the value part if the key is included in `value_field()`.
+    pub fn value(&self) -> Option<&'a [u8]> {
+        if let Some(value) = self.value_field() {
+            if self.0.mKey.is_null() {
+                let mut iter = value.splitn(2, |x| *x == b'=');
+                let a = iter.next();
+                let b = iter.next();
+                match (a, b) {
+                    (Some(_), Some(value)) => Some(value),
+                    _ => None,
+                }
+            } else {
+                Some(value)
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Renders out this key-value pair to a `Vec<u8>`.
+    pub fn to_vec(&self) -> Vec<u8> {
+        let mut pair = vec![];
+        match (self.key(), self.value()) {
+            (Some(key), Some(value)) => {
+                pair.extend_from_slice(key.as_bytes());
+                pair.push(b'=');
+                pair.extend_from_slice(value);
+            }
+            (Some(key), None) => {
+                pair.extend_from_slice(key.as_bytes());
+            }
+            _ => {}
+        }
+        pair.truncate(u8::MAX as usize);
+        pair
+    }
+}
+
+impl<'a> std::fmt::Debug for DnsTxtEntry<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn ascii_dump(data: &[u8]) -> String {
+            let vec = data.iter().copied().flat_map(std::ascii::escape_default).collect::<Vec<_>>();
+            std::str::from_utf8(&vec).unwrap().to_string()
+        }
+        match (self.key(), self.value()) {
+            (Some(key), Some(value)) => write!(f, "{}={}", key, ascii_dump(value)),
+            (Some(key), None) => write!(f, "{}", key),
+            (None, Some(value)) => write!(f, "{}", ascii_dump(value)),
+            (None, None) => Ok(()),
+        }
+    }
+}
+
+impl<'a> std::fmt::Display for DnsTxtEntry<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+/// Functional equivalent of [`otsys::otDnsTxtEntryIterator`](crate::otsys::otDnsTxtEntryIterator).
+#[derive(Default, Debug, Clone)]
+pub struct DnsTxtEntryIterator<'a>(pub otDnsTxtEntryIterator, PhantomData<&'a str>);
+
+impl_ot_castable!(lifetime DnsTxtEntryIterator<'_>, otDnsTxtEntryIterator, Default::default());
+
+impl<'a> DnsTxtEntryIterator<'a> {
+    /// Tries to create a new `DnsTxtEntry` instance. Functional equivalent
+    /// of [`otsys::otDnsInitTxtEntryIterator`](crate::otsys::otDnsInitTxtEntryIterator).
+    ///
+    /// Fails if `txt_data` is too large.
+    pub fn try_new(txt_data: &'a [u8]) -> Result<DnsTxtEntryIterator<'a>, WrongSize> {
+        if let Ok(len) = u16::try_from(txt_data.len()) {
+            let mut ret = DnsTxtEntryIterator::default();
+            // SAFETY: All values being passed into this function have been validated.
+            unsafe { otDnsInitTxtEntryIterator(ret.as_ot_mut_ptr(), txt_data.as_ptr(), len) }
+            Ok(ret)
+        } else {
+            Err(WrongSize)
+        }
+    }
+}
+
+impl<'a> Iterator for DnsTxtEntryIterator<'a> {
+    type Item = Result<DnsTxtEntry<'a>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut ret = DnsTxtEntry::default();
+
+        match Error::from(unsafe {
+            otDnsGetNextTxtEntry(self.as_ot_mut_ptr(), ret.as_ot_mut_ptr())
+        }) {
+            Error::None => Some(Ok(ret)),
+            Error::NotFound => None,
+            err => Some(Err(err)),
+        }
+    }
+}
 
 /// Converts a iterator of strings into a single string separated with
 /// [`DNSSD_TXT_SEPARATOR_STR`].
-pub fn dnssd_flatten_txt<I: IntoIterator<Item = String>>(txt: I) -> String {
-    txt.into_iter().collect::<Vec<_>>().join(ot::DNSSD_TXT_SEPARATOR_STR)
-}
+pub fn dns_txt_flatten<I: IntoIterator<Item = (String, Option<Vec<u8>>)>>(txt: I) -> Vec<u8> {
+    let mut ret = vec![];
+    for (key, value) in txt {
+        let mut pair = vec![];
 
-/// Splits a TXT record from OpenThread into individual values.
-pub fn dnssd_split_txt(txt: &str) -> impl Iterator<Item = &'_ str> {
-    txt.split(|x| x == ot::DNSSD_TXT_SEPARATOR_CHAR).filter(|x| !x.is_empty())
+        if let Some(value) = value {
+            pair.extend_from_slice(key.as_bytes());
+            pair.push(b'=');
+            pair.extend_from_slice(&value);
+        } else {
+            pair.extend_from_slice(key.as_bytes());
+        }
+        pair.truncate(u8::MAX as usize);
+        ret.push(u8::try_from(pair.len()).unwrap());
+        ret.extend(pair);
+    }
+    ret
 }
 
 /// Represents the type of a DNS query
@@ -346,48 +523,61 @@ mod test {
     #[test]
     fn test_split_txt() {
         assert_eq!(
-            ot::dnssd_split_txt("").map(ToString::to_string).collect::<Vec<_>>(),
+            DnsTxtEntryIterator::try_new(b"")
+                .unwrap()
+                .map(|x| x.unwrap().to_string())
+                .collect::<Vec<_>>(),
             Vec::<String>::new()
         );
         assert_eq!(
-            ot::dnssd_split_txt("\x0b\x0b\x0b\x0b").map(ToString::to_string).collect::<Vec<_>>(),
-            Vec::<String>::new()
-        );
-        assert_eq!(
-            ot::dnssd_split_txt("\x0bxa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb")
-                .map(ToString::to_string)
+            DnsTxtEntryIterator::try_new(b"\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb")
+                .unwrap()
+                .map(|x| x.unwrap().to_string())
                 .collect::<Vec<_>>(),
             vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
         );
         assert_eq!(
-            ot::dnssd_split_txt("xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb")
-                .map(ToString::to_string)
+            DnsTxtEntryIterator::try_new(b"\x13xa=a7bfc4981f4e4d22\x11xp=029c6f4dbae059")
+                .unwrap()
+                .map(|x| x.unwrap().to_string())
                 .collect::<Vec<_>>(),
-            vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
+            vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059".to_string()]
+        );
+        assert_eq!(
+            DnsTxtEntryIterator::try_new(b"\x13xa=a7bfc4981f4e4d22\x04flag\x11xp=029c6f4dbae059")
+                .unwrap()
+                .map(|x| x.unwrap().to_string())
+                .collect::<Vec<_>>(),
+            vec![
+                "xa=a7bfc4981f4e4d22".to_string(),
+                "flag".to_string(),
+                "xp=029c6f4dbae059".to_string()
+            ]
         );
     }
 
     #[test]
     fn test_flatten_txt() {
-        assert_eq!(ot::dnssd_flatten_txt(None), String::default());
-        assert_eq!(ot::dnssd_flatten_txt(vec![]), String::default());
+        assert_eq!(ot::dns_txt_flatten(None), vec![]);
+        assert_eq!(ot::dns_txt_flatten(vec![]), vec![]);
         assert_eq!(
-            ot::dnssd_flatten_txt(vec!["xa=a7bfc4981f4e4d22".to_string()]),
-            "xa=a7bfc4981f4e4d22".to_string()
+            ot::dns_txt_flatten(vec![("xa".to_string(), Some(b"a7bfc4981f4e4d22".to_vec()))]),
+            b"\x13xa=a7bfc4981f4e4d22".to_vec()
         );
         assert_eq!(
-            ot::dnssd_flatten_txt(
-                Some(vec!["xa=a7bfc4981f4e4d22".to_string()]).into_iter().flatten()
-            ),
-            "xa=a7bfc4981f4e4d22".to_string()
+            ot::dns_txt_flatten(vec![
+                ("xa".to_string(), Some(b"a7bfc4981f4e4d22".to_vec())),
+                ("xp".to_string(), Some(b"029c6f4dbae059cb".to_vec()))
+            ]),
+            b"\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb".to_vec()
         );
         assert_eq!(
-            ot::dnssd_flatten_txt(
-                Some(vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()])
-                    .into_iter()
-                    .flatten()
-            ),
-            "xa=a7bfc4981f4e4d22\x0bxp=029c6f4dbae059cb".to_string()
+            ot::dns_txt_flatten(vec![
+                ("xa".to_string(), Some(b"a7bfc4981f4e4d22".to_vec())),
+                ("flag".to_string(), None),
+                ("xp".to_string(), Some(b"029c6f4dbae059cb".to_vec()))
+            ]),
+            b"\x13xa=a7bfc4981f4e4d22\x04flag\x13xp=029c6f4dbae059cb".to_vec()
         );
     }
 }

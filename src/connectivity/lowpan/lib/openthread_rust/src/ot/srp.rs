@@ -6,6 +6,7 @@
 // specifically to the type `ChangedFlags`, due to a bug in `bitflags!`.
 #![allow(missing_docs)]
 
+use crate::ot::DnsTxtEntryIterator;
 use crate::prelude_internal::*;
 use std::ffi::CStr;
 use std::ptr::null;
@@ -230,16 +231,24 @@ impl_ot_castable!(opaque SrpServerService, otSrpServerService);
 
 impl std::fmt::Debug for SrpServerService {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("otSrpServerService")
-            .field("full_name", &self.full_name_cstr())
-            .field("is_deleted", &self.is_deleted())
-            .field("port", &self.port())
-            .field("priority", &self.priority())
-            .field("weight", &self.weight())
-            .field("is_subtype", &self.is_subtype())
-            .field("service_name", &self.service_name_cstr())
-            .field("instance_name", &self.instance_name_cstr())
-            .finish()
+        if self.is_deleted() {
+            f.debug_struct("otSrpServerService")
+                .field("full_name", &self.full_name_cstr())
+                .field("is_deleted", &self.is_deleted())
+                .finish()
+        } else {
+            f.debug_struct("otSrpServerService")
+                .field("full_name", &self.full_name_cstr())
+                .field("is_deleted", &self.is_deleted())
+                .field("txt_data", &self.txt_entries().collect::<Vec<_>>())
+                .field("port", &self.port())
+                .field("priority", &self.priority())
+                .field("weight", &self.weight())
+                .field("is_subtype", &self.is_subtype())
+                .field("service_name", &self.service_name_cstr())
+                .field("instance_name", &self.instance_name_cstr())
+                .finish()
+        }
     }
 }
 
@@ -278,6 +287,11 @@ impl SrpServerService {
 
             std::slice::from_raw_parts(txt_data_ptr, txt_data_len as usize)
         }
+    }
+
+    /// Returns iterator over all the DNS TXT entries.
+    pub fn txt_entries(&self) -> DnsTxtEntryIterator<'_> {
+        DnsTxtEntryIterator::try_new(self.txt_data()).unwrap()
     }
 
     /// Functional equivalent of

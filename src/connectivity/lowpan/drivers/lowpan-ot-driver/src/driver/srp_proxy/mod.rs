@@ -29,17 +29,19 @@ const MAX_DNSSD_HOST_LEN: usize = 255;
 
 const MAX_DNSSD_INSTANCE_LEN: usize = 63;
 
-/// Converts an optional vector of strings and to a single string.
-fn flatten_txt(txt: Option<Vec<String>>) -> String {
-    ot::dnssd_flatten_txt(txt.into_iter().flat_map(IntoIterator::into_iter))
-}
+/// Converts an optional vector of strings into a DNS-compatible TXT record vector.
+fn flatten_txt_strings(txt: Option<Vec<String>>) -> Vec<u8> {
+    let mut ret = vec![];
 
-/// Splits the TXT record into individual values.
-#[allow(dead_code)]
-fn split_txt(txt: &[u8]) -> Vec<String> {
-    ot::dnssd_split_txt(std::str::from_utf8(txt).unwrap())
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
+    for mut txt in txt.iter().flat_map(|x| x.iter()).map(String::as_bytes) {
+        if txt.len() > u8::MAX as usize {
+            txt = &txt[0..(u8::MAX as usize) + 1];
+        }
+        ret.push(u8::try_from(txt.len()).unwrap());
+        ret.extend_from_slice(txt);
+    }
+
+    ret
 }
 
 fn replace_domain<T: AsRef<str>>(

@@ -60,14 +60,6 @@ impl AdvertisingProxyService {
     }
 }
 
-// Splits the TXT record into individual values.
-fn split_txt(txt: &[u8]) -> Vec<Vec<u8>> {
-    txt.split(|&x| x == ot::DNSSD_TXT_SEPARATOR_BYTE)
-        .filter(|x| !x.is_empty())
-        .map(|x| x.to_vec())
-        .collect::<Vec<_>>()
-}
-
 impl AdvertisingProxy {
     pub fn new(instance: &ot::Instance) -> Result<AdvertisingProxy, anyhow::Error> {
         let inner = Arc::new(Mutex::new(AdvertisingProxyInner {
@@ -324,7 +316,7 @@ impl AdvertisingProxyInner {
                 });
 
             // Make copies of all of the pertinent data for the publication responder.
-            let txt = split_txt(srp_service.txt_data());
+            let txt = srp_service.txt_entries().map(|x| x.unwrap().to_vec()).collect::<Vec<_>>();
             let port = srp_service.port();
             let weight = srp_service.weight();
             let priority = srp_service.priority();

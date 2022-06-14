@@ -397,7 +397,7 @@ impl DiscoveryProxy {
                 sockaddr.port(),
                 srv_priority,
                 ttl,
-                flatten_txt(text).as_bytes(),
+                &flatten_txt_strings(text),
                 srv_weight,
             );
 
