@@ -53,22 +53,16 @@ rustc_test("font_info_test_bin") {
   sources = [ "tests/tests.rs" ]
 }
 
-# Needed for testing on Fuchsia
-fuchsia_component("font_info_tests_cmp") {
-  testonly = true
-  manifest = "meta/font_info_test.cmx"
-  component_name = "font_info_test"
-  deps = [ ":font_info_test_bin" ]
-}
-
 resource("testdata") {
   sources = [ "//src/fonts/test_data/SampleFont-Regular.ttf" ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_test_package("font_info_tests") {
-  test_components = [ ":font_info_tests_cmp" ]
-  deps = [ ":testdata" ]
+fuchsia_unittest_package("font_info_tests") {
+  deps = [
+    ":font_info_test_bin",
+    ":testdata",
+  ]
 }
 
 if (is_host) {
@@ -81,7 +75,7 @@ if (is_host) {
 group("tests") {
   testonly = true
 
-  public_deps = [
+  deps = [
     ":font_info_test_bin($host_toolchain)",
     ":font_info_tests",
   ]

@@ -25,18 +25,11 @@ rustc_library("offset_string") {
   ]
 }
 
-fuchsia_component("offset_string_tests_cmp") {
-  testonly = true
-  manifest = "meta/offset_string_lib_test.cmx"
-  component_name = "offset_string_lib_test"
+fuchsia_unittest_package("offset_string_tests") {
   deps = [ ":offset_string_test" ]
-}
-
-fuchsia_test_package("offset_string_tests") {
-  test_components = [ ":offset_string_tests_cmp" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":offset_string_tests" ]
+  deps = [ ":offset_string_tests" ]
 }

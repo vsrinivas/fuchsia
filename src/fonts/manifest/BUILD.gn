@@ -43,15 +43,8 @@ rustc_library("manifest") {
   ]
 }
 
-fuchsia_component("manifest_tests_cmp") {
-  testonly = true
-  manifest = "meta/manifest_lib_test.cmx"
-  component_name = "manifest_lib_test"
+fuchsia_unittest_package("manifest_tests") {
   deps = [ ":manifest_test" ]
-}
-
-fuchsia_test_package("manifest_tests") {
-  test_components = [ ":manifest_tests_cmp" ]
 }
 
 # The host target is called `manifest_test`, but the binary's name is `manifest_lib_test`.
@@ -60,7 +53,7 @@ fuchsia_test_package("manifest_tests") {
 # fx test manifest_tests          # Fuchsia
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":manifest_test($host_toolchain)",
     ":manifest_tests",
   ]
