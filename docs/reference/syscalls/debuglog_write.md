@@ -1,12 +1,12 @@
 # zx_debuglog_write
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Write a message to the kernel debuglog.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

@@ -1,12 +1,12 @@
 # zx_debug_send_command
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 TODO(fxbug.dev/32938)
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

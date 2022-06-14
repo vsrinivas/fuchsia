@@ -1,12 +1,12 @@
 # zx_thread_write_state
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Write one aspect of thread state.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

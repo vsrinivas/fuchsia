@@ -1,12 +1,12 @@
 # zx_interrupt_wait
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Wait for an interrupt.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

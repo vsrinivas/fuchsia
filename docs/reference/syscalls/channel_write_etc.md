@@ -1,12 +1,12 @@
 # zx_channel_write_etc
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Write a message to a channel.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

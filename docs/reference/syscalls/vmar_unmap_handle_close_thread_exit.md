@@ -1,12 +1,12 @@
 # zx_vmar_unmap_handle_close_thread_exit
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Unmap memory, close handle, exit.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

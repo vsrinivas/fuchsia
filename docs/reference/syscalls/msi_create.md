@@ -1,12 +1,12 @@
 # zx_msi_create
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Create an Interrupt object from a Messaged-Signaled Interrupt (MSI) allocation.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

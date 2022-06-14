@@ -1,12 +1,12 @@
 # zx_object_get_child
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

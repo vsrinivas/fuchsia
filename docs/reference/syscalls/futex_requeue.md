@@ -1,12 +1,12 @@
 # zx_futex_requeue
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Wake some number of threads waiting on a futex, and move more waiters to another wait queue.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

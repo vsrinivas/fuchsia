@@ -1,12 +1,12 @@
 # zx_futex_wake_handle_close_thread_exit
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Write to futex, wake futex, close handle, exit.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

@@ -1,12 +1,12 @@
 # zx_futex_wake
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Wake some number of threads waiting on a futex, and set the ownership of the futex to nothing.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

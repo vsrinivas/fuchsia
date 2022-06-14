@@ -1,12 +1,12 @@
 # zx_futex_requeue_single_owner
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Wake one thread waiting on a futex, and requeue more waiters to another futex wait queue.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

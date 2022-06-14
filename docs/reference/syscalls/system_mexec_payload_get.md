@@ -1,12 +1,12 @@
 # zx_system_mexec_payload_get
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Return a ZBI containing ZBI entries necessary to boot this system.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

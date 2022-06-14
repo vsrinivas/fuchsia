@@ -4,13 +4,13 @@ This function replaces [task_suspend](task_suspend.md). When all callers are
 updated, [`zx_task_suspend()`] will be deleted and this function will be renamed
 [`zx_task_suspend()`].
 
-## NAME
+## SUMMARY
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
 Suspend the given task. Currently only thread or process handles may be suspended.
 
-## SYNOPSIS
+## DECLARATION
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 

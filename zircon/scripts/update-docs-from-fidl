@@ -383,7 +383,7 @@ def update_rights(lines, syscall_data, warn):
         syscall_data['requirements'], syscall_data['arguments'], warn)
 
 
-def make_name_block(syscall_data, warn):
+def make_summary_block(syscall_data, warn):
     desc = ''
     for x in syscall_data['top_description']:
         # TODO(scottmg): This is gross, we should change the output to give us a
@@ -404,19 +404,19 @@ def make_name_block(syscall_data, warn):
     return STANDARD_BLOCK_HEADER + [desc, '']
 
 
-def update_name(lines, syscall_data, warn):
-    """Updates the NAME block of the .md file in lines.
+def update_summary(lines, syscall_data, warn):
+    """Updates the SUMMARY block of the .md file in lines.
     """
-    name_start_index, name_end_index = find_block(lines, 'NAME')
-    if name_start_index == -1 or name_end_index == -1:
-        warn('did not find NAME section, skipping update')
+    start_index, end_index = find_block(lines, 'SUMMARY')
+    if start_index == -1 or end_index == -1:
+        warn('did not find SUMMARY section, skipping update')
         return
 
-    lines[name_start_index:name_end_index] = make_name_block(syscall_data, warn)
+    lines[start_index:end_index] = make_summary_block(syscall_data, warn)
 
 
-def make_synopsis_block(syscall_data, warn):
-    # Construct a synopsis block of the form:
+def make_declaration_block(syscall_data, warn):
+    # Construct a declaration block of the form:
     #
     #   ```c
     #   #include <zircon/syscalls.h>
@@ -469,7 +469,7 @@ def make_synopsis_block(syscall_data, warn):
                                     stdout=subprocess.PIPE)
     formatted, _ = clang_format.communicate(to_format.encode('utf-8'))
     if clang_format.returncode != 0:
-        warn('formatting synopsis failed, skipping update')
+        warn('formatting declaration failed, skipping update')
         return None
 
     footer = [
@@ -479,15 +479,16 @@ def make_synopsis_block(syscall_data, warn):
     return STANDARD_BLOCK_HEADER + header + [formatted.decode('utf-8')] + footer
 
 
-def update_synopsis(lines, syscall_data, warn):
-    """Updates the SYNOPSIS block of the .md file in lines.
+def update_declaration(lines, syscall_data, warn):
+    """Updates the DECLARATION block of the .md file in lines.
     """
-    start_index, end_index = find_block(lines, 'SYNOPSIS')
+    start_index, end_index = find_block(lines, 'DECLARATION')
+
     if start_index == -1 or end_index == -1:
-        warn('did not find SYNOPSIS section, skipping update')
+        warn('did not find DECLARATION section, skipping update')
         return
 
-    syn = make_synopsis_block(syscall_data, warn)
+    syn = make_declaration_block(syscall_data, warn)
     if not syn:
         return
     lines[start_index:end_index] = syn
@@ -508,9 +509,9 @@ def generate_stub(md):
     stub = '''\
 # zx_xyz
 
-## NAME
+## SUMMARY
 
-## SYNOPSIS
+## DECLARATION
 
 ## DESCRIPTION
 
@@ -760,8 +761,8 @@ def main():
                 print('warning: %s: %s' % (md, msg), file=sys.stderr)
 
             update_title(lines, syscall, warn)
-            update_name(lines, syscall, warn)
-            update_synopsis(lines, syscall, warn)
+            update_summary(lines, syscall, warn)
+            update_declaration(lines, syscall, warn)
             update_rights(lines, syscall, warn)
             concepts = update_seealso(lines, syscall, all_syscall_names, warn)
             update_syscall_references(lines, syscall, all_syscall_names, concepts, warn)
