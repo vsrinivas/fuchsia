@@ -173,11 +173,11 @@ where
     W: Write + Sync,
 {
     if product_url.scheme() == "file" {
-        writeln!(writer, "There's no data download necessary for local products.")?;
+        log::info!("There's no data download necessary for local products.");
         return Ok(());
     }
     if product_url.scheme() != GS_SCHEME {
-        writeln!(writer, "Only GCS downloads are supported at this time.")?;
+        log::info!("Only GCS downloads are supported at this time.");
         return Ok(());
     }
     get_product_data_from_gcs(product_url, verbose, writer)

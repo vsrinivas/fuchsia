@@ -101,7 +101,7 @@ async fn pb_get<W: Write + Sync>(
                     .map_err(RepositoryError::from)
                     .with_context(|| format!("registering repository {}", product_name))?;
 
-                writeln!(writer, "Created repository named '{}'", product_name)?;
+                log::info!("Created repository named '{}'", product_name);
             }
         }
     }

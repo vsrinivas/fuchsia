@@ -95,7 +95,7 @@ impl Sdk {
         };
 
         let file = fs::File::open(&manifest_path)
-            .context(format!("opening sdk path: {:?}", manifest_path))?;
+            .context(format!("opening manifest path: {:?}", manifest_path))?;
 
         // If we are able to parse the json file into atoms, creates a Sdk object from the atoms.
         Self::from_sdk_atoms(

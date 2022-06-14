@@ -94,7 +94,7 @@ where
                     update_refresh_token(&boto_path).await.context("Updating refresh token")?
                 }
                 Some(GcsError::NotFound(b, p)) => {
-                    writeln!(writer, "[gs://{}/{} not found]", b, p)?;
+                    log::warn!("[gs://{}/{} not found]", b, p);
                     break;
                 }
                 Some(_) | None => bail!(

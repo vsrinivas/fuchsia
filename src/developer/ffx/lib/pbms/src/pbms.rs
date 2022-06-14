@@ -34,7 +34,7 @@ pub(crate) async fn fetch_product_metadata<W>(
 where
     W: Write + Sync,
 {
-    writeln!(writer, "Getting product metadata.")?;
+    log::info!("Getting product metadata.");
     let storage_path: PathBuf =
         ffx_config::get(CONFIG_STORAGE_PATH).await.context("get CONFIG_STORAGE_PATH")?;
     async_fs::create_dir_all(&storage_path).await.context("create directory")?;
@@ -212,7 +212,7 @@ where
         .context("finding product bundle")?;
 
     let start = std::time::Instant::now();
-    writeln!(writer, "Getting product data for {:?}", product_bundle.name)?;
+    log::debug!("Getting product data for {:?}", product_bundle.name);
     let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
     for image in &product_bundle.images {
