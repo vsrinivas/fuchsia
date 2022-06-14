@@ -398,7 +398,7 @@ From //boards/arm64.gni:27
 
 From //build/board.gni:17
 
-**Current value for `target_cpu = "x64"`:** `["//bundles/packages/prod:drivers-system", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//bundles/packages/prod:drivers-system", "//bundles/packages/prod:wifi_intel", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/common/x64-common.gni:54
 
@@ -510,7 +510,7 @@ From //build/board.gni:21
 
 **Current value for `target_cpu = "x64"`:** `["//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader", "//src/power/thermd", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config", "//src/media/codec/codecs/vaapi:codec_runner_intel_gen_prebuilt"]`
 
-From //boards/common/x64-common.gni:61
+From //boards/common/x64-common.gni:62
 
 **Overridden from the default:** `[]`
 
@@ -1412,7 +1412,7 @@ Compiles with ares.
 
 **Current value (from the default):** `false`
 
-From [//third_party/grpc/BUILD.gn:13](https://fuchsia.googlesource.com/third_party/grpc/+/fc662b7964384b701af5bd3ce6994d2180080eb4/BUILD.gn#13)
+From [//third_party/grpc/BUILD.gn:13](https://fuchsia.googlesource.com/third_party/grpc/+/53d69cc581c5b7305708587f4f1939278477c28a/BUILD.gn#13)
 
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
@@ -2162,11 +2162,14 @@ From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:40
 ### grpc_use_static_linking
 TODO(169395837): Somehow gRPC symbols cannot be found on Android.
 Keep using static linking for now.
-In windows use static linking.
+In windows and mac use static linking.
+Use static linking on Chrome OS as a workaround for the symbol lookup
+error(crbug/1241330) due to a gRPC version mismatch between what Chrome
+uses and what CrOS provides.
 
 **Current value (from the default):** `false`
 
-From [//third_party/grpc/BUILD.gn:18](https://fuchsia.googlesource.com/third_party/grpc/+/fc662b7964384b701af5bd3ce6994d2180080eb4/BUILD.gn#18)
+From [//third_party/grpc/BUILD.gn:21](https://fuchsia.googlesource.com/third_party/grpc/+/53d69cc581c5b7305708587f4f1939278477c28a/BUILD.gn#21)
 
 ### hangcheck_timeout_ms
 Set this to accommodate long running tests
