@@ -34,8 +34,11 @@ rustc_library("forced-fdr") {
 }
 
 fuchsia_unittest_package("forced-fdr-tests") {
-  manifest = "meta/forced-fdr-lib-test.cmx"
-  deps = [ ":forced-fdr_test" ]
+  manifest = "meta/forced-fdr-lib-test.cml"
+  deps = [
+    ":forced-fdr_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 group("tests") {
