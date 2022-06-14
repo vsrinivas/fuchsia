@@ -4,42 +4,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("includes") {
-  include_dirs = [ "include" ]
-}
+import("//build/zircon/migrated_targets.gni")
 
-source_set("gfx") {
-  public = [ "include/lib/gfx/surface.h" ]
-  sources = [ "surface.cc" ]
-  deps = [
-    "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/gfx-font",
-  ]
-  public_deps = [
-    "//src/zircon/lib/zircon:headers",
-    "//zircon/system/ulib/gfx-font",
-  ]
-
-  if (is_kernel) {
-    public += [
-      "include/lib/gfx/console.h",
-      "include/lib/gfx/gfx.h",
-    ]
-    sources += [
-      "console.cc",
-      "gfx.cc",
-    ]
-    deps += [
-      "//zircon/kernel/lib/boot-options",
-      "//zircon/kernel/lib/console",
-      "//zircon/kernel/lib/io",
-    ]
-  }
-
-  public_configs = [ ":includes" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ "tests" ]
+zx_library("gfx") {
+  sources = [ "gfx.cc" ]
+  deps = [ "//zircon/kernel/lib/console" ]
+  public_deps = [ "//zircon/system/ulib/gfx-common" ]
 }

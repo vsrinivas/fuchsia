@@ -6,7 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
-#include <lib/gfx/gfx.h>
+#include <lib/gfx.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>

@@ -13,13 +13,14 @@
  * @brief  Graphics drawing library
  */
 #include <assert.h>
-#include <lib/gfx/surface.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
+
+#include <gfx-common/gfx-common.h>
 
 #define GFX_LOG(ctx, fmt, ...)                                     \
   do {                                                             \

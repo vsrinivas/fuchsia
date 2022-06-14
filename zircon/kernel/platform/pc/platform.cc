@@ -114,7 +114,7 @@ static void boot_reserve_zbi() {
   boot_reserve_add_range(physmap_to_paddr(zbi.data()), ROUNDUP_PAGE_SIZE(zbi.size_bytes()));
 }
 
-#include <lib/gfx/console.h>
+#include <lib/gfxconsole.h>
 
 #include <dev/display.h>
 

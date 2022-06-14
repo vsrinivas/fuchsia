@@ -22,7 +22,6 @@ source_set("platform") {
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/debuglog",
-    "//zircon/kernel/lib/gfx",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/jtrace:headers",
     "//zircon/kernel/lib/ktl",

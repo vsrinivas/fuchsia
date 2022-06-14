@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
-#include <lib/gfx/console.h>
+#include <lib/gfxconsole.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
@@ -50,7 +50,7 @@
 // of doing this.  Not all system have PCI, and (eventually) not all systems
 // will attempt to initialize PCI.  Someday, there should be a different way of
 // handing off from early/BSOD kernel mode graphics to user mode.
-#include <lib/gfx/console.h>
+#include <lib/gfxconsole.h>
 static inline void shutdown_early_init_console() { gfxconsole_bind_display(nullptr, nullptr); }
 
 #ifdef WITH_KERNEL_PCIE

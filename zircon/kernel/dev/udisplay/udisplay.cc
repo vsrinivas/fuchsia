@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
-#include <lib/gfx/console.h>
+#include <lib/gfxconsole.h>
 #include <lib/io.h>
 #include <platform.h>
 #include <stdlib.h>

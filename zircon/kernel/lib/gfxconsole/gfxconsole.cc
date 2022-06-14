@@ -20,8 +20,8 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/types.h>
 #include <lib/gfx-font/gfx-font.h>
-#include <lib/gfx/console.h>
-#include <lib/gfx/gfx.h>
+#include <lib/gfx.h>
+#include <lib/gfxconsole.h>
 #include <lib/io.h>
 #include <stdlib.h>
 #include <string.h>

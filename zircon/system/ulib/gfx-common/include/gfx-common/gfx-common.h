@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_SURFACE_H_
-#define ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_SURFACE_H_
+#ifndef GFX_COMMON_GFX_COMMON_H_
+#define GFX_COMMON_GFX_COMMON_H_
 
 #include <inttypes.h>
 #include <lib/gfx-font/gfx-font.h>
@@ -130,4 +130,4 @@ void gfx_draw_pattern(void);
 
 __END_CDECLS
 
-#endif  // ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_SURFACE_H_
+#endif  // GFX_COMMON_GFX_COMMON_H_

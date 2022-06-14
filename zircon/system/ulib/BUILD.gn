@@ -38,6 +38,7 @@ group("tests") {
     "ftl:tests",
     "ftl-mtd:tests",
     "fzl:tests",
+    "gfx:tests",
     "hid-parser:tests",
     "hwreg:tests",
     "id_allocator:tests",

@@ -42,7 +42,7 @@ zx_library("pc") {
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/fixed_point",
-    "//zircon/kernel/lib/gfx",
+    "//zircon/kernel/lib/gfxconsole",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/jtrace:headers",
     "//zircon/kernel/lib/ktl",

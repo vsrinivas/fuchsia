@@ -6,16 +6,16 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-zx_library("udisplay") {
-  sources = [ "udisplay.cc" ]
+zx_library("gfxconsole") {
+  sources = [ "gfxconsole.cc" ]
   deps = [
-    "//zircon/kernel/lib/crashlog",
-    "//zircon/kernel/lib/debuglog",
-    "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/gfx",
-    "//zircon/kernel/lib/gfxconsole",
     "//zircon/kernel/lib/io",
-    "//zircon/kernel/lib/ktl",
-    "//zircon/kernel/vm:headers",
+    "//zircon/system/ulib/gfx-font",
+  ]
+  public_deps = [
+    # <lib/gfxconsole.h> has #include <lib/gfx.h>.
+    "//zircon/kernel/lib/gfx",
   ]
 }

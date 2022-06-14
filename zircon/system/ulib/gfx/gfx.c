@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test-surface.h"
-
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
+
+#include <gfx/gfx.h>
 
 #define TRACE 0
 
