@@ -9,14 +9,17 @@ use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use futures::TryStreamExt as _;
+use net_declare::fidl_mac;
 use netstack_testing_common::{
     devices::{create_tun_device, create_tun_port, install_device},
     realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _},
 };
+use netstack_testing_macros::variants_test;
 
 async fn get_loopback_id(realm: &netemul::TestRealm<'_>) -> u64 {
-    let fidl_fuchsia_net_interfaces_ext::Properties {
+    let fnet_interfaces_ext::Properties {
         id,
         name: _,
         device_class: _,
@@ -141,4 +144,25 @@ async fn get_mac_pure_ip() {
     let virtual_id = admin_control.get_id().await.expect("get id");
     // Pure IP interfaces do not have MAC addresses.
     assert_matches!(get_mac(virtual_id, &debug_interfaces).await, Ok(None));
+}
+
+#[variants_test]
+async fn get_mac_netemul_endpoint<E: netemul::Endpoint>(name: &str) {
+    type N = Netstack2; // TODO(https://fxbug.dev/88797): Test against NS3.
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
+
+    const DEFAULT_MAC: fnet::MacAddress = fidl_mac!("00:03:00:00:00:00");
+    let device = sandbox
+        .create_endpoint_with("get_mac", E::make_config(netemul::DEFAULT_MTU, Some(DEFAULT_MAC)))
+        .await
+        .expect("create netemul endpoint");
+    // Retain `_control` and `_device_control` to keep the FIDL channel open.
+    let (id, _control, _device_control) = device
+        .add_to_stack(&realm, netemul::InterfaceConfig::default())
+        .await
+        .expect("add to stack");
+    assert_matches!(get_mac(id.into(), &debug_interfaces).await, Ok(Some(DEFAULT_MAC)));
 }
