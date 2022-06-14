@@ -161,7 +161,6 @@ group("core_base_packages") {
     "//src/sys/appmgr/integration_tests/mock_runner:fake_component_for_runner",
     "//src/sys/appmgr/integration_tests/util:persistent_storage_test_util",
     "//src/sys/component_manager:component-manager",
-    "//src/sys/pkg/bin/fake-channel-control:fake-channel-control",
     "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
     "//src/sys/test_manager/cmx_runner/tests:cmx_runner_tests",
     "//src/sys/test_manager/tests/diagnostics_tests:test-manager-diagnostics-tests",
