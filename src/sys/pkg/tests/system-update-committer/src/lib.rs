@@ -6,14 +6,13 @@ use {
     anyhow::anyhow,
     assert_matches::assert_matches,
     diagnostics_hierarchy::DiagnosticsHierarchy,
-    diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
+    diagnostics_reader::{ArchiveReader, Inspect},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{Configuration, ConfigurationStatus},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async::{self as fasync, OnSignals, TimeoutExt},
-    fuchsia_component::{
-        client::{App, AppBuilder},
-        server::{NestedEnvironment, ServiceFs},
-    },
+    fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{channel::oneshot, prelude::*},
@@ -22,12 +21,12 @@ use {
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
     serde_json::json,
-    std::{fs::File, path::PathBuf, sync::Arc, time::Duration},
+    std::{path::PathBuf, sync::Arc, time::Duration},
     tempfile::TempDir,
 };
 
-const SYSTEM_UPDATE_COMMITTER_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/system-update-committer-integration-tests#meta/system-update-committer.cmx";
+const SYSTEM_UPDATE_COMMITTER_CM: &str =
+    "fuchsia-pkg://fuchsia.com/system-update-committer-integration-tests#meta/system-update-committer.cm";
 const HANG_DURATION: Duration = Duration::from_millis(500);
 
 struct TestEnvBuilder {
@@ -53,7 +52,7 @@ impl TestEnvBuilder {
         Self { verifier_service: Some(verifier_service), ..self }
     }
 
-    fn build(self) -> TestEnv {
+    async fn build(self) -> TestEnv {
         // Optionally write config data.
         let config_data = tempfile::tempdir().expect("/tmp to exist");
         if let Some((path, data)) = self.config_data {
@@ -64,14 +63,19 @@ impl TestEnvBuilder {
         }
 
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
+        let config_data_proxy = fuchsia_fs::directory::open_in_namespace(
+            config_data.path().to_str().unwrap(),
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+        )
+        .unwrap();
+        fs.dir("config").add_remote("data", config_data_proxy);
 
         // Set up paver service.
         let paver_service_builder =
             self.paver_service_builder.unwrap_or_else(|| MockPaverServiceBuilder::new());
         let paver_service = Arc::new(paver_service_builder.build());
         let paver_service_clone = Arc::clone(&paver_service);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&paver_service_clone)
                     .run_paver_service(stream)
@@ -85,7 +89,7 @@ impl TestEnvBuilder {
             MockRebootService::new(Box::new(|_| panic!("unexpected call to reboot")))
         }));
         let reboot_service_clone = Arc::clone(&reboot_service);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&reboot_service_clone)
                     .run_reboot_service(stream)
@@ -98,49 +102,103 @@ impl TestEnvBuilder {
         let verifier_service =
             Arc::new(self.verifier_service.unwrap_or_else(|| MockVerifierService::new(|_| Ok(()))));
         let verifier_service_clone = Arc::clone(&verifier_service);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream),
             )
             .detach()
         });
 
-        let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]);
-        let nested_environment_label = format!("committer-env_{}", hex::encode(&salt));
-
-        let env = fs
-            .create_nested_environment(&nested_environment_label)
-            .expect("nested environment to create successfully");
-        fasync::Task::spawn(fs.collect()).detach();
-
-        let system_update_committer = AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned())
-            .add_dir_to_namespace(
-                "/config/data".to_owned(),
-                File::open(config_data.path()).unwrap(),
+        let fs_holder = Mutex::new(Some(fs));
+        let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        let system_update_committer = builder
+            .add_child(
+                "system_update_committer",
+                SYSTEM_UPDATE_COMMITTER_CM,
+                ChildOptions::new().eager(),
             )
-            .expect("config-data to mount")
-            .spawn(env.launcher())
-            .expect("system-update-committer to launch");
+            .await
+            .unwrap();
+        let fake_capabilities = builder
+            .add_local_child(
+                "fake_capabilities",
+                move |handles| {
+                    let mut rfs = fs_holder
+                        .lock()
+                        .take()
+                        .expect("mock component should only be launched once");
+                    async {
+                        rfs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+                        let () = rfs.collect().await;
+                        Ok(())
+                    }
+                    .boxed()
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&system_update_committer),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("config-data")
+                            .path("/config/data")
+                            .rights(fio::R_STAR_DIR),
+                    )
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.hardware.power.statecontrol.Admin",
+                    ))
+                    .capability(Capability::protocol_by_name("fuchsia.paver.Paver"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.update.verify.BlobfsVerifier",
+                    ))
+                    .from(&fake_capabilities)
+                    .to(&system_update_committer),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.update.CommitStatusProvider"))
+                    .from(&system_update_committer)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+
+        let realm_instance = builder.build().await.unwrap();
+        let commit_status_provider = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<CommitStatusProviderMarker>()
+            .expect("connect to commit status provider");
 
         TestEnv {
             _config_data: config_data,
-            _env: env,
-            system_update_committer,
+            realm_instance,
+            commit_status_provider,
             _paver_service: paver_service,
             _reboot_service: reboot_service,
-            nested_environment_label,
             _verifier_service: verifier_service,
         }
     }
 }
 struct TestEnv {
     _config_data: TempDir,
-    _env: NestedEnvironment,
-    system_update_committer: App,
+    realm_instance: RealmInstance,
+    commit_status_provider: CommitStatusProviderProxy,
     _paver_service: Arc<MockPaverService>,
     _reboot_service: Arc<MockRebootService>,
-    nested_environment_label: String,
     _verifier_service: Arc<MockVerifierService>,
 }
 
@@ -156,15 +214,15 @@ impl TestEnv {
 
     /// Opens a connection to the fuchsia.update/CommitStatusProvider FIDL service.
     fn commit_status_provider_proxy(&self) -> CommitStatusProviderProxy {
-        self.system_update_committer.connect_to_protocol::<CommitStatusProviderMarker>().unwrap()
+        self.commit_status_provider.clone()
     }
 
     async fn system_update_committer_inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         let mut data = ArchiveReader::new()
-            .add_selector(ComponentSelector::new(vec![
-                self.nested_environment_label.clone(),
-                "system-update-committer.cmx".to_string(),
-            ]))
+            .add_selector(format!(
+                "realm_builder\\:{}/system_update_committer:root",
+                self.realm_instance.root.child_name()
+            ))
             .snapshot::<Inspect>()
             .await
             .expect("got inspect data");
@@ -180,7 +238,8 @@ async fn is_current_system_committed_hangs_until_query_configuration_status() {
 
     let env = TestEnv::builder()
         .paver_service_builder(MockPaverServiceBuilder::new().insert_hook(throttle_hook))
-        .build();
+        .build()
+        .await;
 
     // No paver events yet, so the commit status FIDL server is still hanging.
     // We use timeouts to tell if the FIDL server hangs. This is obviously not ideal, but
@@ -226,7 +285,8 @@ async fn system_pending_commit() {
                 .insert_hook(throttle_hook)
                 .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending))),
         )
-        .build();
+        .build()
+        .await;
 
     // Emit the first 2 paver events to unblock the FIDL server.
     let () = throttler.emit_next_paver_events(&[
@@ -257,7 +317,8 @@ async fn system_already_committed() {
 
     let env = TestEnv::builder()
         .paver_service_builder(MockPaverServiceBuilder::new().insert_hook(throttle_hook))
-        .build();
+        .build()
+        .await;
 
     // Emit the first 2 paver events to unblock the FIDL server.
     let () = throttler.emit_next_paver_events(&[
@@ -278,7 +339,7 @@ async fn system_already_committed() {
 /// should observe `EVENTPAIR_CLOSED`.
 #[fasync::run_singlethreaded(test)]
 async fn eventpair_closed() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
     let event_pair =
         env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
 
@@ -294,7 +355,7 @@ async fn eventpair_closed() {
 /// a sanity check to verify our implementation can handle multiple clients.
 #[fasync::run_singlethreaded(test)]
 async fn multiple_commit_status_provider_requests() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     let p0 = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
     let p1 = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
@@ -318,7 +379,8 @@ async fn inspect_health_status_ok() {
             MockPaverServiceBuilder::new()
                 .insert_hook(mphooks::config_status(|_| Ok(ConfigurationStatus::Pending))),
         )
-        .build();
+        .build()
+        .await;
 
     // Wait for verifications to complete.
     let p = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
@@ -370,7 +432,8 @@ async fn paver_failure_causes_reboot() {
             reboot_sender.lock().take().unwrap().send(reason).unwrap();
             Ok(())
         })))
-        .build();
+        .build()
+        .await;
 
     assert_eq!(reboot_recv.await, Ok(RebootReason::RetrySystemUpdate));
 
@@ -410,7 +473,8 @@ async fn verification_failure_causes_reboot() {
             reboot_sender.lock().take().unwrap().send(reason).unwrap();
             Ok(())
         })))
-        .build();
+        .build()
+        .await;
 
     // We should observe a reboot.
     assert_eq!(reboot_recv.await, Ok(RebootReason::RetrySystemUpdate));
@@ -459,7 +523,8 @@ async fn verification_failure_does_not_cause_reboot() {
             reboot_sender.lock().take().unwrap().send(reason).unwrap();
             Ok(())
         })))
-        .build();
+        .build()
+        .await;
 
     // The commit should happen because the failure was ignored.
     let p = env.commit_status_provider_proxy().is_current_system_committed().await.unwrap();
