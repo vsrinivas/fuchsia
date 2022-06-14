@@ -81,12 +81,14 @@ void ScreenCapture::Configure(ScreenCaptureConfig args, ConfigureCallback callba
 
       auto result = importer->ImportBufferImage(metadata);
       if (!result) {
-        // If this importer fails, we need to release the image from all of the importers that it
-        // passed on. Luckily we can do this right here instead of waiting for a fence since we know
-        // this image isn't being used by anything yet.
+        // If this importer fails, we need to release the image from all of the importers
+        // that successfully imported it and release all of the past buffer images as well.
+        // Luckily we can do this right here instead of waiting for a fence since we know
+        // these images are not being used by anything yet.
         for (uint32_t k = 0; k < j; k++) {
           buffer_collection_importers_[k]->ReleaseBufferImage(metadata.identifier);
         }
+        ClearImages();
 
         FX_LOGS(WARNING) << "ScreenCapture::Configure: Failed to import BufferImage.";
         callback(fpromise::error(ScreenCaptureError::BAD_OPERATION));

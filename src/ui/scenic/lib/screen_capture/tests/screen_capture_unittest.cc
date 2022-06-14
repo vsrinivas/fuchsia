@@ -193,20 +193,30 @@ TEST_F(ScreenCaptureTest, ConfigureMultipleImportersImportFailure) {
   ScreenCaptureConfig args;
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_size({1, 1});
-  args.set_buffer_count(1);
+  args.set_buffer_count(3);
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
-      .WillRepeatedly(testing::Return(true));
+      .WillOnce(testing::Return(true))
+      .WillOnce(testing::Return(true));
   EXPECT_CALL(*mock_buffer_collection_importer2, ImportBufferImage(_))
-      .WillRepeatedly(testing::Return(false));
+      .WillOnce(testing::Return(true))
+      .WillOnce(testing::Return(false));
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_));
+  // We expect that all buffer images up to the failure will be released.
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(2);
+  EXPECT_CALL(*mock_buffer_collection_importer2, ReleaseBufferImage(_)).Times(1);
 
-  sc.Configure(std::move(args), [](fpromise::result<void, ScreenCaptureError> result) {
+  ScreenCaptureError error;
+  sc.Configure(std::move(args), [&error](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_TRUE(result.is_error());
-    EXPECT_EQ(result.error(), ScreenCaptureError::BAD_OPERATION);
+    error = result.error();
   });
   RunLoopUntilIdle();
+  EXPECT_EQ(error, ScreenCaptureError::BAD_OPERATION);
+
+  // We expect that all buffer images up to the failure will be released.
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(testing::Exactly(0));
+  EXPECT_CALL(*mock_buffer_collection_importer2, ReleaseBufferImage(_)).Times(testing::Exactly(0));
 }
 
 TEST_F(ScreenCaptureTest, ConfigureWithMissingArguments) {
