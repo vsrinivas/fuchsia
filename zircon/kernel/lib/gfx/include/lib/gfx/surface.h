@@ -27,6 +27,14 @@ namespace gfx {
 #define GFX_FLAG_FREE_ON_DESTROY (1 << 0)  // free the ptr at destroy
 #define GFX_FLAG_FLUSH_CPU_CACHE (1 << 1)  // do a cache flush during Flush
 
+struct Context {
+  void (*vlog)(const char* format, va_list v);
+
+  void (*log)(const char* format, ...);
+  void (*panic)(const char* format, ...);
+  void (*flush_cache)(void* start, size_t len);
+};
+
 // TODO(fxbug.dev/96043): `class Surface`.
 /**
  * @brief  Describe a graphics drawing surface
@@ -39,6 +47,7 @@ namespace gfx {
  */
 struct Surface {
   void* ptr;
+  const Context* ctx;
   uint32_t flags;
   uint32_t format;
   uint32_t width;
@@ -101,8 +110,8 @@ static inline void Clear(Surface* surface, uint32_t color) {
 }
 
 // surface setup
-Surface* CreateSurface(void* ptr, uint32_t width, uint32_t height, uint32_t stride, uint32_t format,
-                       uint32_t flags);
+Surface* CreateSurfaceWithContext(void* ptr, const Context* ctx, uint32_t width, uint32_t height,
+                                  uint32_t stride, uint32_t format, uint32_t flags);
 zx_status_t InitSurface(Surface* surface, void* ptr, uint32_t width, uint32_t height,
                         uint32_t stride, uint32_t format, uint32_t flags);
 

@@ -8,6 +8,8 @@
 
 #include <fuzzer/FuzzedDataProvider.h>
 
+#include "test-surface.h"
+
 static const unsigned kMaxDimension = 4096;
 
 static bool IsBlendable(gfx::Surface* a, gfx::Surface* b) {
@@ -73,7 +75,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto pixel_format = ReadPixelFormat(&input);
         auto flags = input.ConsumeIntegral<unsigned>() & (GFX_FLAG_FLUSH_CPU_CACHE);
         if (auto* surface =
-                gfx::CreateSurface(nullptr, width, height, stride, pixel_format, flags)) {
+                CreateTestSurface(nullptr, width, height, stride, pixel_format, flags)) {
           surfaces[id] = surface;
         }
         break;

@@ -25,6 +25,33 @@
 
 namespace gfx {
 
+static void kernel_gfx_log(const char* format, ...) {
+  if (LOCAL_TRACE) {
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+  }
+}
+
+static void kernel_flush_cache(void* ptr, size_t size) {
+  arch_clean_cache_range(reinterpret_cast<vaddr_t>(ptr), size);
+}
+
+static const Context g_kernel_ctx = {
+    .log = kernel_gfx_log,
+    .panic = panic,
+    .flush_cache = kernel_flush_cache,
+};
+
+/**
+ * @brief  Create a new graphics surface object
+ */
+Surface* CreateSurface(void* ptr, uint width, uint height, uint stride, gfx_format format,
+                       uint32_t flags) {
+  return CreateSurfaceWithContext(ptr, &g_kernel_ctx, width, height, stride, format, flags);
+}
+
 /**
  * @brief  Create a new graphics surface object from a display
  */

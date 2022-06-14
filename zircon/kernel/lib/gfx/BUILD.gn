@@ -13,7 +13,6 @@ source_set("gfx") {
   sources = [ "surface.cc" ]
   deps = [
     "//src/zircon/lib/zircon",
-    "//zircon/kernel/lib/arch",
     "//zircon/system/ulib/gfx-font",
   ]
   public_deps = [
