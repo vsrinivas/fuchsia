@@ -81,7 +81,7 @@ test("standalone") {
 }
 
 fuchsia_unittest_package("zxio-unittest-package") {
-  manifest = "meta/zxio_test.cmx"
+  manifest = "meta/zxio_test.cml"
   deps = [ ":zxio" ]
 }
 
