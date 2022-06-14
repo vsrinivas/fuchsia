@@ -86,21 +86,30 @@ where
                     warn!("Unable to leave multicast group `{:?}`: {:?}", subnet, err);
                 }
             }
+        } else if is_added {
+            debug!("OpenThread ADDED address: {:?}", info);
+            // TODO(b/235498515): If it looks like an RLOC, don't add it for the time being.
+            if subnet.addr.segments()[4..7] == [0x0, 0xff, 0xfe00] {
+                info!(
+                    "HACK(b/235498515): Refusing to add {:?} because it looks like an RLOC",
+                    subnet.addr
+                );
+            } else if let Err(err) = self.net_if.add_address(&subnet).ignore_already_exists() {
+                fx_log_warn!("Unable to add address `{:?}` to interface: {:?}", subnet, err);
+            }
         } else {
-            if is_added {
-                debug!("OpenThread ADDED address: {:?}", info);
-                if let Err(err) = self.net_if.add_address(&subnet).ignore_already_exists() {
-                    fx_log_warn!("Unable to add address `{:?}` to interface: {:?}", subnet, err);
-                }
-            } else {
-                debug!("OpenThread REMOVED address: {:?}", info);
-                if let Err(err) = self.net_if.remove_address(&subnet).ignore_not_found() {
-                    fx_log_warn!(
-                        "Unable to remove address `{:?}` from interface: {:?}",
-                        subnet,
-                        err
-                    );
-                }
+            debug!("OpenThread REMOVED address: {:?}", info);
+            if subnet.addr.segments()[4..7] == [0x0, 0xff, 0xfe00] {
+                info!(
+                    "HACK(b/235498515): Refusing to remove {:?} because it looks like an RLOC",
+                    subnet.addr
+                );
+            } else if let Err(err) = self.net_if.remove_address(&subnet).ignore_not_found() {
+                fx_log_warn!(
+                    "Unable to remove address `{:?}` from interface: {:?}",
+                    subnet,
+                    err
+                );
             }
         }
     }
