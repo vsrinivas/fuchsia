@@ -148,6 +148,23 @@ pub fn sys_getgid(current_task: &CurrentTask) -> Result<gid_t, Errno> {
     Ok(current_task.read().creds.gid)
 }
 
+pub fn sys_setuid(current_task: &CurrentTask, uid: uid_t) -> Result<(), Errno> {
+    let creds = &mut current_task.write().creds;
+    if uid == gid_t::MAX {
+        return error!(EINVAL);
+    }
+    if !new_uid_allowed(creds, uid) {
+        return error!(EPERM);
+    }
+    let has_cap_setuid = creds.has_capability(CAP_SETUID);
+    creds.euid = uid;
+    if has_cap_setuid {
+        creds.uid = uid;
+        creds.saved_uid = uid;
+    }
+    Ok(())
+}
+
 pub fn sys_setgid(current_task: &CurrentTask, gid: gid_t) -> Result<(), Errno> {
     let creds = &mut current_task.write().creds;
     if gid == gid_t::MAX {
@@ -791,5 +808,48 @@ mod tests {
         let param_value: sched_param =
             current_task.mm.read_object(mapped_address.into()).expect("read_object");
         assert_eq!(param_value.sched_priority, 0);
+    }
+
+    #[::fuchsia::test]
+    fn test_setuid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        // Test for root.
+        current_task.write().creds = Credentials::system();
+        sys_setuid(&current_task, 42).expect("setuid");
+        let creds = current_task.read().creds.clone();
+        assert_eq!(creds.euid, 42);
+        assert_eq!(creds.uid, 42);
+        assert_eq!(creds.saved_uid, 42);
+
+        // Test for non root, which task now is.
+        assert_eq!(sys_setuid(&current_task, 0), Err(EPERM));
+        assert_eq!(sys_setuid(&current_task, 43), Err(EPERM));
+
+        sys_setuid(&current_task, 42).expect("setuid");
+        let creds = current_task.read().creds.clone();
+        assert_eq!(creds.euid, 42);
+        assert_eq!(creds.uid, 42);
+        assert_eq!(creds.saved_uid, 42);
+
+        // Change uid and saved_uid, and check that one can set the euid to these.
+        current_task.write().creds.uid = 41;
+        current_task.write().creds.euid = 42;
+        current_task.write().creds.saved_uid = 43;
+
+        sys_setuid(&current_task, 41).expect("setuid");
+        let creds = current_task.read().creds.clone();
+        assert_eq!(creds.euid, 41);
+        assert_eq!(creds.uid, 41);
+        assert_eq!(creds.saved_uid, 43);
+
+        current_task.write().creds.uid = 41;
+        current_task.write().creds.euid = 42;
+        current_task.write().creds.saved_uid = 43;
+
+        sys_setuid(&current_task, 43).expect("setuid");
+        let creds = current_task.read().creds.clone();
+        assert_eq!(creds.euid, 43);
+        assert_eq!(creds.uid, 41);
+        assert_eq!(creds.saved_uid, 43);
     }
 }
