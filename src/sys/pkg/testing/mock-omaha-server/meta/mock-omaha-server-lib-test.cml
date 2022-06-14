@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/mock_omaha_server_lib_test",
+    },
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+        },
+    ],
+}

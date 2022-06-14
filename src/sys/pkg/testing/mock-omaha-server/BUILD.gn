@@ -31,11 +31,17 @@ rustc_library("mock-omaha-server") {
 }
 
 fuchsia_unittest_package("mock-omaha-server-tests") {
-  manifest = "meta/mock-omaha-server-lib-test.cmx"
+  manifest = "meta/mock-omaha-server-lib-test.cml"
   deps = [
     ":mock-omaha-server_test",
-    "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
