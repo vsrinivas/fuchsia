@@ -22,10 +22,7 @@ async fn failure() -> Result<()> {
         TestEnv::new("blackout-integration-target", "blackout-integration-target-component", opts)
             .await;
 
-    test.setup_step()
-        .load_step(Duration::from_secs(1))
-        .reboot_step()
-        .verify_step(20, Duration::from_secs(15));
+    test.setup_step().load_step(Duration::from_secs(1)).verify_step(20, Duration::from_secs(15));
 
     match test.run().await {
         Err(BlackoutError::Verification(_)) => Ok(()),
@@ -46,10 +43,7 @@ async fn success(iterations: Option<u64>) -> Result<()> {
         TestEnv::new("blackout-integration-target", "blackout-integration-target-component", opts)
             .await;
 
-    test.setup_step()
-        .load_step(Duration::from_secs(1))
-        .reboot_step()
-        .verify_step(20, Duration::from_secs(15));
+    test.setup_step().load_step(Duration::from_secs(1)).verify_step(20, Duration::from_secs(15));
     test.run().await?;
 
     Ok(())
