@@ -497,7 +497,6 @@ func affectedTestsNoWork(
 		// For host tests we use the executable path.
 		if test.Path != "" {
 			testsByPath[test.Path] = test.Name
-			continue
 		}
 
 		for _, packageManifest := range test.PackageManifests {

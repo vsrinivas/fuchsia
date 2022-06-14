@@ -522,8 +522,9 @@ func TestCheckNinjaNoop(t *testing.T) {
 func TestAffectedTestsNoWork(t *testing.T) {
 	mockTestManifest := []build.Test{
 		{
-			Name: "host_test",
-			Path: "host/run.sh",
+			Name:  "host_test",
+			Path:  "host/run.sh",
+			Label: "//tools/foo:host_test(//toolchain)",
 		},
 		{
 			Name:             "fuchsia_test",
@@ -603,6 +604,14 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 			ninjaOutput:           "ninja: entering directory /foo" + noWorkString,
 			affectedFiles:         []string{"src/path2/test/BUILD.gn"},
 			expectedAffectedTests: []string{"fuchsia_test2"},
+			expectedNoWork:        true,
+			expectedDryRuns:       2,
+		},
+		{
+			name:                  "affected BUILD.gn file defining host test",
+			ninjaOutput:           "ninja: entering directory /foo" + noWorkString,
+			affectedFiles:         []string{"tools/foo/BUILD.gn"},
+			expectedAffectedTests: []string{"host_test"},
 			expectedNoWork:        true,
 			expectedDryRuns:       2,
 		},
