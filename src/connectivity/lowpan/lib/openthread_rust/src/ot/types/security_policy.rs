@@ -20,7 +20,6 @@ impl std::fmt::Debug for SecurityPolicy {
             .field("is_native_commissioning_enabled", &self.is_native_commissioning_enabled())
             .field("is_routers_enabled", &self.is_routers_enabled())
             .field("is_external_commissioning_enabled", &self.is_external_commissioning_enabled())
-            .field("is_beacons_enabled", &self.is_beacons_enabled())
             .field(
                 "is_commercial_commissioning_enabled",
                 &self.is_commercial_commissioning_enabled(),
@@ -56,10 +55,6 @@ impl SecurityPolicy {
 
     pub fn is_external_commissioning_enabled(&self) -> bool {
         self.0.mExternalCommissioningEnabled()
-    }
-
-    pub fn is_beacons_enabled(&self) -> bool {
-        self.0.mBeaconsEnabled()
     }
 
     pub fn is_commercial_commissioning_enabled(&self) -> bool {
@@ -107,10 +102,6 @@ impl SecurityPolicy {
 
     pub fn set_external_commissioning_enabled(&mut self, x: bool) {
         self.0.set_mExternalCommissioningEnabled(x)
-    }
-
-    pub fn set_beacons_enabled(&mut self, x: bool) {
-        self.0.set_mBeaconsEnabled(x)
     }
 
     pub fn set_commercial_commissioning_enabled(&mut self, x: bool) {

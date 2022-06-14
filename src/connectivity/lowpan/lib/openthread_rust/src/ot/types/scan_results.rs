@@ -34,9 +34,17 @@ impl ActiveScanResult {
         self.0.mExtendedPanId.into()
     }
 
+    /// Deprecated. Use [`discover()`] instead.
+    ///
     /// Returns true if this beacon is joinable.
+    #[deprecated]
     pub fn is_joinable(&self) -> bool {
-        self.0.mIsJoinable()
+        self.0.mDiscover()
+    }
+
+    /// Returns true if this beacon is discoverable.
+    pub fn discover(&self) -> bool {
+        self.0.mDiscover()
     }
 
     /// Returns true if this beacon is "native".
