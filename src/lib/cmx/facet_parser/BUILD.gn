@@ -44,8 +44,10 @@ executable("cmx_facet_parser_unittest") {
 }
 
 fuchsia_unittest_package("cmx_facet_parser_tests") {
-  manifest = "meta/cmx_facet_parser_unittest.cmx"
-  deps = [ ":cmx_facet_parser_unittest" ]
+  deps = [
+    ":cmx_facet_parser_unittest",
+    "//src/sys/test_runners:tmp_storage",
+  ]
   test_specs = {
     environments = [ emu_env ]
   }
