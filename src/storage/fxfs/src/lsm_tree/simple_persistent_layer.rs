@@ -5,6 +5,7 @@
 use {
     crate::{
         errors::FxfsError,
+        log::*,
         lsm_tree::types::{
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, Value,
         },
@@ -114,11 +115,10 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
             let len = self.layer.object_handle.read(self.pos, self.buffer.buffer.as_mut()).await?;
             self.buffer.pos = 0;
             self.buffer.len = len;
-            log::debug!(
-                "pos={}, object size={}, object id={}",
-                self.pos,
-                self.layer.size,
-                self.layer.object_handle.object_id()
+            debug!(
+                pos = self.pos,
+                object_size = self.layer.size,
+                oid = self.layer.object_handle.object_id()
             );
             self.item_count = self.buffer.read_u16::<LittleEndian>()?;
             if self.item_count == 0 {
@@ -322,7 +322,7 @@ impl<W: WriteBytes, K: Key, V: Value> SimplePersistentLayerWriter<W, K, V> {
         LittleEndian::write_u16(&mut self.buf[0..2], self.item_count);
         self.writer.write_bytes(&self.buf[..len]).await?;
         self.writer.skip(self.block_size as u64 - len as u64).await?;
-        log::debug!("wrote {} items, {} bytes", self.item_count, len);
+        debug!(item_count = self.item_count, byte_count = len, "wrote items");
         self.buf.drain(..len - 2); // 2 bytes are used for the next item count.
         self.item_count = 0;
         Ok(())
@@ -359,7 +359,7 @@ impl<W: WriteBytes + Send, K: Key, V: Value> LayerWriter<K, V>
 impl<W: WriteBytes, K: Key, V: Value> Drop for SimplePersistentLayerWriter<W, K, V> {
     fn drop(&mut self) {
         if self.item_count > 0 {
-            log::warn!("Dropping unwritten items; did you forget to flush?");
+            warn!("Dropping unwritten items; did you forget to flush?");
         }
     }
 }

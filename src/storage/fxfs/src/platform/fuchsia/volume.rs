@@ -6,6 +6,7 @@ use {
     crate::{
         errors::FxfsError,
         filesystem::{self, SyncOptions},
+        log::*,
         object_store::{
             directory::{self, Directory, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options},
@@ -108,8 +109,8 @@ impl FxVolume {
             .filesystem()
             .sync(SyncOptions { flush_device: true, ..Default::default() })
             .await;
-        if sync_status.is_err() {
-            log::error!("Failed to sync filesystem; data may be lost: {:?}", sync_status);
+        if let Err(e) = sync_status {
+            error!(error = e.as_value(), "Failed to sync filesystem; data may be lost");
         }
         self.pager.terminate().await;
         let task = std::mem::replace(&mut *self.flush_task.lock().unwrap(), None);
@@ -204,7 +205,7 @@ impl FxVolume {
     }
 
     async fn flush_task(self: Arc<Self>, period: Duration, terminate: oneshot::Receiver<()>) {
-        log::debug!("FxVolume::flush_task start {}", self.store.store_object_id());
+        debug!(store_id = self.store.store_object_id(), "FxVolume::flush_task start");
         let mut terminate = terminate.fuse();
         loop {
             if futures::select!(
@@ -217,18 +218,22 @@ impl FxVolume {
             let mut flushed = 0;
             for file in files {
                 if let Err(e) = file.flush().await {
-                    log::warn!(
-                        "Failed to flush {}.{}: {:?}",
-                        self.store.store_object_id(),
-                        file.object_id(),
-                        e
+                    warn!(
+                        store_id = self.store.store_object_id(),
+                        oid = file.object_id(),
+                        error = e.as_value(),
+                        "Failed to flush",
                     )
                 }
                 flushed += 1;
             }
-            log::debug!("FxVolume {} flushed {} files", self.store.store_object_id(), flushed);
+            debug!(
+                store_id = self.store.store_object_id(),
+                file_count = flushed,
+                "FxVolume flushed"
+            );
         }
-        log::debug!("FxVolume::flush_task end {}", self.store.store_object_id());
+        debug!(store_id = self.store.store_object_id(), "FxVolume::flush_task end");
     }
 }
 

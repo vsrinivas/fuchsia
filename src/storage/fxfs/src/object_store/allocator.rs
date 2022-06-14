@@ -9,6 +9,7 @@ use {
         debug_assert_not_too_long,
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, Filesystem, JournalingObject, SyncOptions},
+        log::*,
         lsm_tree::{
             layers_from_handles,
             merge::Merger,
@@ -743,7 +744,7 @@ impl Allocator for SimpleAllocator {
             }
         };
 
-        log::debug!("allocate {:?}", result);
+        debug!(device_range = ?result, "allocate");
 
         let len = result.length().unwrap();
         reservation.either(|l| l.forget_some(len), |r| r.forget_some(len));
@@ -804,7 +805,7 @@ impl Allocator for SimpleAllocator {
         owner_object_id: u64,
         mut dealloc_range: Range<u64>,
     ) -> Result<u64, Error> {
-        log::debug!("deallocate {:?}", dealloc_range);
+        debug!(device_range = ?dealloc_range, "deallocate");
         trace_duration!("SimpleAllocator::deallocate");
 
         ensure!(dealloc_range.valid(), FxfsError::InvalidArgs);
@@ -1188,7 +1189,7 @@ impl JournalingObject for SimpleAllocator {
                 .await?;
         }
 
-        log::debug!("using {} for allocator layer file", object_id);
+        debug!(oid = object_id, "new allocator layer file");
         let object_handle =
             ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default(), None)
                 .await?;

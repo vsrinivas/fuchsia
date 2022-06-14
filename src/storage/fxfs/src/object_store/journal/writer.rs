@@ -5,6 +5,7 @@
 use {
     crate::{
         checksum::{fletcher64, Checksum},
+        log::*,
         metrics::{traits::Metric as _, UintMetric},
         object_handle::ObjectHandle,
         object_store::journal::JournalCheckpoint,
@@ -146,7 +147,7 @@ impl Drop for JournalWriter {
         // If this message is logged it means we forgot to call flush_buffer(), which in turn might
         // mean Journal::sync() was not called.
         if self.buf.len() > 0 {
-            log::warn!("journal data dropped!");
+            warn!("journal data dropped!");
         }
     }
 }

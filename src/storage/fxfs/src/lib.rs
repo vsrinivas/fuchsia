@@ -17,6 +17,7 @@ pub mod errors;
 pub mod ff1;
 pub mod filesystem;
 pub mod fsck;
+pub mod log;
 mod lsm_tree;
 pub mod metrics;
 pub mod object_handle;

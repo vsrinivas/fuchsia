@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::lsm_tree::types::{
-        Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut, NextKey, OrdLowerBound, Value,
+    crate::{
+        log::*,
+        lsm_tree::types::{
+            Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut, NextKey, OrdLowerBound,
+            Value,
+        },
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -580,12 +584,11 @@ pub(super) async fn merge_into<K: Debug + OrdLowerBound, V: Debug>(
         if mut_merge_iter > item_merge_iter {
             // In this branch the mutable layer is left and the item we're merging-in is right.
             let merge_result = merge_fn(&mut_merge_iter, &item_merge_iter);
-            log::debug!(
-                "(1) merge for {:?} {:?} -> {:?}",
-                mut_merge_iter.key(),
-                item_merge_iter.key(),
-                merge_result
-            );
+            debug!(
+                lhs = ?mut_merge_iter.key(),
+                rhs = ?item_merge_iter.key(),
+                result = ?merge_result,
+                "(1) merge");
             match merge_result {
                 MergeResult::EmitLeft => {
                     if let Some(item) = mut_merge_iter.take_item() {
@@ -624,12 +627,11 @@ pub(super) async fn merge_into<K: Debug + OrdLowerBound, V: Debug>(
         } else {
             // In this branch, the item we're merging-in is left and the mutable layer is right.
             let merge_result = merge_fn(&item_merge_iter, &mut_merge_iter);
-            log::debug!(
-                "(2) merge for {:?} {:?} -> {:?}",
-                item_merge_iter.key(),
-                mut_merge_iter.key(),
-                merge_result
-            );
+            debug!(
+                lhs = ?mut_merge_iter.key(),
+                rhs = ?item_merge_iter.key(),
+                result = ?merge_result,
+                "(2) merge");
             match merge_result {
                 MergeResult::EmitLeft => break, // Item is inserted outside the loop
                 MergeResult::Other { emit, left, right } => {

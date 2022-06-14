@@ -7,6 +7,7 @@ use {
         crypt::Crypt,
         debug_assert_not_too_long,
         errors::FxfsError,
+        log::*,
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_store::{
             allocator::{Allocator, Hold, Reservation, ReservationOwner},
@@ -164,9 +165,7 @@ impl From<Arc<FxFilesystem>> for OpenFxFilesystem {
 impl Drop for OpenFxFilesystem {
     fn drop(&mut self) {
         if !self.read_only && !self.closed.load(atomic::Ordering::SeqCst) {
-            log::error!(
-                "OpenFxFilesystem dropped without first being closed. Data loss may occur."
-            );
+            error!("OpenFxFilesystem dropped without first being closed. Data loss may occur.");
         }
     }
 }
@@ -322,8 +321,8 @@ impl FxFilesystem {
         self.journal.stop_compactions().await;
         let sync_status =
             self.journal.sync(SyncOptions { flush_device: true, ..Default::default() }).await;
-        if sync_status.is_err() {
-            log::error!("Failed to sync filesystem; data may be lost: {:?}", sync_status);
+        if let Err(e) = &sync_status {
+            error!(error = e.as_value(), "Failed to sync filesystem; data may be lost");
         }
         self.journal.terminate();
         let flush_task = self.flush_task.lock().unwrap().take();

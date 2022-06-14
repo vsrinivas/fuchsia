@@ -7,6 +7,7 @@
 
 use {
     crate::{
+        log::*,
         lsm_tree::{
             merge::{self, MergeFn},
             types::{
@@ -190,7 +191,7 @@ impl<K: Key, V: Value> SkipListLayer<K, V> {
             if k == key {
                 iter.erase();
             } else {
-                log::warn!("Attempt to erase key not present!");
+                warn!("Attempt to erase key not present!");
             }
         }
         iter.commit_and_wait().await;

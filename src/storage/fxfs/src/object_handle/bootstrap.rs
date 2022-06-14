@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        log::*,
         object_handle::{ObjectHandle, ReadObjectHandle},
         range::RangeExt,
     },
@@ -83,7 +84,7 @@ impl BootstrapObjectHandle {
             num += 1;
         }
         if self.trace.load(Ordering::Relaxed) {
-            log::info!("JH: Discarded {} extents from offset {}", num, discard_offset);
+            info!(count = num, offset = discard_offset, "JH: Discarded extents");
         }
     }
 
@@ -112,11 +113,7 @@ impl ObjectHandle for BootstrapObjectHandle {
     fn set_trace(&self, trace: bool) {
         let old_value = self.trace.swap(trace, Ordering::Relaxed);
         if trace != old_value {
-            log::info!(
-                "JH {} tracing {}",
-                self.object_id,
-                if trace { "enabled" } else { "disabled" },
-            );
+            info!(oid = self.object_id, trace, "JH: trace");
         }
     }
 }
@@ -127,7 +124,7 @@ impl ReadObjectHandle for BootstrapObjectHandle {
         assert!(offset >= self.start_offset);
         let trace = self.trace.load(Ordering::Relaxed);
         if trace {
-            log::info!("JH: read {}@{}", buf.len(), offset);
+            info!(len = buf.len(), offset, "JH: read");
         }
         let len = buf.len();
         let mut buf_offset = 0;
@@ -136,7 +133,7 @@ impl ReadObjectHandle for BootstrapObjectHandle {
             let extent_len = extent.end - extent.start;
             if offset < file_offset + extent_len {
                 if trace {
-                    log::info!("JH: matching extent {:?}", extent);
+                    info!(?extent, "JH: matching extent");
                 }
                 let device_offset = extent.start + offset - file_offset;
                 let to_read = min(extent.end - device_offset, (len - buf_offset) as u64) as usize;

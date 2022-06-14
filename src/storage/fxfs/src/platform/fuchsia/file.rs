@@ -6,6 +6,7 @@ use {
     crate::{
         async_enter,
         filesystem::SyncOptions,
+        log::*,
         object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{CachingObjectHandle, StoreObjectHandle, Timestamp},
         platform::fuchsia::{
@@ -230,11 +231,11 @@ impl FxFile {
             let buffer = match buffer_result {
                 Ok(buffer) => buffer,
                 Err(e) => {
-                    log::error!(
-                        "Failed to page in range {:?} for object id {:?}: {:?}",
-                        range,
-                        this.handle.uncached_handle().object_id(),
-                        e
+                    error!(
+                        ?range,
+                        oid = this.handle.uncached_handle().object_id(),
+                        error = e.as_value(),
+                        "Failed to page-in range"
                     );
                     this.handle.owner().pager().report_failure(
                         this.vmo(),
@@ -260,7 +261,10 @@ impl FxFile {
                     Err(e) => {
                         // Failures here due to OOM will get reported as IO errors, as those are
                         // considered transient.
-                        log::error!("Failed to transfer range {:?}: {:?}", range_chunk, e);
+                        error!(
+                            range = ?range_chunk,
+                            error = e.as_value(),
+                            "Failed to transfer range");
                         this.handle.owner().pager().report_failure(
                             this.vmo(),
                             range_chunk,
@@ -427,21 +431,21 @@ impl File for FxFile {
     async fn get_buffer(&self, flags: fio::VmoFlags) -> Result<Buffer, Status> {
         // We do not support exact/duplicate sharing mode.
         if flags.contains(fio::VmoFlags::SHARED_BUFFER) {
-            log::error!("get_buffer does not support exact sharing mode!");
+            error!("get_buffer does not support exact sharing mode!");
             return Err(Status::NOT_SUPPORTED);
         }
         // We only support the combination of WRITE when a private COW clone is explicitly
         // specified. This implicitly restricts any mmap call that attempts to use MAP_SHARED +
         // PROT_WRITE.
         if flags.contains(fio::VmoFlags::WRITE) && !flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
-            log::error!(
+            error!(
                 "get_buffer only supports fio::VmoFlags::WRITE with fio::VmoFlags::PRIVATE_CLONE!"
             );
             return Err(Status::NOT_SUPPORTED);
         }
         // We do not support executable VMO handles.
         if flags.contains(fio::VmoFlags::EXECUTE) {
-            log::error!("get_buffer does not support execute rights!");
+            error!("get_buffer does not support execute rights!");
             return Err(Status::NOT_SUPPORTED);
         }
 

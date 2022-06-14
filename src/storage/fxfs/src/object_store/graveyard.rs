@@ -5,6 +5,7 @@
 use {
     crate::{
         async_enter,
+        log::*,
         lsm_tree::{
             merge::{Merger, MergerIterator},
             types::{ItemRef, LayerIterator},
@@ -113,7 +114,7 @@ impl Graveyard {
         // Wait and process reap requests.
         while let Some((store_id, object_id)) = receiver.next().await {
             if let Err(e) = self.tombstone(store_id, object_id).await {
-                log::error!("Tombstone error for {}.{}: {:?}", store_id, object_id, e);
+                error!(error = e.as_value(), store_id, oid = object_id, "Tombstone error");
             }
         }
     }

@@ -7,6 +7,7 @@ use {
         crypt::Crypt,
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, JournalingObject},
+        log::*,
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_handle::INVALID_OBJECT_ID,
         object_store::{
@@ -327,7 +328,7 @@ impl ObjectManager {
         context: &ApplyContext<'_, '_>,
         associated_object: AssocObj<'_>,
     ) {
-        log::debug!("applying mutation: {}: {:?}", object_id, mutation);
+        debug!(oid = object_id, ?mutation, "applying mutation");
         let object = {
             let mut inner = self.inner.write().unwrap();
             match mutation {
@@ -399,7 +400,7 @@ impl ObjectManager {
         context: &ApplyContext<'_, '_>,
         end_offset: u64,
     ) {
-        log::debug!("REPLAY {}", context.checkpoint.file_offset);
+        debug!(checkpoint = context.checkpoint.file_offset, "REPLAY");
         let txn_size = {
             let mut inner = self.inner.write().unwrap();
             if end_offset > inner.last_end_offset {
@@ -432,14 +433,14 @@ impl ObjectManager {
         let old_amount = self.metadata_reservation().amount();
         let old_required = self.inner.read().unwrap().required_reservation();
 
-        log::debug!("BEGIN TXN {}", checkpoint.file_offset);
+        debug!(checkpoint = checkpoint.file_offset, "BEGIN TXN");
         let mutations = std::mem::take(&mut transaction.mutations);
         let context =
             ApplyContext { mode: ApplyMode::Live(transaction), checkpoint: checkpoint.clone() };
         for TxnMutation { object_id, mutation, associated_object } in mutations {
             self.apply_mutation(object_id, mutation, &context, associated_object).await;
         }
-        log::debug!("END TXN");
+        debug!("END TXN");
 
         if let MetadataReservation::Borrowed = transaction.metadata_reservation {
             // If this transaction is borrowing metadata, figure out what has changed and return a

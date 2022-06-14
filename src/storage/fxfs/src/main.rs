@@ -9,10 +9,11 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_runtime::HandleType,
-    fuchsia_syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     fxfs::{
         filesystem::{mkfs, FxFilesystem, OpenOptions},
         fsck,
+        log::*,
         platform::{component::Component, RemoteCrypt},
         serialized_types::LATEST_VERSION,
     },
@@ -79,12 +80,12 @@ fn get_crypt_client() -> Result<Arc<RemoteCrypt>, Error> {
 // that we allow since otherwise deadlocks are possible.  Search for CONCURRENT_SYSCALLS.
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().unwrap();
+    diagnostics_log::init!();
 
     #[cfg(feature = "tracing")]
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
-    log::info!("fxfs version {} started {:?}", LATEST_VERSION, std::env::args());
+    info!(version = %LATEST_VERSION, "Started");
 
     let args: TopLevel = argh::from_env();
 

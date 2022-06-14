@@ -6,6 +6,7 @@ use {
     crate::{
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, JournalingObject},
+        log::*,
         lsm_tree::types::LayerIterator,
         metrics::{traits::Metric as _, UintMetric},
         object_handle::BootstrapObjectHandle,
@@ -267,7 +268,7 @@ impl SuperBlockManager {
                 }
             }
         };
-        log::info!("superblock: {:?} (copy {:?})", super_block, current_super_block);
+        info!(?super_block, ?current_super_block, "loaded super-block");
         *self.next_instance.lock().unwrap() = current_super_block.next();
         Ok((super_block, root_parent))
     }

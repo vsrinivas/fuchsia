@@ -7,6 +7,7 @@ use {
         checksum::fletcher64,
         crypt::{UnwrappedKeys, XtsCipherSet},
         errors::FxfsError,
+        log::*,
         lsm_tree::types::{ItemRef, LayerIterator},
         object_handle::{
             GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteBytes,
@@ -203,12 +204,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         compute_checksum: bool,
     ) -> Result<Checksums, Error> {
         if self.trace.load(atomic::Ordering::Relaxed) {
-            log::info!(
-                "{}.{} W {:?} ({})",
-                self.store().store_object_id(),
-                self.object_id,
-                device_offset..device_offset + buf.len() as u64,
-                buf.len(),
+            info!(
+                store_id = self.store().store_object_id(),
+                oid = self.object_id,
+                device_range = ?(device_offset..device_offset + buf.len() as u64),
+                len = buf.len(),
+                "W",
             );
         }
         let mut checksums = Vec::new();
@@ -267,13 +268,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                     let range = device_offset + overlap.start - extent_key.range.start
                         ..device_offset + overlap.end - extent_key.range.start;
                     if trace {
-                        log::info!(
-                            "{}.{} D {:?} ({}) from extent {:?}",
-                            self.store().store_object_id(),
-                            self.object_id,
-                            range,
-                            range.end - range.start,
-                            extent_key
+                        info!(
+                            store_id = self.store().store_object_id(),
+                            oid = self.object_id,
+                            device_range = ?range,
+                            len = range.end - range.start,
+                            ?extent_key,
+                            "D",
                         );
                     }
                     allocator
@@ -479,12 +480,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 .await
                 .context("allocation failed")?;
             if trace {
-                log::info!(
-                    "{}.{} A {:?} ({})",
+                info!(
                     store_id,
-                    self.object_id,
-                    device_range,
-                    device_range.end - device_range.start
+                    oid = self.object_id,
+                    ?device_range,
+                    len = device_range.end - device_range.start,
+                    "A",
                 );
             }
             let device_range_len = device_range.end - device_range.start;
@@ -677,13 +678,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     ) -> Result<(), Error> {
         let old_size = self.txn_get_size(transaction);
         if self.trace.load(atomic::Ordering::Relaxed) {
-            log::info!(
-                "{}.{} T {}/{} -> {}",
-                self.store().store_object_id(),
-                self.object_id,
+            info!(
+                store_id = self.store().store_object_id(),
+                oid = self.object_id,
                 old_size,
-                self.get_size(),
-                size
+                orig_size = self.get_size(),
+                new_size = size,
+                "T",
             );
         }
         if size < old_size {
@@ -936,7 +937,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> AssociatedObject for StoreOb
 
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObjectHandle<S> {
     fn set_trace(&self, v: bool) {
-        log::info!("{}.{} tracing: {}", self.store().store_object_id, self.object_id(), v);
+        info!(store_id = self.store().store_object_id, oid = self.object_id(), trace = v, "trace");
         self.trace.store(v, atomic::Ordering::Relaxed);
     }
 
@@ -1063,11 +1064,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
                 let to_copy = min(buf.len() - end_align, (extent_key.range.end - offset) as usize);
                 if to_copy > 0 {
                     if trace {
-                        log::info!(
-                            "{}.{} R {:?}",
-                            self.store().store_object_id(),
-                            self.object_id,
-                            device_offset..device_offset + to_copy as u64
+                        info!(
+                            store_id = self.store().store_object_id(),
+                            oid = self.object_id,
+                            device_range = ?(device_offset..device_offset + to_copy as u64),
+                            "R",
                         );
                     }
                     let (head, tail) = buf.split_at_mut(to_copy);
@@ -1085,11 +1086,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for StoreOb
                 if offset < extent_key.range.end && end_align > 0 {
                     let mut align_buf = self.store().device.allocate_buffer(block_size as usize);
                     if trace {
-                        log::info!(
-                            "{}.{} RT {:?}",
-                            self.store().store_object_id(),
-                            self.object_id,
-                            device_offset..device_offset + align_buf.len() as u64
+                        info!(
+                            store_id = self.store().store_object_id(),
+                            oid = self.object_id,
+                            device_range = ?(device_offset..device_offset + align_buf.len() as u64),
+                            "RT",
                         );
                     }
                     self.read_and_decrypt(device_offset, offset, align_buf.as_mut(), *key_id)
@@ -1163,7 +1164,7 @@ const BUFFER_SIZE: usize = 1_048_576;
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Drop for DirectWriter<'_, S> {
     fn drop(&mut self) {
         if self.buf_offset != 0 {
-            log::warn!("DirectWriter: dropping data, did you forget to call complete?");
+            warn!("DirectWriter: dropping data, did you forget to call complete?");
         }
     }
 }

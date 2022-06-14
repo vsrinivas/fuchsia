@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        log::*,
         lsm_tree::types::ItemRef,
         object_store::{
             allocator::{AllocatorKey, AllocatorValue},
@@ -41,6 +42,13 @@ impl FsckIssue {
         match self {
             FsckIssue::Error(_) | FsckIssue::Fatal(_) => true,
             FsckIssue::Warning(_) => false,
+        }
+    }
+    pub fn log(&self) {
+        match self {
+            FsckIssue::Warning(w) => w.log(),
+            FsckIssue::Error(e) => e.log(),
+            FsckIssue::Fatal(f) => f.log(),
         }
     }
 }
@@ -148,6 +156,32 @@ impl FsckWarning {
             }
             FsckWarning::OrphanedObject(store_id, object_id) => {
                 format!("Orphaned object {} was found in store {}", object_id, store_id)
+            }
+        }
+    }
+
+    fn log(&self) {
+        match self {
+            FsckWarning::ExtentForMissingAttribute(store_id, oid, attr_id) => {
+                warn!(store_id, oid, attr_id, "Found an extent for a missing attribute");
+            }
+            FsckWarning::ExtentForDirectory(store_id, oid) => {
+                warn!(store_id, oid, "Extent for a directory object");
+            }
+            FsckWarning::ExtentForNonexistentObject(store_id, oid) => {
+                warn!(store_id, oid, "Extent for missing object");
+            }
+            FsckWarning::GraveyardRecordForAbsentObject(store_id, oid) => {
+                warn!(store_id, oid, "Graveyard entry for missing object");
+            }
+            FsckWarning::InvalidObjectIdInStore(store_id, key, value) => {
+                warn!(store_id, ?key, ?value, "Invalid object ID");
+            }
+            FsckWarning::OrphanedAttribute(store_id, oid, attribute_id) => {
+                warn!(store_id, oid, attribute_id, "Attribute for missing object");
+            }
+            FsckWarning::OrphanedObject(store_id, oid) => {
+                warn!(oid, store_id, "Orphaned object");
             }
         }
     }
@@ -306,6 +340,95 @@ impl FsckError {
             }
         }
     }
+
+    fn log(&self) {
+        match self {
+            FsckError::AllocationMismatch(expected, actual) => {
+                error!(?expected, ?actual, "Unexpected allocation");
+            }
+            FsckError::AllocatedBytesMismatch(expected, actual) => {
+                error!(?expected, ?actual, "Unexpected allocated bytes");
+            }
+            FsckError::AllocatedSizeMismatch(store_id, oid, expected, actual) => {
+                error!(expected, oid, store_id, actual, "Unexpected allocated size");
+            }
+            FsckError::AttributeOnDirectory(store_id, oid) => {
+                error!(store_id, oid, "Attribute for directory");
+            }
+            FsckError::ConflictingTypeForLink(store_id, oid, expected, actual) => {
+                error!(store_id, oid, ?expected, ?actual, "Bad link");
+            }
+            FsckError::ExtentExceedsLength(store_id, oid, attr_id, size, extent) => {
+                error!(store_id, oid, attr_id, size, ?extent, "Extent exceeds length");
+            }
+            FsckError::ExtraAllocations(allocations) => {
+                error!(?allocations, "Unexpected allocations");
+            }
+            FsckError::FileHasChildren(store_id, oid) => {
+                error!(store_id, oid, "File has children");
+            }
+            FsckError::UnexpectedJournalFileOffset(object_id) => {
+                error!(
+                    oid = object_id,
+                    "SuperBlock journal_file_offsets contains unexpected object-id"
+                );
+            }
+            FsckError::LinkCycle(store_id, oid) => {
+                error!(store_id, oid, "Link cycle");
+            }
+            FsckError::MalformedAllocation(allocations) => {
+                error!(?allocations, "Malformed allocations");
+            }
+            FsckError::MalformedExtent(store_id, oid, extent, device_offset) => {
+                error!(store_id, oid, ?extent, device_offset, "Malformed extent");
+            }
+            FsckError::MalformedObjectRecord(store_id, key, value) => {
+                error!(store_id, ?key, ?value, "Mismatched key and value");
+            }
+            FsckError::MisalignedAllocation(allocations) => {
+                error!(?allocations, "Misaligned allocation");
+            }
+            FsckError::MisalignedExtent(store_id, oid, extent, device_offset) => {
+                error!(store_id, oid, ?extent, device_offset, "Misaligned extent");
+            }
+            FsckError::MissingAllocation(allocation) => {
+                error!(?allocation, "Missing allocation");
+            }
+            FsckError::MissingDataAttribute(store_id, oid) => {
+                error!(store_id, oid, "Missing default attribute");
+            }
+            FsckError::MissingObjectInfo(store_id, oid) => {
+                error!(store_id, oid, "Missing object record");
+            }
+            FsckError::MultipleLinksToDirectory(store_id, oid) => {
+                error!(store_id, oid, "Directory with multiple links");
+            }
+            FsckError::ObjectCountMismatch(store_id, expected, actual) => {
+                error!(store_id, expected, actual, "Object count mismatch");
+            }
+            FsckError::RefCountMismatch(oid, expected, actual) => {
+                error!(oid, expected, actual, "Reference count mistmatch");
+            }
+            FsckError::RootObjectHasParent(store_id, oid, apparent_parent_id) => {
+                error!(store_id, oid, apparent_parent_id, "Root object is a child");
+            }
+            FsckError::SubDirCountMismatch(store_id, oid, expected, actual) => {
+                error!(store_id, oid, expected, actual, "Sub-dir count mismatch");
+            }
+            FsckError::TombstonedObjectHasRecords(store_id, oid) => {
+                error!(store_id, oid, "Tombstoned object with references");
+            }
+            FsckError::UnexpectedObjectInGraveyard(oid) => {
+                error!(oid, "Unexpected object in graveyard");
+            }
+            FsckError::UnexpectedRecordInObjectStore(store_id, key, value) => {
+                error!(store_id, ?key, ?value, "Unexpected record");
+            }
+            FsckError::VolumeInChildStore(store_id, oid) => {
+                error!(store_id, oid, "Volume in child store");
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -355,6 +478,42 @@ impl FsckFatal {
                     "Layer file {} for store/allocator {} contains overlapping keys {:?} and {:?}",
                     store_id, layer_file_id, key1, key2
                 )
+            }
+        }
+    }
+
+    fn log(&self) {
+        match self {
+            FsckFatal::MalformedGraveyard => {
+                error!("Graveyard is malformed; root store is inconsistent");
+            }
+            FsckFatal::MalformedLayerFile(store_id, layer_file_id) => {
+                error!(store_id, layer_file_id, "Layer file malformed");
+            }
+            FsckFatal::MalformedStore(id) => {
+                error!(id, "Malformed store; root store is inconsistent");
+            }
+            FsckFatal::MisOrderedLayerFile(store_id, layer_file_id) => {
+                // This can be for stores or the allocator.
+                error!(oid = store_id, layer_file_id, "Layer file contains out-of-oder records");
+            }
+            FsckFatal::MisOrderedObjectStore(store_id) => {
+                // This can be for stores or the allocator.
+                error!(
+                    oid = store_id,
+                    "Store/allocator contains out-of-order or duplicate records"
+                );
+            }
+            FsckFatal::MissingLayerFile(store_id, layer_file_id) => {
+                // This can be for stores or the allocator.
+                error!(oid = store_id, layer_file_id, "Missing layer file");
+            }
+            FsckFatal::MissingStoreInfo(id) => {
+                error!(id, "Missing store info");
+            }
+            FsckFatal::OverlappingKeysInLayerFile(store_id, layer_file_id, key1, key2) => {
+                // This can be for stores or the allocator.
+                error!(oid = store_id, layer_file_id, ?key1, ?key2, "Overlapping keys");
             }
         }
     }

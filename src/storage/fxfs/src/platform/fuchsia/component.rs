@@ -7,6 +7,7 @@ use {
         crypt::Crypt,
         filesystem::{mkfs, FxFilesystem, OpenFxFilesystem, OpenOptions},
         fsck,
+        log::*,
         object_store::volume::root_volume,
         platform::{
             fuchsia::{
@@ -210,7 +211,6 @@ impl Component {
         device: ClientEnd<BlockMarker>,
         options: StartOptions,
     ) -> Result<(), Error> {
-        log::info!("Mounting");
         // TODO(fxbug.dev/99591): When runring as a component, it's possible for us to end up with
         // orphaned filesystems in the case where a client crashes and is unable to send
         // Admin/Shutdown and this causes problems in some tests which do this deliberately.  To
@@ -276,7 +276,7 @@ impl Component {
                 root.clone().open(scope.clone(), open_flags, mode, path, channel);
             }
         }
-        log::info!("Mounted");
+        info!("Mounted");
         Ok(())
     }
 
@@ -330,7 +330,7 @@ impl Component {
     async fn handle_admin(&self, req: AdminRequest) -> Result<bool, Error> {
         match req {
             AdminRequest::Shutdown { responder } => {
-                log::info!("Received shutdown request");
+                info!("Received shutdown request");
                 let state = self.state.lock().unwrap().maybe_stop();
                 if let Some(state) = state {
                     let _ = self
@@ -339,10 +339,10 @@ impl Component {
                     state.volumes.terminate().await;
                     let _ = state.fs.close().await;
                 }
-                log::info!("Filesystem terminated");
-                responder
-                    .send()
-                    .unwrap_or_else(|e| log::warn!("Failed to send shutdown response: {}", e));
+                info!("Filesystem terminated");
+                responder.send().unwrap_or_else(|e| {
+                    warn!(error = e.as_value(), "Failed to send shutdown response")
+                });
                 return Ok(true);
             }
         }
@@ -359,7 +359,7 @@ impl Component {
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
                 VolumesRequest::Create { name, crypt, outgoing_directory, responder } => {
-                    log::info!("Create volume {:?}", name);
+                    info!(name = name.as_str(), "Create volume");
                     let crypt = crypt.map(|crypt| {
                         Arc::new(RemoteCrypt::new(crypt.into_proxy().unwrap())) as Arc<dyn Crypt>
                     });
@@ -373,14 +373,20 @@ impl Component {
                                 outgoing_directory,
                             );
                             responder.send(&mut Ok(())).unwrap_or_else(|e| {
-                                log::warn!("Failed to send volume creation response: {}", e)
+                                warn!(
+                                    error = e.as_value(),
+                                    "Failed to send volume creation response"
+                                )
                             });
                         }
                         Err(status) => {
                             responder
                                 .send_no_shutdown_on_err(&mut Err(status.into_raw()))
                                 .unwrap_or_else(|e| {
-                                    log::warn!("Failed to send volume creation response: {}", e)
+                                    warn!(
+                                        error = e.as_value(),
+                                        "Failed to send volume creation response"
+                                    )
                                 });
                         }
                     };

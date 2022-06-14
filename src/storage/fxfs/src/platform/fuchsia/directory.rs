@@ -5,6 +5,7 @@
 use {
     crate::{
         errors::FxfsError,
+        log::*,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             self,
@@ -368,7 +369,7 @@ impl MutableDirectory for FxDirectory {
                 // If purging fails , we should still return success, since the file will appear
                 // unlinked at this point anyways.  The file should be cleaned up on a later mount.
                 if let Err(e) = self.volume().maybe_purge_file(id).await {
-                    log::warn!("Failed to purge file: {:?}", e);
+                    warn!(error = e.as_value(), "Failed to purge file");
                 }
             }
             ReplacedChild::Directory(id) => {
@@ -561,10 +562,7 @@ impl Directory for FxDirectory {
                 let mut iter = match self.directory.iter_from(&mut merger, "").await {
                     Ok(iter) => iter,
                     Err(e) => {
-                        log::error!(
-                            "encountered error {} whilst trying to iterate directory for watch",
-                            e
-                        );
+                        error!(error = e.as_value(), "Failed to iterate directory for watch",);
                         // TODO(fxbug.dev/96086): This really should close the watcher connection
                         // with an epitaph so that the watcher knows.
                         return;
@@ -576,10 +574,7 @@ impl Directory for FxDirectory {
                 while let Some((name, _, _)) = iter.get() {
                     controller.send_event(&mut SingleNameEventProducer::existing(name));
                     if let Err(e) = iter.advance().await {
-                        log::error!(
-                            "encountered error {} whilst trying to iterate directory for watch",
-                            e
-                        );
+                        error!(error = e.as_value(), "Failed to iterate directory for watch",);
                         return;
                     }
                 }

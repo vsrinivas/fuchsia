@@ -9,6 +9,7 @@ pub mod types;
 
 use {
     crate::{
+        log::*,
         object_handle::{ReadObjectHandle, WriteBytes, WriteObjectHandle, Writer},
         serialized_types::{Version, LATEST_VERSION},
         trace_duration,
@@ -153,7 +154,7 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         trace_duration!("LSMTree::compact_with_iterator");
         let mut writer = SimplePersistentLayerWriter::<W, K, V>::new(writer, block_size).await?;
         while let Some(item_ref) = iterator.get() {
-            log::debug!("compact: writing {:?}", item_ref);
+            debug!(?item_ref, "compact: writing");
             writer.write(item_ref).await?;
             iterator.advance().await?;
         }

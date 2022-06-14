@@ -7,6 +7,7 @@ use {
         crypt::Crypt,
         filesystem::{Filesystem, FxFilesystem},
         fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
+        log::*,
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayer,
             skip_list_layer::SkipListLayer,
@@ -65,13 +66,7 @@ pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
         fail_on_warning: false,
         halt_on_error: false,
         do_slow_passes: true,
-        on_error: |err: &FsckIssue| {
-            if err.is_error() {
-                log::error!("{:?}", err.to_string())
-            } else {
-                log::warn!("{:?}", err.to_string())
-            }
-        },
+        on_error: FsckIssue::log,
         verbose: false,
     }
 }
@@ -99,7 +94,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     crypt: Option<Arc<dyn Crypt>>,
     options: FsckOptions<F>,
 ) -> Result<(), Error> {
-    log::info!("Starting fsck");
+    info!("Starting fsck");
     let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
 
     let mut fsck = Fsck::new(options);
@@ -269,9 +264,9 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         Err(anyhow!("Fsck encountered {} errors, {} warnings", errors, warnings))
     } else {
         if warnings > 0 {
-            log::warn!("Fsck encountered {} warnings", warnings);
+            warn!(count = warnings, "Fsck encountered warnings");
         } else {
-            log::info!("No issues detected");
+            info!("No issues detected");
         }
         Ok(())
     }
@@ -309,7 +304,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
     // Log if in verbose mode.
     fn verbose(&self, message: impl AsRef<str>) {
         if self.options.verbose {
-            log::info!("fsck: {}", message.as_ref());
+            info!(message = message.as_ref(), "fsck");
         }
     }
 
@@ -365,7 +360,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             LockState::Locked => {
                 if crypt.is_none() {
                     // We can't check this store.
-                    log::info!("Skipping locked encrypted store: {}", store_id);
+                    info!(store_id, "Skipping locked encrypted store");
                     return Ok(());
                 }
                 store.unlock(crypt.clone().unwrap()).await?;

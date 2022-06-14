@@ -5,6 +5,7 @@
 use {
     crate::{
         debug_assert_not_too_long,
+        log::*,
         lsm_tree::types::Item,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
@@ -518,14 +519,14 @@ impl<'a> Transaction<'a> {
 
     /// Commits a transaction.  If successful, returns the journal offset of the transaction.
     pub async fn commit(mut self) -> Result<u64, Error> {
-        log::debug!("Commit {:?}", &self);
+        debug!(txn = ?&self, "Commit");
         self.handler.clone().commit_transaction(&mut self).await
     }
 
     /// Commits and then runs the callback whilst locks are held.  The callback accepts a single
     /// parameter which is the journal offset of the transaction.
     pub async fn commit_with_callback<R>(mut self, f: impl FnOnce(u64) -> R) -> Result<R, Error> {
-        log::debug!("Commit {:?}", &self);
+        debug!(txn = ?&self, "Commit");
         Ok(f(self.handler.clone().commit_transaction(&mut self).await?))
     }
 }
@@ -534,7 +535,7 @@ impl Drop for Transaction<'_> {
     fn drop(&mut self) {
         // Call the TransactionHandler implementation of drop_transaction which should, as a
         // minimum, call LockManager's drop_transaction to ensure the locks are released.
-        log::debug!("Drop {:?}", &self);
+        debug!(txn = ?&self, "Drop");
         self.handler.clone().drop_transaction(self);
     }
 }

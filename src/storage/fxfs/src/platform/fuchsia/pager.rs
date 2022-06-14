@@ -5,6 +5,7 @@
 use {
     crate::{
         debug_assert_not_too_long,
+        log::*,
         platform::fuchsia::{file::FxFile, node::FxNode},
     },
     anyhow::{anyhow, Error},
@@ -154,7 +155,7 @@ impl Pager {
         transfer_offset: u64,
     ) {
         if let Err(e) = self.thread.pager.supply_pages(vmo, range, transfer_vmo, transfer_offset) {
-            log::error!("Supply pages error: {:?}", e);
+            error!(error = e.as_value(), "supply_pages failed");
         }
     }
 
@@ -173,7 +174,7 @@ impl Pager {
             _ => zx::Status::BAD_STATE,
         };
         if let Err(e) = self.thread.pager.op_range(zx::PagerOp::Fail(pager_status), vmo, range) {
-            log::error!("Pager op range error: {:?}", e);
+            error!(error = e.as_value(), "op_range failed");
         }
     }
 }
@@ -193,7 +194,7 @@ impl PagerThread {
                         break;
                     }
                 }
-                Err(e) => log::error!("Port::wait error: {:?}", e),
+                Err(e) => error!(error = e.as_value(), "Port::wait failed"),
             }
         }
     }
@@ -245,7 +246,7 @@ impl PagerThread {
                                 }
                             }
                             Err(e) => {
-                                log::error!("Vmo::info error: {:?}", e);
+                                error!(error = e.as_value(), "Vmo::info failed");
                             }
                         }
                     }

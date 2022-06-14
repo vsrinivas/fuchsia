@@ -27,6 +27,7 @@ use {
         debug_assert_not_too_long,
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
+        log::*,
         object_handle::{BootstrapObjectHandle, ObjectHandle},
         object_store::{
             allocator::{Allocator, SimpleAllocator},
@@ -292,7 +293,7 @@ impl Journal {
     pub fn set_trace(&self, trace: bool) {
         let old_value = self.trace.swap(trace, Ordering::Relaxed);
         if trace != old_value {
-            log::info!("J tracing {}", if trace { "enabled" } else { "disabled" },);
+            info!(trace, "J: trace");
         }
     }
 
@@ -669,7 +670,7 @@ impl Journal {
         'bad_replay: for (checkpoint, mutations, _) in &transactions {
             for (object_id, mutation) in mutations {
                 if !self.validate_mutation(&mutation)? {
-                    log::info!("Stopping replay at bad mutation: {:?}", mutation);
+                    info!(?mutation, "Stopping replay at bad mutation");
                     valid_to = checkpoint.file_offset;
                     break 'bad_replay;
                 }
@@ -756,13 +757,13 @@ impl Journal {
         self.objects.on_replay_complete().await?;
 
         if last_checkpoint.file_offset != reader.journal_file_checkpoint().file_offset {
-            log::info!(
-                "replayed to {} (discarded to: {})",
-                last_checkpoint.file_offset,
-                reader.journal_file_checkpoint().file_offset
+            info!(
+                checkpoint = last_checkpoint.file_offset,
+                discarded_to = reader.journal_file_checkpoint().file_offset,
+                "replay complete"
             );
         } else {
-            log::info!("replayed to {}", reader.journal_file_checkpoint().file_offset);
+            info!(checkpoint = reader.journal_file_checkpoint().file_offset, "replay complete",);
         }
         Ok(())
     }
@@ -779,7 +780,7 @@ impl Journal {
         const INIT_ROOT_STORE_OBJECT_ID: u64 = 4;
         const INIT_ALLOCATOR_OBJECT_ID: u64 = 5;
 
-        log::info!("Formatting fxfs (device size: {})", filesystem.device().size());
+        info!(device_size = filesystem.device().size(), "Formatting");
 
         let checkpoint = JournalCheckpoint {
             version: LATEST_VERSION,
@@ -1087,11 +1088,11 @@ impl Journal {
         if needs_flush {
             let trace = self.trace.load(Ordering::Relaxed);
             if trace {
-                log::info!("J start flush device");
+                info!("J: start flush device");
             }
             self.handle.get().unwrap().flush_device().await?;
             if trace {
-                log::info!("J end flush device");
+                info!("J: end flush device");
             }
 
             // We need to write a DidFlushDevice record at some point, but if we are in the
@@ -1111,7 +1112,7 @@ impl Journal {
             // space that was deallocated.
             self.objects.allocator().did_flush_device(checkpoint_offset).await;
             if trace {
-                log::info!("J did flush device");
+                info!("J: did flush device");
             }
         }
 
@@ -1245,7 +1246,7 @@ impl Journal {
             if let Some(fut) = flush_fut.as_mut() {
                 if let Poll::Ready(result) = fut.poll_unpin(ctx) {
                     if let Err(e) = result {
-                        log::info!("Flush error: {:?}", e);
+                        info!(error = e.as_value(), "Flush error");
                         self.inner.lock().unwrap().terminate();
                         flush_error = true;
                     }
@@ -1257,7 +1258,7 @@ impl Journal {
                 if let Poll::Ready(result) = fut.poll_unpin(ctx) {
                     let mut inner = self.inner.lock().unwrap();
                     if let Err(e) = result {
-                        log::info!("Compaction error: {:?}", e);
+                        info!(error = e.as_value(), "Compaction error");
                         inner.terminate();
                     }
                     compact_fut = None;
@@ -1286,18 +1287,18 @@ impl Journal {
 
     async fn compact(&self) -> Result<(), Error> {
         let trace = self.trace.load(Ordering::Relaxed);
-        log::debug!("Compaction starting");
+        debug!("Compaction starting");
         if trace {
-            log::info!("J start compaction");
+            info!("J: start compaction");
         }
         trace_duration!("Journal::compact");
         let earliest_version = self.objects.flush().await?;
         self.inner.lock().unwrap().super_block.earliest_version = earliest_version;
         self.write_super_block().await?;
         if trace {
-            log::info!("J end compaction");
+            info!("J: end compaction");
         }
-        log::debug!("Compaction finished");
+        debug!("Compaction finished");
         Ok(())
     }
 

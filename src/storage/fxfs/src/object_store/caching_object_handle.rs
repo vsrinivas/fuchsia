@@ -6,6 +6,7 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
+        log::*,
         object_handle::{
             GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
         },
@@ -123,7 +124,7 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
     async fn flush_impl(&self, take_lock: bool) -> Result<(), Error> {
         let bs = self.block_size() as u64;
         let fs = self.store().filesystem();
-        let store_object_id = self.store().store_object_id;
+        let store_id = self.store().store_object_id;
         let reservation = self.store().allocator().reserve_at_most(0);
 
         // Whilst we are calling take_flushable we need to guard against changes to the cache so
@@ -132,7 +133,7 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
         let cached_write_lock = if take_lock {
             Some(
                 fs.transaction_lock(&[LockKey::cached_write(
-                    store_object_id,
+                    store_id,
                     self.handle.object_id,
                     self.handle.attribute_id,
                 )])
@@ -154,7 +155,7 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
         // locks since we need to stop take_flushable from being called.
         let locks = fs
             .transaction_lock(&[LockKey::object_attribute(
-                store_object_id,
+                store_id,
                 self.handle.object_id,
                 self.handle.attribute_id,
             )])
@@ -191,13 +192,13 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
             .await?;
 
         if self.handle.trace.load(atomic::Ordering::Relaxed) {
-            log::info!("{}.{} F {:?}", store_object_id, self.handle.object_id, flushable);
+            info!(store_id, oid = self.handle.object_id, ?flushable);
         }
 
         if let Some(metadata) = flushable.metadata.as_ref() {
             if let Some(content_size) = metadata.content_size {
                 transaction.add_with_object(
-                    store_object_id,
+                    store_id,
                     Mutation::replace_or_insert_object(
                         ObjectKey::attribute(
                             self.handle.object_id,
@@ -364,7 +365,7 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
         // Try and resize immediately, but since we successfully resized the cache, don't propagate
         // errors here.
         if let Err(e) = self.flush_metadata().await {
-            log::warn!("Failed to flush after resize: {:?}", e);
+            warn!(error = e.as_value(), "Failed to flush after resize");
         }
         Ok(())
     }

@@ -32,6 +32,7 @@ use {
         errors::FxfsError,
         ff1::Ff1,
         filesystem::{ApplyContext, ApplyMode, Filesystem, FxFilesystem, JournalingObject},
+        log::*,
         lsm_tree::{
             types::{Item, ItemRef, LayerIterator},
             LSMTree,
@@ -598,11 +599,7 @@ impl ObjectStore {
     pub fn set_trace(&self, trace: bool) {
         let old_value = self.trace.swap(trace, Ordering::Relaxed);
         if trace != old_value {
-            log::info!(
-                "OS {} tracing {}",
-                self.store_object_id(),
-                if trace { "enabled" } else { "disabled" },
-            );
+            info!(store_id = self.store_object_id(), trace, "OS: trace",);
         }
     }
 

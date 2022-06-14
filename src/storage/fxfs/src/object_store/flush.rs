@@ -7,6 +7,7 @@
 use {
     crate::{
         debug_assert_not_too_long,
+        log::*,
         lsm_tree::{
             layers_from_handles,
             types::{BoxedLayerIterator, ItemRef, LayerIteratorFilter},
@@ -74,7 +75,7 @@ impl ObjectStore {
 
         let trace = self.trace.load(Ordering::Relaxed);
         if trace {
-            log::info!("OS {} begin flush", self.store_object_id());
+            info!(store_id = self.store_object_id(), "OS: begin flush");
         }
 
         let parent_store = self.parent_store.as_ref().unwrap();
@@ -282,12 +283,12 @@ impl ObjectStore {
         );
 
         if trace {
-            log::info!(
-                "OS {} compacting {} obj, -> {} obj, layers (sz {})",
-                self.store_object_id(),
-                old_layers.len(),
-                new_layers.as_ref().map(|v| v.len()).unwrap_or(0),
-                total_layer_size
+            info!(
+                store_id = self.store_object_id(),
+                old_layer_count = old_layers.len(),
+                new_layer_count = new_layers.as_ref().map(|v| v.len()).unwrap_or(0),
+                total_layer_size,
+                "OS: compacting"
             );
         }
         end_transaction
@@ -319,7 +320,7 @@ impl ObjectStore {
         }
 
         if trace {
-            log::info!("OS {} end flush", self.store_object_id());
+            info!(store_id = self.store_object_id(), "OS: end flush");
         }
 
         // Return the earliest version used by a struct in the tree
