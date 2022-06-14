@@ -13,7 +13,7 @@ using fuchsia.diagnostics;
 /// greater than the threshold being included in the
 /// printable logs.
 type LogLevelFilter = strict enum : int8 {
-    @deprecated("TODO(https://crrev.com/c/3606917): Remove when no longer used in Chromium")
+    @available(removed=8)
     DEPRECATED_INFO_LOAD_BEARING_IN_CHROMIUM = 0;
     TRACE = 0x10;
     DEBUG = 0x20;

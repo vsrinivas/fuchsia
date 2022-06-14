@@ -99,11 +99,6 @@
     },
     {
         "kind": "enum/member",
-        "name": "fuchsia.logger/LogLevelFilter.DEPRECATED_INFO_LOAD_BEARING_IN_CHROMIUM",
-        "value": "0"
-    },
-    {
-        "kind": "enum/member",
         "name": "fuchsia.logger/LogLevelFilter.ERROR",
         "value": "80"
     },
