@@ -23,6 +23,9 @@ use {
     },
 };
 
+pub mod log;
+use log::*;
+
 pub enum Services {
     Crypt(CryptRequestStream),
     CryptManagement(CryptManagementRequestStream),
@@ -73,7 +76,7 @@ impl CryptService {
         zx::cprng_draw(&mut key);
 
         let wrapped = cipher.encrypt(&nonce, &key[..]).map_err(|e| {
-            log::error!("Failed to wrap key: {:?}", e);
+            error!(error = ?e, "Failed to wrap key");
             zx::Status::INTERNAL.into_raw()
         })?;
 
@@ -130,7 +133,7 @@ impl CryptService {
         match inner.ciphers.entry(wrapping_key_id) {
             Entry::Occupied(_) => Err(zx::Status::ALREADY_EXISTS.into_raw()),
             Entry::Vacant(vacant) => {
-                log::info!("Adding wrapping key {}", wrapping_key_id);
+                info!(wrapping_key_id, "Adding wrapping key");
                 vacant.insert(Aes256GcmSiv::new(Key::from_slice(&key[..])));
                 Ok(())
             }
@@ -155,7 +158,7 @@ impl CryptService {
     }
 
     fn forget_wrapping_key(&self, wrapping_key_id: u64) -> CryptManagementForgetWrappingKeyResult {
-        log::info!("Removing wrapping key {}", wrapping_key_id);
+        info!(wrapping_key_id, "Removing wrapping key");
         let mut inner = self.inner.lock().unwrap();
         if let Some(id) = &inner.active_data_key {
             if *id == wrapping_key_id {
@@ -179,13 +182,13 @@ impl CryptService {
                         CryptRequest::CreateKey { owner, purpose, responder } => {
                             let mut response = self.create_key(owner, purpose);
                             responder.send(&mut response).unwrap_or_else(|e| {
-                                log::error!("Failed to send CreateKey response: {:?}", e)
+                                error!(error = e.as_value(), "Failed to send CreateKey response")
                             });
                         }
                         CryptRequest::UnwrapKey { wrapping_key_id, owner, key, responder } => {
                             let mut response = self.unwrap_key(wrapping_key_id, owner, key);
                             responder.send(&mut response).unwrap_or_else(|e| {
-                                log::error!("Failed to send UnwrapKey response: {:?}", e)
+                                error!(error = e.as_value(), "Failed to send UnwrapKey response")
                             });
                         }
                     }
@@ -201,7 +204,10 @@ impl CryptService {
                         } => {
                             let mut response = self.add_wrapping_key(wrapping_key_id, key);
                             responder.send(&mut response).unwrap_or_else(|e| {
-                                log::error!("Failed to send AddWrappingKey response: {:?}", e)
+                                error!(
+                                    error = e.as_value(),
+                                    "Failed to send AddWrappingKey response"
+                                )
                             });
                         }
                         CryptManagementRequest::SetActiveKey {
@@ -211,7 +217,7 @@ impl CryptService {
                         } => {
                             let mut response = self.set_active_key(purpose, wrapping_key_id);
                             responder.send(&mut response).unwrap_or_else(|e| {
-                                log::error!("Failed to send SetActiveKey response: {:?}", e)
+                                error!(error = e.as_value(), "Failed to send SetActiveKey response")
                             });
                         }
                         CryptManagementRequest::ForgetWrappingKey {
@@ -220,7 +226,10 @@ impl CryptService {
                         } => {
                             let mut response = self.forget_wrapping_key(wrapping_key_id);
                             responder.send(&mut response).unwrap_or_else(|e| {
-                                log::error!("Failed to send ForgetWrappingKey response: {:?}", e)
+                                error!(
+                                    error = e.as_value(),
+                                    "Failed to send ForgetWrappingKey response"
+                                )
                             });
                         }
                     }

@@ -7,12 +7,12 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{stream::StreamExt, TryFutureExt},
-    fxfs_crypt::{CryptService, Services},
+    fxfs_crypt::{log::*, CryptService, Services},
 };
 
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().unwrap();
+    diagnostics_log::init!();
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::Crypt).add_fidl_service(Services::CryptManagement);
@@ -23,7 +23,7 @@ async fn main() -> Result<(), Error> {
 
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |request| {
-        crypt.handle_request(request).unwrap_or_else(|e| log::error!("{}", e))
+        crypt.handle_request(request).unwrap_or_else(|e| error!("{}", e))
     })
     .await;
 
