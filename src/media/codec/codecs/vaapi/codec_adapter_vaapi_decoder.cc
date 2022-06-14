@@ -13,16 +13,580 @@
 #include <condition_variable>
 #include <mutex>
 #include <optional>
+#include <unordered_map>
 
 #include <fbl/algorithm.h>
+#include <safemath/checked_math.h>
 #include <va/va_drmcommon.h>
 
+#include "geometry.h"
 #include "h264_accelerator.h"
 #include "media/gpu/h264_decoder.h"
 #include "media/gpu/vp9_decoder.h"
 #include "vp9_accelerator.h"
 
 #define LOG(x, ...) fprintf(stderr, __VA_ARGS__)
+
+// This class manages output buffers when the client selects a linear buffer output. Since the
+// output is linear the client will have to deswizzle the output from the decoded picture buffer
+// (DPB) meaning that we can't directly share the output with the client. The manager will be
+// responsible for creating the DPB surfaces used by the decoder and reconstructing them when a mid
+// stream configuration change is required. This buffer manager will also be responsible for copying
+// the output from the DBPs to the CodecBuffers the client provides us.
+class LinearBufferManager : public SurfaceBufferManager {
+ public:
+  LinearBufferManager(std::mutex& codec_lock) : SurfaceBufferManager(codec_lock) {}
+  ~LinearBufferManager() override = default;
+
+  void AddBuffer(const CodecBuffer* buffer) override { output_buffer_pool_.AddBuffer(buffer); }
+
+  void RecycleBuffer(const CodecBuffer* buffer) override {
+    LinearOutput local_output;
+    {
+      std::lock_guard<std::mutex> guard(codec_lock_);
+      ZX_DEBUG_ASSERT(in_use_by_client_.find(buffer) != in_use_by_client_.end());
+      local_output = std::move(in_use_by_client_[buffer]);
+      in_use_by_client_.erase(buffer);
+    }
+    // ~ local_output, which may trigger a buffer free callback.
+  }
+
+  void DeconfigureBuffers() override {
+    {
+      std::map<const CodecBuffer*, LinearOutput> to_drop;
+      {
+        std::lock_guard<std::mutex> lock(codec_lock_);
+        std::swap(to_drop, in_use_by_client_);
+      }
+    }
+    // ~to_drop
+
+    ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
+  }
+
+  scoped_refptr<VASurface> GetDPBSurface() override {
+    uint64_t surface_generation;
+    VASurfaceID surface_id;
+    gfx::Size pic_size;
+
+    {
+      std::lock_guard<std::mutex> guard(surface_lock_);
+      if (surfaces_.empty()) {
+        return {};
+      }
+      surface_id = surfaces_.back().release();
+      surfaces_.pop_back();
+      surface_generation = surface_generation_;
+      pic_size = surface_size_;
+    }
+
+    VASurface::ReleaseCB release_cb = [this, surface_generation](VASurfaceID surface_id) {
+      std::lock_guard lock(surface_lock_);
+      if (surface_generation_ == surface_generation) {
+        surfaces_.emplace_back(surface_id);
+      } else {
+        auto status =
+            vaDestroySurfaces(VADisplayWrapper::GetSingleton()->display(), &surface_id, 1);
+
+        if (status != VA_STATUS_SUCCESS) {
+          FX_LOGS(WARNING) << "vaDestroySurfaces failed: " << vaErrorStr(status);
+        }
+      }
+    };
+
+    return std::make_shared<VASurface>(surface_id, pic_size, VA_RT_FORMAT_YUV420,
+                                       std::move(release_cb));
+  }
+
+  std::optional<std::pair<const CodecBuffer*, uint32_t>> ProcessOutputSurface(
+      scoped_refptr<VASurface> va_surface) override {
+    const CodecBuffer* buffer = output_buffer_pool_.AllocateBuffer();
+
+    if (!buffer) {
+      return std::nullopt;
+    }
+
+    // If any errors happen, release the buffer back into the pool
+    auto release_buffer = fit::defer([&]() { output_buffer_pool_.FreeBuffer(buffer->base()); });
+
+    const auto surface_size = va_surface->size();
+
+    const auto aligned_stride_checked = GetAlignedStride(surface_size);
+    const auto& [y_plane_checked, uv_plane_checked] = GetSurfacePlaneSizes(surface_size);
+    const auto pic_size_checked = (y_plane_checked + uv_plane_checked).Cast<uint32_t>();
+
+    if (!pic_size_checked.IsValid()) {
+      FX_LOGS(WARNING) << "Output picture size overflowed";
+      return std::nullopt;
+    }
+
+    size_t pic_size_bytes = static_cast<size_t>(pic_size_checked.ValueOrDie());
+    ZX_ASSERT(buffer->size() >= pic_size_bytes);
+
+    zx::vmo vmo_dup;
+    zx_status_t zx_status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+    if (zx_status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to duplicate vmo " << zx_status_get_string(zx_status);
+      return std::nullopt;
+    }
+
+    // For the moment we use DRM_PRIME_2 to represent VMOs.
+    // To specify the destination VMO, we need two VASurfaceAttrib, one to set the
+    // VASurfaceAttribMemoryType to VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2 and one for the
+    // VADRMPRIMESurfaceDescriptor.
+    VADRMPRIMESurfaceDescriptor ext_attrib{};
+    VASurfaceAttrib attrib[2] = {
+        {.type = VASurfaceAttribMemoryType,
+         .flags = VA_SURFACE_ATTRIB_SETTABLE,
+         .value = {.type = VAGenericValueTypeInteger,
+                   .value = {.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2}}},
+        {.type = VASurfaceAttribExternalBufferDescriptor,
+         .flags = VA_SURFACE_ATTRIB_SETTABLE,
+         .value = {.type = VAGenericValueTypePointer, .value = {.p = &ext_attrib}}},
+    };
+
+    // VADRMPRIMESurfaceDescriptor
+    ext_attrib.width = surface_size.width();
+    ext_attrib.height = surface_size.height();
+    ext_attrib.fourcc = VA_FOURCC_NV12;  // 2 plane YCbCr
+    ext_attrib.num_objects = 1;
+    ext_attrib.objects[0].fd = vmo_dup.release();
+    ext_attrib.objects[0].drm_format_modifier = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+    ext_attrib.objects[0].size = pic_size_checked.ValueOrDie();
+    ext_attrib.num_layers = 1;
+    ext_attrib.layers[0].drm_format = make_fourcc('N', 'V', '1', '2');
+    ext_attrib.layers[0].num_planes = 2;
+
+    // Y plane
+    ext_attrib.layers[0].object_index[0] = 0;
+    ext_attrib.layers[0].pitch[0] = aligned_stride_checked.ValueOrDie();
+    ext_attrib.layers[0].offset[0] = 0;
+
+    // UV Plane
+    ext_attrib.layers[0].object_index[1] = 0;
+    ext_attrib.layers[0].pitch[1] = aligned_stride_checked.ValueOrDie();
+    ext_attrib.layers[0].offset[1] = y_plane_checked.ValueOrDie();
+
+    VASurfaceID processed_surface_id;
+    // Create one surface backed by the destination VMO.
+    VAStatus status = vaCreateSurfaces(VADisplayWrapper::GetSingleton()->display(),
+                                       VA_RT_FORMAT_YUV420, surface_size.width(),
+                                       surface_size.height(), &processed_surface_id, 1, attrib, 2);
+    if (status != VA_STATUS_SUCCESS) {
+      FX_LOGS(WARNING) << "CreateSurface failed: " << vaErrorStr(status);
+      return std::nullopt;
+    }
+
+    ScopedSurfaceID processed_surface(processed_surface_id);
+
+    // Set up a VAImage for the destination VMO.
+    VAImage image;
+    status =
+        vaDeriveImage(VADisplayWrapper::GetSingleton()->display(), processed_surface.id(), &image);
+    if (status != VA_STATUS_SUCCESS) {
+      FX_LOGS(WARNING) << "DeriveImage failed: " << vaErrorStr(status);
+      return std::nullopt;
+    }
+
+    {
+      ScopedImageID scoped_image(image.image_id);
+
+      // Copy from potentially-tiled surface to output surface. Intel decoders only
+      // support writing to Y-tiled textures, so this copy is necessary for linear
+      // output.
+      status = vaGetImage(VADisplayWrapper::GetSingleton()->display(), va_surface->id(), 0, 0,
+                          surface_size.width(), surface_size.height(), scoped_image.id());
+      if (status != VA_STATUS_SUCCESS) {
+        FX_LOGS(WARNING) << "GetImage failed: " << vaErrorStr(status);
+        return std::nullopt;
+      }
+    }
+    // ~processed_surface: Clean up the image; the data was already copied to the destination VMO
+    // above.
+
+    {
+      std::lock_guard<std::mutex> guard(codec_lock_);
+      ZX_DEBUG_ASSERT(in_use_by_client_.count(buffer) == 0);
+
+      in_use_by_client_.emplace(buffer, LinearOutput(buffer, this));
+    }
+    // ~guard
+
+    // LinearOutput has taken ownership of the buffer.
+    release_buffer.cancel();
+
+    return std::make_pair(buffer, pic_size_checked.ValueOrDie());
+  }
+
+  void Reset() override { output_buffer_pool_.Reset(true); }
+
+  void StopAllWaits() override { output_buffer_pool_.StopAllWaits(); }
+
+ protected:
+  void OnSurfaceGenerationUpdatedLocked(size_t num_of_surfaces, uint32_t output_stride)
+      FXL_REQUIRE(surface_lock_) override {
+    // Clear all existing DPB surfaces
+    surfaces_.clear();
+
+    std::vector<VASurfaceID> va_surfaces(num_of_surfaces, 0);
+    VAStatus va_res =
+        vaCreateSurfaces(VADisplayWrapper::GetSingleton()->display(), VA_RT_FORMAT_YUV420,
+                         surface_size_.width(), surface_size_.height(), va_surfaces.data(),
+                         static_cast<uint32_t>(va_surfaces.size()), nullptr, 0);
+
+    if (va_res != VA_STATUS_SUCCESS) {
+      // TODO(stefanbossbaly): Fix this
+#if 0
+      SetCodecFailure("vaCreateSurfaces failed: %s", vaErrorStr(va_res));
+#endif
+      return;
+    }
+
+    for (VASurfaceID id : va_surfaces) {
+      surfaces_.emplace_back(id);
+    }
+
+    output_stride_ = output_stride;
+  }
+
+ private:
+  safemath::internal::CheckedNumeric<uint32_t> GetAlignedStride(const gfx::Size& size) const {
+    ZX_DEBUG_ASSERT(output_stride_.has_value());
+    uint32_t output_stride = output_stride_.value();
+
+    auto aligned_stride = fbl::round_up(static_cast<uint64_t>(size.width()), output_stride);
+    return safemath::MakeCheckedNum(aligned_stride).Cast<uint32_t>();
+  }
+
+  std::pair<safemath::internal::CheckedNumeric<uint32_t>,
+            safemath::internal::CheckedNumeric<uint32_t>>
+  GetSurfacePlaneSizes(const gfx::Size& size) {
+    // Depending on if the output is tiled or not we have to align our planes on tile boundaries
+    // for both width and height
+    auto aligned_stride = GetAlignedStride(size);
+    auto aligned_y_height = static_cast<uint32_t>(size.height());
+    auto aligned_uv_height = static_cast<uint32_t>(size.height()) / 2u;
+
+    auto y_plane_size = safemath::CheckMul(aligned_stride, aligned_y_height);
+    auto uv_plane_size = safemath::CheckMul(aligned_stride, aligned_uv_height);
+
+    return std::make_pair(y_plane_size, uv_plane_size);
+  }
+
+  // VA-API outputs are distinct from the DPB and are stored in a regular
+  // BufferPool, since the hardware doesn't necessarily support decoding to a
+  // linear format like downstream consumers might need.
+  class LinearOutput {
+   public:
+    LinearOutput() = default;
+    LinearOutput(const CodecBuffer* buffer, LinearBufferManager* buffer_manager)
+        : codec_buffer_(buffer), buffer_manager_(buffer_manager) {}
+    ~LinearOutput() {
+      if (buffer_manager_) {
+        buffer_manager_->output_buffer_pool_.FreeBuffer(codec_buffer_->base());
+      }
+    }
+
+    // Delete copying
+    LinearOutput(const LinearOutput&) noexcept = delete;
+    LinearOutput& operator=(const LinearOutput&) noexcept = delete;
+
+    // Allow moving
+    LinearOutput(LinearOutput&& other) noexcept {
+      codec_buffer_ = other.codec_buffer_;
+      buffer_manager_ = other.buffer_manager_;
+      other.buffer_manager_ = nullptr;
+    }
+
+    LinearOutput& operator=(LinearOutput&& other) noexcept {
+      codec_buffer_ = other.codec_buffer_;
+      buffer_manager_ = other.buffer_manager_;
+      other.buffer_manager_ = nullptr;
+      return *this;
+    }
+
+   private:
+    const CodecBuffer* codec_buffer_ = nullptr;
+    LinearBufferManager* buffer_manager_ = nullptr;
+  };
+
+  // The order of output_buffer_pool_ and in_use_by_client_ matters, so that
+  // destruction of in_use_by_client_ happens first, because those destructing
+  // will return buffers to output_buffer_pool_.
+  BufferPool output_buffer_pool_;
+  std::map<const CodecBuffer*, LinearOutput> in_use_by_client_ FXL_GUARDED_BY(codec_lock_);
+
+  // Holds the DPB surfaces
+  std::vector<ScopedSurfaceID> surfaces_ FXL_GUARDED_BY(surface_lock_) = {};
+
+  // Output stride
+  std::optional<uint32_t> output_stride_;
+};
+
+// This class manages output buffers when the client selects a tiled buffer output. Since the output
+// is tiled the client will directly share the output from the decoded picture buffer (DPB). The
+// manager will be responsible for creating the DPB surfaces that are backed by CodecBuffers the
+// client provides us. The manager is also responsible for reconfiguring surfaces when a mid stream
+// configuration change is required.
+class TiledBufferManager : public SurfaceBufferManager {
+ public:
+  TiledBufferManager(std::mutex& codec_lock) : SurfaceBufferManager(codec_lock) {}
+  ~TiledBufferManager() override = default;
+
+  void AddBuffer(const CodecBuffer* buffer) override { output_buffer_pool_.AddBuffer(buffer); }
+
+  void RecycleBuffer(const CodecBuffer* buffer) override {
+    scoped_refptr<VASurface> to_drop;
+    {
+      std::lock_guard<std::mutex> guard(codec_lock_);
+      ZX_DEBUG_ASSERT(in_use_by_client_.count(buffer) != 0);
+      auto map_itr = in_use_by_client_.find(buffer);
+      to_drop = std::move(map_itr->second);
+      in_use_by_client_.erase(map_itr);
+    }
+    // ~ to_drop, which may trigger a buffer free callback if the decoder is no longer referencing
+    // the frame
+  }
+
+  void DeconfigureBuffers() override {
+    // Drop all references to buffers referenced by the client but keep the ones referenced by the
+    // decoder
+    {
+      std::unordered_multimap<const CodecBuffer*, scoped_refptr<VASurface>> to_drop;
+      {
+        std::lock_guard<std::mutex> lock(codec_lock_);
+        std::swap(to_drop, in_use_by_client_);
+      }
+    }
+    // ~to_drop
+
+    ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
+  }
+
+  // Getting a DPB requires that the surface is not in use by the client. This differs from the
+  // linear version where DPB were not backed by a VMO. This function will block until a buffer is
+  // recycled by the client or the manager is reset by the codec.
+  scoped_refptr<VASurface> GetDPBSurface() override {
+    const CodecBuffer* buffer = output_buffer_pool_.AllocateBuffer();
+
+    if (!buffer) {
+      return {};
+    }
+
+    // If any errors happen, release the buffer back into the pool
+    auto release_buffer = fit::defer([&]() { output_buffer_pool_.FreeBuffer(buffer->base()); });
+
+    std::lock_guard<std::mutex> guard(surface_lock_);
+    VASurfaceID vmo_surface_id;
+
+    // Check to see if there already is a surface allocated for this buffer
+    auto map_itr = allocated_free_surfaces_.find(buffer);
+    if (map_itr != allocated_free_surfaces_.end()) {
+      vmo_surface_id = map_itr->second.release();
+      allocated_free_surfaces_.erase(map_itr);
+    } else {
+      zx::vmo vmo_dup;
+      zx_status_t zx_status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+      if (zx_status != ZX_OK) {
+        FX_LOGS(WARNING) << "Failed to duplicate vmo " << zx_status_get_string(zx_status);
+        return {};
+      }
+
+      const auto aligned_stride_checked = GetAlignedStride(surface_size_);
+      const auto& [y_plane_checked, uv_plane_checked] = GetSurfacePlaneSizes(surface_size_);
+      const auto pic_size_checked = (y_plane_checked + uv_plane_checked).Cast<uint32_t>();
+
+      if (!aligned_stride_checked.IsValid()) {
+        FX_LOGS(WARNING) << "Aligned stride overflowed";
+        return {};
+      }
+
+      if (!pic_size_checked.IsValid()) {
+        FX_LOGS(WARNING) << "Output picture size overflowed";
+        return {};
+      }
+
+      size_t pic_size_bytes = static_cast<size_t>(pic_size_checked.ValueOrDie());
+      ZX_ASSERT(buffer->size() >= pic_size_bytes);
+
+      // For the moment we use DRM_PRIME_2 to represent VMOs.
+      // To specify the destination VMO, we need two VASurfaceAttrib, one to set the
+      // VASurfaceAttribMemoryType to VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2 and one for the
+      // VADRMPRIMESurfaceDescriptor.
+      VADRMPRIMESurfaceDescriptor ext_attrib{};
+      VASurfaceAttrib attrib[2] = {
+          {.type = VASurfaceAttribMemoryType,
+           .flags = VA_SURFACE_ATTRIB_SETTABLE,
+           .value = {.type = VAGenericValueTypeInteger,
+                     .value = {.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2}}},
+          {.type = VASurfaceAttribExternalBufferDescriptor,
+           .flags = VA_SURFACE_ATTRIB_SETTABLE,
+           .value = {.type = VAGenericValueTypePointer, .value = {.p = &ext_attrib}}},
+      };
+
+      // VADRMPRIMESurfaceDescriptor
+      ext_attrib.width = surface_size_.width();
+      ext_attrib.height = surface_size_.height();
+      ext_attrib.fourcc = VA_FOURCC_NV12;  // 2 plane YCbCr
+      ext_attrib.num_objects = 1;
+      ext_attrib.objects[0].fd = vmo_dup.release();
+      ext_attrib.objects[0].drm_format_modifier =
+          fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+      ext_attrib.objects[0].size = pic_size_checked.ValueOrDie();
+      ext_attrib.num_layers = 1;
+      ext_attrib.layers[0].drm_format = make_fourcc('N', 'V', '1', '2');
+      ext_attrib.layers[0].num_planes = 2;
+
+      // Y plane
+      ext_attrib.layers[0].object_index[0] = 0;
+      ext_attrib.layers[0].pitch[0] = aligned_stride_checked.ValueOrDie();
+      ext_attrib.layers[0].offset[0] = 0;
+
+      // UV Plane
+      ext_attrib.layers[0].object_index[1] = 0;
+      ext_attrib.layers[0].pitch[1] = aligned_stride_checked.ValueOrDie();
+      ext_attrib.layers[0].offset[1] = y_plane_checked.ValueOrDie();
+
+      // Create one surface backed by the destination VMO.
+      VAStatus status = vaCreateSurfaces(VADisplayWrapper::GetSingleton()->display(),
+                                         VA_RT_FORMAT_YUV420, surface_size_.width(),
+                                         surface_size_.height(), &vmo_surface_id, 1, attrib, 2);
+      if (status != VA_STATUS_SUCCESS) {
+        FX_LOGS(WARNING) << "CreateSurface failed: " << vaErrorStr(status);
+        return {};
+      }
+    }
+
+    gfx::Size pic_size = surface_size_;
+    uint64_t surface_generation = surface_generation_;
+
+    // Callback that is called when the ref_count of this new constructed surface hits 0, This
+    // occurs when the surface is no longer being used in the decoder (aka a new frame has replaced
+    // us) and is no longer in use by the client (surface has been removed from in_use_by_client_).
+    // Therefore once the VASurface release callback is called we can return this surface (and
+    // therefore the VMO backing the surface) back into the pool of available surfaces.
+    VASurface::ReleaseCB release_cb = [this, buffer, surface_generation](VASurfaceID surface_id) {
+      {
+        std::lock_guard<std::mutex> guard(surface_lock_);
+        ZX_ASSERT(surface_to_buffer_.erase(surface_id) == 1);
+
+        if (surface_generation_ == surface_generation) {
+          allocated_free_surfaces_.emplace(buffer, surface_id);
+        } else {
+          auto status =
+              vaDestroySurfaces(VADisplayWrapper::GetSingleton()->display(), &surface_id, 1);
+
+          if (status != VA_STATUS_SUCCESS) {
+            FX_LOGS(ERROR) << "vaDestroySurfaces failed: " << vaErrorStr(status);
+          }
+        }
+      }
+      // ~guard
+
+      output_buffer_pool_.FreeBuffer(buffer->base());
+    };
+
+    ZX_DEBUG_ASSERT(surface_to_buffer_.count(vmo_surface_id) == 0);
+    surface_to_buffer_.emplace(vmo_surface_id, buffer);
+
+    release_buffer.cancel();
+    return std::make_shared<VASurface>(vmo_surface_id, pic_size, VA_RT_FORMAT_YUV420,
+                                       std::move(release_cb));
+  }
+
+  std::optional<std::pair<const CodecBuffer*, uint32_t>> ProcessOutputSurface(
+      scoped_refptr<VASurface> va_surface) override {
+    const CodecBuffer* buffer = nullptr;
+
+    {
+      std::lock_guard<std::mutex> guard(surface_lock_);
+      ZX_DEBUG_ASSERT(surface_to_buffer_.count(va_surface->id()) != 0);
+      buffer = surface_to_buffer_[va_surface->id()];
+    }
+
+    if (!buffer) {
+      return {};
+    }
+
+    const auto& [y_plane_checked, uv_plane_checked] = GetSurfacePlaneSizes(va_surface->size());
+    const auto pic_size_checked = (y_plane_checked + uv_plane_checked).Cast<uint32_t>();
+    if (!pic_size_checked.IsValid()) {
+      FX_LOGS(WARNING) << "Output picture size overflowed";
+      return {};
+    }
+
+    // We are about to lend out the surface to the client so store the surface in in_use_by_client_
+    // multimap so it increments the refcount until the client recycles it
+    {
+      std::lock_guard<std::mutex> guard(codec_lock_);
+      in_use_by_client_.insert(std::make_pair(buffer, va_surface));
+    }
+
+    return std::make_pair(buffer, pic_size_checked.ValueOrDie());
+  }
+
+  void Reset() override { output_buffer_pool_.Reset(true); }
+
+  void StopAllWaits() override { output_buffer_pool_.StopAllWaits(); }
+
+ protected:
+  void OnSurfaceGenerationUpdatedLocked(size_t num_of_surfaces, uint32_t output_stride)
+      FXL_REQUIRE(surface_lock_) override {
+    // This will call vaDestroySurface on all surfaces held by this data structure. Don't need to
+    // reconstruct the surfaces here. They will be reconstructed once GetDPBSurface() is called and
+    // the buffer has no linked surface.
+    allocated_free_surfaces_.clear();
+  }
+
+ private:
+  static safemath::internal::CheckedNumeric<uint32_t> GetAlignedStride(const gfx::Size& size) {
+    auto aligned_stride = fbl::round_up(static_cast<uint64_t>(size.width()),
+                                        CodecAdapterVaApiDecoder::kTileWidthAlignment);
+    return safemath::MakeCheckedNum(aligned_stride).Cast<uint32_t>();
+  }
+
+  static std::pair<safemath::internal::CheckedNumeric<uint32_t>,
+                   safemath::internal::CheckedNumeric<uint32_t>>
+  GetSurfacePlaneSizes(const gfx::Size& size) {
+    // Depending on if the output is tiled or not we have to align our planes on tile boundaries
+    // for both width and height
+    auto aligned_stride = GetAlignedStride(size);
+    auto aligned_y_height = static_cast<uint32_t>(size.height());
+    auto aligned_uv_height = static_cast<uint32_t>(size.height()) / 2u;
+
+    aligned_y_height =
+        fbl::round_up(aligned_y_height, CodecAdapterVaApiDecoder::kTileHeightAlignment);
+    aligned_uv_height =
+        fbl::round_up(aligned_uv_height, CodecAdapterVaApiDecoder::kTileHeightAlignment);
+
+    auto y_plane_size = safemath::CheckMul(aligned_stride, aligned_y_height);
+    auto uv_plane_size = safemath::CheckMul(aligned_stride, aligned_uv_height);
+
+    return std::make_pair(y_plane_size, uv_plane_size);
+  }
+
+  // Structure that maps allocated buffers shared with the client. Once the buffer is no longer in
+  // use by the client and the decoder it should be removed from this map and marked as free in the
+  // output_buffer_pool_.
+  std::unordered_map<VASurfaceID, const CodecBuffer*> surface_to_buffer_
+      FXL_GUARDED_BY(surface_lock_);
+
+  // Once a surface is allocated it is stored in this map which maps the codec buffer that backs
+  // the surface. If a resize event happens this structure will have to be invalidated and the
+  // surfaces will have to be regenerated to match the new surface_size_
+  std::unordered_map<const CodecBuffer*, ScopedSurfaceID> allocated_free_surfaces_
+      FXL_GUARDED_BY(surface_lock_);
+
+  // Maps the codec buffer to the VA surface being shared to the client. In addition to the
+  // mapping this data structure holds a reference to the surface being used by the client,
+  // preventing it from being destructed prior to it being recycled.
+  // This has to be a multimap because it is possible to lend out the same surface concurrently to
+  // the client and we don't want the destructor of the VASurface to be called when only one of the
+  // lent out surfaces is recycled. For example on VP9 if show_existing_frame is marked true, we can
+  // lend out the same surface concurrently.
+  std::unordered_multimap<const CodecBuffer*, scoped_refptr<VASurface>> in_use_by_client_
+      FXL_GUARDED_BY(codec_lock_);
+};
 
 void CodecAdapterVaApiDecoder::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
@@ -52,9 +616,7 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
     codec_instance_diagnostics_ = codec_diagnostics_->CreateComponentCodec(codec_name);
   }
 
-  VAConfigAttrib attribs[1];
-  attribs[0].type = VAConfigAttribRTFormat;
-  attribs[0].value = VA_RT_FORMAT_YUV420;
+  VAConfigAttrib attribs[1] = {{.type = VAConfigAttribRTFormat, .value = VA_RT_FORMAT_YUV420}};
   VAConfigID config_id;
   VAEntrypoint va_entrypoint = VAEntrypointVLD;
   VAStatus va_status;
@@ -131,6 +693,23 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
   }
 }
 
+void CodecAdapterVaApiDecoder::CoreCodecStartStream() {
+  // It's ok for RecycleInputPacket to make a packet free anywhere in this
+  // sequence. Nothing else ought to be happening during CoreCodecStartStream
+  // (in this or any other thread).
+  input_queue_.Reset();
+  free_output_packets_.Reset(/*keep_data=*/true);
+
+  // If the stream has initialized then reset
+  if (surface_buffer_manager_) {
+    surface_buffer_manager_->Reset();
+  }
+
+  LaunchInputProcessingLoop();
+
+  TRACE_INSTANT("codec_runner", "Media:Start", TRACE_SCOPE_THREAD);
+}
+
 void CodecAdapterVaApiDecoder::CoreCodecResetStreamAfterCurrentFrame() {
   // Before we reset the decoder we must ensure that ProcessInputLoop() has exited and has no
   // outstanding tasks
@@ -160,6 +739,12 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
     state_ = DecoderState::kIdle;
 
     if (result == media::AcceleratedVideoDecoder::kConfigChange) {
+      {
+        std::lock_guard<std::mutex> guard(lock_);
+        mid_stream_output_buffer_reconfig_finish_ = false;
+      }
+
+      // Trigger a mid stream output constraints change
       events_->onCoreCodecMidStreamOutputConstraintsChange(true);
 
       gfx::Size pic_size = media_decoder_->GetPicSize();
@@ -172,27 +757,21 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
         break;
       }
       context_id_.emplace(context_id);
-      std::vector<VASurfaceID> va_surfaces;
-      va_surfaces.resize(media_decoder_->GetRequiredNumOfPictures());
 
-      std::lock_guard lock(surfaces_lock_);
+      // Wait for the stream reconfiguration to finish before continuing to increment the surface
+      // generation value
+      {
+        std::unique_lock<std::mutex> lock(lock_);
+        surface_buffer_manager_cv_.wait(lock, [this]() FXL_REQUIRE(lock_) {
+          return mid_stream_output_buffer_reconfig_finish_;
+        });
+      }
+
       // Increment surface generation so all existing surfaces will be freed
       // when they're released instead of being returned to the pool.
-      surface_generation_++;
-      surfaces_.clear();
-      surface_size_ = pic_size;
+      surface_buffer_manager_->IncrementSurfaceGeneration(
+          pic_size, media_decoder_->GetRequiredNumOfPictures(), GetOutputStride());
 
-      va_res = vaCreateSurfaces(VADisplayWrapper::GetSingleton()->display(), VA_RT_FORMAT_YUV420,
-                                pic_size.width(), pic_size.height(), va_surfaces.data(),
-                                static_cast<uint32_t>(va_surfaces.size()), nullptr, 0);
-      if (va_res != VA_STATUS_SUCCESS) {
-        SetCodecFailure("vaCreateSurfaces failed: %s", vaErrorStr(va_res));
-        break;
-      }
-
-      for (VASurfaceID id : va_surfaces) {
-        surfaces_.emplace_back(id);
-      }
       continue;
     } else if (result == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
       // Reset decoder failures on successful decode
@@ -360,134 +939,49 @@ void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
   }
 }
 
-bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface,
-                                             int bitstream_id) {
-  // We always allocate an entire buffer. Output buffers may not necessarily be
-  // allocated in sysmem until AllocateBuffer returns.
-  const CodecBuffer* buffer = output_buffer_pool_.AllocateBuffer();
-  if (!buffer) {
-    // Wait will succeed unless we're dropping all remaining frames of a stream.
-    return true;
-  }
-  auto release_buffer = fit::defer([&]() { output_buffer_pool_.FreeBuffer(buffer->base()); });
-
-  gfx::Size pic_size = va_surface->size();
-
-  // NV12 texture
-  // Depending on if the output is tiled or not we have to align our planes on tile boundaries for
-  // both width and height
-  uint32_t aligned_stride = GetOutputStride();
-  uint32_t aligned_y_height = static_cast<uint32_t>(pic_size.height());
-  uint32_t aligned_uv_height = static_cast<uint32_t>(pic_size.height()) / 2u;
+void CodecAdapterVaApiDecoder::CoreCodecMidStreamOutputBufferReConfigFinish() {
+  ZX_DEBUG_ASSERT(!surface_buffer_manager_);
 
   if (IsOutputTiled()) {
-    aligned_y_height = fbl::round_up(aligned_y_height, kTileHeightAlignment);
-    aligned_uv_height = fbl::round_up(aligned_uv_height, kTileHeightAlignment);
+    surface_buffer_manager_ = std::make_unique<TiledBufferManager>(lock_);
+  } else {
+    surface_buffer_manager_ = std::make_unique<LinearBufferManager>(lock_);
   }
 
-  auto y_plane_size = safemath::CheckMul(aligned_stride, aligned_y_height);
-  auto uv_plane_size = safemath::CheckMul(aligned_stride, aligned_uv_height);
+  LoadStagedOutputBuffers();
 
-  auto pic_size_checked = (y_plane_size + uv_plane_size).Cast<uint32_t>();
-  if (!pic_size_checked.IsValid()) {
-    FX_LOGS(WARNING) << "Output picture size overflowed";
-    return false;
+  // Signal that we are done with the mid stream output buffer configuration to other threads
+  {
+    std::lock_guard<std::mutex> guard(lock_);
+    mid_stream_output_buffer_reconfig_finish_ = true;
   }
-  size_t pic_size_bytes = static_cast<size_t>(pic_size_checked.ValueOrDie());
-  ZX_ASSERT(buffer->size() >= pic_size_bytes);
+  surface_buffer_manager_cv_.notify_all();
+}
 
-  zx::vmo vmo_dup;
-  zx_status_t zx_status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
-  if (zx_status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to duplicate vmo " << zx_status_get_string(zx_status);
-    return false;
-  }
+bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface,
+                                             int bitstream_id) {
+  auto maybe_processed_surface = surface_buffer_manager_->ProcessOutputSurface(va_surface);
 
-  // For the moment we use DRM_PRIME_2 to represent VMOs.
-  // To specify the destination VMO, we need two VASurfaceAttrib, one to set the
-  // VASurfaceAttribMemoryType to VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2 and one for the
-  // VADRMPRIMESurfaceDescriptor.
-  VADRMPRIMESurfaceDescriptor ext_attrib{};
-  VASurfaceAttrib attrib[2] = {
-      {.type = VASurfaceAttribMemoryType,
-       .flags = VA_SURFACE_ATTRIB_SETTABLE,
-       .value = {.type = VAGenericValueTypeInteger,
-                 .value = {.i = VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2}}},
-      {.type = VASurfaceAttribExternalBufferDescriptor,
-       .flags = VA_SURFACE_ATTRIB_SETTABLE,
-       .value = {.type = VAGenericValueTypePointer, .value = {.p = &ext_attrib}}},
-  };
-
-  // VADRMPRIMESurfaceDescriptor
-  ext_attrib.width = pic_size.width();
-  ext_attrib.height = pic_size.height();
-  ext_attrib.fourcc = VA_FOURCC_NV12;  // 2 plane YCbCr
-  ext_attrib.num_objects = 1;
-  ext_attrib.objects[0].fd = vmo_dup.release();
-  ext_attrib.objects[0].drm_format_modifier =
-      IsOutputTiled() ? fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED
-                      : fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
-  ext_attrib.objects[0].size = pic_size_checked.ValueOrDie();
-  ext_attrib.num_layers = 1;
-  ext_attrib.layers[0].drm_format = make_fourcc('N', 'V', '1', '2');
-  ext_attrib.layers[0].num_planes = 2;
-
-  // Y plane, [7:0]
-  ext_attrib.layers[0].object_index[0] = 0;
-  ext_attrib.layers[0].pitch[0] = GetOutputStride();
-  ext_attrib.layers[0].offset[0] = 0;
-
-  // Cr:Cb plane, [15:0] Cr:Cb little endian
-  ext_attrib.layers[0].object_index[1] = 0;
-  ext_attrib.layers[0].pitch[1] = GetOutputStride();
-  ext_attrib.layers[0].offset[1] = aligned_stride * aligned_y_height;
-
-  VASurfaceID processed_surface_id;
-  // Create one surface backed by the destination VMO.
-  VAStatus status =
-      vaCreateSurfaces(VADisplayWrapper::GetSingleton()->display(), VA_RT_FORMAT_YUV420,
-                       pic_size.width(), pic_size.height(), &processed_surface_id, 1, attrib, 2);
-  if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "CreateSurface failed: " << vaErrorStr(status);
-    return false;
-  }
-  ScopedSurfaceID processed_surface(processed_surface_id);
-
-  // Set up a VAImage for the destination VMO.
-  VAImage image;
-  status =
-      vaDeriveImage(VADisplayWrapper::GetSingleton()->display(), processed_surface.id(), &image);
-  if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "DeriveImage failed: " << vaErrorStr(status);
-    return false;
+  if (!maybe_processed_surface) {
+    return true;
   }
 
-  ScopedImageID scoped_image(image.image_id);
+  auto& [codec_buffer, pic_size_bytes] = maybe_processed_surface.value();
 
-  // Copy from potentially-tiled surface to output surface. Intel decoders only
-  // support writing to Y-tiled textures, so this copy is necessary for linear
-  // output.
-  // TODO(jbauman): Use VPP.
-  status = vaGetImage(VADisplayWrapper::GetSingleton()->display(), va_surface->id(), 0, 0,
-                      pic_size.width(), pic_size.height(), scoped_image.id());
-  if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "GetImage failed: " << vaErrorStr(status);
-    return false;
-  }
-
-  // Clean up the image; the data was already copied to the destination VMO
-  // above.  The surface is cleaned up by ~processed_surface.
-  scoped_image = ScopedImageID();
+  auto release_buffer = fit::defer([this, codec_buffer = codec_buffer]() {
+    surface_buffer_manager_->RecycleBuffer(codec_buffer);
+  });
 
   std::optional<CodecPacket*> maybe_output_packet = free_output_packets_.WaitForElement();
   if (!maybe_output_packet) {
     // Wait will succeed unless we're dropping all remaining frames of a stream.
     return true;
   }
-  auto output_packet = *maybe_output_packet;
-  output_packet->SetBuffer(buffer);
+
+  auto output_packet = maybe_output_packet.value();
+  output_packet->SetBuffer(codec_buffer);
   output_packet->SetStartOffset(0);
-  output_packet->SetValidLengthBytes(static_cast<uint32_t>(pic_size_bytes));
+  output_packet->SetValidLengthBytes(pic_size_bytes);
   {
     auto pts_it =
         std::find_if(stream_to_pts_map_.begin(), stream_to_pts_map_.end(),
@@ -499,14 +993,7 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
     }
   }
 
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    ZX_DEBUG_ASSERT(in_use_by_client_.find(output_packet) == in_use_by_client_.end());
-
-    in_use_by_client_.emplace(output_packet, VaApiOutput(buffer->base(), this));
-    // VaApiOutput has taken ownership of the buffer.
-    release_buffer.cancel();
-  }
+  release_buffer.cancel();
   events_->onCoreCodecOutputPacket(output_packet,
                                    /*error_detected_before=*/false,
                                    /*error_detected_during=*/false);
@@ -514,44 +1001,5 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
 }
 
 scoped_refptr<VASurface> CodecAdapterVaApiDecoder::GetVASurface() {
-  uint64_t surface_generation;
-  VASurfaceID surface_id;
-  gfx::Size pic_size;
-  {
-    std::lock_guard lock(surfaces_lock_);
-    if (surfaces_.empty())
-      return {};
-    surface_id = surfaces_.back().release();
-    surfaces_.pop_back();
-    surface_generation = surface_generation_;
-    pic_size = surface_size_;
-  }
-  return std::make_shared<VASurface>(
-      surface_id, pic_size, VA_RT_FORMAT_YUV420,
-      fit::function<void(VASurfaceID)>([this, surface_generation](VASurfaceID surface_id) {
-        std::lock_guard lock(surfaces_lock_);
-        if (surface_generation_ == surface_generation) {
-          surfaces_.emplace_back(surface_id);
-        } else {
-          vaDestroySurfaces(VADisplayWrapper::GetSingleton()->display(), &surface_id, 1);
-        }
-      }));
-}
-
-VaApiOutput::~VaApiOutput() {
-  if (adapter_)
-    adapter_->output_buffer_pool_.FreeBuffer(base_address_);
-}
-
-VaApiOutput::VaApiOutput(VaApiOutput&& other) noexcept {
-  adapter_ = other.adapter_;
-  base_address_ = other.base_address_;
-  other.adapter_ = nullptr;
-}
-
-VaApiOutput& VaApiOutput::operator=(VaApiOutput&& other) noexcept {
-  adapter_ = other.adapter_;
-  base_address_ = other.base_address_;
-  other.adapter_ = nullptr;
-  return *this;
+  return surface_buffer_manager_->GetDPBSurface();
 }

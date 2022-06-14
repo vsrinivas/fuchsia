@@ -15,9 +15,13 @@
 #include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/media/codec_impl/codec_input_item.h>
 #include <lib/media/codec_impl/codec_packet.h>
+#include <lib/media/codec_impl/fourcc.h>
 #include <lib/trace/event.h>
 #include <threads.h>
 
+#include <condition_variable>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <queue>
 
@@ -40,30 +44,79 @@ namespace test {
 class Vp9VaapiTestFixture;
 }  // namespace test
 
-// VA-API outputs are distinct from the DPB and are stored in a regular
-// BufferPool, since the hardware doesn't necessarily support decoding to a
-// linear format like downstream consumers might need.
-class VaApiOutput {
+// Interface used to manage output buffer, DPB surfaces and their relationship to each other. The
+// goal of this class is to abstract away the implementation details on how linear and tiled
+// surfaces are handled differently.
+class SurfaceBufferManager {
  public:
-  VaApiOutput() = default;
-  VaApiOutput(uint8_t* base_address, CodecAdapterVaApiDecoder* adapter)
-      : base_address_(base_address), adapter_(adapter) {}
-  VaApiOutput(const VaApiOutput&) = delete;
-  VaApiOutput(VaApiOutput&& other) noexcept;
+  virtual ~SurfaceBufferManager() = default;
 
-  ~VaApiOutput();
+  // Adds a output CodecBuffer under the management of the class
+  virtual void AddBuffer(const CodecBuffer* buffer) = 0;
 
-  VaApiOutput& operator=(VaApiOutput&& other) noexcept;
+  // Called when an output buffer that was shared with the client is no longer by that client and
+  // now can be used again.
+  virtual void RecycleBuffer(const CodecBuffer* buffer) = 0;
 
- private:
-  uint8_t* base_address_ = nullptr;
-  CodecAdapterVaApiDecoder* adapter_ = nullptr;
+  // Deconfigures all output buffers under the manager's control
+  virtual void DeconfigureBuffers() = 0;
+
+  // Get a surface that will be used as a DPB for the codec. If no current surfaces are available
+  // this function will block until either a DPB surfaces becomes available or Reset() is called
+  virtual scoped_refptr<VASurface> GetDPBSurface() = 0;
+
+  // This function returns an output CodecBuffer to be sent to the client for the given DPB surface
+  virtual std::optional<std::pair<const CodecBuffer*, uint32_t>> ProcessOutputSurface(
+      scoped_refptr<VASurface> dpb_surface) = 0;
+
+  // Resets any underlying blocking data structures after a call to StopAllWaits(). This allows the
+  // data structures to block again.
+  virtual void Reset() = 0;
+
+  // Stops all blocking calls, specially the potentially blocking call of GetDPBSurface() or
+  // ProcessOutputSurface(). Will cause blocking calls to immediately return with default
+  // constructed objects as their return values.
+  virtual void StopAllWaits() = 0;
+
+  // Increments the surface generation tracker to signal to subclasses that a resize event has
+  // happened mid stream.
+  void IncrementSurfaceGeneration(const gfx::Size& new_surface_size, size_t num_of_surfaces,
+                                  uint32_t output_stride) {
+    std::lock_guard<std::mutex> guard(surface_lock_);
+    surface_generation_ += 1;
+    surface_size_ = new_surface_size;
+
+    // Signal to subclass that new surface generation has occurred. Called under lock
+    OnSurfaceGenerationUpdatedLocked(num_of_surfaces, output_stride);
+  }
+
+ protected:
+  explicit SurfaceBufferManager(std::mutex& codec_lock) : codec_lock_(codec_lock) {}
+
+  // Event method subclass must implement. Called when the surface generation has been incremented
+  // and a new surface size is available. This function is guaranteed to be called with the
+  // surface_lock_ locked.
+  virtual void OnSurfaceGenerationUpdatedLocked(size_t num_of_surfaces, uint32_t output_stride)
+      FXL_REQUIRE(surface_lock_) = 0;
+
+  // The lock is owned by the VAAPI decoder and hence the decoder class will always outlive this
+  // class.
+  std::mutex& codec_lock_;
+
+  // Lock that must be used when modifying any surface data.
+  std::mutex surface_lock_{};
+
+  // Holds the current version of surface generation. If incremented DPB surfaces will have to be
+  // destroyed and recreated with the new the new surface_size_ dimensions
+  uint64_t surface_generation_ FXL_GUARDED_BY(surface_lock_) = {};
+  gfx::Size surface_size_ FXL_GUARDED_BY(surface_lock_) = {};
+
+  // The order of output_buffer_pool_ and in_use_by_client_ matters, so that
+  // destruction of in_use_by_client_ happens first, because those destructing
+  // will return buffers to output_buffer_pool_.
+  BufferPool output_buffer_pool_{};
 };
 
-static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
-  return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
-         (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
-}
 class CodecAdapterVaApiDecoder : public CodecAdapter {
  public:
   CodecAdapterVaApiDecoder(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
@@ -75,7 +128,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   ~CodecAdapterVaApiDecoder() override {
     input_processing_loop_.Shutdown();
-    // Tear down first to make sure the H264Accelerator doesn't reference other variables in this
+    // Tear down first to make sure the accelerator doesn't reference other variables in this
     // class later.
     media_decoder_.reset();
   }
@@ -105,29 +158,19 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     if (port != kOutputPort) {
       return;
     }
+
     std::vector<CodecPacket*> all_packets;
     for (auto& packet : packets) {
       all_packets.push_back(packet.get());
     }
+
     std::shuffle(all_packets.begin(), all_packets.end(), not_for_security_prng_);
     for (CodecPacket* packet : all_packets) {
       free_output_packets_.Push(packet);
     }
   }
 
-  void CoreCodecStartStream() override {
-    // It's ok for RecycleInputPacket to make a packet free anywhere in this
-    // sequence. Nothing else ought to be happening during CoreCodecStartStream
-    // (in this or any other thread).
-    input_queue_.Reset();
-    free_output_packets_.Reset(/*keep_data=*/true);
-    output_buffer_pool_.Reset(/*keep_data=*/true);
-    LoadStagedOutputBuffers();
-
-    LaunchInputProcessingLoop();
-
-    TRACE_INSTANT("codec_runner", "Media:Start", TRACE_SCOPE_THREAD);
-  }
+  void CoreCodecStartStream() override;
 
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::media::FormatDetails& per_stream_override_format_details) override {
@@ -152,7 +195,12 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   void CoreCodecStopStream() override {
     input_queue_.StopAllWaits();
     free_output_packets_.StopAllWaits();
-    output_buffer_pool_.StopAllWaits();
+
+    // It is possible a stream was started by no input packets were provided which means that the
+    // surface buffer manager was never constructed.
+    if (surface_buffer_manager_) {
+      surface_buffer_manager_->StopAllWaits();
+    }
 
     WaitForInputProcessingLoopToEnd();
     CleanUpAfterStream();
@@ -179,18 +227,13 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       packet->SetIsNew(false);
       return;
     }
-    if (packet->buffer()) {
-      VaApiOutput local_output;
-      {
-        std::lock_guard<std::mutex> lock(lock_);
-        ZX_DEBUG_ASSERT(in_use_by_client_.find(packet) != in_use_by_client_.end());
-        local_output = std::move(in_use_by_client_[packet]);
-        in_use_by_client_.erase(packet);
-      }
 
-      // ~ local_output, which may trigger a buffer free callback.
+    if (packet->buffer()) {
+      ZX_ASSERT(surface_buffer_manager_);
+      surface_buffer_manager_->RecycleBuffer(packet->buffer());
     }
-    free_output_packets_.Push(std::move(packet));
+
+    free_output_packets_.Push(packet);
   }
 
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override {
@@ -200,25 +243,19 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       return;
     }
 
-    {  // scope to_drop
-      std::map<CodecPacket*, VaApiOutput> to_drop;
-      {
-        std::lock_guard<std::mutex> lock(lock_);
-        std::swap(to_drop, in_use_by_client_);
-      }
-      // ~to_drop
+    // The first time this function is called before CodecStartStream() which means that
+    // surface_buffer_manager_ will not be configured yet. If this is the case then by default our
+    // surface buffer manager is not configured and no action is needed
+    if (surface_buffer_manager_) {
+      surface_buffer_manager_->DeconfigureBuffers();
+      surface_buffer_manager_->Reset();
     }
-
-    // The ~to_drop returns all buffers to the output_buffer_pool_.
-    ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
 
     // VMO handles for the old output buffers may still exist, but the SW
     // decoder doesn't know about those, and buffer_lifetime_ordinal will
     // prevent us calling output_buffer_pool_.FreeBuffer() for any of the old
     // buffers.  So forget about the old buffers here.
-    output_buffer_pool_.Reset();
     staged_output_buffers_.clear();
-
     free_output_packets_.Reset();
   }
 
@@ -226,7 +263,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     // Nothing to do here.
   }
 
-  void CoreCodecMidStreamOutputBufferReConfigFinish() override { LoadStagedOutputBuffers(); }
+  void CoreCodecMidStreamOutputBufferReConfigFinish() override;
+
+  std::string CoreCodecGetName() override { return "VAAPI"; }
 
   std::unique_ptr<const fuchsia::media::StreamOutputConstraints> CoreCodecBuildNewOutputConstraints(
       uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
@@ -296,13 +335,14 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       constraints.min_buffer_count_for_camping = 1;
       constraints.has_buffer_memory_constraints = true;
       constraints.buffer_memory_constraints.cpu_domain_supported = true;
-      // Must be big enough to hold an entire NAL unit, since the H264Decoder doesn't support split
-      // NAL units.
+      // Must be big enough to hold an entire NAL unit, since the H264Decoder doesn't support
+      // split NAL units.
       constraints.buffer_memory_constraints.min_size_bytes = 8192 * 512;
       return constraints;
     } else if (port == kOutputPort) {
       fuchsia::sysmem::BufferCollectionConstraints constraints;
-      constraints.min_buffer_count_for_camping = 1;
+      constraints.min_buffer_count_for_camping =
+          static_cast<uint32_t>(media_decoder_->GetRequiredNumOfPictures());
       constraints.has_buffer_memory_constraints = true;
       // TODO(fxbug.dev/94140): Add RAM domain support.
       constraints.buffer_memory_constraints.cpu_domain_supported = true;
@@ -405,6 +445,10 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   scoped_refptr<VASurface> GetVASurface();
 
+  // Intel Y-Tiling alignment
+  static constexpr uint32_t kTileWidthAlignment = 128u;
+  static constexpr uint32_t kTileHeightAlignment = 32u;
+
  private:
   friend class VaApiOutput;
   friend class test::Vp9VaapiTestFixture;
@@ -455,9 +499,10 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // configuration we stage all the buffers. Here we load all the staged
   // buffers so the codec can make output.
   void LoadStagedOutputBuffers() {
+    ZX_ASSERT(surface_buffer_manager_);
     std::vector<const CodecBuffer*> to_add = std::move(staged_output_buffers_);
     for (auto buffer : to_add) {
-      output_buffer_pool_.AddBuffer(buffer);
+      surface_buffer_manager_->AddBuffer(buffer);
     }
   }
 
@@ -499,7 +544,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     auto checked_stride = safemath::MakeCheckedNum(stride).Cast<uint32_t>();
 
     if (!checked_stride.IsValid()) {
-      FX_LOGS(ERROR) << "Stride could not be represented as a 32 bit integer";
+      FX_LOGS(FATAL) << "Stride could not be represented as a 32 bit integer";
     }
 
     return checked_stride.ValueOrDie();
@@ -552,20 +597,20 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // Allow up to 240 frames (8 seconds @ 30 fps) between keyframes.
   static constexpr uint32_t kMaxDecoderFailures = 240u;
 
-  // Intel Y-Tiling alignment
-  static constexpr uint32_t kTileWidthAlignment = 128u;
-  static constexpr uint32_t kTileHeightAlignment = 32u;
-
   BlockingMpscQueue<CodecInputItem> input_queue_{};
   BlockingMpscQueue<CodecPacket*> free_output_packets_{};
 
   std::optional<ScopedConfigID> config_;
 
+  // DPB surfaces.
+  std::mutex surfaces_lock_;
+
   // The order of output_buffer_pool_ and in_use_by_client_ matters, so that
   // destruction of in_use_by_client_ happens first, because those destructing
   // will return buffers to output_buffer_pool_.
-  BufferPool output_buffer_pool_;
-  std::map<CodecPacket*, VaApiOutput> in_use_by_client_ FXL_GUARDED_BY(lock_);
+  std::unique_ptr<SurfaceBufferManager> surface_buffer_manager_;
+  std::condition_variable surface_buffer_manager_cv_;
+  bool mid_stream_output_buffer_reconfig_finish_ FXL_GUARDED_BY(lock_) = false;
 
   // Buffers the client has added but that we cannot use until configuration is
   // complete.
@@ -583,13 +628,6 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   CodecDiagnostics* codec_diagnostics_{nullptr};
   std::optional<ComponentCodecDiagnostics> codec_instance_diagnostics_;
 
-  // DPB surfaces.
-  std::mutex surfaces_lock_;
-  // Incremented whenever new surfaces are allocated and old surfaces should be released.
-  uint64_t surface_generation_ FXL_GUARDED_BY(surfaces_lock_) = {};
-  gfx::Size surface_size_ FXL_GUARDED_BY(surfaces_lock_);
-  std::vector<ScopedSurfaceID> surfaces_ FXL_GUARDED_BY(surfaces_lock_);
-
   std::optional<ScopedContextID> context_id_;
 
   // Will be accessed from the input processing thread if that's active, or the main thread
@@ -598,8 +636,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   bool is_h264_{false};  // TODO(stefanbossbaly): Remove in favor abstraction in VAAPI layer
   uint32_t decoder_failures_{0};  // The amount of failures the decoder has encountered
   DiagnosticStateWrapper<DecoderState> state_{
-      []() {}, DecoderState::kIdle,
-      &DecoderStateName};  // Used for trace events to show when we are waiting on the iGPU for data
+      []() {}, DecoderState::kIdle, &DecoderStateName};  // Used for trace events to show when we
+                                                         // are waiting on the iGPU for data
 
   // These are set in CoreCodecInit() by querying the underlying hardware. If the hardware query
   // returns no results the current value is not overwritten.
