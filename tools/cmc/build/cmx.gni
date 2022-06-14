@@ -268,6 +268,10 @@ template("cmx") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ "//build/components/cmx:cmx_allowlist" ]
+    if (string_replace(target_out_dir, "vendor/google", "") != target_out_dir) {
+      deps += [ "//vendor/google/build/components/cmx:cmx_allowlist" ]
+    } else {
+      deps += [ "//build/components/cmx:cmx_allowlist" ]
+    }
   }
 }
