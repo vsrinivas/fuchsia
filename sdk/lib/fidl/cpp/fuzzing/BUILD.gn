@@ -38,7 +38,6 @@ test("fidl_hlcpp_fuzzing_unittests") {
 
 fuchsia_unittest_package("fidl-hlcpp-fuzzing-tests") {
   component_name = "fidl_hlcpp_fuzzing_tests"
-  manifest = "meta/fidl_hlcpp_fuzzing_tests.cmx"
   deps = [ ":fidl_hlcpp_fuzzing_unittests" ]
 }
 
