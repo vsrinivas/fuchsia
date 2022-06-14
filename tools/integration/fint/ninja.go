@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -471,8 +472,8 @@ type affectedTestsResult struct {
 func affectedTestsNoWork(
 	ctx context.Context,
 	runner ninjaRunner,
+	contextSpec *fintpb.Context,
 	allTests []build.Test,
-	affectedFiles []string,
 	targets []string,
 ) (affectedTestsResult, error) {
 	result := affectedTestsResult{
@@ -493,10 +494,9 @@ func affectedTestsNoWork(
 			continue
 		}
 
-		path := test.Path
 		// For host tests we use the executable path.
-		if path != "" {
-			testsByPath[path] = test.Name
+		if test.Path != "" {
+			testsByPath[test.Path] = test.Name
 			continue
 		}
 
@@ -505,7 +505,7 @@ func affectedTestsNoWork(
 			testsByDirtyLine[dirtyLine] = append(testsByDirtyLine[dirtyLine], test.Name)
 		}
 
-		var buildGnPath = buildGnPathForLabel(test.Label)
+		buildGnPath := buildGnPathForLabel(test.Label)
 		testsByBuildGn[buildGnPath] = append(testsByBuildGn[buildGnPath], test.Name)
 		if test.PackageLabel != "" {
 			buildGnPath = buildGnPathForLabel(test.PackageLabel)
@@ -514,12 +514,12 @@ func affectedTestsNoWork(
 	}
 
 	var gnFiles, nonGNFiles []string
-	for _, path := range affectedFiles {
-		ext := filepath.Ext(path)
+	for _, f := range contextSpec.ChangedFiles {
+		ext := filepath.Ext(f.Path)
 		if ext == ".gn" || ext == ".gni" {
-			gnFiles = append(gnFiles, path)
+			gnFiles = append(gnFiles, f.Path)
 		} else {
-			nonGNFiles = append(nonGNFiles, path)
+			nonGNFiles = append(nonGNFiles, f.Path)
 		}
 	}
 
@@ -536,7 +536,7 @@ func affectedTestsNoWork(
 	// triggers an action to regenerate the entire graph. So if GN files were
 	// modified and we touched them then the following dry run results are not
 	// useful for determining affected tests.
-	touchNonGNResult, err := touchFiles(nonGNFiles)
+	touchNonGNResult, err := touchFiles(makeAbsolute(contextSpec.CheckoutDir, nonGNFiles))
 	if err != nil {
 		return result, err
 	}
@@ -578,7 +578,7 @@ func affectedTestsNoWork(
 
 		// Since we only did a Ninja dry run, the non-GN files will still be
 		// considered dirty, so we need only touch the GN files.
-		touchGNResult, err := touchFiles(gnFiles)
+		touchGNResult, err := touchFiles(makeAbsolute(contextSpec.CheckoutDir, gnFiles))
 		if err != nil {
 			return result, err
 		}
@@ -602,9 +602,9 @@ func dirtyLineForPackageManifest(label string) string {
 }
 
 func buildGnPathForLabel(label string) string {
-	var result = strings.TrimPrefix(label, "//")
+	result := strings.TrimPrefix(label, "//")
 	result = strings.Split(result, ":")[0]
-	return result + "/BUILD.gn"
+	return path.Join(result, "BUILD.gn")
 }
 
 // ninjaGraph runs the ninja graph tool and pipes its stdout to the file at the

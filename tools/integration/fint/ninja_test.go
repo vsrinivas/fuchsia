@@ -521,11 +521,32 @@ func TestCheckNinjaNoop(t *testing.T) {
 
 func TestAffectedTestsNoWork(t *testing.T) {
 	mockTestManifest := []build.Test{
-		{Name: "host_test", Path: "host/run.sh"},
-		{Name: "fuchsia_test", Label: "//src/path/to:fuchsia_test(//toolchain)", PackageLabel: "//src/path/to:fuchsia_test_pkg(//toolchain)", PackageManifests: []string{"obj/src/path/to/fuchsia_test/package_manifest.json"}},
-		{Name: "fuchsia_test2", Label: "//src/path2:fuchsia_test(//toolchain)", PackageLabel: "//src/path2/test:pkg(//toolchain)", PackageManifests: []string{"obj/src/path2/test/pkg/package_manifest.json"}},
-		{Name: "unaffected_test", Label: "//src/path/to:unaffected_test(//toolchain)", PackageLabel: "//src/path/to:unaffected_test_pkg(//toolchain)", PackageManifests: []string{"obj/src/path/to/unaffected_test/package_manifest.json"}},
-		{Name: "never_affected_test", PackageLabel: neverAffectedTestLabels[0] + "(//toolchain)"},
+		{
+			Name: "host_test",
+			Path: "host/run.sh",
+		},
+		{
+			Name:             "fuchsia_test",
+			Label:            "//src/path/to:fuchsia_test(//toolchain)",
+			PackageLabel:     "//src/path/to:fuchsia_test_pkg(//toolchain)",
+			PackageManifests: []string{"obj/src/path/to/fuchsia_test/package_manifest.json"},
+		},
+		{
+			Name:             "fuchsia_test2",
+			Label:            "//src/path2:fuchsia_test(//toolchain)",
+			PackageLabel:     "//src/path2/test:pkg(//toolchain)",
+			PackageManifests: []string{"obj/src/path2/test/pkg/package_manifest.json"},
+		},
+		{
+			Name:             "unaffected_test",
+			Label:            "//src/path/to:unaffected_test(//toolchain)",
+			PackageLabel:     "//src/path/to:unaffected_test_pkg(//toolchain)",
+			PackageManifests: []string{"obj/src/path/to/unaffected_test/package_manifest.json"},
+		},
+		{
+			Name:         "never_affected_test",
+			PackageLabel: neverAffectedTestLabels[0] + "(//toolchain)",
+		},
 	}
 
 	testCases := []struct {
@@ -611,20 +632,26 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 				buildDir:  "build",
 			}
 
+			contextSpec := &fintpb.Context{
+				CheckoutDir: checkoutDir,
+			}
 			for _, path := range tc.affectedFiles {
-				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+				contextSpec.ChangedFiles = append(contextSpec.ChangedFiles, &fintpb.Context_ChangedFile{Path: path})
+
+				absPath := filepath.Join(checkoutDir, path)
+				if err := os.MkdirAll(filepath.Dir(absPath), 0o700); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := os.Create(path); err != nil {
+				if _, err := os.Create(absPath); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.Chtimes(path, oneMinuteAgo, oneMinuteAgo); err != nil {
+				if err := os.Chtimes(absPath, oneMinuteAgo, oneMinuteAgo); err != nil {
 					t.Fatal(err)
 				}
 			}
 
 			targets := []string{"foo", "bar"}
-			result, err := affectedTestsNoWork(context.Background(), r, mockTestManifest, tc.affectedFiles, targets)
+			result, err := affectedTestsNoWork(context.Background(), r, contextSpec, mockTestManifest, targets)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -645,12 +672,13 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 
 			// Ensure file timestamps weren't modified
 			for _, path := range tc.affectedFiles {
-				stat, err := os.Stat(path)
+				absPath := filepath.Join(checkoutDir, path)
+				stat, err := os.Stat(absPath)
 				if err != nil {
 					t.Fatal(err)
 				}
 				if !stat.ModTime().Equal(oneMinuteAgo) {
-					t.Errorf("Unexpected %v modified time, wanted %v, got %v", path, oneMinuteAgo, stat.ModTime())
+					t.Errorf("Unexpected %v modified time, wanted %v, got %v", absPath, oneMinuteAgo, stat.ModTime())
 				}
 			}
 		})

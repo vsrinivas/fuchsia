@@ -308,12 +308,7 @@ func buildImpl(
 		for _, t := range modules.TestSpecs() {
 			tests = append(tests, t.Test)
 		}
-		var affectedFiles []string
-		for _, f := range contextSpec.ChangedFiles {
-			absPath := filepath.Join(contextSpec.CheckoutDir, f.Path)
-			affectedFiles = append(affectedFiles, absPath)
-		}
-		result, err := affectedTestsNoWork(ctx, r, tests, affectedFiles, targets)
+		result, err := affectedTestsNoWork(ctx, r, contextSpec, tests, targets)
 		if err != nil {
 			return artifacts, err
 		}
@@ -594,22 +589,20 @@ func toStructPB(s interface{}) (*structpb.Struct, error) {
 	return structpb.NewStruct(m)
 }
 
-// removeDuplicates rearranges and re-slices the given slice in-place, returning
-// a slice containing only the unique elements of the original slice.
+// removeDuplicates returns a slice containing only the unique elements of the
+// original slice.
 func removeDuplicates(slice []string) []string {
-	sort.Strings(slice)
-
-	var numUnique int
-	var previous string
+	uniq := make(map[string]struct{})
 	for _, str := range slice {
-		if previous == "" || str != previous {
-			slice[numUnique] = str
-			numUnique++
-		}
-		previous = str
+		uniq[str] = struct{}{}
 	}
-
-	return slice[:numUnique]
+	var deduped []string
+	for str := range uniq {
+		deduped = append(deduped, str)
+	}
+	// Sort to make the output deterministic for unit tests.
+	sort.Strings(deduped)
+	return deduped
 }
 
 // gnCheckGenerated runs `gn check` against a build directory that's already had

@@ -29,3 +29,13 @@ func contains(items []string, target string) bool {
 	}
 	return false
 }
+
+// makeAbsolute takes a root directory and a list of relative paths of files
+// within that directory, and returns a list of absolute paths to those files.
+func makeAbsolute(rootDir string, paths []string) []string {
+	var res []string
+	for _, path := range paths {
+		res = append(res, filepath.Join(rootDir, path))
+	}
+	return res
+}
