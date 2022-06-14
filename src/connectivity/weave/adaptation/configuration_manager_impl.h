@@ -132,6 +132,11 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     // operations and fail if it is unable to provide such support.
     virtual bool IsThreadEnabled() = 0;
 
+    // Returns whether IPv6 Forwarding is enabled.
+    //
+    // When true, weavestack will enable IPv6 forwarding.
+    virtual bool IsIPv6ForwardingEnabled() = 0;
+
     // Returns whether WoBLE is enabled.
     //
     // When enabled, weavestack will publish GATT service for WoBLE.
@@ -205,6 +210,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
 
   // Returns whether Thread is enabled, see definition in delegate.
   bool IsThreadEnabled();
+
+  // Returns whether IP forwarding is enabled, see definition in delegate.
+  bool IsIPv6ForwardingEnabled();
 
   // Returns whether WoBLE is enabled, see definition in delegate.
   bool IsWoBLEEnabled();

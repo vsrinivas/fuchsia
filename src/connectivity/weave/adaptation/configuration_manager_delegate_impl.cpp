@@ -43,6 +43,7 @@ constexpr char kDeviceInfoConfigKey_BleDeviceNamePrefix[] = "ble-device-name-pre
 constexpr char kDeviceInfoConfigKey_DeviceId[] = "device-id";
 constexpr char kDeviceInfoConfigKey_DeviceIdPath[] = "device-id-path";
 constexpr char kDeviceInfoConfigKey_EnableThread[] = "enable-thread";
+constexpr char kDeviceInfoConfigKey_EnableIpForwarding[] = "enable-ipv6-forwarding";
 constexpr char kDeviceInfoConfigKey_EnableWoBLE[] = "enable-woble";
 constexpr char kDeviceInfoConfigKey_EnableWoBLEAdvertisement[] = "enable-woble-advertisement";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
@@ -284,6 +285,12 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetBleDeviceNamePrefix(char* devic
 bool ConfigurationManagerDelegateImpl::IsThreadEnabled() {
   bool is_enabled = false;
   device_info_->ReadConfigValue(kDeviceInfoConfigKey_EnableThread, &is_enabled);
+  return is_enabled;
+}
+
+bool ConfigurationManagerDelegateImpl::IsIPv6ForwardingEnabled() {
+  bool is_enabled = false;
+  device_info_->ReadConfigValue(kDeviceInfoConfigKey_EnableIpForwarding, &is_enabled);
   return is_enabled;
 }
 

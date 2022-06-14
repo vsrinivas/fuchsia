@@ -485,6 +485,10 @@ TEST_F(ConfigurationManagerTest, IsThreadEnabled) {
   EXPECT_TRUE(ConfigurationMgrImpl().IsThreadEnabled());
 }
 
+TEST_F(ConfigurationManagerTest, IsIPv6ForwardingEnabled) {
+  EXPECT_FALSE(ConfigurationMgrImpl().IsIPv6ForwardingEnabled());
+}
+
 TEST_F(ConfigurationManagerTest, GetAppletsPathList) {
   std::vector<std::string> applet_paths = {"test1", "test2", "test3"};
   std::vector<std::string> expected_applet_paths;

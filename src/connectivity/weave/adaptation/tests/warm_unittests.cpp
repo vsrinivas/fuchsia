@@ -26,6 +26,7 @@
 #pragma GCC diagnostic pop
 // clang-format on
 
+#include "test_configuration_manager.h"
 #include "test_connectivity_manager.h"
 #include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
@@ -37,9 +38,11 @@ namespace Platform {
 namespace testing {
 
 namespace {
+using weave::adaptation::testing::TestConfigurationManager;
 using weave::adaptation::testing::TestConnectivityManager;
 using weave::adaptation::testing::TestThreadStackManager;
 
+using DeviceLayer::ConfigurationMgrImpl;
 using DeviceLayer::ConnectivityMgrImpl;
 using DeviceLayer::PlatformMgrImpl;
 using DeviceLayer::ThreadStackMgrImpl;
@@ -367,6 +370,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
         fake_net_stack_.GetStackHandler(dispatcher()));
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<TestConnectivityManager>());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     Warm::Platform::Init(nullptr);
@@ -385,6 +389,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
 
   void TearDown() override {
     StopFixtureLoop();
+    ConfigurationMgrImpl().SetDelegate(nullptr);
     ConnectivityMgrImpl().SetDelegate(nullptr);
     ThreadStackMgrImpl().SetDelegate(nullptr);
     WeaveTestFixture<>::TearDown();
@@ -642,6 +647,54 @@ TEST_F(WarmTest, RemoveAddressWiFiNoInterface) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 }
 
+TEST_F(WarmTest, CheckInterfaceNotForwarding) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPPrefix prefix;
+
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, prefix.IPAddr));
+  prefix.Length = kPrefixLength;
+
+  // Sanity check - confirm no routes to the Tunnel interface exist.
+  uint64_t tunnel_iface_id = GetTunnelInterfaceId();
+  ASSERT_NE(tunnel_iface_id, 0u);
+  EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
+
+  auto delegate = reinterpret_cast<TestConfigurationManager*>(ConfigurationMgrImpl().GetDelegate());
+  delegate->set_is_ipv6_forwarding_enabled(false);
+
+  // Attempt to add a route to the Tunnel interface.
+  auto result = AddRemoveHostRoute(kInterfaceTypeTunnel, prefix, kRoutePriorityHigh, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that this interface is not forwarded, consistent with configuration.
+  EXPECT_FALSE(fake_net_stack().IsInterfaceForwarded(tunnel_iface_id));
+}
+
+TEST_F(WarmTest, CheckInterfaceForwarding) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPPrefix prefix;
+
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, prefix.IPAddr));
+  prefix.Length = kPrefixLength;
+
+  // Sanity check - confirm no routes to the Tunnel interface exist.
+  uint64_t tunnel_iface_id = GetTunnelInterfaceId();
+  ASSERT_NE(tunnel_iface_id, 0u);
+  EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
+
+  auto delegate = reinterpret_cast<TestConfigurationManager*>(ConfigurationMgrImpl().GetDelegate());
+  delegate->set_is_ipv6_forwarding_enabled(true);
+
+  // Attempt to add a route to the Tunnel interface.
+  auto result = AddRemoveHostRoute(kInterfaceTypeTunnel, prefix, kRoutePriorityHigh, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that this interface is not forwarded, consistent with configuration.
+  EXPECT_TRUE(fake_net_stack().IsInterfaceForwarded(tunnel_iface_id));
+}
+
 TEST_F(WarmTest, AddRemoveHostRouteTunnel) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
@@ -662,8 +715,9 @@ TEST_F(WarmTest, AddRemoveHostRouteTunnel) {
   // Confirm that a route exists to the Tunnel interface with the given IP.
   EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
 
-  // Confirm that this interface is now forwarded.
-  EXPECT_TRUE(fake_net_stack().IsInterfaceForwarded(tunnel_iface_id));
+  // Confirm that this interface is forwarded/not, consistent with device configuration.
+  EXPECT_EQ(fake_net_stack().IsInterfaceForwarded(tunnel_iface_id),
+            ConfigurationMgrImpl().IsIPv6ForwardingEnabled());
 
   // Remove the route to the Tunnel interface.
   result = AddRemoveHostRoute(kInterfaceTypeTunnel, prefix, kRoutePriorityHigh, /*add*/ false);

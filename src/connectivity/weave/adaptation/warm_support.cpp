@@ -54,7 +54,8 @@ std::optional<std::string> GetInterfaceName(InterfaceType interface_type) {
 
 // Returns whether IPv6 forwarding is allowed for the given interface type.
 bool ShouldEnableV6Forwarding(InterfaceType interface_type) {
-  return (interface_type == kInterfaceTypeThread) || (interface_type == kInterfaceTypeTunnel);
+  return ((DeviceLayer::ConfigurationMgrImpl().IsIPv6ForwardingEnabled()) &&
+          ((interface_type == kInterfaceTypeThread) || (interface_type == kInterfaceTypeTunnel)));
 }
 
 // Returns the interface id associated with the given interface name. On

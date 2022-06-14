@@ -2,90 +2,94 @@
     "$schema": "http://json-schema.org/schema#",
     "type": "object",
     "properties": {
-      "mfr-device-id": {
-        "description": "Unique Weave Device ID (hex)",
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 18446744073709551615
-      },
-      "pairing-code": {
-        "description": "Pairing Code (PASE)",
-        "type": "string",
-        "pattern": "^[A-HJ-NPR-Y0-9]{6,16}$"
-      },
-      "vendor-id": {
-        "description": "Vendor ID",
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 65535
-      },
-      "vendor-id-description": {
-        "description": "Vendor ID Description",
-	"type": "string",
-	"maxLength": 256
-      },
-      "product-id": {
-        "description": "Product ID",
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 65535
-      },
-      "product-id-description": {
-        "description": "Product ID Description",
-	"type": "string",
-	"maxLength": 256
-      },
-      "firmware-revision": {
-        "description": "Firmware Revision",
-        "type": "string",
-        "maxLength": 32
-      },
-      "device-id-path": {
-        "description": "Device ID Path",
-        "type": "string"
-      },
-      "enable-woble": {
-        "description": "Enable WoBLE",
-        "type": "boolean"
-      },
-      "ble-device-name-prefix": {
-        "description": "BLE Device Name Prefix",
-        "type": "string",
-        "maxLength": 19
-      },
-      "enable-woble-advertisement": {
-        "description": "Enable WoBLE Advertisement",
-        "type": "boolean"
-      },
-      "mfr-device-cert-allow-local": {
-        "description": "Allow Local Manufacturer Certificate",
-        "type": "boolean"
-      },
-      "mfr-device-cert-path": {
-        "description": "Manufacturer Device Certificate Path",
-        "type": "string"
-      },
-      "mfr-private-key-path": {
-        "description": "Manufacturer Private Key Path",
-        "type": "string"
-      },
-      "serial-number": {
-        "description": "Serial Number",
-        "type": "string",
-        "maxLength": 32
-      },
-      "applet-paths": {
-        "description": "Applet Paths",
-        "type": "array"
-      },
-      "enable-thread": {
-        "description": "Enable Thread",
-        "type": "boolean"
-      },
-      "thread-joinable-duration-sec": {
-        "description": "Thread Joinable Duration In Seconds",
-        "type": "integer"
-      }
+        "mfr-device-id": {
+            "description": "Unique Weave Device ID (hex)",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 18446744073709551615
+        },
+        "pairing-code": {
+            "description": "Pairing Code (PASE)",
+            "type": "string",
+            "pattern": "^[A-HJ-NPR-Y0-9]{6,16}$"
+        },
+        "vendor-id": {
+            "description": "Vendor ID",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+        },
+        "vendor-id-description": {
+            "description": "Vendor ID Description",
+            "type": "string",
+            "maxLength": 256
+        },
+        "product-id": {
+            "description": "Product ID",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+        },
+        "product-id-description": {
+            "description": "Product ID Description",
+            "type": "string",
+            "maxLength": 256
+        },
+        "firmware-revision": {
+            "description": "Firmware Revision",
+            "type": "string",
+            "maxLength": 32
+        },
+        "device-id-path": {
+            "description": "Device ID Path",
+            "type": "string"
+        },
+        "enable-ipv6-forwarding": {
+            "description": "Enable IP Forwarding",
+            "type": "boolean"
+        },
+        "enable-woble": {
+            "description": "Enable WoBLE",
+            "type": "boolean"
+        },
+        "ble-device-name-prefix": {
+            "description": "BLE Device Name Prefix",
+            "type": "string",
+            "maxLength": 19
+        },
+        "enable-woble-advertisement": {
+            "description": "Enable WoBLE Advertisement",
+            "type": "boolean"
+        },
+        "mfr-device-cert-allow-local": {
+            "description": "Allow Local Manufacturer Certificate",
+            "type": "boolean"
+        },
+        "mfr-device-cert-path": {
+            "description": "Manufacturer Device Certificate Path",
+            "type": "string"
+        },
+        "mfr-private-key-path": {
+            "description": "Manufacturer Private Key Path",
+            "type": "string"
+        },
+        "serial-number": {
+            "description": "Serial Number",
+            "type": "string",
+            "maxLength": 32
+        },
+        "applet-paths": {
+            "description": "Applet Paths",
+            "type": "array"
+        },
+        "enable-thread": {
+            "description": "Enable Thread",
+            "type": "boolean"
+        },
+        "thread-joinable-duration-sec": {
+            "description": "Thread Joinable Duration In Seconds",
+            "type": "integer"
+        }
     },
     "additionalProperties": false
 }

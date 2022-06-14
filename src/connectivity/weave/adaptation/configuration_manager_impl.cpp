@@ -115,6 +115,10 @@ WEAVE_ERROR ConfigurationManagerImpl::GetBleDeviceNamePrefix(char* device_name_p
 
 bool ConfigurationManagerImpl::IsThreadEnabled() { return delegate_->IsThreadEnabled(); }
 
+bool ConfigurationManagerImpl::IsIPv6ForwardingEnabled() {
+  return delegate_->IsIPv6ForwardingEnabled();
+}
+
 bool ConfigurationManagerImpl::IsWoBLEEnabled() { return delegate_->IsWoBLEEnabled(); }
 
 bool ConfigurationManagerImpl::IsWoBLEAdvertisementEnabled() {

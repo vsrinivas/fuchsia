@@ -25,6 +25,11 @@ class TestConfigurationManager final
     ASSERT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::Init(), WEAVE_NO_ERROR);
   }
 
+  // Returns whether the device is thread-enabled.
+  bool IsIPv6ForwardingEnabled() override {
+    return is_ipv6_forwarding_enabled_.value_or(Impl::IsIPv6ForwardingEnabled());
+  }
+
   // Returns whether the device is paired to an account.
   bool IsPairedToAccount() override {
     return is_paired_to_account_.value_or(Impl::IsPairedToAccount());
@@ -82,6 +87,13 @@ class TestConfigurationManager final
       return StringToBuffer(firmware_revision_.value(), buf, buf_size, out_len);
     }
     return Impl::GetFirmwareRevision(buf, buf_size, out_len);
+  }
+
+  // Set whether the device is a member of a fabric.
+  TestConfigurationManager& set_is_ipv6_forwarding_enabled(
+      std::optional<bool> is_ipv6_forwarding_enabled) {
+    is_ipv6_forwarding_enabled_ = is_ipv6_forwarding_enabled;
+    return *this;
   }
 
   // Set whether the device is paired to an account.
@@ -153,6 +165,7 @@ class TestConfigurationManager final
     return WEAVE_NO_ERROR;
   }
 
+  std::optional<bool> is_ipv6_forwarding_enabled_;
   std::optional<bool> is_paired_to_account_;
   std::optional<bool> is_member_of_fabric_;
   std::optional<bool> is_thread_enabled_;

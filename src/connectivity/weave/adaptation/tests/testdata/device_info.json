@@ -6,6 +6,7 @@
     ],
     "ble-device-name-prefix": "Fuchsia",
     "device-id-path": "testdata_device_id",
+    "enable-ipv6-forwarding": false,
     "enable-thread": true,
     "enable-woble": true,
     "firmware-revision": "prerelease-1",
