@@ -1,0 +1,27 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Needed for fuchsia.kernel.RootJob
+        "//src/sys/test_manager/system-test.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/root_job_test_runner",
+        args: [
+            "/pkg/bin/process_builder_lib_test",
+            "-Zunstable-options",
+            "--force-run-in-process",
+        ],
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.kernel.RootJob",
+                "fuchsia.process.Launcher",
+            ],
+        },
+    ],
+}

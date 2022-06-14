@@ -353,7 +353,6 @@ group("cmx_allowlist") {
     "//src/lib/nix/tests:*",
     "//src/lib/pkg_url:*",
     "//src/lib/process:*",
-    "//src/lib/process_builder:*",
     "//src/lib/pty:*",
     "//src/lib/scoped_task:*",
     "//src/lib/storage/ramdevice_client/rust:*",

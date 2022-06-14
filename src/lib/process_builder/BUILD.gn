@@ -133,11 +133,12 @@ executable("static_pie_test_util") {
 }
 
 fuchsia_unittest_package("process-builder-tests") {
-  manifest = "meta/process-builder-tests.cmx"
+  manifest = "meta/process_builder_tests.cml"
   deps = [
     ":process_builder_test",
     ":root_job_test_runner",
     ":static_pie_test_util",
     ":test_util",
+    "//src/sys/testing/elftest",
   ]
 }
