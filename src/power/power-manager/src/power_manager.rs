@@ -54,13 +54,6 @@ impl PowerManager {
         let node_futures = FuturesUnordered::new();
         self.create_nodes_from_config(&mut fs, &node_futures).await?;
 
-        // TODO (https://fxbug.dev/98138) Remove this is a load-bearing print
-        // used in the OOM test E2E test when this bug is resolved.
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_boot::WriteOnlyLogMarker>()?
-            .get()
-            .await?
-            .write("power-manager: service initialization complete".as_bytes())?;
-
         // Run the ServiceFs (handles incoming request streams) and node futures. This future never
         // completes.
         futures::stream::select(fs, node_futures).collect::<()>().await;

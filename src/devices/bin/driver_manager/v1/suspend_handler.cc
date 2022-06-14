@@ -17,9 +17,20 @@
 
 namespace {
 
+fidl::WireSharedClient<fuchsia_fshost::Admin> ConnectToFshostAdminServer(
+    async_dispatcher_t* dispatcher) {
+  auto result = service::Connect<fuchsia_fshost::Admin>();
+  if (result.is_error()) {
+    LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", result.status_string());
+    return fidl::WireSharedClient<fuchsia_fshost::Admin>();
+  }
+  return fidl::WireSharedClient(std::move(*result), dispatcher);
+}
+
 void SuspendFallback(const zx::resource& root_resource, uint32_t flags, zx::vmo mexec_kernel_zbi,
                      zx::vmo mexec_data_zbi) {
   LOGF(INFO, "Suspend fallback with flags %#08x", flags);
+
   const char* what = "zx_system_powerctl";
   zx_status_t status = ZX_OK;
   if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
@@ -31,19 +42,6 @@ void SuspendFallback(const zx::resource& root_resource, uint32_t flags, zx::vmo 
   } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED) {
     status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_ACK_KERNEL_INITIATED_REBOOT,
                                 nullptr);
-    if (status == ZX_OK) {
-      // Sleep indefinitely to give the kernel a chance to reboot the system. This results in a
-      // cleaner reboot because it prevents driver_manager from exiting. If driver_manager exits the
-      // other parts of the system exit, bringing down the root job. Crashing the root job is
-      // innocuous at this point, but we try to avoid it to reduce log noise and possible confusion.
-      while (true) {
-        sleep(5 * 60);
-        // We really shouldn't still be running, so log if we are. Use `printf`
-        // because messages from the devices are probably only visible over
-        // serial at this point.
-        printf("driver_manager: unexpectedly still running after successful reboot syscall\n");
-      }
-    }
   } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
     status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_MEXEC) {
@@ -97,7 +95,9 @@ void DumpSuspendTaskDependencies(const SuspendTask* task, int depth = 0) {
 }  // namespace
 
 SuspendHandler::SuspendHandler(Coordinator* coordinator, zx::duration suspend_timeout)
-    : coordinator_(coordinator), suspend_timeout_(suspend_timeout) {}
+    : coordinator_(coordinator), suspend_timeout_(suspend_timeout) {
+  fshost_admin_client_ = ConnectToFshostAdminServer(coordinator_->dispatcher());
+}
 
 void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
@@ -129,7 +129,19 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   sflags_ = flags;
   suspend_callback_ = std::move(callback);
 
-  LOGF(INFO, "Creating a suspend timeout-watchdog\n");
+  // TODO(91708) remove once driver_manager is no longer listening to the OOM event
+  if ((sflags_ & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
+    log_to_debuglog();
+    LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");
+    ShutdownFilesystems([this](zx_status_t status) { SuspendAfterFilesystemShutdown(); });
+    return;
+  }
+  // If we don't have to shutdown the filesystems we can just call this directly.
+  SuspendAfterFilesystemShutdown();
+}
+
+void SuspendHandler::SuspendAfterFilesystemShutdown() {
+  LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog\n");
   auto watchdog_task = std::make_unique<async::TaskClosure>([this] {
     if (!InSuspend()) {
       return;  // Suspend failed to complete.
@@ -169,9 +181,9 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
       return;
     }
 
-    // Although this is called the SuspendFallback we expect to end up here for most operations
-    // that execute a flavor of reboot because Zircon can handle most reboot operations on most
-    // platforms.
+    // should never get here on x86
+    // on arm, if the platform driver does not implement
+    // suspend go to the kernel fallback
     SuspendFallback(coordinator_->root_resource(), sflags_,
                     std::move(coordinator_->mexec_kernel_zbi()),
                     std::move(coordinator_->mexec_data_zbi()));
@@ -187,6 +199,21 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
 
   suspend_task_ = SuspendTask::Create(coordinator_->sys_device(), sflags_, std::move(completion));
   LOGF(INFO, "Successfully created suspend task on device 'sys'");
+}
+
+void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callback) {
+  fshost_admin_client_->Shutdown().ThenExactlyOnce(
+      [callback = std::move(callback)](
+          fidl::WireUnownedResult<fuchsia_fshost::Admin::Shutdown>& result) mutable {
+        if (!result.ok()) {
+          LOGF(WARNING,
+               "Failed to cause VFS exit ourselves, this is expected during orderly shutdown: %s",
+               result.error().FormatDescription().c_str());
+        } else {
+          LOGF(INFO, "Successfully waited for VFS exit completion\n");
+        }
+        callback(ZX_OK);
+      });
 }
 
 void SuspendHandler::UnregisterSystemStorageForShutdown(SuspendCallback callback) {

@@ -282,6 +282,10 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // Driver registrar interface
   void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;
 
+  void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                  const zx_packet_signal_t* signal);
+  async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
+
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
   CoordinatorConfig config_;

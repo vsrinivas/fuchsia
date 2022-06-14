@@ -393,10 +393,12 @@ void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
 
 void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
                                        fit::function<void(uint32_t flags)> suspend_cb) {
+  const bool vfs_exit_expected = (flags != DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
   suspend_cb(flags);
   if (!coordinator_loop_thread_running()) {
     coordinator_loop()->RunUntilIdle();
   }
+  ASSERT_EQ(vfs_exit_expected, admin_server().has_been_shutdown());
 }
 
 void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {

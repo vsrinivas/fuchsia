@@ -252,6 +252,11 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       package_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
                      dispatcher, config_.require_system, &package_resolver_) {
+  if (config_.oom_event) {
+    wait_on_oom_event_.set_object(config_.oom_event.get());
+    wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
+    wait_on_oom_event_.Begin(dispatcher);
+  }
   shutdown_system_state_ = config_.default_shutdown_system_state;
 
   root_device_ =
@@ -307,9 +312,6 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver,
   });
 
   devfs_publish(root_device_, sys_device_);
-
-  // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
-  LOGF(INFO, "V1 drivers loaded and published");
 }
 
 void Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
@@ -1119,6 +1121,11 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   };
   return svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::DebugDumper>,
                            fbl::MakeRefCounted<fs::Service>(debug));
+}
+
+void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                             zx_status_t status, const zx_packet_signal_t* signal) {
+  suspend_resume_manager_->suspend_handler().ShutdownFilesystems([](zx_status_t status) {});
 }
 
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }

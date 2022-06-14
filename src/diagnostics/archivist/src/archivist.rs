@@ -37,7 +37,7 @@ use {
     },
     parking_lot::RwLock,
     std::{path::Path, sync::Arc},
-    tracing::{debug, error, info, warn},
+    tracing::{debug, error, warn},
 };
 
 /// Responsible for initializing an `Archivist` instance. Supports multiple configurations by
@@ -377,7 +377,7 @@ impl Archivist {
             None => future::ready(()).right_future(),
         };
 
-        info!("archivist: Entering core loop.");
+        debug!("Entering core loop.");
         // Combine all three futures into a main future.
         future::join3(abortable_fut, stop_fut, all_msg).map(|_| Ok(())).await
     }

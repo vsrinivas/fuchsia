@@ -28,7 +28,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.feedback.CrashReporter",

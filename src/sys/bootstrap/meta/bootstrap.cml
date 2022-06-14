@@ -395,10 +395,7 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.kernel.CpuResource",
-            ],
+            protocol: [ "fuchsia.kernel.CpuResource" ],
             from: "parent",
             to: "#power_manager",
         },
@@ -792,11 +789,6 @@
             ],
         },
         {
-            protocol: [ "fuchsia.kernel.RootJob" ],
-            from: "parent",
-            to: "#pwrbtn-monitor",
-        },
-        {
             protocol: [ "fuchsia.power.button.Monitor" ],
             from: "#pwrbtn-monitor",
             to: "#cr50_agent",
@@ -808,6 +800,12 @@
                 "#console-launcher",
                 "#netsvc",
             ],
+        },
+        {
+            protocol: [ "fuchsia.fshost.Admin" ],
+            from: "#fshost",
+            to: "#driver_manager",
+            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.tpm.cr50.Cr50" ],
