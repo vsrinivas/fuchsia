@@ -5290,7 +5290,6 @@ mod tests {
     // NOTE: All comparisons are done on millisecond, so this test is not affected by precision
     // loss from floating point arithmetic.
     #[test]
-    #[ignore]
     fn retransmission_timeout() {
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
