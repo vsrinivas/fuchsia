@@ -23,10 +23,11 @@
 #define LEAVES_START %esi
 #define LEAVES_STOP %edi
 #define DATA_START %ebp
+#define movslq movl
 #endif // __x86_64__
 
 // Stores CPUID values represented by EAX-EDX at a particular address.
-.macro store_cpuid addr
+.macro store_cpuid addr:vararg
 mov %eax, CPUID_EAX + \addr
 mov %ebx, CPUID_EBX + \addr
 mov %ecx, CPUID_ECX + \addr
@@ -66,13 +67,11 @@ mov %edx, CPUID_EDX + \addr
   store_cpuid GLOBAL(gBootCpuidExt0)
 
   // CpuidIo objects are uint32_t[4] data objects (C++ thinks they're a fancier
-  // type, but that's the layout).  The arch::BootCpuid instantiations put
-  // their objects into the special section named "BootCpuid", so the linker
-  // magically defines these two symbols.  The compile-time initialized values
-  // give the leaf and subleaf to query.
+  // type, but that's the layout).  Each other BootCpuidIo::Get<Leaf, Subleaf>
+  // instantiation puts an entry into the BootCpuidLeaf special section.
+  // Each entry holds a leaf, subleaf, and offset from the entry to the datum.
   LEA_GLOBAL(__start_BootCpuidLeaf, LEAVES_START)
   LEA_GLOBAL(__stop_BootCpuidLeaf, LEAVES_STOP)
-  LEA_GLOBAL(__start_BootCpuidData, DATA_START)
   jmp .Loopcheck
 
 .Loop:
@@ -120,15 +119,28 @@ mov %edx, CPUID_EDX + \addr
 
   // Store the register values.
 .Lstore:
+
+#if defined(__ELF__)
+
+  movslq 8(LEAVES_START), DATA_START  // Sign-extend from 32 bits.
+  store_cpuid 0(LEAVES_START, DATA_START)
+
+  // Next iteration.
+  lea (4 * 3)(LEAVES_START), LEAVES_START
+
+#elif defined(_WIN32)
+
+  mov 8(LEAVES_START), DATA_START // Here it's an absolute pointer.
   store_cpuid 0(DATA_START)
 
   // Next iteration.
-  lea (4 * 4)(DATA_START), DATA_START
-  lea (4 * 2)(LEAVES_START), LEAVES_START
+  lea (8 + REGSIZE)(LEAVES_START), LEAVES_START
+
+#else
+#error "what format?"
+#endif
+
 .Loopcheck:
-  // A link-time assertion ensures that BootCpuidLeaf and BootCpuidData
-  // sections have the same number of entries, so we need only track the
-  // iteration through BootCpuidLeaf.
   cmp LEAVES_START, LEAVES_STOP
   jne .Loop
 
@@ -158,18 +170,7 @@ mov %edx, CPUID_EDX + \addr
 // to declare $A and $Z sections and symbols within.
 
 .section .drectve, "yn"
-.ascii " /MERGE:.BootCpuidData=.data"
 .ascii " /MERGE:.BootCpuidLeaf=.rdata"
-
-.section  .BootCpuidData$A, "dw"
-.balign 4
-.int 0
-.label __start_BootCpuidData
-
-.section  .BootCpuidData$Z, "dw"
-.balign 4
-.label __stop_BootCpuidData
-.int 0
 
 .section  .BootCpuidLeaf$A, "dr"
 .balign 4

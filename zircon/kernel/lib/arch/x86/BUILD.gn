@@ -23,26 +23,23 @@ zx_library("x86") {
   include_dirs = [ "../include" ]
 
   public_deps += [ ":gen-cpuid-asm" ]
-  if (!is_host) {
+  if (is_kernel) {
     sources += [
       "boot-cpuid.S",
       "boot-cpuid.cc",
       "random.cc",
       "standard-segments.cc",
     ]
-    deps += [ "//zircon/kernel/lib/special-sections" ]
+    deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/kernel/lib/special-sections",
+    ]
 
     if (toolchain_environment == "kernel.phys32") {
       sources += [ "zbi-boot.cc" ]
     } else {
       sources += [ "descriptor-regs.S" ]
-    }
-
-    if (is_kernel) {
-      deps += [
-        "//zircon/kernel/lib/ktl",
-        "//zircon/kernel/lib/libc",
-      ]
     }
   }
 

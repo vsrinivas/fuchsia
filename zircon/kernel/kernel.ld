@@ -238,14 +238,6 @@ SECTIONS
         *(.data .data.* .gnu.linkonce.d.*)
     }
 
-    BootCpuidData : {
-        PROVIDE_HIDDEN(__start_BootCpuidData = .);
-        *(BootCpuidData)
-        PROVIDE_HIDDEN(__stop_BootCpuidData = .);
-    }
-    ASSERT(SIZEOF(BootCpuidData) ==  2 * SIZEOF(BootCpuidLeaf),
-           "The BootCpuidLeaf and BootCpuidData sizes should precisely correlate: one holds CPUID leaf information and the other the associated values")
-
     /*
      * When these instrumentation sections are emitted, they are
      * writable data that gets updated at runtime.
