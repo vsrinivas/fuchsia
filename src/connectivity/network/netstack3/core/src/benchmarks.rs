@@ -12,7 +12,6 @@
 #![cfg_attr(not(fuzz), warn(dead_code, unused_imports, unused_macros))]
 
 use alloc::vec;
-use core::time::Duration;
 
 use net_types::{ip::Ipv4, Witness as _};
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
@@ -30,18 +29,17 @@ use packet_formats::{
         Ipv4PacketBuilder,
     },
 };
-use rand_xorshift::XorShiftRng;
 
 use crate::{
-    context::{testutil::DummyInstant, EventContext, InstantContext, RngContext, TimerContext},
+    context::EventContext,
     device::{receive_frame, DeviceId, DeviceLayerEventDispatcher},
     ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     testutil::{
         benchmarks::{black_box, Bencher},
-        DummyEventDispatcherBuilder, DummyNonSyncCtx, FakeCryptoRng, DUMMY_CONFIG_V4,
+        DummyEventDispatcherBuilder, DummyNonSyncCtx, DUMMY_CONFIG_V4,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    Ctx, StackStateBuilder, TimerId,
+    Ctx, StackStateBuilder,
 };
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
@@ -53,11 +51,6 @@ use crate::{
 struct BenchmarkEventDispatcher {
     #[cfg(debug_assertions)]
     frames_sent: usize,
-}
-
-#[derive(Default)]
-struct BenchmarkCoreContext {
-    rng: FakeCryptoRng<XorShiftRng>,
 }
 
 impl<I: IcmpIpExt> UdpContext<I> for BenchmarkEventDispatcher {}
@@ -103,52 +96,6 @@ impl<T> EventContext<T> for BenchmarkEventDispatcher {
     fn on_event(&mut self, _event: T) {}
 }
 
-impl InstantContext for BenchmarkCoreContext {
-    type Instant = DummyInstant;
-
-    fn now(&self) -> DummyInstant {
-        DummyInstant::default()
-    }
-}
-
-impl RngContext for BenchmarkCoreContext {
-    type Rng = FakeCryptoRng<XorShiftRng>;
-
-    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
-        &self.rng
-    }
-
-    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
-        &mut self.rng
-    }
-}
-
-impl TimerContext<TimerId> for BenchmarkCoreContext {
-    fn schedule_timer(&mut self, _duration: Duration, _id: TimerId) -> Option<DummyInstant> {
-        unimplemented!()
-    }
-
-    fn schedule_timer_instant(
-        &mut self,
-        _time: DummyInstant,
-        _id: TimerId,
-    ) -> Option<DummyInstant> {
-        unimplemented!()
-    }
-
-    fn cancel_timer(&mut self, _id: TimerId) -> Option<DummyInstant> {
-        None
-    }
-
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, _f: F) {
-        unimplemented!()
-    }
-
-    fn scheduled_instant(&self, _id: TimerId) -> Option<DummyInstant> {
-        unimplemented!()
-    }
-}
-
 // Benchmark the minimum possible time to forward an IPv4 packet by stripping
 // out all interesting computation. We have the simplest possible setup - a
 // forwarding table with a single entry, and a single device - and we receive an
@@ -156,12 +103,10 @@ impl TimerContext<TimerId> for BenchmarkCoreContext {
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let Ctx { mut sync_ctx, mut non_sync_ctx } =
-        DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-            .build_with::<_, _, DummyNonSyncCtx>(
-                StackStateBuilder::default(),
-                BenchmarkEventDispatcher::default(),
-                BenchmarkCoreContext::default(),
-            );
+        DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build_with::<_, DummyNonSyncCtx>(
+            StackStateBuilder::default(),
+            BenchmarkEventDispatcher::default(),
+        );
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut sync_ctx,
         &mut non_sync_ctx,

@@ -1638,7 +1638,7 @@ mod tests {
             None,
         )
         .unwrap();
-        let mut check_sent_frame = |sync_ctx: &SyncCtx<DummyEventDispatcher, _, _>| {
+        let mut check_sent_frame = |sync_ctx: &SyncCtx<DummyEventDispatcher, _>| {
             packet_count += 1;
             assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_count);
             let (dev, frame) = &sync_ctx.dispatcher.frames_sent()[packet_count - 1];

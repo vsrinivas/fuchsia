@@ -38,7 +38,7 @@ use crate::{
     },
     error::ExistsError,
     ip::device::state::{AddrConfig, IpDeviceState},
-    BlanketCoreContext, EventDispatcher, NonSyncContext, SyncCtx,
+    EventDispatcher, NonSyncContext, SyncCtx,
 };
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
@@ -106,8 +106,8 @@ pub(crate) trait EthernetIpLinkDeviceContext<C: EthernetIpLinkDeviceNonSyncConte
     );
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    EthernetIpLinkDeviceContext<NonSyncCtx> for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn add_ipv6_addr_subnet(
         &mut self,
@@ -1373,7 +1373,7 @@ mod tests {
 
         // Receiving a packet not destined for the node should only result in a
         // dest unreachable message if routing is enabled.
-        receive_ip_packet::<_, _, _, _, I>(
+        receive_ip_packet::<_, _, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,
@@ -1391,7 +1391,7 @@ mod tests {
 
         // Should route the packet since routing fully enabled (netstack &
         // device).
-        receive_ip_packet::<_, _, _, _, I>(
+        receive_ip_packet::<_, _, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,
@@ -1422,7 +1422,7 @@ mod tests {
             .ok()
             .unwrap()
             .unwrap_b();
-        receive_ip_packet::<_, _, _, _, I>(
+        receive_ip_packet::<_, _, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,
@@ -1439,7 +1439,7 @@ mod tests {
         check_other_is_routing_enabled::<I>(&sync_ctx, device, false);
 
         // Should not route packets anymore
-        receive_ip_packet::<_, _, _, _, I>(
+        receive_ip_packet::<_, _, _, I>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,
@@ -1622,7 +1622,7 @@ mod tests {
             .unwrap()
             .into_inner();
 
-        receive_ip_packet::<_, _, _, _, A::Version>(
+        receive_ip_packet::<_, _, _, A::Version>(
             sync_ctx,
             non_sync_ctx,
             device,
@@ -1754,13 +1754,8 @@ mod tests {
         );
     }
 
-    fn join_ip_multicast<
-        A: IpAddress,
-        D: EventDispatcher,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn join_ip_multicast<A: IpAddress, D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,
@@ -1781,13 +1776,8 @@ mod tests {
         }
     }
 
-    fn leave_ip_multicast<
-        A: IpAddress,
-        D: EventDispatcher,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn leave_ip_multicast<A: IpAddress, D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         device: DeviceId,
         multicast_addr: MulticastAddr<A>,

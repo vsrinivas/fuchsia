@@ -1168,11 +1168,8 @@ mod tests {
 
     #[test]
     fn enable_disable_ipv6() {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } = Ctx::new(
-            StackStateBuilder::default().build(),
-            DummyEventDispatcher::default(),
-            Default::default(),
-        );
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            Ctx::new(StackStateBuilder::default().build(), DummyEventDispatcher::default());
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
         let device_id =

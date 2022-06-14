@@ -57,7 +57,7 @@ use crate::{
         },
         IpDeviceId, IpDeviceIdContext,
     },
-    BlanketCoreContext, BufferDispatcher, EventDispatcher, Instant, NonSyncContext, SyncCtx,
+    BufferDispatcher, EventDispatcher, Instant, NonSyncContext, SyncCtx,
 };
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -139,9 +139,9 @@ impl<
 {
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
     RecvFrameContext<NonSyncCtx, B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>>
-    for SyncCtx<D, C, NonSyncCtx>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn receive_frame(
         &mut self,
@@ -159,9 +159,9 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: No
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
     RecvFrameContext<NonSyncCtx, B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>>
-    for SyncCtx<D, C, NonSyncCtx>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn receive_frame(
         &mut self,
@@ -179,12 +179,12 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: No
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext>
     StateContext<
         NonSyncCtx,
         IpLinkDeviceState<NonSyncCtx::Instant, EthernetDeviceState>,
         EthernetDeviceId,
-    > for SyncCtx<D, C, NonSyncCtx>
+    > for SyncCtx<D, NonSyncCtx>
 {
     fn get_state_with(
         &self,
@@ -201,8 +201,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
     }
 }
 
-fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    ctx: &SyncCtx<D, C, NonSyncCtx>,
+fn get_ip_device_state<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &SyncCtx<D, NonSyncCtx>,
     device: DeviceId,
 ) -> &DualStackIpDeviceState<NonSyncCtx::Instant> {
     match device.inner() {
@@ -213,12 +213,8 @@ fn get_ip_device_state<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 }
 
-fn get_ip_device_state_mut<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+fn get_ip_device_state_mut<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<D, NonSyncCtx>,
     device: DeviceId,
 ) -> &mut DualStackIpDeviceState<NonSyncCtx::Instant> {
     match device.inner() {
@@ -229,8 +225,8 @@ fn get_ip_device_state_mut<
     }
 }
 
-fn iter_devices<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    ctx: &SyncCtx<D, C, NonSyncCtx>,
+fn iter_devices<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &SyncCtx<D, NonSyncCtx>,
 ) -> impl Iterator<Item = DeviceId> + '_ {
     let DeviceLayerState { ethernet, loopback } = &ctx.state.device;
 
@@ -240,8 +236,8 @@ fn iter_devices<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncCo
         .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback.into()))
 }
 
-fn get_mtu<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    ctx: &SyncCtx<D, C, NonSyncCtx>,
+fn get_mtu<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &SyncCtx<D, NonSyncCtx>,
     device: DeviceId,
 ) -> u32 {
     match device.inner() {
@@ -250,13 +246,8 @@ fn get_mtu<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext
     }
 }
 
-fn join_link_multicast_group<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
-    A: IpAddress,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+fn join_link_multicast_group<D: EventDispatcher, NonSyncCtx: NonSyncContext, A: IpAddress>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
@@ -272,13 +263,8 @@ fn join_link_multicast_group<
     }
 }
 
-fn leave_link_multicast_group<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
-    A: IpAddress,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+fn leave_link_multicast_group<D: EventDispatcher, NonSyncCtx: NonSyncContext, A: IpAddress>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device_id: DeviceId,
     multicast_addr: MulticastAddr<A>,
@@ -294,8 +280,7 @@ fn leave_link_multicast_group<
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext, T> EventContext<T>
-    for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext, T> EventContext<T> for SyncCtx<D, NonSyncCtx>
 where
     D: EventContext<T>,
 {
@@ -304,8 +289,8 @@ where
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    IpDeviceContext<Ipv4, NonSyncCtx> for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv4DeviceState<NonSyncCtx::Instant> {
         &get_ip_device_state(self, device).ipv4
@@ -348,12 +333,11 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
 fn send_ip_frame<
     B: BufferMut,
     D: BufferDispatcher<B>,
-    C: BlanketCoreContext,
     NonSyncCtx: NonSyncContext,
     S: Serializer<Buffer = B>,
     A: IpAddress,
 >(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     local_addr: SpecifiedAddr<A>,
@@ -367,8 +351,8 @@ fn send_ip_frame<
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    BufferIpDeviceContext<Ipv4, NonSyncCtx, B> for SyncCtx<D, C, NonSyncCtx>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
+    BufferIpDeviceContext<Ipv4, NonSyncCtx, B> for SyncCtx<D, NonSyncCtx>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -381,8 +365,8 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: No
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn get_ip_device_state(&self, device: DeviceId) -> &Ipv6DeviceState<NonSyncCtx::Instant> {
         &get_ip_device_state(self, device).ipv6
@@ -422,8 +406,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    Ipv6DeviceContext<NonSyncCtx> for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
         match device_id.inner() {
@@ -442,8 +426,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    BufferIpDeviceContext<Ipv6, NonSyncCtx, B> for SyncCtx<D, C, NonSyncCtx>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
+    BufferIpDeviceContext<Ipv6, NonSyncCtx, B> for SyncCtx<D, NonSyncCtx>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -456,8 +440,8 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: No
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    FrameContext<NonSyncCtx, B, EthernetDeviceId> for SyncCtx<D, C, NonSyncCtx>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
+    FrameContext<NonSyncCtx, B, EthernetDeviceId> for SyncCtx<D, NonSyncCtx>
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -509,8 +493,8 @@ impl From<EthernetTimerId<EthernetDeviceId>> for DeviceLayerTimerId {
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    DeviceIdContext<EthernetLinkDevice> for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> DeviceIdContext<EthernetLinkDevice>
+    for SyncCtx<D, NonSyncCtx>
 {
     type DeviceId = EthernetDeviceId;
 }
@@ -523,12 +507,8 @@ impl_timer_context!(
 );
 
 /// Handle a timer event firing in the device layer.
-pub(crate) fn handle_timer<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub(crate) fn handle_timer<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: DeviceLayerTimerId,
 ) {
@@ -709,8 +689,8 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
 /// # Panics
 ///
 /// Panics if `device` does not refer to an existing device.
-pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn remove_device<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
 ) {
@@ -738,12 +718,8 @@ pub fn remove_device<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonS
 }
 
 /// Adds a new Ethernet device to the stack.
-pub fn add_ethernet_device<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn add_ethernet_device<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     mac: UnicastAddr<Mac>,
     mtu: u32,
@@ -767,25 +743,16 @@ pub fn add_ethernet_device<
 /// Adds a new device loopback device to the stack.
 ///
 /// Only one loopback device may be installed at any point in time.
-pub fn add_loopback_device<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn add_loopback_device<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     mtu: u32,
 ) -> Result<DeviceId, crate::error::ExistsError> {
     sync_ctx.state.device.add_loopback_device(mtu)
 }
 
 /// Receive a device layer frame from the network.
-pub fn receive_frame<
-    B: BufferMut,
-    D: BufferDispatcher<B>,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     buffer: B,
@@ -799,12 +766,8 @@ pub fn receive_frame<
 /// Set the promiscuous mode flag on `device`.
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
-pub(crate) fn set_promiscuous_mode<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub(crate) fn set_promiscuous_mode<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     enabled: bool,
@@ -821,13 +784,8 @@ pub(crate) fn set_promiscuous_mode<
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
 /// begins performing Duplicate Address Detection (DAD).
-pub(crate) fn add_ip_addr_subnet<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
-    A: IpAddress,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, NonSyncCtx: NonSyncContext, A: IpAddress>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
@@ -851,13 +809,8 @@ pub(crate) fn add_ip_addr_subnet<
 /// Removes an IP address and associated subnet from this device.
 ///
 /// Should only be called on user action.
-pub(crate) fn del_ip_addr<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
-    A: IpAddress,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub(crate) fn del_ip_addr<D: EventDispatcher, NonSyncCtx: NonSyncContext, A: IpAddress>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: &SpecifiedAddr<A>,
@@ -878,8 +831,8 @@ pub(crate) fn del_ip_addr<
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // the `context` module.
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext, I: Ip>
-    IpDeviceIdContext<I> for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext, I: Ip> IpDeviceIdContext<I>
+    for SyncCtx<D, NonSyncCtx>
 {
     type DeviceId = DeviceId;
 
@@ -895,12 +848,8 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext, I: I
 // TODO(rheacock): remove `cfg(test)` when this is used. Will probably be
 // called by a pub fn in the device mod.
 #[cfg(test)]
-pub(super) fn insert_static_arp_table_entry<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub(super) fn insert_static_arp_table_entry<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: Ipv4Addr,
@@ -921,12 +870,8 @@ pub(super) fn insert_static_arp_table_entry<
 /// resolution.
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
-pub(crate) fn insert_ndp_table_entry<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub(crate) fn insert_ndp_table_entry<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
@@ -941,24 +886,16 @@ pub(crate) fn insert_ndp_table_entry<
 }
 
 /// Gets the IPv4 Configuration for a `device`.
-pub fn get_ipv4_configuration<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &SyncCtx<D, C, NonSyncCtx>,
+pub fn get_ipv4_configuration<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &SyncCtx<D, NonSyncCtx>,
     device: DeviceId,
 ) -> Ipv4DeviceConfiguration {
     crate::ip::device::get_ipv4_configuration(ctx, device)
 }
 
 /// Gets the IPv6 Configuration for a `device`.
-pub fn get_ipv6_configuration<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &SyncCtx<D, C, NonSyncCtx>,
+pub fn get_ipv6_configuration<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &SyncCtx<D, NonSyncCtx>,
     device: DeviceId,
 ) -> Ipv6DeviceConfiguration {
     crate::ip::device::get_ipv6_configuration(ctx, device)
@@ -967,11 +904,10 @@ pub fn get_ipv6_configuration<
 /// Updates the IPv4 Configuration for a `device`.
 pub fn update_ipv4_configuration<
     D: EventDispatcher,
-    C: BlanketCoreContext,
     NonSyncCtx: NonSyncContext,
     F: FnOnce(&mut Ipv4DeviceConfiguration),
 >(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     update_cb: F,
@@ -982,11 +918,10 @@ pub fn update_ipv4_configuration<
 /// Updates the IPv6 Configuration for a `device`.
 pub fn update_ipv6_configuration<
     D: EventDispatcher,
-    C: BlanketCoreContext,
     NonSyncCtx: NonSyncContext,
     F: FnOnce(&mut Ipv6DeviceConfiguration),
 >(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     update_cb: F,
@@ -1006,8 +941,8 @@ pub fn update_ipv6_configuration<
 pub struct Tentative<T>(T, bool);
 
 /// This implementation of `NdpPacketHandler` is consumed by ICMPv6.
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    NdpPacketHandler<NonSyncCtx, DeviceId> for SyncCtx<D, C, NonSyncCtx>
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> NdpPacketHandler<NonSyncCtx, DeviceId>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn receive_ndp_packet<B: ByteSlice>(
         &mut self,
@@ -1043,12 +978,8 @@ pub(crate) mod testutil {
     pub(crate) trait DeviceTestIpExt<Instant: crate::Instant>:
         IpDeviceStateIpExt<Instant>
     {
-        fn get_ip_device_state<
-            D: EventDispatcher,
-            C: BlanketCoreContext,
-            NonSyncCtx: NonSyncContext<Instant = Instant>,
-        >(
-            ctx: &SyncCtx<D, C, NonSyncCtx>,
+        fn get_ip_device_state<D: EventDispatcher, NonSyncCtx: NonSyncContext<Instant = Instant>>(
+            ctx: &SyncCtx<D, NonSyncCtx>,
             device: DeviceId,
         ) -> &IpDeviceState<NonSyncCtx::Instant, Self>;
     }
@@ -1056,10 +987,9 @@ pub(crate) mod testutil {
     impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv4 {
         fn get_ip_device_state<
             D: EventDispatcher,
-            C: BlanketCoreContext,
             NonSyncCtx: NonSyncContext<Instant = Instant>,
         >(
-            ctx: &SyncCtx<D, C, NonSyncCtx>,
+            ctx: &SyncCtx<D, NonSyncCtx>,
             device: DeviceId,
         ) -> &IpDeviceState<NonSyncCtx::Instant, Ipv4> {
             crate::ip::device::get_ipv4_device_state(ctx, device)
@@ -1069,10 +999,9 @@ pub(crate) mod testutil {
     impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv6 {
         fn get_ip_device_state<
             D: EventDispatcher,
-            C: BlanketCoreContext,
             NonSyncCtx: NonSyncContext<Instant = Instant>,
         >(
-            ctx: &SyncCtx<D, C, NonSyncCtx>,
+            ctx: &SyncCtx<D, NonSyncCtx>,
             device: DeviceId,
         ) -> &IpDeviceState<NonSyncCtx::Instant, Ipv6> {
             crate::ip::device::get_ipv6_device_state(ctx, device)
@@ -1083,18 +1012,17 @@ pub(crate) mod testutil {
     pub(crate) fn receive_frame_or_panic<
         B: BufferMut,
         D: BufferDispatcher<B>,
-        C: BlanketCoreContext,
         NonSyncCtx: NonSyncContext,
     >(
-        Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<D, C, NonSyncCtx>,
+        Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<D, NonSyncCtx>,
         device: DeviceId,
         buffer: B,
     ) {
         crate::device::receive_frame(sync_ctx, non_sync_ctx, device, buffer).unwrap()
     }
 
-    pub fn enable_device<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    pub fn enable_device<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         device: DeviceId,
     ) {

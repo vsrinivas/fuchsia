@@ -228,13 +228,11 @@ pub trait NonSyncContext: RngContext + TimerContext<TimerId> {}
 impl<C: RngContext + TimerContext<TimerId>> NonSyncContext for C {}
 
 /// The synchronized context.
-pub struct SyncCtx<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> {
+pub struct SyncCtx<D: EventDispatcher, NonSyncCtx: NonSyncContext> {
     /// Contains the state of the stack.
     pub state: StackState<NonSyncCtx::Instant>,
     /// The dispatcher, take a look at [`EventDispatcher`] for more details.
     pub dispatcher: D,
-    /// The execution context.
-    pub ctx: C,
     /// A marker for the non-synchronized context type.
     pub non_sync_ctx_marker: PhantomData<NonSyncCtx>,
 }
@@ -244,27 +242,23 @@ pub struct SyncCtx<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyn
 /// `Ctx` provides access to the state of the netstack and to an event
 /// dispatcher which can be used to emit events and schedule timers. A mutable
 /// reference to a `Ctx` is passed to every function in the netstack.
-pub struct Ctx<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> {
+pub struct Ctx<D: EventDispatcher, NonSyncCtx: NonSyncContext> {
     /// The synchronized context.
-    pub sync_ctx: SyncCtx<D, C, NonSyncCtx>,
+    pub sync_ctx: SyncCtx<D, NonSyncCtx>,
     /// The non-synchronized context.
     pub non_sync_ctx: NonSyncCtx,
 }
 
-impl<
-        D: EventDispatcher + Default,
-        C: BlanketCoreContext + Default,
-        NonSyncCtx: NonSyncContext + Default,
-    > Default for Ctx<D, C, NonSyncCtx>
+impl<D: EventDispatcher + Default, NonSyncCtx: NonSyncContext + Default> Default
+    for Ctx<D, NonSyncCtx>
 where
     StackState<NonSyncCtx::Instant>: Default,
 {
-    fn default() -> Ctx<D, C, NonSyncCtx> {
+    fn default() -> Ctx<D, NonSyncCtx> {
         Ctx {
             sync_ctx: SyncCtx {
                 state: StackState::default(),
                 dispatcher: D::default(),
-                ctx: C::default(),
                 non_sync_ctx_marker: PhantomData,
             },
             non_sync_ctx: Default::default(),
@@ -272,28 +266,21 @@ where
     }
 }
 
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext + Default>
-    Ctx<D, C, NonSyncCtx>
-{
+impl<D: EventDispatcher, NonSyncCtx: NonSyncContext + Default> Ctx<D, NonSyncCtx> {
     /// Constructs a new `Ctx`.
-    pub fn new(
-        state: StackState<NonSyncCtx::Instant>,
-        dispatcher: D,
-        ctx: C,
-    ) -> Ctx<D, C, NonSyncCtx> {
+    pub fn new(state: StackState<NonSyncCtx::Instant>, dispatcher: D) -> Ctx<D, NonSyncCtx> {
         Ctx {
-            sync_ctx: SyncCtx { state, dispatcher, ctx, non_sync_ctx_marker: PhantomData },
+            sync_ctx: SyncCtx { state, dispatcher, non_sync_ctx_marker: PhantomData },
             non_sync_ctx: Default::default(),
         }
     }
 
     /// Constructs a new `Ctx` using the default `StackState`.
-    pub fn with_default_state(dispatcher: D, ctx: C) -> Ctx<D, C, NonSyncCtx> {
+    pub fn with_default_state(dispatcher: D) -> Ctx<D, NonSyncCtx> {
         Ctx {
             sync_ctx: SyncCtx {
                 state: StackState::default(),
                 dispatcher,
-                ctx,
                 non_sync_ctx_marker: PhantomData,
             },
             non_sync_ctx: Default::default(),
@@ -301,21 +288,11 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext + Def
     }
 }
 
-impl<D: EventDispatcher + Default, C: BlanketCoreContext, NonSyncCtx: NonSyncContext + Default>
-    Ctx<D, C, NonSyncCtx>
-{
+impl<D: EventDispatcher + Default, NonSyncCtx: NonSyncContext + Default> Ctx<D, NonSyncCtx> {
     /// Construct a new `Ctx` using the default dispatcher.
-    pub fn with_default_dispatcher(
-        state: StackState<NonSyncCtx::Instant>,
-        ctx: C,
-    ) -> Ctx<D, C, NonSyncCtx> {
+    pub fn with_default_dispatcher(state: StackState<NonSyncCtx::Instant>) -> Ctx<D, NonSyncCtx> {
         Ctx {
-            sync_ctx: SyncCtx {
-                state,
-                dispatcher: D::default(),
-                ctx,
-                non_sync_ctx_marker: PhantomData,
-            },
+            sync_ctx: SyncCtx { state, dispatcher: D::default(), non_sync_ctx_marker: PhantomData },
             non_sync_ctx: Default::default(),
         }
     }
@@ -382,8 +359,8 @@ impl_timer_context!(
 );
 
 /// Handles a generic timer event.
-pub fn handle_timer<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn handle_timer<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: TimerId,
 ) {
@@ -465,10 +442,6 @@ impl<
 // [u8]>` bound? Would anything get more efficient if we were able to stack
 // allocate internally-generated buffers?
 
-/// The execution context required by the Netstack3 Core.
-pub trait BlanketCoreContext {}
-impl<C> BlanketCoreContext for C {}
-
 /// An object which can dispatch events to a real system.
 ///
 /// An `EventDispatcher` provides access to a real system. It provides the
@@ -526,13 +499,8 @@ impl<
 }
 
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device
-pub fn get_all_ip_addr_subnets<
-    'a,
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &'a SyncCtx<D, C, NonSyncCtx>,
+pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &'a SyncCtx<D, NonSyncCtx>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
     let addr_v4 = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
@@ -544,8 +512,8 @@ pub fn get_all_ip_addr_subnets<
 }
 
 /// Set the IP address and subnet for a device.
-pub fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn add_ip_addr_subnet<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
@@ -558,8 +526,8 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx:
 }
 
 /// Delete an IP address on a device.
-pub fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn del_ip_addr<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>,
@@ -572,8 +540,8 @@ pub fn del_ip_addr<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyn
 }
 
 /// Adds a route to the forwarding table.
-pub fn add_route<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn add_route<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     entry: AddableEntryEither<DeviceId>,
 ) -> Result<(), AddRouteError> {
@@ -600,8 +568,8 @@ pub fn add_route<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncC
 
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
-pub fn del_route<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn del_route<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     subnet: SubnetEither,
 ) -> error::Result<()> {
@@ -614,11 +582,11 @@ pub fn del_route<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncC
 }
 
 /// Get all the routes.
-pub fn get_all_routes<'a, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    ctx: &'a SyncCtx<D, C, NonSyncCtx>,
+pub fn get_all_routes<'a, D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &'a SyncCtx<D, NonSyncCtx>,
 ) -> impl 'a + Iterator<Item = EntryEither<DeviceId>> {
-    let v4_routes = ip::iter_all_routes::<_, _, _, Ipv4Addr>(ctx);
-    let v6_routes = ip::iter_all_routes::<_, _, _, Ipv6Addr>(ctx);
+    let v4_routes = ip::iter_all_routes::<_, _, Ipv4Addr>(ctx);
+    let v6_routes = ip::iter_all_routes::<_, _, Ipv6Addr>(ctx);
     v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
 }
 

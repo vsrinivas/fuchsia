@@ -36,12 +36,12 @@ use netstack3_core::{
     connect_udp, create_udp_unbound, get_udp_bound_device, get_udp_conn_info,
     get_udp_listener_info, get_udp_posix_reuse_port, icmp, listen_udp, remove_udp_conn,
     remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
-    set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BlanketCoreContext,
-    BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
-    IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError,
-    LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId,
-    UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-    UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
+    set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BufferDispatcher,
+    BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap, IdMapCollection,
+    IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError, LocalAddressError,
+    NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
+    UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+    UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -626,46 +626,36 @@ impl IntoErrno for IcmpSendError {
 
 /// An extension trait that allows generic access to IP-specific ICMP functionality in the Core.
 pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
-    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn new_icmp_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self>;
 
-    fn remove_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn remove_icmp_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     );
 
-    fn new_icmp_connection<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Self>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
         local_id: Option<
-            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>>>::LocalIdentifier,
+            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, NonSyncCtx>>>::LocalIdentifier,
         >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError>;
 
-    fn send_icmp_echo_request<
-        B: BufferMut,
-        D: BufferDispatcher<B>,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
     ) -> Result<(), (B, IcmpSendError)>;
 
-    fn send_conn<
-        B: BufferMut,
-        D: BufferDispatcher<B>,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn send_conn<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         mut body: B,
@@ -715,34 +705,26 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
 }
 
 impl IcmpEchoIpExt for Ipv4 {
-    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn new_icmp_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self> {
         icmp::create_icmpv4_unbound(sync_ctx)
     }
 
-    fn remove_icmp_unbound<
-        D: EventDispatcher,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn remove_icmp_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     ) {
         icmp::remove_icmpv4_unbound(sync_ctx, unbound)
     }
 
-    fn new_icmp_connection<
-        D: EventDispatcher,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv4>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
         local_id: Option<
-            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>>>::LocalIdentifier,
+            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, NonSyncCtx>>>::LocalIdentifier,
         >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
@@ -756,13 +738,8 @@ impl IcmpEchoIpExt for Ipv4 {
         )
     }
 
-    fn send_icmp_echo_request<
-        B: BufferMut,
-        D: BufferDispatcher<B>,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
@@ -774,34 +751,26 @@ impl IcmpEchoIpExt for Ipv4 {
 }
 
 impl IcmpEchoIpExt for Ipv6 {
-    fn new_icmp_unbound<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn new_icmp_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ) -> icmp::IcmpUnboundId<Self> {
         icmp::create_icmpv6_unbound(sync_ctx)
     }
 
-    fn remove_icmp_unbound<
-        D: EventDispatcher,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn remove_icmp_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         unbound: icmp::IcmpUnboundId<Self>,
     ) {
         icmp::remove_icmpv6_unbound(sync_ctx, unbound)
     }
 
-    fn new_icmp_connection<
-        D: EventDispatcher,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv6>,
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
         local_id: Option<
-            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>>>::LocalIdentifier,
+            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<D, NonSyncCtx>>>::LocalIdentifier,
         >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
@@ -815,13 +784,8 @@ impl IcmpEchoIpExt for Ipv6 {
         )
     }
 
-    fn send_icmp_echo_request<
-        B: BufferMut,
-        D: BufferDispatcher<B>,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    >(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
@@ -838,8 +802,8 @@ impl OptionFromU16 for u16 {
     }
 }
 
-impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    TransportState<I, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>> for IcmpEcho
+impl<I: IcmpEchoIpExt, D: EventDispatcher, NonSyncCtx: NonSyncContext>
+    TransportState<I, NonSyncCtx, SyncCtx<D, NonSyncCtx>> for IcmpEcho
 {
     type CreateConnError = icmp::IcmpSockCreationError;
     type CreateListenerError = icmp::IcmpSockCreationError;
@@ -847,12 +811,12 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     type LocalIdentifier = u16;
     type RemoteIdentifier = IcmpRemoteIdentifier;
 
-    fn create_unbound(sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>) -> Self::UnboundId {
+    fn create_unbound(sync_ctx: &mut SyncCtx<D, NonSyncCtx>) -> Self::UnboundId {
         I::new_icmp_unbound(sync_ctx)
     }
 
     fn connect_unbound(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         id: Self::UnboundId,
         local_addr: Option<SpecifiedAddr<I::Addr>>,
@@ -865,7 +829,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 
     fn listen_on_unbound(
-        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::UnboundId,
         _addr: Option<SpecifiedAddr<I::Addr>>,
@@ -875,7 +839,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 
     fn get_conn_info(
-        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> (
@@ -888,7 +852,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 
     fn get_listener_info(
-        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
@@ -896,7 +860,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 
     fn remove_conn(
-        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> (
@@ -909,36 +873,36 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 
     fn remove_listener(
-        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
-    fn remove_unbound(sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>, id: Self::UnboundId) {
+    fn remove_unbound(sync_ctx: &mut SyncCtx<D, NonSyncCtx>, id: Self::UnboundId) {
         I::remove_icmp_unbound(sync_ctx, id)
     }
 
     fn set_socket_device(
-        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
-        _device: Option<<SyncCtx<D, C, NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
+        _device: Option<<SyncCtx<D, NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn get_bound_device(
-        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
-    ) -> Option<<SyncCtx<D, C, NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId> {
+    ) -> Option<<SyncCtx<D, NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn set_reuse_port(
-        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::UnboundId,
         _reuse_port: bool,
@@ -947,7 +911,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 
     fn get_reuse_port(
-        _sync_ctx: &SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
     ) -> bool {
@@ -955,13 +919,8 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: No
     }
 }
 
-impl<
-        I: IcmpEchoIpExt,
-        B: BufferMut,
-        D: BufferDispatcher<B>,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    > BufferTransportState<I, B, NonSyncCtx, SyncCtx<D, C, NonSyncCtx>> for IcmpEcho
+impl<I: IcmpEchoIpExt, B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
+    BufferTransportState<I, B, NonSyncCtx, SyncCtx<D, NonSyncCtx>> for IcmpEcho
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
@@ -970,7 +929,7 @@ where
     type SendListenerError = IcmpSendError;
 
     fn send(
-        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
         _local_id: Option<Self::LocalIdentifier>,
@@ -982,7 +941,7 @@ where
     }
 
     fn send_conn(
-        sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: Self::ConnId,
         body: B,
@@ -991,7 +950,7 @@ where
     }
 
     fn send_listener(
-        _sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        _sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _listener: Self::ListenerId,
         _local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -1213,7 +1172,6 @@ where
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
-            <SC as RequestHandlerContext<I, T>>::Context,
             <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
@@ -1223,7 +1181,6 @@ where
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
-            <SC as RequestHandlerContext<I, T>>::Context,
             <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
@@ -1232,12 +1189,10 @@ where
     SC: Clone + Send + Sync + 'static,
     SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
-        <SC as RequestHandlerContext<I, T>>::Context,
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     >: TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
     <SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
-        <SC as RequestHandlerContext<I, T>>::Context,
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
         + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
@@ -1246,7 +1201,6 @@ where
         Devices<
             <SyncCtx<
                 <SC as RequestHandlerContext<I, T>>::Dispatcher,
-                <SC as RequestHandlerContext<I, T>>::Context,
                 <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
             > as IpDeviceIdContext<I>>::DeviceId,
         >,
@@ -1274,7 +1228,7 @@ where
                     let mut guard = ctx.lock().await;
                     let Ctx { sync_ctx, non_sync_ctx: _ } = guard.deref_mut();
                     let unbound_id = T::create_unbound(sync_ctx);
-                    let SyncCtx { state: _, dispatcher, ctx: _, non_sync_ctx_marker: _ } = sync_ctx;
+                    let SyncCtx { state: _, dispatcher, non_sync_ctx_marker: _ } = sync_ctx;
                     let SocketCollection { binding_data, conns: _, listeners: _ } =
                         I::get_collection_mut(dispatcher);
                     binding_data.push(BindingData::new(
@@ -1939,7 +1893,6 @@ where
 trait RequestHandlerContext<I, T>:
     LockableContext<
     Dispatcher = <Self as RequestHandlerContext<I, T>>::Dispatcher,
-    Context = <Self as RequestHandlerContext<I, T>>::Context,
     NonSyncCtx = <Self as RequestHandlerContext<I, T>>::NonSyncCtx,
 >
 where
@@ -1949,7 +1902,6 @@ where
     T: Transport<I>,
 {
     type Dispatcher: RequestHandlerDispatcher<I, T>;
-    type Context: BlanketCoreContext;
     type NonSyncCtx: NonSyncContext;
 }
 
@@ -1963,12 +1915,11 @@ where
     C::Dispatcher: RequestHandlerDispatcher<I, T>,
 {
     type Dispatcher = C::Dispatcher;
-    type Context = C::Context;
     type NonSyncCtx = C::NonSyncCtx;
 }
 
 struct RequestHandler<'a, I, T, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context, C::NonSyncCtx>>>::Guard,
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::NonSyncCtx>>>::Guard,
     binding_id: usize,
     rights: fio::OpenFlags,
     _marker: PhantomData<(I, T)>,
@@ -2018,14 +1969,12 @@ where
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
-            <SC as RequestHandlerContext<I, T>>::Context,
             <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
     SC: RequestHandlerContext<I, T>,
     SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
-        <SC as RequestHandlerContext<I, T>>::Context,
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     >: TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
 {
@@ -2133,7 +2082,6 @@ where
                 <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
                 SyncCtx<
                     <SC as RequestHandlerContext<I, T>>::Dispatcher,
-                    <SC as LockableContext>::Context,
                     <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
                 >,
             >>::LocalIdentifier,
@@ -2227,7 +2175,6 @@ where
         info: SocketControlInfo<I, T>,
         sync_ctx: &mut SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
-            <SC as RequestHandlerContext<I, T>>::Context,
             <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
         ctx: &mut <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
@@ -2360,7 +2307,6 @@ where
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
-            <SC as RequestHandlerContext<I, T>>::Context,
             <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
@@ -2370,19 +2316,16 @@ where
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         SyncCtx<
             <SC as RequestHandlerContext<I, T>>::Dispatcher,
-            <SC as RequestHandlerContext<I, T>>::Context,
             <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         >,
     >,
     SC: RequestHandlerContext<I, T>,
     SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
-        <SC as RequestHandlerContext<I, T>>::Context,
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     >: TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
     <SyncCtx<
         <SC as RequestHandlerContext<I, T>>::Dispatcher,
-        <SC as RequestHandlerContext<I, T>>::Context,
         <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
     > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
         + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
@@ -2391,7 +2334,6 @@ where
         Devices<
             <SyncCtx<
                 <SC as RequestHandlerContext<I, T>>::Dispatcher,
-                <SC as RequestHandlerContext<I, T>>::Context,
                 <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
             > as IpDeviceIdContext<I>>::DeviceId,
         >,

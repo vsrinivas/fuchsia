@@ -1332,7 +1332,7 @@ mod tests {
             generate_opaque_interface_identifier, OpaqueIidNonce, STABLE_IID_SECRET_KEY_BYTES,
         },
         context::{
-            testutil::{DummyInstant, DummySyncCtx, DummyTimerCtxExt as _, StepResult},
+            testutil::{DummyInstant, DummyTimerCtxExt as _, StepResult},
             InstantContext as _, RngContext as _,
         },
         device::{
@@ -1732,17 +1732,9 @@ mod tests {
         let stack_builder = StackStateBuilder::default();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
-            local.build_with(
-                stack_builder.clone(),
-                DummyEventDispatcher::default(),
-                DummySyncCtx::default(),
-            ),
+            local.build_with(stack_builder.clone(), DummyEventDispatcher::default()),
             "remote",
-            remote.build_with(
-                stack_builder,
-                DummyEventDispatcher::default(),
-                DummySyncCtx::default(),
-            ),
+            remote.build_with(stack_builder, DummyEventDispatcher::default()),
         );
 
         // Create the devices (will start DAD at the same time).

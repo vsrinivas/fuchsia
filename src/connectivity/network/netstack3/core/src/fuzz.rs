@@ -327,10 +327,7 @@ fn dispatch(
 pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     print_on_panic::initialize_logging();
 
-    let mut ctx = Ctx::with_default_state(
-        DummyEventDispatcher::default(),
-        crate::context::testutil::DummySyncCtx::default(),
-    );
+    let mut ctx = Ctx::with_default_state(DummyEventDispatcher::default());
     let FuzzInput { actions } = input;
 
     let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;

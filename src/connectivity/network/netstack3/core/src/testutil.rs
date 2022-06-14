@@ -11,7 +11,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::{convert::Infallible as Never, fmt::Debug, time::Duration};
+use core::{fmt::Debug, time::Duration};
 
 use net_types::{
     ethernet::Mac,
@@ -34,10 +34,10 @@ use crate::{
     ip::{
         device::{dad::DadEvent, route_discovery::Ipv6RouteDiscoveryEvent, IpDeviceEvent},
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-        AddableEntryEither, DummyDeviceId, IpLayerEvent, SendIpPacketMeta,
+        AddableEntryEither, IpLayerEvent, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    BlanketCoreContext, Ctx, EventDispatcher, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
+    Ctx, EventDispatcher, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
 };
 
 /// Asserts that an iterable object produces zero items.
@@ -108,17 +108,9 @@ pub(crate) mod benchmarks {
 // prevent code from attempting to read from this context (code which only
 // accesses the frame contents rather than the frame metadata will still
 // compile).
-pub(crate) type DummyCtx = Ctx<
-    DummyEventDispatcher,
-    crate::context::testutil::DummySyncCtx<(), Never, (), DummyDeviceId>,
-    DummyNonSyncCtx,
->;
+pub(crate) type DummyCtx = Ctx<DummyEventDispatcher, DummyNonSyncCtx>;
 
-pub(crate) type DummySyncCtx = SyncCtx<
-    DummyEventDispatcher,
-    crate::context::testutil::DummySyncCtx<(), Never, (), DummyDeviceId>,
-    DummyNonSyncCtx,
->;
+pub(crate) type DummySyncCtx = SyncCtx<DummyEventDispatcher, DummyNonSyncCtx>;
 pub(crate) type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<TimerId>;
 
 impl NonSyncContext for DummyNonSyncCtx {}
@@ -511,22 +503,17 @@ impl DummyEventDispatcherBuilder {
     ) -> DummyCtx {
         let mut stack_builder = StackStateBuilder::default();
         f(&mut stack_builder);
-        self.build_with(stack_builder, Default::default(), Default::default())
+        self.build_with(stack_builder, Default::default())
     }
 
     /// Build a `Ctx` from the present configuration with a caller-provided
     /// dispatcher and `StackStateBuilder`.
-    pub(crate) fn build_with<
-        D: EventDispatcher,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext + Default,
-    >(
+    pub(crate) fn build_with<D: EventDispatcher, NonSyncCtx: NonSyncContext + Default>(
         self,
         state_builder: StackStateBuilder,
         dispatcher: D,
-        ctx: C,
-    ) -> Ctx<D, C, NonSyncCtx> {
-        let mut ctx = Ctx::new(state_builder.build(), dispatcher, ctx);
+    ) -> Ctx<D, NonSyncCtx> {
+        let mut ctx = Ctx::new(state_builder.build(), dispatcher);
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let DummyEventDispatcherBuilder {

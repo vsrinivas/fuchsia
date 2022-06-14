@@ -59,7 +59,7 @@ use crate::{
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap},
-    BlanketCoreContext, BufferDispatcher, EventDispatcher, NonSyncContext, SyncCtx,
+    BufferDispatcher, EventDispatcher, NonSyncContext, SyncCtx,
 };
 
 /// The default number of ICMP error messages to send per second.
@@ -597,12 +597,8 @@ pub trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>: IcmpContext<I> {
     );
 }
 
-impl<
-        I: IcmpIpExt,
-        D: EventDispatcher + IcmpContext<I>,
-        C: BlanketCoreContext,
-        NonSyncCtx: NonSyncContext,
-    > IcmpContext<I> for SyncCtx<D, C, NonSyncCtx>
+impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>, NonSyncCtx: NonSyncContext> IcmpContext<I>
+    for SyncCtx<D, NonSyncCtx>
 {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
         IcmpContext::receive_icmp_error(&mut self.dispatcher, conn, seq_num, err);
@@ -613,9 +609,8 @@ impl<
         I: IcmpIpExt,
         B: BufferMut,
         D: EventDispatcher + BufferIcmpContext<I, B>,
-        C: BlanketCoreContext,
         NonSyncCtx: NonSyncContext,
-    > BufferIcmpContext<I, B> for SyncCtx<D, C, NonSyncCtx>
+    > BufferIcmpContext<I, B> for SyncCtx<D, NonSyncCtx>
 {
     fn receive_icmp_echo_reply(
         &mut self,
@@ -2621,10 +2616,9 @@ fn receive_icmp_echo_reply<
 pub fn send_icmpv4_echo_request<
     B: BufferMut,
     D: BufferDispatcher<B>,
-    C: BlanketCoreContext,
     NonSyncCtx: NonSyncContext,
 >(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
@@ -2642,10 +2636,9 @@ pub fn send_icmpv4_echo_request<
 pub fn send_icmpv6_echo_request<
     B: BufferMut,
     D: BufferDispatcher<B>,
-    C: BlanketCoreContext,
     NonSyncCtx: NonSyncContext,
 >(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
@@ -2706,12 +2699,8 @@ pub enum IcmpSockCreationError {
 }
 
 /// Creates a new unbound ICMPv4 socket.
-pub fn create_icmpv4_unbound<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn create_icmpv4_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<D, NonSyncCtx>,
 ) -> IcmpUnboundId<Ipv4> {
     create_icmpv4_unbound_inner(ctx)
 }
@@ -2727,12 +2716,8 @@ fn create_icmpv4_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv4Context<C>>(
 }
 
 /// Creates a new unbound ICMPv6 socket.
-pub fn create_icmpv6_unbound<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn create_icmpv6_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<D, NonSyncCtx>,
 ) -> IcmpUnboundId<Ipv6> {
     create_icmpv6_unbound_inner(ctx)
 }
@@ -2752,12 +2737,8 @@ fn create_icmpv6_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv6Context<C>>(
 /// # Panics
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
-pub fn remove_icmpv4_unbound<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn remove_icmpv4_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<D, NonSyncCtx>,
     id: IcmpUnboundId<Ipv4>,
 ) {
     remove_icmpv4_unbound_inner(ctx, id)
@@ -2779,12 +2760,8 @@ fn remove_icmpv4_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv4Context<C>>(
 /// # Panics
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
-pub fn remove_icmpv6_unbound<
-    D: EventDispatcher,
-    C: BlanketCoreContext,
-    NonSyncCtx: NonSyncContext,
->(
-    ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn remove_icmpv6_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<D, NonSyncCtx>,
     id: IcmpUnboundId<Ipv6>,
 ) {
     remove_icmpv6_unbound_inner(ctx, id)
@@ -2813,8 +2790,8 @@ fn remove_icmpv6_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv6Context<C>>(
 /// # Panics
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
-pub fn connect_icmpv4<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn connect_icmpv4<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: IcmpUnboundId<Ipv4>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
@@ -2852,8 +2829,8 @@ fn connect_icmpv4_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv4Context<C>>(
 /// # Panics
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
-pub fn connect_icmpv6<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+pub fn connect_icmpv6<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: IcmpUnboundId<Ipv6>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
@@ -2937,12 +2914,8 @@ mod tests {
     };
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
-        fn new_icmp_connection<
-            D: EventDispatcher,
-            C: BlanketCoreContext,
-            NonSyncCtx: NonSyncContext,
-        >(
-            sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Self::Addr>>,
             remote_addr: SpecifiedAddr<Self::Addr>,
@@ -2952,10 +2925,9 @@ mod tests {
         fn send_icmp_echo_request<
             B: BufferMut,
             D: BufferDispatcher<B>,
-            C: BlanketCoreContext,
             NonSyncCtx: NonSyncContext,
         >(
-            sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Self>,
             seq_num: u16,
@@ -2964,12 +2936,8 @@ mod tests {
     }
 
     impl TestIpExt for Ipv4 {
-        fn new_icmp_connection<
-            D: EventDispatcher,
-            C: BlanketCoreContext,
-            NonSyncCtx: NonSyncContext,
-        >(
-            sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
             remote_addr: SpecifiedAddr<Ipv4Addr>,
@@ -2982,10 +2950,9 @@ mod tests {
         fn send_icmp_echo_request<
             B: BufferMut,
             D: BufferDispatcher<B>,
-            C: BlanketCoreContext,
             NonSyncCtx: NonSyncContext,
         >(
-            sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Ipv4>,
             seq_num: u16,
@@ -2996,12 +2963,8 @@ mod tests {
     }
 
     impl TestIpExt for Ipv6 {
-        fn new_icmp_connection<
-            D: EventDispatcher,
-            C: BlanketCoreContext,
-            NonSyncCtx: NonSyncContext,
-        >(
-            sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+        fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
             remote_addr: SpecifiedAddr<Ipv6Addr>,
@@ -3014,10 +2977,9 @@ mod tests {
         fn send_icmp_echo_request<
             B: BufferMut,
             D: BufferDispatcher<B>,
-            C: BlanketCoreContext,
             NonSyncCtx: NonSyncContext,
         >(
-            sync_ctx: &mut SyncCtx<D, C, NonSyncCtx>,
+            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Ipv6>,
             seq_num: u16,

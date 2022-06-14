@@ -24,9 +24,9 @@ use netstack3_core::{
     context::EventContext,
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BlanketCoreContext,
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt,
-    NonSyncContext, UdpBoundId, UdpContext,
+    update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt, NonSyncContext, UdpBoundId,
+    UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -39,8 +39,8 @@ use crate::bindings::{
     },
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsContextImpl, BindingsDispatcher, BindingsNonSyncCtxImpl, DeviceStatusNotifier,
-    LockableContext, RequestStreamExt as _, DEFAULT_LOOPBACK_MTU,
+    BindingsDispatcher, BindingsNonSyncCtxImpl, DeviceStatusNotifier, LockableContext,
+    RequestStreamExt as _, DEFAULT_LOOPBACK_MTU,
 };
 
 /// log::Log implementation that uses stdout.
@@ -206,7 +206,7 @@ impl<T: 'static + Send> EventContext<T> for TestDispatcher {
 #[derive(Clone)]
 /// A netstack context for testing.
 pub(crate) struct TestContext {
-    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>>>,
+    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>>,
     _interfaces_worker: Arc<super::interfaces_watcher::Worker>,
     interfaces_sink: super::interfaces_watcher::WorkerInterfaceSink,
 }
@@ -232,17 +232,9 @@ impl super::InterfaceEventProducerFactory for TestContext {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>>
-    for TestContext
-{
-    type Guard = futures::lock::MutexGuard<
-        'a,
-        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
-    >;
-    type Fut = futures::lock::MutexLockFuture<
-        'a,
-        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
-    >;
+impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>> for TestContext {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -250,7 +242,6 @@ impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCt
 
 impl LockableContext for TestContext {
     type Dispatcher = TestDispatcher;
-    type Context = BindingsContextImpl;
     type NonSyncCtx = BindingsNonSyncCtxImpl;
 }
 
@@ -372,7 +363,7 @@ impl TestStack {
     /// [`Ctx<TestDispatcher, BindingsContext>`] provided by this `TestStack`.
     pub(crate) async fn with_ctx<
         R,
-        F: FnOnce(&mut Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>) -> R,
+        F: FnOnce(&mut Ctx<TestDispatcher, BindingsNonSyncCtxImpl>) -> R,
     >(
         &mut self,
         f: F,
@@ -384,10 +375,7 @@ impl TestStack {
     /// Acquire a lock on this `TestStack`'s context.
     pub(crate) async fn ctx(
         &self,
-    ) -> <TestContext as Lockable<
-        '_,
-        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
-    >>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>>::Guard {
         self.ctx.lock().await
     }
 
@@ -438,10 +426,7 @@ impl TestSetup {
     pub(crate) async fn ctx(
         &mut self,
         i: usize,
-    ) -> <TestContext as Lockable<
-        '_,
-        Ctx<TestDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>,
-    >>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>>::Guard {
         self.get(i).ctx.lock().await
     }
 
@@ -831,8 +816,8 @@ async fn test_ethernet_link_up_down() {
         .expect("error receiving frame");
 }
 
-fn check_ip_enabled<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>(
-    Ctx { sync_ctx, non_sync_ctx: _ }: &mut Ctx<D, C, NonSyncCtx>,
+fn check_ip_enabled<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
+    Ctx { sync_ctx, non_sync_ctx: _ }: &mut Ctx<D, NonSyncCtx>,
     core_id: DeviceId,
     expected: bool,
 ) {

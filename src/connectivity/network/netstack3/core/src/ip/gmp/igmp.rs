@@ -1284,11 +1284,8 @@ mod tests {
             subnet: _,
         } = Ipv4::DUMMY_CONFIG;
 
-        let crate::testutil::DummyCtx { mut sync_ctx, mut non_sync_ctx } = Ctx::new(
-            StackStateBuilder::default().build(),
-            DummyEventDispatcher::default(),
-            Default::default(),
-        );
+        let crate::testutil::DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            Ctx::new(StackStateBuilder::default().build(), DummyEventDispatcher::default());
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv4::MINIMUM_LINK_MTU.into());
         crate::ip::device::add_ipv4_addr_subnet(

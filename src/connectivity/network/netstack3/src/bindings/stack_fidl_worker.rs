@@ -31,7 +31,7 @@ pub(crate) struct StackFidlWorker<C> {
 }
 
 struct LockedFidlWorker<'a, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::Context, C::NonSyncCtx>>>::Guard,
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher, C::NonSyncCtx>>>::Guard,
     worker: &'a StackFidlWorker<C>,
 }
 
