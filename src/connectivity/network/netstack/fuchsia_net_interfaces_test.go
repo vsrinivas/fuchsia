@@ -19,6 +19,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces"
@@ -303,5 +304,86 @@ func TestInterfacesWatcher(t *testing.T) {
 		}
 	default:
 		t.Fatalf("unexpected return value from Watch resolved due to channel closure; got: %#v, want: %s", got, want)
+	}
+}
+
+func TestInterfacesWatcherDuplicateAddress(t *testing.T) {
+	eventChan := make(chan interfaceEvent)
+	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
+	go interfaceWatcherEventLoop(eventChan, watcherChan)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	protocolAddr := tcpip.ProtocolAddress{
+		Protocol: header.IPv6ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address:   util.Parse("abcd::1"),
+			PrefixLen: 64,
+		},
+	}
+	ndpDisp := newNDPDispatcherForTest()
+	ndpDisp.getAddressPrefix = func(_ *stack.NICInfo, addr tcpip.Address) (int, bool) {
+		if want := protocolAddr.AddressWithPrefix.Address; addr != want {
+			t.Fatalf("getAddressPrefix got addr=%s, want addr=%s", addr, want)
+			return 0, false
+		}
+		return protocolAddr.AddressWithPrefix.PrefixLen, true
+	}
+	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan, ndpDisp: ndpDisp})
+	ndpDisp.start(ctx)
+
+	si := &interfaceStateImpl{watcherChan: watcherChan}
+
+	ifs := addNoopEndpoint(t, ns, "")
+
+	watcher := initWatcher(t, si)
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Fatalf("failed to close watcher: %s", err)
+		}
+	}()
+
+	watcher.expectEvent(t, interfaces.EventWithExisting(initialProperties(ifs, ns.name(ifs.nicid))))
+	watcher.expectIdleEvent(t)
+
+	// Add an IPv6 address, should not observe the address until DAD success.
+	ifs.addAddress(protocolAddr, stack.AddressProperties{})
+	resultCh := make(chan watchResult, 1)
+	watcher.blockingWatch(t, resultCh)
+
+	// Fake a DAD succeeded event and observe the address.
+	ndpDisp.OnDuplicateAddressDetectionResult(ifs.nicid, protocolAddr.AddressWithPrefix.Address, &stack.DADSucceeded{})
+	var wantAddress interfaces.Address
+	wantAddress.SetAddr(fidlconv.ToNetSubnet(protocolAddr.AddressWithPrefix))
+	wantAddress.SetValidUntil(int64(zx.TimensecInfinite))
+	{
+		var wantProperties interfaces.Properties
+		wantProperties.SetId(uint64(ifs.nicid))
+		wantProperties.SetAddresses([]interfaces.Address{wantAddress})
+		watchResult := <-resultCh
+		if err := assertWatchResult(watchResult.event, watchResult.err, interfaces.EventWithChanged(wantProperties)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Fake another DAD completion event. Note that DAD is normally only re-run
+	// after an interface goes down and back up, but since that is not relevant
+	// to this test we forego that step. Expect nothing on the watcher.
+	ndpDisp.OnDuplicateAddressDetectionResult(ifs.nicid, protocolAddr.AddressWithPrefix.Address, &stack.DADSucceeded{})
+	watcher.blockingWatch(t, resultCh)
+
+	// Remove the address and observe removal.
+	if status := ifs.removeAddress(protocolAddr); status != zx.ErrOk {
+		t.Fatalf("ifs.removeAddress(%#v) = %s", protocolAddr, status)
+	}
+	{
+		var wantProperties interfaces.Properties
+		wantProperties.SetId(uint64(ifs.nicid))
+		wantProperties.SetAddresses([]interfaces.Address{})
+		watchResult := <-resultCh
+		if err := assertWatchResult(watchResult.event, watchResult.err, interfaces.EventWithChanged(wantProperties)); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

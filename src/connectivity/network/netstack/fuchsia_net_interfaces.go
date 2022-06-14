@@ -322,19 +322,20 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					break
 				}
 				addresses := properties.GetAddresses()
+				// Addresses are sorted by subnet.
 				i := sort.Search(len(addresses), func(i int) bool {
-					diff := cmpSubnet(event.subnet, addresses[i].GetAddr())
-					if diff == 0 {
-						// TODO(https://fxbug.dev/97731): Panic if we receive duplicate DAD success
-						// within the same link once address assignment state is tracked.
-						if event.strict {
-							panic(fmt.Sprintf("duplicate address added event: %#v", event))
-						} else {
-							_ = syslog.WarnTf(watcherProtocolName, "address added event for already-assigned address: %#v", event)
-						}
-					}
-					return diff < 0
+					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
 				})
+				if i < len(addresses) && cmpSubnet(event.subnet, addresses[i].GetAddr()) == 0 {
+					// TODO(https://fxbug.dev/97731): Panic if we receive duplicate DAD success
+					// within the same link once address assignment state is tracked.
+					if event.strict {
+						panic(fmt.Sprintf("duplicate address added event: %#v", event))
+					} else {
+						_ = syslog.WarnTf(watcherProtocolName, "address added event for already-assigned address: %#v", event)
+						break
+					}
+				}
 				addresses = append(addresses, interfaces.Address{})
 				copy(addresses[i+1:], addresses[i:])
 				newAddr := &addresses[i]
@@ -358,6 +359,7 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					break
 				}
 				addresses := properties.GetAddresses()
+				// Addresses are sorted by subnet.
 				i := sort.Search(len(addresses), func(i int) bool {
 					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
 				})
@@ -386,6 +388,7 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 					break
 				}
 				addresses := properties.GetAddresses()
+				// Addresses are sorted by subnet.
 				i := sort.Search(len(addresses), func(i int) bool {
 					return cmpSubnet(event.subnet, addresses[i].GetAddr()) <= 0
 				})
