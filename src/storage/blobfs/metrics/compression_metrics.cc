@@ -19,7 +19,7 @@ void CompressionMetrics::Update(const InodePtr& inode) {
 CompressionMetrics::Properties CompressionMetrics::Attach(inspect::Node& node) const {
   return CompressionMetrics::Properties{
       .uncompressed_bytes = node.CreateUint("uncompressed_bytes", uncompressed_bytes_),
-      .zstd_chunked_bytes = node.CreateUint("uncompressed_bytes", zstd_chunked_bytes_),
+      .zstd_chunked_bytes = node.CreateUint("zstd_chunked_bytes", zstd_chunked_bytes_),
   };
 }
 
