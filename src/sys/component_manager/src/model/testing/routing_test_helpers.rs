@@ -430,11 +430,12 @@ impl RoutingTest {
             dir_path.push(relative_path);
         }
         if !dir_path.parent().is_none() {
-            let dir_proxy = fuchsia_fs::open_directory(
+            let dir_proxy = fuchsia_fs::directory::open_directory(
                 &self.test_dir_proxy,
-                &dir_path,
+                &dir_path.to_str().unwrap(),
                 fuchsia_fs::OpenFlags::RIGHT_READABLE,
             )
+            .await
             .expect("failed to open directory");
             list_directory(&dir_proxy).await
         } else {
@@ -444,11 +445,12 @@ impl RoutingTest {
 
     /// Lists the contents of a directory.
     pub async fn list_directory(&self, path: &str) -> Vec<String> {
-        let dir_proxy = fuchsia_fs::open_directory(
+        let dir_proxy = fuchsia_fs::directory::open_directory(
             &self.test_dir_proxy,
-            Path::new(path),
+            path,
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
+        .await
         .expect("failed to open directory");
         list_directory(&dir_proxy).await
     }
@@ -699,8 +701,13 @@ impl RoutingTestModel for RoutingTest {
                 .await;
             }
             CheckUse::Directory { path, file, expected_res } => {
-                capability_util::read_data_from_namespace(&namespace, path, &file, expected_res)
-                    .await
+                capability_util::read_data_from_namespace(
+                    &namespace,
+                    path,
+                    file.to_str().unwrap(),
+                    expected_res,
+                )
+                .await
             }
             CheckUse::Storage {
                 path,
@@ -876,7 +883,7 @@ impl RoutingTestModel for RoutingTest {
             CheckUse::Directory { path, file, expected_res } => {
                 capability_util::read_data_from_exposed_dir(
                     path,
-                    &file,
+                    file.to_str().unwrap(),
                     &moniker,
                     &self.model,
                     expected_res,
@@ -977,7 +984,7 @@ impl Drop for ScopedNamespaceDir<'_> {
 pub mod capability_util {
     use {
         super::*, anyhow::format_err, assert_matches::assert_matches, cm_rust::NativeIntoFidl,
-        fidl::endpoints::ProtocolMarker, fidl_fuchsia_sys2::EventSourceMarker, std::path::PathBuf,
+        fidl::endpoints::ProtocolMarker, fidl_fuchsia_sys2::EventSourceMarker,
     };
 
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
@@ -985,21 +992,33 @@ pub mod capability_util {
     pub async fn read_data_from_namespace(
         namespace: &ManagedNamespace,
         path: CapabilityPath,
-        file: &Path,
+        file: &str,
         expected_res: ExpectedResult,
     ) {
         let path = path.to_string();
         let dir_proxy = take_dir_from_namespace(namespace, &path).await;
-        let file_proxy = fuchsia_fs::open_file(&dir_proxy, file, fio::OpenFlags::RIGHT_READABLE)
-            .expect("failed to open file");
-        let res = fuchsia_fs::read_file(&file_proxy).await;
         match expected_res {
-            ExpectedResult::Ok => assert_eq!(
-                "hello",
-                res.expect(&format!("failed to read file {}", path.to_string()))
-            ),
+            ExpectedResult::Ok => {
+                let file_proxy = fuchsia_fs::directory::open_file(
+                    &dir_proxy,
+                    file,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .await
+                .expect("failed to open file");
+                let res = fuchsia_fs::read_file(&file_proxy).await.expect("failed to read file");
+                assert_eq!("hello", res);
+            }
             ExpectedResult::Err(s) => {
-                assert!(res.is_err(), "read file successfully when it should fail");
+                let file_proxy = fuchsia_fs::directory::open_file_no_describe(
+                    &dir_proxy,
+                    file,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .expect("failed to open file");
+                let _ = fuchsia_fs::read_file(&file_proxy)
+                    .await
+                    .expect_err("read file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
@@ -1009,7 +1028,15 @@ pub mod capability_util {
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
-                assert!(res.is_err(), "read file successfully when it should fail");
+                let file_proxy = fuchsia_fs::directory::open_file_no_describe(
+                    &dir_proxy,
+                    file,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .expect("failed to open file");
+                let _ = fuchsia_fs::read_file(&file_proxy)
+                    .await
+                    .expect_err("read file successfully when it should fail");
                 assert_matches!(dir_proxy.take_event_stream().next().await, None);
             }
         }
@@ -1079,17 +1106,19 @@ pub mod capability_util {
         let file_proxy = if let Some(directory) = path.parent() {
             let subdir = fuchsia_fs::create_sub_directories(root, directory)
                 .map_err(|e| e.context(format!("failed to create subdirs for {:?}", path)))?;
-            fuchsia_fs::open_file(
+            fuchsia_fs::directory::open_file(
                 &subdir,
-                &PathBuf::from(path.file_name().unwrap()),
+                path.file_name().unwrap().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
-            )?
+            )
+            .await?
         } else {
-            fuchsia_fs::open_file(
+            fuchsia_fs::directory::open_file(
                 root,
-                path,
+                path.to_str().unwrap(),
                 fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
-            )?
+            )
+            .await?
         };
 
         // Write contents.
@@ -1107,11 +1136,12 @@ pub mod capability_util {
             if persistent_storage { relation.with_zero_value_instance_ids() } else { relation };
         let mut dir_path = generate_storage_path(storage_subdir, &relation, instance_id);
         dir_path.push("hippos");
-        let file_proxy = fuchsia_fs::open_file(
+        let file_proxy = fuchsia_fs::directory::open_file(
             &test_dir_proxy,
-            &dir_path,
+            &dir_path.to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
-        )?;
+        )
+        .await?;
         let res = fuchsia_fs::read_file(&file_proxy).await;
 
         if let Ok(contents) = res {
@@ -1336,7 +1366,7 @@ pub mod capability_util {
     /// contain the string "hello".
     pub async fn read_data_from_exposed_dir<'a>(
         path: CapabilityPath,
-        file: &Path,
+        file: &str,
         abs_moniker: &'a AbsoluteMoniker,
         model: &'a Arc<Model>,
         expected_res: ExpectedResult,
@@ -1346,15 +1376,23 @@ pub mod capability_util {
         let dir_proxy = fio::DirectoryProxy::new(node_proxy.into_channel().unwrap());
         match expected_res {
             ExpectedResult::Ok => {
-                let file_proxy =
-                    fuchsia_fs::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
-                        .expect("failed to open file");
+                let file_proxy = fuchsia_fs::directory::open_file(
+                    &dir_proxy,
+                    &file,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .await
+                .expect("failed to open file");
                 let res = fuchsia_fs::read_file(&file_proxy).await;
                 assert_eq!("hello", res.expect("failed to read file"));
             }
             ExpectedResult::Err(s) => {
-                fuchsia_fs::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
-                    .expect_err("opened file successfully when it should fail");
+                fuchsia_fs::directory::open_file_no_describe(
+                    &dir_proxy,
+                    &file,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .expect_err("opened file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");
                 assert_matches!(
                     epitaph,
@@ -1364,8 +1402,12 @@ pub mod capability_util {
                 );
             }
             ExpectedResult::ErrWithNoEpitaph => {
-                fuchsia_fs::open_file(&dir_proxy, &file, fio::OpenFlags::RIGHT_READABLE)
-                    .expect_err("opened file successfully when it should fail");
+                fuchsia_fs::directory::open_file_no_describe(
+                    &dir_proxy,
+                    &file,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .expect_err("opened file successfully when it should fail");
                 assert_matches!(dir_proxy.take_event_stream().next().await, None);
             }
         }
