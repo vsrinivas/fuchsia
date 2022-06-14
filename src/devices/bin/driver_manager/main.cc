@@ -39,6 +39,7 @@
 #include "devfs.h"
 #include "driver_host_loader_service.h"
 #include "fdio.h"
+#include "lib/async/cpp/task.h"
 #include "src/devices/bin/driver_manager/devfs_exporter.h"
 #include "src/devices/bin/driver_manager/device_watcher.h"
 #include "src/devices/bin/driver_manager/v2/driver_development_service.h"
@@ -504,6 +505,9 @@ int main(int argc, char** argv) {
   });
   loader_loop.StartThread();
 
+  // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
+  LOGF(INFO, "driver_manager loader loop started");
+
   outgoing.svc_dir()->AddEntry(
       "fuchsia.hardware.pci.DeviceWatcher",
       fbl::MakeRefCounted<fs::Service>(
@@ -528,6 +532,11 @@ int main(int argc, char** argv) {
   outgoing.root_dir()->AddEntry("diagnostics", fbl::MakeRefCounted<fs::RemoteDir>(
                                                    system_instance.CloneFs("dev/diagnostics")));
   outgoing.ServeFromStartupInfo();
+
+  // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
+  auto log_loop_start = std::make_unique<async::TaskClosure>(
+      [] { LOGF(INFO, "driver_manager main loop is running"); });
+  log_loop_start->Post(loop.dispatcher());
 
   coordinator.set_running(true);
   status = loop.Run();

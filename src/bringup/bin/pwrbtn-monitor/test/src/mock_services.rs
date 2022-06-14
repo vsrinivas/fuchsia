@@ -85,8 +85,12 @@ async fn main() -> Result<(), Error> {
                             send_test_result.send(()).expect("failed to send test completion");
                         }
                     }
-                    _ => {
-                        panic!("only expecting calls to Poweroff");
+
+                    Some(other) => {
+                        panic!("only expecting calls to Poweroff, but got: {:?}", other);
+                    }
+                    None => {
+                        // the connection closed
                     }
                 }
                 Ok(())

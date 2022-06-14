@@ -15,8 +15,20 @@ import (
 )
 
 var cmdlineCommon = []string{"kernel.oom.behavior=reboot"}
+var initMessages []string = []string{
+	// Ensure the kernel OOM system was properly initialized.
+	"memory-pressure: memory availability state - Normal",
+	"pwrbtn-monitor: OOM monitoring active",
+	// Make sure the shell is ready to accept commands over serial.
+	"console.shell: enabled",
+	"fshost: lifecycle handler ready",
+	"power-manager: service initialization complete",
+	"V1 drivers loaded and published",
+	"driver_manager loader loop started",
+	"driver_manager main loop is running",
+	"archivist: Entering core loop"}
 
-// Triggers the OOM signal without leaking memory. Verifies that fileystems are shut down and the
+// Triggers the OOM signal without leaking memory. Verifies that filesystems are shut down and the
 // system reboots in a somewhat orderly fashion.
 func TestOOMSignal(t *testing.T) {
 	exDir := execDir(t)
@@ -28,7 +40,6 @@ func TestOOMSignal(t *testing.T) {
 	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
 
 	// TODO(https://fxbug.dev/97444): do not set this kernel argument when it is no longer used.
-	const driverManagerLogLine = "Successfully waited for VFS exit completion"
 	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -36,22 +47,22 @@ func TestOOMSignal(t *testing.T) {
 	i := distro.CreateContext(ctx, device)
 	i.Start()
 
-	i.WaitForLogMessages([]string{
-		// Ensure the kernel OOM system was properly initialized.
-		"memory-pressure: memory availability state - Normal",
-		// Make sure the shell is ready to accept commands over serial.
-		"console.shell: enabled",
-	})
+	initMsgs := make([]string, len(initMessages))
+	copy(initMsgs, initMessages)
+	// Make sure some of the basic systems are initialized
+	i.WaitForLogMessages(initMsgs)
 
 	// Trigger a simulated OOM, without leaking any memory.
 	i.RunCommand("k pmm oom signal")
-	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
 
-	// Make sure the file system is notified and unmounts.
-	i.WaitForLogMessage(driverManagerLogLine)
+	// Sometimes fshost shut down so quickly, its messages are printed
+	// before the memory-pressure ones.
+	i.WaitForLogMessages([]string{"memory-pressure: memory availability state - OutOfMemory",
+		"received shutdown command over lifecycle interface",
+		"fshost shutdown complete"})
 
 	// Ensure the OOM thread reboots the target.
-	i.WaitForLogMessage("memory-pressure: rebooting due to OOM")
+	i.WaitForLogMessage("memory-pressure: rebooting due to OOM. received user-mode acknowledgement.")
 
 	// Ensure that the reboot has stowed a correct crashlog.
 	i.WaitForLogMessage("memory-pressure: stowing crashlog")
@@ -76,12 +87,10 @@ func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
 	i := distro.CreateContext(ctx, device)
 	i.Start()
 
-	i.WaitForLogMessages([]string{
-		// Ensure the kernel OOM system was properly initialized.
-		"memory-pressure: memory availability state - Normal",
-		// Make sure the shell is ready to accept commands over serial.
-		"console.shell: enabled",
-	})
+	initMsgs := make([]string, len(initMessages))
+	copy(initMsgs, initMessages)
+	// Make sure some of the basic systems are initialized
+	i.WaitForLogMessages(initMsgs)
 
 	// Trigger a simulated OOM, without leaking any memory.
 	i.RunCommand("k pmm oom signal")
@@ -91,7 +100,7 @@ func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
 	i.WaitForLogMessage("memory-pressure: pausing for")
 
 	// Kill a critical process.
-	i.RunCommand("killall bootsvc")
+	i.RunCommand("killall bin/component_manager")
 
 	// Ensure that the reboot has stowed a correct crashlog.
 	i.WaitForLogMessage("memory-pressure: stowing crashlog")
@@ -116,12 +125,10 @@ func testOOMCommon(t *testing.T, cmdline []string, cmd string, msgs ...string) {
 	i := distro.CreateContext(ctx, device)
 	i.Start()
 
-	i.WaitForLogMessages([]string{
-		// Ensure the kernel OOM system was properly initialized.
-		"memory-pressure: memory availability state - Normal",
-		// Make sure the shell is ready to accept commands over serial.
-		"console.shell: enabled",
-	})
+	initMsgs := make([]string, len(initMessages))
+	copy(initMsgs, initMessages)
+	// Make sure some of the basic systems are initialized
+	i.WaitForLogMessages(initMsgs)
 
 	// Trigger an OOM.
 	i.RunCommand(cmd)
