@@ -65,7 +65,6 @@ sdk_source_set("llcpp") {
       "include/lib/fidl/llcpp/internal/server_details.h",
       "include/lib/fidl/llcpp/internal/thenable.h",
       "include/lib/fidl/llcpp/internal/thread_checker.h",
-      "include/lib/fidl/llcpp/internal/transport.h",
       "include/lib/fidl/llcpp/message.h",
       "include/lib/fidl/llcpp/server.h",
       "include/lib/fidl/llcpp/service_handler_interface.h",
