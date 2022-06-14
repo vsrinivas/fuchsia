@@ -9,7 +9,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/virtio_block_rs_bin_test",
+        binary: "bin/virtio_block_bin_test",
     },
     use: [
         {

@@ -30,8 +30,7 @@ static constexpr char kVirtioBlockId[] = "block-id";
 static constexpr size_t kNumSectors = 2;
 static constexpr uint8_t kSectorBytes[kNumSectors] = {0xab, 0xcd};
 
-constexpr auto kVirtioBlockUrl =
-    "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
+constexpr auto kVirtioBlockUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
 
 struct VirtioBlockTestParam {
   std::string test_name;

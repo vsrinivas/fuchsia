@@ -5,7 +5,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/virtio_block_rs",
+        binary: "bin/virtio_block",
     },
     capabilities: [
         {

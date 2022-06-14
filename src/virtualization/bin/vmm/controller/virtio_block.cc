@@ -45,14 +45,14 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
                                async_dispatcher_t* dispatcher, size_t component_name_suffix) {
   if (launcher) {
     fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cmx";
+    launch_info.url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
     auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
     launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
     services->Connect(block_.NewRequest());
   } else {
     const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
     constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
-    auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
+    auto component_url = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
 
     zx_status_t status = CreateDynamicComponent(
         realm, kVirtioBlockCollectionName, kComponentName.c_str(), component_url,

@@ -102,7 +102,7 @@ mod tests {
     // those test cases).
     //
     // Instead we adapt some test cases to use a pre-generated disk image. For details of this
-    // image see the target //src/virtualization/bin/vmm/device/virtio_block_rs:qcow_test
+    // image see the target //src/virtualization/bin/vmm/device/virtio_block:qcow_test
     fn create_backend() -> QcowBackend {
         let test_image =
             std::fs::File::open("/pkg/data/qcow_test.qcow2").expect("Failed to open qcow file");

@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/virtio_block_rs"
+        "binary": "bin/virtio_block"
     },
     "sandbox": {
         "services": [
