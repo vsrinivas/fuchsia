@@ -13,7 +13,6 @@ use {
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
-    pkgfs_ramdisk::PkgfsRamdisk,
     std::convert::TryInto,
 };
 
@@ -43,22 +42,6 @@ async fn main_inner() -> Result<(), Error> {
 
     let blobfs_client = blobfs.client();
 
-    // Spin up a pkgfs.
-    let pkgfs = PkgfsRamdisk::builder()
-        .blobfs(blobfs)
-        .system_image_merkle(system_image_package.meta_far_merkle_root())
-        .start()
-        .expect("started pkgfs");
-
-    // Open the test package.
-    let pkgfs_backed_package = fuchsia_fs::directory::open_directory(
-        &pkgfs.root_dir_proxy().unwrap(),
-        &format!("packages/{}/0", test_package.name()),
-        fio::OpenFlags::DIRECTORY,
-    )
-    .await
-    .unwrap();
-
     let (pkgdir_backed_package, dir_request) = fidl::endpoints::create_proxy().unwrap();
     package_directory::serve(
         vfs::execution_scope::ExecutionScope::new(),
@@ -81,12 +64,8 @@ async fn main_inner() -> Result<(), Error> {
         .for_each_concurrent(None, move |svc| {
             match svc {
                 IncomingService::Harness(stream) => Task::spawn(
-                    serve_harness(
-                        stream,
-                        Clone::clone(&pkgfs_backed_package),
-                        Clone::clone(&pkgdir_backed_package),
-                    )
-                    .map(|res| res.context("while serving test.fidl.pkg.Harness")),
+                    serve_harness(stream, Clone::clone(&pkgdir_backed_package))
+                        .map(|res| res.context("while serving test.fidl.pkg.Harness")),
                 ),
             }
             .unwrap_or_else(|e| {
@@ -101,13 +80,11 @@ async fn main_inner() -> Result<(), Error> {
 /// Serve test.fidl.pkg.Harness.
 async fn serve_harness(
     mut stream: HarnessRequestStream,
-    pkgfs_backed_package: fio::DirectoryProxy,
     pkgdir_backed_package: fio::DirectoryProxy,
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await.context("while pulling next event")? {
         let HarnessRequest::ConnectPackage { backing, dir, responder } = event;
         let pkg = match backing {
-            Backing::Pkgfs => &pkgfs_backed_package,
             Backing::Pkgdir => &pkgdir_backed_package,
         };
 

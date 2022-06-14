@@ -7,7 +7,7 @@
 //! meaningful differences in File behavior.
 
 use {
-    crate::{dirs_to_test, just_pkgfs_for_now, repeat_by_n, PackageSource},
+    crate::{dirs_to_test, repeat_by_n, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
@@ -113,21 +113,7 @@ async fn read_at() {
 
 async fn read_at_per_package_source(source: PackageSource) {
     for path in ["file", "meta/file", "meta"] {
-        let expected_contents = if path == "meta" {
-            if source.is_pkgdir() {
-                // "/meta opened as a file supports ReadAt()"
-                TEST_PKG_HASH
-            } else {
-                let file =
-                    open_file(&source.dir, "meta", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
-                let result =
-                    file.read_at(fio::MAX_BUF, 0).await.unwrap().map_err(zx::Status::from_raw);
-                assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
-                continue;
-            }
-        } else {
-            path
-        };
+        let expected_contents = if path == "meta" { TEST_PKG_HASH } else { path };
         assert_read_at_max_buffer_success(&source.dir, path, expected_contents).await;
         assert_read_at_success(&source.dir, path, expected_contents).await;
 
@@ -243,20 +229,6 @@ async fn seek() {
 async fn seek_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
     for path in ["file", "meta/file", "meta"] {
-        if source.is_pkgfs() && path == "meta" {
-            // "/meta opened as a file supports Seek()"
-            for seek_offset in 0..TEST_PKG_HASH.len() as i64 {
-                let file =
-                    open_file(root_dir, "meta", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
-                let result = file
-                    .seek(fio::SeekOrigin::Current, seek_offset)
-                    .await
-                    .unwrap()
-                    .map_err(zx::Status::from_raw);
-                assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
-            }
-            continue;
-        }
         let expected = if path == "meta" { TEST_PKG_HASH } else { path };
         assert_seek_success(root_dir, path, expected, fio::SeekOrigin::Start).await;
         assert_seek_success(root_dir, path, expected, fio::SeekOrigin::Current).await;
@@ -371,8 +343,6 @@ async fn get_buffer() {
     }
 }
 
-// Ported over version of TestMapFileForRead, TestMapFileForReadPrivate, TestMapFileForReadExact,
-// TestMapFilePrivateAndExact, TestMapFileForWrite, and TestMapFileForExec from pkgfs_test.go.
 async fn get_buffer_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
 
@@ -445,48 +415,27 @@ async fn get_buffer_per_package_source(source: PackageSource) {
     assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
 
     let file = open_file(root_dir, "meta/file", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
-    // files under `/meta` behave like content files for `GetBuffer()`
-    if !source.is_pkgdir() {
-        for flags in [
-            fio::VmoFlags::EXECUTE,
-            fio::VmoFlags::SHARED_BUFFER,
-            fio::VmoFlags::SHARED_BUFFER | fio::VmoFlags::PRIVATE_CLONE,
-            fio::VmoFlags::WRITE,
-        ] {
-            let result =
-                file.get_backing_memory(flags).await.unwrap().map_err(zx::Status::from_raw);
-            if flags.contains(fio::VmoFlags::SHARED_BUFFER) {
-                assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
-            } else {
-                assert_eq!(result, Err(zx::Status::BAD_HANDLE));
-            }
-        }
-    } else {
-        let result = file
-            .get_backing_memory(fio::VmoFlags::EXECUTE)
-            .await
-            .unwrap()
-            .map_err(zx::Status::from_raw);
-        assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
-        let result = file
-            .get_backing_memory(fio::VmoFlags::SHARED_BUFFER)
-            .await
-            .unwrap()
-            .map_err(zx::Status::from_raw);
-        assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
-        let result = file
-            .get_backing_memory(fio::VmoFlags::PRIVATE_CLONE | fio::VmoFlags::SHARED_BUFFER)
-            .await
-            .unwrap()
-            .map_err(zx::Status::from_raw);
-        assert_eq!(result, Err(zx::Status::INVALID_ARGS));
-        let result = file
-            .get_backing_memory(fio::VmoFlags::WRITE)
-            .await
-            .unwrap()
-            .map_err(zx::Status::from_raw);
-        assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
-    }
+    let result = file
+        .get_backing_memory(fio::VmoFlags::EXECUTE)
+        .await
+        .unwrap()
+        .map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
+    let result = file
+        .get_backing_memory(fio::VmoFlags::SHARED_BUFFER)
+        .await
+        .unwrap()
+        .map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
+    let result = file
+        .get_backing_memory(fio::VmoFlags::PRIVATE_CLONE | fio::VmoFlags::SHARED_BUFFER)
+        .await
+        .unwrap()
+        .map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::INVALID_ARGS));
+    let result =
+        file.get_backing_memory(fio::VmoFlags::WRITE).await.unwrap().map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
 }
 
 fn round_up_to_4096_multiple(val: usize) -> usize {
@@ -542,12 +491,8 @@ async fn clone_per_package_source(source: PackageSource) {
     assert_clone_success(root_dir, "meta/file", "meta/file").await;
     assert_clone_sends_on_open_event(root_dir, "file").await;
     assert_clone_sends_on_open_event(root_dir, "meta/file").await;
-
-    // `/meta` opened as a file supports `Clone()`.
-    if source.is_pkgdir() {
-        assert_clone_success(root_dir, "meta", TEST_PKG_HASH).await;
-        assert_clone_sends_on_open_event(root_dir, "meta").await;
-    }
+    assert_clone_success(root_dir, "meta", TEST_PKG_HASH).await;
+    assert_clone_sends_on_open_event(root_dir, "meta").await;
 }
 
 async fn assert_clone_success(
@@ -591,110 +536,6 @@ async fn assert_clone_sends_on_open_event(package_root: &fio::DirectoryProxy, pa
     if let Err(e) = verify_file_clone_sends_on_open_event(file_proxy).await {
         panic!("failed to verify clone. parent: {:?}, error: {:#}", path, e);
     }
-}
-
-#[fuchsia::test]
-async fn get_flags() {
-    for source in just_pkgfs_for_now().await {
-        get_flags_per_package_source(source).await
-    }
-}
-
-async fn get_flags_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
-    assert_get_flags_content_file(&root_dir).await;
-    assert_get_flags_meta_file(&root_dir, "meta").await;
-    assert_get_flags_meta_file(&root_dir, "meta/file").await;
-}
-
-/// Opens a file and verifies the result of GetFlags() and GetFlags().
-async fn assert_get_flags(
-    root_dir: &fio::DirectoryProxy,
-    path: &str,
-    open_flag: fio::OpenFlags,
-    status_flags: fio::OpenFlags,
-    right_flags: fio::OpenFlags,
-) {
-    let file = open_file(root_dir, path, open_flag).await.unwrap();
-
-    // The flags returned by GetFlags() do NOT always match the flags the file is opened with
-    // because File servers each AND the open flag with some other flags. The `status_flags` and
-    // `right_flags` parameters are meant to account for these implementation differences.
-    let expected_flags = open_flag & (status_flags | right_flags);
-
-    // Verify GetFlags() produces the expected result.
-    let (status, flags) = file.get_flags().await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
-    assert_eq!(flags, expected_flags);
-}
-
-async fn assert_get_flags_content_file(root_dir: &fio::DirectoryProxy) {
-    // Content files are served by blobfs, which uses the VFS library to filter out some of the
-    // open flags before returning.
-    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/storage/vfs/cpp/file_connection.cc;l=125;drc=6a01adba247f273496ee8b9227c24252a459a534
-    let status_flags = fio::OpenFlags::APPEND | fio::OpenFlags::NODE_REFERENCE;
-    let right_flags = fio::OpenFlags::RIGHT_READABLE
-        | fio::OpenFlags::RIGHT_WRITABLE
-        | fio::OpenFlags::RIGHT_EXECUTABLE;
-
-    for open_flag in [
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::CREATE_IF_ABSENT,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_EXECUTABLE,
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::NOT_DIRECTORY,
-        fio::OpenFlags::RIGHT_EXECUTABLE,
-        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::CREATE_IF_ABSENT,
-        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::POSIX_EXECUTABLE,
-        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::NOT_DIRECTORY,
-    ] {
-        assert_get_flags(root_dir, "file", open_flag, status_flags, right_flags).await;
-    }
-}
-
-async fn assert_get_flags_meta_file(root_dir: &fio::DirectoryProxy, path: &str) {
-    // Meta files are served by thinfs, which filter out some of the open flags before returning.
-    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/thinfs/zircon/rpc/rpc.go;l=562-565;drc=fb0bf809980ed37f43a15e4292fb10bf943cb00e
-    let status_flags = fio::OpenFlags::APPEND;
-    let right_flags = fio::OpenFlags::RIGHT_READABLE
-        | fio::OpenFlags::RIGHT_WRITABLE
-        | fio::OpenFlags::NODE_REFERENCE;
-
-    for open_flag in [
-        fio::OpenFlags::empty(),
-        fio::OpenFlags::RIGHT_READABLE,
-        fio::OpenFlags::CREATE_IF_ABSENT,
-        fio::OpenFlags::DIRECTORY,
-        fio::OpenFlags::NODE_REFERENCE,
-        fio::OpenFlags::DESCRIBE,
-        fio::OpenFlags::POSIX_WRITABLE,
-        fio::OpenFlags::POSIX_EXECUTABLE,
-        fio::OpenFlags::NOT_DIRECTORY,
-    ] {
-        assert_get_flags(root_dir, path, open_flag, status_flags, right_flags).await;
-    }
-}
-
-#[fuchsia::test]
-async fn set_flags() {
-    for source in just_pkgfs_for_now().await {
-        set_flags_per_package_source(source).await
-    }
-}
-
-async fn set_flags_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
-    assert_set_flags_meta_file_unsupported(&root_dir, "meta").await;
-    assert_set_flags_meta_file_unsupported(&root_dir, "meta/file").await;
-}
-
-async fn assert_set_flags_meta_file_unsupported(root_dir: &fio::DirectoryProxy, path: &str) {
-    let file = open_file(root_dir, path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
-    let status = file.set_flags(fio::OpenFlags::APPEND).await.unwrap();
-    assert_eq!(status, zx::Status::NOT_SUPPORTED.into_raw());
 }
 
 #[fuchsia::test]
@@ -754,13 +595,6 @@ async fn unsupported_per_package_source(source: PackageSource) {
     // documentation because files without WRITE permissions *should* yield BAD_HANDLE for these
     // methods.
     verify_unsupported_calls(root_dir, "file", zx::Status::BAD_HANDLE).await;
-
-    // Rights enforced for write operations.
-    if source.is_pkgdir() {
-        verify_unsupported_calls(root_dir, "meta/file", zx::Status::BAD_HANDLE).await;
-        verify_unsupported_calls(root_dir, "meta", zx::Status::BAD_HANDLE).await;
-    } else {
-        verify_unsupported_calls(root_dir, "meta/file", zx::Status::NOT_SUPPORTED).await;
-        verify_unsupported_calls(root_dir, "meta", zx::Status::NOT_SUPPORTED).await;
-    }
+    verify_unsupported_calls(root_dir, "meta/file", zx::Status::BAD_HANDLE).await;
+    verify_unsupported_calls(root_dir, "meta", zx::Status::BAD_HANDLE).await;
 }

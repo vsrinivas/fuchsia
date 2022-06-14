@@ -99,7 +99,7 @@ async fn assert_open_root_directory(
 ) {
     let package_root = &source.dir;
 
-    let mut success_flags = vec![
+    let success_flags = vec![
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -109,42 +109,15 @@ async fn assert_open_root_directory(
         fio::OpenFlags::POSIX_WRITABLE,
         fio::OpenFlags::POSIX_EXECUTABLE,
     ];
-    if source.is_pkgfs() {
-        success_flags.extend_from_slice(&[
-            // "OPEN_RIGHT_WRITABLE not supported"
-            fio::OpenFlags::RIGHT_WRITABLE,
-            // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
-            fio::OpenFlags::TRUNCATE,
-            fio::OpenFlags::APPEND,
-            // "OPEN_FLAG_CREATE not supported"
-            fio::OpenFlags::CREATE,
-            fio::OpenFlags::CREATE | fio::OpenFlags::CREATE_IF_ABSENT,
-            // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
-            // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
-        ])
-    }
 
-    let child_paths = if source.is_pkgfs() {
-        // See generate_lax_directory_paths for comments on how pkgfs path handling behavior differs.
-        generate_lax_directory_paths(child_base_path)
-    } else {
-        generate_valid_directory_paths(child_base_path)
-    };
+    let child_paths = generate_valid_directory_paths(child_base_path);
     let lax_child_paths = generate_lax_directory_paths(child_base_path);
     let all_flag_mode_and_child_paths =
         product3(ALL_FLAGS, ALL_MODES, lax_child_paths.iter().map(String::as_str));
 
     let success_flags_modes_and_child_paths =
-        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str)).filter_map(
-            if source.is_pkgdir() {
-                // "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY"
-                filter_out_contradictory_open_parameters
-            } else {
-                dont_filter_anything
-            },
-        );
+        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str))
+            .filter_map(filter_out_contradictory_open_parameters);
     assert_open_success(
         package_root,
         parent_path,
@@ -160,12 +133,6 @@ async fn assert_open_root_directory(
         verify_open_failed,
     )
     .await;
-}
-
-fn dont_filter_anything(
-    (flag, mode, child_path): (fio::OpenFlags, u32, &str),
-) -> Option<(fio::OpenFlags, u32, &'_ str)> {
-    Some((flag, mode, child_path))
 }
 
 fn filter_out_contradictory_open_parameters(
@@ -265,7 +232,7 @@ async fn assert_open_content_directory(
 ) {
     let package_root = &source.dir;
 
-    let mut success_flags = vec![
+    let success_flags = vec![
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::RIGHT_EXECUTABLE,
@@ -275,33 +242,14 @@ async fn assert_open_content_directory(
         fio::OpenFlags::POSIX_WRITABLE,
         fio::OpenFlags::POSIX_EXECUTABLE,
     ];
-    if source.is_pkgfs() {
-        success_flags.extend_from_slice(&[
-            // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
-            // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
-        ])
-    }
-    let child_paths = if source.is_pkgfs() {
-        // See generate_lax_directory_paths for comments on how pkgfs path handling behavior differs.
-        generate_lax_directory_paths(child_base_path)
-    } else {
-        generate_valid_directory_paths(child_base_path)
-    };
+    let child_paths = generate_valid_directory_paths(child_base_path);
     let lax_child_paths = generate_lax_directory_paths(child_base_path);
     let all_flag_mode_and_child_paths =
         product3(ALL_FLAGS, ALL_MODES, lax_child_paths.iter().map(String::as_str));
 
     let success_flags_modes_and_child_paths =
-        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str)).filter_map(
-            if source.is_pkgdir() {
-                // "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY"
-                filter_out_contradictory_open_parameters
-            } else {
-                dont_filter_anything
-            },
-        );
+        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str))
+            .filter_map(filter_out_contradictory_open_parameters);
     assert_open_success(
         package_root,
         parent_path,
@@ -364,57 +312,35 @@ async fn assert_open_content_file(
 ) {
     let package_root = &source.dir;
 
-    let mut success_flags = vec![
+    let success_flags = vec![
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OpenFlags::APPEND,
         fio::OpenFlags::NODE_REFERENCE,
         fio::OpenFlags::DESCRIBE,
         fio::OpenFlags::POSIX_WRITABLE,
         fio::OpenFlags::POSIX_EXECUTABLE,
         fio::OpenFlags::NOT_DIRECTORY,
     ];
-    if source.is_pkgdir() {
-        // "content files support `OPEN_FLAG_APPEND`"
-        success_flags.push(fio::OpenFlags::APPEND);
-    }
-    if source.is_pkgfs() {
-        // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-        success_flags.extend([fio::OpenFlags::CREATE_IF_ABSENT]);
-    }
-    let mut success_modes = vec![
+
+    let success_modes = vec![
         0,
+        fio::MODE_TYPE_DIRECTORY,
         fio::MODE_TYPE_BLOCK_DEVICE,
         fio::MODE_TYPE_FILE,
         fio::MODE_TYPE_SOCKET,
         fio::MODE_TYPE_SERVICE,
     ];
-    if source.is_pkgdir() {
-        // "mode is ignored other than consistency checking with
-        // OPEN_FLAG{_NOT,}_DIRECTORY and meta-as-file/meta-as-dir duality"
-        success_modes.push(fio::MODE_TYPE_DIRECTORY);
-    }
 
-    let child_paths = if source.is_pkgfs() {
-        // See generate_lax_directory_paths for comments on how pkgfs path handling behavior differs.
-        // Extra Note: "trailing slash implies OPEN_FLAG_DIRECTORY"
-        generate_lax_directory_paths(child_base_path)
-    } else {
-        generate_valid_file_paths(child_base_path)
-    };
+    let child_paths = generate_valid_file_paths(child_base_path);
     let lax_child_paths = generate_lax_directory_paths(child_base_path);
     let all_flag_mode_and_child_paths =
         product3(ALL_FLAGS, ALL_MODES, lax_child_paths.iter().map(String::as_str));
 
     let success_flags_modes_and_child_paths =
-        product3(success_flags, success_modes, child_paths.iter().map(String::as_str)).filter_map(
-            if source.is_pkgdir() {
-                // "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY"
-                filter_out_contradictory_open_parameters
-            } else {
-                dont_filter_anything
-            },
-        );
+        product3(success_flags, success_modes, child_paths.iter().map(String::as_str))
+            .filter_map(filter_out_contradictory_open_parameters);
     assert_open_success(
         package_root,
         parent_path,
@@ -439,7 +365,7 @@ async fn assert_open_meta_as_directory_and_file(
 ) {
     let package_root = &source.dir;
 
-    let mut base_directory_success_flags = vec![
+    let base_directory_success_flags = vec![
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::DIRECTORY,
@@ -448,20 +374,6 @@ async fn assert_open_meta_as_directory_and_file(
         fio::OpenFlags::POSIX_WRITABLE,
         fio::OpenFlags::POSIX_EXECUTABLE,
     ];
-    if source.is_pkgfs() {
-        base_directory_success_flags.extend_from_slice(&[
-            // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
-            // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
-        ])
-    }
-    // pkgfs allows meta (file or directory) to be opened EXECUTABLE if opened directly from the
-    // package root, but not if "re-opened" from itself, i.e. opening "." from the meta dir.
-    if source.is_pkgfs() && parent_path == "." {
-        // "meta/ directories and files may not be opened with OPEN_RIGHT_EXECUTABLE"
-        base_directory_success_flags.push(fio::OpenFlags::RIGHT_EXECUTABLE);
-    }
 
     // To open "meta" as a directory:
     //  1. mode cannot be MODE_TYPE_FILE
@@ -473,7 +385,7 @@ async fn assert_open_meta_as_directory_and_file(
         product(base_directory_success_flags.clone(), [fio::MODE_TYPE_DIRECTORY])
             .chain(product(
                 base_directory_success_flags.clone().into_iter().filter_map(|f| {
-                    if f.intersects(fio::OpenFlags::NOT_DIRECTORY) && source.is_pkgdir() {
+                    if f.intersects(fio::OpenFlags::NOT_DIRECTORY) {
                         // "OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY are mutually exclusive"
                         None
                     } else {
@@ -502,24 +414,12 @@ async fn assert_open_meta_as_directory_and_file(
                 ],
             ));
 
-    let directory_child_paths = if source.is_pkgfs() {
-        // See generate_lax_directory_paths for comments on how pkgfs path handling behavior differs.
-        generate_lax_directory_paths(child_base_path)
-    } else {
-        generate_valid_directory_paths(child_base_path)
-    };
+    let directory_child_paths = generate_valid_directory_paths(child_base_path);
     let lax_child_paths = generate_lax_directory_paths(child_base_path);
 
     let directory_only_child_paths = generate_valid_directory_only_paths(child_base_path);
     let all_flag_mode_and_child_paths =
         product3(ALL_FLAGS, ALL_MODES, lax_child_paths.iter().map(String::as_str));
-
-    let extra_directory_only_child_paths = if source.is_pkgdir() {
-        // "trailing slash implies OPEN_FLAG_DIRECTORY"
-        Some(directory_only_child_paths.as_slice())
-    } else {
-        None
-    };
 
     let directory_flags_modes_and_child_paths =
         product(directory_flags_and_modes, directory_child_paths.iter().map(String::as_str))
@@ -533,14 +433,9 @@ async fn assert_open_meta_as_directory_and_file(
                     fio::MODE_TYPE_SOCKET,
                     fio::MODE_TYPE_SERVICE,
                 ],
-                extra_directory_only_child_paths.into_iter().flatten().map(String::as_str),
+                directory_only_child_paths.iter().map(String::as_str),
             ))
-            .filter_map(if source.is_pkgdir() {
-                // "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY"
-                filter_out_contradictory_open_parameters
-            } else {
-                dont_filter_anything
-            });
+            .filter_map(filter_out_contradictory_open_parameters);
     assert_open_success(
         package_root,
         parent_path,
@@ -555,7 +450,7 @@ async fn assert_open_meta_as_directory_and_file(
     //    a. MODE_TYPE_DIRECTORY is set
     //    b. OPEN_FLAG_DIRECTORY is set
     //    c. OPEN_FLAG_NODE_REFERENCE is set
-    let mut base_file_flags = vec![
+    let base_file_flags = vec![
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::DESCRIBE,
@@ -563,14 +458,6 @@ async fn assert_open_meta_as_directory_and_file(
         fio::OpenFlags::POSIX_EXECUTABLE,
         fio::OpenFlags::NOT_DIRECTORY,
     ];
-    if source.is_pkgfs() {
-        base_file_flags.extend_from_slice(&[
-            // "meta/ directories and files may not be opened with OPEN_RIGHT_EXECUTABLE"
-            fio::OpenFlags::RIGHT_EXECUTABLE,
-            // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
-        ])
-    }
 
     let file_flags_and_modes = product(
         base_file_flags
@@ -583,23 +470,12 @@ async fn assert_open_meta_as_directory_and_file(
         base_file_flags.iter().copied(),
         [0, fio::MODE_TYPE_BLOCK_DEVICE, fio::MODE_TYPE_SOCKET, fio::MODE_TYPE_SERVICE],
     ));
-    let file_child_paths = if source.is_pkgfs() {
-        // See generate_lax_directory_paths for comments on how pkgfs path handling behavior differs.
-        // Extra Note: "trailing slash implies OPEN_FLAG_DIRECTORY"
-        generate_lax_directory_paths(child_base_path)
-    } else {
-        generate_valid_file_paths(child_base_path)
-    };
+    let file_child_paths = generate_valid_file_paths(child_base_path);
 
     let file_flags_modes_and_child_paths =
         product(file_flags_and_modes, file_child_paths.iter().map(String::as_str))
             .map(|((flag, mode), path)| (flag, mode, path))
-            .filter_map(if source.is_pkgdir() {
-                // "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY"
-                filter_out_contradictory_open_parameters
-            } else {
-                dont_filter_anything
-            });
+            .filter_map(filter_out_contradictory_open_parameters);
 
     assert_open_success(
         package_root,
@@ -630,7 +506,7 @@ async fn assert_open_meta_subdirectory(
 ) {
     let package_root = &source.dir;
 
-    let mut success_flags = vec![
+    let success_flags = vec![
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::DIRECTORY,
@@ -639,35 +515,16 @@ async fn assert_open_meta_subdirectory(
         fio::OpenFlags::POSIX_WRITABLE,
         fio::OpenFlags::POSIX_EXECUTABLE,
     ];
-    if source.is_pkgfs() {
-        success_flags.extend_from_slice(&[
-            // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
-            // "OPEN_FLAG_NOT_DIRECTORY enforced"
-            fio::OpenFlags::NOT_DIRECTORY,
-        ])
-    }
 
-    let child_paths = if source.is_pkgfs() {
-        // See generate_lax_directory_paths for comments on how pkgfs path handling behavior differs.
-        generate_lax_directory_paths(child_base_path)
-    } else {
-        generate_valid_directory_paths(child_base_path)
-    };
+    let child_paths = generate_valid_directory_paths(child_base_path);
 
     let lax_child_paths = generate_lax_directory_paths(child_base_path);
     let all_flag_mode_and_child_paths =
         product3(ALL_FLAGS, ALL_MODES, lax_child_paths.iter().map(String::as_str));
 
     let success_flags_modes_and_child_paths =
-        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str)).filter_map(
-            if source.is_pkgdir() {
-                // "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY"
-                filter_out_contradictory_open_parameters
-            } else {
-                dont_filter_anything
-            },
-        );
+        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str))
+            .filter_map(filter_out_contradictory_open_parameters);
     assert_open_success(
         package_root,
         parent_path,
@@ -688,7 +545,7 @@ async fn assert_open_meta_subdirectory(
 async fn assert_open_meta_file(source: &PackageSource, parent_path: &str, child_base_path: &str) {
     let package_root = &source.dir;
 
-    let mut success_flags = vec![
+    let success_flags = vec![
         fio::OpenFlags::empty(),
         fio::OpenFlags::RIGHT_READABLE,
         fio::OpenFlags::NODE_REFERENCE,
@@ -697,36 +554,16 @@ async fn assert_open_meta_file(source: &PackageSource, parent_path: &str, child_
         fio::OpenFlags::POSIX_EXECUTABLE,
         fio::OpenFlags::NOT_DIRECTORY,
     ];
-    if source.is_pkgfs() {
-        success_flags.extend_from_slice(&[
-            // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
-            fio::OpenFlags::CREATE_IF_ABSENT,
-            // "OPEN_FLAG_DIRECTORY enforced"
-            fio::OpenFlags::DIRECTORY,
-        ])
-    }
 
-    let child_paths = if source.is_pkgfs() {
-        // See generate_lax_directory_paths for comments on how pkgfs path handling behavior differs.
-        // Extra Note: "trailing slash implies OPEN_FLAG_DIRECTORY"
-        generate_lax_directory_paths(child_base_path)
-    } else {
-        generate_valid_file_paths(child_base_path)
-    };
+    let child_paths = generate_valid_file_paths(child_base_path);
 
     let lax_child_paths = generate_lax_directory_paths(child_base_path);
     let all_flag_mode_and_child_paths =
         product3(ALL_FLAGS, ALL_MODES, lax_child_paths.iter().map(String::as_str));
 
     let success_flags_modes_and_child_paths =
-        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str)).filter_map(
-            if source.is_pkgdir() {
-                // "mode checked for consistency with OPEN_FLAG{_NOT,}_DIRECTORY"
-                filter_out_contradictory_open_parameters
-            } else {
-                dont_filter_anything
-            },
-        );
+        product3(success_flags, ALL_MODES, child_paths.iter().map(String::as_str))
+            .filter_map(filter_out_contradictory_open_parameters);
     assert_open_success(
         package_root,
         parent_path,
@@ -771,12 +608,11 @@ fn open_node(
 }
 
 /// Generates the same path variations as [`generate_valid_directory_paths`]
-/// plus extra path variations that pkgfs accepts but pkgdir rejects.
+/// plus extra invalid path variations using segments of "." and "..", leading "/", trailing "/",
+/// and repeated "/".
 fn generate_lax_directory_paths(base: &str) -> Vec<String> {
     let mut paths = generate_valid_directory_paths(base);
     if base == "." {
-        // pkgfs doesn't give "." any special treatment, so add the "/"-variations
-        // TODO(fxbug.dev/85012): figure out if pkgdir should accept these
         paths.extend([format!("{}/", base), format!("/{}", base), format!("/{}/", base)]);
     }
     // "path segment rules are checked"
@@ -983,12 +819,10 @@ async fn clone_per_package_source(source: PackageSource) {
         fio::OpenFlags::DESCRIBE,
         fio::OpenFlags::CLONE_SAME_RIGHTS,
     ] {
-        if source.is_pkgdir() && (flag.intersects(fio::OpenFlags::APPEND)) {
-            // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
+        if flag.intersects(fio::OpenFlags::APPEND) {
             continue;
         }
-        if source.is_pkgdir() && (flag.intersects(fio::OpenFlags::RIGHT_WRITABLE)) {
-            // "OPEN_RIGHT_WRITABLE not supported"
+        if flag.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
             continue;
         }
 
@@ -1025,10 +859,8 @@ async fn clone_per_package_source(source: PackageSource) {
         )
         .await;
         if flag.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
-            // pkgdir requires a directory to have EXECUTABLE rights for it to be cloned
-            // ("Hierarchical rights enforcement"), Since both pkgfs and pkgdir reject opening
-            // meta dirs with EXECUTABLE rights, we can't get a valid parent directory to
-            // test with. So no test is possible here.
+            // neither the "meta" dir nor meta subdirectories can be opened with the executable
+            // right, so they can not be cloned with the executable right.
         } else {
             assert_clone_directory_overflow(
                 root_dir,
@@ -1375,16 +1207,8 @@ async fn get_token_per_package_source(source: PackageSource) {
 
         let (status, token) = dir.get_token().await.unwrap();
         let status = zx::Status::ok(status);
-        if source.is_pkgdir() {
-            // "GetToken() not supported"
-            assert_eq!(status, Err(zx::Status::NOT_SUPPORTED));
-            assert!(token.is_none(), "token should be absent");
-        } else {
-            status.expect("status ok");
-            // We can't do anything meaningful with this token beyond checking it's Some because
-            // all the IO APIs that consume tokens are unsupported.
-            let _token = token.expect("token present");
-        }
+        assert_eq!(status, Err(zx::Status::NOT_SUPPORTED));
+        assert!(token.is_none(), "token should be absent");
     }
 }
 
@@ -1435,15 +1259,8 @@ async fn assert_get_flags_directory_calls(
     let (status, flags) = dir.get_flags().await.unwrap();
     let status = zx::Status::ok(status);
 
-    if source.is_pkgdir() {
-        // "GetFlags() is supported on directories"
-        let result = status.map(|()| flags);
-        assert_eq!(result, Ok(expected_rights))
-    } else {
-        // Verify nodeGetFlags() is not supported.
-        assert_eq!(status, Err(zx::Status::NOT_SUPPORTED));
-        assert_eq!(flags, fio::OpenFlags::empty());
-    }
+    let result = status.map(|()| flags);
+    assert_eq!(result, Ok(expected_rights))
 }
 
 #[fuchsia::test]
@@ -1485,32 +1302,18 @@ async fn assert_unsupported_directory_calls(
     );
 
     // Verify link() is not supported.
-    let token: zx::Handle = if source.is_pkgdir() {
-        // "GetToken() not supported"
-        // Since we can't call GetToken, we can't construct a valid token to pass here.
-        // But we can at least test what it does with an arbitrary event object.
-        zx::Event::create().unwrap().into()
-    } else {
-        let (status, token) = parent.get_token().await.unwrap();
-        zx::Status::ok(status).expect("status ok");
-        token.unwrap()
-    };
+    // Since we can't call GetToken, we can't construct a valid token to pass here.
+    // But we can at least test what it does with an arbitrary event object.
+    let token: zx::Handle = zx::Event::create().unwrap().into();
     assert_eq!(
         zx::Status::from_raw(parent.link(child_base_path, token, "link").await.unwrap()),
         zx::Status::NOT_SUPPORTED
     );
 
     // Verify rename() is not supported.
-    let token = if source.is_pkgdir() {
-        // "GetToken() not supported"
-        // Since we can't call GetToken, we can't construct a valid token to pass here.
-        // But we can at least test what it does with an arbitrary event object.
-        zx::Event::create().unwrap()
-    } else {
-        let (status, token) = parent.get_token().await.unwrap();
-        zx::Status::ok(status).expect("status ok");
-        zx::Event::from(token.unwrap())
-    };
+    // Since we can't call GetToken, we can't construct a valid token to pass here.
+    // But we can at least test what it does with an arbitrary event object.
+    let token = zx::Event::create().unwrap();
     assert_eq!(
         parent.rename(child_base_path, token, "renamed").await.unwrap(),
         Err(zx::sys::ZX_ERR_NOT_SUPPORTED)

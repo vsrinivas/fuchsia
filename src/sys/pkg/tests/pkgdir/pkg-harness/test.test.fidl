@@ -5,10 +5,10 @@ library test.fidl.pkg;
 
 using fuchsia.io;
 
-/// Packages can either be backed by pkgfs (SWD v1) or pkgdir (SWD v2).
+/// Packages can only be backed by package-directory. To test a new implementation, add a field
+/// here so the tests can request it.
 type Backing = strict enum {
-    PKGFS = 0;
-    PKGDIR = 1;
+    PKGDIR = 0;
 };
 
 /// Error codes for `ConnectPackage`.
@@ -23,14 +23,14 @@ type ConnectError = strict enum {
 /// This protocol can be used to connect to a package.
 @discoverable
 protocol Harness {
-    /// Connects to a package backed by either pkgfs or pkg-dir. A package is a directory tree with
+    /// Connects to a package with the requested `backing`. A package is a directory tree with
     /// additional constraints: e.g. there is a meta/ subdirectory, meta/contents and meta/package
     /// files, the entries in meta/contents appear in the directory tree itself, and the files are
     /// not writable. For more context, see the package
     /// [documentation](https://fuchsia.dev/fuchsia-src/concepts/packages/package).
     ///
-    /// + request `backing` is the source of package we want (e.g. pkgfs or pkg-dir backed).
-    /// + request `dir` is the server end of directory to connect the package to.
+    /// + request `backing` is the package directory implementation.
+    /// + request `dir` is the server end to serve the package over.
     /// * error a `ConnectError` value indicating failure reason.
     ConnectPackage(resource struct {
         backing Backing;

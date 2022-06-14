@@ -33,12 +33,6 @@ impl U64Verifier for AnyU64 {
     fn verify(&self, _num: u64) {}
 }
 
-/// pkgfs uses this timestamp when it doesn't have something else to return.
-/// This value is computed via a comedy of errors in the implementation involving
-/// The golang zero time.Time value, returning seconds instead of nanoseconds, and
-/// integer underflow.
-const PKGFS_PLACEHOLDER_TIME: u64 = 18446744011573954816;
-
 async fn get_attr_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
     #[derive(Debug)]
@@ -87,19 +81,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         ".",
         Args {
             open_flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-            expected_mode: fio::MODE_TYPE_DIRECTORY
-                | if source.is_pkgdir() {
-                    // "mode protection group and other bytes not set"
-                    0o700
-                } else {
-                    0o755
-                },
-            time_verifier: if source.is_pkgdir() {
-                // "creation and modification times unimplemented"
-                Box::new(0)
-            } else {
-                Box::new(PKGFS_PLACEHOLDER_TIME)
-            },
+            expected_mode: fio::MODE_TYPE_DIRECTORY | 0o700,
+            time_verifier: Box::new(0),
             ..Default::default()
         },
     )
@@ -108,19 +91,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "dir",
         Args {
-            expected_mode: fio::MODE_TYPE_DIRECTORY
-                | if source.is_pkgdir() {
-                    // "mode protection group and other bytes not set"
-                    0o700
-                } else {
-                    0o755
-                },
-            time_verifier: if source.is_pkgdir() {
-                // "creation and modification times unimplemented"
-                Box::new(0)
-            } else {
-                Box::new(PKGFS_PLACEHOLDER_TIME)
-            },
+            expected_mode: fio::MODE_TYPE_DIRECTORY | 0o700,
+            time_verifier: Box::new(0),
             ..Default::default()
         },
     )
@@ -144,21 +116,10 @@ async fn get_attr_per_package_source(source: PackageSource) {
         "meta",
         Args {
             open_mode: fio::MODE_TYPE_FILE,
-            expected_mode: fio::MODE_TYPE_FILE
-                | if source.is_pkgdir() {
-                    // "mode protection group and other bytes not set"
-                    0o600
-                } else {
-                    0o644
-                },
+            expected_mode: fio::MODE_TYPE_FILE | 0o600,
             expected_content_size: 64,
             expected_storage_size: 64,
-            time_verifier: if source.is_pkgdir() {
-                // "creation and modification times unimplemented"
-                Box::new(0)
-            } else {
-                Box::new(PKGFS_PLACEHOLDER_TIME)
-            },
+            time_verifier: Box::new(0),
             ..Default::default()
         },
     )
@@ -168,21 +129,10 @@ async fn get_attr_per_package_source(source: PackageSource) {
         "meta",
         Args {
             open_mode: fio::MODE_TYPE_DIRECTORY,
-            expected_mode: fio::MODE_TYPE_DIRECTORY
-                | if source.is_pkgdir() {
-                    // "mode protection group and other bytes not set"
-                    0o700
-                } else {
-                    0o755
-                },
+            expected_mode: fio::MODE_TYPE_DIRECTORY | 0o700,
             expected_content_size: 75,
             expected_storage_size: 75,
-            time_verifier: if source.is_pkgdir() {
-                // "creation and modification times unimplemented"
-                Box::new(0)
-            } else {
-                Box::new(PKGFS_PLACEHOLDER_TIME)
-            },
+            time_verifier: Box::new(0),
             ..Default::default()
         },
     )
@@ -191,21 +141,10 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "meta/dir",
         Args {
-            expected_mode: fio::MODE_TYPE_DIRECTORY
-                | if source.is_pkgdir() {
-                    // "mode protection group and other bytes not set"
-                    0o700
-                } else {
-                    0o755
-                },
+            expected_mode: fio::MODE_TYPE_DIRECTORY | 0o700,
             expected_content_size: 75,
             expected_storage_size: 75,
-            time_verifier: if source.is_pkgdir() {
-                // "creation and modification times unimplemented"
-                Box::new(0)
-            } else {
-                Box::new(PKGFS_PLACEHOLDER_TIME)
-            },
+            time_verifier: Box::new(0),
             ..Default::default()
         },
     )
@@ -214,21 +153,10 @@ async fn get_attr_per_package_source(source: PackageSource) {
         root_dir,
         "meta/file",
         Args {
-            expected_mode: fio::MODE_TYPE_FILE
-                | if source.is_pkgdir() {
-                    // "mode protection group and other bytes not set"
-                    0o600
-                } else {
-                    0o644
-                },
+            expected_mode: fio::MODE_TYPE_FILE | 0o600,
             expected_content_size: 9,
             expected_storage_size: 9,
-            time_verifier: if source.is_pkgdir() {
-                // "creation and modification times unimplemented"
-                Box::new(0)
-            } else {
-                Box::new(PKGFS_PLACEHOLDER_TIME)
-            },
+            time_verifier: Box::new(0),
             ..Default::default()
         },
     )
@@ -374,6 +302,124 @@ async fn verify_describe_meta_file_success(node: fio::NodeProxy) -> Result<(), E
 }
 
 #[fuchsia::test]
+async fn get_flags() {
+    for source in dirs_to_test().await {
+        get_flags_per_package_source(source).await
+    }
+}
+
+async fn get_flags_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
+    assert_get_flags_root_dir(&root_dir, ".").await;
+    assert_get_flags_content_dir(&root_dir, "dir").await;
+    assert_get_flags_content_file(&root_dir, "file").await;
+    assert_get_flags_meta(&root_dir, "meta").await;
+    assert_get_flags_meta_file(&root_dir, "meta/file").await;
+    assert_get_flags_meta_dir(&root_dir, "meta/dir").await;
+}
+
+/// Opens a file and verifies the result of GetFlags().
+async fn assert_get_flags(root_dir: &fio::DirectoryProxy, path: &str, open_flags: fio::OpenFlags) {
+    let node = fuchsia_fs::directory::open_node(root_dir, path, open_flags, 0).await.unwrap();
+
+    // The flags returned by GetFlags() do NOT always match the flags the node is opened with
+    // because GetFlags only returns those flags that are meaningful after the Open call (instead
+    // of only during).
+    // C++ VFS https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/storage/vfs/cpp/file_connection.cc;l=124;drc=6865fdce358ab86d9d2deae5d4693786fbe88d45
+    // Rust VFS https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/storage/vfs/rust/src/common.rs;l=21;drc=8cea889022e03a335c73905f5b0aa80937165c03
+    let mask = fio::OpenFlags::APPEND
+        | fio::OpenFlags::NODE_REFERENCE
+        | fio::OpenFlags::RIGHT_READABLE
+        | fio::OpenFlags::RIGHT_WRITABLE
+        | fio::OpenFlags::RIGHT_EXECUTABLE;
+    let expected_flags = open_flags & (mask);
+
+    // Verify GetFlags() produces the expected result.
+    let (status, flags) = node.get_flags().await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(flags, expected_flags);
+}
+
+async fn assert_get_flags_root_dir(root_dir: &fio::DirectoryProxy, path: &str) {
+    for open_flag in [
+        fio::OpenFlags::empty(),
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::DIRECTORY,
+        fio::OpenFlags::NODE_REFERENCE,
+        fio::OpenFlags::DESCRIBE,
+    ] {
+        assert_get_flags(root_dir, path, open_flag).await;
+    }
+}
+
+async fn assert_get_flags_content_dir(root_dir: &fio::DirectoryProxy, path: &str) {
+    for open_flag in [
+        fio::OpenFlags::empty(),
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::DIRECTORY,
+        fio::OpenFlags::NODE_REFERENCE,
+        fio::OpenFlags::DESCRIBE,
+    ] {
+        assert_get_flags(root_dir, path, open_flag).await;
+    }
+}
+
+async fn assert_get_flags_content_file(root_dir: &fio::DirectoryProxy, path: &str) {
+    for open_flag in [
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::NOT_DIRECTORY,
+        fio::OpenFlags::RIGHT_EXECUTABLE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::NOT_DIRECTORY,
+    ] {
+        assert_get_flags(root_dir, path, open_flag).await;
+    }
+}
+
+async fn assert_get_flags_meta(root_dir: &fio::DirectoryProxy, path: &str) {
+    for open_flag in [
+        fio::OpenFlags::empty(),
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::DIRECTORY,
+        fio::OpenFlags::NODE_REFERENCE,
+        fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::NOT_DIRECTORY,
+    ] {
+        assert_get_flags(root_dir, path, open_flag).await;
+    }
+}
+
+async fn assert_get_flags_meta_file(root_dir: &fio::DirectoryProxy, path: &str) {
+    for open_flag in [
+        fio::OpenFlags::empty(),
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::NODE_REFERENCE,
+        fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::NOT_DIRECTORY,
+    ] {
+        assert_get_flags(root_dir, path, open_flag).await;
+    }
+}
+
+async fn assert_get_flags_meta_dir(root_dir: &fio::DirectoryProxy, path: &str) {
+    for open_flag in [
+        fio::OpenFlags::empty(),
+        fio::OpenFlags::RIGHT_READABLE,
+        fio::OpenFlags::NODE_REFERENCE,
+        fio::OpenFlags::DESCRIBE,
+        fio::OpenFlags::POSIX_EXECUTABLE,
+        fio::OpenFlags::DIRECTORY,
+    ] {
+        assert_get_flags(root_dir, path, open_flag).await;
+    }
+}
+
+#[fuchsia::test]
 async fn set_flags() {
     for source in dirs_to_test().await {
         set_flags_per_package_source(source).await
@@ -397,48 +443,18 @@ async fn set_flags_per_package_source(source: PackageSource) {
     do_set_flags(package_root, "file", fio::MODE_TYPE_FILE, fio::OpenFlags::empty())
         .await
         .assert_ok();
-    {
-        let outcome =
-            do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OpenFlags::empty()).await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
-    {
-        let outcome =
-            do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OpenFlags::APPEND).await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
-    {
-        let outcome =
-            do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OpenFlags::empty())
-                .await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
-    {
-        let outcome =
-            do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OpenFlags::APPEND)
-                .await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
+    do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OpenFlags::empty())
+        .await
+        .assert_ok();
+    do_set_flags(package_root, "meta", fio::MODE_TYPE_FILE, fio::OpenFlags::APPEND)
+        .await
+        .assert_ok();
+    do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OpenFlags::empty())
+        .await
+        .assert_ok();
+    do_set_flags(package_root, "meta/file", fio::MODE_TYPE_FILE, fio::OpenFlags::APPEND)
+        .await
+        .assert_ok();
 }
 
 struct SetFlagsOutcome<'a> {

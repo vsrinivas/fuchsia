@@ -28,7 +28,6 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/package-directory",
     "//src/sys/pkg/testing/blobfs-ramdisk",
-    "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -41,7 +40,6 @@ fuchsia_component("pkg-harness") {
   deps = [
     ":bin",
     "//src/storage/bin/blobfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
 }

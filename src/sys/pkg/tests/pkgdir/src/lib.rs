@@ -7,7 +7,6 @@ use {
     fidl_fuchsia_io as fio,
     fidl_test_fidl_pkg::{Backing, HarnessMarker},
     fuchsia_component::client::connect_to_protocol,
-    std::fmt::Debug,
 };
 
 mod directory;
@@ -25,31 +24,17 @@ async fn dirs_to_test() -> impl Iterator<Item = PackageSource> {
         async move {
             let (dir, server) = create_proxy::<fio::DirectoryMarker>().unwrap();
             let () = proxy.connect_package(backing, server).await.unwrap().unwrap();
-            PackageSource { dir, backing }
+            PackageSource { dir, _backing: backing }
         }
     };
-    IntoIterator::into_iter([connect(Backing::Pkgfs).await, connect(Backing::Pkgdir).await])
-}
-
-// TODO(fxbug.dev/75481): migrate all callers to use `dirs_to_test`
-async fn just_pkgfs_for_now() -> impl Iterator<Item = PackageSource> {
-    dirs_to_test().await.filter(|source| source.is_pkgfs())
+    // To test a new implementation, add the corresponding field from the test.fidl.pkg/Backing enum
+    // here.
+    IntoIterator::into_iter([connect(Backing::Pkgdir).await])
 }
 
 struct PackageSource {
-    backing: Backing,
+    _backing: Backing,
     dir: fio::DirectoryProxy,
-}
-impl PackageSource {
-    #[allow(dead_code)]
-    fn is_pkgfs(&self) -> bool {
-        self.backing == Backing::Pkgfs
-    }
-
-    #[allow(dead_code)]
-    fn is_pkgdir(&self) -> bool {
-        self.backing == Backing::Pkgdir
-    }
 }
 
 macro_rules! flag_list {
@@ -75,7 +60,7 @@ const MODE_TYPES: &[(u32, &str)] = &flag_list![
 #[derive(PartialEq, Eq)]
 struct Mode(u32);
 
-impl Debug for Mode {
+impl std::fmt::Debug for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut flags = self.0;
         let flag_strings = MODE_TYPES.iter().filter_map(|&flag| {
