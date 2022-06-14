@@ -80,6 +80,7 @@ fuchsia_test_package("use_h264_decoder_tests") {
   test_components = [ ":use_h264_decoder_test_v2" ]
   test_specs = {
     environments = [
+      atlas_env,
       astro_env,
       emu_env,
       nelson_env,
@@ -103,11 +104,9 @@ fuchsia_test_component("use_h264_decoder_tiled_output_test_v2") {
 fuchsia_test_package("use_h264_decoder_tests_x86") {
   test_components = [ ":use_h264_decoder_tiled_output_test_v2" ]
   test_specs = {
-    # Enable these once media-driver rolls
-    # TODO(fxbug.dev/99091): Re-enable.
     environments = [
-      #atlas_env,
-      #nuc_env,
+      atlas_env,
+      nuc_env,
     ]
   }
 }
@@ -128,6 +127,7 @@ fuchsia_test_package("use_h264_decoder_frame_num_gaps_tests") {
   test_components = [ ":use_h264_decoder_frame_num_gaps_test_v2" ]
   test_specs = {
     environments = [
+      atlas_env,
       astro_env,
       emu_env,
       nelson_env,
@@ -174,7 +174,6 @@ fuchsia_test_package("use_h264_multi_decoder_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
-      nuc_env,
     ]
   }
 }
@@ -198,7 +197,6 @@ fuchsia_test_package("use_h264_multi_decoder_flake_repro_tests") {
       nelson_env,
       sherlock_env,
       vim3_env,
-      nuc_env,
     ]
   }
 }
@@ -221,6 +219,7 @@ fuchsia_test_package("use_h264_decoder_stream_switching_tests") {
 
     # Disable on qemu because the test flakes so far. TODO(fxbug.dev/49932) Re-enable in emu_env.
     environments = [
+      atlas_env,
       astro_env,
       nelson_env,
       sherlock_env,
@@ -249,6 +248,7 @@ fuchsia_test_package("use_h264_multi_decoder_stream_switching_tests") {
     # Should pass when run on VIM2, sherlock, or QEMU.
 
     environments = [
+      atlas_env,
       astro_env,
       nelson_env,
       sherlock_env,
@@ -277,6 +277,7 @@ fuchsia_test_package(
     # Should pass when run on VIM2, astro, sherlock, or QEMU.
 
     environments = [
+      atlas_env,
       astro_env,
       nelson_env,
       sherlock_env,
@@ -365,6 +366,7 @@ fuchsia_test_package("h264_decoder_fuzzer_tests") {
 
   test_specs = {
     environments = [
+      atlas_env,
       astro_env,
       sherlock_env,
       vim3_env,
@@ -433,10 +435,12 @@ fuchsia_test_package("use_vp9_decoder_tests") {
   test_specs = {
     # Astro has enough contiguous memory for this.
     environments = [
+      atlas_env,
       astro_env,
       nelson_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
@@ -445,11 +449,9 @@ fuchsia_test_package("use_vp9_decoder_tests") {
 fuchsia_test_package("use_vp9_decoder_tests_x86") {
   test_components = [ ":use_vp9_decoder_tiled_output_test_v2" ]
   test_specs = {
-    # Enable these once media-driver rolls
-    # TODO(fxbug.dev/99091): Re-enable.
     environments = [
-      #atlas_env,
-      #nuc_env,
+      atlas_env,
+      nuc_env,
     ]
   }
 }
@@ -475,7 +477,7 @@ fuchsia_test_package("use_vp9_decoder_stream_switching_tests") {
   }
 }
 
-# Test amlogic-video vp9 decoder's ability to skip frames until keyframe when
+# Test vp9 decoder's ability to skip frames until keyframe when
 # input starts at non-keyframe.
 fuchsia_unittest_component("use_vp9_decoder_skip_first_frame_test_v2") {
   manifest = "use_media_decoder/meta/use_vp9_decoder_skip_first_frame_test.cml"
@@ -491,9 +493,11 @@ fuchsia_test_package("use_vp9_decoder_skip_first_frame_tests") {
 
   test_specs = {
     environments = [
+      atlas_env,
       astro_env,
       sherlock_env,
       vim3_env,
+      nuc_env,
     ]
   }
 }
