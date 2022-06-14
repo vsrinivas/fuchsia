@@ -375,17 +375,21 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
 
   Status Bind(fidl::WireSyncClient<fuchsia_sysmem::Allocator>& allocator, uint32_t token_handle) {
     DASSERT(!collection_);
-    zx::channel h1;
-    zx::channel h2;
-    zx_status_t status = zx::channel::create(0, &h1, &h2);
-    if (status != ZX_OK)
-      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d", status);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+    if (!endpoints.is_ok())
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d",
+                      endpoints.status_value());
 
-    status = allocator->BindSharedCollection(zx::channel(token_handle), std::move(h2)).status();
+    zx_status_t status =
+        allocator
+            ->BindSharedCollection(
+                fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken>(zx::channel(token_handle)),
+                std::move(endpoints->server))
+            .status();
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Internal error: %d", status);
 
-    collection_ = fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>(std::move(h1));
+    collection_ = fidl::WireSyncClient(std::move(endpoints->client));
 
     return MAGMA_STATUS_OK;
   }
@@ -540,19 +544,18 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
   }
 
   Status CreateBufferCollectionToken(uint32_t* handle_out) override {
-    zx::channel h1;
-    zx::channel h2;
-    zx_status_t status = zx::channel::create(0, &h1, &h2);
-    if (status != ZX_OK)
-      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d", status);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+    if (!endpoints.is_ok())
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d",
+                      endpoints.status_value());
 
-    auto result = sysmem_allocator_->AllocateSharedCollection(std::move(h2));
+    auto result = sysmem_allocator_->AllocateSharedCollection(std::move(endpoints->server));
     if (result.status() != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "AllocateSharedCollection failed: %d",
                       result.status());
     }
 
-    *handle_out = h1.release();
+    *handle_out = endpoints->client.TakeChannel().release();
     return MAGMA_STATUS_OK;
   }
 
@@ -579,17 +582,17 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
   magma_status_t AllocateBufferCollection(
       const fuchsia_sysmem::wire::BufferCollectionConstraints& constraints, std::string name,
       fuchsia_sysmem::wire::BufferCollectionInfo2* info_out) {
-    zx::channel h1;
-    zx::channel h2;
-    zx_status_t status = zx::channel::create(0, &h1, &h2);
-    if (status != ZX_OK)
-      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d", status);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+    if (!endpoints.is_ok())
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create channels: %d",
+                      endpoints.status_value());
 
-    status = sysmem_allocator_->AllocateNonSharedCollection(std::move(h2)).status();
+    zx_status_t status =
+        sysmem_allocator_->AllocateNonSharedCollection(std::move(endpoints->server)).status();
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to allocate buffer: %d", status);
 
-    fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(h1));
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection(std::move(endpoints->client));
 
     if (!name.empty()) {
       // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -626,7 +629,8 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 // static
 std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Import(uint32_t handle) {
   zx::channel channel = zx::channel(handle);
-  fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator(std::move(channel));
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator(
+      fidl::ClientEnd<fuchsia_sysmem::Allocator>(std::move(channel)));
   return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
 }
 

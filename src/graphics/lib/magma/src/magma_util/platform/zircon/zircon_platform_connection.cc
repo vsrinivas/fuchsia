@@ -69,8 +69,10 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
       };
 
   // Note: the async loop should not be started until we assign |server_binding_|.
-  server_binding_ = fidl::BindServer(async_loop()->dispatcher(), std::move(server_endpoint), this,
-                                     std::move(unbind_callback));
+  server_binding_ =
+      fidl::BindServer(async_loop()->dispatcher(),
+                       fidl::ServerEnd<fuchsia_gpu_magma::Primary>(std::move(server_endpoint)),
+                       this, std::move(unbind_callback));
   return true;
 }
 

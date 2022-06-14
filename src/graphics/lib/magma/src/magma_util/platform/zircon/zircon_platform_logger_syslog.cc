@@ -31,7 +31,8 @@ bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> channel) {
 
   auto zircon_handle = static_cast<ZirconPlatformHandle*>(channel.get());
 
-  auto result = fidl::WireCall<fuchsia_logger::LogSink>(zx::unowned_channel(zircon_handle->get()))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_logger::LogSink>(
+                                   zx::unowned_channel(zircon_handle->get())))
                     ->Connect(std::move(remote_socket));
   if (result.status() != ZX_OK)
     return false;

@@ -12,7 +12,7 @@
 namespace magma {
 class ZirconPlatformDeviceClient : public PlatformDeviceClient {
  public:
-  ZirconPlatformDeviceClient(magma_handle_t handle) : channel_(handle) {}
+  explicit ZirconPlatformDeviceClient(magma_handle_t handle) : channel_(zx::channel(handle)) {}
 
   std::unique_ptr<PlatformConnectionClient> Connect() {
     uint64_t inflight_params = 0;
@@ -30,9 +30,9 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     if (status != ZX_OK)
       return DRETP(nullptr, "zx::channel::create failed");
 
-    auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())
-                      ->Connect2(magma::PlatformThreadId().id(), std::move(endpoints->server),
-                                 std::move(server_notification_endpoint));
+    auto result = fidl::WireCall(channel_)->Connect2(magma::PlatformThreadId().id(),
+                                                     std::move(endpoints->server),
+                                                     std::move(server_notification_endpoint));
 
     if (result.status() != ZX_OK)
       return DRETP(nullptr, "magma_DeviceConnect2 failed: %d", result.status());
@@ -80,7 +80,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
   }
 
  private:
-  zx::channel channel_;
+  fidl::ClientEnd<fuchsia_gpu_magma::Device> channel_;
 };
 
 // static

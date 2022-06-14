@@ -37,8 +37,8 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
     zx::channel client_endpoint;
     zx_status_t status = zx::channel::create(0, &client_endpoint, &server_endpoint_);
     if (status == ZX_OK)
-      perf_counter_events_ = fidl::WireSyncClient<fuchsia_gpu_magma::PerformanceCounterEvents>(
-          std::move(client_endpoint));
+      perf_counter_events_ = fidl::WireSyncClient(
+          fidl::ClientEnd<fuchsia_gpu_magma::PerformanceCounterEvents>(std::move(client_endpoint)));
     return status;
   }
   uint64_t pool_id() override { return pool_id_; }
@@ -131,7 +131,8 @@ void PrimaryWrapper::OnNotifyMemoryImported(
 PrimaryWrapper::PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messages,
                                uint64_t max_inflight_bytes)
     : loop_(&kAsyncLoopConfigNeverAttachToThread),
-      client_(std::move(channel), loop_.dispatcher(), this),
+      client_(fidl::ClientEnd<fuchsia_gpu_magma::Primary>(std::move(channel)), loop_.dispatcher(),
+              this),
       max_inflight_messages_(max_inflight_messages),
       max_inflight_bytes_(max_inflight_bytes) {
   if (max_inflight_messages == 0 || max_inflight_bytes == 0)
@@ -345,7 +346,11 @@ magma_status_t PrimaryWrapper::CreatePerformanceCounterBufferPool(uint64_t pool_
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status =
-      client_->CreatePerformanceCounterBufferPool(pool_id, std::move(event_channel)).status();
+      client_
+          ->CreatePerformanceCounterBufferPool(
+              pool_id, fidl::ServerEnd<fuchsia_gpu_magma::PerformanceCounterEvents>(
+                           std::move(event_channel)))
+          .status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -896,8 +901,9 @@ std::unique_ptr<magma::PlatformHandle> PlatformConnectionClient::RetrieveAccessT
     magma::PlatformHandle* channel) {
   if (!channel)
     return DRETP(nullptr, "No channel");
-  auto rsp = fidl::WireCall<fuchsia_gpu_magma::PerformanceCounterAccess>(
-                 zx::unowned_channel(static_cast<const ZirconPlatformHandle*>(channel)->get()))
+  auto rsp = fidl::WireCall(
+                 fidl::UnownedClientEnd<fuchsia_gpu_magma::PerformanceCounterAccess>(
+                     zx::unowned_channel(static_cast<const ZirconPlatformHandle*>(channel)->get())))
                  ->GetPerformanceCountToken();
   if (!rsp.ok()) {
     return DRETP(nullptr, "GetPerformanceCountToken failed");
