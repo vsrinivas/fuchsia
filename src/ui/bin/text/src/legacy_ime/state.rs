@@ -7,7 +7,7 @@
 use {
     anyhow::{Context as _, Error},
     core::convert::TryInto,
-    fidl_fuchsia_input as input, fidl_fuchsia_ui_input as uii, fidl_fuchsia_ui_text as txt,
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_input as uii,
     fuchsia_syslog::fx_log_warn,
     std::{
         char,
@@ -95,14 +95,6 @@ impl ImeState {
                 )
             });
         }
-    }
-
-    /// Creates a new TextPoint corresponding to the byte index `index`.
-    pub fn new_point(&mut self, index: usize) -> txt::Position {
-        let id = self.next_text_point_id;
-        self.next_text_point_id += 1;
-        self.text_points.insert(id, index);
-        txt::Position { id }
     }
 
     // gets start and len, and sets base/extent to start of string if don't exist

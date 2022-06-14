@@ -38,7 +38,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus-rustc",
-    "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
