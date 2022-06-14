@@ -9,6 +9,8 @@
 
 #include <fbl/intrusive_double_list.h>
 
+namespace dfv2 {
+
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
  public:
   DriverHostComponent(fidl::ClientEnd<fuchsia_driver_host::DriverHost> driver_host,
@@ -20,10 +22,12 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
       fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
       fuchsia_component_runner::wire::ComponentStartInfo start_info);
 
-  zx::status<uint64_t> GetProcessKoid();
+  zx::status<uint64_t> GetProcessKoid() const;
 
  private:
   fidl::WireSharedClient<fuchsia_driver_host::DriverHost> driver_host_;
 };
+
+}  // namespace dfv2
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_HOST_H_

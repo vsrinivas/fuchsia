@@ -31,6 +31,8 @@
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.
 
+namespace dfv2 {
+
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
                      public DriverBinder {
  public:
@@ -103,5 +105,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   // failed to start.
   std::vector<std::weak_ptr<Node>> orphaned_nodes_;
 };
+
+}  // namespace dfv2
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_RUNNER_H_

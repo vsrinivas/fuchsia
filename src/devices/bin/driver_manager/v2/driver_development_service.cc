@@ -19,7 +19,7 @@ namespace fdf = fuchsia_driver_framework;
 
 namespace driver_manager {
 
-DriverDevelopmentService::DriverDevelopmentService(DriverRunner& driver_runner,
+DriverDevelopmentService::DriverDevelopmentService(dfv2::DriverRunner& driver_runner,
                                                    async_dispatcher_t* dispatcher)
     : driver_runner_(driver_runner), dispatcher_(dispatcher) {}
 
@@ -62,7 +62,8 @@ class DeviceInfoIterator : public fidl::WireServer<fdd::DeviceInfoIterator> {
 };
 }  // namespace
 
-zx::status<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator, const Node* node) {
+zx::status<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
+                                                   const dfv2::Node* node) {
   fdd::wire::DeviceInfo device_info(allocator);
 
   device_info.set_id(allocator, reinterpret_cast<uint64_t>(node));
@@ -132,8 +133,8 @@ void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
   auto arena = std::make_unique<fidl::Arena<512>>();
   std::vector<fdd::wire::DeviceInfo> device_infos;
 
-  std::unordered_set<const Node*> unique_nodes;
-  std::queue<const Node*> remaining_nodes;
+  std::unordered_set<const dfv2::Node*> unique_nodes;
+  std::queue<const dfv2::Node*> remaining_nodes;
   remaining_nodes.push(driver_runner_.root_node().get());
   while (!remaining_nodes.empty()) {
     auto node = remaining_nodes.front();

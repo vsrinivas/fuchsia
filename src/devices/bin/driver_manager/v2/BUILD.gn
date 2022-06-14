@@ -1,0 +1,80 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("driver_runner") {
+  sources = [
+    "driver_component.cc",
+    "driver_component.h",
+    "driver_host.cc",
+    "driver_host.h",
+    "driver_runner.cc",
+    "driver_runner.h",
+    "node.cc",
+    "node.h",
+  ]
+
+  deps = [
+    "//sdk/lib/driver2:llcpp",
+    "//src/devices/lib/log",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_llcpp",
+    "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_llcpp",
+    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_llcpp",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/inspect",
+  ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+}
+
+executable("driver_runner_test") {
+  testonly = true
+  sources = [ "driver_runner_test.cc" ]
+
+  deps = [
+    ":driver_runner",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.driver.host",
+    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+}
+
+fuchsia_unittest_component("driver-runner-test") {
+  deps = [ ":driver_runner_test" ]
+}
+
+fuchsia_test_package("driver-runner-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+
+  test_components = [ ":driver-runner-test" ]
+}

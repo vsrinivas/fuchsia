@@ -14,6 +14,8 @@
 #include "src/devices/bin/driver_manager/v2/driver_component.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 
+namespace dfv2 {
+
 // This function creates a composite offer based on a 'directory service' offer.
 std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeDirOffer(
     fidl::AnyArena& arena, fuchsia_component_decl::wire::Offer& offer,
@@ -104,6 +106,23 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
        async_dispatcher_t* dispatcher);
   ~Node() override;
 
+  fidl::VectorView<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::AnyArena& arena) const;
+
+  fuchsia_driver_framework::wire::NodeAddArgs CreateAddArgs(fidl::AnyArena& arena);
+
+  void OnBind() const;
+  void AddToParents();
+
+  // Begin the removal process for a Node. This function ensures that a Node is
+  // only removed after all of its children are removed. It also ensures that
+  // a Node is only removed after the driver that is bound to it has been stopped.
+  // This is safe to call multiple times.
+  // There are lots of reasons a Node's removal will be started:
+  //   - The Node's driver component wants to exit.
+  //   - The `node_ref` server has become unbound.
+  //   - The Node's parent is being removed.
+  void Remove();
+
   const std::string& name() const;
   const DriverComponent* driver_component() const;
   const std::vector<Node*>& parents() const;
@@ -123,22 +142,6 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_parents_names(std::vector<std::string> names) { parents_names_ = std::move(names); }
 
   std::string TopoName() const;
-  fidl::VectorView<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::AnyArena& arena) const;
-
-  fuchsia_driver_framework::wire::NodeAddArgs CreateAddArgs(fidl::AnyArena& arena);
-
-  void OnBind() const;
-  void AddToParents();
-
-  // Begin the removal process for a Node. This function ensures that a Node is
-  // only removed after all of its children are removed. It also ensures that
-  // a Node is only removed after the driver that is bound to it has been stopped.
-  // This is safe to call multiple times.
-  // There are lots of reasons a Node's removal will be started:
-  //   - The Node's driver component wants to exit.
-  //   - The `node_ref` server has become unbound.
-  //   - The Node's parent is being removed.
-  void Remove();
 
  private:
   // fidl::WireServer<fuchsia_driver_framework::NodeController>
@@ -170,5 +173,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
 };
+
+}  // namespace dfv2
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V2_NODE_H_

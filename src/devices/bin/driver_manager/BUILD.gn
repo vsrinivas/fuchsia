@@ -13,7 +13,10 @@ group("tests") {
   # TODO(fxbug.dev/86747): Failed test disabled on coverage.
   # Please fix the failure and remove the condition below.
   if (!is_coverage) {
-    deps += [ ":driver-manager-tests" ]
+    deps += [
+      ":driver-manager-tests",
+      "v2:driver-runner-tests",
+    ]
   }
 }
 
@@ -97,8 +100,8 @@ source_set("lib") {
   ]
 
   public_deps = [
-    ":driver_runner",
     ":manifest_parser",
+    "v2:driver_runner",
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_llcpp",
@@ -256,42 +259,6 @@ fuchsia_unittest_component("driver-host-loader-service-test") {
   deps = [ ":driver_host_loader_service_test" ]
 }
 
-source_set("driver_runner") {
-  sources = [
-    "v2/driver_component.cc",
-    "v2/driver_component.h",
-    "v2/driver_host.cc",
-    "v2/driver_host.h",
-    "v2/driver_runner.cc",
-    "v2/driver_runner.h",
-    "v2/node.cc",
-    "v2/node.h",
-  ]
-
-  deps = [
-    "//sdk/lib/driver2:llcpp",
-    "//src/devices/lib/log",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/zircon-internal",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
-    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_llcpp",
-    "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_llcpp",
-    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_llcpp",
-    "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/inspect",
-  ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-}
-
 executable("manifest_parser_test") {
   testonly = true
   sources = [ "manifest_parser_test.cc" ]
@@ -304,35 +271,6 @@ executable("manifest_parser_test") {
 
 fuchsia_unittest_component("manifest_parser_test_component") {
   deps = [ ":manifest_parser_test" ]
-}
-
-executable("driver_runner_test") {
-  testonly = true
-  sources = [ "v2/driver_runner_test.cc" ]
-
-  deps = [
-    ":driver_runner",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.driver.host",
-    "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zircon-internal",
-  ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-}
-
-fuchsia_unittest_component("driver-runner-test") {
-  manifest = "meta/driver_runner_test.cml"
-
-  deps = [ ":driver_runner_test" ]
 }
 
 cpp_fuzzer("manifest-parser-fuzzer") {
@@ -354,7 +292,6 @@ fuchsia_test_package("driver-manager-tests") {
   test_components = [
     ":driver-host-loader-service-test",
     ":driver-manager-test",
-    ":driver-runner-test",
     ":manifest_parser_test_component",
   ]
 }

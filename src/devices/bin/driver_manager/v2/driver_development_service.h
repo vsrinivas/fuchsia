@@ -16,7 +16,8 @@ namespace driver_manager {
 class DriverDevelopmentService
     : public fidl::WireServer<fuchsia_driver_development::DriverDevelopment> {
  public:
-  explicit DriverDevelopmentService(DriverRunner& driver_runner, async_dispatcher_t* dispatcher);
+  explicit DriverDevelopmentService(dfv2::DriverRunner& driver_runner,
+                                    async_dispatcher_t* dispatcher);
 
   zx::status<> Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
 
@@ -31,7 +32,7 @@ class DriverDevelopmentService
   void BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
                            BindAllUnboundNodesCompleter::Sync& completer) override;
 
-  DriverRunner& driver_runner_;
+  dfv2::DriverRunner& driver_runner_;
   async_dispatcher_t* const dispatcher_;
 };
 

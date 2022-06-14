@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.driver.host/cpp/wire.h>
 
+namespace dfv2 {
 class DriverComponent : public fidl::WireServer<fuchsia_component_runner::ComponentController>,
                         public fidl::WireAsyncEventHandler<fuchsia_driver_host::Driver> {
  public:
@@ -75,5 +76,7 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   RequestRemoveCallback request_remove_;
   RemoveCallback remove_;
 };
+
+}  // namespace dfv2
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_COMPONENT_H_

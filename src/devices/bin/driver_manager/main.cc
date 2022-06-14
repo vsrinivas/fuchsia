@@ -370,7 +370,7 @@ int main(int argc, char** argv) {
 
   devfs_init(coordinator.root_device(), loop.dispatcher());
 
-  std::optional<DriverRunner> driver_runner;
+  std::optional<dfv2::DriverRunner> driver_runner;
   std::optional<driver_manager::DriverDevelopmentService> driver_development_service;
   std::optional<driver_manager::DevfsExporter> devfs_exporter;
 

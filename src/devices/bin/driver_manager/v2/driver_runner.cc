@@ -37,7 +37,9 @@ namespace frunner = fuchsia_component_runner;
 namespace fcomponent = fuchsia_component;
 namespace fdecl = fuchsia_component_decl;
 
-using InspectStack = std::stack<std::pair<inspect::Node*, const Node*>>;
+using InspectStack = std::stack<std::pair<inspect::Node*, const dfv2::Node*>>;
+
+namespace dfv2 {
 
 namespace {
 
@@ -646,3 +648,5 @@ zx::status<> DriverRunner::CreateComponent(std::string name, Collection collecti
       .Then(std::move(create_callback));
   return zx::ok();
 }
+
+}  // namespace dfv2

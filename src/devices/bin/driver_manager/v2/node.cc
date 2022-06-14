@@ -13,6 +13,8 @@
 namespace fdf = fuchsia_driver_framework;
 namespace fdecl = fuchsia_component_decl;
 
+namespace dfv2 {
+
 namespace {
 
 template <typename R, typename F>
@@ -517,3 +519,5 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   // child is waiting to be bound, it is owned by the driver runner.
   completer.ReplySuccess();
 }
+
+}  // namespace dfv2

@@ -8,6 +8,8 @@
 
 namespace fdh = fuchsia_driver_host;
 
+namespace dfv2 {
+
 DriverComponent::DriverComponent(
     fidl::ClientEnd<fdh::Driver> driver,
     fidl::ServerEnd<fuchsia_component_runner::ComponentController> component,
@@ -70,3 +72,5 @@ void DriverComponent::StopComponent() {
   driver_ref_->Close(ZX_OK);
   driver_ref_.reset();
 }
+
+}  // namespace dfv2

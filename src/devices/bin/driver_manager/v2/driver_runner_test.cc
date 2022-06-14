@@ -34,6 +34,8 @@ namespace fcd = fuchsia_component_decl;
 using namespace testing;
 using namespace inspect::testing;
 
+using namespace dfv2;
+
 class FakeContext : public fpromise::context {
  public:
   fpromise::executor* executor() const override {
