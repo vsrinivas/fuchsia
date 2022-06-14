@@ -565,15 +565,21 @@ impl BlockServer {
         // Handling requests from fifo
         let fifo_future = async {
             let fifo = fasync::Fifo::<BlockFifoRequest, BlockFifoResponse>::from_fifo(server_fifo)?;
-            while let Some(request) = fifo.read_entry().await? {
-                if let Some(response) = self.handle_fifo_request(request).await {
-                    fifo.write_entries(std::slice::from_ref(&response)).await?;
+            loop {
+                match fifo.read_entry().await {
+                    Ok(request) => {
+                        if let Some(response) = self.handle_fifo_request(request).await {
+                            fifo.write_entries(std::slice::from_ref(&response)).await?;
+                        }
+                        // if `self.handle_fifo_request(..)` returns None, then
+                        // there's no reply for this request. This occurs for
+                        // requests part of a group request where
+                        // `BLOCK_GROUP_LAST` flag is not set.
+                    }
+                    Err(zx::Status::PEER_CLOSED) => break Result::<_, Error>::Ok(()),
+                    Err(e) => break Err(e.into()),
                 }
-                // if `self.handle_fifo_request(..)` returns None, then there's no reply for this
-                // request. This occurs for requests part of a group request where
-                // `BLOCK_GROUP_LAST` flag is not set.
             }
-            Result::<_, Error>::Ok(())
         };
 
         // Handling requests from fidl

@@ -719,9 +719,9 @@ impl Future for FifoPoller {
 
         // Receive responses.
         let fifo = state.fifo.as_ref().unwrap(); // Safe because poll_send_requests checks.
-        while let Poll::Ready(result) = fifo.read(context) {
+        while let Poll::Ready(result) = fifo.read_one(context) {
             match result {
-                Ok(Some(response)) => {
+                Ok(response) => {
                     let request_id = response.request_id;
                     // If the request isn't in the map, assume that it's a cancelled read.
                     if let Some(request_state) = state.map.get_mut(&request_id) {
@@ -731,7 +731,7 @@ impl Future for FifoPoller {
                         }
                     }
                 }
-                _ => {
+                Err(_) => {
                     state.terminate();
                     return Poll::Ready(());
                 }
@@ -1055,7 +1055,13 @@ mod tests {
             let fifo_future = Abortable::new(
                 async {
                     let fifo = fasync::Fifo::from_fifo(server_fifo).expect("from_fifo failed");
-                    while let Some(request) = fifo.read_entry().await.expect("read_entry failed") {
+                    loop {
+                        let request = match fifo.read_entry().await {
+                            Ok(r) => r,
+                            Err(zx::Status::PEER_CLOSED) => break,
+                            Err(e) => panic!("read_entry failed {:?}", e),
+                        };
+
                         let response = self.fifo_handler.as_ref()(request);
                         fifo.write_entries(std::slice::from_ref(&response))
                             .await

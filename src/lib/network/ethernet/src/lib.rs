@@ -9,7 +9,7 @@
 use bitflags::bitflags;
 use fidl_fuchsia_hardware_ethernet as sys;
 use fidl_fuchsia_hardware_ethernet_ext::EthernetInfo;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, FifoReadable as _};
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
     ready,
@@ -350,13 +350,9 @@ impl ClientInner {
         &self,
         cx: &mut Context<'_>,
     ) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
-        match ready!(self.tx_fifo.try_read(cx))? {
-            Some(buffer::FifoEntry { offset, flags, .. }) => {
-                self.pool.lock().unwrap().release_tx_buffer(offset as usize);
-                Poll::Ready(Ok(EthernetQueueFlags::from_bits_truncate(flags)))
-            }
-            None => Poll::Ready(Err(zx::Status::PEER_CLOSED)),
-        }
+        let buffer::FifoEntry { offset, flags, .. } = ready!(self.tx_fifo.read_one(cx))?;
+        self.pool.lock().unwrap().release_tx_buffer(offset as usize);
+        Poll::Ready(Ok(EthernetQueueFlags::from_bits_truncate(flags)))
     }
 
     /// Queue an available receive buffer to the rx fifo.
@@ -370,7 +366,7 @@ impl ClientInner {
             None => Poll::Pending,
             Some(entry) => {
                 let fifo_offset = entry.offset;
-                let result = self.rx_fifo.try_write(cx, &[entry.into()])?;
+                let result = self.rx_fifo.try_write(cx, &entry)?;
                 if let Poll::Pending = result {
                     // Map the buffer and drop it immediately, to return it to the set of available
                     // buffers.
@@ -386,13 +382,9 @@ impl ClientInner {
         &self,
         cx: &mut Context<'_>,
     ) -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
-        Poll::Ready(match ready!(self.rx_fifo.try_read(cx))? {
-            Some(entry) => {
-                let mut pool_guard = self.pool.lock().unwrap();
-                let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);
-                Ok((buf, EthernetQueueFlags::from_bits_truncate(entry.flags)))
-            }
-            None => Err(zx::Status::PEER_CLOSED),
-        })
+        let entry = ready!(self.rx_fifo.read_one(cx))?;
+        let mut pool_guard = self.pool.lock().unwrap();
+        let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);
+        Poll::Ready(Ok((buf, EthernetQueueFlags::from_bits_truncate(entry.flags))))
     }
 }

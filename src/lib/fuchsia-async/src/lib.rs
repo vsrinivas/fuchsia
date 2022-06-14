@@ -19,7 +19,7 @@ pub mod net;
 
 #[cfg(target_os = "fuchsia")]
 pub use self::handle::{
-    fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry},
+    fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntries, ReadOne, WriteEntries},
     rwhandle::RWHandle,
 };
 

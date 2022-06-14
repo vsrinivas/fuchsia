@@ -43,16 +43,30 @@ impl Fifo {
             count * elem_size == bytes.len(),
             "bytes.len() must be divisible by elem_size"
         );
+        unsafe { self.write_ptr(elem_size, bytes.as_ptr(), count) }
+    }
+
+    /// Attempts to write some number of elements into the fifo. `bytes` must
+    /// be at least `elem_size * count` bytes long. On success, returns the
+    /// number of elements actually written.
+    ///
+    /// Wraps
+    /// [zx_fifo_write](https://fuchsia.dev/fuchsia-src/reference/syscalls/fifo_write.md).
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for ensuring `bytes` points to valid and
+    /// initialized memory at least `elem_size * count` bytes long.
+    #[allow(unsafe_op_in_unsafe_fn)]
+    pub unsafe fn write_ptr(
+        &self,
+        elem_size: usize,
+        bytes: *const u8,
+        count: usize,
+    ) -> Result<usize, Status> {
         let mut actual_count = 0;
-        let status = unsafe {
-            sys::zx_fifo_write(
-                self.raw_handle(),
-                elem_size,
-                bytes.as_ptr(),
-                count,
-                &mut actual_count,
-            )
-        };
+        let status =
+            sys::zx_fifo_write(self.raw_handle(), elem_size, bytes, count, &mut actual_count);
         ok(status).map(|()| actual_count)
     }
 
@@ -68,16 +82,30 @@ impl Fifo {
             count * elem_size == bytes.len(),
             "bytes.len() must be divisible by elem_size"
         );
+        unsafe { self.read_ptr(elem_size, bytes.as_mut_ptr(), count) }
+    }
+
+    /// Attempts to read some number of elements out of the fifo. `bytes` must
+    /// be at least `elem_size * count` bytes long. On success, returns the
+    /// number of elements actually read.
+    ///
+    /// Wraps
+    /// [zx_fifo_read](https://fuchsia.dev/fuchsia-src/reference/syscalls/fifo_read.md).
+    ///
+    /// # Safety
+    ///
+    /// The caller is responsible for ensuring `bytes` points to valid (albeit
+    /// not necessarily initialized) memory at least `elem_size * count` bytes
+    /// long.
+    pub unsafe fn read_ptr(
+        &self,
+        elem_size: usize,
+        bytes: *mut u8,
+        count: usize,
+    ) -> Result<usize, Status> {
         let mut actual_count = 0;
-        let status = unsafe {
-            sys::zx_fifo_read(
-                self.raw_handle(),
-                elem_size,
-                bytes.as_mut_ptr(),
-                count,
-                &mut actual_count,
-            )
-        };
+        let status =
+            sys::zx_fifo_read(self.raw_handle(), elem_size, bytes, count, &mut actual_count);
         ok(status).map(|()| actual_count)
     }
 }

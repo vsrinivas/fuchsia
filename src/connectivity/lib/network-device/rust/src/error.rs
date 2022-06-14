@@ -18,8 +18,6 @@ pub enum Error {
     FrameType(u8),
     #[error("the task is dropped so session can make no progress")]
     NoProgress,
-    #[error("unexpected peer close for fifo {0}")]
-    PeerClosed(&'static str),
     #[error("invalid config: {0}")]
     Config(String),
     #[error("too many descriptors are chained ({0}), at most 4 are allowed")]

@@ -159,7 +159,6 @@ async fn create_interface(
                     netdevice_client::Error::RxFlags(_)
                     | netdevice_client::Error::FrameType(_)
                     | netdevice_client::Error::NoProgress
-                    | netdevice_client::Error::PeerClosed(_)
                     | netdevice_client::Error::Config(_)
                     | netdevice_client::Error::LargeChain(_)
                     | netdevice_client::Error::Index(_, _)

@@ -14,7 +14,7 @@ use std::{convert::TryFrom, task::Waker};
 
 use fidl_fuchsia_hardware_network as netdev;
 use fidl_table_validation::ValidFidlTable;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, FifoReadable as _};
 use fuchsia_zircon as zx;
 use futures::{
     future::{poll_fn, Future},
@@ -175,13 +175,10 @@ impl Inner {
     ///
     /// Returns the the head of a completed rx descriptor chain.
     fn poll_complete_rx(&self, cx: &mut Context<'_>) -> Poll<Result<DescId<Rx>>> {
-        // TODO(https://fxbug.bug/78342): The fuchsia_async fifo wrapper API only
-        // allows to read one at a time, consider batch reading to reduce the
-        // number of syscalls if it becomes a performance issue in the future.
-        match ready!(self.rx.try_read(cx)).map_err(|status| Error::Fifo("read", "rx", status))? {
-            Some(desc) => Poll::Ready(Ok(desc)),
-            None => Err(Error::PeerClosed("rx"))?,
-        }
+        // TODO(https://fxbug.dev/78342): Read more than one entry at a time.
+        let desc =
+            ready!(self.rx.read_one(cx)).map_err(|status| Error::Fifo("read", "rx", status))?;
+        Poll::Ready(Ok(desc))
     }
 
     /// Polls to submit tx descriptors that are pending to the driver.
@@ -193,13 +190,10 @@ impl Inner {
 
     /// Polls completed tx descriptors from the driver then puts them in pool.
     fn poll_complete_tx(&self, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        // TODO(https://fxbug.bug/78342): The fuchsia_async fifo wrapper API only
-        // allows to read one at a time, consider batch reading to reduce the
-        // number of syscalls if it becomes a performance issue in the future.
-        match ready!(self.tx.try_read(cx)).map_err(|status| Error::Fifo("read", "tx", status))? {
-            Some(head) => Poll::Ready(self.pool.tx_completed(head)),
-            None => Err(Error::PeerClosed("tx"))?,
-        }
+        // TODO(https://fxbug.dev/78342): Read more than one entry at a time.
+        let desc =
+            ready!(self.tx.read_one(cx)).map_err(|status| Error::Fifo("read", "tx", status))?;
+        Poll::Ready(self.pool.tx_completed(desc))
     }
 
     /// Sends the [`Buffer`] to the driver.
