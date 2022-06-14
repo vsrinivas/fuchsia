@@ -31,7 +31,8 @@ zx_status_t EndpointManager::CreateEndpoint(std::string name, Endpoint::Config c
     return ZX_ERR_ALREADY_EXISTS;
   }
   Endpoint& ep = it->second;
-  if (zx_status_t status = ep.Startup(*parent_, start_online); status != ZX_OK) {
+  if (zx_status_t status = ep.Startup(*parent_, start_online, endpoint_counter_++);
+      status != ZX_OK) {
     endpoints_.erase(it);
     return status;
   }

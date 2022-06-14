@@ -41,7 +41,7 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
   const std::string& name() const { return name_; }
 
   // Sets up the endpoint based on the configuration
-  zx_status_t Startup(const NetworkContext& context, bool start_online);
+  zx_status_t Startup(const NetworkContext& context, bool start_online, size_t id);
 
   // fidl interface implementations:
   void GetConfig(GetConfigCallback callback) override;

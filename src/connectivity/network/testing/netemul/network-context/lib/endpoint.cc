@@ -5,6 +5,7 @@
 #include "endpoint.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.ethertap/cpp/wire.h>
 #include <fuchsia/netemul/internal/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -44,7 +45,7 @@ class EndpointImpl : public data::Consumer {
   void SetClosedCallback(fit::closure cb) { closed_callback_ = std::move(cb); }
 
   virtual zx_status_t Setup(const std::string& name, bool start_online,
-                            const NetworkContext& context) = 0;
+                            const NetworkContext& context, size_t id) = 0;
 
   virtual void SetLinkUp(bool up, fit::callback<void()> done) = 0;
 
@@ -94,8 +95,8 @@ class EthertapImpl : public EndpointImpl {
  public:
   explicit EthertapImpl(Endpoint::Config config) : EndpointImpl(std::move(config)) {}
 
-  zx_status_t Setup(const std::string& name, bool start_online,
-                    const NetworkContext& context) override {
+  zx_status_t Setup(const std::string& name, bool start_online, const NetworkContext& context,
+                    size_t id) override {
     EthertapConfig tap_cfg;
     if (config().mac) {
       tap_cfg.tap_cfg.mac.octets = config().mac->octets;
@@ -106,6 +107,14 @@ class EthertapImpl : public EndpointImpl {
     }
 
     tap_cfg.name = name;
+    // Because device cleanup is asynchronous for ethertap devices, it's
+    // possible that an existing device with this name has been removed by the
+    // client but not yet fully cleaned up. This would lead to a name collision.
+    //
+    // To avoid this issue, append a unique integer ID to the endpoint name
+    // (overwriting the end of the name if necessary to avoid surpassing the
+    // maximum ethertap interface name length).
+    AppendSuffix(tap_cfg.name, id);
     tap_cfg.tap_cfg.mtu = config().mtu;
     fuchsia::hardware::ethernet::MacAddress mac;
     tap_cfg.tap_cfg.mac.Clone(&mac);
@@ -179,6 +188,24 @@ class EthertapImpl : public EndpointImpl {
   }
 
  private:
+  static void AppendSuffix(std::string& name, size_t id) {
+    std::string suffix = std::to_string(id);
+    if (name.size() <= fuchsia_hardware_ethertap::wire::kMaxNameLength - suffix.size()) {
+      name.append(suffix);
+    } else {
+      // The endpoint name is too long to append the entire suffix without
+      // overflowing the maximum ethertap name length. Overwrite the end of the
+      // endpoint name and then append any remaining characters in the suffix.
+      auto it = suffix.begin();
+      for (size_t i = fuchsia_hardware_ethertap::wire::kMaxNameLength - suffix.size();
+           i < name.size(); i++) {
+        name[i] = *it;
+        it++;
+      }
+      name.append(it, suffix.end());
+    }
+  }
+
   std::string ethernet_mount_path_;
   std::unique_ptr<EthernetClientFactory> ethernet_factory_;
   std::unique_ptr<EthertapClient> ethertap_;
@@ -189,8 +216,8 @@ class NetworkDeviceImpl : public EndpointImpl,
  public:
   explicit NetworkDeviceImpl(Endpoint::Config config) : EndpointImpl(std::move(config)) {}
 
-  zx_status_t Setup(const std::string& name, bool start_online,
-                    const NetworkContext& context) override {
+  zx_status_t Setup(const std::string& name, bool start_online, const NetworkContext& context,
+                    /* unused by NetworkDevice endpoints */ size_t it) override {
     device_name_ = name;
 
     auto tun_ctl = context.ConnectNetworkTun().BindSync();
@@ -376,8 +403,8 @@ Endpoint::Endpoint(NetworkContext* context, std::string name, Endpoint::Config c
   bindings_.set_empty_set_handler(close_handler);
 }
 
-zx_status_t Endpoint::Startup(const NetworkContext& context, bool start_online) {
-  return impl_->Setup(name_, start_online, context);
+zx_status_t Endpoint::Startup(const NetworkContext& context, bool start_online, size_t id) {
+  return impl_->Setup(name_, start_online, context, id);
 }
 
 Endpoint::~Endpoint() = default;

@@ -50,6 +50,9 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
   NetworkContext* parent_;
   fidl::BindingSet<FEndpointManager> bindings_;
   std::unordered_map<std::string, Endpoint> endpoints_;
+  // Used to tag ethertap interface names with a unique integer ID to avoid name
+  // collisions when device cleanup and creation race.
+  size_t endpoint_counter_ = 0;
 };
 
 }  // namespace netemul

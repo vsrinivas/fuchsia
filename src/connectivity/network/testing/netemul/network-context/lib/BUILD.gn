@@ -52,6 +52,7 @@ source_set("network_service") {
   deps = [
     ":ethertap",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_llcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",

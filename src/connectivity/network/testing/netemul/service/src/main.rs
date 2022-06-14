@@ -1953,18 +1953,6 @@ mod tests {
             });
     }
 
-    fn format_topological_path(
-        backing: &fnetemul_network::EndpointBacking,
-        device_name: &str,
-    ) -> String {
-        match backing {
-            fnetemul_network::EndpointBacking::Ethertap => {
-                format!("@/dev/sys/test/tapctl/{}/ethernet", device_name)
-            }
-            fnetemul_network::EndpointBacking::NetworkDevice => format!("/netemul/{}", device_name),
-        }
-    }
-
     #[fixture(with_sandbox)]
     #[fuchsia::test]
     async fn devfs(sandbox: fnetemul::SandboxProxy) {
@@ -2028,7 +2016,7 @@ mod tests {
                 .expect("calling get topological path")
                 .map_err(zx::Status::from_raw)
                 .expect("failed to get topological path");
-            assert_eq!(path, format_topological_path(backing, &name));
+            assert!(path.contains(&name));
 
             let () = realm
                 .remove_device(&name)
@@ -2193,7 +2181,7 @@ mod tests {
                 .expect("FIDL error")
                 .map_err(zx::Status::from_raw)
                 .expect("failed to get topological path");
-            assert_eq!(path, format_topological_path(backing, &name));
+            assert!(path.contains(&name));
         }
     }
 
