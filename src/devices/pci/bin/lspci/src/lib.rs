@@ -10,6 +10,12 @@ pub mod device;
 pub mod filter;
 pub mod util;
 
+fn u64_from_maybe_hex_str(s: &str) -> Result<u64, String> {
+    let (s, radix) = if let Some(s) = s.strip_prefix("0x") { (s, 16) } else { (s, 10) };
+
+    u64::from_str_radix(&s, radix).map_err(|e| e.to_string())
+}
+
 use argh::FromArgs;
 #[derive(FromArgs, Default)]
 /// Display PCI information
@@ -71,10 +77,10 @@ pub struct ReadBarCommand {
     #[argh(positional)]
     pub bar_id: u8,
     /// offset into the BAR to read [default = 0x0].
-    #[argh(option, short = 'o', default = "0")]
+    #[argh(option, short = 'o', default = "0", from_str_fn(u64_from_maybe_hex_str))]
     pub offset: u64,
     /// how much to read [default = 0x80].
-    #[argh(option, short = 's', default = "128")]
+    #[argh(option, short = 's', default = "128", from_str_fn(u64_from_maybe_hex_str))]
     pub size: u64,
     /// print verbose read information
     #[argh(switch, short = 'v')]
