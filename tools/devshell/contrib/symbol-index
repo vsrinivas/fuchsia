@@ -47,6 +47,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 fx-config-read
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/symbol-index.sh || exit $?
 
+fx-warn "\"fx symbol-index\" is deprecated by \"ffx debug symbol-index\" and will be removed soon!"
+fx-warn "Sleep 3 seconds before continuing..."
+sleep 3
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h)

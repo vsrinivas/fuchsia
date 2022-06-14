@@ -217,6 +217,10 @@ fx-config-read
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/debug-agent.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/symbol-index.sh || exit $?
 
+fx-warn "\"fx fidlcat\" is deprecated by \"ffx debug fidl\" and will be removed soon!"
+fx-warn "Sleep 3 seconds before continuing..."
+sleep 3
+
 launch_agent=1
 
 action=
