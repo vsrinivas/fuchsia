@@ -10,7 +10,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Base class for FIDL servers. Example of use:
 //
@@ -105,6 +105,6 @@ class BaseFidlServer : public fidl::WireServer<ProtocolT> {
   ::libsync::Completion shutdown_complete_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_BASE_FIDL_SERVER_H_

@@ -16,7 +16,7 @@
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/producer_stage.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 class RingBufferProducerStage : public ProducerStage {
  public:
@@ -51,6 +51,6 @@ class RingBufferProducerStage : public ProducerStage {
   SafeReadFrameFn safe_read_frame_fn_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_RING_BUFFER_PRODUCER_STAGE_H_

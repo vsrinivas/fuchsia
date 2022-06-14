@@ -15,7 +15,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 TEST(TimerWithRealClockTest, Event) {
   TimerWithRealClock timer({});
@@ -194,4 +194,4 @@ TEST(TimerWithRealClockTest, TimerThenTimer) {
   EXPECT_EQ(done.Wait(zx::sec(5)), ZX_OK);
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

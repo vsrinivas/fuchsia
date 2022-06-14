@@ -20,7 +20,7 @@
 #include "src/media/audio/mixer_service/mix/reusable_buffer.h"
 #include "src/media/audio/mixer_service/mix/silence_padding_stage.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Custom effect stage that has a single input and produces a single output.
 // TODO(fxbug.dev/87651): Generalize this for all N inputs K outputs use cases.
@@ -113,6 +113,6 @@ class CustomStage : public PipelineStage {
   ReusableBuffer source_buffer_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_CUSTOM_STAGE_H_

@@ -19,7 +19,7 @@
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 
@@ -298,4 +298,4 @@ CustomStage::FidlBuffers::FidlBuffers(const Range& input_range, const Range& out
   output_size = output_range.size;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

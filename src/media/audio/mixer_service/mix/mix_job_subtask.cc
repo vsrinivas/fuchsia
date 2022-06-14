@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 MixJobSubtask::MixJobSubtask(std::string_view name) {
   metrics_.name.Append(name);
@@ -44,4 +44,4 @@ void MixJobSubtask::Done() {
   }
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

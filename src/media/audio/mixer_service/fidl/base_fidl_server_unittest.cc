@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 namespace {
 
 // Arbitrarily selecting `GraphCreator` for this test since it's a small protocol.
@@ -32,7 +32,7 @@ class TestFidlServer : public BaseFidlServer<TestFidlServer, fuchsia_audio_mixer
  private:
   static inline constexpr std::string_view Name = "TestFidlServer";
   template <class ServerT, class ProtocolT>
-  friend class ::media_audio_mixer_service::BaseFidlServer;
+  friend class ::media_audio::BaseFidlServer;
 
   TestFidlServer(int x, int y) : x_(x), y_(y) {}
 
@@ -58,4 +58,4 @@ TEST(BaseFidlServer, CreateAndShutdown) {
 }
 
 }  // namespace
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

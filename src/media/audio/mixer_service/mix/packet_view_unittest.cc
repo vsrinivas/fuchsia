@@ -9,7 +9,7 @@
 #include <ffl/string.h>
 #include <gtest/gtest.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 // Intersection Test cases are expressed with start+end, instead of start+count,
@@ -524,4 +524,4 @@ TEST(PacketViewTest, Slice) {
   }
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

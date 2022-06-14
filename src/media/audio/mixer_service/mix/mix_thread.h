@@ -16,7 +16,7 @@
 #include "src/media/audio/mixer_service/common/timer.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A mix thread encapsulates a kernel thread and all work performed on that thread,
 // which includes mix jobs and other operations that must execute on a mix thread.
@@ -80,6 +80,6 @@ class MixThread : public Thread {
   std::mutex startup_mutex_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_MIX_THREAD_H_

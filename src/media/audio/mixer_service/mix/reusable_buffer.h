@@ -13,7 +13,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // This class contains an audio buffer along with a frame number that identifies the
 // first frame in the buffer:
@@ -115,6 +115,6 @@ class ReusableBuffer {
   std::vector<char> buf_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_REUSABLE_BUFFER_H_

@@ -10,7 +10,7 @@
 
 #include <functional>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // An abstract wrapper around a zx::timer. The class can sleep until a timer
 // fires or until a signal bit is set. This is an abstract class so we can
@@ -55,6 +55,6 @@ class Timer {
   virtual WakeReason SleepUntil(zx::time deadline) = 0;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_COMMON_TIMER_H_

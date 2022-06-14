@@ -8,7 +8,7 @@
 
 #include <ffl/string.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 PacketView::PacketView(Args args)
     : format_(args.format),
@@ -65,4 +65,4 @@ std::ostream& operator<<(std::ostream& out, const PacketView& packet) {
   return out;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

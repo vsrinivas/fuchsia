@@ -8,7 +8,7 @@
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/mix_job_context.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Can be used when any MixJobContext will do.
 MixJobContext& DefaultCtx();
@@ -20,6 +20,6 @@ const ClockSnapshots& DefaultClockSnapshots();
 // This clock is guaranteed to exist in `MixJobContext.clocks()` and `DefaultClockSnapshots()`.
 zx_koid_t DefaultClockKoid();
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_TESTING_DEFAULTS_H_

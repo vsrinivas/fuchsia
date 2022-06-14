@@ -7,7 +7,7 @@
 
 #include <memory>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // This file exists to break circular dependencies.
 // Since shared_ptr use is ubiquitous, we use XPtr as a more concise name for std::shared_ptr<X>.
@@ -15,6 +15,6 @@ namespace media_audio_mixer_service {
 class Node;
 using NodePtr = std::shared_ptr<Node>;
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_PTR_DECLS_H_

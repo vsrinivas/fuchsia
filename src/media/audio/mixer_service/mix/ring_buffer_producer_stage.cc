@@ -12,7 +12,7 @@
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 std::optional<PipelineStage::Packet> RingBufferProducerStage::ReadImpl(MixJobContext& ctx,
                                                                        Fixed start_frame,
@@ -63,4 +63,4 @@ std::optional<PipelineStage::Packet> RingBufferProducerStage::ReadImpl(MixJobCon
   return MakeUncachedPacket(Fixed(absolute_start_frame), packet_frame_count, packet_payload);
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

@@ -16,7 +16,7 @@
 
 #include <fbl/string_buffer.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Collects metrics for a during subtask of a mix job.
 class MixJobSubtask {
@@ -73,6 +73,6 @@ class MixJobSubtask {
   Metrics metrics_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_MIX_JOB_SUBTASK_H_

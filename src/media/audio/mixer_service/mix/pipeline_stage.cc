@@ -8,7 +8,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 void PipelineStage::Advance(Fixed frame) {
   // TODO(fxbug.dev/87651): Add more logging and tracing etc (similar to `ReadableStream`).
@@ -116,4 +116,4 @@ std::optional<PipelineStage::Packet> PipelineStage::ReadFromCachedPacket(Fixed s
   return std::nullopt;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

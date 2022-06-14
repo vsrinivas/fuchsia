@@ -9,7 +9,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // An abstract registry of all clocks used by a mix graph.
 // Not safe for concurrent use.
@@ -33,6 +33,6 @@ class ClockRegistry {
   static zx::status<zx_koid_t> ZxClockToKoid(const zx::clock& clock);
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_CLOCK_REGISTRY_H_

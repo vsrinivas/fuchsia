@@ -6,7 +6,7 @@
 
 #include <memory>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 struct Defaults {
@@ -31,4 +31,4 @@ MixJobContext& DefaultCtx() { return *global_defaults.mix_job_ctx; }
 const ClockSnapshots& DefaultClockSnapshots() { return global_defaults.clock_snapshots; }
 zx_koid_t DefaultClockKoid() { return global_defaults.clock->koid(); }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

@@ -16,7 +16,7 @@
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/common/timer.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A queue of pending tasks.
 // The queue has two important properties:
@@ -65,6 +65,6 @@ class GlobalTaskQueue {
   std::unordered_map<ThreadId, std::shared_ptr<Timer>> timers_ TA_GUARDED(mutex_);
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_COMMON_GLOBAL_WORK_QUEUE_H_

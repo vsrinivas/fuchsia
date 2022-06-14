@@ -15,7 +15,7 @@
 #include "src/media/audio/mixer_service/mix/packet_view.h"
 #include "src/media/audio/mixer_service/mix/testing/defaults.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
@@ -404,4 +404,4 @@ TEST(SilencePaddingStageTest, CreateRoundsUpNumberOfFrames) {
 }
 
 }  // namespace
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

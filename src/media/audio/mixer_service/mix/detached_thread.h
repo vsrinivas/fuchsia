@@ -14,7 +14,7 @@
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A detached thread controls PipelineStages that are not connected to any ConsumerStage,
 // i.e. it controls "detached" stages. There is exactly one DetachedThread for every graph.
@@ -58,6 +58,6 @@ class DetachedThread : public Thread {
   const ThreadChecker checker_{std::nullopt};
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_DETACHED_THREAD_H_

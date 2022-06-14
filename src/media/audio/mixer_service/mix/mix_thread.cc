@@ -10,7 +10,7 @@
 
 #include <thread>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 MixThreadPtr MixThread::Create(ThreadId id,
                                fuchsia_audio_mixer::wire::GraphCreateThreadRequest& options,
@@ -103,4 +103,4 @@ void MixThread::Shutdown() {
   timer_->SetShutdownBit();
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

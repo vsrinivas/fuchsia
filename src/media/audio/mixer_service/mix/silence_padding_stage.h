@@ -12,7 +12,7 @@
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A stage wrapper that appends silence after each discontiguous chunk of audio to "ring out" or
 // "fade out" audio processors. This wrapper can be used when the following conditions are met:
@@ -118,6 +118,6 @@ class SilencePaddingStage : public PipelineStage {
   std::vector<char> silence_buffer_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_SILENCE_PADDING_STAGE_H_

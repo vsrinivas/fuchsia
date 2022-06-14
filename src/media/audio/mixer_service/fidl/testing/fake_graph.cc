@@ -9,7 +9,7 @@
 #include "src/media/audio/mixer_service/mix/packet_queue_producer_stage.h"
 #include "src/media/audio/mixer_service/mix/testing/defaults.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 PipelineStagePtr CreatePipelineStage() {
@@ -130,4 +130,4 @@ NodeId FakeGraph::NextId() {
   return id;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

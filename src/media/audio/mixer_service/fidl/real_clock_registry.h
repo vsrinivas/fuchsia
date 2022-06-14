@@ -9,7 +9,7 @@
 
 #include "src/media/audio/mixer_service/fidl/clock_registry.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A registry of RealClocks.
 // Not safe for concurrent use.
@@ -24,6 +24,6 @@ class RealClockRegistry : public ClockRegistry {
   uint64_t num_graph_controlled_ = 0;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_REAL_CLOCK_REGISTRY_H_

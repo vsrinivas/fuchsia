@@ -10,7 +10,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
@@ -179,4 +179,4 @@ TEST(ReusableBufferTest, AppendResetAppend) {
 }
 
 }  // namespace
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

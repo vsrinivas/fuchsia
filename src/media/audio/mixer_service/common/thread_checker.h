@@ -11,7 +11,7 @@
 #include <optional>
 #include <thread>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A class to validate that operations happen on a specific thread.
 // This is like fit::thread_checker, with three differences:
@@ -66,6 +66,6 @@ class TA_SCOPED_CAP ScopedThreadChecker final {
   const ThreadChecker& checker_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_COMMON_THREAD_CHECKER_H_

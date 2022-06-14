@@ -29,7 +29,7 @@
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 #include "src/media/audio/mixer_service/mix/testing/defaults.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 
@@ -1143,4 +1143,4 @@ TEST_F(CustomStageTest, Metrics) {
   }
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

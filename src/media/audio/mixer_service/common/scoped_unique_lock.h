@@ -9,7 +9,7 @@
 
 #include <mutex>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A wrapper around std::unique_lock<Mutex> that enables thread-safety analysis.
 // The lock may be passed to std::condition_variable::wait, but explicit lock/unlock
@@ -36,6 +36,6 @@ class TA_SCOPED_CAP scoped_unique_lock : public std::unique_lock<Mutex> {
   using std::unique_lock<Mutex>::unlock;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_COMMON_SCOPED_UNIQUE_LOCK_H_

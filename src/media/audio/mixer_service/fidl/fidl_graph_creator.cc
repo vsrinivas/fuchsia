@@ -7,7 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // static
 std::shared_ptr<FidlGraphCreator> FidlGraphCreator::Create(
@@ -21,4 +21,4 @@ void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& 
   FX_CHECK(false) << "not implemented";
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

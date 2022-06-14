@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 TEST(RealClockRegistryTest, CreateGraphControlled) {
   RealClockRegistry registry;
@@ -67,4 +67,4 @@ TEST(RealClockRegistryTest, FindFailsOnInvalidHandle) {
   ASSERT_EQ(clock.get(), nullptr);
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

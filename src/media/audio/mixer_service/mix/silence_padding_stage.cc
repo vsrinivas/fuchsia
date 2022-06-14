@@ -11,7 +11,7 @@
 #include "src/media/audio/mixer_service/mix/packet_view.h"
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 void SilencePaddingStage::AdvanceImpl(Fixed frame) {
   if (source_) {
@@ -93,4 +93,4 @@ std::optional<PipelineStage::Packet> SilencePaddingStage::ReadImpl(MixJobContext
   return std::nullopt;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

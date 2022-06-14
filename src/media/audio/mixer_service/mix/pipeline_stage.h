@@ -22,7 +22,7 @@
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // A stage in a pipeline tree.
 //
@@ -247,6 +247,6 @@ class PipelineStage {
   ThreadPtr thread_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_PIPELINE_STAGE_H_

@@ -18,7 +18,7 @@
 #include "src/media/audio/mixer_service/mix/producer_stage.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 class PacketQueueProducerStage : public ProducerStage {
  public:
@@ -82,6 +82,6 @@ class PacketQueueProducerStage : public ProducerStage {
   fit::function<void(zx::duration)> underflow_reporter_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_PACKET_QUEUE_PRODUCER_STAGE_H_

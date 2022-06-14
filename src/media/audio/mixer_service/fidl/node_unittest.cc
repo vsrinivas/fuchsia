@@ -7,10 +7,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 TEST(NodeTest, TODO) {
   // XXX(DO NOT SUBMIT)
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

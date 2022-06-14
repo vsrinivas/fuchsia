@@ -10,7 +10,7 @@
 
 #include "src/media/audio/mixer_service/fidl/testing/fake_graph.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 TEST(ReachabilityTest, OrdinaryNodeSelfEdge) {
   FakeGraph graph({
@@ -173,4 +173,4 @@ TEST(ReachabilityTest, MetaAndOrdinaryNodes) {
   }
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

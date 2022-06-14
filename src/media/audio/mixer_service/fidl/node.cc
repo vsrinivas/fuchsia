@@ -14,7 +14,7 @@
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 
@@ -294,4 +294,4 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   return fpromise::ok();
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

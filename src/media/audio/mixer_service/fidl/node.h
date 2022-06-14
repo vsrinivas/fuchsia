@@ -18,7 +18,7 @@
 #include "src/media/audio/mixer_service/fidl/ptr_decls.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Node is the base type for all nodes in the mix graph.
 //
@@ -199,6 +199,6 @@ class Node {
   std::vector<NodePtr> child_outputs_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_NODE_H_

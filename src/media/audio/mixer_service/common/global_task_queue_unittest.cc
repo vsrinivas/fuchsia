@@ -7,7 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 class StubTimer : public Timer {
@@ -101,4 +101,4 @@ TEST(GlobalTaskQueueTest, Notify) {
   EXPECT_FALSE(t3->signaled());
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

@@ -16,7 +16,7 @@
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/mix_job_subtask.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // MixJobContext provides a container for state that can be carried throughout a mix job.
 class MixJobContext {
@@ -54,6 +54,6 @@ class MixJobContext {
   SubtaskMetricsVector per_subtask_metrics_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_MIX_JOB_CONTEXT_H_

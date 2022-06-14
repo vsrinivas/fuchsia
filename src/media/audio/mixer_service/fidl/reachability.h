@@ -7,13 +7,13 @@
 
 #include "src/media/audio/mixer_service/fidl/node.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Reports whether there exists a path from `src` to `dest`. The nodes may be ordinary nodes and/or
 // meta nodes. For any given meta node M, there are implicit paths from M's child input nodes, to M
 // itself, to M's child output nodes.
 bool ExistsPath(const Node& src, const Node& dest);
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_REACHABILITY_H_

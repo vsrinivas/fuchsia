@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 // Pushes `n` onto `stack` if `n` has not yet been visited. Returns true iff `n == goal`.
@@ -90,4 +90,4 @@ bool ExistsPath(const Node& src, const Node& dest) {
   }
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

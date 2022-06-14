@@ -8,7 +8,7 @@
 
 #include "src/media/audio/mixer_service/common/scoped_unique_lock.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 TimerWithSyntheticClock::TimerWithSyntheticClock(zx::time start_time) : state_(start_time) {}
 
@@ -102,4 +102,4 @@ zx::time TimerWithSyntheticClock::now() {
   return state_.now;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

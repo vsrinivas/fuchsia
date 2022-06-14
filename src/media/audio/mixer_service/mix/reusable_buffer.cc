@@ -8,7 +8,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 ReusableBuffer::ReusableBuffer(Format format, int64_t capacity_frames)
     : capacity_frames_(capacity_frames), format_(format) {
@@ -61,4 +61,4 @@ void ReusableBuffer::PushSilence(int64_t frames) {
   buf_.resize(buf_.size() + frames * format_.bytes_per_frame(), 0);
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

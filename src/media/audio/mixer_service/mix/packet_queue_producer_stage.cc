@@ -12,7 +12,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 void PacketQueueProducerStage::AdvanceImpl(Fixed frame) {
   while (!pending_packet_queue_.empty()) {
@@ -76,4 +76,4 @@ void PacketQueueProducerStage::ReportUnderflow(Fixed underlow_frame_count) {
   }
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

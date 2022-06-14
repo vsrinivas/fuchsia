@@ -9,7 +9,7 @@
 
 #include "src/media/audio/lib/clock/unadjustable_clock_wrapper.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // static
 std::shared_ptr<FidlSyntheticClock> FidlSyntheticClock::Create(
@@ -201,4 +201,4 @@ std::shared_ptr<Clock> FidlSyntheticClockRealm::FindOrCreate(zx::clock zx_clock,
   return nullptr;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

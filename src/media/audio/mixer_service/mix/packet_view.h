@@ -9,7 +9,7 @@
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Represents a view to a fixed-sized packet of audio data.
 class PacketView {
@@ -96,6 +96,6 @@ class PacketView {
 // Convenience for logging.
 std::ostream& operator<<(std::ostream& out, const PacketView& packet);
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_PACKET_H_

@@ -16,7 +16,7 @@
 
 using ::testing::ContainerEq;
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 TEST(TimerWithSyntheticClockTest, Event) {
   TimerWithSyntheticClock timer(zx::time(0));
@@ -254,4 +254,4 @@ TEST(TimerWithSyntheticClockTest, Advance) {
   EXPECT_EQ(done.Wait(zx::sec(5)), ZX_OK);
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

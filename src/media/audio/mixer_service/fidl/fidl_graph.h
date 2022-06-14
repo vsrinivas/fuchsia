@@ -13,7 +13,7 @@
 
 #include "src/media/audio/mixer_service/fidl/base_fidl_server.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
  public:
@@ -56,6 +56,6 @@ class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
   FidlGraph() = default;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_FIDL_GRAPH_H_

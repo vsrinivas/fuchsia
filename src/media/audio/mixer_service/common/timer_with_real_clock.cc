@@ -9,7 +9,7 @@
 // System calls in this file should not fail unless the system is out-of-memory
 // or we have a bug. Therefore we FX_CHECK that every system call succeeds.
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 namespace {
 constexpr auto kSignalForEvent = ZX_USER_SIGNAL_0;
@@ -76,4 +76,4 @@ Timer::WakeReason TimerWithRealClock::SleepUntil(zx::time deadline) {
   };
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

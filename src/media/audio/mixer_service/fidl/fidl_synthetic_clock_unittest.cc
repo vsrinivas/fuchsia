@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 namespace {
 
 zx::clock CreateArbitraryZxClock() {
@@ -603,4 +603,4 @@ TEST_F(FidlSyntheticClockTest, AdvanceByFails) {
 }
 
 }  // namespace
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

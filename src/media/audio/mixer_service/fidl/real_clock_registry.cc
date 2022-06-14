@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 zx::clock RealClockRegistry::CreateGraphControlled() {
   // These system calls shouldn't fail, unless our parameters are invalid, which should not happen.
@@ -54,4 +54,4 @@ std::shared_ptr<Clock> RealClockRegistry::FindOrCreate(zx::clock zx_clock, std::
   return clock;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

@@ -13,7 +13,7 @@
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // Producer stage that does not have any inputs and produces a single output.
 class ProducerStage : public PipelineStage {
@@ -31,6 +31,6 @@ class ProducerStage : public PipelineStage {
       : PipelineStage(name, format, reference_clock_koid) {}
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_PRODUCER_STAGE_H_

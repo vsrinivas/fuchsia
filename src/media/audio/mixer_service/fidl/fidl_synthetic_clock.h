@@ -18,7 +18,7 @@
 #include "src/media/audio/mixer_service/fidl/clock_registry.h"
 #include "src/media/audio/mixer_service/fidl/ptr_decls.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 class FidlSyntheticClock
     : public BaseFidlServer<FidlSyntheticClock, fuchsia_audio_mixer::SyntheticClock> {
@@ -84,6 +84,6 @@ class FidlSyntheticClockRealm
   uint64_t num_graph_controlled_ = 0;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_FIDL_SYNTHETIC_CLOCK_H_

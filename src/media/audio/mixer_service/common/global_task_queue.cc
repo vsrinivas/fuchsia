@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 void GlobalTaskQueue::Push(ThreadId id, std::function<void()>&& fn) {
   std::shared_ptr<Timer> next_timer;
@@ -109,4 +109,4 @@ std::shared_ptr<Timer> GlobalTaskQueue::NextThreadToRun() const {
   return timers_.begin()->second;
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

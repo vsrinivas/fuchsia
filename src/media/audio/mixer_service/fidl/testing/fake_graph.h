@@ -13,7 +13,7 @@
 
 #include "src/media/audio/mixer_service/fidl/node.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 class FakeNode;
 class FakeGraph;
@@ -155,6 +155,6 @@ class FakeGraph {
   std::unordered_map<NodeId, FakeNodePtr> nodes_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_FIDL_TESTING_FAKE_NODE_H_

@@ -7,7 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // static
 std::shared_ptr<FidlGraph> FidlGraph::Create(
@@ -98,4 +98,4 @@ void FidlGraph::ForgetGraphControlledReferenceClock(
   FX_CHECK(false) << "not implemented";
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

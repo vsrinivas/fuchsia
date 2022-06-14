@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 zx::status<zx_koid_t> ClockRegistry::ZxClockToKoid(const zx::clock& clock) {
   zx_info_handle_basic_t info;
@@ -17,4 +17,4 @@ zx::status<zx_koid_t> ClockRegistry::ZxClockToKoid(const zx::clock& clock) {
   return zx::ok(info.koid);
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

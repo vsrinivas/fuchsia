@@ -14,7 +14,7 @@
 
 #include "src/media/audio/mixer_service/common/timer.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // An implementation of Timer that uses a real clock.
 // This class is thread safe.
@@ -37,6 +37,6 @@ class TimerWithRealClock : public Timer {
   zx::timer timer_;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_COMMON_TIMER_WITH_REAL_CLOCK_H_

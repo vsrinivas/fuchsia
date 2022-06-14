@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 DetachedThreadPtr DetachedThread::Create() {
   // std::make_shared requires a public ctor, but we hide our ctor to force callers to use Create.
@@ -25,4 +25,4 @@ void DetachedThread::RemoveConsumer(ConsumerStagePtr consumer) {
   FX_CHECK(false) << "Consumers should never be assigned to the DetachedThread";
 }
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio

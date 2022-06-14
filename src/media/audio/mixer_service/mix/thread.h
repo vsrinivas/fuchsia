@@ -12,7 +12,7 @@
 #include "src/media/audio/mixer_service/common/thread_checker.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 
-namespace media_audio_mixer_service {
+namespace media_audio {
 
 // An abstract base class for threads.
 // Most methods are not thread safe: see individual methods for specifics.
@@ -50,6 +50,6 @@ class Thread {
   Thread& operator=(Thread&&) = delete;
 };
 
-}  // namespace media_audio_mixer_service
+}  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_MIXER_SERVICE_MIX_THREAD_H_
