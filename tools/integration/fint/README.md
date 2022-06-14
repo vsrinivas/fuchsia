@@ -272,9 +272,8 @@ Follow these guidelines when modifying fint protos:
 
 #### Regenerating generated code
 
-After changing a .proto file, run `fx build` (make sure the changed proto is
-included by your `fx set`), and follow the prompt to update the corresponding
-generated code.
+After changing a .proto file, run `./tools/integration/fint/proto/update.sh` to
+update the corresponding generated code.
 
 Note that when adding a new field to a protobuf, you'll need to add the field
 and then update the generated code *before* referencing the new field in fint's

@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import shutil
 import sys
 
 # Verifies that the current golden go proto file matches the provided golden.
@@ -45,12 +46,18 @@ def main():
         '--fuchsia-dir', help='Path to Fuchsia source directory')
     parser.add_argument(
         '--stamp', help='Path to the victory file', required=True)
+    parser.add_argument(
+        '--bless',
+        help="Overwrites current with golden if they don't match.",
+        action='store_true')
     args = parser.parse_args()
 
     golden = read_file(args.golden)
     current = read_file(args.current)
 
-    if golden != current:
+    if args.bless:
+        shutil.copyfile(args.current, args.golden)
+    elif golden != current:
         # Compute paths relative to the Fuchsia directory for the messages
         # below.
         fuchsia_dir = args.fuchsia_dir if args.fuchsia_dir else '../..'

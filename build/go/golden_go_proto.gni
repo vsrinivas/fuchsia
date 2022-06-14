@@ -52,6 +52,10 @@ template("_golden_go_proto_file") {
       "--fuchsia-dir",
       rebase_path("//", root_build_dir),
     ]
+
+    if (bless_goldens) {
+      args += [ "--bless" ]
+    }
   }
 }
 
