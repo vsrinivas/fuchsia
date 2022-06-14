@@ -9,6 +9,7 @@
 #include <lib/stdcompat/type_traits.h>
 
 #include <cstddef>
+#include <new>
 #include <tuple>
 #include <type_traits>
 #include <utility>
