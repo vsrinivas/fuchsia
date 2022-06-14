@@ -16,14 +16,16 @@ test("test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//sdk/fidl/fuchsia.driver.development",
+    "//sdk/fidl/fuchsia.driver.test",
     "//sdk/lib/device-watcher/cpp",
-    "//sdk/lib/driver_test_realm/simple",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/fdio-caller",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below

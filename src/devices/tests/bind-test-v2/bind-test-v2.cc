@@ -5,37 +5,58 @@
 #include <fidl/fuchsia.device.test/cpp/wire.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/driver/development/cpp/fidl.h>
+#include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
+#include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
+#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 const std::string kDevPrefix = "/dev/";
 const std::string kDriverUrl = "fuchsia-boot:///#driver/bind-test-v2-driver.so";
 const std::string kDriverLibname = "bind-test-v2-driver.so";
 const std::string kChildDeviceName = "child";
 
-class BindCompilerV2Test : public testing::Test {
+class BindCompilerV2Test : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
-    // Wait for /dev/sys/test/test to appear, then create an endpoint to it.
+    auto realm_builder = component_testing::RealmBuilder::Create();
+    driver_test_realm::Setup(realm_builder);
+    realm_ = std::make_unique<component_testing::RealmRoot>(realm_builder.Build(dispatcher()));
+
+    fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
+    ASSERT_EQ(realm_->Connect(driver_test_realm.NewRequest()), ZX_OK);
+    fuchsia::driver::test::Realm_Start_Result realm_result;
+    ASSERT_EQ(driver_test_realm->Start(fuchsia::driver::test::RealmArgs(), &realm_result), ZX_OK);
+    ASSERT_FALSE(realm_result.is_err());
+
+    fidl::InterfaceHandle<fuchsia::io::Directory> dev;
+    zx_status_t status = realm_->Connect("dev", dev.NewRequest().TakeChannel());
+    ASSERT_EQ(status, ZX_OK);
+
     fbl::unique_fd root_fd;
-    zx_status_t status = device_watcher::RecursiveWaitForFile("/dev/sys/test/test", &root_fd);
+    status = fdio_fd_create(dev.TakeChannel().release(), root_fd.reset_and_get_address());
+    ASSERT_EQ(status, ZX_OK);
+
+    // Wait for /dev/sys/test/test to appear, then create an endpoint to it.
+    fbl::unique_fd out;
+    status = device_watcher::RecursiveWaitForFile(root_fd, "sys/test/test", &out);
     ASSERT_EQ(status, ZX_OK);
 
     zx::status root_device_client_end =
-        fdio_cpp::FdioCaller(std::move(root_fd)).take_as<fuchsia_device_test::RootDevice>();
+        fdio_cpp::FdioCaller(std::move(out)).take_as<fuchsia_device_test::RootDevice>();
     ASSERT_EQ(root_device_client_end.status_value(), ZX_OK);
     auto root_device = fidl::BindSyncClient(std::move(*root_device_client_end));
 
     auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
-    ASSERT_EQ(endpoints.status_value(), ZX_OK);
+    ASSERT_EQ(ZX_OK, endpoints.status_value());
 
     // Create the root test device in /dev/sys/test/test, and get its relative path from /dev.
     auto result = root_device->CreateDevice(fidl::StringView::FromExternal(kDriverLibname),
@@ -61,11 +82,12 @@ class BindCompilerV2Test : public testing::Test {
     ASSERT_EQ(status, ZX_OK);
 
     // Connect to the DriverDevelopment service.
-    auto context = sys::ComponentContext::Create();
-    context->svc()->Connect(driver_dev_.NewRequest());
+    status = realm_->Connect(driver_dev_.NewRequest());
+    ASSERT_EQ(status, ZX_OK);
   }
 
   fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
   std::string relative_device_path_;
 };
 
