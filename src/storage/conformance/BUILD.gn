@@ -78,32 +78,3 @@ rustc_test("io1_conformance_test") {
 
   sources = [ "io1_tests.rs" ]
 }
-
-# test("io_conformance_fdio") {
-#   sources = [ "fdio.cc" ]
-#   deps = [
-#     "//sdk/fidl/fuchsia.io.test",
-#     "//sdk/lib/sys/cpp",
-#     "//third_party/googletest:gtest",
-#     "//zircon/system/ulib/async-loop:async-loop-cpp",
-#     "//zircon/system/ulib/async-loop:async-loop-default",
-#     "//zircon/system/ulib/fbl",
-#     "//sdk/lib/fdio",
-#     "//sdk/fidl/fuchsia.io",
-#   ]
-# }
-
-# test_package("fdio_test") {
-#   package_name = "io_conformance_fdio_test"
-#   deps = [ ":io_conformance_fdio" ]
-#   tests = [
-#     {
-#       name = "io_conformance_fdio"
-#       environments = basic_envs
-
-#       # TODO(fxbug.dev/44968): Re-enable these tests once we fix race conditions involving starting
-#       # and connecting components.
-#       disabled = true
-#     },
-#   ]
-# }
