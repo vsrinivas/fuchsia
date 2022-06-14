@@ -38,7 +38,8 @@
 ##   --verbose Print all formatting commands prior to execution.
 ##    -- PATTERN
 ##             For --all or --git, passes along -- PATTERN to `git ls-files`
-##             to filter what files are affected.
+##             to filter what files are affected. For example, to format all
+##             rust source files use `fx format-code --all -- "*.rs"`
 ##
 ## Supported Languages: C, C++, cml, Dart, FIDL, GN, Go, Python, Rust, JSON
 
@@ -219,9 +220,9 @@ done
 GIT_FILTER=(
   "$@"
   ":(top,exclude)third_party/golibs/vendor"
-  ":(top,exclude)third_party/rust_crates/forks"
-  ":(top,exclude)third_party/rust_crates/mirrors"
-  ":(top,exclude)third_party/rust_crates/vendor"
+  ":(top,exclude)third_party/rust_crates"
+  ":(top,exclude)src/devices/tools/fidlgen_banjo/tests"
+  ":(top,exclude)src/devices/tools/fidlgen_banjo/src/backends/templates/rust"
   ":(exclude)*/goldens/*"
 )
 
