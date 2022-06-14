@@ -20,7 +20,6 @@ core_realm_shards += [
 ]
 
 legacy_base_package_labels += [
-  "//src/connectivity/wlan/drivers:iwlwifi",
   "//src/developer/memory/buckets:workstation_memory_monitor_config",
   "//src/fonts",
   "//src/fonts:open-fonts-collection",

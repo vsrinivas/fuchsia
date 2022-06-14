@@ -53,6 +53,7 @@ board_zedboot_bootfs_labels += _bootfs_deps
 
 board_driver_package_labels += [
   "//bundles/packages/prod:drivers-system",
+  "//bundles/packages/prod:wifi_intel",
   "//src/devices/acpi:drivers",
   "//src/graphics/drivers/msd-intel-gen",
   "//src/media/audio/bundles:virtual_audio_driver",
