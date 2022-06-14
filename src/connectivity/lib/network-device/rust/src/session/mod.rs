@@ -10,11 +10,11 @@ use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
-use std::{convert::TryFrom, task::Waker};
+use std::{convert::TryFrom, mem::MaybeUninit, ops::Range, task::Waker};
 
 use fidl_fuchsia_hardware_network as netdev;
 use fidl_table_validation::ValidFidlTable;
-use fuchsia_async::{self as fasync, FifoReadable as _};
+use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
     future::{poll_fn, Future},
@@ -40,7 +40,16 @@ impl Debug for Session {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.inner.upgrade() {
             Some(inner) => {
-                let Inner { name, pool: _, proxy: _, rx: _, tx: _, tx_pending: _ } = &*inner;
+                let Inner {
+                    name,
+                    pool: _,
+                    proxy: _,
+                    rx: _,
+                    tx: _,
+                    tx_pending: _,
+                    rx_ready: _,
+                    tx_ready: _,
+                } = &*inner;
                 f.debug_struct("Session").field("name", &name).finish_non_exhaustive()
             }
             None => f.write_str("Session(closed)"),
@@ -118,6 +127,8 @@ struct Inner {
     tx: fasync::Fifo<DescId<Tx>>,
     // Pending tx descriptors to be sent.
     tx_pending: Pending<Tx>,
+    rx_ready: Mutex<ReadyBuffer<DescId<Rx>>>,
+    tx_ready: Mutex<ReadyBuffer<DescId<Tx>>>,
 }
 
 impl Inner {
@@ -161,6 +172,8 @@ impl Inner {
             rx,
             tx,
             tx_pending: Pending::new(Vec::new()),
+            rx_ready: Mutex::new(ReadyBuffer::new(config.num_rx_buffers.get().into())),
+            tx_ready: Mutex::new(ReadyBuffer::new(config.num_tx_buffers.get().into())),
         }))
     }
 
@@ -175,10 +188,8 @@ impl Inner {
     ///
     /// Returns the the head of a completed rx descriptor chain.
     fn poll_complete_rx(&self, cx: &mut Context<'_>) -> Poll<Result<DescId<Rx>>> {
-        // TODO(https://fxbug.dev/78342): Read more than one entry at a time.
-        let desc =
-            ready!(self.rx.read_one(cx)).map_err(|status| Error::Fifo("read", "rx", status))?;
-        Poll::Ready(Ok(desc))
+        let mut rx_ready = self.rx_ready.lock();
+        rx_ready.poll_with_fifo(cx, &self.rx).map_err(|status| Error::Fifo("read", "rx", status))
     }
 
     /// Polls to submit tx descriptors that are pending to the driver.
@@ -190,10 +201,14 @@ impl Inner {
 
     /// Polls completed tx descriptors from the driver then puts them in pool.
     fn poll_complete_tx(&self, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        // TODO(https://fxbug.dev/78342): Read more than one entry at a time.
-        let desc =
-            ready!(self.tx.read_one(cx)).map_err(|status| Error::Fifo("read", "tx", status))?;
-        Poll::Ready(self.pool.tx_completed(desc))
+        let mut tx_ready = self.tx_ready.lock();
+        // TODO(https://github.com/rust-lang/rust/issues/63569): Provide entire
+        // chain of completed descriptors to the pool at once when slice of
+        // MaybeUninit is stabilized.
+        tx_ready.poll_with_fifo(cx, &self.tx).map(|r| match r {
+            Ok(desc) => self.pool.tx_completed(desc),
+            Err(status) => Err(Error::Fifo("read", "tx", status)),
+        })
     }
 
     /// Sends the [`Buffer`] to the driver.
@@ -537,6 +552,68 @@ impl<K: AllocKind> Pending<K> {
             .map_err(|status| Error::Fifo("write", K::REFL.as_str(), status))?;
         let _drained = storage.drain(0..submitted);
         Poll::Ready(Ok(submitted))
+    }
+}
+
+/// An intermediary buffer used to reduce syscall overhead by acting as a proxy
+/// to read entries from a FIFO.
+///
+/// `ReadyBuffer` caches read entries from a FIFO in pre-allocated memory,
+/// allowing different batch sizes between what is acquired from the FIFO and
+/// what's processed by the caller.
+struct ReadyBuffer<T> {
+    // NB: A vector of `MaybeUninit` here allows us to give a transparent memory
+    // layout to the FIFO object but still move objects out of our buffer
+    // without needing a `T: Default` implementation. There's a small added
+    // benefit of not paying for memory initialization on creation as well, but
+    // that's mostly negligible given all allocation is performed upfront.
+    data: Vec<MaybeUninit<T>>,
+    available: Range<usize>,
+}
+
+impl<T> Drop for ReadyBuffer<T> {
+    fn drop(&mut self) {
+        let Self { data, available } = self;
+        for initialized in &mut data[available.clone()] {
+            // SAFETY: the available range keeps track of initialized buffers,
+            // we must drop them on drop to uphold `MaybeUninit` expectations.
+            unsafe { initialized.assume_init_drop() }
+        }
+        *available = 0..0;
+    }
+}
+
+impl<T> ReadyBuffer<T> {
+    fn new(capacity: usize) -> Self {
+        let data = std::iter::from_fn(|| Some(MaybeUninit::uninit())).take(capacity).collect();
+        Self { data, available: 0..0 }
+    }
+
+    fn poll_with_fifo(
+        &mut self,
+        cx: &mut Context<'_>,
+        fifo: &fuchsia_async::Fifo<T>,
+    ) -> Poll<std::result::Result<T, zx::Status>>
+    where
+        T: fasync::FifoEntry,
+    {
+        let Self { data, available: Range { start, end } } = self;
+
+        loop {
+            // Always pop from available data first.
+            if *start != *end {
+                let desc = std::mem::replace(&mut data[*start], MaybeUninit::uninit());
+                *start += 1;
+                // SAFETY: Descriptor was in the initialized section, it was
+                // initialized.
+                let desc = unsafe { desc.assume_init() };
+                return Poll::Ready(Ok(desc));
+            }
+            // Fetch more from the FIFO.
+            let count = ready!(fifo.try_read(cx, &mut data[..]))?;
+            *start = 0;
+            *end = count;
+        }
     }
 }
 
