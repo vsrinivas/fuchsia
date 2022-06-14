@@ -21,6 +21,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.buildinfo.Provider",
             "fuchsia.paver.Paver",
             "fuchsia.process.Launcher",
             "fuchsia.recovery.FactoryReset",

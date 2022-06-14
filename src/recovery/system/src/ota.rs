@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 use {
     crate::{setup::DevhostConfig, storage::Storage},
-    anyhow::{Context, Error},
+    anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,
+    fidl_fuchsia_buildinfo::ProviderMarker as BuildInfoMarker,
     fidl_fuchsia_io as fio, fidl_fuchsia_paver as fpaver, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{client, server::ServiceFs},
     fuchsia_zircon as zx,
     futures::prelude::*,
     hyper::Uri,
@@ -14,8 +15,6 @@ use {
     serde_json::{json, Value},
     std::{fs::File, str::FromStr},
 };
-
-const BOARD_NAME_PATH: &str = "/config/build-info/board";
 
 enum PaverType {
     /// Use the real paver.
@@ -115,6 +114,21 @@ impl OtaEnvBuilder {
         self
     }
 
+    /// Returns the name of the board provided by fidl/fuchsia.buildinfo
+    async fn get_board_name(&self) -> Result<String, Error> {
+        match &self.board_name {
+            BoardName::BuildInfo => {
+                let proxy = match client::connect_to_protocol::<BuildInfoMarker>() {
+                    Ok(p) => p,
+                    Err(err) => bail!("Failed to connect to fuchsia.buildinfo.Provider proxy: {:?}", err),
+                };
+                let build_info = proxy.get_build_info().await.context("Failed to read build info")?;
+                build_info.board_config.ok_or(format_err!("No board name provided"))
+            }
+            BoardName::Override { name } => Ok(name.to_owned()),
+        }
+    }
+
     /// Takes a devhost config, and converts into a pkg-resolver friendly format.
     /// Returns SSH authorized keys and a |File| representing a directory with the repository
     /// configuration in it.
@@ -191,6 +205,8 @@ impl OtaEnvBuilder {
         let ssl_certificates =
             File::open(&self.ssl_certificates).context("Opening SSL certificate folder")?;
 
+        let board_name = self.get_board_name().await.context("Could not get board name")?;
+
         let (storage, blobfs_root, minfs_root_path) =
             if let StorageType::Fake { blobfs_root, minfs_path } = self.storage_type {
                 (None, blobfs_root, minfs_path)
@@ -208,13 +224,6 @@ impl OtaEnvBuilder {
                 ClientEnd::from(paver_connector)
             }
             PaverType::Fake { connector } => connector,
-        };
-
-        let board_name = match self.board_name {
-            BoardName::BuildInfo => {
-                std::fs::read_to_string(BOARD_NAME_PATH).context("Reading board name")?
-            }
-            BoardName::Override { name } => name,
         };
 
         Ok(OtaEnv {

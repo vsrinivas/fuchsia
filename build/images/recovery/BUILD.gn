@@ -73,6 +73,7 @@ _core_realm_deps = [
   "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
   "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
+  "//src/developer/build_info:build_info_core_shard",
   "//src/recovery/factory_reset:factory_reset_core_shard",
   "//src/ui/bin/brightness_manager:auto-brightness_core_shard",
 ]
@@ -119,6 +120,9 @@ recovery_system_image_deps = [ "//bundles/packages/prod:broadcom" ]
 
 recovery_eng_packages =
     recovery_packages + [
+      # So recovery can read board name and version info:
+      "//src/developer/build_info:build-info-service",
+
       # So components can be launched:
       "//src/sys/tools/run",
 

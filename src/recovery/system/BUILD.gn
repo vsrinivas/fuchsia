@@ -65,6 +65,7 @@ rustc_binary("bin") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
