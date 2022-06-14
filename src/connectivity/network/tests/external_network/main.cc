@@ -208,7 +208,7 @@ TEST(ExternalNetworkTest, IoctlGetInterfaceAddresses) {
       },
       // This interface with two static addresses is configured in the emulated
       // network environment in which this test is run. This configuration is in
-      // this component manifest: meta/netstack_external_network_test.cmx.
+      // this component manifest: meta/test.cml.
       {
           .name = "device",
           .addr = "192.168.0.1",
