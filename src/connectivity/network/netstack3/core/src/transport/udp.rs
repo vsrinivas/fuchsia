@@ -876,7 +876,7 @@ pub trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext>:
     UdpContext<I>
     + CounterContext
     + TransportIpContext<I, C>
-    + StateContext<UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
+    + StateContext<C, UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
 {
 }
 
@@ -886,7 +886,7 @@ impl<
         SC: UdpContext<I>
             + CounterContext
             + TransportIpContext<I, C>
-            + StateContext<UdpState<I, SC::DeviceId>>,
+            + StateContext<C, UdpState<I, SC::DeviceId>>,
     > UdpStateContext<I, C> for SC
 {
 }
@@ -1005,7 +1005,7 @@ impl<
 }
 
 impl<I: IpExt, D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    StateContext<UdpState<I, DeviceId>> for SyncCtx<D, C, NonSyncCtx>
+    StateContext<NonSyncCtx, UdpState<I, DeviceId>> for SyncCtx<D, C, NonSyncCtx>
 {
     fn get_state_with(&self, _id0: ()) -> &UdpState<I, DeviceId> {
         // Since `specialize_ip` doesn't support multiple trait bounds (ie, `I:
@@ -1960,7 +1960,7 @@ mod tests {
     }
 
     impl<I: TestIpExt, D: IpDeviceId + 'static>
-        StateContext<UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
+        StateContext<DummyDeviceNonSyncCtx, UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
         for DummyDeviceSyncCtx<I, D>
     {
         fn get_state_with(&self, _id0: ()) -> &UdpState<I, D> {
@@ -2561,7 +2561,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_empty(
-            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
+            StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -2581,7 +2581,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_empty(
-            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
+            StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -2657,7 +2657,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_empty(
-            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
+            StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -2684,7 +2684,7 @@ mod tests {
         // UDP connection count should be zero before and after `send_udp` call
         // (even in the case of errors).
         assert_empty(
-            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
+            StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .iter_conn_addrs(),
         );
@@ -3612,7 +3612,7 @@ mod tests {
         );
 
         let conn_state =
-            &StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
+            &StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
 
         // Collect all used local ports.
         assert_eq!(
@@ -3703,7 +3703,7 @@ mod tests {
                 .expect("listen_udp failed");
 
         let conn_state =
-            &StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
+            &StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
         let wildcard_port = assert_matches!(conn_state.bound.get_listener_by_id(&wildcard_list),
             Some((
                 (ListenerState, _),
@@ -3742,7 +3742,7 @@ mod tests {
             device: None,
         };
         let conn_state =
-            &StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
+            &StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
         for listener in listeners {
             assert_matches!(conn_state.bound.get_listener_by_id(&listener),
                 Some(((ListenerState, _), addr)) => assert_eq!(addr, &expected_addr));
@@ -3810,7 +3810,7 @@ mod tests {
         // Assert that that connection id was removed from the connections
         // state.
         assert_eq!(
-            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
+            StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
                 .get_conn_by_id(&conn),
@@ -3843,7 +3843,7 @@ mod tests {
         assert_eq!(info.local_ip.unwrap(), local_ip);
         assert_eq!(info.local_port, local_port);
         assert_eq!(
-            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
+            StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
                 .get_listener_by_id(&list),
@@ -3864,7 +3864,7 @@ mod tests {
         assert_eq!(info.local_ip, None);
         assert_eq!(info.local_port, local_port);
         assert_eq!(
-            StateContext::<UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
+            StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
                 .get_listener_by_id(&list),

@@ -266,7 +266,7 @@ pub trait RngContext {
 /// `StateContext` stores instances of `State` keyed by `Id`, and provides
 /// getters for this state. If `Id` is `()`, then `StateContext` represents a
 /// single instance of `State`.
-pub trait StateContext<State, Id = ()> {
+pub trait StateContext<C, State, Id = ()> {
     /// Get the state immutably.
     ///
     /// # Panics
@@ -294,7 +294,7 @@ pub trait StateContext<State, Id = ()> {
     /// `x.get_state()` is shorthand for `x.get_state_with(())`.
     fn get_state(&self) -> &State
     where
-        Self: StateContext<State>,
+        Self: StateContext<C, State>,
     {
         self.get_state_with(())
     }
@@ -304,7 +304,7 @@ pub trait StateContext<State, Id = ()> {
     /// `x.get_state_mut()` is shorthand for `x.get_state_mut_with(())`.
     fn get_state_mut(&mut self) -> &mut State
     where
-        Self: StateContext<State>,
+        Self: StateContext<C, State>,
     {
         self.get_state_mut_with(())
     }

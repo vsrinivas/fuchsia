@@ -149,7 +149,7 @@ pub(crate) trait ArpDeviceIdContext<D: ArpDevice> {
 /// An execution context for the ARP protocol.
 pub(crate) trait ArpContext<D: ArpDevice, P: PType, C>:
     ArpDeviceIdContext<D>
-    + StateContext<ArpState<D, P>, <Self as ArpDeviceIdContext<D>>::DeviceId>
+    + StateContext<C, ArpState<D, P>, <Self as ArpDeviceIdContext<D>>::DeviceId>
     + TimerContext<ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
     + FrameContext<C, EmptyBuf, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
     + CounterContext
@@ -824,7 +824,7 @@ mod tests {
         }
     }
 
-    impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>> for MockCtx {
+    impl StateContext<MockNonSyncCtx, ArpState<EthernetLinkDevice, Ipv4Addr>> for MockCtx {
         fn get_state_with(&self, _id: ()) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
             &self.get_ref().arp_state
         }
@@ -1080,7 +1080,7 @@ mod tests {
             }
         }
 
-        impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, usize> for MockCtx2 {
+        impl StateContext<MockNonSyncCtx2, ArpState<EthernetLinkDevice, Ipv4Addr>, usize> for MockCtx2 {
             fn get_state_with(&self, _id: usize) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
                 &self.get_ref().arp_state
             }

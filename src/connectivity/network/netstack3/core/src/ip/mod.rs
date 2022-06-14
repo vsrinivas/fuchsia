@@ -2331,7 +2331,7 @@ impl<
         C,
         SC: IpTransportLayerContext<Ipv4, C>
             + IcmpContext<Ipv4>
-            + StateContext<IcmpState<Ipv4Addr, SC::Instant, IpSock<Ipv4, SC::DeviceId>>>
+            + StateContext<C, IcmpState<Ipv4Addr, SC::Instant, IpSock<Ipv4, SC::DeviceId>>>
             + IpSocketHandler<Ipv4, C>
             + InstantContext
             + CounterContext,
@@ -2376,7 +2376,7 @@ impl<
         C,
         SC: IpTransportLayerContext<Ipv6, C>
             + IcmpContext<Ipv6>
-            + StateContext<IcmpState<Ipv6Addr, SC::Instant, IpSock<Ipv6, SC::DeviceId>>>
+            + StateContext<C, IcmpState<Ipv6Addr, SC::Instant, IpSock<Ipv6, SC::DeviceId>>>
             + IpSocketHandler<Ipv6, C>
             + InstantContext
             + CounterContext,

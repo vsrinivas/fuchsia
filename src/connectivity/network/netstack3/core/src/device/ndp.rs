@@ -181,7 +181,7 @@ pub(crate) trait NdpContext<D: LinkDevice, C>:
     Sized
     + DeviceIdContext<D>
     + CounterContext
-    + StateContext<NdpState<D>, <Self as DeviceIdContext<D>>::DeviceId>
+    + StateContext<C, NdpState<D>, <Self as DeviceIdContext<D>>::DeviceId>
     + TimerContext<NdpTimerId<D, <Self as DeviceIdContext<D>>::DeviceId>>
 {
     /// Returns the NDP retransmission timer configured on the device.
@@ -1555,7 +1555,7 @@ mod tests {
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
         // Neighbor entry for remote should be marked as Incomplete.
         assert_eq!(
-            StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+            StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 net.sync_ctx("local"),
                 device_id.try_into().expect("expected ethernet ID")
             )
@@ -1584,25 +1584,27 @@ mod tests {
 
         // At the end of the exchange, both sides should have each other in
         // their NDP tables.
-        let local_neighbor = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
-            net.sync_ctx("local"),
-            device_id.try_into().expect("expected ethernet ID"),
-        )
-        .neighbors
-        .get_neighbor_state(&remote_ip())
-        .unwrap();
+        let local_neighbor =
+            StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+                net.sync_ctx("local"),
+                device_id.try_into().expect("expected ethernet ID"),
+            )
+            .neighbors
+            .get_neighbor_state(&remote_ip())
+            .unwrap();
         assert_eq!(local_neighbor.link_address.unwrap(), remote_mac().get(),);
         // Remote must be reachable from local since it responded with an NA
         // message with the solicited flag set.
         assert_eq!(local_neighbor.state, NeighborEntryState::Reachable,);
 
-        let remote_neighbor = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
-            net.sync_ctx("remote"),
-            device_id.try_into().expect("expected ethernet ID"),
-        )
-        .neighbors
-        .get_neighbor_state(&local_ip())
-        .unwrap();
+        let remote_neighbor =
+            StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+                net.sync_ctx("remote"),
+                device_id.try_into().expect("expected ethernet ID"),
+            )
+            .neighbors
+            .get_neighbor_state(&local_ip())
+            .unwrap();
         assert_eq!(remote_neighbor.link_address.unwrap(), local_mac().get(),);
         // Local must be marked as stale because remote got an NS from it but
         // has not itself sent any packets to it and confirmed that local
@@ -2510,7 +2512,7 @@ mod tests {
         let icmpv6_packet = icmpv6_packet_buf
             .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
             .unwrap();
-        let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+        let ndp_state = StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut sync_ctx,
             device_id.try_into().expect("expected ethernet ID"),
         );
@@ -2523,7 +2525,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 1);
-        let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+        let ndp_state = StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut sync_ctx,
             device_id.try_into().expect("expected ethernet ID"),
         );
@@ -2553,7 +2555,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(get_counter_val(&mut sync_ctx, "ndp::rx_router_advertisement"), 2);
-        let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+        let ndp_state = StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut sync_ctx,
             device_id.try_into().expect("expected ethernet ID"),
         );
@@ -3083,7 +3085,7 @@ mod tests {
             );
 
             let neighbor_state =
-                StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+                StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                     sync_ctx,
                     device.try_into().unwrap(),
                 )
@@ -3111,7 +3113,7 @@ mod tests {
         // Should not know about the neighbor yet.
         let device_id = device.try_into().unwrap();
         assert_eq!(
-            StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+            StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 &mut sync_ctx,
                 device_id
             )
@@ -3146,7 +3148,7 @@ mod tests {
         // We still do not know about the neighbor since the NA was unsolicited
         // and we never were interested in the neighbor yet.
         assert_eq!(
-            StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+            StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 &mut sync_ctx,
                 device_id
             )
@@ -3181,7 +3183,7 @@ mod tests {
         // We still do not know about the neighbor since the NA was unsolicited
         // and we never were interested in the neighbor yet.
         assert_eq!(
-            StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+            StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 &mut sync_ctx,
                 device_id
             )
@@ -3196,11 +3198,12 @@ mod tests {
         // Should do nothing (still INCOMPLETE).
 
         // Create incomplete neighbor entry.
-        let neighbors = &mut StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
-            &mut sync_ctx,
-            device_id,
-        )
-        .neighbors;
+        let neighbors =
+            &mut StateContext::<_, NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+                &mut sync_ctx,
+                device_id,
+            )
+            .neighbors;
         neighbors.add_incomplete_neighbor_state(neighbor_ip.get());
 
         test_receiving_na_from_known_neighbor(

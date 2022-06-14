@@ -638,6 +638,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C>:
     + CounterContext
     + InstantContext
     + StateContext<
+        C,
         IcmpState<
             I::Addr,
             <Self as InstantContext>::Instant,
@@ -708,6 +709,7 @@ impl<
 pub(crate) trait InnerIcmpv4Context<C>:
     InnerIcmpContext<Ipv4, C>
     + StateContext<
+        C,
         Icmpv4State<
             <Self as InstantContext>::Instant,
             IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
@@ -720,6 +722,7 @@ impl<
         C,
         SC: InnerIcmpContext<Ipv4, C>
             + StateContext<
+                C,
                 Icmpv4State<
                     <Self as InstantContext>::Instant,
                     IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
@@ -742,21 +745,23 @@ impl<B: BufferMut, C, SC: InnerIcmpv4Context<C> + InnerBufferIcmpContext<Ipv4, C
 {
 }
 
-impl<C>
+impl<C, SC>
     StateContext<
+        C,
         IcmpState<
             Ipv4Addr,
-            <C as InstantContext>::Instant,
-            IpSock<Ipv4, <C as IpDeviceIdContext<Ipv4>>::DeviceId>,
+            <SC as InstantContext>::Instant,
+            IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>,
         >,
-    > for C
+    > for SC
 where
-    C: InstantContext
+    SC: InstantContext
         + IpDeviceIdContext<Ipv4>
         + StateContext<
+            C,
             Icmpv4State<
-                <C as InstantContext>::Instant,
-                IpSock<Ipv4, <C as IpDeviceIdContext<Ipv4>>::DeviceId>,
+                <SC as InstantContext>::Instant,
+                IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>,
             >,
         >,
 {
@@ -789,6 +794,7 @@ where
 pub(crate) trait InnerIcmpv6Context<C>:
     InnerIcmpContext<Ipv6, C>
     + StateContext<
+        C,
         Icmpv6State<
             <Self as InstantContext>::Instant,
             IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
@@ -800,6 +806,7 @@ pub(crate) trait InnerIcmpv6Context<C>:
 impl<C, SC> InnerIcmpv6Context<C> for SC where
     SC: InnerIcmpContext<Ipv6, C>
         + StateContext<
+            C,
             Icmpv6State<
                 <Self as InstantContext>::Instant,
                 IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
@@ -821,21 +828,23 @@ impl<B: BufferMut, C, SC: InnerIcmpv6Context<C> + InnerBufferIcmpContext<Ipv6, C
 {
 }
 
-impl<C>
+impl<C, SC>
     StateContext<
+        C,
         IcmpState<
             Ipv6Addr,
-            <C as InstantContext>::Instant,
-            IpSock<Ipv6, <C as IpDeviceIdContext<Ipv6>>::DeviceId>,
+            <SC as InstantContext>::Instant,
+            IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>,
         >,
-    > for C
+    > for SC
 where
-    C: InstantContext
+    SC: InstantContext
         + IpDeviceIdContext<Ipv6>
         + StateContext<
+            C,
             Icmpv6State<
-                <C as InstantContext>::Instant,
-                IpSock<Ipv6, <C as IpDeviceIdContext<Ipv6>>::DeviceId>,
+                <SC as InstantContext>::Instant,
+                IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>,
             >,
         >,
 {
@@ -998,7 +1007,7 @@ impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B> + PmtuHandler<Ipv4, C>>
             Icmpv4Packet::TimestampRequest(timestamp_request) => {
                 sync_ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::timestamp_request");
                 if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-                    if StateContext::<Icmpv4State<_, _>>::get_state(sync_ctx).send_timestamp_reply {
+                    if StateContext::<_, Icmpv4State<_, _>>::get_state(sync_ctx).send_timestamp_reply {
                         trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Responding to Timestamp Request message");
                         // We're supposed to respond with the time that we
                         // processed this message as measured in milliseconds
@@ -3871,7 +3880,7 @@ mod tests {
                 }
             }
 
-            impl StateContext<$state<DummyInstant, IpSock<$ip, DummyDeviceId>>> for $outer_sync_ctx {
+            impl StateContext<$outer_non_sync_ctx, $state<DummyInstant, IpSock<$ip, DummyDeviceId>>> for $outer_sync_ctx {
                 fn get_state_with(
                     &self,
                     _id: (),

@@ -60,26 +60,26 @@ impl<I: Instant, SC: IpStateContext<Ipv6, I>> PmtuStateContext<Ipv6, I> for SC {
     }
 }
 
-impl<I: Instant, C: IpStateContext<Ipv4, I>> StateContext<Icmpv4State<I, IpSock<Ipv4, C::DeviceId>>>
-    for C
+impl<C, I: Instant, SC: IpStateContext<Ipv4, I>>
+    StateContext<C, Icmpv4State<I, IpSock<Ipv4, SC::DeviceId>>> for SC
 {
-    fn get_state_with(&self, _id: ()) -> &Icmpv4State<I, IpSock<Ipv4, C::DeviceId>> {
+    fn get_state_with(&self, _id: ()) -> &Icmpv4State<I, IpSock<Ipv4, SC::DeviceId>> {
         &self.get_ip_layer_state().icmp
     }
 
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv4State<I, IpSock<Ipv4, C::DeviceId>> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv4State<I, IpSock<Ipv4, SC::DeviceId>> {
         &mut self.get_ip_layer_state_mut().icmp
     }
 }
 
-impl<I: Instant, C: IpStateContext<Ipv6, I>> StateContext<Icmpv6State<I, IpSock<Ipv6, C::DeviceId>>>
-    for C
+impl<C, I: Instant, SC: IpStateContext<Ipv6, I>>
+    StateContext<C, Icmpv6State<I, IpSock<Ipv6, SC::DeviceId>>> for SC
 {
-    fn get_state_with(&self, _id: ()) -> &Icmpv6State<I, IpSock<Ipv6, C::DeviceId>> {
+    fn get_state_with(&self, _id: ()) -> &Icmpv6State<I, IpSock<Ipv6, SC::DeviceId>> {
         &self.get_ip_layer_state().icmp
     }
 
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv6State<I, IpSock<Ipv6, C::DeviceId>> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv6State<I, IpSock<Ipv6, SC::DeviceId>> {
         &mut self.get_ip_layer_state_mut().icmp
     }
 }

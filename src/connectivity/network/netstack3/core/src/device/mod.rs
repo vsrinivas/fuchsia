@@ -87,6 +87,7 @@ pub(crate) trait IpLinkDeviceContext<D: LinkDevice, C, TimerId>:
     DeviceIdContext<D>
     + CounterContext
     + StateContext<
+        C,
         IpLinkDeviceState<<Self as InstantContext>::Instant, D::State>,
         <Self as DeviceIdContext<D>>::DeviceId,
     > + TimerContext<TimerId>
@@ -103,6 +104,7 @@ impl<
             + DeviceIdContext<D>
             + CounterContext
             + StateContext<
+                C,
                 IpLinkDeviceState<<Self as InstantContext>::Instant, D::State>,
                 <Self as DeviceIdContext<D>>::DeviceId,
             > + TimerContext<TimerId>
@@ -177,7 +179,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, C: BlanketCoreContext, NonSyncCtx: No
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    StateContext<IpLinkDeviceState<C::Instant, EthernetDeviceState>, EthernetDeviceId>
+    StateContext<NonSyncCtx, IpLinkDeviceState<C::Instant, EthernetDeviceState>, EthernetDeviceId>
     for SyncCtx<D, C, NonSyncCtx>
 {
     fn get_state_with(

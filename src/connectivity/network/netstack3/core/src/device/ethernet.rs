@@ -673,13 +673,15 @@ pub(super) fn deinitialize<
 }
 
 impl<
+        C,
         SC: InstantContext
             + DeviceIdContext<EthernetLinkDevice>
             + StateContext<
+                C,
                 IpLinkDeviceState<<SC as InstantContext>::Instant, EthernetDeviceState>,
                 <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId,
             >,
-    > StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, SC::DeviceId> for SC
+    > StateContext<C, ArpState<EthernetLinkDevice, Ipv4Addr>, SC::DeviceId> for SC
 {
     fn get_state_with(&self, id: SC::DeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
         &self.get_state_with(id).link.ipv4_arp
@@ -772,13 +774,15 @@ impl<C: EthernetIpLinkDeviceNonSyncContext, SC: EthernetIpLinkDeviceContext<C>>
 }
 
 impl<
+        C,
         SC: InstantContext
             + DeviceIdContext<EthernetLinkDevice>
             + StateContext<
+                C,
                 IpLinkDeviceState<<SC as InstantContext>::Instant, EthernetDeviceState>,
                 <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId,
             >,
-    > StateContext<NdpState<EthernetLinkDevice>, SC::DeviceId> for SC
+    > StateContext<C, NdpState<EthernetLinkDevice>, SC::DeviceId> for SC
 {
     fn get_state_with(&self, id: SC::DeviceId) -> &NdpState<EthernetLinkDevice> {
         &self.get_state_with(id).link.ndp
@@ -1015,8 +1019,12 @@ mod tests {
         DummyDeviceId,
     >;
 
-    impl StateContext<IpLinkDeviceState<DummyInstant, EthernetDeviceState>, DummyDeviceId>
-        for DummyCtx
+    impl
+        StateContext<
+            DummyNonSyncCtx,
+            IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
+            DummyDeviceId,
+        > for DummyCtx
     {
         fn get_state_with(
             &self,
