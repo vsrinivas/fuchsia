@@ -11,10 +11,7 @@ import("//build/testing/environments.gni")
 # This is pulled from workstation.gni.
 group("end_to_end_deps") {
   testonly = true
-  public_deps = [
-    "//src/experiences/bin/ermine_testserver",
-    "//src/sys/tools/stash_ctl",
-  ]
+  deps = [ "//src/experiences/bin/ermine_testserver" ]
 }
 
 if (is_host) {
