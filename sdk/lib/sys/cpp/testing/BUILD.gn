@@ -73,7 +73,10 @@ source_set("enclosing_environment") {
     "component_interceptor.h",
   ]
 
-  deps = [ "//third_party/rapidjson" ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner:bin",
+    "//third_party/rapidjson",
+  ]
 
   public_deps = [
     ":cpp",
