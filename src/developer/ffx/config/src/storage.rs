@@ -4,24 +4,31 @@
 
 use {
     crate::api::query::SelectMode,
+    crate::environment::Environment,
+    crate::mapping::{nested_get, nested_map, nested_remove, nested_set},
     crate::{ConfigLevel, ConfigQuery},
-    anyhow::{anyhow, bail, Result},
+    anyhow::{bail, Context, Result},
     config_macros::include_default,
     serde_json::{Map, Value},
-    std::fmt,
+    std::{
+        fmt,
+        fs::{File, OpenOptions},
+        io::{BufReader, BufWriter, Read, Write},
+        path::Path,
+    },
 };
 
-pub(crate) struct Priority {
+pub struct Config {
     default: Option<Value>,
-    pub(crate) build: Option<Value>,
-    pub(crate) global: Option<Value>,
-    pub(crate) user: Option<Value>,
-    pub(crate) runtime: Option<Value>,
+    build: Option<Value>,
+    global: Option<Value>,
+    user: Option<Value>,
+    runtime: Option<Value>,
 }
 
 struct PriorityIterator<'a> {
     curr: Option<ConfigLevel>,
-    config: &'a Priority,
+    config: &'a Config,
 }
 
 impl<'a> Iterator for PriorityIterator<'a> {
@@ -56,131 +63,196 @@ impl<'a> Iterator for PriorityIterator<'a> {
     }
 }
 
-impl Priority {
-    pub(crate) fn new(
-        user: Option<Value>,
-        build: Option<Value>,
+/// Reads a JSON formatted reader permissively, returning None if for whatever reason
+/// the file couldn't be read.
+///
+/// If the JSON is malformed, it will just get overwritten if set is ever used.
+/// (TODO: Validate above assumptions)
+fn read_json(file: impl Read) -> Option<Value> {
+    serde_json::from_reader(file).ok()
+}
+
+/// Takes an optional path-like object and maps it to a buffer reader of that
+/// file.
+fn reader(path: Option<impl AsRef<Path>>) -> Result<Option<BufReader<File>>> {
+    match path {
+        Some(p) => OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&p)
+            .map(|f| Some(BufReader::new(f)))
+            .context("opening read buffer"),
+        None => Ok(None),
+    }
+}
+
+fn write_json<W: Write>(file: Option<W>, value: Option<&Value>) -> Result<()> {
+    match (value, file) {
+        (Some(v), Some(mut f)) => {
+            serde_json::to_writer_pretty(&mut f, v).context("writing config file")?;
+            f.flush().map_err(Into::into)
+        }
+        (_, _) => {
+            // If either value or file are None, then return Ok(()). File being none will
+            // presume the user doesn't want to save at this level.
+            Ok(())
+        }
+    }
+}
+
+/// Atomically write to the file by creating a temporary file and passing it
+/// to the closure, and atomically rename it to the destination file.
+/// TODO(102542): This isn't really atomic unless same fs. Also, should be RAII.
+fn with_writer<F>(path: Option<&str>, f: F) -> Result<()>
+where
+    F: FnOnce(Option<BufWriter<&mut tempfile::NamedTempFile>>) -> Result<()>,
+{
+    if let Some(path) = path {
+        let parent = Path::new(path).parent().unwrap_or_else(|| Path::new("."));
+        let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
+
+        f(Some(BufWriter::new(&mut tmp)))?;
+
+        tmp.persist(path)?;
+
+        Ok(())
+    } else {
+        f(None)
+    }
+}
+
+impl Config {
+    fn new(
         global: Option<Value>,
+        build: Option<Value>,
+        user: Option<Value>,
         runtime: Option<Value>,
     ) -> Self {
         Self { user, build, global, runtime, default: include_default!() }
     }
 
+    pub(crate) fn from_env(
+        env: &Environment,
+        build_dir: Option<&String>,
+        runtime: Option<Value>,
+    ) -> Result<Self> {
+        let build_dir = build_dir.and_then(|b| env.build.as_ref().and_then(|c| c.get(b)));
+
+        let user = reader(env.user.as_ref())?.and_then(read_json);
+        let build = reader(build_dir.as_ref())?.and_then(read_json);
+        let global = reader(env.global.as_ref())?.and_then(read_json);
+
+        Ok(Self::new(global, build, user, runtime))
+    }
+
+    fn write<W: Write>(&self, global: Option<W>, build: Option<W>, user: Option<W>) -> Result<()> {
+        write_json(user, self.user.as_ref())?;
+        write_json(build, self.build.as_ref())?;
+        write_json(global, self.global.as_ref())?;
+        Ok(())
+    }
+
+    pub(crate) fn save(
+        &self,
+        global: Option<&String>,
+        build: Option<&String>,
+        user: Option<&String>,
+    ) -> Result<()> {
+        // First save the config to a temp file in the same location as the file, then atomically
+        // rename the file to the final location to avoid partially written files.
+
+        with_writer(global.map(|s| s.as_str()), |global| {
+            with_writer(build.map(|s| s.as_str()), |build| {
+                with_writer(user.map(|s| s.as_str()), |user| self.write(global, build, user))
+            })
+        })
+    }
+
+    pub fn get<T: Fn(Value) -> Option<Value>>(
+        &self,
+        key: &ConfigQuery<'_>,
+        mapper: &T,
+    ) -> Option<Value> {
+        if let Some(name) = key.name {
+            // Check for nested config values if there's a '.' in the key
+            let key_vec: Vec<&str> = name.split('.').collect();
+            if let Some(level) = key.level {
+                let config = match level {
+                    ConfigLevel::Runtime => &self.runtime,
+                    ConfigLevel::User => &self.user,
+                    ConfigLevel::Build => &self.build,
+                    ConfigLevel::Global => &self.global,
+                    ConfigLevel::Default => &self.default,
+                };
+                nested_get(config, key_vec[0], &key_vec[1..], mapper)
+            } else {
+                match key.select {
+                    SelectMode::First => {
+                        self.iter().find_map(|c| nested_get(c, key_vec[0], &key_vec[1..], mapper))
+                    }
+                    SelectMode::All => {
+                        let result: Vec<Value> = self
+                            .iter()
+                            .filter_map(|c| nested_get(c, key_vec[0], &key_vec[1..], mapper))
+                            .collect();
+                        if result.len() > 0 {
+                            Some(Value::Array(result))
+                        } else {
+                            None
+                        }
+                    }
+                }
+            }
+        } else {
+            if let Some(level) = key.level {
+                let config = match level {
+                    ConfigLevel::Runtime => &self.runtime,
+                    ConfigLevel::User => &self.user,
+                    ConfigLevel::Build => &self.build,
+                    ConfigLevel::Global => &self.global,
+                    ConfigLevel::Default => &self.default,
+                };
+                nested_map(config.clone(), mapper)
+            } else {
+                // Not really supported now.  Maybe in the future.
+                None
+            }
+        }
+    }
+
+    fn validate_write_query<'a>(query: &'a ConfigQuery<'a>) -> Result<(&'a str, &'a ConfigLevel)> {
+        match query {
+            ConfigQuery { name: None, .. } => {
+                bail!("Name of configuration is required to write to a value")
+            }
+            ConfigQuery { level: None, .. } => {
+                bail!("Level of configuration is required to write to a value")
+            }
+            ConfigQuery { level: Some(level), .. } if level == &ConfigLevel::Default => {
+                bail!("Cannot override defaults")
+            }
+            ConfigQuery { name: Some(key), level: Some(level), .. } => Ok((*key, level)),
+        }
+    }
+
+    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<bool> {
+        let (key, level) = Self::validate_write_query(query)?;
+
+        let key_vec: Vec<&str> = key.split('.').collect();
+        let config_changed =
+            nested_set(&mut self.get_level_map(level), key_vec[0], &key_vec[1..], value);
+        Ok(config_changed)
+    }
+
+    pub fn remove(&mut self, query: &ConfigQuery<'_>) -> Result<()> {
+        let (key, level) = Self::validate_write_query(query)?;
+        let key_vec: Vec<&str> = key.split('.').collect();
+        nested_remove(&mut self.get_level_map(&level), key_vec[0], &key_vec[1..])
+    }
+
     fn iter(&self) -> PriorityIterator<'_> {
         PriorityIterator { curr: None, config: self }
-    }
-
-    pub fn nested_map<T: Fn(Value) -> Option<Value>>(
-        cur: Option<Value>,
-        mapper: &T,
-    ) -> Option<Value> {
-        cur.and_then(|c| {
-            if let Value::Object(map) = c {
-                let mut result = Map::new();
-                for (key, value) in map.iter() {
-                    let new_value = if value.is_object() {
-                        Priority::nested_map(map.get(key).cloned(), mapper)
-                    } else {
-                        map.get(key).cloned().and_then(|v| mapper(v))
-                    };
-                    if let Some(new_value) = new_value {
-                        result.insert(key.to_string(), new_value);
-                    }
-                }
-                if result.len() == 0 {
-                    None
-                } else {
-                    Some(Value::Object(result))
-                }
-            } else {
-                mapper(c)
-            }
-        })
-    }
-
-    fn nested_get<T: Fn(Value) -> Option<Value>>(
-        cur: &Option<Value>,
-        key: &str,
-        remaining_keys: Vec<&str>,
-        mapper: &T,
-    ) -> Option<Value> {
-        cur.as_ref().and_then(|c| {
-            if remaining_keys.len() == 0 {
-                Priority::nested_map(c.get(key).cloned(), mapper)
-            } else {
-                Priority::nested_get(
-                    &c.get(key).cloned(),
-                    remaining_keys[0],
-                    remaining_keys[1..].to_vec(),
-                    mapper,
-                )
-            }
-        })
-    }
-
-    pub(crate) fn nested_set(
-        cur: &mut Map<String, Value>,
-        key: &str,
-        remaining_keys: Vec<&str>,
-        value: Value,
-    ) -> bool {
-        if remaining_keys.len() == 0 {
-            // Exit early if the value hasn't changed.
-            if let Some(old_value) = cur.get(key) {
-                if old_value == &value {
-                    return false;
-                }
-            }
-            cur.insert(key.to_string(), value);
-            true
-        } else {
-            match cur.get(key) {
-                Some(value) => {
-                    if !value.is_object() {
-                        // Any literals will be overridden.
-                        cur.insert(key.to_string(), Value::Object(Map::new()));
-                    }
-                }
-                None => {
-                    cur.insert(key.to_string(), Value::Object(Map::new()));
-                }
-            }
-            // Just ensured this would be the case.
-            let next_map = cur
-                .get_mut(key)
-                .expect("unable to get configuration")
-                .as_object_mut()
-                .expect("Unable to set configuration value as map");
-            Priority::nested_set(next_map, remaining_keys[0], remaining_keys[1..].to_vec(), value)
-        }
-    }
-
-    fn nested_remove(
-        cur: &mut Map<String, Value>,
-        key: &str,
-        remaining_keys: Vec<&str>,
-    ) -> Result<()> {
-        if remaining_keys.len() == 0 {
-            cur.remove(&key.to_string()).ok_or(anyhow!("Config key not found")).map(|_| ())
-        } else {
-            match cur.get(key) {
-                Some(value) => {
-                    if !value.is_object() {
-                        bail!("Configuration literal found when expecting a map.")
-                    }
-                }
-                None => {
-                    bail!("Configuration key not found.");
-                }
-            }
-            // Just ensured this would be the case.
-            let next_map = cur
-                .get_mut(key)
-                .expect("unable to get configuration")
-                .as_object_mut()
-                .expect("Unable to set configuration value as map");
-            Priority::nested_remove(next_map, remaining_keys[0], remaining_keys[1..].to_vec())
-        }
     }
 
     fn get_level_map(&mut self, level: &ConfigLevel) -> &mut Map<String, Value> {
@@ -208,103 +280,9 @@ impl Priority {
             .as_object_mut()
             .expect("unable to initialize configuration map")
     }
-
-    pub fn get<T: Fn(Value) -> Option<Value>>(
-        &self,
-        key: &ConfigQuery<'_>,
-        mapper: &T,
-    ) -> Option<Value> {
-        if let Some(name) = key.name {
-            // Check for nested config values if there's a '.' in the key
-            let key_vec: Vec<&str> = name.split('.').collect();
-            if let Some(level) = key.level {
-                let config = match level {
-                    ConfigLevel::Runtime => &self.runtime,
-                    ConfigLevel::User => &self.user,
-                    ConfigLevel::Build => &self.build,
-                    ConfigLevel::Global => &self.global,
-                    ConfigLevel::Default => &self.default,
-                };
-                Priority::nested_get(config, key_vec[0], key_vec[1..].to_vec(), mapper)
-            } else {
-                match key.select {
-                    SelectMode::First => self.iter().find_map(|c| {
-                        Priority::nested_get(c, key_vec[0], key_vec[1..].to_vec(), mapper)
-                    }),
-                    SelectMode::All => {
-                        let result: Vec<Value> = self
-                            .iter()
-                            .filter_map(|c| {
-                                Priority::nested_get(c, key_vec[0], key_vec[1..].to_vec(), mapper)
-                            })
-                            .collect();
-                        if result.len() > 0 {
-                            Some(Value::Array(result))
-                        } else {
-                            None
-                        }
-                    }
-                }
-            }
-        } else {
-            if let Some(level) = key.level {
-                let config = match level {
-                    ConfigLevel::Runtime => &self.runtime,
-                    ConfigLevel::User => &self.user,
-                    ConfigLevel::Build => &self.build,
-                    ConfigLevel::Global => &self.global,
-                    ConfigLevel::Default => &self.default,
-                };
-                Priority::nested_map(config.clone(), mapper)
-            } else {
-                // Not really supported now.  Maybe in the future.
-                None
-            }
-        }
-    }
-
-    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<bool> {
-        let key = if let Some(k) = query.name {
-            k
-        } else {
-            bail!("name of configuration is required to set a value");
-        };
-
-        let level = if let Some(l) = query.level {
-            l
-        } else {
-            bail!("level of configuration is required to set a value");
-        };
-
-        let key_vec: Vec<&str> = key.split('.').collect();
-        let config_changed = Priority::nested_set(
-            &mut self.get_level_map(&level),
-            key_vec[0],
-            key_vec[1..].to_vec(),
-            value,
-        );
-        Ok(config_changed)
-    }
-
-    pub fn remove(&mut self, query: &ConfigQuery<'_>) -> Result<()> {
-        let key = if let Some(k) = query.name {
-            k
-        } else {
-            bail!("name of configuration is required to remove a value");
-        };
-
-        let level = if let Some(l) = query.level {
-            l
-        } else {
-            bail!("level of configuration is required to remove a value");
-        };
-
-        let key_vec: Vec<&str> = key.split('.').collect();
-        Priority::nested_remove(&mut self.get_level_map(&level), key_vec[0], key_vec[1..].to_vec())
-    }
 }
 
-impl fmt::Display for Priority {
+impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
@@ -355,6 +333,7 @@ mod test {
     use crate::mapping::identity::identity;
     use regex::Regex;
     use serde_json::json;
+    use std::io::{BufReader, BufWriter};
 
     const ERROR: &'static str = "0";
 
@@ -407,8 +386,52 @@ mod test {
         }"#;
 
     #[test]
+    fn test_persistent_build() -> Result<()> {
+        let mut user_file = String::from(USER);
+        let mut build_file = String::from(BUILD);
+        let mut global_file = String::from(GLOBAL);
+
+        let persistent_config = Config::new(
+            read_json(BufReader::new(global_file.as_bytes())),
+            read_json(BufReader::new(build_file.as_bytes())),
+            read_json(BufReader::new(user_file.as_bytes())),
+            None,
+        );
+
+        let value = persistent_config.get(&"name".into(), &identity);
+        assert!(value.is_some());
+        assert_eq!(value.unwrap(), Value::String(String::from("User")));
+
+        let mut user_file_out = String::new();
+        let mut build_file_out = String::new();
+        let mut global_file_out = String::new();
+
+        unsafe {
+            persistent_config.write(
+                Some(BufWriter::new(global_file_out.as_mut_vec())),
+                Some(BufWriter::new(build_file_out.as_mut_vec())),
+                Some(BufWriter::new(user_file_out.as_mut_vec())),
+            )?;
+        }
+
+        // Remove whitespace
+        user_file.retain(|c| !c.is_whitespace());
+        build_file.retain(|c| !c.is_whitespace());
+        global_file.retain(|c| !c.is_whitespace());
+        user_file_out.retain(|c| !c.is_whitespace());
+        build_file_out.retain(|c| !c.is_whitespace());
+        global_file_out.retain(|c| !c.is_whitespace());
+
+        assert_eq!(user_file, user_file_out);
+        assert_eq!(build_file, build_file_out);
+        assert_eq!(global_file, global_file_out);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_priority_iterator() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -427,7 +450,7 @@ mod test {
 
     #[test]
     fn test_priority_iterator_with_nones() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: None,
             global: None,
@@ -446,7 +469,7 @@ mod test {
 
     #[test]
     fn test_get() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -458,7 +481,7 @@ mod test {
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("User")));
 
-        let test_build = Priority {
+        let test_build = Config {
             user: None,
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -470,7 +493,7 @@ mod test {
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("Build")));
 
-        let test_global = Priority {
+        let test_global = Config {
             user: None,
             build: None,
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -482,7 +505,7 @@ mod test {
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("Global")));
 
-        let test_default = Priority {
+        let test_default = Config {
             user: None,
             build: None,
             global: None,
@@ -495,7 +518,7 @@ mod test {
         assert_eq!(value_default.unwrap(), Value::String(String::from("Default")));
 
         let test_none =
-            Priority { user: None, build: None, global: None, default: None, runtime: None };
+            Config { user: None, build: None, global: None, default: None, runtime: None };
 
         let value_none = test_none.get(&"name".into(), &identity);
         assert!(value_none.is_none());
@@ -504,7 +527,7 @@ mod test {
 
     #[test]
     fn test_set_non_map_value() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(ERROR)?),
             build: None,
             global: None,
@@ -519,7 +542,7 @@ mod test {
 
     #[test]
     fn test_get_nonexistent_config() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -533,7 +556,7 @@ mod test {
 
     #[test]
     fn test_set() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -549,7 +572,7 @@ mod test {
 
     #[test]
     fn test_set_twice_does_not_change_config() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -589,13 +612,17 @@ mod test {
     #[test]
     fn test_set_build_from_none() -> Result<()> {
         let mut test =
-            Priority { user: None, build: None, global: None, default: None, runtime: None };
+            Config { user: None, build: None, global: None, default: None, runtime: None };
         let value_none = test.get(&"name".into(), &identity);
         assert!(value_none.is_none());
-        test.set(&("name", &ConfigLevel::Default).into(), Value::String(String::from("default")))?;
+        let error_set = test
+            .set(&("name", &ConfigLevel::Default).into(), Value::String(String::from("default")));
+        assert!(error_set.is_err(), "Should not be able to set default values at runtime");
         let value_default = test.get(&"name".into(), &identity);
-        assert!(value_default.is_some());
-        assert_eq!(value_default.unwrap(), Value::String(String::from("default")));
+        assert!(
+            value_default.is_none(),
+            "Default value should be unset after failed attempt to set it"
+        );
         test.set(&("name", &ConfigLevel::Global).into(), Value::String(String::from("global")))?;
         let value_global = test.get(&"name".into(), &identity);
         assert!(value_global.is_some());
@@ -613,7 +640,7 @@ mod test {
 
     #[test]
     fn test_remove() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -632,15 +659,21 @@ mod test {
         let default_value = test.get(&"name".into(), &identity);
         assert!(default_value.is_some());
         assert_eq!(default_value.unwrap(), Value::String(String::from("Default")));
-        test.remove(&("name", &ConfigLevel::Default).into())?;
-        let none_value = test.get(&"name".into(), &identity);
-        assert!(none_value.is_none());
+        let error_removed = test.remove(&("name", &ConfigLevel::Default).into());
+        assert!(error_removed.is_err(), "Should not be able to remove a default value");
+        let default_value = test.get(&"name".into(), &identity);
+        assert_eq!(
+            default_value,
+            Some(Value::String(String::from("Default"))),
+            "value should still be default after trying to remove it (was {:?})",
+            default_value
+        );
         Ok(())
     }
 
     #[test]
     fn test_default() {
-        let test = Priority::new(None, None, None, None);
+        let test = Config::new(None, None, None, None);
         let default_value = test.get(&"log.enabled".into(), &identity);
         assert_eq!(
             default_value.unwrap(),
@@ -650,7 +683,7 @@ mod test {
 
     #[test]
     fn test_display() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
@@ -680,7 +713,7 @@ mod test {
 
     #[test]
     fn test_mapping() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: Some(serde_json::from_str(MAPPED)?),
             build: None,
             global: None,
@@ -698,7 +731,7 @@ mod test {
 
     #[test]
     fn test_nested_get() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: None,
             build: None,
             global: None,
@@ -712,7 +745,7 @@ mod test {
 
     #[test]
     fn test_nested_get_should_return_sub_tree() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: None,
             build: None,
             global: None,
@@ -726,7 +759,7 @@ mod test {
 
     #[test]
     fn test_nested_get_should_return_full_match() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: None,
             build: None,
             global: None,
@@ -740,7 +773,7 @@ mod test {
 
     #[test]
     fn test_nested_get_should_map_values_in_sub_tree() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: None,
             build: None,
             global: None,
@@ -755,7 +788,7 @@ mod test {
     #[test]
     fn test_nested_set_from_none() -> Result<()> {
         let mut test =
-            Priority { user: None, build: None, global: None, default: None, runtime: None };
+            Config { user: None, build: None, global: None, default: None, runtime: None };
         test.set(&("name.nested", &ConfigLevel::User).into(), Value::Bool(false))?;
         let nested_value = test.get(&"name".into(), &identity);
         assert_eq!(nested_value, Some(serde_json::from_str("{\"nested\": false}")?));
@@ -764,7 +797,7 @@ mod test {
 
     #[test]
     fn test_nested_set_from_already_populated_tree() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(NESTED)?),
             build: None,
             global: None,
@@ -783,7 +816,7 @@ mod test {
 
     #[test]
     fn test_nested_set_override_literals() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(json!([])),
             build: None,
             global: None,
@@ -805,7 +838,7 @@ mod test {
     #[test]
     fn test_nested_remove_from_none() -> Result<()> {
         let mut test =
-            Priority { user: None, build: None, global: None, default: None, runtime: None };
+            Config { user: None, build: None, global: None, default: None, runtime: None };
         let result = test.remove(&("name.nested", &ConfigLevel::User).into());
         assert!(result.is_err());
         Ok(())
@@ -813,7 +846,7 @@ mod test {
 
     #[test]
     fn test_nested_remove_throws_error_if_key_not_found() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(NESTED)?),
             build: None,
             global: None,
@@ -827,7 +860,7 @@ mod test {
 
     #[test]
     fn test_nested_remove_deletes_literals() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(DEEP)?),
             build: None,
             global: None,
@@ -842,7 +875,7 @@ mod test {
 
     #[test]
     fn test_nested_remove_deletes_subtrees() -> Result<()> {
-        let mut test = Priority {
+        let mut test = Config {
             user: Some(serde_json::from_str(DEEP)?),
             build: None,
             global: None,
@@ -857,7 +890,7 @@ mod test {
 
     #[test]
     fn test_additive_mode() -> Result<()> {
-        let test = Priority {
+        let test = Config {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),

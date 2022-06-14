@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::priority_config::Priority;
+use crate::mapping;
 use anyhow::{anyhow, bail, Context, Result};
 use serde_json::{Map, Value};
 use std::{fs::File, io::BufReader, path::Path};
@@ -13,10 +13,10 @@ fn try_split_name_value_pairs(config: &String) -> Result<Option<Value>> {
         let s: Vec<&str> = pair.trim().split('=').collect();
         if s.len() == 2 {
             let key_vec: Vec<&str> = s[0].split('.').collect();
-            Priority::nested_set(
+            mapping::nested_set(
                 &mut runtime_config,
                 key_vec[0],
-                key_vec[1..].to_vec(),
+                &key_vec[1..],
                 Value::String(s[1].to_string()),
             );
         } else {

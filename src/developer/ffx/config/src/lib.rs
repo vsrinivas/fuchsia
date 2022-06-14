@@ -12,12 +12,12 @@ use {
     },
     crate::cache::load_config,
     crate::environment::Environment,
-    crate::file_backed_config::FileBacked as Config,
     crate::mapping::{
         cache::cache, config::config, data::data, env_var::env_var, file_check::file_check,
         home::home, identity::identity, runtime::runtime,
     },
     crate::paths::get_default_user_file_path,
+    crate::storage::Config,
     analytics::{is_opted_in, set_opt_in_status},
     anyhow::{anyhow, bail, Context, Result},
     serde_json::Value,
@@ -37,12 +37,10 @@ pub mod logging;
 pub mod sdk;
 
 mod cache;
-mod file_backed_config;
 mod mapping;
 mod paths;
-mod persistent_config;
-mod priority_config;
 mod runtime;
+mod storage;
 
 pub use cache::{env_file, init, test_env_file, test_init};
 
@@ -251,7 +249,7 @@ pub fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let env = Environment::load(&e)?;
     let build = build_dir.as_ref().and_then(|b| env.build.as_ref().and_then(|c| c.get(b)));
-    config.save(&env.global, &build, &env.user)
+    config.save(env.global.as_ref(), build, env.user.as_ref())
 }
 
 pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -> Result<()> {

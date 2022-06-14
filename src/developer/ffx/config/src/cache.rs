@@ -4,8 +4,8 @@
 
 use {
     crate::environment::Environment,
-    crate::file_backed_config::FileBacked as Config,
     crate::runtime::populate_runtime_config,
+    crate::storage::Config,
     anyhow::{anyhow, Result},
     async_lock::RwLock,
     serde_json::Value,
@@ -155,7 +155,11 @@ async fn load_config_with_instant(
                         build_dir.as_ref().cloned(),
                         CacheItem {
                             created: now,
-                            config: Arc::new(RwLock::new(Config::new(&env, build_dir, runtime)?)),
+                            config: Arc::new(RwLock::new(Config::from_env(
+                                &env,
+                                build_dir.as_ref(),
+                                runtime,
+                            )?)),
                         },
                     );
                 }
@@ -257,9 +261,9 @@ mod test {
         let later = now.checked_add(Duration::from_millis(1)).expect("timeout should not overflow");
         let item = CacheItem {
             created: later,
-            config: Arc::new(RwLock::new(Config::new(
+            config: Arc::new(RwLock::new(Config::from_env(
                 &Environment::default(),
-                &build_dirs[0],
+                build_dirs[0].as_ref(),
                 None,
             )?)),
         };

@@ -38,7 +38,6 @@ if (is_host) {
       "src/api/value.rs",
       "src/cache.rs",
       "src/environment.rs",
-      "src/file_backed_config.rs",
       "src/lib.rs",
       "src/logging.rs",
       "src/mapping/cache.rs",
@@ -53,10 +52,9 @@ if (is_host) {
       "src/mapping/mod.rs",
       "src/mapping/runtime.rs",
       "src/paths.rs",
-      "src/persistent_config.rs",
-      "src/priority_config.rs",
       "src/runtime.rs",
       "src/sdk.rs",
+      "src/storage.rs",
     ]
   }
 }
