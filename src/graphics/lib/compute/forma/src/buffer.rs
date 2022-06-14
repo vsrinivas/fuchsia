@@ -46,11 +46,8 @@ pub struct Buffer<'b, 'l, L: Layout> {
 /// let width = 100;
 /// let height = 100;
 /// let mut buffer = vec![0; 100 * 4 * 100];
-///
-/// let _buffer = BufferBuilder::new(
-///     &mut buffer,
-///     &mut LinearLayout::new(width, width * 4, height),
-/// ).build();
+/// let mut layout = LinearLayout::new(width, width * 4, height);
+/// let _buffer = BufferBuilder::new(&mut buffer, &mut layout).build();
 /// ```
 #[derive(Debug)]
 pub struct BufferBuilder<'b, 'l, L: Layout> {
