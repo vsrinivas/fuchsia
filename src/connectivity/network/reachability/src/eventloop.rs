@@ -17,6 +17,7 @@ use {
     futures::{pin_mut, prelude::*, select},
     reachability_core::Monitor,
     std::collections::HashMap,
+    tracing::debug,
 };
 
 const REPORT_PERIOD: zx::Duration = zx::Duration::from_seconds(60);

@@ -18,6 +18,7 @@ use {
     net_declare::std_ip,
     net_types::ScopeableAddress as _,
     std::collections::hash_map::{Entry, HashMap},
+    tracing::{debug, error, info},
 };
 
 const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: std::net::IpAddr = std_ip!("8.8.8.8");
@@ -273,16 +274,16 @@ impl StateInfo {
     /// Report the duration of the current state for each interface and each protocol.
     fn report(&self) {
         let time = fasync::Time::now();
-        log::debug!("system reachability state IPv4 {:?}", self.get_system_ipv4());
-        log::debug!("system reachability state IPv6 {:?}", self.get_system_ipv6());
+        debug!("system reachability state IPv4 {:?}", self.get_system_ipv4());
+        debug!("system reachability state IPv6 {:?}", self.get_system_ipv6());
         for (id, IpVersions { ipv4, ipv6 }) in self.per_interface.iter() {
-            log::debug!(
+            debug!(
                 "reachability state {:?} IPv4 {:?} with duration {:?}",
                 id,
                 ipv4,
                 time - ipv4.time
             );
-            log::debug!(
+            debug!(
                 "reachability state {:?} IPv6 {:?} with duration {:?}",
                 id,
                 ipv6,
@@ -379,7 +380,7 @@ impl Monitor {
     /// Reports all information.
     pub fn report_state(&self) {
         self.state.report();
-        log::debug!("reachability stats {:?}", self.stats);
+        debug!("reachability stats {:?}", self.stats);
     }
 
     /// Returns an interface watcher client proxy.
@@ -421,15 +422,12 @@ impl Monitor {
             if delta.change_observed() {
                 let &Delta { previous, current } = delta;
                 if let Some(previous) = previous {
-                    log::info!(
+                    info!(
                         "interface updated {:?} {:?} current: {:?} previous: {:?}",
-                        id,
-                        proto,
-                        current,
-                        previous
+                        id, proto, current, previous
                     );
                 } else {
-                    log::info!("new interface {:?} {:?}: {:?}", id, proto, current);
+                    info!("new interface {:?} {:?}: {:?}", id, proto, current);
                 }
                 let () = log_state(self.interface_node(id, name), proto, current.state);
                 *self.stats.state_updates.entry(id).or_insert(0) += 1;
@@ -440,14 +438,12 @@ impl Monitor {
             if delta.change_observed() {
                 let &Delta { previous, current } = delta;
                 if let Some(previous) = previous {
-                    log::info!(
+                    info!(
                         "system updated {:?} current: {:?}, previous: {:?}",
-                        proto,
-                        current,
-                        previous,
+                        proto, current, previous,
                     );
                 } else {
-                    log::info!("initial system state {:?}: {:?}", proto, current);
+                    info!("initial system state {:?}: {:?}", proto, current);
                 }
                 let () = log_state(self.system_node.as_mut(), proto, current.state.state);
             }
@@ -460,7 +456,7 @@ impl Monitor {
     /// have changed.
     pub async fn compute_state(&mut self, properties: &fnet_interfaces_ext::Properties) {
         let routes = self.stack.get_forwarding_table().await.unwrap_or_else(|e| {
-            log::error!("failed to get route table: {}", e);
+            error!("failed to get route table: {}", e);
             Vec::new()
         });
         if let Some(info) = compute_state(properties, &routes, &ping::Pinger).await {
@@ -560,7 +556,7 @@ async fn network_layer_state(
                         }
                         std::net::IpAddr::V6(v6) => match (*device_id).try_into() {
                             Err(std::num::TryFromIntError { .. }) => {
-                                log::error!("device id {} doesn't fit in u32", device_id);
+                                error!("device id {} doesn't fit in u32", device_id);
                                 None
                             }
                             Ok(device_id) => {

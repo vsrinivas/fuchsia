@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use fuchsia_async::{self as fasync, TimeoutExt as _};
 use futures::{FutureExt as _, SinkExt as _, TryFutureExt as _, TryStreamExt as _};
 use std::net::SocketAddr;
+use tracing::warn;
 
 const PING_MESSAGE: &str = "Hello from reachability monitor!";
 const SEQ_MIN: u16 = 1;
@@ -73,7 +74,7 @@ impl Ping for Pinger {
         match r {
             Ok(()) => true,
             Err(e) => {
-                log::warn!("error while pinging {}: {:?}", addr, e);
+                warn!("error while pinging {}: {:?}", addr, e);
                 false
             }
         }

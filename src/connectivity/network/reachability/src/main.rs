@@ -5,24 +5,20 @@
 //! The reachability monitor monitors reachability state and generates an event to signal
 //! changes.
 
-extern crate fuchsia_syslog as syslog;
-#[macro_use]
-extern crate log;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::component;
 use futures::{FutureExt as _, StreamExt as _};
 use reachability_core::Monitor;
+use tracing::info;
 
 mod eventloop;
 
 use crate::eventloop::EventLoop;
 
+#[fuchsia::main(logging_tags = ["reachability"])]
 fn main() {
     // TODO(dpradilla): use a `StructOpt` to pass in a log level option where the user can control
     // how verbose logs should be.
-
-    syslog::init_with_tags(&["reachability"]).expect("failed to initialize logger");
-
     info!("Starting reachability monitor!");
     let mut executor =
         fuchsia_async::LocalExecutor::new().expect("failed to create local executor");

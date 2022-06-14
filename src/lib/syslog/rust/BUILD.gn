@@ -73,8 +73,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/connectivity/lowpan/tools/lowpanctl:*",
   "//src/connectivity/network/dhcp:*",
   "//src/connectivity/network/dhcpv6/client:*",
-  "//src/connectivity/network/reachability:*",
-  "//src/connectivity/network/reachability/core:*",
   "//src/connectivity/network/testing/netemul/service:*",
   "//src/connectivity/network/testing/netemul/test-support:*",
   "//src/connectivity/network/tests/integration/management:*",
