@@ -122,6 +122,8 @@ fbl::String GetTestFilter() {
     return "*QemuX64Q35*";
   } else if (!strcmp(board_name, "av400")) {
     return "*Av400*";
+  } else if (!strcmp(board_name, "arm64") || !strcmp(board_name, "x64")) {
+    return "*GenericShouldFail*";
   }
 
   return "Unknown";
@@ -649,6 +651,13 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
+}
+
+// If this test fails, it indicates that the board driver set the board name incorrectly.
+TEST_F(DeviceEnumerationTest, GenericShouldFailTest) {
+  ASSERT_TRUE(false,
+              "Board name was a generic board name, likely indicating that the board driver failed "
+              "to find a real board name.");
 }
 
 }  // namespace

@@ -28,6 +28,7 @@ fuchsia_driver("acpi-arm64-driver") {
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/board/lib/acpi",
+    "//src/devices/board/lib/smbios",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
     "//src/devices/lib/iommu:iommu-arm",

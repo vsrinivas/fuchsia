@@ -30,6 +30,8 @@ class AcpiArm64 : public DeviceType {
   zx::status<> SysmemInit();
 
  private:
+  zx::status<> SmbiosInit();
+
   std::optional<acpi::FuchsiaManager> manager_;
   acpi::AcpiImpl acpi_;
   iommu::ArmIommuManager iommu_manager_;
