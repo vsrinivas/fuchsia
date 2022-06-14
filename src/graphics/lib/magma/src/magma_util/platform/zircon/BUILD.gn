@@ -120,7 +120,10 @@ source_set("entry_test") {
 source_set("interrupt") {
   sources = [ "zircon_platform_interrupt.h" ]
 
-  public_deps = [ "//zircon/system/ulib/zx" ]
+  public_deps = [
+    "..:interrupt_header",
+    "//zircon/system/ulib/zx",
+  ]
 }
 
 source_set("device") {
@@ -137,6 +140,7 @@ source_set("device") {
   ]
 
   public_deps = [
+    ":interrupt",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/lib/ddk",
@@ -145,7 +149,6 @@ source_set("device") {
   deps = [
     ":bus_mapper",
     ":handle",
-    ":interrupt",
     "$magma_build_root/src/magma_util:macros",
     "..:device_header",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -193,6 +196,7 @@ source_set("connection") {
   ]
 
   public_deps = [
+    ":event",
     ":status",
     "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
@@ -281,7 +285,10 @@ source_set("thread") {
 source_set("event") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [ "zircon_platform_event.cc" ]
+  sources = [
+    "zircon_platform_event.cc",
+    "zircon_platform_event.h",
+  ]
 
   deps = [
     "$magma_build_root/src/magma_util:macros",

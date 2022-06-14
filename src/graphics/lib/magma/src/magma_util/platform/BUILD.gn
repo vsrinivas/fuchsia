@@ -117,6 +117,12 @@ source_set("handle") {
   }
 }
 
+source_set("interrupt_header") {
+  public_configs = [ ":platform_include_config" ]
+  public_deps = [ "$magma_build_root/src/magma_util:macros" ]
+  sources = [ "platform_interrupt.h" ]
+}
+
 source_set("iommu_header") {
   public_configs = [ ":platform_include_config" ]
 
@@ -153,6 +159,7 @@ source_set("device_header") {
   public_deps = [
     ":buffer_header",
     ":handle_header",
+    ":interrupt_header",
     ":mmio_header",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:status",
