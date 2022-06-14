@@ -3,9 +3,12 @@
 # found in the LICENSE file.
 #
 import("//build/components.gni")
+import("//build/test.gni")
+import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-source_set("src") {
+# Used by other Vulkan tests.
+source_set("helper") {
   testonly = true
 
   sources = [
@@ -24,37 +27,34 @@ source_set("src") {
   ]
 }
 
-executable("vkreadback_bin") {
-  testonly = true
-  output_name = "vkreadback"
-
+# Built both on Fuchsia and on the host.
+test("vkreadback_test") {
   sources = [ "main.cc" ]
 
   deps = [
-    ":src",
+    ":helper",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(fxbug.dev/102268): Add macOS support to VulkanContext and remove this.
+  if (is_host) {
+    environments = [ linux_env ]
+  }
 }
 
-group("linux_arm64") {
-  testonly = true
-  deps = [ ":vkreadback_bin(//build/toolchain:linux_arm64)" ]
-}
-
-fuchsia_component("vkreadback_cmp") {
-  testonly = true
-  component_name = "vkreadback"
+fuchsia_test_component("vkreadback_test_component") {
+  component_name = "vkreadback_test"
   deps = [
-    ":vkreadback_bin",
+    ":vkreadback_test",
     "//src/lib/vulkan/validation_layers",
   ]
 
   manifest = "meta/vkreadback.cml"
 }
 
-fuchsia_test_package("vkreadback-pkg") {
-  package_name = "vkreadback"
-  test_components = [ ":vkreadback_cmp" ]
+fuchsia_test_package("vkreadback_test_package") {
+  package_name = "vkreadback_test"
+  test_components = [ ":vkreadback_test_component" ]
   test_specs = {
     # TODO(fxbug.dev/47373): Restore astro_env when fxbug.dev/44570 is fixed.
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs +
@@ -64,5 +64,8 @@ fuchsia_test_package("vkreadback-pkg") {
 
 group("vkreadback") {
   testonly = true
-  deps = [ ":vkreadback-pkg" ]
+  deps = [
+    ":vkreadback_test($host_toolchain)",
+    ":vkreadback_test_package",
+  ]
 }

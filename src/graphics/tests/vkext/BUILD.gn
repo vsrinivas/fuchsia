@@ -17,7 +17,7 @@ executable("vkext_bin") {
   ]
 
   deps = [
-    "../vkreadback:src",
+    "../vkreadback:helper",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fdio",

@@ -14,7 +14,7 @@ executable("vk_timer_query_bin") {
   deps = [
     "$magma_build_root/include:magma",
     "$magma_build_root/src/magma_util/platform:semaphore",
-    "../vkreadback:src",
+    "../vkreadback:helper",
     "//sdk/lib/fdio",
     "//src/graphics/drivers/msd-arm-mali/include",
     "//src/graphics/lib/magma/src/libmagma",
