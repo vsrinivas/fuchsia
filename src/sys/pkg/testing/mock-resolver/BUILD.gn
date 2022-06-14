@@ -9,6 +9,7 @@ rustc_library("mock-resolver") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
+  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -31,8 +32,10 @@ rustc_library("mock-resolver") {
 }
 
 fuchsia_unittest_package("mock-resolver-tests") {
-  manifest = "meta/mock-resolver-lib-test.cmx"
-  deps = [ ":mock-resolver_test" ]
+  deps = [
+    ":mock-resolver_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 group("tests") {
