@@ -38,6 +38,8 @@ toc:
     path: /docs/concepts/ui/input/focus.md
   - title: "Hit testing"
     path: /docs/concepts/ui/input/hit_testing.md
+  - title: "Semantic visibility"
+    path: /docs/concepts/ui/input/semantic_visibility.md
   - title: "Scene root"
     path: /docs/concepts/ui/input/scene_root.md
   - title: "Testing"
