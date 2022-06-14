@@ -30,6 +30,5 @@ group("tests") {
     "system-update-configurator:tests",
     "system-updater:tests",
     "update:tests",
-    "usb-system-update-checker:tests",
   ]
 }

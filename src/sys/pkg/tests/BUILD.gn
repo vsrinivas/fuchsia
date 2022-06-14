@@ -17,7 +17,6 @@ group("tests") {
     "system-update-committer:tests",
     "system-updater:tests",
     "update:tests",
-    "usb-system-update-checker:tests",
   ]
 }
 
