@@ -106,26 +106,30 @@ class ThreadLockState {
     }
 
     // Scans the acquired lock list and performs the following operations:
-    //  1. Checks that the given lock class is not already in the list unless
+    //  1. Checks that there are no leaf locks in (at the end of) the list.
+    //  2. Checks that the given lock class is not already in the list unless
     //     the lock class is multi-acquire, or is nestable and external/address
     //     ordering is correctly applied.
-    //  2. Checks that the given lock instance is not already in the list.
-    //  3. Checks that the given lock class is not in the dependency set for
+    //  3. Checks that the given lock instance is not already in the list.
+    //  4. Checks that the given lock class is not in the dependency set for
     //     any lock class already in the list.
-    //  4. Checks that irq-safe locks are not held when acquiring an irq-unsafe
+    //  5. Checks that irq-safe locks are not held when acquiring an irq-unsafe
     //     lock.
-    //  5. Adds each lock class already in the list to the dependency set of the
+    //  6. Adds each lock class already in the list to the dependency set of the
     //     given lock class.
     for (AcquiredLockEntry& entry : acquired_locks_) {
-      if (entry.id() == lock_entry->id()) {
+      if (LockClassState::IsLeaf(entry.id())) {
+        Report(lock_entry, &entry, LockResult::AcquireAfterLeaf);
+      } else if (entry.id() == lock_entry->id()) {
         if (lock_entry->address() == entry.address()) {
           Report(lock_entry, &entry, LockResult::Reentrance);
         } else if (!LockClassState::IsMultiAcquire(lock_entry->id()) &&
                    lock_entry->order() <= entry.order()) {
-          if (!LockClassState::IsNestable(lock_entry->id()) && lock_entry->order() == 0)
+          if (!LockClassState::IsNestable(lock_entry->id()) && lock_entry->order() == 0) {
             Report(lock_entry, &entry, LockResult::AlreadyAcquired);
-          else
+          } else {
             Report(lock_entry, &entry, LockResult::InvalidNesting);
+          }
         }
       } else {
         const LockResult result = LockClassState::AddLockClass(lock_entry->id(), entry.id());
@@ -146,17 +150,20 @@ class ThreadLockState {
         if (result == LockResult::Success) {
           const bool entry_irqsafe = LockClassState::IsIrqSafe(entry.id());
           const bool lock_entry_irqsafe = LockClassState::IsIrqSafe(lock_entry->id());
-          if (entry_irqsafe && !lock_entry_irqsafe)
+          if (entry_irqsafe && !lock_entry_irqsafe) {
             Report(lock_entry, &entry, LockResult::InvalidIrqSafety);
+          }
 
-          if (LockClassState::HasLockClass(entry.id(), lock_entry->id()))
+          if (LockClassState::HasLockClass(entry.id(), lock_entry->id())) {
             Report(lock_entry, &entry, LockResult::OutOfOrder);
+          }
         }
       }
     }
 
-    if (!LockClassState::IsActiveListDisabled(lock_entry->id()))
+    if (!LockClassState::IsActiveListDisabled(lock_entry->id())) {
       acquired_locks_.push_back(lock_entry);
+    }
   }
 
   // Removes the given lock entry from the acquired lock list.
@@ -207,6 +214,10 @@ class ThreadLockState {
       SystemLockValidationFatal(bad_entry, this, __GET_CALLER(0), __GET_FRAME(0),
                                 LockResult::AlreadyAcquired);
     }
+    if (result == LockResult::AcquireAfterLeaf) {
+      SystemLockValidationFatal(bad_entry, this, __GET_CALLER(0), __GET_FRAME(0),
+                                LockResult::AcquireAfterLeaf);
+    }
 
     if (!reporting_disabled()) {
       reporting_disabled_count_++;
@@ -217,8 +228,9 @@ class ThreadLockState {
       reporting_disabled_count_--;
 
       // Update the last result for testing.
-      if (last_result_ == LockResult::Success)
+      if (last_result_ == LockResult::Success) {
         last_result_ = result;
+      }
     }
   }
 

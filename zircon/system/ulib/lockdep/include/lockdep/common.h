@@ -90,6 +90,7 @@ enum class LockResult : uint8_t {
   InvalidIrqSafety,
   Reentrance,
   ShouldNotHold,
+  AcquireAfterLeaf,
 
   // Non-fatal error that indicates the dependency hash set for a particular
   // lock class is full. Consider increasing the size of the lock dependency
@@ -119,6 +120,8 @@ inline const char* ToString(LockResult result) {
       return "Reentrance";
     case LockResult::ShouldNotHold:
       return "Should Not Hold";
+    case LockResult::AcquireAfterLeaf:
+      return "Acquire After Leaf";
     case LockResult::MaxLockDependencies:
       return "Max Lock Dependencies";
     case LockResult::DependencyExists:

@@ -7,10 +7,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <type_traits>
+
 namespace lockdep {
 
 // Flags to specify which rules to apply to a lock class during validation.
-enum LockFlags : uint8_t {
+enum LockFlags : uint16_t {
   // Apply only common rules that apply to all locks.
   LockFlagsNone = 0,
 
@@ -24,35 +26,40 @@ enum LockFlags : uint8_t {
   // locks.
   LockFlagsMultiAcquire = (1 << 2),
 
+  // Apply the leaf lock rules in addition to the common rules for all locks.
+  LockFlagsLeaf = (1 << 3),
+
   // Do not report validation errors. This flag prevents recursive validation
   // of locks that are acquired by reporting routines.
-  LockFlagsReportingDisabled = (1 << 3),
+  LockFlagsReportingDisabled = (1 << 4),
 
   // There is only one member of this locks class.
-  LockFlagsSingletonLock = (1 << 4),
+  LockFlagsSingletonLock = (1 << 5),
 
   // Abort the program with an error if a lock is improperly acquired more
   // than once in the same context.
-  LockFlagsReAcquireFatal = (1 << 5),
+  LockFlagsReAcquireFatal = (1 << 6),
 
   // Do not add this acquisition to the active list. This may be required for
   // locks that are used to protect context switching logic.
-  LockFlagsActiveListDisabled = (1 << 6),
+  LockFlagsActiveListDisabled = (1 << 7),
 
   // Do not track this lock.
-  LockFlagsTrackingDisabled = (1 << 7),
+  LockFlagsTrackingDisabled = (1 << 8),
 };
 
 // Prevent implicit conversion to int of bitwise-or expressions involving
 // LockFlags.
 constexpr inline LockFlags operator|(LockFlags a, LockFlags b) {
-  return static_cast<LockFlags>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+  using U = std::underlying_type_t<LockFlags>;
+  return static_cast<LockFlags>(static_cast<U>(a) | static_cast<U>(b));
 }
 
 // Prevent implicit conversion to int of bitwise-and expressions involving
 // LockFlags.
 constexpr inline LockFlags operator&(LockFlags a, LockFlags b) {
-  return static_cast<LockFlags>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+  using U = std::underlying_type_t<LockFlags>;
+  return static_cast<LockFlags>(static_cast<U>(a) & static_cast<U>(b));
 }
 
 namespace internal {

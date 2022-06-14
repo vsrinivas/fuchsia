@@ -20,7 +20,7 @@ class AcquiredLockEntry;
 class ThreadLockState;
 class LockClassState;
 enum class LockResult : uint8_t;
-enum LockFlags : uint8_t;
+enum LockFlags : uint16_t;
 
 // System-defined hook to report detected lock validation failures.
 extern void SystemLockValidationError(AcquiredLockEntry* lock_entry,

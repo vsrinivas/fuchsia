@@ -265,6 +265,7 @@ static bool lock_dep_dynamic_analysis_tests() {
   using lockdep::GuardMultiple;
   using lockdep::kInvalidLockClassId;
   using lockdep::LockClassState;
+  using lockdep::LockFlagsLeaf;
   using lockdep::LockFlagsMultiAcquire;
   using lockdep::LockFlagsNestable;
   using lockdep::LockFlagsReAcquireFatal;
@@ -576,6 +577,18 @@ static bool lock_dep_dynamic_analysis_tests() {
     Baz<Mutex> baz;
     Guard<Mutex> auto_baz{&baz.lock};
     AssertNoLocksHeld();
+#endif
+  }
+
+  // Test that acquiring a lock after a leaf lock will fail.
+  // TODO(338187): Enable the userspace death test when lockdep has a userspace
+  // runtime and validation can be tested in userspace.
+  {
+#if TEST_WILL_PANIC || 0
+    Baz<Mutex, LockFlagsLeaf> baz_leaf_lock;
+    Baz<Mutex> baz;
+    Guard<Mutex> leaf_guard{&baz_leaf_lock.lock};
+    Guard<Mutex> guard{&baz.lock};
 #endif
   }
 
