@@ -500,6 +500,39 @@ class Performance {
     _log.info('Stop system metrics logging');
     await _sl4f.request('system_metrics_facade.StopLogging', {});
   }
+
+  /// Starts logging power data into the metrics_logger trace category.
+  ///
+  /// The power sensors will be polled and a trace event produced after each
+  /// `interval` amount of time. If `duration` is specified, then logging will
+  /// automatically stop after that amount of time has elapsed. If `duration` is
+  /// not specified, then logging will continue until explicitly stopped.
+  ///
+  /// This function will fail if logging is already started.
+  Future<void> startPowerLogging({
+    @required Duration interval,
+    Duration duration,
+  }) async {
+    _log.info('Start power logging: interval $interval duration $duration');
+    if (duration == null) {
+      await _sl4f.request('power_facade.StartLoggingForever', {
+        'sampling_interval_ms': interval.inMilliseconds,
+      });
+    } else {
+      await _sl4f.request('power_facade.StartLogging', {
+        'sampling_interval_ms': interval.inMilliseconds,
+        'duration_ms': duration.inMilliseconds,
+      });
+    }
+  }
+
+  /// Stops logging power data in metrics_logger trace category.
+  ///
+  /// This function will still succeed if logging is already stopped.
+  Future<void> stopPowerLogging() async {
+    _log.info('Stop power logging');
+    await _sl4f.request('power_facade.StopLogging', {});
+  }
 }
 
 /// Handle a tracing session.

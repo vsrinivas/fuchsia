@@ -45,6 +45,7 @@ dart_library("client") {
     "src/trace_processing/metrics/gpu_metrics.dart",
     "src/trace_processing/metrics/input_latency.dart",
     "src/trace_processing/metrics/memory_metrics.dart",
+    "src/trace_processing/metrics/power_metrics.dart",
     "src/trace_processing/metrics/scenic_frame_stats.dart",
     "src/trace_processing/metrics/temperature_metrics.dart",
     "src/trace_processing/metrics/total_trace_wall_time.dart",
@@ -141,6 +142,7 @@ if (is_host) {
       "test/trace_processing_test_data/input_latency.json",
       "test/trace_processing_test_data/memory_metric.json",
       "test/trace_processing_test_data/model.json",
+      "test/trace_processing_test_data/power_metric.json",
       "test/trace_processing_test_data/scenic.json",
       "test/trace_processing_test_data/temperature_metric_temperature_logger.json",
     ]

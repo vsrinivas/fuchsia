@@ -15,6 +15,7 @@ import 'metrics/flutter_frame_stats.dart';
 import 'metrics/gpu_metrics.dart';
 import 'metrics/input_latency.dart';
 import 'metrics/memory_metrics.dart';
+import 'metrics/power_metrics.dart';
 import 'metrics/scenic_frame_stats.dart';
 import 'metrics/temperature_metrics.dart';
 import 'metrics/total_trace_wall_time.dart';
@@ -71,6 +72,7 @@ const defaultMetricsRegistry = {
   'gpu': gpuMetricsProcessor,
   'input_latency': inputLatencyMetricsProcessor,
   'memory': memoryMetricsProcessor,
+  'power': powerMetricsProcessor,
   'scenic_frame_stats': scenicFrameStatsMetricsProcessor,
   'temperature': temperatureMetricsProcessor,
   'total_trace_wall_time': totalTraceWallTimeMetricsProcessor,

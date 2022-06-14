@@ -1,0 +1,47 @@
+{
+    "displayTimeUnit": "ns",
+    "systemTraceEvents": {
+        "events": [
+            {
+                "name": "root_presenter",
+                "ph": "p",
+                "pid": 7009
+            },
+            {
+                "name": "initial-thread",
+                "ph": "t",
+                "pid": 7009,
+                "tid": 7022
+            }
+        ],
+        "type": "fuchsia"
+    },
+    "traceEvents": [
+        {
+            "args": {
+                "/dev/ti-ina231-mlb/ti-ina231": 0.25,
+                "/dev/ti-ina231-speaker/ti-ina231": 0.75,
+                "client_id": "sl4f"
+            },
+            "cat": "metrics_logger",
+            "name": "power",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 3000000000
+        },
+        {
+            "args": {
+                "/dev/ti-ina231-mlb/ti-ina231": 1.25,
+                "/dev/ti-ina231-speaker/ti-ina231": 1.75,
+                "client_id": "sl4f"
+            },
+            "cat": "metrics_logger",
+            "name": "power",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 3000000000
+        }
+    ]
+}

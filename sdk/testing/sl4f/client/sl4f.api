@@ -4613,6 +4613,46 @@
               "returnType": "Future<WebSocket>",
               "type": "MethodDeclarationImpl"
             },
+            "startPowerLogging": {
+              "SimpleFormalParameterImpl": {
+                "duration": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "duration",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Duration"
+                },
+                "interval": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "interval",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Duration"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "startPowerLogging",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
             "startSystemMetricsLogging": {
               "SimpleFormalParameterImpl": {
                 "duration": {
@@ -4731,6 +4771,16 @@
               "isStatic": false,
               "name": "stopChromeTrace",
               "returnType": "Future<File>",
+              "type": "MethodDeclarationImpl"
+            },
+            "stopPowerLogging": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "stopPowerLogging",
+              "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
             "stopSystemMetricsLogging": {
@@ -5029,6 +5079,105 @@
         }
       },
       "name": "power.dart",
+      "type": "file"
+    },
+    "power_metrics.dart": {
+      "FunctionDeclarationImpl": {
+        "powerMetricsProcessor": {
+          "SimpleFormalParameterImpl": {
+            "arg": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "arg",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
+            "element": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "element",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
+            "event": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "event",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
+            "extraArgs": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "extraArgs",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Map<String, dynamic>"
+            },
+            "model": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "model",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Model"
+            },
+            "value": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "value",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "powerMetricsProcessor",
+          "returnType": "List<TestCaseResults>",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "name": "power_metrics.dart",
       "type": "file"
     },
     "proxy.dart": {
@@ -9386,6 +9535,10 @@
         },
         "src/trace_processing/metrics/memory_metrics.dart": {
           "name": "src/trace_processing/metrics/memory_metrics.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/trace_processing/metrics/power_metrics.dart": {
+          "name": "src/trace_processing/metrics/power_metrics.dart",
           "type": "ExportDirectiveImpl"
         },
         "src/trace_processing/metrics/scenic_frame_stats.dart": {

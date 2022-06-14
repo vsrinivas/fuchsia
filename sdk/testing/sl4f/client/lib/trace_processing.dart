@@ -14,6 +14,7 @@ export 'src/trace_processing/metrics/flutter_frame_stats.dart';
 export 'src/trace_processing/metrics/gpu_metrics.dart';
 export 'src/trace_processing/metrics/input_latency.dart';
 export 'src/trace_processing/metrics/memory_metrics.dart';
+export 'src/trace_processing/metrics/power_metrics.dart';
 export 'src/trace_processing/metrics/scenic_frame_stats.dart';
 export 'src/trace_processing/metrics/temperature_metrics.dart';
 export 'src/trace_processing/metrics/total_trace_wall_time.dart';

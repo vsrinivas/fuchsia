@@ -733,6 +733,35 @@ void main(List<String> args) {
     expect(resultsExcludingBandwidth[3].values[1], _closeTo(49152));
   });
 
+  test('Power metric', () async {
+    final model = await _modelFromPath('runtime_deps/power_metric.json');
+    final results = powerMetricsProcessor(model, {});
+    expect(results.length, 1);
+    expect(results[0].label, equals('Device power'));
+    expect(results[0].values[0], _closeTo(1.0));
+    expect(results[0].values[1], _closeTo(3.0));
+
+    final aggregatedResults =
+        powerMetricsProcessor(model, {'aggregateMetricsOnly': true});
+    expect(aggregatedResults.length, equals(8));
+    expect(aggregatedResults[0].label, equals('power_p5'));
+    expect(aggregatedResults[0].values[0], _closeTo(1.1));
+    expect(aggregatedResults[1].label, equals('power_p25'));
+    expect(aggregatedResults[1].values[0], _closeTo(1.5));
+    expect(aggregatedResults[2].label, equals('power_p50'));
+    expect(aggregatedResults[2].values[0], _closeTo(2.0));
+    expect(aggregatedResults[3].label, equals('power_p75'));
+    expect(aggregatedResults[3].values[0], _closeTo(2.5));
+    expect(aggregatedResults[4].label, equals('power_p95'));
+    expect(aggregatedResults[4].values[0], _closeTo(2.9));
+    expect(aggregatedResults[5].label, equals('power_min'));
+    expect(aggregatedResults[5].values[0], _closeTo(1.0));
+    expect(aggregatedResults[6].label, equals('power_max'));
+    expect(aggregatedResults[6].values[0], _closeTo(3.0));
+    expect(aggregatedResults[7].label, equals('power_average'));
+    expect(aggregatedResults[7].values[0], _closeTo(2.0));
+  });
+
   test('Custom registry', () async {
     List<TestCaseResults> testProcessor(
             Model _model, Map<String, dynamic> _extraArgs) =>
