@@ -58,5 +58,10 @@
             from: "#archivist",
             to: "#reader",
         },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#reader",
+        },
     ],
 }

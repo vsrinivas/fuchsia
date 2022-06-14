@@ -20,7 +20,7 @@ use {
 /// component that tried to use the capability.
 ///
 /// Part of the test runs inside the `reader` component inside the test
-/// topology. If `reader` sees the log it expects from the Archvist component
+/// topology. If `reader` sees the log it expects from the Archivist component
 /// it exits cleanly, otherwise it crashes.
 async fn verify_routing_failure_messages() {
     let test_env = OpaqueTestBuilder::new(
@@ -42,16 +42,27 @@ async fn verify_routing_failure_messages() {
     let expected = EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker("./routing-tests/child"),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
-                    "./routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
-                ),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
-                    "./routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
-                ),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
-                    "./routing-tests/offers-to-children-unavailable/child-open-unrequested",
-                ),
+                EventMatcher::ok()
+                    .r#type(events::Stopped::TYPE)
+                    .moniker("./routing-tests/child")
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok()
+                    .r#type(events::Stopped::TYPE)
+                    .moniker(
+                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
+                    )
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok()
+                    .r#type(events::Stopped::TYPE)
+                    .moniker(
+                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
+                    ).stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok()
+                    .r#type(events::Stopped::TYPE)
+                    .moniker(
+                        "./routing-tests/offers-to-children-unavailable/child-open-unrequested",
+                    )
+                    .stop(Some(ExitStatusMatcher::AnyCrash)),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
                     .moniker("./reader")
@@ -59,6 +70,14 @@ async fn verify_routing_failure_messages() {
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.diagnostics.ArchiveAccessor")
+                    .moniker("./reader"),
+                EventMatcher::ok()
+                    .r#type(events::CapabilityRouted::TYPE)
+                    .capability_name("fuchsia.logger.LogSink")
+                    .moniker("./reader"),
+                EventMatcher::ok()
+                    .r#type(events::CapabilityRouted::TYPE)
+                    .capability_name("fuchsia.logger.LogSink")
                     .moniker("./reader"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
@@ -88,11 +107,11 @@ async fn verify_routing_failure_messages() {
                     .moniker("./archivist"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.sys2.EventSource")
+                    .capability_name("fuchsia.logger.LogSink")
                     .moniker("./archivist"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
+                    .capability_name("fuchsia.sys2.EventSource")
                     .moniker("./archivist"),
             ],
             sequence::Ordering::Unordered,

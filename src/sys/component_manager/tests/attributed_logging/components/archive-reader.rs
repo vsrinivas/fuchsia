@@ -1,7 +1,8 @@
 // Copyright 2020 the Fuchsia Authors. All rights reserved.
-// Use of this source code is goverened by a BSD-style license that can be
+// Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use tracing::info;
 use {
     diagnostics_data::Logs, diagnostics_reader::ArchiveReader, fuchsia_async as fasync,
     futures::stream::StreamExt, std::collections::HashMap, std::vec::Vec,
@@ -9,10 +10,19 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() {
+    diagnostics_log::init!(
+        &["archive-reader"],
+        diagnostics_log::Interest {
+            min_severity: Some(diagnostics_log::Severity::Info),
+            ..diagnostics_log::Interest::EMPTY
+        }
+    );
+
     let reader = ArchiveReader::new();
     let mut non_matching_logs = vec![];
 
-    let mut treasure = HashMap::<String, Vec<Vec<&str>>>::new();
+    type Fingerprint = Vec<&'static str>;
+    let mut treasure = HashMap::<String, Vec<Fingerprint>>::new();
     treasure.insert(
         "routing-tests/offers-to-children-unavailable/child-for-offer-from-parent".to_string(),
         vec![vec![
@@ -58,6 +68,7 @@ async fn main() {
     if let Ok(mut results) = reader.snapshot_then_subscribe::<Logs>() {
         while let Some(Ok(log_record)) = results.next().await {
             if let Some(log_str) = log_record.msg() {
+                info!("Log from {}: {}", log_record.moniker, log_str);
                 match treasure.get_mut(&log_record.moniker) {
                     None => non_matching_logs.push(log_record),
                     Some(log_fingerprints) => {

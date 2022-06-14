@@ -1,5 +1,5 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is goverened by a BSD-style license that can be
+// Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
@@ -9,7 +9,7 @@ use {
 
 #[fasync::run_singlethreaded]
 /// Tries to connect to the Trigger service, which it should not have access
-/// to. This should generate an expect log message from copmonent manager that
+/// to. This should generate an expect log message from component manager that
 /// will be attributed to this component.
 async fn main() {
     let trigger = match connect_to_protocol::<ftest::TriggerMarker>() {
@@ -17,5 +17,5 @@ async fn main() {
         Err(_) => return,
     };
 
-    let _ = trigger.run().await;
+    let _ = trigger.run().await.unwrap();
 }
