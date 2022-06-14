@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/affine/transform.h>
+#include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/types.h>
 #include <lib/counters.h>
@@ -430,12 +431,6 @@ outer:
          apic_divisor);
 }
 
-static inline void serialize_instructions(void) {
-  // Executing a cpuid instruction serializes the instruction stream. Use inline
-  // assembly to force the compiler to include it, unlike the builtins.
-  __asm__ __volatile__("cpuid" : : "rax"(0) : "rax", "rbx", "rcx", "rdx", "memory");
-}
-
 static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
   zx_ticks_t best_time = ktl::numeric_limits<zx_ticks_t>::max();
 
@@ -451,9 +446,9 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
         PANIC_UNIMPLEMENTED;
     }
 
-    serialize_instructions();
+    arch::SerializeInstructions();
     uint64_t start = _rdtsc();
-    serialize_instructions();
+    arch::SerializeInstructions();
 
     switch (calibration_clock) {
       case CLOCK_HPET:
@@ -466,9 +461,9 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
         PANIC_UNIMPLEMENTED;
     }
 
-    serialize_instructions();
+    arch::SerializeInstructions();
     zx_ticks_t end = _rdtsc();
-    serialize_instructions();
+    arch::SerializeInstructions();
 
     zx_ticks_t tsc_ticks = end - start;
     if (tsc_ticks < best_time) {

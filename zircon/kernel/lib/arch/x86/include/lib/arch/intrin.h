@@ -39,6 +39,18 @@ inline void DeviceMemoryBarrier() { __asm__ volatile("mfence" ::: "memory"); }
 /// Synchronize the ordering of all memory accesses wrt other CPUs.
 inline void ThreadMemoryBarrier() { DeviceMemoryBarrier(); }
 
+// Force the processor to complete all modifications to register state and
+// memory by previous instructions (including draining any buffered writes)
+// before the next instruction is fetched.
+inline void SerializeInstructions() {
+  // [intel/vol3]: 8.3  Serializing Instructions.
+  // [amd/vol2]: 7.6.4  Serializing Instructions.
+  //
+  // `cpuid` is a serializaing instruction.
+  uintptr_t rax = 0;
+  __asm__ volatile("cpuid" : "+a"(rax) : : "rbx", "rcx", "rdx");
+}
+
 /// Return the current CPU cycle count.
 inline uint64_t Cycles() { return _rdtsc(); }
 

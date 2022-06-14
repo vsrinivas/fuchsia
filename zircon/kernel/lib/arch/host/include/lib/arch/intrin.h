@@ -26,6 +26,11 @@ inline void DeviceMemoryBarrier() {}
 /// Synchronize the ordering of all memory accesses wrt other CPUs.
 inline void ThreadMemoryBarrier() {}
 
+// Force the processor to complete all modifications to register state and
+// memory by previous instructions (including draining any buffered writes)
+// before the next instruction is fetched.
+inline void SerializeInstructions() {}
+
 /// Return the current CPU cycle count.
 inline uint64_t Cycles() { return 0; }
 

@@ -8,6 +8,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASPACE_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ASPACE_H_
 
+#include <lib/arch/intrin.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -180,23 +181,18 @@ class X86VmICacheConsistencyManager final : public ArchVmICacheConsistencyManage
   X86VmICacheConsistencyManager() = default;
   ~X86VmICacheConsistencyManager() override { Finish(); }
 
-  void SyncAddr(vaddr_t start, size_t len) override { need_cpuid_ = true; }
+  void SyncAddr(vaddr_t start, size_t len) override { serialize_ = true; }
 
   void Finish() override {
-    if (!need_cpuid_) {
+    if (!serialize_) {
       return;
     }
-    // Invoke cpuid to act as a serializing instruction.  This will ensure we
-    // see modifications to future parts of the instruction stream.  See
-    // Intel Volume 3, 8.1.3 "Handling Self- and Cross-Modifying Code".  cpuid
-    // is the more conservative approach suggested in this section.
-    uint32_t v;
-    cpuid(0, &v, &v, &v, &v);
-    need_cpuid_ = false;
+    arch::SerializeInstructions();
+    serialize_ = false;
   }
 
  private:
-  bool need_cpuid_ = false;
+  bool serialize_ = false;
 };
 
 using ArchVmAspace = X86ArchVmAspace;

@@ -12,6 +12,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "intrin.h"
+
 namespace arch {
 
 // Ensures that the instruction and data caches are in coherence after the
@@ -27,10 +29,8 @@ struct GlobalCacheConsistencyContext {
     //
     // [intel/vol3]: 8.1.3  Handling Self- and Cross-Modifying Code.
     // Intel recommends executing a serializing instruction after any self- or
-    // cross-modification - and in particular gives CPUID as an example (which is
-    // also a serializaing instruction for AMD).
-    uint32_t x;
-    __cpuid(0, x, x, x, x);
+    // cross-modification.
+    SerializeInstructions();
   }
 
   // Records a virtual address range that should factor into consistency.
