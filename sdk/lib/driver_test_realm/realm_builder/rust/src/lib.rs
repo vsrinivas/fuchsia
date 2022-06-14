@@ -42,6 +42,9 @@ impl DriverTestRealmBuilder for RealmBuilder {
                 .capability(Capability::protocol_by_name(
                     "fuchsia.driver.development.DriverDevelopment",
                 ))
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.driver.registrar.DriverRegistrar",
+                ))
                 .capability(Capability::protocol_by_name("fuchsia.driver.test.Realm"))
                 .capability(Capability::directory("dev"))
                 .from(&driver_realm)

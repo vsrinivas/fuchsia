@@ -13,6 +13,7 @@
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
+#include <fidl/fuchsia.pkg/cpp/wire.h>
 #include <fidl/fuchsia.power.manager/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -312,6 +313,26 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
   fbl::RefPtr<fs::RemoteDir> pkg_dir_;
 };
 
+class FakePackageResolver final : public fidl::WireServer<fuchsia_pkg::PackageResolver> {
+  void Resolve(ResolveRequestView request, ResolveCompleter::Sync& completer) override {
+    auto status = fdio_open("/pkg",
+                            static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kDirectory |
+                                                  fuchsia_io::wire::OpenFlags::kRightReadable |
+                                                  fuchsia_io::wire::OpenFlags::kRightExecutable),
+                            request->dir.TakeChannel().release());
+    if (status != ZX_OK) {
+      completer.ReplyError(fuchsia_pkg::wire::ResolveError::kInternal);
+      return;
+    }
+
+    completer.ReplySuccess();
+  }
+
+  void GetHash(GetHashRequestView request, GetHashCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+  }
+};
+
 class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm> {
  public:
   DriverTestRealm(svc::Outgoing* outgoing, async::Loop* loop) : outgoing_(outgoing), loop_(loop) {}
@@ -429,6 +450,11 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
       return ZX_ERR_INTERNAL;
     }
 
+    status = AddProtocolWithWait<fuchsia_pkg::PackageResolver>(&package_resolver_);
+    if (status != ZX_OK) {
+      return ZX_ERR_INTERNAL;
+    }
+
     status = InitializeDirectories();
     if (status != ZX_OK) {
       return ZX_ERR_INTERNAL;
@@ -445,6 +471,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
       is_dfv2 = request->args.use_driver_framework_v2();
     }
 
+    boot_args["devmgr.enable-ephemeral"] = "true";
     boot_args["devmgr.require-system"] = "true";
     if (is_dfv2) {
       boot_args["driver_manager.use_driver_framework_v2"] = "true";
@@ -572,6 +599,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
   FakeBootItems boot_items_;
   FakeRootJob root_job_;
   FakeBootResolver boot_resolver_;
+  FakePackageResolver package_resolver_;
 
   zx::event start_event_;
   bool is_started_ = false;

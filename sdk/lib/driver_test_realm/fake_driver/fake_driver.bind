@@ -1,0 +1,9 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.test;
+
+// This driver should not bind so we make it impossible here.
+fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.PARENT;
+fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.DEVICE;

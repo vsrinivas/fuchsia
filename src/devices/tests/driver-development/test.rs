@@ -18,6 +18,7 @@ const SAMPLE_DRIVER_URL: &str = "fuchsia-boot:///#meta/sample-driver.cm";
 const SAMPLE_DRIVER_LIBNAME: &str = "fuchsia-boot:///#driver/sample-driver.so";
 const PARENT_DRIVER_URL: &str = "fuchsia-boot:///#meta/test-parent-sys.cm";
 const PARENT_DRIVER_LIBNAME: &str = "fuchsia-boot:///#driver/test-parent-sys.so";
+const FAKE_DRIVER_URL: &str = "fuchsia-boot:///#meta/driver-test-realm-fake-driver.cm";
 
 fn get_no_protocol_dfv2_property_list() -> Option<[fdf::NodeProperty; 2]> {
     Some([
@@ -171,9 +172,10 @@ async fn test_get_driver_info_no_filter_dfv1() -> Result<()> {
     let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
     let driver_infos = get_driver_info(&driver_dev, &[]).await?;
 
-    assert_eq!(driver_infos.len(), 2);
+    assert_eq!(driver_infos.len(), 3);
     assert_contains_driver_url(&driver_infos, SAMPLE_DRIVER_URL);
     assert_contains_driver_url(&driver_infos, PARENT_DRIVER_URL);
+    assert_contains_driver_url(&driver_infos, FAKE_DRIVER_URL);
     Ok(())
 }
 
@@ -231,9 +233,10 @@ async fn test_get_driver_info_no_filter_dfv2() -> Result<()> {
     let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
     let driver_infos = get_driver_info(&driver_dev, &[]).await?;
 
-    assert_eq!(driver_infos.len(), 2);
-    assert_contains_driver_url(&driver_infos, "fuchsia-boot:///#meta/sample-driver.cm");
+    assert_eq!(driver_infos.len(), 3);
+    assert_contains_driver_url(&driver_infos, SAMPLE_DRIVER_URL);
     assert_contains_driver_url(&driver_infos, PARENT_DRIVER_URL);
+    assert_contains_driver_url(&driver_infos, FAKE_DRIVER_URL);
     Ok(())
 }
 

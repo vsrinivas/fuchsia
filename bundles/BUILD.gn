@@ -186,6 +186,7 @@ group("drivers-not-templates") {
   testonly = true
   deps = [
     "//examples/drivers",
+    "//sdk/lib/driver_test_realm/fake_driver:component",
     "//src/camera:drivers",
     "//src/connectivity/bundles:drivers",
     "//src/devices/bundles:drivers",

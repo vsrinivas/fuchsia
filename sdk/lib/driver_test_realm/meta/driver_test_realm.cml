@@ -114,6 +114,14 @@
             to: [ "#driver_manager" ],
         },
         {
+            protocol: [ "fuchsia.pkg.PackageResolver" ],
+            from: "#driver-manager-support",
+            to: [
+                "#driver-index",
+                "#driver_manager",
+            ],
+        },
+        {
             directory: "pkgfs",
             from: "#driver-manager-support",
             to: [ "#driver_manager" ],

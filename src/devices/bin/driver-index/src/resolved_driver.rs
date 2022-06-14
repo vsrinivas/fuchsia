@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{self, Context},
+    anyhow::{anyhow, Context, Error},
     bind::interpreter::{
         common::BytecodeError,
         decode_bind_rules::{DecodedCompositeBindRules, DecodedRules},
@@ -218,16 +218,20 @@ pub async fn load_driver(
     dir: &fio::DirectoryProxy,
     component_url: url::Url,
     package_type: DriverPackageType,
-) -> Result<Option<ResolvedDriver>, anyhow::Error> {
+) -> Result<Option<ResolvedDriver>, Error> {
     let component = fuchsia_fs::open_file(
         &dir,
         std::path::Path::new(
             component_url
                 .fragment()
-                .ok_or(anyhow::anyhow!("{}: URL is missing fragment", component_url.as_str()))?,
+                .ok_or(anyhow!("{}: URL is missing fragment", component_url.as_str()))?,
         ),
         fio::OpenFlags::RIGHT_READABLE,
-    )?;
+    )
+    .with_context(|| {
+        format!("{}: Failed to open component manifest file", component_url.as_str())
+    })?;
+
     let component: fdecl::Component = fuchsia_fs::read_file_fidl(&component)
         .await
         .with_context(|| format!("{}: Failed to read component", component_url.as_str()))?;
@@ -242,13 +246,14 @@ pub async fn load_driver(
     }
 
     let bind_path = get_rules_string_value(&component, "bind")
-        .ok_or(anyhow::anyhow!("{}: Missing bind path", component_url.as_str()))?;
+        .ok_or(anyhow!("{}: Missing bind path", component_url.as_str()))?;
     let bind = fuchsia_fs::open_file(
         &dir,
         std::path::Path::new(&bind_path),
         fio::OpenFlags::RIGHT_READABLE,
     )
     .with_context(|| format!("{}: Failed to open bind", component_url.as_str()))?;
+
     let bind = fuchsia_fs::read_file_bytes(&bind)
         .await
         .with_context(|| format!("{}: Failed to read bind", component_url.as_str()))?;

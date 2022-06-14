@@ -1,0 +1,38 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+rustc_test("driver_register_test") {
+  testonly = true
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/lib/device-watcher/rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+fuchsia_unittest_package("package") {
+  package_name = "driver_register_test"
+  deps = [
+    ":driver_register_test",
+    "//examples/drivers/driver_test_realm/sample-driver",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}

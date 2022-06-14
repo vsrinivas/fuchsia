@@ -1,0 +1,10 @@
+{
+    "short_description": "Fake Driver used by the FakePackageResolver in support.cc",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

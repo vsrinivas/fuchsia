@@ -40,8 +40,8 @@ zx::status<std::unique_ptr<Driver>> BasePackageResolver::FetchDriver(
   }
 
   auto base_path_result = GetBasePathFromUrl(package_url);
-  if (result.is_error()) {
-    return result.take_error();
+  if (base_path_result.is_error()) {
+    return base_path_result.take_error();
   }
 
   int fd;

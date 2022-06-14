@@ -24,6 +24,7 @@ group("tests") {
     "device-watcher:tests",
     "driver-development:tests",
     "driver-inspect-test",
+    "driver-register:tests",
     "driver-runtime:tests",
     "driver-transport:tests",
     "fidl-bindlib-generation:tests",
