@@ -319,9 +319,9 @@ impl<DeviceId> From<GmpDelayedReportTimerId<Ipv4Addr, DeviceId>> for IgmpTimerId
 // Impl `TimerContext<GmpDelayedReportTimerId<Ipv4Addr, C::DeviceId>>` for all
 // implementors of `TimerContext<IgmpTimerId<C::DeviceId>> + IpDeviceIdContext<Ipv4>`.
 impl_timer_context!(
-    IpDeviceIdContext<Ipv4>,
-    IgmpTimerId<C::DeviceId>,
-    GmpDelayedReportTimerId<Ipv4Addr, C::DeviceId>,
+    DeviceId,
+    IgmpTimerId<DeviceId>,
+    GmpDelayedReportTimerId<Ipv4Addr, DeviceId>,
     IgmpTimerId::Gmp(id),
     id
 );

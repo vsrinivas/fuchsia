@@ -62,9 +62,9 @@ impl<DeviceId> From<IgmpTimerId<DeviceId>> for Ipv4DeviceTimerId<DeviceId> {
 // If we are provided with an impl of `TimerContext<Ipv4DeviceTimerId<_>>`, then
 // we can in turn provide an impl of `TimerContext` for IGMP.
 impl_timer_context!(
-    IpDeviceIdContext<Ipv4>,
-    Ipv4DeviceTimerId<C::DeviceId>,
-    IgmpTimerId<C::DeviceId>,
+    DeviceId,
+    Ipv4DeviceTimerId<DeviceId>,
+    IgmpTimerId<DeviceId>,
     Ipv4DeviceTimerId(id),
     id
 );
@@ -124,37 +124,37 @@ impl<DeviceId> From<SlaacTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
 // If we are provided with an impl of `TimerContext<Ipv6DeviceTimerId<_>>`, then
 // we can in turn provide an impl of `TimerContext` for MLD and DAD.
 impl_timer_context!(
-    IpDeviceIdContext<Ipv6>,
-    Ipv6DeviceTimerId<C::DeviceId>,
-    MldDelayedReportTimerId<C::DeviceId>,
+    DeviceId,
+    Ipv6DeviceTimerId<DeviceId>,
+    MldDelayedReportTimerId<DeviceId>,
     Ipv6DeviceTimerId::Mld(id),
     id
 );
 impl_timer_context!(
-    IpDeviceIdContext<Ipv6>,
-    Ipv6DeviceTimerId<C::DeviceId>,
-    DadTimerId<C::DeviceId>,
+    DeviceId,
+    Ipv6DeviceTimerId<DeviceId>,
+    DadTimerId<DeviceId>,
     Ipv6DeviceTimerId::Dad(id),
     id
 );
 impl_timer_context!(
-    IpDeviceIdContext<Ipv6>,
-    Ipv6DeviceTimerId<C::DeviceId>,
-    RsTimerId<C::DeviceId>,
+    DeviceId,
+    Ipv6DeviceTimerId<DeviceId>,
+    RsTimerId<DeviceId>,
     Ipv6DeviceTimerId::Rs(id),
     id
 );
 impl_timer_context!(
-    IpDeviceIdContext<Ipv6>,
-    Ipv6DeviceTimerId<C::DeviceId>,
-    Ipv6DiscoveredRouteTimerId<C::DeviceId>,
+    DeviceId,
+    Ipv6DeviceTimerId<DeviceId>,
+    Ipv6DiscoveredRouteTimerId<DeviceId>,
     Ipv6DeviceTimerId::RouteDiscovery(id),
     id
 );
 impl_timer_context!(
-    IpDeviceIdContext<Ipv6>,
-    Ipv6DeviceTimerId<C::DeviceId>,
-    SlaacTimerId<C::DeviceId>,
+    DeviceId,
+    Ipv6DeviceTimerId<DeviceId>,
+    SlaacTimerId<DeviceId>,
     Ipv6DeviceTimerId::Slaac(id),
     id
 );

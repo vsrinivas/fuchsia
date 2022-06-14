@@ -378,9 +378,9 @@ impl<DeviceId> From<GmpDelayedReportTimerId<Ipv6Addr, DeviceId>>
 }
 
 impl_timer_context!(
-    IpDeviceIdContext<Ipv6>,
-    MldDelayedReportTimerId<C::DeviceId>,
-    GmpDelayedReportTimerId<Ipv6Addr, C::DeviceId>,
+    DeviceId,
+    MldDelayedReportTimerId<DeviceId>,
+    GmpDelayedReportTimerId<Ipv6Addr, DeviceId>,
     MldDelayedReportTimerId(id),
     id
 );

@@ -340,16 +340,16 @@ pub(super) fn handle_timer<
 // we can in turn provide impls of `TimerContext` for ARP, NDP, IGMP, and MLD
 // timers.
 impl_timer_context!(
-    DeviceIdContext<EthernetLinkDevice>,
-    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    ArpTimerId<EthernetLinkDevice, Ipv4Addr, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    DeviceId,
+    EthernetTimerId<DeviceId>,
+    ArpTimerId<EthernetLinkDevice, Ipv4Addr, DeviceId>,
     EthernetTimerId::Arp(id),
     id
 );
 impl_timer_context!(
-    DeviceIdContext<EthernetLinkDevice>,
-    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    NdpTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    DeviceId,
+    EthernetTimerId<DeviceId>,
+    NdpTimerId<EthernetLinkDevice, DeviceId>,
     EthernetTimerId::Ndp(id),
     id
 );
