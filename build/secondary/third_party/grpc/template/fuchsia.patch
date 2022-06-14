@@ -1,0 +1,125 @@
+diff --git b/build/secondary/third_party/grpc/template/BUILD.fuchsia.gn.template a/build/secondary/third_party/grpc/template/BUILD.fuchsia.gn.template
+index 65da32a7d60..7131273314a 100644
+--- b/build/secondary/third_party/grpc/template/BUILD.fuchsia.gn.template
++++ a/build/secondary/third_party/grpc/template/BUILD.fuchsia.gn.template
+@@ -3,11 +3,15 @@
+   <%doc>
+   Header piece
+   </%doc>\
+-  # GRPC Chromium GN build file
+-
+-  # This file has been automatically generated from a template file.
+-  # Please look at the templates directory instead.
+-  # See //third_party/grpc/README.chromium for more information.
++  # Copyright 2021 The Fuchsia Authors. All rights reserved.
++  # Use of this source code is governed by a BSD-style license that can be
++  # found in the LICENSE file.
++  #
++  # GRPC Fuchsia GN build file
++  #
++  # DO NOT EDIT: This file has been automatically generated from a template.
++  #
++  # See README.md for more information.
+ 
+   declare_args() {
+     # Compiles with ares.
+@@ -22,6 +26,11 @@
+     grpc_use_static_linking = is_android || is_win || is_chromeos || is_mac
+   }
+ 
++  if (defined(is_fuchsia_tree) && is_fuchsia_tree) {
++    grpc_use_static_linking = true
++    is_fuchsia = true
++  }
++
+   if (is_android) {
+     import("//build/config/android/config.gni")
+     import("//build/config/android/rules.gni")
+@@ -36,6 +45,7 @@
+       "./third_party/cares",
+       "//third_party/cares",
+       "./third_party/upb",
++      "./third_party/xxhash",
+       "//third_party/abseil-cpp",
+     ]
+ 
+@@ -53,13 +63,6 @@
+       defines += [ "GRPC_NO_BINDER", ]
+     }
+ 
+-    cflags = [
+-      "-Wno-implicit-fallthrough",
+-      "-Wno-shadow",
+-      "-Wno-unreachable-code-return",
+-      "-Wno-unreachable-code-break",
+-    ]
+-
+     if (is_android) {
+       libs = [ "log" ]  # For __android_log_write
+     }
+@@ -91,10 +94,20 @@
+     cflags = [
+       "-Wno-c++98-compat-extra-semi",
+       "-Wno-extra-semi",
++      "-Wno-float-conversion",
++      "-Wno-implicit-fallthrough",
++      "-Wno-implicit-float-conversion",
++      "-Wno-implicit-int-conversion",
++      "-Wno-implicit-int-float-conversion",
++      "-Wno-shadow",
++      "-Wno-shorten-64-to-32",
+       "-Wno-sign-compare",
++      "-Wno-strict-prototypes",
+       "-Wno-sometimes-uninitialized",
+       "-Wno-string-concatenation",
+       "-Wno-unreachable-code",
++      "-Wno-unreachable-code-break",
++      "-Wno-unreachable-code-return",
+       "-Wno-unused-variable",
+     ]
+   }
+@@ -205,10 +218,6 @@
+         out_sources.append('# gRPC memcpy wrapping logic isn\'t useful here.')
+         out_sources.append('# See https://crbug.com/661171')
+         out_sources.append('# "{}",'.format(s))
+-      elif s == './src/core/plugin_registry/grpc_plugin_registry.cc':
+-        out_sources.append('# Disabling some default plugins.')
+-        out_sources.append('# "{}",'.format(s))
+-        out_sources.append('"plugin_registry/grpc_plugin_registry.cc",')
+       elif s == './src/core/lib/gprpp/status_helper.cc':
+         out_sources.append('# "{}",'.format(s))
+       elif s == './src/core/lib/matchers/matchers.cc':
+@@ -288,16 +297,9 @@
+ 
+ 
+   def strip_sources(sources):
+-    exceptions = [
+-      "./src/core/ext/filters/client_channel/lb_policy/grpclb/grpclb_balancer_addresses.h",
+-      "./src/core/ext/filters/client_channel/lb_policy/grpclb/grpclb_balancer_addresses.cc",
+-      "./src/core/ext/filters/client_channel/lb_policy/pick_first/pick_first.cc",
+-    ]
+-
+     return [f for f in sources
+             if "ruby_generator" not in f
+-            and not (re.match("./src/core/ext/filters/client_channel/lb_policy/.*/.*",f)
+-                and not f in exceptions)
++            and not re.match("./src/core/ext/filters/client_channel/lb_policy/xds/.*",f)
+             and not re.match("./src/core/ext/filters/client_channel/resolver/xds/.*",f)
+             and not re.match("./src/core/ext/xds/.*",f)
+             ]
+@@ -496,6 +498,7 @@
+     % endif
+   ${indent}  public_configs = [
+   ${indent}    ":grpc_config",
++  ${indent}    "//build/config:suppress_iterator_warnings",
+   ${indent}  ]
+     % if extra_configs:
+   ${indent}  configs += [
+@@ -538,6 +541,7 @@
+   ${indent}  ]
+   ${indent}  configs += [
+   ${indent}    "//third_party/protobuf:protobuf_config",
++  ${indent}    ":grpc_config_private",
+   ${indent}  ]
+   ${indent}  public_configs = [ ":grpc_config" ]
+   ${indent}}
