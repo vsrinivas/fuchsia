@@ -258,6 +258,7 @@ typedef uint32_t zx_vm_option_t;
 #define ZX_VM_REQUIRE_NON_RESIZABLE ((zx_vm_option_t)(1u << 11))
 #define ZX_VM_ALLOW_FAULTS          ((zx_vm_option_t)(1u << 12))
 #define ZX_VM_OFFSET_IS_UPPER_LIMIT ((zx_vm_option_t)(1u << 13))
+#define ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED ((zx_vm_option_t)(1u << 14))
 
 #define ZX_VM_ALIGN_BASE            24
 #define ZX_VM_ALIGN_1KB             ((zx_vm_option_t)(10u << ZX_VM_ALIGN_BASE))

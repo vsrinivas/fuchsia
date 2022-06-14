@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <zircon/errors.h>
+#include <zircon/features.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
@@ -2456,6 +2457,45 @@ TEST(Vmar, ProtectCowWritable) {
   // Clone should have been modified.
   EXPECT_OK(clone.read(&val, 0, sizeof(uint64_t)));
   EXPECT_EQ(77, val);
+}
+
+TEST(Vmar, MapReadIfXomUnsupported) {
+  zx_handle_t vmo;
+  size_t size = zx_system_get_page_size();
+  ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
+
+  uintptr_t addr;
+  ASSERT_EQ(
+      zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED, 0, vmo, 0, size, &addr),
+      ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+
+  uint32_t features = 0;
+  ASSERT_EQ(zx_system_get_features(ZX_FEATURE_KIND_VM, &features), ZX_OK);
+  bool xomUnsupported = !(features & ZX_VM_FEATURE_CAN_MAP_XOM);
+
+  EXPECT_EQ(probe_for_read(reinterpret_cast<void*>(addr)), xomUnsupported);
+}
+
+TEST(Vmar, ProtectReadIfXomUnsupported) {
+  zx_handle_t vmo;
+  size_t size = zx_system_get_page_size();
+  ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
+
+  uintptr_t addr;
+  ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, &addr), ZX_OK);
+  EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+
+  ASSERT_TRUE(probe_for_read(reinterpret_cast<void*>(addr)));
+
+  ASSERT_EQ(zx_vmar_protect(zx_vmar_root_self(), ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED, addr, size),
+            ZX_OK);
+
+  uint32_t features = 0;
+  ASSERT_EQ(zx_system_get_features(ZX_FEATURE_KIND_VM, &features), ZX_OK);
+  bool xomUnsupported = !(features & ZX_VM_FEATURE_CAN_MAP_XOM);
+
+  EXPECT_EQ(probe_for_read(reinterpret_cast<void*>(addr)), xomUnsupported);
 }
 
 }  // namespace

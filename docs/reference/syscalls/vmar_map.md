@@ -64,6 +64,9 @@ closing the VMO handle does not remove the mapping added by this function.
   mapping to generate faults. In particular, it is required if *vmo* is resizable,
   if *vmo* is non-resizable but the mapping extends past the end of *vmo*, if
   *vmo* is discardable, or if *vmo* was created from [`zx_pager_create_vmo()`].
+- **ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED** Map *vmo* as readable if the system does
+  not support mapping execute-only pages. If the system can map execute-only
+  this flag is ignored.
 
 *vmar_offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC**,
 **ZX_VM_SPECIFIC_OVERWRITE** or **ZX_VM_OFFSET_IS_UPPER_LIMIT** set.

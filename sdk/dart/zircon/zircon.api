@@ -2956,6 +2956,14 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
+            "VM_PERM_READ_IF_XOM_UNSUPPORTED": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "VM_PERM_READ_IF_XOM_UNSUPPORTED",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
             "VM_PERM_WRITE": {
               "isConst": true,
               "isFinal": false,

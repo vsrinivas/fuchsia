@@ -17,6 +17,9 @@
 // arch-independent CPU features
 #define ZX_HAS_CPU_FEATURES            ((uint32_t)(1u << 0))
 
+// Virtual memory features.
+#define ZX_VM_FEATURE_CAN_MAP_XOM ((uint32_t)(1u << 0))
+
 #if defined(__x86_64__)
 
 // x86-64 CPU features
@@ -49,9 +52,6 @@
 
 // arm64 address-tagging features
 #define ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI  ((uint32_t)(1u << 0))
-
-// Virtual memory features.
-#define ZX_VM_FEATURE_CAN_MAP_XOM ((uint32_t)(1u << 0))
 
 #else
 

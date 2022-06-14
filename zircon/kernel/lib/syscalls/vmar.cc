@@ -9,8 +9,10 @@
 #include <lib/user_copy/user_ptr.h>
 #include <trace.h>
 #include <zircon/errors.h>
+#include <zircon/features.h>
 #include <zircon/types.h>
 
+#include <arch/ops.h>
 #include <fbl/ref_ptr.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
@@ -115,6 +117,12 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
     return ZX_ERR_ACCESS_DENIED;
   }
 
+  if ((options & ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED)) {
+    if (!(arch_vm_features() & ZX_VM_FEATURE_CAN_MAP_XOM)) {
+      options |= ZX_VM_PERM_READ;
+    }
+  }
+
   if (!VmAddressRegionDispatcher::is_valid_mapping_protection(options)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -212,6 +220,12 @@ zx_status_t sys_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len) {
 zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vaddr_t addr,
                              uint64_t len) {
   auto* up = ProcessDispatcher::GetCurrent();
+
+  if ((options & ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED)) {
+    if (!(arch_vm_features() & ZX_VM_FEATURE_CAN_MAP_XOM)) {
+      options |= ZX_VM_PERM_READ;
+    }
+  }
 
   zx_rights_t vmar_rights = 0u;
   if (options & ZX_VM_PERM_READ) {

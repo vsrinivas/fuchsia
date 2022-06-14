@@ -50,6 +50,9 @@ zx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch
   mmu_flags |= ExtractFlag<ZX_VM_PERM_WRITE, ARCH_MMU_FLAG_PERM_WRITE>(&flags);
   mmu_flags |= ExtractFlag<ZX_VM_PERM_EXECUTE, ARCH_MMU_FLAG_PERM_EXECUTE>(&flags);
 
+  // This flag is no longer needed and should have already been acted upon.
+  ExtractFlag<ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED, 0>(&flags);
+
   // Figure out vmar flags
   uint32_t vmar = 0;
   vmar |= ExtractFlag<ZX_VM_COMPACT, VMAR_FLAG_COMPACT>(&flags);
