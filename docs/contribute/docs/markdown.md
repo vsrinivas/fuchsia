@@ -781,7 +781,9 @@ element tag such as:
 
 ## Links
 
-Fuchsia.dev supports three style of links: *inline*, *reference*, and *external*. In all styles, the link text is delimited by `[]` (square brackets).
+Fuchsia.dev supports three style of links: *inline*, *reference*, and *external*.
+In all styles, the link text is delimited by `[]` (square brackets).
+
 ### Inline links
 
 To create an inline link, use a set of regular parentheses immediately
@@ -789,15 +791,15 @@ after the link text's closing square bracket. Inside the parentheses,
 put the URL where you want the link to point, along with an optional
 title for the link, surrounded in quotes. For example:
 
-```none {:.devsite-disable-click-to-copy}
-This is [an example](https://{{example_url}}/ "Title") inline link.
-
-[This link](https://{{example_url}}/) has no title attribute.
-```
-
-This produces the following HTML:
-
 *  {Markdown}
+
+    ```none {:.devsite-disable-click-to-copy}
+    This is [an example](https://{{example_url}}/ "Title") inline link.
+
+    [This link](https://{{example_url}}/) has no title attribute.
+    ```
+
+*  {Generated HTML}
 
     ```html
     <p>This is <a href="https://{{example_url}}/" title="Title">
@@ -807,14 +809,7 @@ This produces the following HTML:
     title attribute.</p>
     ```
 
-    If you're referring to a local resource on the same server, you can
-    use relative paths:
-
-    ```none {:.devsite-disable-click-to-copy}
-    See my [docs](/docs/) page for details.
-    ```
-
-*  {Generated HTML}
+*  {Rendered}
 
     <p>This is <a href="https://{{example_url}}/" title="Title">
     an example</a> inline link.</p>
@@ -822,10 +817,8 @@ This produces the following HTML:
     <p><a href="{{example_url}}">This link</a> has no
     title attribute.</p>
 
-    If you're referring to a local resource such as a file in the source tree, you can
-    use relative paths:
-
-    See my [docs](/docs/README.md) page for details.
+If you're referring to a local resource such as a file in the source tree, you can
+use relative paths. See the [docs README](/docs/README.md) for examples.
 
 ### Reference links
 
