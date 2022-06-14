@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Enable logging on stdout
+        "syslog/elf_stdio.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        runner: "elf",
+        binary: "bin/soundplayer_example",
+    },
+
+    // Capabilities used by this component.
+    use: [
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+        { protocol: "fuchsia.media.sounds.Player" },
+    ],
+
+    // Capabilities exposed to the parent component.
+    expose: [
+        // Enable session framework to start this component automatically
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}
