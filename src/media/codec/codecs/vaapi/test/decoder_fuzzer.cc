@@ -200,6 +200,7 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
 
   // Fake out the client setting buffer constraints on sysmem
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+  buffer_collection.settings.has_image_format_constraints = true;
   buffer_collection.settings.image_format_constraints =
       output_constraints.image_format_constraints.at(0);
   decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
