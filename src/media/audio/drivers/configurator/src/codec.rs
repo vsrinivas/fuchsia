@@ -107,11 +107,6 @@ mod tests {
             mut device: crate::codec::CodecInterface,
         ) -> Result<(), Error> {
             let _ = device.connect().context("Couldn't connect to codec")?;
-            let info = device.get_info().await?;
-            assert_eq!(info.unique_id, "123");
-            assert_eq!(info.manufacturer, "456");
-            assert_eq!(info.product_name, "789");
-
             let formats = device.get_dai_formats().await?.map_err(|e| anyhow!(e.to_string()))?;
             // We have 2 test codecs, one with good behavior (formats listed) and one with bad
             // behavior (empty formats), we only set_dai_formats for the the one that reported

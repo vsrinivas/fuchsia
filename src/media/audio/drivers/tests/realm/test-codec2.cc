@@ -27,7 +27,7 @@ class Test : public SimpleCodecServer {
   }
   zx_status_t Reset() override { return ZX_OK; }
   Info GetInfo() override {
-    return {.unique_id = "123", .manufacturer = "456", .product_name = "789"};
+    return {.unique_id = "abc", .manufacturer = "def", .product_name = "ghi"};
   }
   zx_status_t Stop() override { return ZX_OK; }
   zx_status_t Start() override { return ZX_OK; }

@@ -863,8 +863,8 @@ mod tests {
         // Codec 2.
         config.load_device(
             Device {
-                manufacturer: "456".to_string(),
-                product: "789".to_string(),
+                manufacturer: "def".to_string(),
+                product: "ghi".to_string(),
                 hardwired: true,
                 is_codec: true,
                 dai_channel: 1,
