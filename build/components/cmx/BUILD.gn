@@ -38,7 +38,6 @@ group("cmx_allowlist") {
   # To trim:
   # scripts/gn/trim_visibility.py --target="//build/components/cmx:cmx_allowlist"
   visibility = [
-    "//build/components/tests:*",
     "//build/dart/tests:*",
     "//examples/benchmark:*",
     "//examples/components/realm_builder:*",

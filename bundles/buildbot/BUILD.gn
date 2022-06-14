@@ -81,10 +81,6 @@ group("core") {
 group("core_base_packages") {
   testonly = true
   deps = [
-    "///build/components/tests:return-zero-component-named",
-    "///build/components/tests:return-zero-package-component-named",
-    "///build/components/tests:return-zero-package-named",
-    "///build/components/tests:return-zero-unnamed",
     "///examples/diagnostics/inspect/codelab/dart/part_1:bin",
     "///examples/diagnostics/inspect/codelab/dart/part_2:bin",
     "///examples/diagnostics/inspect/codelab/dart/part_3:bin",
