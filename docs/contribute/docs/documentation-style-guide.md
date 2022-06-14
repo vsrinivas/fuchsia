@@ -18,10 +18,16 @@ in the resources in the following documents:
 
 ## Text and links
 
-### Follow the 100 character limit
+### Follow the 80 character limit
 
-In the Fuchsia project, the maximum line length for documentation and code is
-100 characters.
+In the Fuchsia project, the maximum line length for code is 100 characters,
+while the maximum line length for documentation is 80 characters. A notable
+exception to this rule is URLs (i.e. links) which are written on one line,
+without wrapping.
+
+Code tends to be indented (blank space on the left of the page), while English
+prose (documentation) tends to form paragraphs of text. This difference leads to
+different width specification.
 
 ### Mark external links
 
@@ -43,7 +49,7 @@ then refers to that identifier whenever you use the link in the doc. This makes
 links easy to update in the document.
 
 
-<span class="compare-better">Recommended</span>: Create an identifer where you
+<span class="compare-better">Recommended</span>: Create an identifier where you
 want the link.
 
 In this example, the link identifier is called `fuchsia-home`:
@@ -77,7 +83,7 @@ In the Fuchsia documentation you can link to three types of contents:
   tree. These links can link to any file extension, but these files must exist
   in the source tree. For example, `/src/sys/sysmgr/main.cc`.
 * Reference documentation - Links to auto-generated Fuchsia reference
-  documentation. 
+  documentation.
   * Most of the Fuchsia reference documentation doesn't exist in
     the source tree, but is published on [fuchsia.dev][fuchsia-dev]. These links
     must be used as fully qualified URLs. For example,
