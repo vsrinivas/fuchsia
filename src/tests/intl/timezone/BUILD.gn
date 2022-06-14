@@ -175,6 +175,10 @@ fuchsia_unittest_package("timezone-flutter-test") {
   ]
 
   test_specs = {
+    log_settings = {
+      # #a11y is missing fuchsia.settings.Accessibility from #setui_service.
+      max_severity = "ERROR"
+    }
     environments = [
       {
         dimensions = {
