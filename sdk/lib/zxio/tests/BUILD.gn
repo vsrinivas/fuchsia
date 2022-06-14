@@ -86,8 +86,10 @@ fuchsia_unittest_package("zxio-unittest-package") {
 }
 
 fuchsia_unittest_component("zxio-standalone") {
-  manifest = "meta/standalone_test.cmx"
-  deps = [ ":standalone" ]
+  deps = [
+    ":standalone",
+    "//src/sys/testing/elftest",
+  ]
 }
 
 fuchsia_test_package("zxio-standalone-package") {
