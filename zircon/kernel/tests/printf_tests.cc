@@ -19,8 +19,13 @@
 using ssize_t = ptrdiff_t;
 #endif
 
+namespace {
+
+template <typename IntegralType>
+constexpr bool kIs64Bit = sizeof(IntegralType) == sizeof(uint64_t);
+
 // Checks that vsnprintf() gives the expected string as output.
-static bool test_printf(const char* expected, const char* format, ...) {
+bool test_printf(const char* expected, const char* format, ...) {
   char buf[100];
   va_list args;
   va_start(args, format);
@@ -45,7 +50,7 @@ static bool test_printf(const char* expected, const char* format, ...) {
   return success;
 }
 
-static bool numbers() {
+bool numbers() {
   BEGIN_TEST;
 
   EXPECT_TRUE(test_printf("int8:  -12 0 -2", "int8:  %hhd %hhd %hhd", -12, 0, 254));
@@ -59,15 +64,14 @@ static bool numbers() {
       test_printf("uint:  4282621618 0 12345678", "uint:  %u %u %u", -12345678, 0, 12345678));
   EXPECT_TRUE(
       test_printf("long:  -12345678 0 12345678", "long:  %ld %ld %ld", -12345678L, 0L, 12345678L));
-#ifdef _LP64
-  static_assert(-12345678UL == 18446744073697205938UL, "");
-  EXPECT_TRUE(test_printf("ulong: 18446744073697205938 0 12345678", "ulong: %lu %lu %lu",
-                          -12345678UL, 0UL, 12345678UL));
-#else
-  static_assert(-12345678UL == 4282621618UL, "");
-  EXPECT_TRUE(test_printf("ulong: 4282621618 0 12345678", "ulong: %lu %lu %lu", -12345678UL, 0UL,
-                          12345678UL));
-#endif
+
+  if constexpr (kIs64Bit<unsigned long>) {
+    EXPECT_TRUE(test_printf("ulong: 18446744073697205938 0 12345678", "ulong: %lu %lu %lu",
+                            -12345678UL, 0UL, 12345678UL));
+  } else {
+    EXPECT_TRUE(test_printf("ulong: 4282621618 0 12345678", "ulong: %lu %lu %lu", -12345678UL, 0UL,
+                            12345678UL));
+  }
 
   EXPECT_TRUE(test_printf("longlong: -12345678 0 12345678", "longlong: %lli %lli %lli", -12345678LL,
                           0LL, 12345678LL));
@@ -75,59 +79,65 @@ static bool numbers() {
                           -12345678LL, 0LL, 12345678LL));
   EXPECT_TRUE(test_printf("ssize_t: -12345678 0 12345678", "ssize_t: %zd %zd %zd",
                           (ssize_t)-12345678, (ssize_t)0, (ssize_t)12345678));
-#ifdef _LP64
-  EXPECT_TRUE(test_printf("usize_t: 18446744073697205938 0 12345678", "usize_t: %zu %zu %zu",
-                          (size_t)-12345678, (size_t)0, (size_t)12345678));
-#else
-  EXPECT_TRUE(test_printf("usize_t: 4282621618 0 12345678", "usize_t: %zu %zu %zu",
-                          (size_t)-12345678, (size_t)0, (size_t)12345678));
-#endif
+
+  if constexpr (kIs64Bit<size_t>) {
+    EXPECT_TRUE(test_printf("usize_t: 18446744073697205938 0 12345678", "usize_t: %zu %zu %zu",
+                            (size_t)-12345678, (size_t)0, (size_t)12345678));
+  } else {
+    EXPECT_TRUE(test_printf("usize_t: 4282621618 0 12345678", "usize_t: %zu %zu %zu",
+                            (size_t)-12345678, (size_t)0, (size_t)12345678));
+  }
+
   EXPECT_TRUE(test_printf("intmax_t: -12345678 0 12345678", "intmax_t: %jd %jd %jd",
                           (intmax_t)-12345678, (intmax_t)0, (intmax_t)12345678));
   EXPECT_TRUE(test_printf("uintmax_t: 18446744073697205938 0 12345678", "uintmax_t: %ju %ju %ju",
                           (uintmax_t)-12345678, (uintmax_t)0, (uintmax_t)12345678));
   EXPECT_TRUE(test_printf("ptrdiff_t: -12345678 0 12345678", "ptrdiff_t: %td %td %td",
                           (ptrdiff_t)-12345678, (ptrdiff_t)0, (ptrdiff_t)12345678));
-#ifdef _LP64
-  EXPECT_TRUE(test_printf("ptrdiff_t (u): 18446744073697205938 0 12345678",
-                          "ptrdiff_t (u): %tu %tu %tu", (ptrdiff_t)-12345678, (ptrdiff_t)0,
-                          (ptrdiff_t)12345678));
-#else
-  EXPECT_TRUE(test_printf("ptrdiff_t (u): 4282621618 0 12345678", "ptrdiff_t (u): %tu %tu %tu",
-                          (ptrdiff_t)-12345678, (ptrdiff_t)0, (ptrdiff_t)12345678));
-#endif
+
+  if constexpr (kIs64Bit<ptrdiff_t>) {
+    EXPECT_TRUE(test_printf("ptrdiff_t (u): 18446744073697205938 0 12345678",
+                            "ptrdiff_t (u): %tu %tu %tu", (ptrdiff_t)-12345678, (ptrdiff_t)0,
+                            (ptrdiff_t)12345678));
+  } else {
+    EXPECT_TRUE(test_printf("ptrdiff_t (u): 4282621618 0 12345678", "ptrdiff_t (u): %tu %tu %tu",
+                            (ptrdiff_t)-12345678, (ptrdiff_t)0, (ptrdiff_t)12345678));
+  }
 
   END_TEST;
 }
 
-static bool hex() {
+bool hex() {
   BEGIN_TEST;
 
   EXPECT_TRUE(test_printf("uint8: f4 0 fe", "uint8: %hhx %hhx %hhx", -12, 0, 254));
   EXPECT_TRUE(test_printf("uint16:fb2e 0 4d2", "uint16:%hx %hx %hx", -1234, 0, 1234));
   EXPECT_TRUE(test_printf("uint:  ff439eb2 0 bc614e", "uint:  %x %x %x", -12345678, 0, 12345678));
-#ifdef _LP64
-  EXPECT_TRUE(test_printf("ulong: ffffffffff439eb2 0 bc614e", "ulong: %lx %lx %lx", -12345678UL,
-                          0UL, 12345678UL));
-#else
-  EXPECT_TRUE(
-      test_printf("ulong: ff439eb2 0 bc614e", "ulong: %lx %lx %lx", -12345678UL, 0UL, 12345678UL));
-#endif
+
+  if constexpr (kIs64Bit<unsigned long>) {
+    EXPECT_TRUE(test_printf("ulong: ffffffffff439eb2 0 bc614e", "ulong: %lx %lx %lx", -12345678UL,
+                            0UL, 12345678UL));
+  } else {
+    EXPECT_TRUE(test_printf("ulong: ff439eb2 0 bc614e", "ulong: %lx %lx %lx", -12345678UL, 0UL,
+                            12345678UL));
+  }
+
   EXPECT_TRUE(test_printf("ulong: FF439EB2 0 BC614E", "ulong: %X %X %X", -12345678, 0, 12345678));
   EXPECT_TRUE(test_printf("ulonglong: ffffffffff439eb2 0 bc614e", "ulonglong: %llx %llx %llx",
                           -12345678LL, 0LL, 12345678LL));
-#ifdef _LP64
-  EXPECT_TRUE(test_printf("usize_t: ffffffffff439eb2 0 bc614e", "usize_t: %zx %zx %zx",
-                          (size_t)-12345678, (size_t)0, (size_t)12345678));
-#else
-  EXPECT_TRUE(test_printf("usize_t: ff439eb2 0 bc614e", "usize_t: %zx %zx %zx", (size_t)-12345678,
-                          (size_t)0, (size_t)12345678));
-#endif
+
+  if constexpr (kIs64Bit<size_t>) {
+    EXPECT_TRUE(test_printf("usize_t: ffffffffff439eb2 0 bc614e", "usize_t: %zx %zx %zx",
+                            (size_t)-12345678, (size_t)0, (size_t)12345678));
+  } else {
+    EXPECT_TRUE(test_printf("usize_t: ff439eb2 0 bc614e", "usize_t: %zx %zx %zx", (size_t)-12345678,
+                            (size_t)0, (size_t)12345678));
+  }
 
   END_TEST;
 }
 
-static bool alt_and_sign() {
+bool alt_and_sign() {
   BEGIN_TEST;
 
   EXPECT_TRUE(test_printf("uint: 0xabcdef 0XABCDEF", "uint: %#x %#X", 0xabcdef, 0xabcdef));
@@ -142,7 +152,7 @@ static bool alt_and_sign() {
   END_TEST;
 }
 
-static bool formatting() {
+bool formatting() {
   BEGIN_TEST;
 
   EXPECT_TRUE(test_printf("int: a12345678a", "int: a%8da", 12345678));
@@ -178,7 +188,7 @@ static bool formatting() {
   END_TEST;
 }
 
-static bool printf_field_width_and_precision_test() {
+bool printf_field_width_and_precision_test() {
   BEGIN_TEST;
 
   const char input[] = "0123456789";
@@ -427,7 +437,7 @@ static bool printf_field_width_and_precision_test() {
 }
 
 // Test snprintf() when the output is larger than the given buffer.
-static bool snprintf_truncation_test() {
+bool snprintf_truncation_test() {
   BEGIN_TEST;
 
   char buf[32];
@@ -451,6 +461,8 @@ static bool snprintf_truncation_test() {
 
   END_TEST;
 }
+
+}  // namespace
 
 UNITTEST_START_TESTCASE(printf_tests)
 UNITTEST("numbers", numbers)
