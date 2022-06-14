@@ -54,33 +54,21 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
                 local.into_proxy().context("creating FileProxy").map_err(make_opaque_error)?;
             let mut stream = file_proxy.take_event_stream();
 
-            let mut status = None;
-            #[allow(clippy::never_loop)] // TODO(fxbug.dev/95063)
-            while let Some(event) = stream.next().await {
-                match event {
-                    Ok(fio::FileEvent::OnOpen_ { s, .. }) => {
-                        status = Some(Status::ok(s));
-                        break;
-                    }
-                    Ok(fio::FileEvent::OnConnectionInfo { .. }) => {
-                        status = Some(Ok(()));
-                        break;
-                    }
-                    Err(e) => {
-                        return Err(make_opaque_error(anyhow!(e).context("waiting for OnOpen")))
-                    }
-                }
-            }
+            let event = if let Some(event) = stream.next().await {
+                event
+            } else {
+                return Err(tuf::Error::Opaque(format!("Expected OnOpen, but did not get one.")));
+            };
+            let status = match event {
+                Ok(fio::FileEvent::OnOpen_ { s, .. }) => Status::ok(s),
+                Ok(fio::FileEvent::OnConnectionInfo { .. }) => Ok(()),
+                Err(e) => return Err(make_opaque_error(anyhow!(e).context("waiting for OnOpen"))),
+            };
 
             match status {
-                Some(Ok(())) => {}
-                Some(Err(Status::NOT_FOUND)) => return Err(tuf::Error::NotFound),
-                Some(Err(e)) => return Err(tuf::Error::Opaque(format!("open failed: {:?}", e))),
-                None => {
-                    return Err(tuf::Error::Opaque(format!(
-                        "Expected OnOpen, but did not get one."
-                    )))
-                }
+                Ok(()) => {}
+                Err(Status::NOT_FOUND) => return Err(tuf::Error::NotFound),
+                Err(e) => return Err(tuf::Error::Opaque(format!("open failed: {:?}", e))),
             }
 
             // Drop the stream so that AsyncReader has sole ownership of the proxy.

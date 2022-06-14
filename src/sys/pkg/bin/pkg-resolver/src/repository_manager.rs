@@ -1213,7 +1213,6 @@ mod tests {
         assert_does_not_exist_error(&errors[0], &does_not_exist_dir);
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_static_configs_dir_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
@@ -1231,7 +1230,7 @@ mod tests {
 
         {
             let mut f = File::create(&invalid_path).unwrap();
-            f.write(b"hello world").unwrap();
+            f.write_all(b"hello world").unwrap();
 
             let mut f = io::BufWriter::new(File::create(dir.path().join("a")).unwrap());
             serde_json::to_writer(
@@ -1419,7 +1418,6 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_dynamic_configs_path_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
@@ -1427,7 +1425,7 @@ mod tests {
 
         {
             let mut f = File::create(&dir.path().join(&invalid_path)).unwrap();
-            f.write(b"hello world").unwrap();
+            f.write_all(b"hello world").unwrap();
         }
 
         let (builder, err) =

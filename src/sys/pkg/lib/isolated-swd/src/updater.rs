@@ -50,7 +50,6 @@ impl Updater {
         Self::launch_with_components(blobfs, paver, cache, resolver, board_name, UPDATER_URL).await
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95063)
     /// Launch the system updater. This is the same as `launch`, except that it expects the path
     /// to the `system-updater` component to be provided.
     pub async fn launch_with_components(
@@ -65,7 +64,7 @@ impl Updater {
         let mut path = board_info_dir.path().to_owned();
         path.push("board");
         let mut file = std::fs::File::create(path).context("creating board file")?;
-        file.write(board_name.as_bytes())?;
+        file.write_all(board_name.as_bytes())?;
         drop(file);
 
         let updater = AppBuilder::new(updater_url)

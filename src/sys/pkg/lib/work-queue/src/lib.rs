@@ -556,7 +556,6 @@ mod tests {
         }
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95063)
     #[test]
     fn check_works_with_sendable_types() {
         struct TestWork;
@@ -587,10 +586,9 @@ mod tests {
                 assert_eq!(res, vec![Ok(())]);
             })
             .expect("spawn to work");
-        assert_eq!(executor.run_until(handle), ());
+        let () = executor.run_until(handle);
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95063)
     #[test]
     fn check_works_with_unsendable_types() {
         use std::rc::Rc;
@@ -637,7 +635,7 @@ mod tests {
                 assert_eq!(res, vec![Ok(TestOutput(Rc::new(())))]);
             })
             .expect("spawn to work");
-        assert_eq!(executor.run_until(handle), ());
+        let () = executor.run_until(handle);
     }
 
     fn spawn_test_work_queue<K, C, O>(

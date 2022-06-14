@@ -684,7 +684,6 @@ pub(crate) mod tests {
         assert_eq!(manager.rewrite(&url), "fuchsia-pkg://fuchsia.com/c".parse().unwrap());
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_commit_additional_rule() {
         let existing_rule = rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice");
@@ -708,7 +707,7 @@ pub(crate) mod tests {
         assert_eq!(transaction.list_dynamic().cloned().collect::<Vec<_>>(), new_rules);
 
         // Commit the new rule set
-        assert_eq!(manager.apply(transaction).await.unwrap(), ());
+        let () = manager.apply(transaction).await.unwrap();
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), new_rules);
 
         // Ensure new rules are persisted to the dynamic config file
@@ -719,7 +718,6 @@ pub(crate) mod tests {
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), new_rules);
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_erase_all_dynamic_rules() {
         let rules = vec![
@@ -741,7 +739,7 @@ pub(crate) mod tests {
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), rules);
         assert_eq!(transaction.list_dynamic().cloned().collect::<Vec<_>>(), vec![]);
 
-        assert_eq!(manager.apply(transaction).await.unwrap(), ());
+        let () = manager.apply(transaction).await.unwrap();
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
 
         let manager = RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)

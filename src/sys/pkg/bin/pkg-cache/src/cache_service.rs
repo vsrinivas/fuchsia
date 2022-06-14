@@ -2019,7 +2019,8 @@ mod serve_needed_blobs_tests {
 
         let payload = b"pending blob write";
 
-        #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95063)
+        #[allow(clippy::async_yields_async)]
+        // We want to join these futures, it's okay to not await them.
         let (pending_blob_mock_fut, blob) = future::join(
             async { blobfs.expect_create_blob(content_blob).await.expect_payload(payload) },
             async {
