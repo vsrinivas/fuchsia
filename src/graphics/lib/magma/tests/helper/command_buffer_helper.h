@@ -98,10 +98,39 @@ class CommandBufferHelper {
     if (!ctx_->ExecuteCommandBufferWithResources(std::move(command_buffer), std::move(resources),
                                                  std::move(semaphores)))
       return false;
-    for (uint32_t i = 0; i < wait_semaphores_.size(); i++) {
-      wait_semaphores_[i]->Signal();
-    }
+
+    ProcessNotifications();
     return true;
+  }
+
+  void ProcessNotifications() {
+    while (notifications_.size()) {
+      std::vector<msd_notification_t> processing_notifications;
+      notifications_.swap(processing_notifications);
+
+      for (auto& notification : processing_notifications) {
+        static int cancel_token;
+
+        if (notification.type == MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT_CANCEL) {
+          EXPECT_EQ(notification.u.handle_wait_cancel.cancel_token, &cancel_token);
+
+        } else if (notification.type == MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT) {
+          notification.u.handle_wait.starter(notification.u.handle_wait.wait_context,
+                                             &cancel_token);
+
+          magma_handle_t handle_copy;
+          ASSERT_TRUE(magma::PlatformHandle::duplicate_handle(notification.u.handle_wait.handle,
+                                                              &handle_copy));
+
+          auto semaphore = magma::PlatformSemaphore::Import(handle_copy);
+          ASSERT_TRUE(semaphore);
+          semaphore->Signal();
+
+          notification.u.handle_wait.completer(notification.u.handle_wait.wait_context,
+                                               MAGMA_STATUS_OK, notification.u.handle_wait.handle);
+        }
+      }
+    }
   }
 
   bool ExecuteAndWait() {
@@ -115,6 +144,11 @@ class CommandBufferHelper {
     return true;
   }
 
+  static void NotificationCallback(void* token, msd_notification_t* notification) {
+    auto helper = reinterpret_cast<CommandBufferHelper*>(token);
+    helper->notifications_.push_back(*notification);
+  }
+
  private:
   CommandBufferHelper(msd_driver_unique_ptr_t msd_drv, std::shared_ptr<MagmaSystemDevice> dev,
                       std::unique_ptr<MagmaSystemConnection> connection, MagmaSystemContext* ctx)
@@ -122,6 +156,8 @@ class CommandBufferHelper {
         dev_(std::move(dev)),
         connection_(std::move(connection)),
         ctx_(ctx) {
+    connection_->SetNotificationCallback(NotificationCallback, this);
+
     uint64_t buffer_size = sizeof(magma_command_buffer) + sizeof(uint64_t) * kSignalSemaphoreCount +
                            sizeof(magma_exec_resource) * kNumResources;
 
@@ -238,4 +274,5 @@ class CommandBufferHelper {
   std::vector<msd_semaphore_t*> msd_wait_semaphores_;
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
   std::vector<msd_semaphore_t*> msd_signal_semaphores_;
+  std::vector<msd_notification_t> notifications_;
 };

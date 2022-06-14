@@ -31,12 +31,23 @@ inline void CopyNotification(const msd_notification_t* src, msd_notification_t* 
       memcpy(dst->u.channel_send.data, src->u.channel_send.data, src->u.channel_send.size);
       dst->u.channel_send.size = src->u.channel_send.size;
       break;
+
     case MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED:
       memcpy(&dst->u.perf_counter_result, &src->u.perf_counter_result,
              sizeof(src->u.perf_counter_result));
       break;
+
     case MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED:
       break;
+
+    case MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT:
+      dst->u.handle_wait = src->u.handle_wait;
+      break;
+
+    case MSD_CONNECTION_NOTIFICATION_HANDLE_WAIT_CANCEL:
+      dst->u.handle_wait_cancel = src->u.handle_wait_cancel;
+      break;
+
     default:
       DMESSAGE("Unhandled notification type: %lu", dst->type);
       DASSERT(false);
