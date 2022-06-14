@@ -40,19 +40,14 @@ rustc_library("blobfs") {
   ]
 }
 
-fuchsia_component("blobfs-lib-test") {
-  testonly = true
-
-  manifest = "meta/blobfs-lib-test.cmx"
+fuchsia_unittest_package("blobfs-lib-tests") {
+  manifest = "meta/blobfs-lib-test.cml"
   deps = [
     ":blobfs_test",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
+    "//sdk/lib/driver_test_realm/platform",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
   ]
-}
-
-fuchsia_test_package("blobfs-lib-test-package") {
-  test_components = [ ":blobfs-lib-test" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -62,5 +57,5 @@ fuchsia_test_package("blobfs-lib-test-package") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":blobfs-lib-test-package" ]
+  public_deps = [ ":blobfs-lib-tests" ]
 }
