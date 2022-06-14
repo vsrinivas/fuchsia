@@ -138,12 +138,12 @@ TEST(WriteElement, HtCapabilities) {
 
   Buf buf;
   HtCapabilities ht_caps = {
-      .ht_cap_info = HtCapabilityInfo{0xbbaa},
+      .ht_cap_info = HtCapabilityInfo{{0xaa, 0xbb}},
       .ampdu_params = AmpduParams{0x55},
       .mcs_set = SupportedMcsSet{{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc,
                                   0xd, 0xe, 0xf}},
-      .ht_ext_cap = HtExtCapabilities{0xeeddu},
-      .txbf_cap = TxBfCapability{0x44332211u},
+      .ht_ext_cap = HtExtCapabilities{{0xdd, 0xee}},
+      .txbf_cap = TxBfCapability{{0x11, 0x22, 0x33, 0x44}},
       .asel_cap = AselCapability{0x77},
   };
   WriteHtCapabilities(&buf.w, ht_caps);
@@ -175,8 +175,8 @@ TEST(WriteElement, VhtCapabilities) {
   // clang-format on
   Buf buf;
   VhtCapabilities caps = {
-      .vht_cap_info = VhtCapabilitiesInfo{0xddccbbaau},
-      .vht_mcs_nss = VhtMcsNss{0x8877665544332211ul},
+      .vht_cap_info = VhtCapabilitiesInfo{{0xaa, 0xbb, 0xcc, 0xdd}},
+      .vht_mcs_nss = VhtMcsNss{{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}},
   };
   WriteVhtCapabilities(&buf.w, caps);
   EXPECT_TRUE(equal(expected, buf.w.WrittenData()));

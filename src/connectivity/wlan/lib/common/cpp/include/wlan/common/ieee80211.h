@@ -191,12 +191,26 @@ enum ieee80211_ht_caps {
 
 #define IEEE80211_HT_MCS_MASK_LEN 10
 
+// IEEE Std 802.11-2016 9.4.2.56.3, Figure 9-333
 enum ieee80211_ampdu_params {
     IEEE80211_AMPDU_RX_LEN_MASK          = 0x03,
         IEEE80211_AMPDU_RX_LEN_SHIFT     = 0,
     IEEE80211_AMPDU_DENSITY_MASK         = 0x1c,
         IEEE80211_AMPDU_DENSITY_SHIFT    = 2
 };
+
+// IEEE Std 802.11-2016 9.4.2.56.1, Figure 9-331
+// This struct should only be used in files with C linkage where the
+// more expressive wlan::HtCapabilities is unavailable.
+struct ieee80211_ht_cap_packed {
+  uint16_t ht_capability_info;
+  uint8_t ampdu_params;
+  uint8_t supported_mcs_set[16];
+  //struct ieee80211_mcs_info supported_mcs_set;
+  uint16_t ht_ext_cap;
+  uint32_t txbf_cap;
+  uint8_t asel_cap;
+} __PACKED;
 
 // IEEE Std. 802.11-2016 9.4.2.158.2
 enum ieee80211_vht_caps {
@@ -257,6 +271,14 @@ enum ieee80211_supported_vht_mcs_nss {
     IEEE80211_VHT_MCS_NSS_EXT_NSS_BW_CAP        = 0x2000000000000000,
     IEEE80211_VHT_MCS_NSS_EXT_NSS_BW_CAP_SHIFT  =                 61,
 };
+
+// IEEE Std 802.11-2016 9.4.2.158.1, Figure 9-558
+// This struct should only be used in files with C linkage where the
+// more expressive wlan::VhtCapabilities is unavailable.
+struct ieee80211_vht_cap_packed {
+  uint32_t vht_capability_info;
+  uint64_t supported_vht_mcs_and_nss_set;
+} __PACKED;
 
 // Max VHT-MCS SS encodings (IEEE Std. 802.11-2016 9.4.2.158.3)
 #define IEEE80211_VHT_MCS_0_7  0

@@ -459,11 +459,13 @@ struct Tspec {
 
 // IEEE Std 802.11-2016, 9.4.2.56.2
 // Note this is a field of HtCapabilities element.
-class HtCapabilityInfo : public common::BitField<uint16_t> {
+class HtCapabilityInfo : public common::LittleEndianBitField<2> {
  public:
-  constexpr explicit HtCapabilityInfo(uint16_t ht_cap_info)
-      : common::BitField<uint16_t>(ht_cap_info) {}
+  constexpr explicit HtCapabilityInfo(std::array<uint8_t, 2> ht_cap_info)
+      : common::LittleEndianBitField<2>(ht_cap_info) {}
   constexpr HtCapabilityInfo() = default;
+
+  WLAN_BIT_FIELD(as_uint16, 0, 16)  // Read/write as a uint16_t
 
   WLAN_BIT_FIELD(ldpc_coding_cap, 0, 1)
   WLAN_BIT_FIELD(chan_width_set, 1, 1)  // In spec: Supported Channel Width Set
@@ -530,6 +532,8 @@ class SupportedMcsSet : public common::LittleEndianBitField<16> {
       : common::LittleEndianBitField<16>(val) {}
   constexpr SupportedMcsSet() = default;
 
+  WLAN_BIT_FIELD(as_uint16, 0, 16)  // Read/write as a uint16_t
+
   // IEEE Std 802.11-2016, 9.4.2.56.4.
   WLAN_BIT_FIELD(rx_mcs_bitmask1, 0, 64)
   WLAN_BIT_FIELD(rx_mcs_bitmask2, 64, 13)
@@ -544,11 +548,13 @@ class SupportedMcsSet : public common::LittleEndianBitField<16> {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.5
-class HtExtCapabilities : public common::BitField<uint16_t> {
+class HtExtCapabilities : public common::LittleEndianBitField<2> {
  public:
-  constexpr explicit HtExtCapabilities(uint16_t ht_ext_cap)
-      : common::BitField<uint16_t>(ht_ext_cap) {}
+  constexpr explicit HtExtCapabilities(std::array<uint8_t, 2> ht_ext_cap)
+      : common::LittleEndianBitField<2>(ht_ext_cap) {}
   constexpr HtExtCapabilities() = default;
+
+  WLAN_BIT_FIELD(as_uint16, 0, 16)  // Read/write as a uint16_t
 
   WLAN_BIT_FIELD(pco, 0, 1)
   WLAN_BIT_FIELD(pco_transition, 1, 2)
@@ -575,10 +581,13 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.6
-class TxBfCapability : public common::BitField<uint32_t> {
+class TxBfCapability : public common::LittleEndianBitField<4> {
  public:
-  constexpr explicit TxBfCapability(uint32_t txbf_cap) : common::BitField<uint32_t>(txbf_cap) {}
+  constexpr explicit TxBfCapability(std::array<uint8_t, 4> txbf_cap)
+      : common::LittleEndianBitField<4>(txbf_cap) {}
   constexpr TxBfCapability() = default;
+
+  WLAN_BIT_FIELD(as_uint32, 0, 32)  // Read/write as a uint32_t
 
   WLAN_BIT_FIELD(implicit_rx, 0, 1)
   WLAN_BIT_FIELD(rx_stag_sounding, 1, 1)
@@ -708,25 +717,23 @@ struct HtCapabilities {
   TxBfCapability txbf_cap;
   AselCapability asel_cap;
 
-  static HtCapabilities FromDdk(const ht_capabilities_fields_t& ddk) {
+  static HtCapabilities* View(ht_capabilities_t* ddk) {
+    static_assert(sizeof(HtCapabilities) == sizeof(ht_capabilities_t));
+    return reinterpret_cast<HtCapabilities*>(ddk);
+  }
+
+  static HtCapabilities FromDdk(const ht_capabilities_t& ddk) {
     HtCapabilities dst{};
-    dst.ht_cap_info.set_val(ddk.ht_capability_info);
-    dst.ampdu_params.set_val(ddk.ampdu_params);
-    memcpy(dst.mcs_set.mut_val()->data(), &ddk.supported_mcs_set[0], sizeof(dst.mcs_set));
-    dst.ht_ext_cap.set_val(ddk.ht_ext_capabilities);
-    dst.txbf_cap.set_val(ddk.tx_beamforming_capabilities);
-    dst.asel_cap.set_val(ddk.asel_capabilities);
+
+    static_assert(sizeof(dst) == sizeof(ddk.bytes));
+    memcpy(&dst, &ddk.bytes, sizeof(ddk.bytes));
     return dst;
   }
 
-  ht_capabilities_fields_t ToDdk() const {
-    ht_capabilities_fields_t ddk{};
-    ddk.ht_capability_info = ht_cap_info.val();
-    ddk.ampdu_params = ampdu_params.val();
-    memcpy(&ddk.supported_mcs_set[0], mcs_set.val().data(), sizeof(ddk.supported_mcs_set));
-    ddk.ht_ext_capabilities = ht_ext_cap.val();
-    ddk.tx_beamforming_capabilities = txbf_cap.val();
-    ddk.asel_capabilities = asel_cap.val();
+  ht_capabilities_t ToDdk() const {
+    ht_capabilities_t ddk{};
+    static_assert(sizeof(ddk.bytes) == sizeof(*this));
+    memcpy(&ddk.bytes, this, sizeof(ddk.bytes));
     return ddk;
   }
 
@@ -825,11 +832,13 @@ struct HtOperation {
 
 // IEEE Std 802.11-2016, 9.4.2.158.2
 // Note this is a field of VhtCapabilities element
-struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
+struct VhtCapabilitiesInfo : public common::LittleEndianBitField<4> {
  public:
-  constexpr explicit VhtCapabilitiesInfo(uint32_t vht_cap_info)
-      : common::BitField<uint32_t>(vht_cap_info) {}
+  constexpr explicit VhtCapabilitiesInfo(std::array<uint8_t, 4> vht_cap_info)
+      : common::LittleEndianBitField<4>(vht_cap_info) {}
   constexpr VhtCapabilitiesInfo() = default;
+
+  WLAN_BIT_FIELD(as_uint32, 0, 32)  // Read/write as a uint32_t
 
   WLAN_BIT_FIELD(max_mpdu_len, 0, 2)
 
@@ -875,10 +884,13 @@ struct VhtCapabilitiesInfo : public common::BitField<uint32_t> {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.158.3
-struct VhtMcsNss : public common::BitField<uint64_t> {
+struct VhtMcsNss : public common::LittleEndianBitField<8> {
  public:
-  constexpr explicit VhtMcsNss(uint64_t vht_mcs_nss) : common::BitField<uint64_t>(vht_mcs_nss) {}
+  constexpr explicit VhtMcsNss(std::array<uint8_t, 8> vht_mcs_nss)
+      : common::LittleEndianBitField<8>(vht_mcs_nss) {}
   constexpr VhtMcsNss() = default;
+
+  WLAN_BIT_FIELD(as_uint64, 0, 64)  // Read/write as a uint64_t
 
   // Rx VHT-MCS Map
   WLAN_BIT_FIELD(rx_max_mcs_ss1, 0, 2)
@@ -920,7 +932,7 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
-    return static_cast<uint8_t>((val() & mask) >> offset);
+    return static_cast<uint8_t>((as_uint64() & mask) >> offset);
   }
 
   uint8_t get_tx_max_mcs_ss(uint8_t ss_num) const {
@@ -929,7 +941,7 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
-    return static_cast<uint8_t>((val() & mask) >> offset);
+    return static_cast<uint8_t>((as_uint64() & mask) >> offset);
   }
 
   void set_rx_max_mcs_ss(uint8_t ss_num, uint8_t mcs) {
@@ -938,7 +950,7 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mcs_val = static_cast<uint64_t>(mcs) << offset;
-    set_val(val() | mcs_val);
+    set_as_uint64(as_uint64() | mcs_val);
   }
 
   void set_tx_max_mcs_ss(uint8_t ss_num, uint8_t mcs) {
@@ -947,7 +959,7 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mcs_val = static_cast<uint64_t>(mcs) << offset;
-    set_val(val() | mcs_val);
+    set_as_uint64(as_uint64() | mcs_val);
   }
 
 } __PACKED;
@@ -957,17 +969,22 @@ struct VhtCapabilities {
   VhtCapabilitiesInfo vht_cap_info;
   VhtMcsNss vht_mcs_nss;
 
-  static VhtCapabilities FromDdk(const vht_capabilities_fields_t& ddk) {
+  static VhtCapabilities* View(vht_capabilities_t* ddk) {
+    static_assert(sizeof(VhtCapabilities) == sizeof(vht_capabilities_t));
+    return reinterpret_cast<VhtCapabilities*>(ddk);
+  }
+
+  static VhtCapabilities FromDdk(const vht_capabilities_t& ddk) {
     VhtCapabilities dst{};
-    dst.vht_cap_info.set_val(ddk.vht_capability_info);
-    dst.vht_mcs_nss.set_val(ddk.supported_vht_mcs_and_nss_set);
+    static_assert(sizeof(dst) == sizeof(ddk.bytes));
+    memcpy(&dst, &ddk.bytes, sizeof(ddk.bytes));
     return dst;
   }
 
-  vht_capabilities_fields_t ToDdk() const {
-    vht_capabilities_fields_t ddk{};
-    ddk.vht_capability_info = vht_cap_info.val();
-    ddk.supported_vht_mcs_and_nss_set = vht_mcs_nss.val();
+  vht_capabilities_t ToDdk() const {
+    vht_capabilities_t ddk{};
+    static_assert(sizeof(ddk.bytes) == sizeof(*this));
+    memcpy(&ddk.bytes, this, sizeof(ddk.bytes));
     return ddk;
   }
 

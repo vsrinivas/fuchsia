@@ -16,14 +16,17 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
   return wlan_assoc_ctx_t{
       .has_ht_cap = true,
       .ht_cap =
-          ht_capabilities_fields_t{
-              .ht_capability_info = 0x0162,
-              .ampdu_params = 0x17,
-              .supported_mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00,
-                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-              .ht_ext_capabilities = 0x1234,
-              .tx_beamforming_capabilities = 0x12345678,
-              .asel_capabilities = 0xff,
+          ht_capabilities_t{
+              .bytes =
+                  {
+                      0x62, 0x01,  // HT capability info
+                      0x17,        // AMPDU params
+                      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff,
+                      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Supported MCS set
+                      0x34, 0x12,                                      // HT extended capabilities
+                      0x78, 0x56, 0x34, 0x12,  // TX beamforming capabilities,
+                      0xff,                    // ASEL capabilities
+                  },
           },
       .has_ht_op = true,
       .ht_op =
@@ -36,9 +39,12 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
           },
       .has_vht_cap = true,
       .vht_cap =
-          vht_capabilities_fields_t{
-              .vht_capability_info = 0x0f805032,
-              .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
+          vht_capabilities_t{
+              .bytes =
+                  {
+                      0x32, 0x50, 0x80, 0x0f,                          // VHT capability info
+                      0xfe, 0xff, 0x00, 0x00, 0xfe, 0xff, 0x00, 0x00,  // VHT MCS and NSS set
+                  },
           },
       .has_vht_op = true,
       .vht_op =
@@ -62,29 +68,28 @@ wlan_softmac_band_capability_t FakeBandCapability(wlan_band_t band) {
       .ht_supported = true,
       .ht_caps =
           {
-              .ht_capability_info = 0x0063,
-              .ampdu_params = 0x17,
-              .supported_mcs_set =
+              .bytes =
                   {
-                      // clang-format off
-                    // Rx MCS bitmask
-                    // Supported MCS values: 0-7
-                    // clang-format off
-                    0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                    // Tx parameters
-                    0x01, 0x00, 0x00, 0x00,
-                      // clang-format on
+                      0x63, 0x00,  // HT capability info
+                      0x17,        // AMPDU params
+                      // Rx MCS bitmask
+                      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00,                    // Supported MCS values: 0-7
+                      0x01, 0x00, 0x00, 0x00,  // Tx parameters
+                      0x00, 0x00,              // HT extended capabilities
+                      0x00, 0x00, 0x00, 0x00,  // TX beamforming capabilities
+                      0x00,                    // ASEL capabilities
+
                   },
-              .ht_ext_capabilities = 0x0000,
-              .tx_beamforming_capabilities = 0x00000000,
-              .asel_capabilities = 0x00,
           },
       .vht_supported = true,
       .vht_caps =
           {
-              .vht_capability_info = 0x0f805032,
-              .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
+              .bytes =
+                  {
+                      0x32, 0x50, 0x80, 0x0f,                          // VHT capability info
+                      0xfe, 0xff, 0x00, 0x00, 0xfe, 0xff, 0x00, 0x00,  // VHT MCS and NSS set
+                  },
           },
       .operating_channel_count = 0,
       .operating_channel_list = {},

@@ -8,8 +8,9 @@ use {
         unaligned_view::UnalignedView,
     },
     banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
-    banjo_fuchsia_wlan_ieee80211 as banjo_80211,
+    banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
     ieee80211::MacAddr,
+    static_assertions::const_assert_eq,
     std::mem::size_of,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
@@ -170,30 +171,22 @@ pub struct HtCapabilities {
     pub asel_cap: AselCapability,      // u8
 }
 
-impl From<banjo_80211::HtCapabilitiesFields> for HtCapabilities {
-    fn from(cap: banjo_80211::HtCapabilitiesFields) -> Self {
-        let mcs_set = u128::from_le_bytes(cap.supported_mcs_set);
-        Self {
-            ht_cap_info: HtCapabilityInfo(cap.ht_capability_info),
-            ampdu_params: AmpduParams(cap.ampdu_params),
-            mcs_set: SupportedMcsSet(mcs_set),
-            ht_ext_cap: HtExtCapabilities(cap.ht_ext_capabilities),
-            txbf_cap: TxBfCapability(cap.tx_beamforming_capabilities),
-            asel_cap: AselCapability(cap.asel_capabilities),
-        }
+impl From<banjo_ieee80211::HtCapabilities> for HtCapabilities {
+    fn from(cap: banjo_ieee80211::HtCapabilities) -> Self {
+        // Safe to unwrap, since cap.bytes is fixed length.
+        const_assert_eq!(
+            std::mem::size_of::<HtCapabilities>(),
+            banjo_ieee80211::HT_CAP_LEN as usize,
+        );
+        HtCapabilities::read_from(&cap.bytes[..]).unwrap()
     }
 }
 
-impl From<HtCapabilities> for banjo_80211::HtCapabilitiesFields {
+impl From<HtCapabilities> for banjo_ieee80211::HtCapabilities {
     fn from(cap: HtCapabilities) -> Self {
-        Self {
-            ht_capability_info: *&{ cap.ht_cap_info }.raw(),
-            ampdu_params: *&{ cap.ampdu_params }.raw(),
-            supported_mcs_set: cap.mcs_set.0.to_le_bytes(),
-            ht_ext_capabilities: *&{ cap.ht_ext_cap }.raw(),
-            tx_beamforming_capabilities: *&{ cap.txbf_cap }.raw(),
-            asel_capabilities: *&{ cap.asel_cap }.raw(),
-        }
+        let mut banjo_cap = Self { bytes: Default::default() };
+        banjo_cap.bytes.copy_from_slice(&cap.as_bytes()[..]);
+        banjo_cap
     }
 }
 
@@ -1038,21 +1031,22 @@ pub struct VhtCapabilities {
     pub vht_mcs_nss: VhtMcsNssSet,         // u64
 }
 
-impl From<banjo_80211::VhtCapabilitiesFields> for VhtCapabilities {
-    fn from(cap: banjo_80211::VhtCapabilitiesFields) -> Self {
-        Self {
-            vht_cap_info: VhtCapabilitiesInfo(cap.vht_capability_info),
-            vht_mcs_nss: VhtMcsNssSet(cap.supported_vht_mcs_and_nss_set),
-        }
+impl From<banjo_ieee80211::VhtCapabilities> for VhtCapabilities {
+    fn from(cap: banjo_ieee80211::VhtCapabilities) -> Self {
+        // Safe to unwrap, since cap.bytes is fixed length.
+        const_assert_eq!(
+            std::mem::size_of::<VhtCapabilities>(),
+            banjo_ieee80211::VHT_CAP_LEN as usize,
+        );
+        VhtCapabilities::read_from(&cap.bytes[..]).unwrap()
     }
 }
 
-impl From<VhtCapabilities> for banjo_80211::VhtCapabilitiesFields {
+impl From<VhtCapabilities> for banjo_ieee80211::VhtCapabilities {
     fn from(cap: VhtCapabilities) -> Self {
-        Self {
-            vht_capability_info: *&{ cap.vht_cap_info }.raw(),
-            supported_vht_mcs_and_nss_set: *&{ cap.vht_mcs_nss }.raw(),
-        }
+        let mut banjo_cap = Self { bytes: Default::default() };
+        banjo_cap.bytes.copy_from_slice(&cap.as_bytes()[..]);
+        banjo_cap
     }
 }
 
@@ -1236,17 +1230,19 @@ mod tests {
 
     #[test]
     fn ht_cap_mcs_set_conversion() {
-        let from = banjo_80211::HtCapabilitiesFields {
-            ht_capability_info: 1,
-            ampdu_params: 2,
-            supported_mcs_set: [
-                3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12,
+        let from = banjo_ieee80211::HtCapabilities {
+            bytes: [
+                0, 1, // ht_capability_info
+                2, // ampdu_params
+                3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11,
+                0x12, // supported_mcs_set
+                0, 0x13, // ht_ext_capabilities
+                0, 0, 0, 0x14, // tx_beamforming_capabilities
+                0x15, // asel_capabilities
             ],
-            ht_ext_capabilities: 0x13,
-            tx_beamforming_capabilities: 0x14,
-            asel_capabilities: 0x15,
         };
-        let mcs_set = HtCapabilities::from(from).mcs_set;
+        let ht_cap = LayoutVerified::<&[u8], HtCapabilities>::new(&from.bytes[..]).unwrap();
+        let mcs_set = ht_cap.mcs_set;
         assert_eq!(
             mcs_set.as_bytes(),
             [3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12]
@@ -1384,30 +1380,6 @@ mod tests {
             map.set_ss(1, VhtMcsSet(4)),
             Err("bitfield is only 2 bit wide, 4 invalid".to_string())
         );
-    }
-
-    unsafe fn as_bytes<T>(s: &T) -> &[u8] {
-        std::slice::from_raw_parts((s as *const T) as *const u8, ::std::mem::size_of::<T>())
-    }
-
-    #[test]
-    fn ddk_conversion_ht_capabilities() {
-        let ht_cap = crate::ie::fake_ies::fake_ht_capabilities();
-        let ddk: banjo_80211::HtCapabilitiesFields = ht_cap.into();
-        assert_eq!(ht_cap.as_bytes(), unsafe { as_bytes(&ddk) });
-
-        let ht_cap: HtCapabilities = ddk.into();
-        assert_eq!(unsafe { as_bytes(&ddk) }, ht_cap.as_bytes());
-    }
-
-    #[test]
-    fn ddk_conversion_vht_capabilities() {
-        let vht_cap = crate::ie::fake_ies::fake_vht_capabilities();
-        let ddk: banjo_80211::VhtCapabilitiesFields = vht_cap.into();
-        assert_eq!(vht_cap.as_bytes(), unsafe { as_bytes(&ddk) });
-
-        let vht_cap: VhtCapabilities = ddk.into();
-        assert_eq!(unsafe { as_bytes(&ddk) }, vht_cap.as_bytes());
     }
 
     #[test]

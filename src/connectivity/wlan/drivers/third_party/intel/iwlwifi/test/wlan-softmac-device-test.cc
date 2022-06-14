@@ -495,26 +495,20 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
       .has_ht_cap = true,
       .ht_cap =
           {
-              .supported_mcs_set =
+              .bytes =
                   {
+                      0,
+                      0,  // HtCapabilityInfo
+                      0,  // AmpduParams
 
-                      255,
-                      255,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      1,
-                      0,
-                      0,
-                      0,
+                      255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                      0,  // Supported mcs set
 
+                      0,
+                      0,  // HtExtCapabilities
+                      0,   0,   0,
+                      0,  // TxBeamformingCapabilities
+                      0,  // AselCapability
                   },
           },
   };

@@ -140,40 +140,6 @@
         "name": "fuchsia.wlan.ieee80211/HtCapabilities"
     },
     {
-        "declaration": "uint8",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.ampdu_params"
-    },
-    {
-        "declaration": "uint8",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.asel_capabilities"
-    },
-    {
-        "declaration": "uint16",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.ht_capability_info"
-    },
-    {
-        "declaration": "uint16",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.ht_ext_capabilities"
-    },
-    {
-        "declaration": "array<uint8,16>",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.supported_mcs_set"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.tx_beamforming_capabilities"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields"
-    },
-    {
         "declaration": "array<uint8,22>",
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtOperation.bytes"
@@ -1105,20 +1071,6 @@
     {
         "kind": "struct",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilities"
-    },
-    {
-        "declaration": "uint64",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/VhtCapabilitiesFields.supported_vht_mcs_and_nss_set"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/VhtCapabilitiesFields.vht_capability_info"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.wlan.ieee80211/VhtCapabilitiesFields"
     },
     {
         "declaration": "array<uint8,5>",

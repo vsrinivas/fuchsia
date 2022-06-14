@@ -1027,10 +1027,7 @@ pub(crate) mod test_utils {
             ht_supported: true,
             ht_caps: ht_cap(),
             vht_supported: false,
-            vht_caps: VhtCapabilitiesFields {
-                vht_capability_info: 0,
-                supported_vht_mcs_and_nss_set: 0,
-            },
+            vht_caps: VhtCapabilities { bytes: Default::default() },
         };
         band_cap_list[1] = banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: banjo_common::WlanBand::FIVE_GHZ,
@@ -1047,9 +1044,8 @@ pub(crate) mod test_utils {
             ht_supported: true,
             ht_caps: ht_cap(),
             vht_supported: true,
-            vht_caps: VhtCapabilitiesFields {
-                vht_capability_info: 0x0f805032,
-                supported_vht_mcs_and_nss_set: 0x0000fffe0000fffe,
+            vht_caps: VhtCapabilities {
+                bytes: [0x32, 0x50, 0x80, 0x0f, 0xfe, 0xff, 0x00, 0x00, 0xfe, 0xff, 0x00, 0x00],
             },
         };
 
@@ -1126,19 +1122,18 @@ pub(crate) mod test_utils {
         }
     }
 
-    fn ht_cap() -> HtCapabilitiesFields {
-        HtCapabilitiesFields {
-            ht_capability_info: 0x0063,
-            ampdu_params: 0x17,
-            supported_mcs_set: [
-                // Rx MCS bitmask, Supported MCS values: 0-7
-                0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                // Tx parameters
-                0x01, 0x00, 0x00, 0x00,
+    fn ht_cap() -> HtCapabilities {
+        HtCapabilities {
+            bytes: [
+                0x63, 0x00, // HT capability info
+                0x17, // AMPDU params
+                0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, // Rx MCS bitmask, Supported MCS values: 0-7
+                0x01, 0x00, 0x00, 0x00, // Tx parameters
+                0x00, 0x00, // HT extended capabilities
+                0x00, 0x00, 0x00, 0x00, // TX beamforming capabilities
+                0x00, // ASEL capabilities
             ],
-            ht_ext_capabilities: 0,
-            tx_beamforming_capabilities: 0,
-            asel_capabilities: 0,
         }
     }
 
@@ -1148,19 +1143,9 @@ pub(crate) mod test_utils {
         banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: banjo_common::WlanBand::TWO_GHZ,
             ht_supported: false,
-            ht_caps: HtCapabilitiesFields {
-                ht_capability_info: 0,
-                ampdu_params: 0,
-                supported_mcs_set: [0; 16],
-                ht_ext_capabilities: 0,
-                tx_beamforming_capabilities: 0,
-                asel_capabilities: 0,
-            },
+            ht_caps: HtCapabilities { bytes: [0; banjo_ieee80211::HT_CAP_LEN as usize] },
             vht_supported: false,
-            vht_caps: VhtCapabilitiesFields {
-                vht_capability_info: 0,
-                supported_vht_mcs_and_nss_set: 0,
-            },
+            vht_caps: VhtCapabilities { bytes: [0; banjo_ieee80211::VHT_CAP_LEN as usize] },
             basic_rate_list: [0; banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize],
             basic_rate_count: 0,
             operating_channel_list: [0; banjo_ieee80211::MAX_UNIQUE_CHANNEL_NUMBERS as usize],
@@ -1177,8 +1162,7 @@ mod tests {
         banjo_fuchsia_wlan_ieee80211::*,
         banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
-        ieee80211::Bssid,
-        ieee80211::Ssid,
+        ieee80211::{Bssid, Ssid},
         std::convert::TryFrom,
         wlan_common::{assert_variant, capabilities::StaCapabilities, mac},
     };
@@ -1487,14 +1471,14 @@ mod tests {
 
             has_ht_cap: false,
             // Safe: This is not read by the driver.
-            ht_cap: unsafe { std::mem::zeroed::<HtCapabilitiesFields>() },
+            ht_cap: unsafe { std::mem::zeroed::<HtCapabilities>() },
             has_ht_op: false,
             // Safe: This is not read by the driver.
             ht_op: unsafe { std::mem::zeroed::<WlanHtOp>() },
 
             has_vht_cap: false,
             // Safe: This is not read by the driver.
-            vht_cap: unsafe { std::mem::zeroed::<VhtCapabilitiesFields>() },
+            vht_cap: unsafe { std::mem::zeroed::<VhtCapabilities>() },
             has_vht_op: false,
             // Safe: This is not read by the driver.
             vht_op: unsafe { std::mem::zeroed::<WlanVhtOp>() },

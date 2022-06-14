@@ -251,13 +251,13 @@ TEST(ParseElement, HtCapabilities) {
   };
   const HtCapabilities* h = ParseHtCapabilities(raw_body);
   ASSERT_NE(nullptr, h);
-  EXPECT_EQ(0xbbaau, h->ht_cap_info.val());
+  EXPECT_EQ(0xbbaau, h->ht_cap_info.as_uint16());
   EXPECT_EQ(0x55u, h->ampdu_params.val());
   std::array<uint8_t, 16> expected_mcs_set = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
                                               0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
   EXPECT_EQ(expected_mcs_set, h->mcs_set.val());
-  EXPECT_EQ(0xeeddu, h->ht_ext_cap.val());
-  EXPECT_EQ(0x44332211u, h->txbf_cap.val());
+  EXPECT_EQ(0xeeddu, h->ht_ext_cap.as_uint16());
+  EXPECT_EQ(0x44332211u, h->txbf_cap.as_uint32());
   EXPECT_EQ(0x77u, h->asel_cap.val());
 }
 
@@ -303,8 +303,8 @@ TEST(ParseElement, VhtCapabilities) {
                                 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
   const VhtCapabilities* v = ParseVhtCapabilities(raw_body);
   ASSERT_NE(nullptr, v);
-  EXPECT_EQ(0xddccbbaau, v->vht_cap_info.val());
-  EXPECT_EQ(0x8877665544332211ul, v->vht_mcs_nss.val());
+  EXPECT_EQ(0xddccbbaau, v->vht_cap_info.as_uint32());
+  EXPECT_EQ(0x8877665544332211ul, v->vht_mcs_nss.as_uint64());
 }
 
 TEST(ParseElement, VhtCapabilitiesTooShort) {

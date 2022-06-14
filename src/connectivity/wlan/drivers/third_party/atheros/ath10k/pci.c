@@ -2898,8 +2898,10 @@ static void ath10k_chan_query_info(const struct ath10k_channel* dev_channel, voi
   }
 }
 
-static void ath10k_get_ht_cap(struct ath10k* ar, ht_capabilities_fields_t* ht_caps) {
-  memset(ht_caps, 0, sizeof(*ht_caps));
+static void ath10k_get_ht_cap(struct ath10k* ar, ht_capabilities_t* ht_capabilities) {
+  memset(ht_capabilities, 0, sizeof(*ht_capabilities));
+
+  struct ieee80211_ht_cap_packed* ht_caps = (struct ieee80211_ht_cap_packed*)ht_capabilities;
 
   if (!(ar->ht_cap_info & WMI_HT_CAP_ENABLED)) {
     return;
@@ -3011,8 +3013,11 @@ static uint32_t ath10k_mac_get_vht_cap_bf_sound_dim(struct ath10k* ar) {
   return sound_dim;
 }
 
-static void ath10k_get_vht_cap(struct ath10k* ar, vht_capabilities_fields_t* vht_caps) {
-  memset(vht_caps, 0, sizeof(*vht_caps));
+static void ath10k_get_vht_cap(struct ath10k* ar, vht_capabilities_t* vht_capabilities) {
+  memset(vht_capabilities, 0, sizeof(*vht_capabilities));
+
+  struct ieee80211_vht_cap_packed* vht_caps = (struct ieee80211_vht_cap_packed*)vht_capabilities;
+
   vht_caps->vht_capability_info = ar->vht_cap_info;
 
   if (ar->vht_cap_info & (IEEE80211_VHT_CAPS_SU_BEAMFORMEE | IEEE80211_VHT_CAPS_MU_BEAMFORMEE)) {

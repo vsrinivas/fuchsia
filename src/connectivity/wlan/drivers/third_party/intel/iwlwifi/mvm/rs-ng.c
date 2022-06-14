@@ -88,7 +88,6 @@ static uint8_t rs_fw_set_active_chains(uint8_t chains) {
 }
 
 static uint8_t rs_fw_sgi_cw_support(struct iwl_mvm_sta* mvm_sta) {
-  ht_capabilities_fields_t* ht_cap = &mvm_sta->ht_cap;
   uint8_t supp = 0;
 
 #if 0  // TODO(fxbug.dev/84773): Support HE (802.11ax)
@@ -99,10 +98,10 @@ static uint8_t rs_fw_sgi_cw_support(struct iwl_mvm_sta* mvm_sta) {
   }
 #endif
 
-  if (ht_cap->ht_capability_info & IEEE80211_HT_CAP_SGI_20) {
+  if (mvm_sta->ht_cap.ht_capability_info & IEEE80211_HT_CAP_SGI_20) {
     supp |= BIT(IWL_TLC_MNG_CH_WIDTH_20MHZ);
   }
-  if (ht_cap->ht_capability_info & IEEE80211_HT_CAP_SGI_40) {
+  if (mvm_sta->ht_cap.ht_capability_info & IEEE80211_HT_CAP_SGI_40) {
     supp |= BIT(IWL_TLC_MNG_CH_WIDTH_40MHZ);
   }
 
@@ -121,12 +120,10 @@ static uint8_t rs_fw_sgi_cw_support(struct iwl_mvm_sta* mvm_sta) {
 }
 
 static uint16_t rs_fw_set_config_flags(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta) {
-  ht_capabilities_fields_t* ht_cap = &sta->ht_cap;
-
   uint16_t flags = 0;
 
   if (mvm->cfg->ht_params->stbc && (num_of_ant(iwl_mvm_get_valid_tx_ant(mvm)) > 1)) {
-    if ((ht_cap && (ht_cap->ht_capability_info & IEEE80211_HT_CAP_RX_STBC))) {
+    if ((sta->support_ht && (sta->ht_cap.ht_capability_info & IEEE80211_HT_CAP_RX_STBC))) {
       flags |= IWL_TLC_MNG_CFG_FLAGS_STBC_MSK;
     }
   }
@@ -256,7 +253,6 @@ static void rs_fw_set_supp_rates(struct iwl_mvm_sta* mvm_sta,
   uint16_t i;
   uint64_t nonht_rates = 0;
   uint8_t* supported_rates = mvm_sta->supp_rates;
-  const ht_capabilities_fields_t* ht_cap = &mvm_sta->ht_cap;
 
 #if 0   // NEEDS_PORTING
   // TODO(fxbug.dev/84773): Support HE (802.11ax)
@@ -282,17 +278,17 @@ static void rs_fw_set_supp_rates(struct iwl_mvm_sta* mvm_sta,
   } else
 
   // TODO(fxbug.dev/36684): Support VHT (802.11ac)
-  const vht_capabilities_fields_t* vht_cap = &sta->vht_cap;
+  const vht_capabilities_t* vht_cap = &sta->vht_cap;
 
   if (vht_cap) {
     cmd->bestSuppMode = IWL_TLC_MNG_MODE_VHT;
     rs_fw_vht_set_enabled_rates(sta, vht_cap, cmd);
   } else
 #endif  // NEEDS_PORTING
-  if (ht_cap) {
+  if (mvm_sta->support_ht) {
     cmd->bestSuppMode = IWL_TLC_MNG_MODE_HT;
-    cmd->mcs[0][0] = (ht_cap->supported_mcs_set[0]);
-    cmd->mcs[1][0] = (ht_cap->supported_mcs_set[1]);
+    cmd->mcs[0][0] = (mvm_sta->ht_cap.supported_mcs_set[0]);
+    cmd->mcs[1][0] = (mvm_sta->ht_cap.supported_mcs_set[1]);
   }
 }
 

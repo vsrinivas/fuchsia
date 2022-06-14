@@ -452,9 +452,9 @@ struct iwl_mvm_sta {
 
   channel_bandwidth_t bw;
   bool support_ht;
-  ht_capabilities_fields_t ht_cap;
+  struct ieee80211_ht_cap_packed ht_cap;
   bool support_vht;
-  vht_capabilities_fields_t vht_cap;
+  struct ieee80211_vht_cap_packed vht_cap;
 
   uint8_t supp_rates[WLAN_MAC_MAX_RATES];
 };

@@ -145,27 +145,24 @@ TEST(ConvertTest, ToFidlEapolConf) {
   EXPECT_EQ(fidl_resp.result_code, wlan_mlme::EapolResultCode::SUCCESS);
 }
 
-ht_capabilities_fields_t fake_ht_cap(std::default_random_engine& rng) {
-  ht_capabilities_fields_t ht_caps = {
-      .ht_capability_info = fuzzing::rand16(rng),
-      .ampdu_params = fuzzing::rand8(rng),
-      .ht_ext_capabilities = fuzzing::rand16(rng),
-      .tx_beamforming_capabilities = fuzzing::rand32(rng),
-      .asel_capabilities = fuzzing::rand8(rng),
+ht_capabilities_t fake_ht_cap(std::default_random_engine& rng) {
+  ht_capabilities_t ht_caps = {
+      .bytes = {},
   };
-
-  for (unsigned char& mcs : ht_caps.supported_mcs_set) {
-    mcs = fuzzing::rand8(rng);
+  for (unsigned char& byte : ht_caps.bytes) {
+    byte = fuzzing::rand8(rng);
   }
-
   return ht_caps;
 }
 
-vht_capabilities_fields_t fake_vht_cap(std::default_random_engine& rng) {
-  return {
-      .vht_capability_info = fuzzing::rand32(rng),
-      .supported_vht_mcs_and_nss_set = fuzzing::rand64(rng),
+vht_capabilities_t fake_vht_cap(std::default_random_engine& rng) {
+  vht_capabilities_t vht_caps = {
+      .bytes = {},
   };
+  for (unsigned char& byte : vht_caps.bytes) {
+    byte = fuzzing::rand8(rng);
+  }
+  return vht_caps;
 }
 
 void log_seed(unsigned int seed) {
@@ -178,7 +175,7 @@ TEST(ConvertTest, ToFidlHtCapabilities) {
   auto rng = fuzzing::seeded_rng(&seed);
   log_seed(seed);
 
-  ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
+  ht_capabilities_t ht_cap = fake_ht_cap(rng);
   auto fidl_ht_cap = std::make_unique<wlan_ieee80211::HtCapabilities>();
   ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
   static_assert(sizeof(ht_cap) == sizeof(fidl_ht_cap->bytes));
@@ -192,7 +189,7 @@ TEST(ConvertTest, ToFidlVhtCapabilities) {
   auto rng = fuzzing::seeded_rng(&seed);
   log_seed(seed);
 
-  vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
+  vht_capabilities_t vht_cap = fake_vht_cap(rng);
   auto fidl_vht_cap = std::make_unique<wlan_ieee80211::VhtCapabilities>();
   ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
   // TODO(fxbug.dev/95240): We may wish to change the FIDL definition in the future
@@ -206,11 +203,11 @@ TEST(ConvertTest, ToFidlBandCapability) {
   auto rng = fuzzing::seeded_rng(&seed);
   log_seed(seed);
 
-  ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
+  ht_capabilities_t ht_cap = fake_ht_cap(rng);
   auto fidl_ht_cap = std::make_unique<wlan_ieee80211::HtCapabilities>();
   ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
 
-  vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
+  vht_capabilities_t vht_cap = fake_vht_cap(rng);
   auto fidl_vht_cap = std::make_unique<wlan_ieee80211::VhtCapabilities>();
   ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
 
@@ -267,11 +264,11 @@ TEST(ConvertTest, ToFidlDeviceInfo) {
   wlan_mlme::DeviceInfo fidl_resp = {};
   const std::array<uint8_t, 6> expected_sta_addr{1, 2, 3, 4, 5, 6};
 
-  ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
+  ht_capabilities_t ht_cap = fake_ht_cap(rng);
   auto fidl_ht_cap = std::make_unique<wlan_ieee80211::HtCapabilities>();
   ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
 
-  vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
+  vht_capabilities_t vht_cap = fake_vht_cap(rng);
   auto fidl_vht_cap = std::make_unique<wlan_ieee80211::VhtCapabilities>();
   ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
 

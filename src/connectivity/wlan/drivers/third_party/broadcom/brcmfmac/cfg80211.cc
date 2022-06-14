@@ -38,6 +38,7 @@
 #include <vector>
 
 #include <wifi/wifi-config.h>
+#include <wlan/common/element.h>
 #include <wlan/common/ieee80211.h>
 #include <wlan/common/ieee80211_codes.h>
 #include <wlan/common/macaddr.h>
@@ -3934,33 +3935,35 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabili
 
   band_cap->ht_supported = true;
 
+  wlan::HtCapabilities* ht_caps = wlan::HtCapabilities::View(&band_cap->ht_caps);
+
   // LDPC Support
   if (ldpc_cap) {
-    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_LDPC;
+    ht_caps->ht_cap_info.set_ldpc_coding_cap(true);
   }
 
   // Bandwidth-related flags
   if (bw_cap[band_cap->band] & WLC_BW_40MHZ_BIT) {
-    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_CHAN_WIDTH;
-    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_40;
+    ht_caps->ht_cap_info.set_chan_width_set(true);
+    ht_caps->ht_cap_info.set_short_gi_40(true);
   }
-  band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_20;
-  band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_DSSS_CCK_40;
+  ht_caps->ht_cap_info.set_short_gi_20(true);
+  ht_caps->ht_cap_info.set_dsss_in_40(true);
 
   // SM Power Save
   // At present SMPS appears to never be enabled in firmware (see fxbug.dev/29648)
-  band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SMPS_DISABLED;
+  ht_caps->ht_cap_info.set_sm_power_save(IEEE80211_HT_CAPS_SMPS_DISABLED);
 
   // Rx STBC
   uint32_t rx_stbc = 0;
   (void)brcmf_fil_iovar_int_get(ifp, "stbc_rx", &rx_stbc, nullptr);
-  band_cap->ht_caps.ht_capability_info |= ((rx_stbc & 0x3) << IEEE80211_HT_CAPS_RX_STBC_SHIFT);
+  ht_caps->ht_cap_info.set_rx_stbc(rx_stbc & 0x3);
 
   // Tx STBC
   // According to Broadcom, Tx STBC capability should be induced from the value of the
   // "stbc_rx" iovar and not "stbc_tx".
   if (rx_stbc != 0) {
-    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_TX_STBC;
+    ht_caps->ht_cap_info.set_tx_stbc(true);
   }
 
   // AMPDU Parameters
@@ -3970,20 +3973,20 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabili
     BRCMF_ERR("Failed to retrieve value for AMPDU Rx density from firmware, using 16 us");
     ampdu_rx_density = 7;
   }
-  band_cap->ht_caps.ampdu_params |= ((ampdu_rx_density & 0x7) << IEEE80211_AMPDU_DENSITY_SHIFT);
+  ht_caps->ampdu_params.set_min_start_spacing(ampdu_rx_density & 0x7);
   if (max_ampdu_len_exp > 3) {
     // Cap A-MPDU length at 64K
     max_ampdu_len_exp = 3;
   }
-  band_cap->ht_caps.ampdu_params |= (max_ampdu_len_exp << IEEE80211_AMPDU_RX_LEN_SHIFT);
+  ht_caps->ampdu_params.set_exponent(max_ampdu_len_exp);
 
   // Supported MCS Set
-  size_t mcs_set_size = sizeof(band_cap->ht_caps.supported_mcs_set);
+  size_t mcs_set_size = sizeof(ht_caps->mcs_set);
   if (nchain > mcs_set_size) {
     BRCMF_ERR("Supported MCS set too small for nchain (%u), truncating", nchain);
     nchain = mcs_set_size;
   }
-  memset(&band_cap->ht_caps.supported_mcs_set[0], 0xff, nchain);
+  memset(&ht_caps->mcs_set, 0xff, nchain);
 }
 
 static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability* band_cap,
@@ -3993,34 +3996,34 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabil
 
   band_cap->vht_supported = true;
 
+  wlan::VhtCapabilities* vht_caps = wlan::VhtCapabilities::View(&band_cap->vht_caps);
+
   // Set Max MPDU length to 11454
   // TODO (fxbug.dev/29107): Value hardcoded from firmware behavior of the BCM4356 and BCM4359
   // chips.
-  band_cap->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_MAX_MPDU_LEN_SHIFT);
+  vht_caps->vht_cap_info.set_max_mpdu_len(2);
 
   /* 80MHz is mandatory */
-  band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_80;
+  vht_caps->vht_cap_info.set_sgi_cbw80(true);
   if (bw_cap[band_cap->band] & WLC_BW_160MHZ_BIT) {
-    band_cap->vht_caps.vht_capability_info |= (1 << IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH_SHIFT);
-    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_160;
+    vht_caps->vht_cap_info.set_supported_cbw_set(1);
+    vht_caps->vht_cap_info.set_sgi_cbw160(true);
   }
 
   if (ldpc_cap) {
-    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_RX_LDPC;
+    vht_caps->vht_cap_info.set_rx_ldpc(true);
   }
 
   // Tx STBC
   // TODO (fxbug.dev/29107): Value is hardcoded for now
   if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
-    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_TX_STBC;
+    vht_caps->vht_cap_info.set_tx_stbc(true);
   }
 
   /* all support 256-QAM */
   mcs_map = brcmf_get_mcs_map(nchain, IEEE80211_VHT_MCS_0_9);
-  /* Rx MCS map (B0:15) */
-  band_cap->vht_caps.supported_vht_mcs_and_nss_set = (uint64_t)mcs_map;
-  /* Tx MCS map (B0:15) */
-  band_cap->vht_caps.supported_vht_mcs_and_nss_set |= ((uint64_t)mcs_map << 32);
+  /* Rx MCS map (B0:15) + Tx MCS map (B0:15) */
+  vht_caps->vht_mcs_nss.set_as_uint64((uint64_t)mcs_map | ((uint64_t)mcs_map << 32));
 
   /* Beamforming support information */
   uint32_t txbf_bfe_cap = 0;
@@ -4040,16 +4043,16 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabil
   }
 
   if (txbf_bfe_cap & BRCMF_TXBF_SU_BFE_CAP) {
-    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMEE;
+    vht_caps->vht_cap_info.set_su_bfee(true);
   }
   if (txbf_bfe_cap & BRCMF_TXBF_MU_BFE_CAP) {
-    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMEE;
+    vht_caps->vht_cap_info.set_mu_bfee(true);
   }
   if (txbf_bfr_cap & BRCMF_TXBF_SU_BFR_CAP) {
-    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMER;
+    vht_caps->vht_cap_info.set_su_bfer(true);
   }
   if (txbf_bfr_cap & BRCMF_TXBF_MU_BFR_CAP) {
-    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMER;
+    vht_caps->vht_cap_info.set_mu_bfer(true);
   }
 
   uint32_t txstreams = 0;
@@ -4061,37 +4064,37 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabil
   }
 
   if ((txbf_bfe_cap || txbf_bfr_cap) && (txstreams > 1)) {
-    band_cap->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_BEAMFORMEE_STS_SHIFT);
-    band_cap->vht_caps.vht_capability_info |=
-        (((txstreams - 1) << IEEE80211_VHT_CAPS_SOUND_DIM_SHIFT) & IEEE80211_VHT_CAPS_SOUND_DIM);
+    vht_caps->vht_cap_info.set_bfee_sts(2);
+    vht_caps->vht_cap_info.set_num_sounding(txstreams - 1);
     // Link adapt = Both
-    band_cap->vht_caps.vht_capability_info |= (3 << IEEE80211_VHT_CAPS_VHT_LINK_ADAPT_SHIFT);
+    vht_caps->vht_cap_info.set_link_adapt(3);
   }
 
   // Maximum A-MPDU Length Exponent
-  band_cap->vht_caps.vht_capability_info |=
-      ((max_ampdu_len_exp & 0x7) << IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT);
+  vht_caps->vht_cap_info.set_max_ampdu_exp(max_ampdu_len_exp);
 }
 
-static void brcmf_dump_80211_ht_caps(ht_capabilities_fields_t* caps) {
-  BRCMF_DBG_UNFILTERED("     ht_capability_info: %#x", caps->ht_capability_info);
-  BRCMF_DBG_UNFILTERED("     ampdu_params: %#x", caps->ampdu_params);
+static void brcmf_dump_80211_ht_caps(ht_capabilities_t* caps) {
+  // wlan::HtCapabilities
+  wlan::HtCapabilities* ht_caps = wlan::HtCapabilities::View(caps);
+  BRCMF_DBG_UNFILTERED("     ht_cap_info: %#x", ht_caps->ht_cap_info.as_uint16());
+  BRCMF_DBG_UNFILTERED("     ampdu_params: %#x", ht_caps->ampdu_params.val());
 
-  char mcs_set_str[std::size(caps->supported_mcs_set) * 5 + 1];
+  char mcs_set_str[std::size(ht_caps->mcs_set.val()) * 5 + 1];
   char* str = mcs_set_str;
-  for (unsigned i = 0; i < std::size(caps->supported_mcs_set); i++) {
-    str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set[i]);
+  for (unsigned i = 0; i < std::size(ht_caps->mcs_set.val()); i++) {
+    str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", ht_caps->mcs_set.val()[i]);
   }
 
   BRCMF_DBG_UNFILTERED("     mcs_set: %s", mcs_set_str);
-  BRCMF_DBG_UNFILTERED("     ht_ext_capabilities: %#x", caps->ht_ext_capabilities);
-  BRCMF_DBG_UNFILTERED("     asel_capabilities: %#x", caps->asel_capabilities);
+  BRCMF_DBG_UNFILTERED("     ht_ext_cap: %#x", ht_caps->ht_ext_cap.as_uint16());
+  BRCMF_DBG_UNFILTERED("     asel_cap: %#x", ht_caps->asel_cap.val());
 }
 
-static void brcmf_dump_80211_vht_caps(vht_capabilities_fields_t* caps) {
-  BRCMF_DBG_UNFILTERED("     vht_capability_info: %#x", caps->vht_capability_info);
-  BRCMF_DBG_UNFILTERED("     supported_vht_mcs_and_nss_set: %#" PRIx64 "",
-                       caps->supported_vht_mcs_and_nss_set);
+static void brcmf_dump_80211_vht_caps(vht_capabilities_t* caps) {
+  wlan::VhtCapabilities* vht_caps = wlan::VhtCapabilities::View(caps);
+  BRCMF_DBG_UNFILTERED("     vht_cap_info: %#lx", vht_caps->vht_cap_info.as_uint32());
+  BRCMF_DBG_UNFILTERED("     vht_mcs_nss: %#" PRIx64 "", vht_caps->vht_mcs_nss.as_uint64());
 }
 
 static void brcmf_dump_if_band_cap(wlan_fullmac_band_capability_t* band_cap) {

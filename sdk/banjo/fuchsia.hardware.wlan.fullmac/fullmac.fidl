@@ -417,13 +417,13 @@ type WlanFullmacBandCapability = struct {
     /// set to true, and the value in ht_caps indicates the capabilities. Otherwise,
     /// ht_supported is set to false.
     ht_supported bool;
-    ht_caps ieee80211.HtCapabilitiesFields;
+    ht_caps ieee80211.HtCapabilities;
 
     /// If the device supports the VHT PHY mode in this band, then vht_supported is
     /// set to true, and the value in vht_caps indicates the capabilities. Otherwise,
     /// vht_supported is set to false.
     vht_supported bool;
-    vht_caps ieee80211.VhtCapabilitiesFields;
+    vht_caps ieee80211.VhtCapabilities;
 
     /// A list of operating channels considered valid by hardware, in the context of
     /// regulatory information known to the device driver, at the time of its

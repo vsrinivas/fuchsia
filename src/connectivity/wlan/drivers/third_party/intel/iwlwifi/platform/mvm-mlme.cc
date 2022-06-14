@@ -119,12 +119,13 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
 
     band_cap->band = band_id;
     band_cap->ht_supported = sband->ht_cap.ht_supported;
-    band_cap->ht_caps.ht_capability_info = sband->ht_cap.cap;
-    band_cap->ht_caps.ampdu_params =
+    struct ieee80211_ht_cap_packed* ht_caps =
+        reinterpret_cast<struct ieee80211_ht_cap_packed*>(&band_cap->ht_caps.bytes);
+    ht_caps->ht_capability_info = sband->ht_cap.cap;
+    ht_caps->ampdu_params =
         (sband->ht_cap.ampdu_factor << IEEE80211_AMPDU_RX_LEN_SHIFT) |   // (64K - 1) bytes
         (sband->ht_cap.ampdu_density << IEEE80211_AMPDU_DENSITY_SHIFT);  // 8 us
-    memcpy(&band_cap->ht_caps.supported_mcs_set, &sband->ht_cap.mcs,
-           sizeof(struct ieee80211_mcs_info));
+    memcpy(&ht_caps->supported_mcs_set, &sband->ht_cap.mcs, sizeof(struct ieee80211_mcs_info));
     // TODO(fxbug.dev/36684): band_info->vht_caps =
 
     ZX_ASSERT(sband->n_bitrates <= std::size(band_cap->basic_rate_list));
@@ -451,7 +452,7 @@ zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, const wlan_assoc_ctx
   // Copy HT related fields from wlan_assoc_ctx_t.
   mvm_sta->support_ht = assoc_ctx->has_ht_cap;
   if (assoc_ctx->has_ht_cap) {
-    memcpy(&mvm_sta->ht_cap, &assoc_ctx->ht_cap, sizeof(ht_capabilities_fields_t));
+    memcpy(&mvm_sta->ht_cap, &assoc_ctx->ht_cap, sizeof(ht_capabilities_t));
   }
 
   // Change the station states step by step.

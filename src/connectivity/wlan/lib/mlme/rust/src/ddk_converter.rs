@@ -39,16 +39,16 @@ pub fn build_ddk_assoc_ctx(
         .clone_from_slice(negotiated_capabilities.rates.as_bytes());
     let has_ht_cap = negotiated_capabilities.ht_cap.is_some();
     let has_vht_cap = negotiated_capabilities.vht_cap.is_some();
-    let ht_cap = negotiated_capabilities.ht_cap.map(|cap| cap.into()).unwrap_or(
-        // Safe to unwrap because the size of the byte array follows wire format
-        { *ie::parse_ht_capabilities(&[0; fidl_ieee80211::HT_CAP_LEN as usize][..]).unwrap() }
-            .into(),
-    );
-    let vht_cap = negotiated_capabilities.vht_cap.map(|cap| cap.into()).unwrap_or(
-        // Safe to unwrap because the size of the byte array follows wire format
-        { *ie::parse_vht_capabilities(&[0; fidl_ieee80211::VHT_CAP_LEN as usize][..]).unwrap() }
-            .into(),
-    );
+    let mut ht_cap =
+        banjo_ieee80211::HtCapabilities { bytes: [0u8; fidl_ieee80211::HT_CAP_LEN as usize] };
+    let mut vht_cap =
+        banjo_ieee80211::VhtCapabilities { bytes: [0u8; fidl_ieee80211::VHT_CAP_LEN as usize] };
+    negotiated_capabilities
+        .ht_cap
+        .map(|negotiated_ht_cap| ht_cap.bytes.copy_from_slice(&negotiated_ht_cap.as_bytes()[..]));
+    negotiated_capabilities.vht_cap.map(|negotiated_vht_cap| {
+        vht_cap.bytes.copy_from_slice(&negotiated_vht_cap.as_bytes()[..])
+    });
     let ht_op_bytes = ht_op.unwrap_or([0; fidl_ieee80211::HT_OP_LEN as usize]);
     let vht_op_bytes = vht_op.unwrap_or([0; fidl_ieee80211::VHT_OP_LEN as usize]);
     banjo_wlan_associnfo::WlanAssocCtx {
@@ -210,18 +210,12 @@ fn convert_ddk_band_cap(
     let operating_channels =
         band_cap.operating_channel_list[..band_cap.operating_channel_count as usize].to_vec();
     let ht_cap = if band_cap.ht_supported {
-        let caps = wlan_common::ie::HtCapabilities::from(band_cap.ht_caps);
-        let mut bytes = [0u8; 26];
-        bytes.copy_from_slice(caps.as_bytes());
-        Some(Box::new(fidl_ieee80211::HtCapabilities { bytes }))
+        Some(Box::new(fidl_ieee80211::HtCapabilities { bytes: band_cap.ht_caps.bytes }))
     } else {
         None
     };
     let vht_cap = if band_cap.vht_supported {
-        let caps = wlan_common::ie::VhtCapabilities::from(band_cap.vht_caps);
-        let mut bytes = [0u8; 12];
-        bytes.copy_from_slice(caps.as_bytes());
-        Some(Box::new(fidl_ieee80211::VhtCapabilities { bytes }))
+        Some(Box::new(fidl_ieee80211::VhtCapabilities { bytes: band_cap.vht_caps.bytes }))
     } else {
         None
     };
@@ -294,26 +288,14 @@ mod tests {
         assert_eq!(0x1234, ddk.capability_info);
 
         assert_eq!(true, ddk.has_ht_cap);
-        let expected_ht_cap: banjo_80211::HtCapabilitiesFields = ie::fake_ht_capabilities().into();
-
-        // PartialEq not derived because supported_mcs_set is a union. Compare fields individually.
-        assert_eq!({ expected_ht_cap.ht_capability_info }, { ddk.ht_cap.ht_capability_info });
-        assert_eq!({ expected_ht_cap.ampdu_params }, { ddk.ht_cap.ampdu_params });
-
-        assert_eq!(expected_ht_cap.supported_mcs_set, ddk.ht_cap.supported_mcs_set);
-
-        assert_eq!({ expected_ht_cap.tx_beamforming_capabilities }, {
-            ddk.ht_cap.tx_beamforming_capabilities
-        });
-        assert_eq!(expected_ht_cap.asel_capabilities, ddk.ht_cap.asel_capabilities);
+        assert_eq!(&ie::fake_ht_capabilities().as_bytes()[..], &ddk.ht_cap.bytes[..]);
 
         assert_eq!(true, ddk.has_ht_op);
         let expected_ht_op: banjo_wlan_associnfo::WlanHtOp = ie::fake_ht_operation().into();
         assert_eq!(expected_ht_op, ddk.ht_op);
 
         assert_eq!(true, ddk.has_vht_cap);
-        let expected_vht_cap: banjo_80211::VhtCapabilitiesFields =
-            ie::fake_vht_capabilities().into();
+        let expected_vht_cap: banjo_80211::VhtCapabilities = ie::fake_vht_capabilities().into();
         assert_eq!(expected_vht_cap, ddk.vht_cap);
 
         assert_eq!(true, ddk.has_vht_op);

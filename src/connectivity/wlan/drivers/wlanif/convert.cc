@@ -523,7 +523,7 @@ wlan_common::WlanMacRole ConvertMacRole(wlan_mac_role_t role) {
 }
 
 void ConvertHtCapabilities(wlan_ieee80211::HtCapabilities* fidl_ht_cap,
-                           const ht_capabilities_fields_t& ht_cap) {
+                           const ht_capabilities_t& ht_cap) {
   *fidl_ht_cap = {};
   static_assert(sizeof(fidl_ht_cap->bytes) == sizeof(ht_cap));
   // TODO(fxbug.dev/95240): The underlying bytes in
@@ -534,7 +534,7 @@ void ConvertHtCapabilities(wlan_ieee80211::HtCapabilities* fidl_ht_cap,
 }
 
 void ConvertVhtCapabilities(wlan_ieee80211::VhtCapabilities* fidl_vht_cap,
-                            const vht_capabilities_fields_t& vht_cap) {
+                            const vht_capabilities_t& vht_cap) {
   *fidl_vht_cap = {};
   static_assert(sizeof(fidl_vht_cap->bytes) == sizeof(vht_cap));
   // TODO(fxbug.dev/95240): The underlying bytes in

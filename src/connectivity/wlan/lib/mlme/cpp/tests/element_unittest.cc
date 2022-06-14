@@ -118,35 +118,33 @@ TEST_F(Elements, TsInfoScheduleSetting) {
 }
 
 TEST(HtCapabilities, DdkConversion) {
-  ht_capabilities_fields_t ddk{
-      .ht_capability_info = 0x016e,
-      .ampdu_params = 0x17,
-      .supported_mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00, 0x00, 0x00,
-                            0x00, 0x00, 0x00, 0x00},
-      .ht_ext_capabilities = 0x1234,
-      .tx_beamforming_capabilities = 0x12345678,
-      .asel_capabilities = 0xff,
+  ht_capabilities_t ddk{
+      .bytes =
+          {
+              0x6e, 0x01,  // HtCapabilityInfo
+              0x17,        // AmpduParams
+              0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff,
+              0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // SupportedMcsSet
+              0x34, 0x12,                                      // HtExtCapabilities
+              0x78, 0x56, 0x34, 0x12,                          // TxBeamformingCapabilities
+              0xff,                                            // AselCapability
+          },
   };
 
   auto ieee = HtCapabilities::FromDdk(ddk);
-  EXPECT_EQ(0x016eU, ieee.ht_cap_info.val());
+  EXPECT_EQ(0x016eU, ieee.ht_cap_info.as_uint16());
   EXPECT_EQ(0x17U, ieee.ampdu_params.val());
   std::array<uint8_t, 16> expected_mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff,
                                               0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   EXPECT_EQ(expected_mcs_set, ieee.mcs_set.val());
-  EXPECT_EQ(0x1234U, ieee.ht_ext_cap.val());
-  EXPECT_EQ(0x12345678U, ieee.txbf_cap.val());
+  EXPECT_EQ(0x1234U, ieee.ht_ext_cap.as_uint16());
+  EXPECT_EQ(0x12345678U, ieee.txbf_cap.as_uint32());
   EXPECT_EQ(0xffU, ieee.asel_cap.val());
 
   auto ddk2 = ieee.ToDdk();
-  EXPECT_EQ(ddk.ht_capability_info, ddk2.ht_capability_info);
-  EXPECT_EQ(ddk.ampdu_params, ddk2.ampdu_params);
-  for (size_t i = 0; i < 16; i++) {
-    EXPECT_EQ(ddk.supported_mcs_set[i], ddk2.supported_mcs_set[i]);
+  for (size_t i = 0; i < sizeof(ddk.bytes); i++) {
+    EXPECT_EQ(ddk.bytes[i], ddk2.bytes[i]);
   }
-  EXPECT_EQ(ddk.ht_ext_capabilities, ddk2.ht_ext_capabilities);
-  EXPECT_EQ(ddk.tx_beamforming_capabilities, ddk2.tx_beamforming_capabilities);
-  EXPECT_EQ(ddk.asel_capabilities, ddk2.asel_capabilities);
 }
 
 TEST(HtOperation, DdkConversion) {
@@ -176,18 +174,22 @@ TEST(HtOperation, DdkConversion) {
 }
 
 TEST(VhtCapabilities, DdkConversion) {
-  vht_capabilities_fields_t ddk{
-      .vht_capability_info = 0xaabbccdd,
-      .supported_vht_mcs_and_nss_set = 0x0011223344556677,
+  vht_capabilities_t ddk{
+      .bytes =
+          {
+              0xdd, 0xcc, 0xbb, 0xaa,                         // VhtCapabilityInfo
+              0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00  // SupportedVhtMcsAndNssSet
+          },
   };
 
   auto ieee = VhtCapabilities::FromDdk(ddk);
-  EXPECT_EQ(0xaabbccddU, ieee.vht_cap_info.val());
-  EXPECT_EQ(0x0011223344556677U, ieee.vht_mcs_nss.val());
+  EXPECT_EQ(0xaabbccddU, ieee.vht_cap_info.as_uint32());
+  EXPECT_EQ(0x0011223344556677U, ieee.vht_mcs_nss.as_uint64());
 
   auto ddk2 = ieee.ToDdk();
-  EXPECT_EQ(ddk.vht_capability_info, ddk2.vht_capability_info);
-  EXPECT_EQ(ddk.supported_vht_mcs_and_nss_set, ddk2.supported_vht_mcs_and_nss_set);
+  for (size_t i = 0; i < sizeof(ddk.bytes); i++) {
+    EXPECT_EQ(ddk.bytes[i], ddk2.bytes[i]);
+  }
 }
 
 TEST(VhtOperation, DdkConversion) {

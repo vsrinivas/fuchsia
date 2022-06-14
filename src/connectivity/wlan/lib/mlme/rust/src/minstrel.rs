@@ -9,8 +9,11 @@ use {
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_minstrel as fidl_minstrel,
     fuchsia_zircon as zx,
     log::{debug, error},
-    std::collections::{hash_map, HashMap, HashSet},
-    std::time::Duration,
+    static_assertions::const_assert_eq,
+    std::{
+        collections::{hash_map, HashMap, HashSet},
+        time::Duration,
+    },
     wlan_common::{
         ie::{HtCapabilities, RxMcsBitmask, SupportedRate},
         mac::FrameControl,
@@ -18,6 +21,7 @@ use {
             TxVecIdx, TxVector, ERP_NUM_TX_VECTOR, ERP_START_IDX, HT_NUM_MCS, HT_NUM_UNIQUE_MCS,
         },
     },
+    zerocopy::FromBytes,
 };
 
 // TODO(fxbug.dev/28744): Enable CBW40 support once its information is available from AssocCtx.
@@ -133,8 +137,14 @@ impl Peer {
             num_pkt_until_next_probe: PROBE_INTERVAL - 1,
             ..Default::default()
         };
+
         if assoc_ctx.has_ht_cap {
-            let mut ht_cap = HtCapabilities::from(assoc_ctx.ht_cap.clone());
+            // Safe unwrap: Fixed size array.
+            const_assert_eq!(
+                std::mem::size_of::<HtCapabilities>(),
+                banjo_fuchsia_wlan_ieee80211::HT_CAP_LEN as usize,
+            );
+            let mut ht_cap = HtCapabilities::read_from(&assoc_ctx.ht_cap.bytes[..]).unwrap();
 
             // TODO(fxbug.dev/29488): SGI support suppressed. Remove these once they are supported.
             let mut cap_info = ht_cap.ht_cap_info;

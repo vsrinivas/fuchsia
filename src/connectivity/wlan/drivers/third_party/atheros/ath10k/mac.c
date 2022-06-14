@@ -2376,7 +2376,8 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar, const wlan_assoc_ctx_t*
 
 static void ath10k_peer_assoc_h_ht(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                    struct wmi_peer_assoc_complete_arg* arg) {
-  const ht_capabilities_fields_t* ht_cap = &assoc->ht_cap;
+  const struct ieee80211_ht_cap_packed* ht_cap =
+      (const struct ieee80211_ht_cap_packed*)&assoc->ht_cap;
   size_t i, n;
   uint8_t max_nss;
   uint32_t stbc;
@@ -2588,7 +2589,8 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
     return;
   }
 
-  uint32_t vht_cap = assoc->vht_cap.vht_capability_info;
+  struct ieee80211_vht_cap_packed* vht_caps = (struct ieee80211_vht_cap_packed*)&assoc->vht_cap;
+  uint32_t vht_cap_info = vht_caps->vht_capability_info;
 
   arg->peer_flags |= ar->wmi.peer_flags->vht;
 
@@ -2601,10 +2603,10 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
     arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
   }
 
-  arg->peer_vht_caps = vht_cap;
+  arg->peer_vht_caps = vht_cap_info;
 
   uint8_t ampdu_factor =
-      (vht_cap & IEEE80211_VHT_CAPS_MAX_AMPDU_LEN) >> IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT;
+      (vht_cap_info & IEEE80211_VHT_CAPS_MAX_AMPDU_LEN) >> IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT;
 
   /* Workaround: Some Netgear/Linksys 11ac APs set Rx A-MPDU factor to
    * zero in VHT IE. Using it would result in degraded throughput.
@@ -2628,7 +2630,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
    * supports VHT.
    */
   uint8_t i, max_nss, vht_mcs;
-  uint64_t supported_vht_mcs_and_nss_set = assoc->vht_cap.supported_vht_mcs_and_nss_set;
+  uint64_t supported_vht_mcs_and_nss_set = vht_caps->supported_vht_mcs_and_nss_set;
   uint16_t rx_vht_mcs_map = (supported_vht_mcs_and_nss_set & IEEE80211_VHT_MCS_NSS_RX_MCS_MAP) >>
                             IEEE80211_VHT_MCS_NSS_RX_MCS_MAP_SHIFT;
   uint16_t rx_highest = (supported_vht_mcs_and_nss_set & IEEE80211_VHT_MCS_NSS_RX_MAX_LGI_RATE) >>
@@ -2655,7 +2657,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
   ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vht peer %pM max_mpdu %d flags 0x%x\n", assoc->bssid,
              arg->peer_max_mpdu, arg->peer_flags);
 
-  if (arg->peer_vht_rates.rx_max_rate && (vht_cap & IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH)) {
+  if (arg->peer_vht_rates.rx_max_rate && (vht_cap_info & IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH)) {
     switch (arg->peer_vht_rates.rx_max_rate) {
       case 1560:
         /* Must be 2x2 at 160Mhz is all it can do. */
@@ -2793,7 +2795,9 @@ static zx_status_t ath10k_setup_peer_smps(struct ath10k* ar, struct ath10k_vif* 
     return ZX_OK;
   }
 
-  smps = assoc->ht_cap.ht_capability_info & IEEE80211_HT_CAPS_SMPS;
+  struct ieee80211_ht_cap_packed* ht_caps = (struct ieee80211_ht_cap_packed*)&assoc->ht_cap;
+
+  smps = ht_caps->ht_capability_info & IEEE80211_HT_CAPS_SMPS;
   smps >>= IEEE80211_HT_CAPS_SMPS_SHIFT;
 
   if (smps >= countof(ath10k_smps_map)) {
