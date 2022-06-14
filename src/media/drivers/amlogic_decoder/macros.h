@@ -15,35 +15,19 @@
 
 namespace amlogic_decoder {
 
-// Using the global logger helps keep messages in order when debugging interaction between driver
-// code and library code used by the driver which is using the global logger (via chromium_utils.h).
-//
 // At some point we may instead wish to build libs used by this driver with an iostreams-style
 // logging wrapper on top of zxlogf(), to allow logs from the driver to all go through zxlogf() and
 // stay ordered that way.
-#define USE_GLOBAL_LOGGER 1
 
-// severity can be ERROR, WARNING, INFO, DEBUG, TRACE.  This is the intersection
-// of ddk/debug.h and lib/syslog/logger.h.  Both versions of LOG() ensure that
-// the severity is valid regardless of USE_GLOBAL_LOGGER setting.
+// severity can be ERROR, WARNING, INFO, DEBUG, TRACE, SERIAL.
 //
 // Using ## __VA_ARGS__ instead of __VA_OPT__(,) __VA_ARGS__ for now, since
 // __VA_OPT__ doesn't seem to be available yet.
-#if USE_GLOBAL_LOGGER
-#define LOG(severity, fmt, ...)                                                               \
-  do {                                                                                        \
-    static_assert(true || DDK_LOG_##severity);                                                \
-    static_assert(true || FX_LOG_##severity);                                                 \
-    FX_LOGF(severity, "amlogic-video", "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__); \
-  } while (0)
-#else
+
 #define LOG(severity, fmt, ...)                                                                 \
   do {                                                                                          \
-    static_assert(true || DDK_LOG_##severity);                                                  \
-    static_assert(true || FX_LOG_##severity);                                                   \
     zxlogf(severity, "[%s:%s:%d] " fmt "", "amlogic-video", __func__, __LINE__, ##__VA_ARGS__); \
   } while (0)
-#endif
 
 #define DECODE_ERROR(fmt, ...) LOG(ERROR, fmt, ##__VA_ARGS__)
 
