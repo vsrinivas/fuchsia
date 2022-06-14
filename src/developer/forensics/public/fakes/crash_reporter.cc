@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/testing/fakes/crash_reporter.h"
+#include "src/developer/forensics/public/fakes/crash_reporter.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>

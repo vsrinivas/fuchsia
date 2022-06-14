@@ -336,7 +336,7 @@ template("fshost_integration_test") {
       "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
-      "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing_llcpp",
+      "//src/developer/forensics/public/fakes:fuchsia.feedback.testing_llcpp",
       "//src/lib/files",
       "//src/lib/fxl/test:gtest_main",
       "//src/lib/storage/fs_management",
@@ -438,7 +438,7 @@ fuchsia_test_package("fshost-tests") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
-    "//src/developer/forensics/testing/fakes:fake_crash_reporter",
+    "//src/developer/forensics/public/fakes:fake_crash_reporter",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs:decompressor-sandbox",

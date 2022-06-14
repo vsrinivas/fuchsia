@@ -62,8 +62,8 @@ executable("exception_broker_integration_test_exe") {
   deps = [
     ":test_lib",
     "//src/developer/forensics/exceptions:lib",
+    "//src/developer/forensics/public/fakes:fuchsia.feedback.testing",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
@@ -232,7 +232,7 @@ fuchsia_test_package("exception-broker-integration-test") {
   deps = [
     # Other components that we are injecting in the integration tests.
     "//src/developer/forensics:exceptions",
-    "//src/developer/forensics/testing/fakes:fake_crash_reporter",
+    "//src/developer/forensics/public/fakes:fake_crash_reporter",
   ]
 }
 

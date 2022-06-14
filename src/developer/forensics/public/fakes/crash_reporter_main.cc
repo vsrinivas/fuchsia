@@ -10,7 +10,7 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/forensics/testing/fakes/crash_reporter.h"
+#include "src/developer/forensics/public/fakes/crash_reporter.h"
 
 int main(int argc, const char** argv) {
   syslog::SetTags({"forensics", "test"});
