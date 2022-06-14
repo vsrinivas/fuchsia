@@ -11,20 +11,16 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <dev/display.h>
-
 #include "surface.h"
 
-namespace gfx {
+__BEGIN_CDECLS
 
-// TODO(fxbug.dev/96043): `class Console`.
+zx_status_t gfxconsole_display_get_info(struct display_info* info);
+void gfxconsole_start(gfx_surface* surface, gfx_surface* hw_surface);
+void gfxconsole_bind_display(struct display_info* info, void* raw_sw_fb);
+void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color);
+void gfxconsole_flush(void);
 
-zx_status_t ConsoleDisplayGetInfo(display_info* info);
-void ConsoleStart(Surface* surface, Surface* hw_surface);
-void ConsoleBindDisplay(display_info* info, void* raw_sw_fb);
-void ConsolePutPixel(unsigned x, unsigned y, unsigned color);
-void ConsoleFlush(void);
-
-}  // namespace gfx
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_CONSOLE_H_

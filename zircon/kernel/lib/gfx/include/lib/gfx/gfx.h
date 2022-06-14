@@ -10,26 +10,22 @@
 
 #include <sys/types.h>
 
-#include <dev/display.h>
-
 #include "surface.h"
 
-// TODO(fxbug.dev/96043): Delete this header. These functions should be Surface
-// methods or internal.
-
-namespace gfx {
+__BEGIN_CDECLS
 
 // surface setup
-Surface* CreateSurface(void* ptr, uint width, uint height, uint stride, gfx_format format,
-                       uint32_t flags);
+gfx_surface* gfx_create_surface(void* ptr, uint width, uint height, uint stride, gfx_format format,
+                                uint32_t flags);
 
 // utility routine to make a surface out of a display info
-Surface* CreateSurfaceFromDisplay(display_info*);
-zx_status_t InitSurfaceFromDisplay(Surface* surface, display_info*);
+struct display_info;
+gfx_surface* gfx_create_surface_from_display(struct display_info*);
+zx_status_t gfx_init_surface_from_display(gfx_surface* surface, struct display_info*);
 
 // utility routine to fill the display with a little moire pattern
-void DrawPattern(void);
+void gfx_draw_pattern(void);
 
-}  // namespace gfx
+__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_GFX_INCLUDE_LIB_GFX_GFX_H_

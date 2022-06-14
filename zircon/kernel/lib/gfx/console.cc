@@ -34,8 +34,6 @@
 #define CRASH_TEXT_COLOR 0xffffffff
 #define CRASH_BACK_COLOR 0xffe000e0
 
-namespace gfx {
-
 /** @addtogroup graphics
  * @{
  */
@@ -45,12 +43,12 @@ namespace gfx {
  */
 static struct {
   // main surface to draw on
-  Surface* surface;
+  gfx_surface* surface;
   // underlying hw surface, if different from above
-  Surface* hw_surface;
+  gfx_surface* hw_surface;
 
   // surface to do single line sub-region flushing with
-  Surface line;
+  gfx_surface line;
   uint linestride;
 
   uint rows, columns;
@@ -63,12 +61,12 @@ static struct {
 } gfxconsole;
 
 static void draw_char(char c, const gfx_font_t* font) {
-  PutChar(gfxconsole.surface, font, c, gfxconsole.x * font->width, gfxconsole.y * font->height,
-          gfxconsole.front_color, gfxconsole.back_color);
+  gfx_putchar(gfxconsole.surface, font, c, gfxconsole.x * font->width, gfxconsole.y * font->height,
+              gfxconsole.front_color, gfxconsole.back_color);
 }
 
-void ConsolePutPixel(unsigned x, unsigned y, unsigned color) {
-  PutPixel(gfxconsole.surface, x, y, color);
+void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color) {
+  gfx_putpixel(gfxconsole.surface, x, y, color);
 }
 
 static const gfx_font_t* font = &gfx_font_9x16;
@@ -128,15 +126,15 @@ static bool gfxconsole_putc(char c) {
   }
   if (gfxconsole.y >= gfxconsole.rows) {
     // scroll up
-    CopyRectangle(gfxconsole.surface, 0, font->height, gfxconsole.surface->width,
-                  gfxconsole.surface->height - font->height - gfxconsole.extray, 0, 0);
+    gfx_copyrect(gfxconsole.surface, 0, font->height, gfxconsole.surface->width,
+                 gfxconsole.surface->height - font->height - gfxconsole.extray, 0, 0);
     gfxconsole.y--;
 
     // clear the bottom line
-    FillRectangle(gfxconsole.surface, 0,
-                  gfxconsole.surface->height - font->height - gfxconsole.extray,
-                  gfxconsole.surface->width, font->height, gfxconsole.back_color);
-    Flush(gfxconsole.surface);
+    gfx_fillrect(gfxconsole.surface, 0,
+                 gfxconsole.surface->height - font->height - gfxconsole.extray,
+                 gfxconsole.surface->width, font->height, gfxconsole.back_color);
+    gfx_flush(gfxconsole.surface);
     inval = 1;
   }
   return inval;
@@ -153,24 +151,24 @@ static void gfxconsole_print_callback(PrintCallback* cb, ktl::string_view str) {
   // blit from the software surface to the hardware
   if (gfxconsole.surface != gfxconsole.hw_surface) {
     if (refresh_full_screen) {
-      Blend(gfxconsole.hw_surface, gfxconsole.surface, 0, 0);
+      gfx_surface_blend(gfxconsole.hw_surface, gfxconsole.surface, 0, 0);
     } else {
       // Only re-blit the active console line.
       // Since blend only works in whole surfaces, configure a sub-surface
       // to use as the blend source.
       gfxconsole.line.ptr =
           ((uint8_t*)gfxconsole.surface->ptr) + (gfxconsole.y * gfxconsole.linestride);
-      Blend(gfxconsole.hw_surface, &gfxconsole.line, 0, gfxconsole.y * font->height);
+      gfx_surface_blend(gfxconsole.hw_surface, &gfxconsole.line, 0, gfxconsole.y * font->height);
     }
-    Flush(gfxconsole.hw_surface);
+    gfx_flush(gfxconsole.hw_surface);
   } else {
-    Flush(gfxconsole.surface);
+    gfx_flush(gfxconsole.surface);
   }
 }
 
 static PrintCallback cb{gfxconsole_print_callback};
 
-static void gfxconsole_setup(Surface* surface, Surface* hw_surface) {
+static void gfxconsole_setup(gfx_surface* surface, gfx_surface* hw_surface) {
   switch (gBootOptions->gfx_console_font) {
     case GfxConsoleFont::k9x16:
       font = &gfx_font_9x16;
@@ -212,9 +210,9 @@ static void gfxconsole_clear(bool crash_console) {
   }
 
   // fill screen with back color
-  FillRectangle(gfxconsole.surface, 0, 0, gfxconsole.surface->width, gfxconsole.surface->height,
-                gfxconsole.back_color);
-  Flush(gfxconsole.surface);
+  gfx_fillrect(gfxconsole.surface, 0, 0, gfxconsole.surface->width, gfxconsole.surface->height,
+               gfxconsole.back_color);
+  gfx_flush(gfxconsole.surface);
 }
 
 /**
@@ -223,7 +221,7 @@ static void gfxconsole_clear(bool crash_console) {
  * The graphics console subsystem is initialized, and registered as
  * an output device for debug output.
  */
-void ConsoleStart(Surface* surface, Surface* hw_surface) {
+void gfxconsole_start(gfx_surface* surface, gfx_surface* hw_surface) {
   DEBUG_ASSERT(gfxconsole.surface == NULL);
 
   gfxconsole_setup(surface, hw_surface);
@@ -233,11 +231,11 @@ void ConsoleStart(Surface* surface, Surface* hw_surface) {
   register_print_callback(&cb);
 }
 
-static Surface hw_surface;
-static Surface sw_surface;
-static display_info dispinfo;
+static gfx_surface hw_surface;
+static gfx_surface sw_surface;
+static struct display_info dispinfo;
 
-zx_status_t ConsoleDisplayGetInfo(display_info* info) {
+zx_status_t gfxconsole_display_get_info(struct display_info* info) {
   if (gfxconsole.surface) {
     memcpy(info, &dispinfo, sizeof(*info));
     return 0;
@@ -259,10 +257,10 @@ zx_status_t ConsoleDisplayGetInfo(display_info* info) {
  * surface (stride * height * pixelsize) for the provided hardware display.
  * This is used for very early framebuffer init before the heap is alive.
  */
-void ConsoleBindDisplay(display_info* info, void* raw_sw_fb) {
+void gfxconsole_bind_display(struct display_info* info, void* raw_sw_fb) {
   static bool active = false;
   bool same_as_before = false;
-  struct Surface hw;
+  struct gfx_surface hw;
 
   if (active) {
     // on re-init or detach, we need to unhook from print callbacks
@@ -273,7 +271,7 @@ void ConsoleBindDisplay(display_info* info, void* raw_sw_fb) {
     return;
   }
 
-  if (InitSurfaceFromDisplay(&hw, info)) {
+  if (gfx_init_surface_from_display(&hw, info)) {
     return;
   }
   if (info->flags & DISPLAY_FLAG_CRASH_FRAMEBUFFER) {
@@ -301,12 +299,12 @@ void ConsoleBindDisplay(display_info* info, void* raw_sw_fb) {
   }
   memcpy(&hw_surface, &hw, sizeof(hw));
 
-  Surface* s = &hw_surface;
+  gfx_surface* s = &hw_surface;
   if (info->flags & DISPLAY_FLAG_HW_FRAMEBUFFER) {
     if (!same_as_before) {
       // we can't re-use the existing sw_surface, create a new one
-      if (InitSurface(&sw_surface, raw_sw_fb, hw_surface.width, hw_surface.height,
-                      hw_surface.stride, hw_surface.format, 0)) {
+      if (gfx_init_surface(&sw_surface, raw_sw_fb, hw_surface.width, hw_surface.height,
+                           hw_surface.stride, hw_surface.format, 0)) {
         return;
       }
     }
@@ -330,13 +328,11 @@ void ConsoleBindDisplay(display_info* info, void* raw_sw_fb) {
   active = true;
 }
 
-void ConsoleFlush() {
+void gfxconsole_flush() {
   if (gfxconsole.surface != gfxconsole.hw_surface) {
-    Blend(gfxconsole.hw_surface, gfxconsole.surface, 0, 0);
-    Flush(gfxconsole.hw_surface);
+    gfx_surface_blend(gfxconsole.hw_surface, gfxconsole.surface, 0, 0);
+    gfx_flush(gfxconsole.hw_surface);
   } else {
-    Flush(gfxconsole.surface);
+    gfx_flush(gfxconsole.surface);
   }
 }
-
-}  // namespace gfx

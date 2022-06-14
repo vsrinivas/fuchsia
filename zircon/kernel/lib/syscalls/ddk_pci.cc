@@ -50,7 +50,8 @@
 // of doing this.  Not all system have PCI, and (eventually) not all systems
 // will attempt to initialize PCI.  Someday, there should be a different way of
 // handing off from early/BSOD kernel mode graphics to user mode.
-static inline void shutdown_early_init_console() { gfx::ConsoleBindDisplay(nullptr, nullptr); }
+#include <lib/gfx/console.h>
+static inline void shutdown_early_init_console() { gfxconsole_bind_display(nullptr, nullptr); }
 
 #ifdef WITH_KERNEL_PCIE
 namespace {

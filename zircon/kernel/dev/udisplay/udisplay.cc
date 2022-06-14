@@ -83,7 +83,7 @@ zx_status_t udisplay_bind_gfxconsole(void) {
   // bind the display to the gfxconsole
   g_udisplay.info.framebuffer = g_udisplay.framebuffer_virt;
   g_udisplay.info.flags = DISPLAY_FLAG_NEEDS_CACHE_FLUSH | DISPLAY_FLAG_CRASH_FRAMEBUFFER;
-  gfx::ConsoleBindDisplay(&g_udisplay.info, nullptr);
+  gfxconsole_bind_display(&g_udisplay.info, nullptr);
 
   return ZX_OK;
 }

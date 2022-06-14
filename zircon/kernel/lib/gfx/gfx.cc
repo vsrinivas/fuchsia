@@ -17,13 +17,7 @@
 #include <arch/ops.h>
 #include <dev/display.h>
 
-#if LK_DEBUGLEVEL > 1
-#include <lib/console.h>
-#endif
-
 #define LOCAL_TRACE 0
-
-namespace gfx {
 
 static void kernel_gfx_log(const char* format, ...) {
   if (LOCAL_TRACE) {
@@ -34,39 +28,39 @@ static void kernel_gfx_log(const char* format, ...) {
   }
 }
 
-static void kernel_flush_cache(void* ptr, size_t size) {
+static void kernel_gfx_flush_cache(void* ptr, size_t size) {
   arch_clean_cache_range(reinterpret_cast<vaddr_t>(ptr), size);
 }
 
-static const Context g_kernel_ctx = {
+static const gfx_context g_kernel_ctx = {
     .log = kernel_gfx_log,
     .panic = panic,
-    .flush_cache = kernel_flush_cache,
+    .flush_cache = kernel_gfx_flush_cache,
 };
 
 /**
  * @brief  Create a new graphics surface object
  */
-Surface* CreateSurface(void* ptr, uint width, uint height, uint stride, gfx_format format,
-                       uint32_t flags) {
-  return CreateSurfaceWithContext(ptr, &g_kernel_ctx, width, height, stride, format, flags);
+gfx_surface* gfx_create_surface(void* ptr, uint width, uint height, uint stride, gfx_format format,
+                                uint32_t flags) {
+  return gfx_create_surface_with_context(ptr, &g_kernel_ctx, width, height, stride, format, flags);
 }
 
 /**
  * @brief  Create a new graphics surface object from a display
  */
-Surface* CreateSurfaceFromDisplay(display_info* info) {
-  Surface* surface = static_cast<Surface*>(calloc(1, sizeof(*surface)));
+gfx_surface* gfx_create_surface_from_display(struct display_info* info) {
+  gfx_surface* surface = static_cast<gfx_surface*>(calloc(1, sizeof(*surface)));
   if (surface == NULL)
     return NULL;
-  if (InitSurfaceFromDisplay(surface, info)) {
+  if (gfx_init_surface_from_display(surface, info)) {
     free(surface);
     return NULL;
   }
   return surface;
 }
 
-zx_status_t InitSurfaceFromDisplay(Surface* surface, display_info* info) {
+zx_status_t gfx_init_surface_from_display(gfx_surface* surface, struct display_info* info) {
   zx_status_t r;
   switch (info->format) {
     case ZX_PIXEL_FORMAT_RGB_565:
@@ -83,22 +77,22 @@ zx_status_t InitSurfaceFromDisplay(Surface* surface, display_info* info) {
   }
 
   uint32_t flags = (info->flags & DISPLAY_FLAG_NEEDS_CACHE_FLUSH) ? GFX_FLAG_FLUSH_CPU_CACHE : 0;
-  r = InitSurface(surface, info->framebuffer, info->width, info->height, info->stride, info->format,
-                  flags);
+  r = gfx_init_surface(surface, info->framebuffer, info->width, info->height, info->stride,
+                       info->format, flags);
 
-  surface->Flush = info->flush;
+  surface->flush = info->flush;
   return r;
 }
 
 /**
  * @brief  Write a test pattern to the default display.
  */
-void DrawPattern(void) {
-  display_info info;
+void gfx_draw_pattern(void) {
+  struct display_info info;
   if (display_get_info(&info) < 0)
     return;
 
-  Surface* surface = CreateSurfaceFromDisplay(&info);
+  gfx_surface* surface = gfx_create_surface_from_display(&info);
   DEBUG_ASSERT(surface != nullptr);
 
   uint x, y;
@@ -110,17 +104,41 @@ void DrawPattern(void) {
       scaledx = x * 256 / surface->width;
       scaledy = y * 256 / surface->height;
 
-      PutPixel(surface, x, y,
-               (0xff << 24) | (scaledx * scaledy) << 16 | (scaledx >> 1) << 8 | scaledy >> 1);
+      gfx_putpixel(surface, x, y,
+                   (0xff << 24) | (scaledx * scaledy) << 16 | (scaledx >> 1) << 8 | scaledy >> 1);
     }
   }
 
-  Flush(surface);
+  gfx_flush(surface);
 
-  DestroySurface(surface);
+  gfx_surface_destroy(surface);
+}
+
+/**
+ * @brief  Fill default display with white
+ */
+[[maybe_unused]] static void gfx_draw_pattern_white(void) {
+  struct display_info info;
+  if (display_get_info(&info) < 0)
+    return;
+
+  gfx_surface* surface = gfx_create_surface_from_display(&info);
+  DEBUG_ASSERT(surface != nullptr);
+
+  uint x, y;
+  for (y = 0; y < surface->height; y++) {
+    for (x = 0; x < surface->width; x++) {
+      gfx_putpixel(surface, x, y, 0xFFFFFFFF);
+    }
+  }
+
+  gfx_flush(surface);
+
+  gfx_surface_destroy(surface);
 }
 
 #if LK_DEBUGLEVEL > 1
+#include <lib/console.h>
 
 static int cmd_gfx(int argc, const cmd_args* argv, uint32_t flags);
 
@@ -128,7 +146,7 @@ STATIC_COMMAND_START
 STATIC_COMMAND("gfx", "gfx commands", &cmd_gfx)
 STATIC_COMMAND_END(gfx)
 
-static int DrawRgbBars(Surface* surface) {
+static int gfx_draw_rgb_bars(gfx_surface* surface) {
   uint x, y;
 
   uint step = surface->height * 100 / 256;
@@ -138,17 +156,17 @@ static int DrawRgbBars(Surface* surface) {
     // R
     for (x = 0; x < surface->width / 3; x++) {
       color = y * 100 / step;
-      PutPixel(surface, x, y, 0xff << 24 | color << 16);
+      gfx_putpixel(surface, x, y, 0xff << 24 | color << 16);
     }
     // G
     for (; x < 2 * (surface->width / 3); x++) {
       color = y * 100 / step;
-      PutPixel(surface, x, y, 0xff << 24 | color << 8);
+      gfx_putpixel(surface, x, y, 0xff << 24 | color << 8);
     }
     // B
     for (; x < surface->width; x++) {
       color = y * 100 / step;
-      PutPixel(surface, x, y, 0xff << 24 | color);
+      gfx_putpixel(surface, x, y, 0xff << 24 | color);
     }
   }
 
@@ -172,7 +190,7 @@ static int cmd_gfx(int argc, const cmd_args* argv, uint32_t flags) {
     return -1;
   }
 
-  Surface* surface = CreateSurfaceFromDisplay(&info);
+  gfx_surface* surface = gfx_create_surface_from_display(&info);
   DEBUG_ASSERT(surface != nullptr);
 
   if (!strcmp(argv[1].str, "display_info")) {
@@ -182,9 +200,9 @@ static int cmd_gfx(int argc, const cmd_args* argv, uint32_t flags) {
     printf("\tformat 0x%x\n", info.format);
     printf("\tflags 0x%x\n", info.flags);
   } else if (!strcmp(argv[1].str, "rgb_bars")) {
-    DrawRgbBars(surface);
+    gfx_draw_rgb_bars(surface);
   } else if (!strcmp(argv[1].str, "test_pattern")) {
-    DrawPattern();
+    gfx_draw_pattern();
   } else if (!strcmp(argv[1].str, "fill")) {
     uint x, y;
 
@@ -193,18 +211,16 @@ static int cmd_gfx(int argc, const cmd_args* argv, uint32_t flags) {
     for (y = 0; y < surface->height; y++) {
       for (x = 0; x < surface->width; x++) {
         /* write pixel to frame buffer */
-        PutPixel(surface, x, y, fillval);
+        gfx_putpixel(surface, x, y, fillval);
       }
     }
   }
 
-  Flush(surface);
+  gfx_flush(surface);
 
-  DestroySurface(surface);
+  gfx_surface_destroy(surface);
 
   return 0;
 }
 
 #endif
-
-}  // namespace gfx

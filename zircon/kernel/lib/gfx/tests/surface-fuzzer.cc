@@ -12,7 +12,7 @@
 
 static const unsigned kMaxDimension = 4096;
 
-static bool IsBlendable(gfx::Surface* a, gfx::Surface* b) {
+static bool IsBlendable(gfx_surface* a, gfx_surface* b) {
   if (a->format != b->format) {
     return false;
   }
@@ -29,8 +29,8 @@ static bool IsBlendable(gfx::Surface* a, gfx::Surface* b) {
   }
 }
 
-static gfx::Surface* LookupSurface(FuzzedDataProvider* input,
-                                   const std::map<unsigned, gfx::Surface*>* surfaces) {
+static gfx_surface* LookupSurface(FuzzedDataProvider* input,
+                                  const std::map<unsigned, gfx_surface*>* surfaces) {
   auto id = input->ConsumeIntegral<unsigned>();
   auto it = surfaces->find(id);
   if (it == surfaces->end()) {
@@ -51,14 +51,14 @@ unsigned ReadPixelFormat(FuzzedDataProvider* input) {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider input(data, size);
-  std::map<unsigned, gfx::Surface*> surfaces;
+  std::map<unsigned, gfx_surface*> surfaces;
 
   while (true) {
     switch (input.ConsumeIntegral<uint8_t>()) {
       default:
       case 0: {
         for (auto [id, surface] : surfaces) {
-          gfx::DestroySurface(surface);
+          gfx_surface_destroy(surface);
         }
         surfaces.clear();
         return 0;
@@ -75,7 +75,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto pixel_format = ReadPixelFormat(&input);
         auto flags = input.ConsumeIntegral<unsigned>() & (GFX_FLAG_FLUSH_CPU_CACHE);
         if (auto* surface =
-                CreateTestSurface(nullptr, width, height, stride, pixel_format, flags)) {
+                gfx_create_surface(nullptr, width, height, stride, pixel_format, flags)) {
           surfaces[id] = surface;
         }
         break;
@@ -87,14 +87,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (it == surfaces.end()) {
           break;
         }
-        gfx::DestroySurface(it->second);
+        gfx_surface_destroy(it->second);
         surfaces.erase(it);
         break;
       }
 
       case 3:
         if (auto* surface = LookupSurface(&input, &surfaces)) {
-          gfx::Flush(surface);
+          gfx_flush(surface);
         }
         break;
 
@@ -106,7 +106,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
           auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
           auto x2 = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto y2 = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-          gfx::CopyRectangle(surface, x, y, width, height, x2, y2);
+          gfx_copyrect(surface, x, y, width, height, x2, y2);
         }
         break;
 
@@ -117,7 +117,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
           auto width = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
           auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
           auto color = input.ConsumeIntegral<unsigned>();
-          gfx::FillRectangle(surface, x, y, width, height, color);
+          gfx_fillrect(surface, x, y, width, height, color);
         }
         break;
 
@@ -126,7 +126,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
           auto x = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto y = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto color = input.ConsumeIntegral<unsigned>();
-          gfx::PutPixel(surface, x, y, color);
+          gfx_putpixel(surface, x, y, color);
         }
         break;
 
@@ -137,7 +137,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
           auto x2 = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto y2 = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
           auto color = input.ConsumeIntegral<unsigned>();
-          gfx::DrawLine(surface, x, y, x2, y2, color);
+          gfx_line(surface, x, y, x2, y2, color);
         }
         break;
 
@@ -149,7 +149,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             }
             auto destx = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             auto desty = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-            gfx::Blend(surface1, surface2, destx, desty);
+            gfx_surface_blend(surface1, surface2, destx, desty);
           }
         }
         break;
@@ -166,7 +166,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
             auto destx = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             auto desty = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
-            gfx::Blend(surface1, surface2, srcx, srcy, width, height, destx, desty);
+            gfx_blend(surface1, surface2, srcx, srcy, width, height, destx, desty);
           }
         }
         break;
@@ -177,7 +177,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             auto srcy = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             auto desty = input.ConsumeIntegralInRange<unsigned>(0, kMaxDimension);
             auto height = input.ConsumeIntegralInRange<unsigned>(1, kMaxDimension);
-            gfx::CopyLines(surface1, surface2, srcy, desty, height);
+            gfx_copylines(surface1, surface2, srcy, desty, height);
           }
         }
         break;
@@ -185,7 +185,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       case 11:
         if (auto* surface = LookupSurface(&input, &surfaces)) {
           auto color = input.ConsumeIntegral<unsigned>();
-          gfx::Clear(surface, color);
+          gfx_clear(surface, color);
         }
         break;
     }
