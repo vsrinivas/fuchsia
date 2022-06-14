@@ -21,7 +21,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::{CounterContext, FrameContext, InstantContext},
+    context::{CounterContext, FrameContext},
     error::ExistsError,
     ip::{
         self,
@@ -48,8 +48,8 @@ use crate::{
             mld::{MldContext, MldFrameMetadata, MldGroupState},
             GmpHandler, MulticastGroupSet,
         },
-        send_ipv6_packet_from_device, AddressStatus, IpLayerIpExt, Ipv4PresentAddressStatus,
-        Ipv6PresentAddressStatus, SendIpPacketMeta, DEFAULT_TTL,
+        send_ipv6_packet_from_device, AddressStatus, IpLayerIpExt, IpLayerNonSyncContext,
+        Ipv4PresentAddressStatus, Ipv6PresentAddressStatus, SendIpPacketMeta, DEFAULT_TTL,
     },
 };
 
@@ -67,7 +67,7 @@ use crate::{
 pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
 impl<
-        C: IpDeviceNonSyncContext,
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
         SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + CounterContext,
     > SlaacStateContext<C> for SC
 {
@@ -104,7 +104,7 @@ impl<
         &self,
         _ctx: &mut C,
         device_id: Self::DeviceId,
-    ) -> Box<dyn Iterator<Item = SlaacAddressEntry<Self::Instant>> + '_> {
+    ) -> Box<dyn Iterator<Item = SlaacAddressEntry<C::Instant>> + '_> {
         Box::new(
             SC::get_ip_device_state(self, device_id).ip_state.iter_addrs().cloned().filter_map(
                 |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
@@ -121,7 +121,7 @@ impl<
         &mut self,
         _ctx: &mut C,
         device_id: Self::DeviceId,
-    ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, Self::Instant>> + '_> {
+    ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, C::Instant>> + '_> {
         Box::new(SC::get_ip_device_state_mut(self, device_id).ip_state.iter_addrs_mut().filter_map(
             |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
                 AddrConfig::Slaac(config) => {
@@ -137,7 +137,7 @@ impl<
         ctx: &mut C,
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-        slaac_config: SlaacConfig<Self::Instant>,
+        slaac_config: SlaacConfig<C::Instant>,
     ) -> Result<(), ExistsError> {
         add_ipv6_addr_subnet(
             self,
@@ -165,7 +165,7 @@ impl<
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv6, C>>
+impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<Ipv6, C>>
     Ipv6RouteDiscoveryStateContext<C> for SC
 {
     fn get_discovered_routes_mut(
@@ -176,8 +176,10 @@ impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv6, C>>
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv4, C, EmptyBuf>> IgmpContext<C>
-    for SC
+impl<
+        C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>,
+        SC: device::BufferIpDeviceContext<Ipv4, C, EmptyBuf>,
+    > IgmpContext<C> for SC
 {
     fn get_ip_addr_subnet(&self, device: SC::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
         get_ipv4_addr_subnet(self, device)
@@ -194,20 +196,22 @@ impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv4, C, Empty
     fn get_state_mut(
         &mut self,
         device: SC::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<<SC as InstantContext>::Instant>> {
+    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>> {
         &mut self.get_ip_device_state_mut(device).ip_state.multicast_groups
     }
 
     fn get_state(
         &self,
         device: SC::DeviceId,
-    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<<SC as InstantContext>::Instant>> {
+    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>> {
         &self.get_ip_device_state(device).ip_state.multicast_groups
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv4, C, EmptyBuf>>
-    FrameContext<C, EmptyBuf, IgmpPacketMetadata<SC::DeviceId>> for SC
+impl<
+        C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>,
+        SC: device::BufferIpDeviceContext<Ipv4, C, EmptyBuf>,
+    > FrameContext<C, EmptyBuf, IgmpPacketMetadata<SC::DeviceId>> for SC
 {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
@@ -219,8 +223,10 @@ impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv4, C, Empty
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv6, C, EmptyBuf>> MldContext<C>
-    for SC
+impl<
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+        SC: device::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
+    > MldContext<C> for SC
 {
     fn get_ipv6_link_local_addr(
         &self,
@@ -249,19 +255,21 @@ impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv6, C, Empty
     fn get_state_mut(
         &mut self,
         device: SC::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<<SC as InstantContext>::Instant>> {
+    ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>> {
         &mut self.get_ip_device_state_mut(device).ip_state.multicast_groups
     }
 
     fn get_state(
         &self,
         device: SC::DeviceId,
-    ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<<SC as InstantContext>::Instant>> {
+    ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>> {
         &self.get_ip_device_state(device).ip_state.multicast_groups
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::Ipv6DeviceContext<C>> Ipv6DeviceDadContext<C> for SC {
+impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContext<C>>
+    Ipv6DeviceDadContext<C> for SC
+{
     fn get_address_state_mut(
         &mut self,
         _ctx: &mut C,
@@ -284,7 +292,7 @@ impl<C: IpDeviceNonSyncContext, SC: device::Ipv6DeviceContext<C>> Ipv6DeviceDadC
 }
 
 fn send_ndp_packet<
-    C,
+    C: IpLayerNonSyncContext,
     SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
     S: Serializer<Buffer = EmptyBuf>,
     M: IcmpMessage<Ipv6, &'static [u8]>,
@@ -321,7 +329,9 @@ fn send_ndp_packet<
     .map_err(|s| s.into_inner())
 }
 
-impl<C, SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>> Ipv6LayerDadContext<C> for SC {
+impl<C: IpLayerNonSyncContext, SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>>
+    Ipv6LayerDadContext<C> for SC
+{
     fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
         ctx: &mut C,
@@ -343,7 +353,9 @@ impl<C, SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>> Ipv6LayerDadContext<C>
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::Ipv6DeviceContext<C>> Ipv6DeviceRsContext<C> for SC {
+impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContext<C>>
+    Ipv6DeviceRsContext<C> for SC
+{
     fn get_max_router_solicitations(&self, device_id: SC::DeviceId) -> Option<NonZeroU8> {
         self.get_ip_device_state(device_id).config.max_router_solicitations
     }
@@ -361,7 +373,7 @@ impl<C: IpDeviceNonSyncContext, SC: device::Ipv6DeviceContext<C>> Ipv6DeviceRsCo
 }
 
 impl<
-        C: IpDeviceNonSyncContext,
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
         SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf> + device::Ipv6DeviceContext<C>,
     > Ipv6LayerRsContext<C> for SC
 {
@@ -391,8 +403,8 @@ impl<
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv4, C>> ip::IpDeviceContext<Ipv4, C>
-    for SC
+impl<C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>, SC: device::IpDeviceContext<Ipv4, C>>
+    ip::IpDeviceContext<Ipv4, C> for SC
 {
     fn is_ip_device_enabled(&self, device_id: SC::DeviceId) -> bool {
         is_ip_device_enabled(self, device_id)
@@ -403,7 +415,7 @@ impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv4, C>> ip::IpDevi
         device_id: Option<SC::DeviceId>,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
     ) -> AddressStatus<Ipv4PresentAddressStatus> {
-        let get_status = |dev_state: &IpDeviceState<SC::Instant, Ipv4>| {
+        let get_status = |dev_state: &IpDeviceState<C::Instant, Ipv4>| {
             if dst_ip.is_limited_broadcast() {
                 return AddressStatus::Present(Ipv4PresentAddressStatus::LimitedBroadcast);
             }
@@ -455,8 +467,8 @@ impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv4, C>> ip::IpDevi
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv6, C>> ip::IpDeviceContext<Ipv6, C>
-    for SC
+impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<Ipv6, C>>
+    ip::IpDeviceContext<Ipv6, C> for SC
 {
     fn is_ip_device_enabled(&self, device_id: SC::DeviceId) -> bool {
         is_ip_device_enabled(self, device_id)
@@ -467,7 +479,7 @@ impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv6, C>> ip::IpDevi
         device_id: Option<SC::DeviceId>,
         addr: SpecifiedAddr<Ipv6Addr>,
     ) -> AddressStatus<Ipv6PresentAddressStatus> {
-        let get_status = |dev_state: &IpDeviceState<SC::Instant, Ipv6>| {
+        let get_status = |dev_state: &IpDeviceState<C::Instant, Ipv6>| {
             if MulticastAddr::new(addr.get())
                 .map_or(false, |addr| dev_state.multicast_groups.contains(&addr))
             {
@@ -512,8 +524,10 @@ impl<C: IpDeviceNonSyncContext, SC: device::IpDeviceContext<Ipv6, C>> ip::IpDevi
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv6, C, EmptyBuf>>
-    FrameContext<C, EmptyBuf, MldFrameMetadata<SC::DeviceId>> for SC
+impl<
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+        SC: device::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
+    > FrameContext<C, EmptyBuf, MldFrameMetadata<SC::DeviceId>> for SC
 {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
@@ -526,9 +540,9 @@ impl<C: IpDeviceNonSyncContext, SC: device::BufferIpDeviceContext<Ipv6, C, Empty
 }
 
 impl<
-        I: IpLayerIpExt + IpDeviceIpExt<SC::Instant, SC::DeviceId>,
+        I: IpLayerIpExt + IpDeviceIpExt<C::Instant, SC::DeviceId>,
         B: BufferMut,
-        C: IpDeviceNonSyncContext,
+        C: IpDeviceNonSyncContext<I, SC::DeviceId>,
         SC: device::BufferIpDeviceContext<I, C, B> + ip::IpDeviceContext<I, C>,
     > ip::BufferIpDeviceContext<I, C, B> for SC
 {

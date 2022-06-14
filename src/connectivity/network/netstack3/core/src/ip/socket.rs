@@ -336,14 +336,18 @@ pub(super) struct IpSockRoute<I: Ip, D> {
     pub(super) destination: Destination<I::Addr, D>,
 }
 
+/// The non-synchronized execution context for IP sockets.
+pub(super) trait IpSocketNonSyncContext: InstantContext {}
+impl<C: InstantContext> IpSocketNonSyncContext for C {}
+
 /// The context required in order to implement [`IpSocketHandler`].
 ///
 /// Blanket impls of `IpSocketHandler` are provided in terms of
 /// `IpSocketContext`.
-pub(super) trait IpSocketContext<I, C>:
-    IpDeviceIdContext<I> + InstantContext + CounterContext
+pub(super) trait IpSocketContext<I, C: IpSocketNonSyncContext>:
+    IpDeviceIdContext<I> + CounterContext
 where
-    I: IpDeviceStateIpExt<<Self as InstantContext>::Instant>,
+    I: IpDeviceStateIpExt<C::Instant>,
 {
     /// Returns a route for a socket.
     ///
@@ -362,9 +366,10 @@ where
 ///
 /// Blanket impls of `BufferIpSocketHandler` are provided in terms of
 /// `BufferIpSocketContext`.
-pub(super) trait BufferIpSocketContext<I, C, B: BufferMut>: IpSocketContext<I, C>
+pub(super) trait BufferIpSocketContext<I, C: IpSocketNonSyncContext, B: BufferMut>:
+    IpSocketContext<I, C>
 where
-    I: IpDeviceStateIpExt<<Self as InstantContext>::Instant> + packet_formats::ip::IpExt,
+    I: IpDeviceStateIpExt<C::Instant> + packet_formats::ip::IpExt,
 {
     /// Send an IP packet to the next-hop node.
     fn send_ip_packet<S: Serializer<Buffer = B>>(
@@ -375,7 +380,7 @@ where
     ) -> Result<(), S>;
 }
 
-impl<C, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ipv4, C> for SC {
+impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ipv4, C> for SC {
     type Builder = Ipv4SocketBuilder;
 
     fn new_ip_socket(
@@ -401,7 +406,7 @@ impl<C, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ipv4, C> for SC {
     }
 }
 
-impl<C, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ipv6, C> for SC {
+impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ipv6, C> for SC {
     type Builder = Ipv6SocketBuilder;
 
     fn new_ip_socket(
@@ -428,10 +433,10 @@ impl<C, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ipv6, C> for SC {
 }
 
 fn send_ip_packet<
-    I: IpExt + IpDeviceStateIpExt<SC::Instant> + packet_formats::ip::IpExt,
+    I: IpExt + IpDeviceStateIpExt<C::Instant> + packet_formats::ip::IpExt,
     B: BufferMut,
     S: Serializer<Buffer = B>,
-    C,
+    C: IpSocketNonSyncContext,
     SC: BufferIpSocketContext<I, C, B>
         + BufferIpSocketContext<I, C, Buf<Vec<u8>>>
         + IpSocketContext<I, C>,
@@ -477,7 +482,7 @@ fn send_ip_packet<
 
 impl<
         B: BufferMut,
-        C,
+        C: IpSocketNonSyncContext,
         SC: BufferIpSocketContext<Ipv4, C, B>
             + BufferIpSocketContext<Ipv4, C, Buf<Vec<u8>>>
             + IpSocketContext<Ipv4, C>,
@@ -499,7 +504,7 @@ impl<
 
 impl<
         B: BufferMut,
-        C,
+        C: IpSocketNonSyncContext,
         SC: BufferIpSocketContext<Ipv6, C, B> + BufferIpSocketContext<Ipv6, C, Buf<Vec<u8>>>,
     > BufferIpSocketHandler<Ipv6, C, B> for SC
 {
@@ -847,11 +852,11 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId: IpDeviceId + 'static,
-        > IpSocketContext<I, DummyNonSyncCtx> for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+        > IpSocketContext<I, DummyNonSyncCtx<Id>> for DummySyncCtx<S, Meta, Event, DeviceId>
     {
         fn lookup_route(
             &self,
-            _ctx: &mut DummyNonSyncCtx,
+            _ctx: &mut DummyNonSyncCtx<Id>,
             device: Option<Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
@@ -901,19 +906,18 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId,
-        > BufferIpSocketContext<I, DummyNonSyncCtx, B>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+        > BufferIpSocketContext<I, DummyNonSyncCtx<Id>, B>
+        for DummySyncCtx<S, Meta, Event, DeviceId>
     where
-        DummySyncCtx<S, Id, Meta, Event, DeviceId>: FrameContext<
-                DummyNonSyncCtx,
+        DummySyncCtx<S, Meta, Event, DeviceId>: FrameContext<
+                DummyNonSyncCtx<Id>,
                 B,
                 SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
-            > + IpSocketContext<I, DummyNonSyncCtx>
-            + InstantContext<Instant = DummyInstant>,
+            > + IpSocketContext<I, DummyNonSyncCtx<Id>>,
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
-            ctx: &mut DummyNonSyncCtx,
+            ctx: &mut DummyNonSyncCtx<Id>,
             meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
             body: SS,
         ) -> Result<(), SS> {

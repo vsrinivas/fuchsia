@@ -73,21 +73,19 @@ pub enum DadEvent<DeviceId> {
     },
 }
 
-/// The execution context for DAD
-pub(super) trait DadContext<C>:
-    Ipv6DeviceDadContext<C>
-    + Ipv6LayerDadContext<C>
-    + TimerContext<DadTimerId<Self::DeviceId>>
-    + EventContext<DadEvent<Self::DeviceId>>
+/// The non-synchronized execution context for DAD.
+pub(super) trait DadNonSyncContext<DeviceId>: TimerContext<DadTimerId<DeviceId>> {}
+impl<DeviceId, C: TimerContext<DadTimerId<DeviceId>>> DadNonSyncContext<DeviceId> for C {}
+
+/// The execution context for DAD.
+pub(super) trait DadContext<C: DadNonSyncContext<Self::DeviceId>>:
+    Ipv6DeviceDadContext<C> + Ipv6LayerDadContext<C> + EventContext<DadEvent<Self::DeviceId>>
 {
 }
 
 impl<
-        C,
-        SC: Ipv6DeviceDadContext<C>
-            + Ipv6LayerDadContext<C>
-            + TimerContext<DadTimerId<SC::DeviceId>>
-            + EventContext<DadEvent<SC::DeviceId>>,
+        C: DadNonSyncContext<SC::DeviceId>,
+        SC: Ipv6DeviceDadContext<C> + Ipv6LayerDadContext<C> + EventContext<DadEvent<SC::DeviceId>>,
     > DadContext<C> for SC
 {
 }
@@ -127,7 +125,7 @@ pub(crate) trait DadHandler<C>: IpDeviceIdContext<Ipv6> {
     }
 }
 
-impl<C, SC: DadContext<C>> DadHandler<C> for SC {
+impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC {
     fn do_duplicate_address_detection(
         &mut self,
         ctx: &mut C,
@@ -188,7 +186,7 @@ impl<C, SC: DadContext<C>> DadHandler<C> for SC {
                 );
 
                 assert_eq!(
-                self.schedule_timer(retrans_timer, DadTimerId { device_id, addr }),
+                ctx.schedule_timer(retrans_timer, DadTimerId { device_id, addr }),
                 None,
                 "Should not have a DAD timer set when performing DAD work; addr={}, device_id={}",
                 addr,
@@ -200,11 +198,11 @@ impl<C, SC: DadContext<C>> DadHandler<C> for SC {
 
     fn stop_duplicate_address_detection(
         &mut self,
-        _ctx: &mut C,
+        ctx: &mut C,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) {
-        let _: Option<SC::Instant> = self.cancel_timer(DadTimerId { device_id, addr });
+        let _: Option<C::Instant> = ctx.cancel_timer(DadTimerId { device_id, addr });
     }
 }
 
@@ -234,15 +232,10 @@ mod tests {
         message: NeighborSolicitation,
     }
 
-    type MockNonSyncCtx = DummyNonSyncCtx;
+    type MockNonSyncCtx = DummyNonSyncCtx<DadTimerId<DummyDeviceId>>;
 
-    type MockCtx<'a> = DummySyncCtx<
-        MockDadContext<'a>,
-        DadTimerId<DummyDeviceId>,
-        DadMessageMeta,
-        DadEvent<DummyDeviceId>,
-        DummyDeviceId,
-    >;
+    type MockCtx<'a> =
+        DummySyncCtx<MockDadContext<'a>, DadMessageMeta, DadEvent<DummyDeviceId>, DummyDeviceId>;
 
     impl<'a> Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx<'a> {
         fn get_address_state_mut(
@@ -360,6 +353,7 @@ mod tests {
 
     fn check_dad(
         sync_ctx: &MockCtx<'_>,
+        non_sync_ctx: &MockNonSyncCtx,
         frames_len: usize,
         dad_transmits_remaining: Option<NonZeroU8>,
         retrans_timer: Duration,
@@ -384,9 +378,9 @@ mod tests {
             }),
             expected_sll_bytes
         );
-        sync_ctx
+        non_sync_ctx
             .timer_ctx()
-            .assert_timers_installed([(DAD_TIMER_ID, sync_ctx.now() + retrans_timer)]);
+            .assert_timers_installed([(DAD_TIMER_ID, non_sync_ctx.now() + retrans_timer)]);
     }
 
     fn perform_dad(link_layer_bytes: Option<(&[u8], &[u8])>) {
@@ -415,13 +409,14 @@ mod tests {
         for count in 0..=1u8 {
             check_dad(
                 &sync_ctx,
+                &non_sync_ctx,
                 usize::from(count + 1),
                 NonZeroU8::new(DAD_TRANSMITS_REQUIRED - count - 1),
                 RETRANS_TIMER,
                 expected_sll_bytes,
             );
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, DadHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, DadHandler::handle_timer),
                 Some(DAD_TIMER_ID)
             );
         }
@@ -454,7 +449,14 @@ mod tests {
             DummyDeviceId,
             DAD_ADDRESS,
         );
-        check_dad(&sync_ctx, 1, NonZeroU8::new(DAD_TRANSMITS_REQUIRED - 1), RETRANS_TIMER, None);
+        check_dad(
+            &sync_ctx,
+            &non_sync_ctx,
+            1,
+            NonZeroU8::new(DAD_TRANSMITS_REQUIRED - 1),
+            RETRANS_TIMER,
+            None,
+        );
 
         DadHandler::stop_duplicate_address_detection(
             &mut sync_ctx,
@@ -462,7 +464,7 @@ mod tests {
             DummyDeviceId,
             DAD_ADDRESS,
         );
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]

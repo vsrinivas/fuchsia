@@ -110,16 +110,16 @@ pub(crate) mod benchmarks {
 // compile).
 pub(crate) type DummyCtx = Ctx<
     DummyEventDispatcher,
-    crate::context::testutil::DummySyncCtx<(), TimerId, Never, (), DummyDeviceId>,
+    crate::context::testutil::DummySyncCtx<(), Never, (), DummyDeviceId>,
     DummyNonSyncCtx,
 >;
 
 pub(crate) type DummySyncCtx = SyncCtx<
     DummyEventDispatcher,
-    crate::context::testutil::DummySyncCtx<(), TimerId, Never, (), DummyDeviceId>,
+    crate::context::testutil::DummySyncCtx<(), Never, (), DummyDeviceId>,
     DummyNonSyncCtx,
 >;
-pub(crate) type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
+pub(crate) type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<TimerId>;
 
 impl NonSyncContext for DummyNonSyncCtx {}
 
@@ -631,18 +631,6 @@ impl AsMut<DummyEventCtx<DispatchedEvent>> for DummySyncCtx {
     }
 }
 
-impl AsRef<DummyTimerCtx<TimerId>> for DummySyncCtx {
-    fn as_ref(&self) -> &DummyTimerCtx<TimerId> {
-        self.ctx.timer_ctx()
-    }
-}
-
-impl AsMut<DummyTimerCtx<TimerId>> for DummySyncCtx {
-    fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
-        self.ctx.timer_ctx_mut()
-    }
-}
-
 impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
         self.sync_ctx.as_mut()
@@ -651,13 +639,13 @@ impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
 
 impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
     fn as_ref(&self) -> &DummyTimerCtx<TimerId> {
-        self.sync_ctx.as_ref()
+        self.non_sync_ctx.as_ref()
     }
 }
 
 impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
-        self.sync_ctx.as_mut()
+        self.non_sync_ctx.as_mut()
     }
 }
 
@@ -872,42 +860,35 @@ mod tests {
             DUMMY_CONFIG_V4.swap().into_builder().build(),
         );
 
-        assert_eq!(
-            net.sync_ctx(1)
-                .ctx
-                .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx(2)
-                .ctx
-                .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx(2)
-                .ctx
-                .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx(1)
-                .ctx
-                .schedule_timer(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx(1)
-                .ctx
-                .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx(2)
-                .ctx
-                .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6))),
-            None
-        );
+        net.with_context(1, |Ctx { sync_ctx: _, non_sync_ctx }| {
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
+                None
+            );
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4))),
+                None
+            );
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5))),
+                None
+            );
+        });
+
+        net.with_context(2, |Ctx { sync_ctx: _, non_sync_ctx }| {
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
+                None
+            );
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
+                None
+            );
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6))),
+                None
+            );
+        });
 
         // No timers fired before.
         assert_eq!(get_counter_val(net.sync_ctx(1), "timer::nop"), 0);
@@ -935,8 +916,8 @@ mod tests {
 
         assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
         // Check that current time on contexts tick together.
-        let t1 = net.sync_ctx(1).now();
-        let t2 = net.sync_ctx(2).now();
+        let t1 = net.with_context(1, |Ctx { sync_ctx: _, non_sync_ctx }| non_sync_ctx.now());
+        let t2 = net.with_context(2, |Ctx { sync_ctx: _, non_sync_ctx }| non_sync_ctx.now());
         assert_eq!(t1, t2);
     }
 
@@ -949,24 +930,22 @@ mod tests {
             2,
             DUMMY_CONFIG_V4.swap().into_builder().build(),
         );
-        assert_eq!(
-            net.sync_ctx(1)
-                .ctx
-                .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx(2)
-                .ctx
-                .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx(2)
-                .ctx
-                .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
-            None
-        );
+        net.with_context(1, |Ctx { sync_ctx: _, non_sync_ctx }| {
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
+                None
+            );
+        });
+        net.with_context(2, |Ctx { sync_ctx: _, non_sync_ctx }| {
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
+                None
+            );
+            assert_eq!(
+                non_sync_ctx.schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
+                None
+            );
+        });
 
         while !net.step(receive_frame_or_panic, handle_timer).is_idle()
             && (get_counter_val(net.sync_ctx(1), "timer::nop") < 1
@@ -1024,24 +1003,25 @@ mod tests {
             .unwrap();
         });
 
-        assert_eq!(
-            net.sync_ctx("alice")
-                .ctx
-                .schedule_timer(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx("bob")
-                .ctx
-                .schedule_timer(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2))),
-            None
-        );
-        assert_eq!(
-            net.sync_ctx("bob")
-                .ctx
-                .schedule_timer(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1))),
-            None
-        );
+        net.with_context("alice", |Ctx { sync_ctx: _, non_sync_ctx }| {
+            assert_eq!(
+                non_sync_ctx
+                    .schedule_timer(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1))),
+                None
+            );
+        });
+        net.with_context("bob", |Ctx { sync_ctx: _, non_sync_ctx }| {
+            assert_eq!(
+                non_sync_ctx
+                    .schedule_timer(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2))),
+                None
+            );
+            assert_eq!(
+                non_sync_ctx
+                    .schedule_timer(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1))),
+                None
+            );
+        });
 
         // Order of expected events is as follows:
         // - Alice's timer expires at t = 3

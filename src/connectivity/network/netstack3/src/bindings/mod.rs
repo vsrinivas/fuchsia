@@ -61,8 +61,8 @@ use netstack3_core::{
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
     BlanketCoreContext, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher,
     EventDispatcher, IpDeviceConfiguration, IpExt, Ipv4DeviceConfiguration,
-    Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, SyncCtx, TimerId, UdpBoundId,
-    UdpConnId, UdpContext, UdpListenerId,
+    Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, TimerId, UdpBoundId, UdpConnId,
+    UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -144,27 +144,26 @@ impl DeviceStatusNotifier for BindingsDispatcher {
 #[derive(Default)]
 pub(crate) struct BindingsNonSyncCtxImpl {
     rng: OsRng,
+    timers: timers::TimerDispatcher<TimerId>,
+}
+
+impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
+    fn as_ref(&self) -> &TimerDispatcher<TimerId> {
+        &self.timers
+    }
+}
+
+impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
+    fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
+        &mut self.timers
+    }
 }
 
 /// Provides context implementations which satisfy [`BlanketCoreContext`].
 ///
 /// `BindingsContext` provides time, timers, and random numbers to the Core.
 #[derive(Default)]
-pub(crate) struct BindingsContextImpl {
-    timers: timers::TimerDispatcher<TimerId>,
-}
-
-impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsContextImpl {
-    fn as_ref(&self) -> &TimerDispatcher<TimerId> {
-        &self.timers
-    }
-}
-
-impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsContextImpl {
-    fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
-        &mut self.timers
-    }
-}
+pub(crate) struct BindingsContextImpl {}
 
 impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsContextImpl, BindingsNonSyncCtxImpl>>
     for Netstack
@@ -209,8 +208,8 @@ impl AsMut<UdpSockets> for BindingsDispatcher {
 impl<D, C, NonSyncCtx> timers::TimerHandler<TimerId> for Ctx<D, C, NonSyncCtx>
 where
     D: EventDispatcher + Send + Sync + 'static,
-    C: BlanketCoreContext + AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
-    NonSyncCtx: NonSyncContext + Send + Sync + 'static,
+    C: BlanketCoreContext + Send + Sync + 'static,
+    NonSyncCtx: NonSyncContext + AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
 {
     fn handle_expired_timer(&mut self, timer: TimerId) {
         let Ctx { sync_ctx, non_sync_ctx } = self;
@@ -218,7 +217,7 @@ where
     }
 
     fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {
-        self.sync_ctx.ctx.as_mut()
+        self.non_sync_ctx.as_mut()
     }
 }
 
@@ -226,8 +225,8 @@ impl<C> timers::TimerContext<TimerId> for C
 where
     C: LockableContext + Clone + Send + Sync + 'static,
     C::Dispatcher: Send + Sync + 'static,
-    C::Context: AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
-    C::NonSyncCtx: Send + Sync + 'static,
+    C::Context: Send + Sync + 'static,
+    C::NonSyncCtx: AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
 {
     type Handler = Ctx<C::Dispatcher, C::Context, C::NonSyncCtx>;
 }
@@ -271,7 +270,7 @@ impl netstack3_core::Instant for StackTime {
     }
 }
 
-impl InstantContext for BindingsContextImpl {
+impl InstantContext for BindingsNonSyncCtxImpl {
     type Instant = StackTime;
 
     fn now(&self) -> StackTime {
@@ -291,7 +290,7 @@ impl RngContext for BindingsNonSyncCtxImpl {
     }
 }
 
-impl TimerContext<TimerId> for BindingsContextImpl {
+impl TimerContext<TimerId> for BindingsNonSyncCtxImpl {
     fn schedule_timer_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
         self.timers.schedule_timer(id, time)
     }
@@ -798,12 +797,7 @@ impl NetstackSeed {
             .expect("error adding IPv6 loopback on-link subnet route");
 
             // Start servicing timers.
-            let SyncCtx {
-                state: _,
-                dispatcher: BindingsDispatcher { devices: _, icmp_echo_sockets: _, udp_sockets: _ },
-                ctx: BindingsContextImpl { timers },
-                non_sync_ctx_marker: _,
-            } = sync_ctx;
+            let BindingsNonSyncCtxImpl { rng: _, timers } = non_sync_ctx;
             timers.spawn(netstack.clone());
         }
 

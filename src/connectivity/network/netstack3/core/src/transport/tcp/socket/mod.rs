@@ -354,7 +354,7 @@ enum ConnectError {
     IpSocketSendError(IpSockSendError),
 }
 
-fn connect<I, D, II, R, S, SC, C>(
+fn connect<I, D, R, S, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: BoundId,
@@ -364,12 +364,11 @@ fn connect<I, D, II, R, S, SC, C>(
 where
     I: IpExt,
     D: IpDeviceId,
-    II: Instant,
     R: ReceiveBuffer,
     S: SendBuffer,
-    SC: AsMut<TcpSockets<I, D, II, R, S>>
-        + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>
-        + InstantContext<Instant = II>,
+    C: InstantContext,
+    SC: AsMut<TcpSockets<I, D, C::Instant, R, S>>
+        + BufferTransportIpContext<I, C, Buf<Vec<u8>>, DeviceId = D>,
 {
     let bound_id = MaybeListenerId::from(id);
     let (bound, bound_addr) =
@@ -389,7 +388,7 @@ where
         // TODO(https://fxbug.dev/102103): Support SO_BINDTODEVICE.
         device: None,
     };
-    let now = sync_ctx.now();
+    let now = ctx.now();
     let (syn_sent, syn) = Closed::<Initial>::connect(isn, now);
     let conn_id = sync_ctx
         .as_mut()
@@ -508,13 +507,12 @@ mod tests {
 
     type TcpSyncCtx<I> = DummySyncCtx<
         TcpState<I>,
-        (),
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
         (),
         DummyDeviceId,
     >;
 
-    type TcpNonSyncCtx = DummyNonSyncCtx;
+    type TcpNonSyncCtx = DummyNonSyncCtx<()>;
 
     impl<I: TcpTestIpExt> TcpBufferContext for TcpSyncCtx<I> {
         type ReceiveBuffer = RingBuffer;
@@ -659,7 +657,6 @@ mod tests {
         buffer: Buf<Vec<u8>>,
     ) where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         TcpIpTransportContext::receive_ip_packet(
@@ -688,7 +685,6 @@ mod tests {
     fn bind_listen_connect_accept<I: Ip + TcpTestIpExt>()
     where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
@@ -772,7 +768,6 @@ mod tests {
     fn bind_conflict_same_addr<I: Ip + TcpTestIpExt>()
     where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
@@ -800,7 +795,6 @@ mod tests {
     fn bind_conflict_any_addr<I: Ip + TcpTestIpExt>()
     where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();
@@ -829,7 +823,6 @@ mod tests {
     fn connect_reset<I: Ip + TcpTestIpExt>()
     where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + InstantContext<Instant = DummyInstant>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         set_logger_for_test();

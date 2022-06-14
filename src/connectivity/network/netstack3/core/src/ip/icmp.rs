@@ -404,7 +404,9 @@ pub(crate) trait BufferIcmpHandler<I: IcmpHandlerIpExt, C, B: BufferMut>:
     );
 }
 
-impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B>> BufferIcmpHandler<Ipv4, C, B> for SC {
+impl<B: BufferMut, C: IcmpNonSyncCtx, SC: InnerBufferIcmpv4Context<C, B>>
+    BufferIcmpHandler<Ipv4, C, B> for SC
+{
     fn send_icmp_error_message(
         &mut self,
         ctx: &mut C,
@@ -481,7 +483,9 @@ impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B>> BufferIcmpHandler<Ipv4
     }
 }
 
-impl<B: BufferMut, C, SC: InnerBufferIcmpv6Context<C, B>> BufferIcmpHandler<Ipv6, C, B> for SC {
+impl<B: BufferMut, C: IcmpNonSyncCtx, SC: InnerBufferIcmpv6Context<C, B>>
+    BufferIcmpHandler<Ipv6, C, B> for SC
+{
     fn send_icmp_error_message(
         &mut self,
         ctx: &mut C,
@@ -626,24 +630,23 @@ impl<
     }
 }
 
+/// The non-synchronized execution context shared by both ICMPv4 and ICMPv6.
+pub(crate) trait IcmpNonSyncCtx: InstantContext {}
+impl<C: InstantContext> IcmpNonSyncCtx for C {}
+
 /// The execution context shared by ICMP(v4) and ICMPv6 for the internal
 /// operations of the IP stack.
 ///
 /// Unlike [`IcmpContext`], `InnerIcmpContext` is not exposed outside of this
 /// crate.
-pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C>:
+pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx>:
     IcmpContext<I>
     + IpSocketHandler<I, C>
     + IpDeviceIdContext<I>
     + CounterContext
-    + InstantContext
     + StateContext<
         C,
-        IcmpState<
-            I::Addr,
-            <Self as InstantContext>::Instant,
-            IpSock<I, <Self as IpDeviceIdContext<I>>::DeviceId>,
-        >,
+        IcmpState<I::Addr, C::Instant, IpSock<I, <Self as IpDeviceIdContext<I>>::DeviceId>>,
     >
 {
     // TODO(joshlf): If we end up needing to respond to these messages with new
@@ -689,14 +692,14 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C>:
 
 /// The execution context shared by ICMP(v4) and ICMPv6 for the internal
 /// operations of the IP stack when a buffer is required.
-pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt + IpExt, C, B: BufferMut>:
+pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx, B: BufferMut>:
     InnerIcmpContext<I, C> + BufferIcmpContext<I, B> + BufferIpSocketHandler<I, C, B>
 {
 }
 
 impl<
         I: IcmpIpExt + IpExt,
-        C,
+        C: IcmpNonSyncCtx,
         B: BufferMut,
         SC: InnerIcmpContext<I, C> + BufferIcmpContext<I, B> + BufferIpSocketHandler<I, C, B>,
     > InnerBufferIcmpContext<I, C, B> for SC
@@ -706,27 +709,21 @@ impl<
 /// The execution context for ICMPv4.
 ///
 /// `InnerIcmpv4Context` is a shorthand for a larger collection of traits.
-pub(crate) trait InnerIcmpv4Context<C>:
+pub(crate) trait InnerIcmpv4Context<C: IcmpNonSyncCtx>:
     InnerIcmpContext<Ipv4, C>
     + StateContext<
         C,
-        Icmpv4State<
-            <Self as InstantContext>::Instant,
-            IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
-        >,
+        Icmpv4State<C::Instant, IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>>,
     >
 {
 }
 
 impl<
-        C,
+        C: IcmpNonSyncCtx,
         SC: InnerIcmpContext<Ipv4, C>
             + StateContext<
                 C,
-                Icmpv4State<
-                    <Self as InstantContext>::Instant,
-                    IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
-                >,
+                Icmpv4State<C::Instant, IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>>,
             >,
     > InnerIcmpv4Context<C> for SC
 {
@@ -735,44 +732,37 @@ impl<
 /// The execution context for ICMPv4 where a buffer is required.
 ///
 /// `InnerBufferIcmpv4Context` is a shorthand for a larger collection of traits.
-pub(crate) trait InnerBufferIcmpv4Context<C, B: BufferMut>:
+pub(crate) trait InnerBufferIcmpv4Context<C: IcmpNonSyncCtx, B: BufferMut>:
     InnerIcmpv4Context<C> + InnerBufferIcmpContext<Ipv4, C, B>
 {
 }
 
-impl<B: BufferMut, C, SC: InnerIcmpv4Context<C> + InnerBufferIcmpContext<Ipv4, C, B>>
-    InnerBufferIcmpv4Context<C, B> for SC
+impl<
+        B: BufferMut,
+        C: IcmpNonSyncCtx,
+        SC: InnerIcmpv4Context<C> + InnerBufferIcmpContext<Ipv4, C, B>,
+    > InnerBufferIcmpv4Context<C, B> for SC
 {
 }
 
 impl<C, SC>
     StateContext<
         C,
-        IcmpState<
-            Ipv4Addr,
-            <SC as InstantContext>::Instant,
-            IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>,
-        >,
+        IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>>,
     > for SC
 where
-    SC: InstantContext
-        + IpDeviceIdContext<Ipv4>
+    C: IcmpNonSyncCtx,
+    SC: IpDeviceIdContext<Ipv4>
         + StateContext<
             C,
-            Icmpv4State<
-                <SC as InstantContext>::Instant,
-                IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>,
-            >,
+            Icmpv4State<C::Instant, IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>>,
         >,
 {
     fn get_state_with(
         &self,
         _id: (),
-    ) -> &IcmpState<
-        Ipv4Addr,
-        <Self as InstantContext>::Instant,
-        IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
-    > {
+    ) -> &IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>>
+    {
         &self.get_state().inner
     }
 
@@ -781,7 +771,7 @@ where
         _id: (),
     ) -> &mut IcmpState<
         Ipv4Addr,
-        <Self as InstantContext>::Instant,
+        C::Instant,
         IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
     > {
         &mut self.get_state_mut().inner
@@ -791,71 +781,60 @@ where
 /// The execution context for ICMPv6.
 ///
 /// `InnerIcmpv6Context` is a shorthand for a larger collection of traits.
-pub(crate) trait InnerIcmpv6Context<C>:
+pub(crate) trait InnerIcmpv6Context<C: IcmpNonSyncCtx>:
     InnerIcmpContext<Ipv6, C>
     + StateContext<
         C,
-        Icmpv6State<
-            <Self as InstantContext>::Instant,
-            IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
-        >,
+        Icmpv6State<C::Instant, IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>>,
     >
 {
 }
 
-impl<C, SC> InnerIcmpv6Context<C> for SC where
+impl<C, SC> InnerIcmpv6Context<C> for SC
+where
+    C: IcmpNonSyncCtx,
     SC: InnerIcmpContext<Ipv6, C>
         + StateContext<
             C,
-            Icmpv6State<
-                <Self as InstantContext>::Instant,
-                IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
-            >,
-        >
+            Icmpv6State<C::Instant, IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>>,
+        >,
 {
 }
 
 /// The execution context for ICMPv6 where a buffer is required.
 ///
 /// `InnerBufferIcmpv6Context` is a shorthand for a larger collection of traits.
-pub(crate) trait InnerBufferIcmpv6Context<C, B: BufferMut>:
+pub(crate) trait InnerBufferIcmpv6Context<C: IcmpNonSyncCtx, B: BufferMut>:
     InnerIcmpv6Context<C> + InnerBufferIcmpContext<Ipv6, C, B>
 {
 }
 
-impl<B: BufferMut, C, SC: InnerIcmpv6Context<C> + InnerBufferIcmpContext<Ipv6, C, B>>
-    InnerBufferIcmpv6Context<C, B> for SC
+impl<
+        B: BufferMut,
+        C: IcmpNonSyncCtx,
+        SC: InnerIcmpv6Context<C> + InnerBufferIcmpContext<Ipv6, C, B>,
+    > InnerBufferIcmpv6Context<C, B> for SC
 {
 }
 
 impl<C, SC>
     StateContext<
         C,
-        IcmpState<
-            Ipv6Addr,
-            <SC as InstantContext>::Instant,
-            IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>,
-        >,
+        IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>>,
     > for SC
 where
-    SC: InstantContext
-        + IpDeviceIdContext<Ipv6>
+    C: IcmpNonSyncCtx,
+    SC: IpDeviceIdContext<Ipv6>
         + StateContext<
             C,
-            Icmpv6State<
-                <SC as InstantContext>::Instant,
-                IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>,
-            >,
+            Icmpv6State<C::Instant, IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>>,
         >,
 {
     fn get_state_with(
         &self,
         _id: (),
-    ) -> &IcmpState<
-        Ipv6Addr,
-        <Self as InstantContext>::Instant,
-        IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
-    > {
+    ) -> &IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>>
+    {
         &self.get_state().inner
     }
 
@@ -864,7 +843,7 @@ where
         _id: (),
     ) -> &mut IcmpState<
         Ipv6Addr,
-        <Self as InstantContext>::Instant,
+        C::Instant,
         IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
     > {
         &mut self.get_state_mut().inner
@@ -873,11 +852,11 @@ where
 
 /// Attempt to send an ICMP or ICMPv6 error message, applying a rate limit.
 ///
-/// `try_send_error!($ctx, $e)` attempts to consume a token from the token
-/// bucket at `$ctx.get_state_mut().error_send_bucket`. If it succeeds, it
-/// invokes the expression `$e`, and otherwise does nothing. It assumes that the
-/// type of `$e` is `Result<(), _>` and, in the case that the rate limit is
-/// exceeded and it does not invoke `$e`, returns `Ok(())`.
+/// `try_send_error!($sync_ctx, $ctx, $e)` attempts to consume a token from the
+/// token bucket at `$sync_ctx.get_state_mut().error_send_bucket`. If it
+/// succeeds, it invokes the expression `$e`, and otherwise does nothing. It
+/// assumes that the type of `$e` is `Result<(), _>` and, in the case that the
+/// rate limit is exceeded and it does not invoke `$e`, returns `Ok(())`.
 ///
 /// [RFC 4443 Section 2.4] (f) requires that we MUST limit the rate of outbound
 /// ICMPv6 error messages. To our knowledge, there is no similar requirement for
@@ -885,14 +864,14 @@ where
 ///
 /// [RFC 4443 Section 2.4]: https://tools.ietf.org/html/rfc4443#section-2.4
 macro_rules! try_send_error {
-    ($ctx:expr, $e:expr, $counter_name:ident) => {{
+    ($sync_ctx:expr, $ctx:expr, $e:expr, $counter_name:ident) => {{
         // TODO(joshlf): Figure out a way to avoid querying for the current time
         // unconditionally. See the documentation on the `CachedInstantCtx` type
         // for more information.
         let instant_ctx = crate::context::new_cached_instant_context($ctx);
-        let state: &mut IcmpState<_, _, _> = $ctx.get_state_mut();
+        let state: &mut IcmpState<_, _, _> = $sync_ctx.get_state_mut();
         if state.error_send_bucket.try_take(&instant_ctx) {
-            $ctx.increment_counter($counter_name);
+            $sync_ctx.increment_counter($counter_name);
             $e
         } else {
             trace!("ip::icmp::try_send_error!: dropping rate-limited ICMP error message");
@@ -904,8 +883,8 @@ macro_rules! try_send_error {
 /// An implementation of [`IpTransportContext`] for ICMP.
 pub(crate) enum IcmpIpTransportContext {}
 
-impl<I: IcmpIpExt + IpExt, C, SC: InnerIcmpContext<I, C>> IpTransportContext<I, C, SC>
-    for IcmpIpTransportContext
+impl<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx, SC: InnerIcmpContext<I, C>>
+    IpTransportContext<I, C, SC> for IcmpIpTransportContext
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
@@ -953,8 +932,11 @@ where
     }
 }
 
-impl<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B> + PmtuHandler<Ipv4, C>>
-    BufferIpTransportContext<Ipv4, C, SC, B> for IcmpIpTransportContext
+impl<
+        B: BufferMut,
+        C: IcmpNonSyncCtx,
+        SC: InnerBufferIcmpv4Context<C, B> + PmtuHandler<Ipv4, C>,
+    > BufferIpTransportContext<Ipv4, C, SC, B> for IcmpIpTransportContext
 {
     fn receive_ip_packet(
         sync_ctx: &mut SC,
@@ -1223,7 +1205,7 @@ fn send_neighbor_advertisement<
 
 fn receive_ndp_packet<
     B: ByteSlice,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerIcmpv6Context<C>
         + Ipv6DeviceHandler<C>
         + NdpPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
@@ -1500,7 +1482,7 @@ fn receive_ndp_packet<
 
 impl<
         B: BufferMut,
-        C,
+        C: IcmpNonSyncCtx,
         SC: InnerIcmpv6Context<C>
             + InnerBufferIcmpContext<Ipv6, C, B>
             + Ipv6DeviceHandler<C>
@@ -1687,7 +1669,7 @@ fn send_icmp_reply<
 /// original IPv4 packet and then delegating to the context.
 fn receive_icmpv4_error<
     B: BufferMut,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpv4Context<C, B>,
     BB: ByteSlice,
     M: IcmpMessage<Ipv4, BB, Body = OriginalPacket<BB>>,
@@ -1730,7 +1712,7 @@ fn receive_icmpv4_error<
 /// the original IPv6 packet and then delegating to the context.
 fn receive_icmpv6_error<
     B: BufferMut,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpv6Context<C, B>,
     BB: ByteSlice,
     M: IcmpMessage<Ipv6, BB, Body = OriginalPacket<BB>>,
@@ -1790,7 +1772,7 @@ fn receive_icmpv6_error<
 /// `header_len` is the length of the header including all options.
 pub(crate) fn send_icmpv4_protocol_unreachable<
     B: BufferMut,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpv4Context<C, B>,
 >(
     sync_ctx: &mut SC,
@@ -1834,7 +1816,7 @@ pub(crate) fn send_icmpv4_protocol_unreachable<
 /// *before* the payload with the problematic Next Header type.
 pub(crate) fn send_icmpv6_protocol_unreachable<
     B: BufferMut,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpv6Context<C, B>,
 >(
     sync_ctx: &mut SC,
@@ -1886,7 +1868,11 @@ pub(crate) fn send_icmpv6_protocol_unreachable<
 /// `original_packet` contains the contents of the entire original packet,
 /// including the IP header. This must be a whole packet, not a packet fragment.
 /// `header_len` is the length of the header including all options.
-pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B>>(
+pub(crate) fn send_icmpv4_port_unreachable<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv4Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -1925,7 +1911,11 @@ pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv
 ///
 /// `original_packet` contains the contents of the entire original packet,
 /// including extension headers.
-pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv6Context<C, B>>(
+pub(crate) fn send_icmpv6_port_unreachable<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv6Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -1959,7 +1949,11 @@ pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `header_len` is the length of the IPv4 header. It
 /// is ignored for IPv6.
-pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B>>(
+pub(crate) fn send_icmpv4_net_unreachable<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv4Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2003,7 +1997,11 @@ pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv4
 /// `original_packet` contains the contents of the entire original packet
 /// including extension headers. `header_len` is the length of the IP header and
 /// all extension headers.
-pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv6Context<C, B>>(
+pub(crate) fn send_icmpv6_net_unreachable<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv6Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2045,7 +2043,11 @@ pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv6
 /// `original_packet` contains the contents of the entire original packet,
 /// including the header. `header_len` is the length of the IP header including
 /// options.
-pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B>>(
+pub(crate) fn send_icmpv4_ttl_expired<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv4Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2090,7 +2092,11 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C, SC: InnerBufferIcmpv4Cont
 /// `original_packet` contains the contents of the entire original packet
 /// including extension headers. `header_len` is the length of the IP header and
 /// all extension headers.
-pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C, SC: InnerBufferIcmpv6Context<C, B>>(
+pub(crate) fn send_icmpv6_ttl_expired<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv6Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2132,7 +2138,11 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C, SC: InnerBufferIcmpv6Cont
 /// `send_icmpv6_packet_too_big` sends an ICMPv6 "packet too big" message in
 /// response to receiving an IP packet from `src_ip` to `dst_ip` whose size
 /// exceeds the `mtu` of the next hop interface.
-pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C, SC: InnerBufferIcmpv6Context<C, B>>(
+pub(crate) fn send_icmpv6_packet_too_big<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv6Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2183,7 +2193,11 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C, SC: InnerBufferIcmpv6C
     )
 }
 
-pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B>>(
+pub(crate) fn send_icmpv4_parameter_problem<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv4Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2223,7 +2237,11 @@ pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C, SC: InnerBufferIcmp
 ///
 /// Panics if `allow_multicast_addr` is set to `true`, but this Parameter
 /// Problem's code is not 2 (Unrecognized IPv6 Option).
-pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C, SC: InnerBufferIcmpv6Context<C, B>>(
+pub(crate) fn send_icmpv6_parameter_problem<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv6Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2257,7 +2275,11 @@ pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C, SC: InnerBufferIcmp
     )
 }
 
-fn send_icmpv4_dest_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C, B>>(
+fn send_icmpv4_dest_unreachable<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv4Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2285,7 +2307,11 @@ fn send_icmpv4_dest_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv4Context<C,
     )
 }
 
-fn send_icmpv6_dest_unreachable<B: BufferMut, C, SC: InnerBufferIcmpv6Context<C, B>>(
+fn send_icmpv6_dest_unreachable<
+    B: BufferMut,
+    C: IcmpNonSyncCtx,
+    SC: InnerBufferIcmpv6Context<C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2314,7 +2340,7 @@ const SEND_ICMPV4_ERROR_MESSAGE_COUNTER_NAME: &'static str = "send_icmpv4_error_
 fn send_icmpv4_error_message<
     B: BufferMut,
     M: IcmpMessage<Ipv4, &'static [u8]>,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpv4Context<C, B>,
 >(
     sync_ctx: &mut SC,
@@ -2344,6 +2370,7 @@ fn send_icmpv4_error_message<
     // errors sent from unnumbered/router interfaces.
     let _ = try_send_error!(
         sync_ctx,
+        ctx,
         sync_ctx.send_oneshot_ip_packet(
             ctx,
             Some(device),
@@ -2370,7 +2397,7 @@ const SEND_ICMPV6_ERROR_MESSAGE_COUNTER_NAME: &'static str = "send_icmpv6_error_
 fn send_icmpv6_error_message<
     B: BufferMut,
     M: IcmpMessage<Ipv6, &'static [u8]>,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpv6Context<C, B>,
 >(
     sync_ctx: &mut SC,
@@ -2396,6 +2423,7 @@ fn send_icmpv6_error_message<
     // errors sent from unnumbered/router interfaces.
     let _ = try_send_error!(
         sync_ctx,
+        ctx,
         sync_ctx.send_oneshot_ip_packet(
             ctx,
             Some(device),
@@ -2534,7 +2562,7 @@ fn is_icmp_error_message<I: IcmpIpExt>(proto: I::Proto, buf: &[u8]) -> bool {
 fn receive_icmp_echo_reply<
     I: IcmpIpExt + IpExt,
     B: BufferMut,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpContext<I, C, B>,
 >(
     sync_ctx: &mut SC,
@@ -2629,7 +2657,7 @@ pub fn send_icmpv6_echo_request<
 fn send_icmp_echo_request_inner<
     I: IcmpIpExt + IpExt,
     B: BufferMut,
-    C,
+    C: IcmpNonSyncCtx,
     SC: InnerBufferIcmpContext<I, C, B>,
 >(
     sync_ctx: &mut SC,
@@ -2691,7 +2719,9 @@ pub fn create_icmpv4_unbound<
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `create_icmpv4_unbound`) once the ICMP context traits are part of
 // the public API.
-fn create_icmpv4_unbound_inner<C, SC: InnerIcmpv4Context<C>>(ctx: &mut SC) -> IcmpUnboundId<Ipv4> {
+fn create_icmpv4_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv4Context<C>>(
+    ctx: &mut SC,
+) -> IcmpUnboundId<Ipv4> {
     let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
     IcmpUnboundId::new(state.unbound.push(()))
 }
@@ -2710,7 +2740,9 @@ pub fn create_icmpv6_unbound<
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `create_icmpv6_unbound`) once the ICMP context traits are part of
 // the public API.
-fn create_icmpv6_unbound_inner<C, SC: InnerIcmpv6Context<C>>(ctx: &mut SC) -> IcmpUnboundId<Ipv6> {
+fn create_icmpv6_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv6Context<C>>(
+    ctx: &mut SC,
+) -> IcmpUnboundId<Ipv6> {
     let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
     IcmpUnboundId::new(state.unbound.push(()))
 }
@@ -2734,7 +2766,7 @@ pub fn remove_icmpv4_unbound<
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `create_icmpv6_unbound`) once the ICMP context traits are part of
 // the public API.
-fn remove_icmpv4_unbound_inner<C, SC: InnerIcmpv4Context<C>>(
+fn remove_icmpv4_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv4Context<C>>(
     ctx: &mut SC,
     id: IcmpUnboundId<Ipv4>,
 ) {
@@ -2761,7 +2793,7 @@ pub fn remove_icmpv6_unbound<
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `create_icmpv6_unbound`) once the ICMP context traits are part of
 // the public API.
-fn remove_icmpv6_unbound_inner<C, SC: InnerIcmpv6Context<C>>(
+fn remove_icmpv6_unbound_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv6Context<C>>(
     ctx: &mut SC,
     id: IcmpUnboundId<Ipv6>,
 ) {
@@ -2795,7 +2827,7 @@ pub fn connect_icmpv4<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: Non
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `connect_icmpv4`) once the ICMP context traits are part of the
 // public API.
-fn connect_icmpv4_inner<C, SC: InnerIcmpv4Context<C>>(
+fn connect_icmpv4_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv4Context<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: IcmpUnboundId<Ipv4>,
@@ -2834,7 +2866,7 @@ pub fn connect_icmpv6<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: Non
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `connect_icmpv6`) once the ICMP context traits are part of the
 // public API.
-fn connect_icmpv6_inner<C, SC: InnerIcmpv6Context<C>>(
+fn connect_icmpv6_inner<C: IcmpNonSyncCtx, SC: InnerIcmpv6Context<C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: IcmpUnboundId<Ipv6>,
@@ -3844,13 +3876,12 @@ mod tests {
 
             type $outer_sync_ctx = DummySyncCtx<
                 $inner,
-                (),
                 SendIpPacketMeta<$ip, DummyDeviceId, SpecifiedAddr<<$ip as Ip>::Addr>>,
                 (),
                 DummyDeviceId,
             >;
 
-            type $outer_non_sync_ctx = DummyNonSyncCtx;
+            type $outer_non_sync_ctx = DummyNonSyncCtx<()>;
 
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
@@ -4037,7 +4068,7 @@ mod tests {
             _ctx: &mut Dummyv6NonSyncCtx,
             _device_id: Self::DeviceId,
             _addr: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-            _state: SlaacConfig<Self::Instant>,
+            _state: SlaacConfig<DummyInstant>,
             _reason: DelIpv6AddrReason,
         ) {
             unimplemented!()
@@ -4900,10 +4931,10 @@ mod tests {
             let mut ctx = with_errors_per_second(0);
             send(&mut ctx);
             assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
-            ctx.sync_ctx.sleep_skip_timers(Duration::from_secs(1));
+            ctx.non_sync_ctx.sleep_skip_timers(Duration::from_secs(1));
             send(&mut ctx);
             assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
-            ctx.sync_ctx.sleep_skip_timers(Duration::from_secs(1));
+            ctx.non_sync_ctx.sleep_skip_timers(Duration::from_secs(1));
             send(&mut ctx);
             assert_eq!(ctx.sync_ctx.get_counter(counter_str), 0);
         }

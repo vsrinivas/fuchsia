@@ -103,7 +103,12 @@ pub(super) fn deinitialize<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
 /// used when a buffer of type `B` is provided to ARP (in particular, in
 /// [`handle_packet`]), and allows ARP to reuse that buffer rather than needing
 /// to always allocate a new one.
-pub(crate) trait BufferArpContext<D: ArpDevice, P: PType, C, B: BufferMut>:
+pub(crate) trait BufferArpContext<
+    D: ArpDevice,
+    P: PType,
+    C: ArpNonSyncCtx<D, P, Self::DeviceId>,
+    B: BufferMut,
+>:
     ArpContext<D, P, C>
     + FrameContext<C, B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
@@ -113,7 +118,7 @@ impl<
         D: ArpDevice,
         P: PType,
         B: BufferMut,
-        C,
+        C: ArpNonSyncCtx<D, P, SC::DeviceId>,
         SC: ArpContext<D, P, C>
             + FrameContext<C, B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>,
     > BufferArpContext<D, P, C, B> for SC
@@ -146,11 +151,20 @@ pub(crate) trait ArpDeviceIdContext<D: ArpDevice> {
     type DeviceId: Copy + PartialEq;
 }
 
+/// The non-synchronized execution context for the ARP protocol.
+pub(crate) trait ArpNonSyncCtx<D: ArpDevice, P: PType, DeviceId>:
+    TimerContext<ArpTimerId<D, P, DeviceId>>
+{
+}
+impl<DeviceId, D: ArpDevice, P: PType, C: TimerContext<ArpTimerId<D, P, DeviceId>>>
+    ArpNonSyncCtx<D, P, DeviceId> for C
+{
+}
+
 /// An execution context for the ARP protocol.
-pub(crate) trait ArpContext<D: ArpDevice, P: PType, C>:
+pub(crate) trait ArpContext<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, Self::DeviceId>>:
     ArpDeviceIdContext<D>
     + StateContext<C, ArpState<D, P>, <Self as ArpDeviceIdContext<D>>::DeviceId>
-    + TimerContext<ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
     + FrameContext<C, EmptyBuf, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
     + CounterContext
 {
@@ -219,10 +233,12 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType, C>:
     );
 }
 
-impl<D: ArpDevice, P: PType, C, SC: ArpContext<D, P, C>> ArpHandler<D, P, C> for SC {
-    fn deinitialize(&mut self, _ctx: &mut C, device_id: Self::DeviceId) {
+impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContext<D, P, C>>
+    ArpHandler<D, P, C> for SC
+{
+    fn deinitialize(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
         // Remove all timers associated with the device
-        self.cancel_timers_with(|timer_id| *timer_id.get_device_id() == device_id);
+        ctx.cancel_timers_with(|timer_id| *timer_id.get_device_id() == device_id);
         // TODO(rheacock): Send any immediate packets, and potentially flag the state as
         // uninitialized?
     }
@@ -255,9 +271,9 @@ impl<D: ArpDevice, P: PType, C, SC: ArpContext<D, P, C>> ArpHandler<D, P, C> for
         // Cancel any outstanding timers for this entry; if none exist, these
         // will be no-ops.
         let outstanding_request =
-            self.cancel_timer(ArpTimerId::new_request_retry(device_id, addr)).is_some();
-        let _: Option<SC::Instant> =
-            self.cancel_timer(ArpTimerId::new_entry_expiration(device_id, addr));
+            ctx.cancel_timer(ArpTimerId::new_request_retry(device_id, addr)).is_some();
+        let _: Option<C::Instant> =
+            ctx.cancel_timer(ArpTimerId::new_entry_expiration(device_id, addr));
 
         // If there was an outstanding resolution request, notify the device
         // layer that it's been resolved.
@@ -280,7 +296,7 @@ pub(super) fn handle_timer<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
     sync_ctx.handle_timer(ctx, id)
 }
 
-impl<D: ArpDevice, P: PType, C, SC: ArpContext<D, P, C>>
+impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContext<D, P, C>>
     TimerHandler<C, ArpTimerId<D, P, SC::DeviceId>> for SC
 {
     fn handle_timer(&mut self, ctx: &mut C, id: ArpTimerId<D, P, SC::DeviceId>) {
@@ -339,7 +355,7 @@ enum ArpTimerIdInner<P: PType> {
 pub(crate) fn handle_packet<
     D: ArpDevice,
     P: PType,
-    C,
+    C: ArpNonSyncCtx<D, P, SC::DeviceId>,
     B: BufferMut,
     SC: BufferArpContext<D, P, C, B>,
 >(
@@ -374,6 +390,7 @@ pub(crate) fn handle_packet<
     if packet.sender_protocol_address() == packet.target_protocol_address() {
         insert_dynamic(
             sync_ctx,
+            ctx,
             device_id,
             packet.sender_protocol_address(),
             packet.sender_hardware_address(),
@@ -381,7 +398,7 @@ pub(crate) fn handle_packet<
 
         // If we have an outstanding retry timer for this host, we should cancel
         // it since we now have the mapping in cache.
-        let _: Option<SC::Instant> = sync_ctx.cancel_timer(ArpTimerId::new_request_retry(
+        let _: Option<C::Instant> = ctx.cancel_timer(ArpTimerId::new_request_retry(
             device_id,
             packet.sender_protocol_address(),
         ));
@@ -450,13 +467,14 @@ pub(crate) fn handle_packet<
     {
         insert_dynamic(
             sync_ctx,
+            ctx,
             device_id,
             packet.sender_protocol_address(),
             packet.sender_hardware_address(),
         );
         // Since we just got the protocol -> hardware address mapping, we can
         // cancel a timer to resend a request.
-        let _: Option<SC::Instant> = sync_ctx.cancel_timer(ArpTimerId::new_request_retry(
+        let _: Option<C::Instant> = ctx.cancel_timer(ArpTimerId::new_request_retry(
             device_id,
             packet.sender_protocol_address(),
         ));
@@ -511,8 +529,14 @@ pub(super) fn insert_static_neighbor<D: ArpDevice, P: PType, C, H: ArpHandler<D,
 /// The entry will potentially be overwritten by any future static entry and the
 /// entry will not be successfully added into the table if there currently is a
 /// static entry.
-fn insert_dynamic<D: ArpDevice, P: PType, C, SC: ArpContext<D, P, C>>(
+fn insert_dynamic<
+    D: ArpDevice,
+    P: PType,
+    C: ArpNonSyncCtx<D, P, SC::DeviceId>,
+    SC: ArpContext<D, P, C>,
+>(
     sync_ctx: &mut SC,
+    ctx: &mut C,
     device_id: SC::DeviceId,
     net: P,
     hw: D::HType,
@@ -522,8 +546,8 @@ fn insert_dynamic<D: ArpDevice, P: PType, C, SC: ArpContext<D, P, C>>(
     // there.
     let expiration = ArpTimerId::new_entry_expiration(device_id, net);
     if sync_ctx.get_state_mut_with(device_id).table.insert_dynamic(net, hw) {
-        let _: Option<SC::Instant> =
-            sync_ctx.schedule_timer(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration);
+        let _: Option<C::Instant> =
+            ctx.schedule_timer(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration);
     }
 }
 
@@ -550,7 +574,12 @@ const DEFAULT_ARP_REQUEST_PERIOD: Duration = Duration::from_secs(20);
 // entry.
 const DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD: Duration = Duration::from_secs(60);
 
-fn send_arp_request<D: ArpDevice, P: PType, C, SC: ArpContext<D, P, C>>(
+fn send_arp_request<
+    D: ArpDevice,
+    P: PType,
+    C: ArpNonSyncCtx<D, P, SC::DeviceId>,
+    SC: ArpContext<D, P, C>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
@@ -584,13 +613,13 @@ fn send_arp_request<D: ArpDevice, P: PType, C, SC: ArpContext<D, P, C>>(
         let id = ArpTimerId::new_request_retry(device_id, lookup_addr);
         if tries_remaining > 1 {
             // TODO(wesleyac): Configurable timer.
-            let _: Option<SC::Instant> = sync_ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
+            let _: Option<C::Instant> = ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
             sync_ctx
                 .get_state_mut_with(device_id)
                 .table
                 .set_waiting(lookup_addr, tries_remaining - 1);
         } else {
-            let _: Option<SC::Instant> = sync_ctx.cancel_timer(id);
+            let _: Option<C::Instant> = ctx.cancel_timer(id);
             sync_ctx.get_state_mut_with(device_id).table.remove(lookup_addr);
             sync_ctx.address_resolution_failed(ctx, device_id, lookup_addr);
         }
@@ -772,15 +801,10 @@ mod tests {
         }
     }
 
-    type MockNonSyncCtx = DummyNonSyncCtx;
+    type MockNonSyncCtx = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>>;
 
-    type MockCtx = DummySyncCtx<
-        DummyArpCtx,
-        ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
-        ArpFrameMetadata<EthernetLinkDevice, ()>,
-        (),
-        DummyDeviceId,
-    >;
+    type MockCtx =
+        DummySyncCtx<DummyArpCtx, ArpFrameMetadata<EthernetLinkDevice, ()>, (), DummyDeviceId>;
 
     impl ArpDeviceIdContext<EthernetLinkDevice> for MockCtx {
         type DeviceId = ();
@@ -893,19 +917,27 @@ mod tests {
     // Validate that `sync_ctx` contains exactly one installed timer with the given
     // instant and ID.
     fn validate_single_timer(
-        sync_ctx: &MockCtx,
+        non_sync_ctx: &MockNonSyncCtx,
         instant: Duration,
         id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
     ) {
-        sync_ctx.timer_ctx().assert_timers_installed([(id, DummyInstant::from(instant))]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(id, DummyInstant::from(instant))]);
     }
 
-    fn validate_single_retry_timer(sync_ctx: &MockCtx, instant: Duration, addr: Ipv4Addr) {
-        validate_single_timer(sync_ctx, instant, ArpTimerId::new_request_retry((), addr))
+    fn validate_single_retry_timer(
+        non_sync_ctx: &MockNonSyncCtx,
+        instant: Duration,
+        addr: Ipv4Addr,
+    ) {
+        validate_single_timer(non_sync_ctx, instant, ArpTimerId::new_request_retry((), addr))
     }
 
-    fn validate_single_entry_timer(sync_ctx: &MockCtx, instant: Duration, addr: Ipv4Addr) {
-        validate_single_timer(sync_ctx, instant, ArpTimerId::new_entry_expiration((), addr))
+    fn validate_single_entry_timer(
+        non_sync_ctx: &MockNonSyncCtx,
+        instant: Duration,
+        addr: Ipv4Addr,
+    ) {
+        validate_single_timer(non_sync_ctx, instant, ArpTimerId::new_entry_expiration((), addr))
     }
 
     #[test]
@@ -975,7 +1007,7 @@ mod tests {
         );
 
         // We should have installed a single retry timer.
-        validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_retry_timer(&non_sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         send_arp_packet(
             &mut sync_ctx,
@@ -996,7 +1028,7 @@ mod tests {
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
         validate_single_entry_timer(
-            &sync_ctx,
+            &non_sync_ctx,
             DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
             TEST_REMOTE_IPV4,
         );
@@ -1020,11 +1052,10 @@ mod tests {
         // Cancelling timers matches on the DeviceId, so setup a context that
         // uses IDs. The test doesn't use the context functions, so it's okay
         // that they return the same info.
-        type MockNonSyncCtx2 = DummyNonSyncCtx;
+        type MockNonSyncCtx2 = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>>;
 
         type MockCtx2 = crate::context::testutil::DummySyncCtx<
             DummyArpCtx,
-            ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>,
             ArpFrameMetadata<EthernetLinkDevice, usize>,
             (),
             DummyDeviceId,
@@ -1106,17 +1137,17 @@ mod tests {
         );
 
         // We should have installed a single retry timer.
-        let deadline = sync_ctx.now() + DEFAULT_ARP_REQUEST_PERIOD;
+        let deadline = non_sync_ctx.now() + DEFAULT_ARP_REQUEST_PERIOD;
         let timer = ArpTimerId::new_request_retry(device_id_0, TEST_REMOTE_IPV4);
-        sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing a different ID should not impact the current timer.
         deinitialize(&mut sync_ctx, &mut non_sync_ctx, device_id_1);
-        sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing the correct ID should cancel the timer.
         deinitialize(&mut sync_ctx, &mut non_sync_ctx, device_id_0);
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -1146,7 +1177,7 @@ mod tests {
         );
 
         // We should have installed a single retry timer.
-        validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_retry_timer(&non_sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         // Test that, when we receive an ARP response, we cancel the timer.
         send_arp_packet(
@@ -1174,7 +1205,7 @@ mod tests {
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
         validate_single_entry_timer(
-            &sync_ctx,
+            &non_sync_ctx,
             DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
             TEST_REMOTE_IPV4,
         );
@@ -1209,7 +1240,7 @@ mod tests {
         assert_empty(sync_ctx.frames().iter());
         // We should not have set a retry timer.
         assert_eq!(
-            sync_ctx.cancel_timer(ArpTimerId::new_request_retry((), TEST_REMOTE_IPV4)),
+            non_sync_ctx.cancel_timer(ArpTimerId::new_request_retry((), TEST_REMOTE_IPV4)),
             None
         );
     }
@@ -1251,7 +1282,7 @@ mod tests {
 
             // There should be a single ARP request retry timer installed.
             validate_single_retry_timer(
-                &sync_ctx,
+                &non_sync_ctx,
                 // Duration only implements Mul<u32>
                 DEFAULT_ARP_REQUEST_PERIOD * (i as u32),
                 TEST_REMOTE_IPV4,
@@ -1259,7 +1290,7 @@ mod tests {
 
             // Trigger the ARP request retry timer.
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(TEST_REQUEST_RETRY_TIMER_ID)
             );
         }
@@ -1279,7 +1310,7 @@ mod tests {
         );
 
         // There shouldn't be any timers installed.
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // The table entry should have been completely removed.
         assert_eq!(sync_ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
@@ -1441,7 +1472,7 @@ mod tests {
             );
             // We should have installed a retry timer.
             validate_single_retry_timer(
-                sync_ctx,
+                non_sync_ctx,
                 DEFAULT_ARP_REQUEST_PERIOD,
                 requested_remote_proto_addr,
             );
@@ -1530,11 +1561,13 @@ mod tests {
         );
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
-        validate_single_entry_timer(
-            network.sync_ctx(local_name),
-            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
-            requested_remote_proto_addr,
-        );
+        network.with_context(local_name, |DummyCtx { sync_ctx: _, non_sync_ctx }| {
+            validate_single_entry_timer(
+                non_sync_ctx,
+                DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
+                requested_remote_proto_addr,
+            );
+        });
         // The device layer should have been notified.
         assert_eq!(
             network.sync_ctx(local_name).get_ref().addr_resolved.as_slice(),
@@ -1633,7 +1666,7 @@ mod tests {
             Some(DEFAULT_ARP_REQUEST_MAX_TRIES - 1)
         );
         // We should have an ARP request retry timer set.
-        validate_single_retry_timer(&sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
+        validate_single_retry_timer(&non_sync_ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
         // Now insert a static entry.
         insert_static_neighbor(
@@ -1645,7 +1678,7 @@ mod tests {
         );
 
         // The timer should have been canceled.
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // We should have notified the device layer.
         assert_eq!(
@@ -1662,7 +1695,7 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_dynamic(&mut sync_ctx, &mut non_sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // We should have the address in cache.
         assert_eq!(
@@ -1671,7 +1704,7 @@ mod tests {
         );
         // We should have an ARP entry expiration timer set.
         validate_single_entry_timer(
-            &sync_ctx,
+            &non_sync_ctx,
             DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
             TEST_REMOTE_IPV4,
         );
@@ -1686,7 +1719,7 @@ mod tests {
         );
 
         // The timer should have been canceled.
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -1697,7 +1730,7 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_dynamic(&mut sync_ctx, &mut non_sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // We should have the address in cache.
         assert_eq!(
@@ -1706,23 +1739,23 @@ mod tests {
         );
         // We should have an ARP entry expiration timer set.
         validate_single_entry_timer(
-            &sync_ctx,
+            &non_sync_ctx,
             DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
             TEST_REMOTE_IPV4,
         );
 
         // Trigger the entry expiration timer.
         assert_eq!(
-            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+            non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
             Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
         );
 
         // The right amount of time should have elapsed.
-        assert_eq!(sync_ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
+        assert_eq!(non_sync_ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
         // The entry should have been removed.
         assert_eq!(sync_ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
         // The timer should have been canceled.
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
         // The device layer should have been notified.
         assert_eq!(sync_ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
@@ -1741,11 +1774,11 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(MockCtx::default());
 
-        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        insert_dynamic(&mut sync_ctx, &mut non_sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // Let 5 seconds elapse.
-        assert_empty(sync_ctx.trigger_timers_until_instant(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_until_instant(
+            &mut sync_ctx,
             DummyInstant::from(Duration::from_secs(5)),
             TimerHandler::handle_timer,
         ));
@@ -1768,8 +1801,8 @@ mod tests {
         );
 
         // Let the remaining time elapse to the first entry expiration timer.
-        assert_empty(sync_ctx.trigger_timers_until_instant(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_until_instant(
+            &mut sync_ctx,
             DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD),
             TimerHandler::handle_timer,
         ));
@@ -1781,12 +1814,12 @@ mod tests {
 
         // Trigger the entry expiration timer.
         assert_eq!(
-            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+            non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
             Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
         );
         // The right amount of time should have elapsed.
         assert_eq!(
-            sync_ctx.now(),
+            non_sync_ctx.now(),
             DummyInstant::from(Duration::from_secs(5) + DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD)
         );
         // The entry should be gone.
@@ -1809,9 +1842,9 @@ mod tests {
             TEST_REMOTE_IPV4,
             TEST_REMOTE_MAC,
         );
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
-        insert_dynamic(&mut sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        insert_dynamic(&mut sync_ctx, &mut non_sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

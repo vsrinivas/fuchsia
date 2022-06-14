@@ -31,7 +31,7 @@ use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::{
-    context::{FrameContext, InstantContext, RngContext, TimerContext, TimerHandler},
+    context::{FrameContext, RngContext, TimerContext, TimerHandler},
     ip::{
         gmp::{
             gmp_handle_disabled, gmp_handle_maybe_enabled, gmp_handle_timer, gmp_join_group,
@@ -62,14 +62,19 @@ impl<D> IgmpPacketMetadata<D> {
     }
 }
 
-pub(crate) trait IgmpNonSyncContext: RngContext {}
-impl<C: RngContext> IgmpNonSyncContext for C {}
+/// The non-synchronized execution context for IGMP.
+pub(crate) trait IgmpNonSyncContext<DeviceId>:
+    RngContext + TimerContext<IgmpTimerId<DeviceId>>
+{
+}
+impl<DeviceId, C: RngContext + TimerContext<IgmpTimerId<DeviceId>>> IgmpNonSyncContext<DeviceId>
+    for C
+{
+}
 
 /// The execution context for the Internet Group Management Protocol (IGMP).
-pub(crate) trait IgmpContext<C: IgmpNonSyncContext>:
-    IpDeviceIdContext<Ipv4>
-    + TimerContext<IgmpTimerId<Self::DeviceId>>
-    + FrameContext<C, EmptyBuf, IgmpPacketMetadata<Self::DeviceId>>
+pub(crate) trait IgmpContext<C: IgmpNonSyncContext<Self::DeviceId>>:
+    IpDeviceIdContext<Ipv4> + FrameContext<C, EmptyBuf, IgmpPacketMetadata<Self::DeviceId>>
 {
     /// Gets an IP address and subnet associated with this device.
     fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
@@ -86,16 +91,16 @@ pub(crate) trait IgmpContext<C: IgmpNonSyncContext>:
     fn get_state_mut(
         &mut self,
         device: Self::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>;
+    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>;
 
     /// Gets immutable access to the device's IGMP state.
     fn get_state(
         &self,
         device: Self::DeviceId,
-    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>;
+    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>;
 }
 
-impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> GmpHandler<Ipv4, C> for SC {
+impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>> GmpHandler<Ipv4, C> for SC {
     fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
         gmp_handle_maybe_enabled(self, ctx, device)
     }
@@ -138,8 +143,8 @@ pub(crate) trait IgmpPacketHandler<C, DeviceId, B: BufferMut> {
     );
 }
 
-impl<C: IgmpNonSyncContext, SC: IgmpContext<C>, B: BufferMut> IgmpPacketHandler<C, SC::DeviceId, B>
-    for SC
+impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>, B: BufferMut>
+    IgmpPacketHandler<C, SC::DeviceId, B> for SC
 {
     fn receive_igmp_packet(
         &mut self,
@@ -208,9 +213,11 @@ impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> GmpMessage<Ipv4>
     }
 }
 
-impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> GmpContext<Ipv4, C, Igmpv2ProtocolSpecific> for SC {
+impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>>
+    GmpContext<Ipv4, C, Igmpv2ProtocolSpecific> for SC
+{
     type Err = IgmpError;
-    type GroupState = IgmpGroupState<Self::Instant>;
+    type GroupState = IgmpGroupState<C::Instant>;
 
     fn gmp_disabled(&self, device: Self::DeviceId, _addr: MulticastAddr<Ipv4Addr>) -> bool {
         !self.igmp_enabled(device)
@@ -264,11 +271,11 @@ impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> GmpContext<Ipv4, C, Igmpv2Protoc
         }
     }
 
-    fn run_actions(&mut self, _ctx: &mut C, device: Self::DeviceId, actions: Igmpv2Actions) {
+    fn run_actions(&mut self, ctx: &mut C, device: Self::DeviceId, actions: Igmpv2Actions) {
         match actions {
             Igmpv2Actions::ScheduleV1RouterPresentTimer(duration) => {
-                let _: Option<SC::Instant> =
-                    self.schedule_timer(duration, IgmpTimerId::new_v1_router_present(device));
+                let _: Option<C::Instant> =
+                    ctx.schedule_timer(duration, IgmpTimerId::new_v1_router_present(device));
             }
         }
     }
@@ -332,7 +339,9 @@ impl<DeviceId> IgmpTimerId<DeviceId> {
     }
 }
 
-impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> TimerHandler<C, IgmpTimerId<SC::DeviceId>> for SC {
+impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>>
+    TimerHandler<C, IgmpTimerId<SC::DeviceId>> for SC
+{
     fn handle_timer(&mut self, ctx: &mut C, timer: IgmpTimerId<SC::DeviceId>) {
         match timer {
             IgmpTimerId::Gmp(id) => gmp_handle_timer(self, ctx, id),
@@ -345,7 +354,7 @@ impl<C: IgmpNonSyncContext, SC: IgmpContext<C>> TimerHandler<C, IgmpTimerId<SC::
     }
 }
 
-fn send_igmp_message<C: IgmpNonSyncContext, SC: IgmpContext<C>, M>(
+fn send_igmp_message<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>, M>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -539,7 +548,10 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyInstant, DummyTimerCtxExt},
+        context::{
+            testutil::{DummyInstant, DummyTimerCtxExt},
+            InstantContext as _,
+        },
         ip::{
             gmp::{
                 MemberState, QueryReceivedActions, ReportReceivedActions, ReportTimerExpiredActions,
@@ -582,13 +594,12 @@ mod tests {
 
     type DummySyncCtx = crate::context::testutil::DummySyncCtx<
         DummyIgmpCtx,
-        IgmpTimerId<DummyDeviceId>,
         IgmpPacketMetadata<DummyDeviceId>,
         (),
         DummyDeviceId,
     >;
 
-    type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
+    type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<IgmpTimerId<DummyDeviceId>>;
 
     impl IgmpContext<DummyNonSyncCtx> for DummySyncCtx {
         fn get_ip_addr_subnet(&self, _device: DummyDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
@@ -805,7 +816,7 @@ mod tests {
             // Should send a report after a query.
             receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(10));
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             check_report(&mut sync_ctx);
@@ -823,7 +834,7 @@ mod tests {
             assert_eq!(sync_ctx.frames().len(), 1);
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             assert_eq!(sync_ctx.frames().len(), 2);
@@ -840,7 +851,7 @@ mod tests {
             }
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             assert_eq!(sync_ctx.frames().len(), 3);
@@ -857,12 +868,12 @@ mod tests {
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
-            let now = sync_ctx.now();
-            sync_ctx.timer_ctx().assert_timers_installed([(
+            let now = non_sync_ctx.now();
+            non_sync_ctx.timer_ctx().assert_timers_installed([(
                 REPORT_DELAY_TIMER_ID,
                 now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
             )]);
-            let instant1 = sync_ctx.timer_ctx().timers()[0].0.clone();
+            let instant1 = non_sync_ctx.timer_ctx().timers()[0].0.clone();
 
             receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(0));
             assert_eq!(sync_ctx.frames().len(), 1);
@@ -881,16 +892,16 @@ mod tests {
             assert_eq!(sync_ctx.frames().len(), 1);
             // Two timers: one for the delayed report, one for the v1 router
             // timer.
-            let now = sync_ctx.now();
-            sync_ctx.timer_ctx().assert_timers_installed([
+            let now = non_sync_ctx.now();
+            non_sync_ctx.timer_ctx().assert_timers_installed([
                 (REPORT_DELAY_TIMER_ID, now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL)),
                 (V1_ROUTER_PRESENT_TIMER_ID, now..=(now + DEFAULT_V1_ROUTER_PRESENT_TIMEOUT)),
             ]);
-            let instant2 = sync_ctx.timer_ctx().timers()[1].0.clone();
+            let instant2 = non_sync_ctx.timer_ctx().timers()[1].0.clone();
             assert_eq!(instant1, instant2);
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             // After the first timer, we send out our V1 report.
@@ -902,7 +913,7 @@ mod tests {
             assert_eq!(frame[24], 0x12);
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(V1_ROUTER_PRESENT_TIMER_ID)
             );
             // After the second timer, we should reset our flag for v1 routers.
@@ -917,7 +928,7 @@ mod tests {
 
             receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(10));
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             assert_eq!(sync_ctx.frames().len(), 3);
@@ -935,29 +946,29 @@ mod tests {
             sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
             GroupJoinResult::Joined(())
         );
-        let now = sync_ctx.now();
-        sync_ctx.timer_ctx().assert_timers_installed([(
+        let now = non_sync_ctx.now();
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             REPORT_DELAY_TIMER_ID,
             now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
         )]);
-        let instant1 = sync_ctx.timer_ctx().timers()[0].0.clone();
-        let start = sync_ctx.now();
+        let instant1 = non_sync_ctx.timer_ctx().timers()[0].0.clone();
+        let start = non_sync_ctx.now();
         let duration = Duration::from_micros(((instant1 - start).as_micros() / 2) as u64);
         assert!(duration.as_millis() > 100);
         receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, duration);
         assert_eq!(sync_ctx.frames().len(), 1);
-        let now = sync_ctx.now();
-        sync_ctx
+        let now = non_sync_ctx.now();
+        non_sync_ctx
             .timer_ctx()
             .assert_timers_installed([(REPORT_DELAY_TIMER_ID, now..=(now + duration))]);
-        let instant2 = sync_ctx.timer_ctx().timers()[0].0.clone();
+        let instant2 = non_sync_ctx.timer_ctx().timers()[0].0.clone();
         // Because of the message, our timer should be reset to a nearer future.
         assert!(instant2 <= instant1);
         assert_eq!(
-            sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+            non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
             Some(REPORT_DELAY_TIMER_ID)
         );
-        assert!(sync_ctx.now() - start <= duration);
+        assert!(non_sync_ctx.now() - start <= duration);
         assert_eq!(sync_ctx.frames().len(), 2);
         // Make sure it is a V2 report.
         assert_eq!(sync_ctx.frames().last().unwrap().1[24], 0x16);
@@ -972,15 +983,15 @@ mod tests {
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
-            let now = sync_ctx.now();
-            sync_ctx.timer_ctx().assert_timers_installed([(
+            let now = non_sync_ctx.now();
+            non_sync_ctx.timer_ctx().assert_timers_installed([(
                 REPORT_DELAY_TIMER_ID,
                 now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
             )]);
             // The initial unsolicited report.
             assert_eq!(sync_ctx.frames().len(), 1);
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
             // The report after the delay.
@@ -1013,14 +1024,14 @@ mod tests {
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
-            let now = sync_ctx.now();
-            sync_ctx.timer_ctx().assert_timers_installed([(
+            let now = non_sync_ctx.now();
+            non_sync_ctx.timer_ctx().assert_timers_installed([(
                 REPORT_DELAY_TIMER_ID,
                 now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
             )]);
             assert_eq!(sync_ctx.frames().len(), 1);
             receive_igmp_report(&mut sync_ctx, &mut non_sync_ctx);
-            sync_ctx.timer_ctx().assert_no_timers_installed();
+            non_sync_ctx.timer_ctx().assert_no_timers_installed();
             // The report should be discarded because we have received from
             // someone else.
             assert_eq!(sync_ctx.frames().len(), 1);
@@ -1046,16 +1057,16 @@ mod tests {
                 sync_ctx.gmp_join_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR_2),
                 GroupJoinResult::Joined(())
             );
-            let now = sync_ctx.now();
+            let now = non_sync_ctx.now();
             let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
-            sync_ctx.timer_ctx().assert_timers_installed([
+            non_sync_ctx.timer_ctx().assert_timers_installed([
                 (REPORT_DELAY_TIMER_ID, range.clone()),
                 (REPORT_DELAY_TIMER_ID_2, range),
             ]);
             // The initial unsolicited report.
             assert_eq!(sync_ctx.frames().len(), 2);
-            sync_ctx.trigger_timers_and_expect_unordered(
-                &mut non_sync_ctx,
+            non_sync_ctx.trigger_timers_and_expect_unordered(
+                &mut sync_ctx,
                 [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
                 TimerHandler::handle_timer,
             );
@@ -1063,14 +1074,14 @@ mod tests {
             const RESP_TIME: Duration = Duration::from_secs(10);
             receive_igmp_general_query(&mut sync_ctx, &mut non_sync_ctx, RESP_TIME);
             // Two new timers should be there.
-            let now = sync_ctx.now();
+            let now = non_sync_ctx.now();
             let range = now..=(now + RESP_TIME);
-            sync_ctx.timer_ctx().assert_timers_installed([
+            non_sync_ctx.timer_ctx().assert_timers_installed([
                 (REPORT_DELAY_TIMER_ID, range.clone()),
                 (REPORT_DELAY_TIMER_ID_2, range),
             ]);
-            sync_ctx.trigger_timers_and_expect_unordered(
-                &mut non_sync_ctx,
+            non_sync_ctx.trigger_timers_and_expect_unordered(
+                &mut sync_ctx,
                 [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
                 TimerHandler::handle_timer,
             );
@@ -1091,8 +1102,8 @@ mod tests {
             sync_ctx.get_mut().igmp_enabled = false;
 
             // Assert that no observable effects have taken place.
-            let assert_no_effect = |sync_ctx: &DummySyncCtx| {
-                sync_ctx.timer_ctx().assert_no_timers_installed();
+            let assert_no_effect = |sync_ctx: &DummySyncCtx, non_sync_ctx: &DummyNonSyncCtx| {
+                non_sync_ctx.timer_ctx().assert_no_timers_installed();
                 assert_empty(sync_ctx.frames());
             };
 
@@ -1103,17 +1114,17 @@ mod tests {
             // We should join the group but left in the GMP's non-member
             // state.
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
-            assert_no_effect(&sync_ctx);
+            assert_no_effect(&sync_ctx, &non_sync_ctx);
 
             receive_igmp_report(&mut sync_ctx, &mut non_sync_ctx);
             // We should have done no state transitions/work.
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
-            assert_no_effect(&sync_ctx);
+            assert_no_effect(&sync_ctx, &non_sync_ctx);
 
             receive_igmp_query(&mut sync_ctx, &mut non_sync_ctx, Duration::from_secs(10));
             // We should have done no state transitions/work.
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
-            assert_no_effect(&sync_ctx);
+            assert_no_effect(&sync_ctx, &non_sync_ctx);
 
             assert_eq!(
                 sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -1121,7 +1132,7 @@ mod tests {
             );
             // We should have left the group but not executed any `Actions`.
             assert!(sync_ctx.get_ref().groups.get(&GROUP_ADDR).is_none());
-            assert_no_effect(&sync_ctx);
+            assert_no_effect(&sync_ctx, &non_sync_ctx);
         });
     }
 
@@ -1139,9 +1150,11 @@ mod tests {
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_eq!(sync_ctx.frames().len(), 1);
-            let now = sync_ctx.now();
+            let now = non_sync_ctx.now();
             let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
-            sync_ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
+            non_sync_ctx
+                .timer_ctx()
+                .assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
             ensure_ttl_ihl_rtr(&sync_ctx);
 
             assert_eq!(
@@ -1150,7 +1163,9 @@ mod tests {
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_eq!(sync_ctx.frames().len(), 1);
-            sync_ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
+            non_sync_ctx
+                .timer_ctx()
+                .assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
 
             assert_eq!(
                 sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
@@ -1158,14 +1173,14 @@ mod tests {
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_eq!(sync_ctx.frames().len(), 1);
-            sync_ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range)]);
+            non_sync_ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range)]);
 
             assert_eq!(
                 sync_ctx.gmp_leave_group(&mut non_sync_ctx, DummyDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             assert_eq!(sync_ctx.frames().len(), 2);
-            sync_ctx.timer_ctx().assert_no_timers_installed();
+            non_sync_ctx.timer_ctx().assert_no_timers_installed();
             ensure_ttl_ihl_rtr(&sync_ctx);
         });
     }
@@ -1283,9 +1298,9 @@ mod tests {
             AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
         )
         .unwrap();
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
-        let now = sync_ctx.now();
+        let now = non_sync_ctx.now();
         let timer_id = TimerId(TimerIdInner::Ipv4Device(
             IgmpTimerId::Gmp(GmpDelayedReportTimerId {
                 device: device_id,
@@ -1368,7 +1383,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
         check_sent_report(&mut sync_ctx);
 
         // Disable IGMP.
@@ -1377,7 +1392,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: false },
         );
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
         check_sent_leave(&mut sync_ctx);
 
         // Enable IGMP but disable IPv4.
@@ -1388,7 +1403,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: false, gmp_enabled: true },
         );
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Disable IGMP but enable IPv4.
@@ -1399,7 +1414,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: false },
         );
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Enable IGMP.
@@ -1408,7 +1423,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
         check_sent_report(&mut sync_ctx);
 
         // Disable IPv4.
@@ -1417,7 +1432,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: false, gmp_enabled: true },
         );
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
         check_sent_leave(&mut sync_ctx);
 
         // Enable IPv4.
@@ -1426,7 +1441,7 @@ mod tests {
             &mut non_sync_ctx,
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
         check_sent_report(&mut sync_ctx);
     }
 }

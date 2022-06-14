@@ -81,19 +81,25 @@ pub(super) trait Ipv6RouteDiscoveryStateContext<C>: IpDeviceIdContext<Ipv6> {
     ) -> &mut Ipv6RouteDiscoveryState;
 }
 
+/// The non-synchronized execution context for IPv6 route discovery.
+trait Ipv6RouteDiscoveryNonSyncContext<DeviceId>:
+    TimerContext<Ipv6DiscoveredRouteTimerId<DeviceId>>
+{
+}
+impl<DeviceId, C: TimerContext<Ipv6DiscoveredRouteTimerId<DeviceId>>>
+    Ipv6RouteDiscoveryNonSyncContext<DeviceId> for C
+{
+}
+
 /// The execution context for IPv6 route discovery.
-trait Ipv6RouteDiscoveryContext<C>:
-    Ipv6RouteDiscoveryStateContext<C>
-    + TimerContext<Ipv6DiscoveredRouteTimerId<Self::DeviceId>>
-    + EventContext<Ipv6RouteDiscoveryEvent<Self::DeviceId>>
+trait Ipv6RouteDiscoveryContext<C: Ipv6RouteDiscoveryNonSyncContext<Self::DeviceId>>:
+    Ipv6RouteDiscoveryStateContext<C> + EventContext<Ipv6RouteDiscoveryEvent<Self::DeviceId>>
 {
 }
 
 impl<
-        C,
-        SC: Ipv6RouteDiscoveryStateContext<C>
-            + TimerContext<Ipv6DiscoveredRouteTimerId<Self::DeviceId>>
-            + EventContext<Ipv6RouteDiscoveryEvent<Self::DeviceId>>,
+        C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>,
+        SC: Ipv6RouteDiscoveryStateContext<C> + EventContext<Ipv6RouteDiscoveryEvent<Self::DeviceId>>,
     > Ipv6RouteDiscoveryContext<C> for SC
 {
 }
@@ -118,10 +124,12 @@ pub(crate) trait RouteDiscoveryHandler<C>: IpDeviceIdContext<Ipv6> {
     fn invalidate_routes(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 }
 
-impl<C, SC: Ipv6RouteDiscoveryContext<C>> RouteDiscoveryHandler<C> for SC {
+impl<C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>, SC: Ipv6RouteDiscoveryContext<C>>
+    RouteDiscoveryHandler<C> for SC
+{
     fn update_route(
         &mut self,
-        _ctx: &mut C,
+        ctx: &mut C,
         device_id: SC::DeviceId,
         route: Ipv6DiscoveredRoute,
         lifetime: Option<NonZeroNdpLifetime>,
@@ -132,15 +140,15 @@ impl<C, SC: Ipv6RouteDiscoveryContext<C>> RouteDiscoveryHandler<C> for SC {
             Some(lifetime) => {
                 let newly_added = routes.insert(route.clone());
                 let timer_id = Ipv6DiscoveredRouteTimerId { device_id, route };
-                let prev_timer_fires_at: Option<SC::Instant> = match lifetime {
+                let prev_timer_fires_at: Option<C::Instant> = match lifetime {
                     NonZeroNdpLifetime::Finite(lifetime) => {
-                        self.schedule_timer(lifetime.get(), timer_id)
+                        ctx.schedule_timer(lifetime.get(), timer_id)
                     }
                     // Routes with an infinite lifetime have no timers
                     //
                     // TODO(https://fxbug.dev/97751): Hold timers scheduled to
                     // fire at infinity.
-                    NonZeroNdpLifetime::Infinite => self.cancel_timer(timer_id),
+                    NonZeroNdpLifetime::Infinite => ctx.cancel_timer(timer_id),
                 };
                 if newly_added {
                     if let Some(prev_timer_fires_at) = prev_timer_fires_at {
@@ -152,22 +160,22 @@ impl<C, SC: Ipv6RouteDiscoveryContext<C>> RouteDiscoveryHandler<C> for SC {
             }
             None => {
                 if routes.remove(&route) {
-                    invalidate_route(self, device_id, route);
+                    invalidate_route(self, ctx, device_id, route);
                 }
             }
         }
     }
 
-    fn invalidate_routes(&mut self, _ctx: &mut C, device_id: SC::DeviceId) {
+    fn invalidate_routes(&mut self, ctx: &mut C, device_id: SC::DeviceId) {
         let Ipv6RouteDiscoveryState { routes } = self.get_discovered_routes_mut(device_id);
         for route in core::mem::take(routes).into_iter() {
-            invalidate_route(self, device_id, route);
+            invalidate_route(self, ctx, device_id, route);
         }
     }
 }
 
-impl<C, SC: Ipv6RouteDiscoveryContext<C>> TimerHandler<C, Ipv6DiscoveredRouteTimerId<SC::DeviceId>>
-    for SC
+impl<C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>, SC: Ipv6RouteDiscoveryContext<C>>
+    TimerHandler<C, Ipv6DiscoveredRouteTimerId<SC::DeviceId>> for SC
 {
     fn handle_timer(
         &mut self,
@@ -180,19 +188,26 @@ impl<C, SC: Ipv6RouteDiscoveryContext<C>> TimerHandler<C, Ipv6DiscoveredRouteTim
     }
 }
 
-fn invalidate_route<C, SC: Ipv6RouteDiscoveryContext<C>>(
-    ctx: &mut SC,
+fn invalidate_route<
+    C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>,
+    SC: Ipv6RouteDiscoveryContext<C>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
     device_id: SC::DeviceId,
     route: Ipv6DiscoveredRoute,
 ) {
     // Routes with an infinite lifetime have no timers.
     //
     // TODO(https://fxbug.dev/97751): Hold timers scheduled to fire at infinity.
-    let _: Option<SC::Instant> = ctx.cancel_timer(Ipv6DiscoveredRouteTimerId { device_id, route });
-    send_event(ctx, device_id, route, Ipv6RouteDiscoverAction::Invalidated);
+    let _: Option<C::Instant> = ctx.cancel_timer(Ipv6DiscoveredRouteTimerId { device_id, route });
+    send_event(sync_ctx, device_id, route, Ipv6RouteDiscoverAction::Invalidated);
 }
 
-fn send_event<C, SC: Ipv6RouteDiscoveryContext<C>>(
+fn send_event<
+    C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>,
+    SC: Ipv6RouteDiscoveryContext<C>,
+>(
     ctx: &mut SC,
     device_id: SC::DeviceId,
     route: Ipv6DiscoveredRoute,
@@ -243,13 +258,12 @@ mod tests {
 
     type MockCtx = DummySyncCtx<
         MockIpv6RouteDiscoveryContext,
-        Ipv6DiscoveredRouteTimerId<DummyDeviceId>,
         (),
         Ipv6RouteDiscoveryEvent<DummyDeviceId>,
         DummyDeviceId,
     >;
 
-    type MockNonSyncCtx = DummyNonSyncCtx;
+    type MockNonSyncCtx = DummyNonSyncCtx<Ipv6DiscoveredRouteTimerId<DummyDeviceId>>;
 
     impl Ipv6RouteDiscoveryStateContext<MockNonSyncCtx> for MockCtx {
         fn get_discovered_routes_mut(
@@ -288,16 +302,22 @@ mod tests {
             None,
         );
         assert_eq!(sync_ctx.take_events(), []);
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     fn discover_new_route(
         sync_ctx: &mut MockCtx,
-        ctx: &mut MockNonSyncCtx,
+        non_sync_ctx: &mut MockNonSyncCtx,
         route: Ipv6DiscoveredRoute,
         duration: NonZeroNdpLifetime,
     ) {
-        RouteDiscoveryHandler::update_route(sync_ctx, ctx, DummyDeviceId, route, Some(duration));
+        RouteDiscoveryHandler::update_route(
+            sync_ctx,
+            non_sync_ctx,
+            DummyDeviceId,
+            route,
+            Some(duration),
+        );
         assert_eq!(
             sync_ctx.take_events(),
             [Ipv6RouteDiscoveryEvent {
@@ -307,7 +327,7 @@ mod tests {
             }]
         );
 
-        sync_ctx.timer_ctx().assert_some_timers_installed(
+        non_sync_ctx.timer_ctx().assert_some_timers_installed(
             match duration {
                 NonZeroNdpLifetime::Finite(duration) => Some((
                     Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route },
@@ -321,11 +341,11 @@ mod tests {
 
     fn assert_single_invalidation_timer(
         sync_ctx: &mut MockCtx,
-        ctx: &mut MockNonSyncCtx,
+        non_sync_ctx: &mut MockNonSyncCtx,
         route: Ipv6DiscoveredRoute,
     ) {
         assert_eq!(
-            sync_ctx.trigger_next_timer(ctx, TimerHandler::handle_timer),
+            non_sync_ctx.trigger_next_timer(sync_ctx, TimerHandler::handle_timer),
             Some(Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route })
         );
         assert_eq!(
@@ -336,7 +356,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Invalidated
             }]
         );
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -345,7 +365,7 @@ mod tests {
             DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut sync_ctx, &mut non_sync_ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -354,7 +374,7 @@ mod tests {
             DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut sync_ctx, &mut non_sync_ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         RouteDiscoveryHandler::update_route(
             &mut sync_ctx,
@@ -364,7 +384,7 @@ mod tests {
             Some(NonZeroNdpLifetime::Finite(ONE_SECOND)),
         );
         assert_eq!(sync_ctx.take_events(), []);
-        sync_ctx.timer_ctx().assert_some_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_some_timers_installed([(
             Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route: ROUTE1 },
             DummyInstant::from(ONE_SECOND.get()),
         )]);
@@ -373,10 +393,10 @@ mod tests {
 
     fn update_to_invalidate_check_invalidation(
         sync_ctx: &mut MockCtx,
-        ctx: &mut MockNonSyncCtx,
+        non_sync_ctx: &mut MockNonSyncCtx,
         route: Ipv6DiscoveredRoute,
     ) {
-        RouteDiscoveryHandler::update_route(sync_ctx, ctx, DummyDeviceId, ROUTE1, None);
+        RouteDiscoveryHandler::update_route(sync_ctx, non_sync_ctx, DummyDeviceId, ROUTE1, None);
         assert_eq!(
             sync_ctx.take_events(),
             [Ipv6RouteDiscoveryEvent {
@@ -385,7 +405,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Invalidated
             }]
         );
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -394,7 +414,7 @@ mod tests {
             DummyCtx::with_sync_ctx(MockCtx::default());
 
         discover_new_route(&mut sync_ctx, &mut non_sync_ctx, ROUTE1, NonZeroNdpLifetime::Infinite);
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         update_to_invalidate_check_invalidation(&mut sync_ctx, &mut non_sync_ctx, ROUTE1);
     }
@@ -432,7 +452,7 @@ mod tests {
             Some(NonZeroNdpLifetime::Infinite),
         );
         assert_eq!(sync_ctx.take_events(), []);
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -455,7 +475,7 @@ mod tests {
             Some(NonZeroNdpLifetime::Finite(TWO_SECONDS)),
         );
         assert_eq!(sync_ctx.take_events(), []);
-        sync_ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             Ipv6DiscoveredRouteTimerId { device_id: DummyDeviceId, route: ROUTE1 },
             DummyInstant::from(TWO_SECONDS.get()),
         )]);
@@ -511,7 +531,7 @@ mod tests {
                 },
             ])
         );
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     fn router_advertisement_buf(
@@ -575,7 +595,7 @@ mod tests {
             config.ip_config.ip_enabled = true;
         });
 
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         (ctx, device_id, Ipv6::DUMMY_CONFIG)
     }
@@ -640,7 +660,7 @@ mod tests {
             buf(0, false, as_secs(ONE_SECOND).into()),
         );
         check_event(sync_ctx, None);
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // Discover a default router only as on-link prefix has no valid
         // lifetime.
@@ -661,7 +681,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Discovered,
             }),
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             timer_id(gateway_route),
             DummyInstant::from(ONE_SECOND.get()),
         )]);
@@ -684,7 +704,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Discovered,
             }),
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([
+        non_sync_ctx.timer_ctx().assert_timers_installed([
             (timer_id(gateway_route), DummyInstant::from(TWO_SECONDS.get())),
             (timer_id(on_link_route), DummyInstant::from(ONE_SECOND.get())),
         ]);
@@ -706,7 +726,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Invalidated,
             }),
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             timer_id(on_link_route),
             DummyInstant::from(TWO_SECONDS.get()),
         )]);
@@ -721,7 +741,7 @@ mod tests {
             buf(0, false, 0),
         );
         check_event(sync_ctx, None);
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             timer_id(on_link_route),
             DummyInstant::from(TWO_SECONDS.get()),
         )]);
@@ -742,7 +762,7 @@ mod tests {
                 action: Ipv6RouteDiscoverAction::Invalidated,
             }),
         );
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -806,7 +826,7 @@ mod tests {
                 .into(),
             ]),
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             timer_id(gateway_route),
             DummyInstant::from(Duration::from_secs(router_lifetime_secs.into())),
         )]);
@@ -821,7 +841,7 @@ mod tests {
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([
+        non_sync_ctx.timer_ctx().assert_timers_installed([
             (
                 timer_id(gateway_route),
                 DummyInstant::from(Duration::from_secs(router_lifetime_secs.into())),
@@ -843,7 +863,7 @@ mod tests {
             FrameDestination::Unicast,
             buf(router_lifetime_secs, true, prefix_lifetime_secs),
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             timer_id(gateway_route),
             DummyInstant::from(Duration::from_secs(router_lifetime_secs.into())),
         )]);
@@ -875,7 +895,7 @@ mod tests {
                 .into(),
             ]),
         );
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -931,7 +951,7 @@ mod tests {
                 .into(),
             ]),
         );
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([
+        non_sync_ctx.timer_ctx().assert_timers_installed([
             (timer_id(gateway_route), DummyInstant::from(TWO_SECONDS.get())),
             (timer_id(on_link_route), DummyInstant::from(ONE_SECOND.get())),
         ]);
@@ -957,6 +977,6 @@ mod tests {
                 .into(),
             ]),
         );
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

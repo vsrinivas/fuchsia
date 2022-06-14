@@ -18,14 +18,14 @@ use crate::{
         path_mtu::{PmtuCache, PmtuStateContext},
         reassembly::FragmentStateContext,
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
-        socket::{BufferIpSocketContext, IpSock, IpSocketContext},
+        socket::{BufferIpSocketContext, IpSock, IpSocketContext, IpSocketNonSyncContext},
         IpDeviceIdContext, IpPacketFragmentCache, IpStateContext, SendIpPacketMeta,
     },
     Instant,
 };
 
 // Note: we can't provide a single impl for `FragmentStateContext` which is
-// generic over all `I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>` because
+// generic over all `I: IpLayerStateIpExt<C::Instant, SC::DeviceId>` because
 // we have a `DummyCtx` type in the reassembly tests module which implements
 // `FragmentStateContext` resulting in a conflicting implementations error.
 // Manually implementing `FragmentStateContext` for each `I: Ip` we support
@@ -86,9 +86,9 @@ impl<C, I: Instant, SC: IpStateContext<Ipv6, I>>
 
 impl<
         B: BufferMut,
-        C,
+        C: IpSocketNonSyncContext,
         SC: ip::BufferIpDeviceContext<Ipv4, C, B>
-            + IpStateContext<Ipv4, SC::Instant>
+            + IpStateContext<Ipv4, C::Instant>
             + IpSocketContext<Ipv4, C>
             + NonTestCtxMarker,
     > BufferIpSocketContext<Ipv4, C, B> for SC
@@ -109,9 +109,9 @@ impl<
 
 impl<
         B: BufferMut,
-        C,
+        C: IpSocketNonSyncContext,
         SC: ip::BufferIpDeviceContext<Ipv6, C, B>
-            + IpStateContext<Ipv6, SC::Instant>
+            + IpStateContext<Ipv6, C::Instant>
             + IpSocketContext<Ipv6, C>
             + NonTestCtxMarker,
     > BufferIpSocketContext<Ipv6, C, B> for SC

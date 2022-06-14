@@ -318,7 +318,7 @@ fn dispatch(
         }
         AdvanceTime(SmallDuration(duration)) => {
             let _: Vec<TimerId> =
-                sync_ctx.trigger_timers_for(non_sync_ctx, duration, crate::handle_timer);
+                non_sync_ctx.trigger_timers_for(sync_ctx, duration, crate::handle_timer);
         }
     }
 }

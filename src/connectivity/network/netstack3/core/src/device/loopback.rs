@@ -90,7 +90,7 @@ mod tests {
         assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device), MTU);
 
         fn test<
-            I: TestIpExt + IpDeviceStateIpExt<C::Instant>,
+            I: TestIpExt + IpDeviceStateIpExt<NonSyncCtx::Instant>,
             D: EventDispatcher,
             C: BlanketCoreContext,
             NonSyncCtx: NonSyncContext,
@@ -101,7 +101,7 @@ mod tests {
             get_ip_state: for<'a> fn(
                 &'a SyncCtx<D, C, NonSyncCtx>,
                 DeviceId,
-            ) -> &'a IpDeviceState<C::Instant, I>,
+            ) -> &'a IpDeviceState<NonSyncCtx::Instant, I>,
         ) {
             assert_eq!(
                 &get_ip_state(sync_ctx, device)

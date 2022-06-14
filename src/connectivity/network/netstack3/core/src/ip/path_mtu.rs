@@ -59,11 +59,15 @@ pub(super) trait PmtuStateContext<I: Ip, Instant> {
     fn get_state_mut(&mut self) -> &mut PmtuCache<I, Instant>;
 }
 
-/// The execution context for the path MTU cache.
-trait PmtuContext<I: Ip, C>: PmtuStateContext<I, Self::Instant> + TimerContext<PmtuTimerId<I>> {}
+/// The non-synchronized execution context for path MTU discovery.
+trait PmtuNonSyncContext<I: Ip>: TimerContext<PmtuTimerId<I>> {}
+impl<I: Ip, C: TimerContext<PmtuTimerId<I>>> PmtuNonSyncContext<I> for C {}
 
-impl<I: Ip, C, SC: PmtuStateContext<I, SC::Instant> + TimerContext<PmtuTimerId<I>>>
-    PmtuContext<I, C> for SC
+/// The execution context for path MTU discovery.
+trait PmtuContext<I: Ip, C: PmtuNonSyncContext<I>>: PmtuStateContext<I, C::Instant> {}
+
+impl<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuStateContext<I, C::Instant>> PmtuContext<I, C>
+    for SC
 {
 }
 
@@ -84,7 +88,10 @@ pub(crate) trait PmtuHandler<I: Ip, C> {
     fn update_pmtu_next_lower(&mut self, ctx: &mut C, src_ip: I::Addr, dst_ip: I::Addr, from: u32);
 }
 
-fn maybe_schedule_timer<I: Ip, C, SC: PmtuContext<I, C>>(sync_ctx: &mut SC, _ctx: &mut C) {
+fn maybe_schedule_timer<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+) {
     // Only attempt to create the next maintenance task if we still have
     // PMTU entries in the cache. If we don't, it would be a waste to
     // schedule the timer. We will let the next creation of a PMTU entry
@@ -94,19 +101,19 @@ fn maybe_schedule_timer<I: Ip, C, SC: PmtuContext<I, C>>(sync_ctx: &mut SC, _ctx
     }
 
     let timer_id = PmtuTimerId::default();
-    match sync_ctx.scheduled_instant(timer_id) {
+    match ctx.scheduled_instant(timer_id) {
         Some(scheduled_at) => {
-            let _: SC::Instant = scheduled_at;
+            let _: C::Instant = scheduled_at;
             // Timer already set, nothing to do.
         }
         None => {
             // We only enter this match arm if a timer was not already set.
-            assert_eq!(sync_ctx.schedule_timer(MAINTENANCE_PERIOD, timer_id), None)
+            assert_eq!(ctx.schedule_timer(MAINTENANCE_PERIOD, timer_id), None)
         }
     }
 }
 
-fn handle_update_result<I: Ip, C, SC: PmtuContext<I, C>>(
+fn handle_update_result<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     result: Result<Option<u32>, Option<u32>>,
@@ -118,23 +125,25 @@ fn handle_update_result<I: Ip, C, SC: PmtuContext<I, C>>(
     });
 }
 
-impl<I: Ip, C, SC: PmtuContext<I, C>> PmtuHandler<I, C> for SC {
+impl<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>> PmtuHandler<I, C> for SC {
     fn update_pmtu_if_less(&mut self, ctx: &mut C, src_ip: I::Addr, dst_ip: I::Addr, new_mtu: u32) {
-        let now = self.now();
+        let now = ctx.now();
         let res = self.get_state_mut().update_pmtu_if_less(src_ip, dst_ip, new_mtu, now);
         handle_update_result(self, ctx, res);
     }
 
     fn update_pmtu_next_lower(&mut self, ctx: &mut C, src_ip: I::Addr, dst_ip: I::Addr, from: u32) {
-        let now = self.now();
+        let now = ctx.now();
         let res = self.get_state_mut().update_pmtu_next_lower(src_ip, dst_ip, from, now);
         handle_update_result(self, ctx, res);
     }
 }
 
-impl<I: Ip, C, SC: PmtuContext<I, C>> TimerHandler<C, PmtuTimerId<I>> for SC {
+impl<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>> TimerHandler<C, PmtuTimerId<I>>
+    for SC
+{
     fn handle_timer(&mut self, ctx: &mut C, _timer: PmtuTimerId<I>) {
-        let now = self.now();
+        let now = ctx.now();
         self.get_state_mut().handle_timer(now);
         maybe_schedule_timer(self, ctx);
     }
@@ -412,7 +421,7 @@ mod tests {
         cache: PmtuCache<I, DummyInstant>,
     }
 
-    type MockCtx<I> = DummySyncCtx<DummyPmtuContext<I>, PmtuTimerId<I>, (), (), ()>;
+    type MockCtx<I> = DummySyncCtx<DummyPmtuContext<I>, (), (), ()>;
 
     impl<I: Ip> PmtuStateContext<I, DummyInstant> for MockCtx<I> {
         fn get_state_mut(&mut self) -> &mut PmtuCache<I, DummyInstant> {
@@ -481,12 +490,12 @@ mod tests {
         );
 
         let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 50;
-        let start_time = sync_ctx.now();
+        let start_time = non_sync_ctx.now();
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -503,8 +512,8 @@ mod tests {
         );
 
         // Advance time to 2s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -525,8 +534,8 @@ mod tests {
         let new_mtu2 = new_mtu1 - 1;
 
         // Advance time to 3s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -543,8 +552,8 @@ mod tests {
         );
 
         // Advance time to 4s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -565,8 +574,8 @@ mod tests {
         let new_mtu3 = new_mtu2 - 1;
 
         // Advance time to 5s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -583,8 +592,8 @@ mod tests {
         );
 
         // Advance time to 6s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -606,8 +615,8 @@ mod tests {
         let new_mtu4 = new_mtu3 + 50;
 
         // Advance time to 7s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -622,8 +631,8 @@ mod tests {
         );
 
         // Advance time to 8s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -643,8 +652,8 @@ mod tests {
         let low_mtu = u32::from(I::MINIMUM_LINK_MTU) - 1;
 
         // Advance time to 9s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -659,8 +668,8 @@ mod tests {
         );
 
         // Advance time to 10s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -685,15 +694,15 @@ mod tests {
             DummyCtx::with_sync_ctx(MockCtx::<I>::default());
 
         // Make sure there are no timers.
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 50;
-        let start_time = sync_ctx.now();
+        let start_time = non_sync_ctx.now();
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -710,14 +719,14 @@ mod tests {
         );
 
         // Make sure a task got scheduled.
-        sync_ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD + Duration::from_secs(1)),
         )]);
 
         // Advance time to 2s.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration,
             TimerHandler::handle_timer,
         ));
@@ -736,8 +745,8 @@ mod tests {
         );
 
         // Advance time to 30mins.
-        assert_empty(sync_ctx.trigger_timers_for(
-            &mut non_sync_ctx,
+        assert_empty(non_sync_ctx.trigger_timers_for(
+            &mut sync_ctx,
             duration * 1798,
             TimerHandler::handle_timer,
         ));
@@ -757,7 +766,7 @@ mod tests {
 
         // Make sure there is still a task scheduled. (we know no timers got
         // triggered because the `run_for` methods returned 0 so far).
-        sync_ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD + Duration::from_secs(1)),
         )]);
@@ -785,8 +794,8 @@ mod tests {
         );
 
         // Advance time to 1hr + 1s. Should have triggered a timer.
-        sync_ctx.trigger_timers_for_and_expect(
-            &mut non_sync_ctx,
+        non_sync_ctx.trigger_timers_for_and_expect(
+            &mut sync_ctx,
             duration * 1801,
             [PmtuTimerId::default()],
             TimerHandler::handle_timer,
@@ -811,14 +820,14 @@ mod tests {
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
-        sync_ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD * 2 + Duration::from_secs(1)),
         )]);
 
         // Advance time to 3hr + 1s. Should have triggered 2 timers.
-        sync_ctx.trigger_timers_for_and_expect(
-            &mut non_sync_ctx,
+        non_sync_ctx.trigger_timers_for_and_expect(
+            &mut sync_ctx,
             duration * 7200,
             [PmtuTimerId::default(), PmtuTimerId::default()],
             TimerHandler::handle_timer,
@@ -841,14 +850,14 @@ mod tests {
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
-        sync_ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             PmtuTimerId::default(),
             DummyInstant::from(MAINTENANCE_PERIOD * 4 + Duration::from_secs(1)),
         )]);
 
         // Advance time to 4hr + 1s. Should have triggered 1 timers.
-        sync_ctx.trigger_timers_for_and_expect(
-            &mut non_sync_ctx,
+        non_sync_ctx.trigger_timers_for_and_expect(
+            &mut sync_ctx,
             duration * 3600,
             [PmtuTimerId::default()],
             TimerHandler::handle_timer,
@@ -865,6 +874,6 @@ mod tests {
         assert_eq!(get_pmtu(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()), None);
         assert_eq!(get_last_updated(&sync_ctx, dummy_config.local_ip.get(), other_ip.get()), None);
         // Should not have a task scheduled since there is no more PMTU data.
-        sync_ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

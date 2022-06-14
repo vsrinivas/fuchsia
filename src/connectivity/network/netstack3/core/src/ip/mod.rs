@@ -446,31 +446,35 @@ pub enum IpLayerEvent<DeviceId, I: Ip> {
     },
 }
 
+/// The non-synchronized execution context for the IP layer.
+pub(crate) trait IpLayerNonSyncContext: InstantContext {}
+impl<C: InstantContext> IpLayerNonSyncContext for C {}
+
 /// The execution context for the IP layer.
 pub(crate) trait IpLayerContext<
-    I: IpLayerStateIpExt<<Self as InstantContext>::Instant, Self::DeviceId>,
-    C,
+    I: IpLayerStateIpExt<C::Instant, Self::DeviceId>,
+    C: IpLayerNonSyncContext,
 >:
-    InstantContext
-    + IpStateContext<I, <Self as InstantContext>::Instant>
+    IpStateContext<I, C::Instant>
     + IpDeviceContext<I, C>
     + EventContext<IpLayerEvent<Self::DeviceId, I>>
 {
 }
 
 impl<
-        I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
-        C,
-        SC: InstantContext
-            + IpStateContext<I, SC::Instant>
+        I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+        C: IpLayerNonSyncContext,
+        SC: IpStateContext<I, C::Instant>
             + IpDeviceContext<I, C>
             + EventContext<IpLayerEvent<SC::DeviceId, I>>,
     > IpLayerContext<I, C> for SC
 {
 }
 
-impl<C: IpDeviceNonSyncContext, SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C>>
-    IpSocketContext<Ipv4, C> for SC
+impl<
+        C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId> + IpLayerNonSyncContext,
+        SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C>,
+    > IpSocketContext<Ipv4, C> for SC
 {
     fn lookup_route(
         &self,
@@ -528,8 +532,10 @@ impl<C: IpDeviceNonSyncContext, SC: IpLayerContext<Ipv4, C> + device::IpDeviceCo
     }
 }
 
-impl<C: IpDeviceNonSyncContext, SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>>
-    IpSocketContext<Ipv6, C> for SC
+impl<
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId> + IpLayerNonSyncContext,
+        SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>,
+    > IpSocketContext<Ipv6, C> for SC
 {
     fn lookup_route(
         &self,
@@ -614,25 +620,25 @@ impl<C: IpDeviceNonSyncContext, SC: IpLayerContext<Ipv6, C> + device::IpDeviceCo
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    IpStateContext<Ipv4, C::Instant> for SyncCtx<D, C, NonSyncCtx>
+    IpStateContext<Ipv4, NonSyncCtx::Instant> for SyncCtx<D, C, NonSyncCtx>
 {
-    fn get_ip_layer_state(&self) -> &Ipv4State<C::Instant, DeviceId> {
+    fn get_ip_layer_state(&self) -> &Ipv4State<NonSyncCtx::Instant, DeviceId> {
         &self.state.ipv4
     }
 
-    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv4State<C::Instant, DeviceId> {
+    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv4State<NonSyncCtx::Instant, DeviceId> {
         &mut self.state.ipv4
     }
 }
 
 impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext>
-    IpStateContext<Ipv6, C::Instant> for SyncCtx<D, C, NonSyncCtx>
+    IpStateContext<Ipv6, NonSyncCtx::Instant> for SyncCtx<D, C, NonSyncCtx>
 {
-    fn get_ip_layer_state(&self) -> &Ipv6State<C::Instant, DeviceId> {
+    fn get_ip_layer_state(&self) -> &Ipv6State<NonSyncCtx::Instant, DeviceId> {
         &self.state.ipv6
     }
 
-    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv6State<C::Instant, DeviceId> {
+    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv6State<NonSyncCtx::Instant, DeviceId> {
         &mut self.state.ipv6
     }
 }
@@ -669,8 +675,8 @@ pub(crate) trait BufferIpDeviceContext<I: IpLayerIpExt, C, B: BufferMut>:
 
 /// The execution context for the IP layer requiring buffer.
 pub(crate) trait BufferIpLayerContext<
-    I: IpLayerStateIpExt<Self::Instant, <Self as IpDeviceIdContext<I>>::DeviceId> + IcmpHandlerIpExt,
-    C,
+    I: IpLayerStateIpExt<C::Instant, <Self as IpDeviceIdContext<I>>::DeviceId> + IcmpHandlerIpExt,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
 >:
     BufferTransportContext<I, C, B>
@@ -682,8 +688,8 @@ pub(crate) trait BufferIpLayerContext<
 }
 
 impl<
-        I: IpLayerStateIpExt<SC::Instant, <SC as IpDeviceIdContext<I>>::DeviceId> + IcmpHandlerIpExt,
-        C,
+        I: IpLayerStateIpExt<C::Instant, <SC as IpDeviceIdContext<I>>::DeviceId> + IcmpHandlerIpExt,
+        C: IpLayerNonSyncContext,
         B: BufferMut,
         SC: BufferTransportContext<I, C, B>
             + BufferIpDeviceContext<I, C, B>
@@ -828,8 +834,8 @@ impl IpDeviceId for DummyDeviceId {
 }
 
 #[cfg(test)]
-impl<I: Ip, S, Id, Meta, Event: Debug, D: IpDeviceId + 'static> IpDeviceIdContext<I>
-    for crate::context::testutil::DummySyncCtx<S, Id, Meta, Event, D>
+impl<I: Ip, S, Meta, Event: Debug, D: IpDeviceId + 'static> IpDeviceIdContext<I>
+    for crate::context::testutil::DummySyncCtx<S, Meta, Event, D>
 {
     type DeviceId = D;
 
@@ -1072,7 +1078,11 @@ pub(crate) fn handle_timer<
 /// `parse_metadata` is `None`. If an IGMP message is received but it is not
 /// coming from a device, i.e., `device` given is `None`,
 /// `dispatch_receive_ip_packet` will also panic.
-fn dispatch_receive_ipv4_packet<C, B: BufferMut, SC: BufferIpLayerContext<Ipv4, C, B>>(
+fn dispatch_receive_ipv4_packet<
+    C: IpLayerNonSyncContext,
+    B: BufferMut,
+    SC: BufferIpLayerContext<Ipv4, C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: <SC as IpDeviceIdContext<Ipv4>>::DeviceId,
@@ -1142,7 +1152,11 @@ fn dispatch_receive_ipv4_packet<C, B: BufferMut, SC: BufferIpLayerContext<Ipv4, 
 ///
 /// `dispatch_receive_ipv6_packet` has the same semantics as
 /// `dispatch_receive_ipv4_packet`, but for IPv6.
-fn dispatch_receive_ipv6_packet<C, B: BufferMut, SC: BufferIpLayerContext<Ipv6, C, B>>(
+fn dispatch_receive_ipv6_packet<
+    C: IpLayerNonSyncContext,
+    B: BufferMut,
+    SC: BufferIpLayerContext<Ipv6, C, B>,
+>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: <SC as IpDeviceIdContext<Ipv6>>::DeviceId,
@@ -1375,7 +1389,7 @@ pub(crate) fn receive_ip_packet<
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
 pub(crate) fn receive_ipv4_packet<
-    C,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
     SC: BufferIpLayerContext<Ipv4, C, B> + BufferIpLayerContext<Ipv4, C, Buf<Vec<u8>>>,
 >(
@@ -1589,7 +1603,7 @@ pub(crate) fn receive_ipv4_packet<
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
 pub(crate) fn receive_ipv6_packet<
-    C,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
     SC: BufferIpLayerContext<Ipv6, C, B> + BufferIpLayerContext<Ipv6, C, Buf<Vec<u8>>>,
 >(
@@ -1913,7 +1927,7 @@ impl Display for DropReason {
 }
 
 /// Computes the action to take in order to process a received IPv4 packet.
-fn receive_ipv4_packet_action<C, SC: IpLayerContext<Ipv4, C>>(
+fn receive_ipv4_packet_action<C: IpLayerNonSyncContext, SC: IpLayerContext<Ipv4, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -1948,7 +1962,7 @@ fn receive_ipv4_packet_action<C, SC: IpLayerContext<Ipv4, C>>(
 }
 
 /// Computes the action to take in order to process a received IPv6 packet.
-fn receive_ipv6_packet_action<C, SC: IpLayerContext<Ipv6, C>>(
+fn receive_ipv6_packet_action<C: IpLayerNonSyncContext, SC: IpLayerContext<Ipv6, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2018,8 +2032,8 @@ fn receive_ipv6_packet_action<C, SC: IpLayerContext<Ipv6, C>>(
 /// Computes the remaining protocol-agnostic actions on behalf of
 /// [`receive_ipv4_packet_action`] and [`receive_ipv6_packet_action`].
 fn receive_ip_packet_action_common<
-    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
-    C,
+    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2058,7 +2072,11 @@ fn receive_ip_packet_action_common<
 }
 
 // Look up the route to a host.
-fn lookup_route<I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>, C, SC: IpLayerContext<I, C>>(
+fn lookup_route<
+    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
+    SC: IpLayerContext<I, C>,
+>(
     sync_ctx: &SC,
     _ctx: &mut C,
     device: Option<SC::DeviceId>,
@@ -2071,21 +2089,21 @@ fn lookup_route<I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>, C, SC: IpLayerC
 
 fn get_ip_layer_state_inner_mut<
     'a,
-    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
-    C,
+    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &'a mut SC,
     _ctx: &mut C,
-) -> &'a mut IpStateInner<I, SC::Instant, SC::DeviceId> {
+) -> &'a mut IpStateInner<I, C::Instant, SC::DeviceId> {
     sync_ctx.get_ip_layer_state_mut().as_mut()
 }
 
 /// Add a route to the forwarding table, returning `Err` if the subnet
 /// is already in the table.
 pub(crate) fn add_route<
-    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
-    C,
+    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2099,8 +2117,8 @@ pub(crate) fn add_route<
 /// Add a device route to the forwarding table, returning `Err` if the
 /// subnet is already in the table.
 pub(crate) fn add_device_route<
-    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
-    C,
+    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2116,8 +2134,8 @@ pub(crate) fn add_device_route<
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
 pub(crate) fn del_route<
-    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
-    C,
+    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2133,9 +2151,9 @@ pub(crate) fn del_route<
 }
 
 pub(crate) fn del_device_routes<
-    I: IpLayerStateIpExt<SC::Instant, SC::DeviceId>,
+    I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
-    C,
+    C: IpLayerNonSyncContext,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -2215,11 +2233,8 @@ trait BufferIpLayerHandler<I: Ip, C, B: BufferMut>: IpDeviceIdContext<I> {
 
 impl<
         B: BufferMut,
-        C,
-        SC: BufferIpDeviceContext<Ipv6, C, B>
-            + InstantContext
-            + IpStateContext<Ipv6, SC::Instant>
-            + NonTestCtxMarker,
+        C: IpLayerNonSyncContext,
+        SC: BufferIpDeviceContext<Ipv6, C, B> + IpStateContext<Ipv6, C::Instant> + NonTestCtxMarker,
     > BufferIpLayerHandler<Ipv6, C, B> for SC
 {
     fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
@@ -2240,8 +2255,8 @@ impl<
 /// and the device is a non-loopback device.
 pub(crate) fn send_ipv4_packet_from_device<
     B: BufferMut,
-    C,
-    SC: BufferIpDeviceContext<Ipv4, C, B> + InstantContext + IpStateContext<Ipv4, SC::Instant>,
+    C: IpLayerNonSyncContext,
+    SC: BufferIpDeviceContext<Ipv4, C, B> + IpStateContext<Ipv4, C::Instant>,
     S: Serializer<Buffer = B>,
 >(
     sync_ctx: &mut SC,
@@ -2288,7 +2303,7 @@ pub(crate) fn send_ipv4_packet_from_device<
 /// and the device is a non-loopback device.
 pub(crate) fn send_ipv6_packet_from_device<
     B: BufferMut,
-    C,
+    C: IpLayerNonSyncContext,
     SC: BufferIpDeviceContext<Ipv6, C, B>,
     S: Serializer<Buffer = B>,
 >(
@@ -2328,12 +2343,11 @@ pub(crate) fn send_ipv6_packet_from_device<
 }
 
 impl<
-        C,
+        C: IpLayerNonSyncContext,
         SC: IpTransportLayerContext<Ipv4, C>
             + IcmpContext<Ipv4>
-            + StateContext<C, IcmpState<Ipv4Addr, SC::Instant, IpSock<Ipv4, SC::DeviceId>>>
+            + StateContext<C, IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, SC::DeviceId>>>
             + IpSocketHandler<Ipv4, C>
-            + InstantContext
             + CounterContext,
     > InnerIcmpContext<Ipv4, C> for SC
 {
@@ -2373,12 +2387,11 @@ impl<
 }
 
 impl<
-        C,
+        C: IpLayerNonSyncContext,
         SC: IpTransportLayerContext<Ipv6, C>
             + IcmpContext<Ipv6>
-            + StateContext<C, IcmpState<Ipv6Addr, SC::Instant, IpSock<Ipv6, SC::DeviceId>>>
+            + StateContext<C, IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, SC::DeviceId>>>
             + IpSocketHandler<Ipv6, C>
-            + InstantContext
             + CounterContext,
     > InnerIcmpContext<Ipv6, C> for SC
 {
@@ -3072,7 +3085,7 @@ mod tests {
         );
 
         // Make sure a timer got added.
-        sync_ctx.ctx.timer_ctx().assert_timers_installed([(
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
             IpLayerTimerId::from(FragmentCacheKey::new(
                 I::DUMMY_CONFIG.remote_ip.get(),
                 I::DUMMY_CONFIG.local_ip.get(),
@@ -3099,12 +3112,12 @@ mod tests {
             u32::from(fragment_id),
         );
         assert_eq!(
-            sync_ctx.trigger_next_timer(&mut non_sync_ctx, crate::handle_timer).unwrap(),
+            non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer).unwrap(),
             IpLayerTimerId::from(key.into()).into(),
         );
 
         // Make sure no other timers exist.
-        sync_ctx.ctx.timer_ctx().assert_no_timers_installed();
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // Process fragment #2
         process_ip_fragment::<I, _, _, _>(
@@ -3826,9 +3839,9 @@ mod tests {
         //
         // TODO(https://fxbug.dev/48578): Once this test is contextified, use a
         // more precise condition to ensure that DAD is complete.
-        let now = sync_ctx.now();
-        let _: Vec<_> = sync_ctx.trigger_timers_until_instant(
-            &mut non_sync_ctx,
+        let now = non_sync_ctx.now();
+        let _: Vec<_> = non_sync_ctx.trigger_timers_until_instant(
+            &mut sync_ctx,
             now + Duration::from_secs(60 * 60 * 24 * 365),
             crate::handle_timer,
         );
@@ -3862,8 +3875,8 @@ mod tests {
         //
         // TODO(https://fxbug.dev/48578): Once this test is contextified, use a
         // more precise condition to ensure that DAD is complete.
-        let _: Vec<_> = sync_ctx.trigger_timers_until_instant(
-            &mut non_sync_ctx,
+        let _: Vec<_> = non_sync_ctx.trigger_timers_until_instant(
+            &mut sync_ctx,
             DummyInstant::LATEST,
             crate::handle_timer,
         );

@@ -93,7 +93,7 @@ use net_types::{
 use packet::{Buf, BufferMut, EmptyBuf};
 
 use crate::{
-    context::{EventContext, InstantContext, RngContext, TimerContext},
+    context::{EventContext, RngContext, TimerContext},
     device::{DeviceLayerState, DeviceLayerTimerId},
     ip::{
         device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
@@ -224,13 +224,13 @@ impl<I: Instant> Default for StackState<I> {
 }
 
 /// The non-synchronized context for the stack.
-pub trait NonSyncContext: RngContext {}
-impl<C: RngContext> NonSyncContext for C {}
+pub trait NonSyncContext: RngContext + TimerContext<TimerId> {}
+impl<C: RngContext + TimerContext<TimerId>> NonSyncContext for C {}
 
 /// The synchronized context.
 pub struct SyncCtx<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> {
     /// Contains the state of the stack.
-    pub state: StackState<C::Instant>,
+    pub state: StackState<NonSyncCtx::Instant>,
     /// The dispatcher, take a look at [`EventDispatcher`] for more details.
     pub dispatcher: D,
     /// The execution context.
@@ -257,7 +257,7 @@ impl<
         NonSyncCtx: NonSyncContext + Default,
     > Default for Ctx<D, C, NonSyncCtx>
 where
-    StackState<C::Instant>: Default,
+    StackState<NonSyncCtx::Instant>: Default,
 {
     fn default() -> Ctx<D, C, NonSyncCtx> {
         Ctx {
@@ -276,7 +276,11 @@ impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext + Def
     Ctx<D, C, NonSyncCtx>
 {
     /// Constructs a new `Ctx`.
-    pub fn new(state: StackState<C::Instant>, dispatcher: D, ctx: C) -> Ctx<D, C, NonSyncCtx> {
+    pub fn new(
+        state: StackState<NonSyncCtx::Instant>,
+        dispatcher: D,
+        ctx: C,
+    ) -> Ctx<D, C, NonSyncCtx> {
         Ctx {
             sync_ctx: SyncCtx { state, dispatcher, ctx, non_sync_ctx_marker: PhantomData },
             non_sync_ctx: Default::default(),
@@ -301,7 +305,10 @@ impl<D: EventDispatcher + Default, C: BlanketCoreContext, NonSyncCtx: NonSyncCon
     Ctx<D, C, NonSyncCtx>
 {
     /// Construct a new `Ctx` using the default dispatcher.
-    pub fn with_default_dispatcher(state: StackState<C::Instant>, ctx: C) -> Ctx<D, C, NonSyncCtx> {
+    pub fn with_default_dispatcher(
+        state: StackState<NonSyncCtx::Instant>,
+        ctx: C,
+    ) -> Ctx<D, C, NonSyncCtx> {
         Ctx {
             sync_ctx: SyncCtx {
                 state,
@@ -459,8 +466,8 @@ impl<
 // allocate internally-generated buffers?
 
 /// The execution context required by the Netstack3 Core.
-pub trait BlanketCoreContext: InstantContext + TimerContext<TimerId> {}
-impl<C: InstantContext + TimerContext<TimerId>> BlanketCoreContext for C {}
+pub trait BlanketCoreContext {}
+impl<C> BlanketCoreContext for C {}
 
 /// An object which can dispatch events to a real system.
 ///

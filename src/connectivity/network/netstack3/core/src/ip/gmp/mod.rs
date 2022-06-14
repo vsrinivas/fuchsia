@@ -44,7 +44,7 @@ use crate::{
     context::{RngContext, TimerContext},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashMap, RemoveResult},
     ip::IpDeviceIdContext,
-    Instant, InstantContext,
+    Instant,
 };
 use assert_matches::assert_matches;
 use net_types::{
@@ -825,19 +825,26 @@ enum GmpMessageType<P> {
     Leave,
 }
 
-trait GmpNonSyncContext: RngContext {}
-impl<C: RngContext> GmpNonSyncContext for C {}
+/// The non-synchronized execution context for GMP.
+trait GmpNonSyncContext<I: Ip, DeviceId>:
+    RngContext + TimerContext<GmpDelayedReportTimerId<I::Addr, DeviceId>>
+{
+}
+impl<DeviceId, I: Ip, C: RngContext + TimerContext<GmpDelayedReportTimerId<I::Addr, DeviceId>>>
+    GmpNonSyncContext<I, DeviceId> for C
+{
+}
 
 /// Provides common functionality for GMP context implementations.
 ///
 /// This trait implements portions of a group management protocol.
-trait GmpContext<I: Ip, C: GmpNonSyncContext, PS: ProtocolSpecific>:
-    IpDeviceIdContext<I> + TimerContext<GmpDelayedReportTimerId<I::Addr, Self::DeviceId>>
+trait GmpContext<I: Ip, C: GmpNonSyncContext<I, Self::DeviceId>, PS: ProtocolSpecific>:
+    IpDeviceIdContext<I>
 {
     type Err;
-    type GroupState: From<GmpStateMachine<Self::Instant, PS>>
-        + Into<GmpStateMachine<Self::Instant, PS>>
-        + AsMut<GmpStateMachine<Self::Instant, PS>>;
+    type GroupState: From<GmpStateMachine<C::Instant, PS>>
+        + Into<GmpStateMachine<C::Instant, PS>>
+        + AsMut<GmpStateMachine<C::Instant, PS>>;
 
     /// Returns true iff the group management protocol is currently disabled for
     /// a multicast address on a device.
@@ -870,7 +877,7 @@ fn gmp_handle_timer<I, PS, C, SC>(
     ctx: &mut C,
     GmpDelayedReportTimerId { device, group_addr }: GmpDelayedReportTimerId<I::Addr, SC::DeviceId>,
 ) where
-    C: GmpNonSyncContext,
+    C: GmpNonSyncContext<I, SC::DeviceId>,
     SC: GmpContext<I, C, PS>,
     I: Ip,
     PS: ProtocolSpecific,
@@ -891,12 +898,12 @@ trait GmpMessage<I: Ip> {
 
 fn handle_report_message<I, PS, C, SC>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     device: SC::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> Result<(), SC::Err>
 where
-    C: GmpNonSyncContext,
+    C: GmpNonSyncContext<I, SC::DeviceId>,
     SC: GmpContext<I, C, PS>,
     I: Ip,
     PS: ProtocolSpecific,
@@ -909,10 +916,7 @@ where
         .report_received();
 
     if stop_timer {
-        assert_matches!(
-            sync_ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }),
-            Some(_)
-        );
+        assert_matches!(ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }), Some(_));
     }
 
     Ok(())
@@ -932,12 +936,12 @@ fn handle_query_message<I, PS, C, SC>(
     max_response_time: Duration,
 ) -> Result<(), SC::Err>
 where
-    C: GmpNonSyncContext,
+    C: GmpNonSyncContext<I, SC::DeviceId>,
     SC: GmpContext<I, C, PS>,
     I: Ip,
     PS: ProtocolSpecific,
 {
-    let now = sync_ctx.now();
+    let now = ctx.now();
     let state = sync_ctx.get_state_mut(device);
     let rng = ctx.rng_mut();
     let addr_and_actions = match target {
@@ -965,9 +969,9 @@ where
     ) in addr_and_actions.into_iter()
     {
         if let Some(generic_actions) = generic_actions {
-            let _: Option<SC::Instant> = match generic_actions {
+            let _: Option<C::Instant> = match generic_actions {
                 QueryReceivedGenericAction::ScheduleTimer(delay) => {
-                    sync_ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr })
+                    ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr })
                 }
                 QueryReceivedGenericAction::StopTimerAndSendReport(protocol_specific) => {
                     sync_ctx.send_message(
@@ -976,7 +980,7 @@ where
                         group_addr,
                         GmpMessageType::Report(protocol_specific),
                     );
-                    sync_ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr })
+                    ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr })
                 }
             };
         }
@@ -991,8 +995,8 @@ where
 
 fn gmp_handle_maybe_enabled<C, SC, I, PS>(sync_ctx: &mut SC, ctx: &mut C, device: SC::DeviceId)
 where
-    C: GmpNonSyncContext,
-    SC: GmpContext<I, C, PS> + InstantContext,
+    C: GmpNonSyncContext<I, SC::DeviceId>,
+    SC: GmpContext<I, C, PS>,
     PS: ProtocolSpecific + Default,
     PS::Config: Default,
     I: Ip,
@@ -1006,7 +1010,7 @@ where
         })
         .collect::<Vec<_>>();
 
-    let now = sync_ctx.now();
+    let now = ctx.now();
     let state = sync_ctx.get_state_mut(device);
     let rng = ctx.rng_mut();
     let actions = groups
@@ -1027,7 +1031,7 @@ where
             );
 
             assert_matches!(
-                sync_ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr }),
+                ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr }),
                 None
             );
         }
@@ -1036,8 +1040,8 @@ where
 
 fn gmp_handle_disabled<C, SC, I, PS>(sync_ctx: &mut SC, ctx: &mut C, device: SC::DeviceId)
 where
-    C: GmpNonSyncContext,
-    SC: GmpContext<I, C, PS> + InstantContext,
+    C: GmpNonSyncContext<I, SC::DeviceId>,
+    SC: GmpContext<I, C, PS>,
     PS: ProtocolSpecific,
     I: Ip,
 {
@@ -1055,7 +1059,7 @@ where
     for (group_addr, LeaveGroupActions { send_leave, stop_timer }) in actions {
         if stop_timer {
             assert_matches!(
-                sync_ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }),
+                ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }),
                 Some(_)
             );
         }
@@ -1073,13 +1077,13 @@ fn gmp_join_group<C, SC, I, PS>(
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupJoinResult
 where
-    C: GmpNonSyncContext,
-    SC: GmpContext<I, C, PS> + InstantContext,
+    C: GmpNonSyncContext<I, SC::DeviceId>,
+    SC: GmpContext<I, C, PS>,
     PS: ProtocolSpecific + Default,
     PS::Config: Default,
     I: Ip,
 {
-    let now = sync_ctx.now();
+    let now = ctx.now();
     let gmp_disabled = sync_ctx.gmp_disabled(device, group_addr);
     let state = sync_ctx.get_state_mut(device);
     let rng = ctx.rng_mut();
@@ -1094,7 +1098,7 @@ where
                 );
 
                 assert_matches!(
-                    sync_ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr }),
+                    ctx.schedule_timer(delay, GmpDelayedReportTimerId { device, group_addr }),
                     None
                 );
             }
@@ -1109,8 +1113,8 @@ fn gmp_leave_group<C, SC, I, PS>(
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupLeaveResult
 where
-    C: GmpNonSyncContext,
-    SC: GmpContext<I, C, PS> + InstantContext,
+    C: GmpNonSyncContext<I, SC::DeviceId>,
+    SC: GmpContext<I, C, PS>,
     PS: ProtocolSpecific,
     I: Ip,
 {
@@ -1118,7 +1122,7 @@ where
         |LeaveGroupActions { send_leave, stop_timer }| {
             if stop_timer {
                 assert_matches!(
-                    sync_ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }),
+                    ctx.cancel_timer(GmpDelayedReportTimerId { device, group_addr }),
                     Some(_)
                 );
             }

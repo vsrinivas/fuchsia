@@ -1923,13 +1923,12 @@ mod tests {
 
     type DummyDeviceSyncCtx<I, D> = crate::context::testutil::DummySyncCtx<
         DummyUdpCtx<I, D>,
-        (),
         SendIpPacketMeta<I, D, SpecifiedAddr<<I as Ip>::Addr>>,
         (),
         D,
     >;
 
-    type DummyDeviceNonSyncCtx = crate::context::testutil::DummyNonSyncCtx;
+    type DummyDeviceNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<()>;
 
     type DummyCtx<I> = DummyDeviceCtx<I, DummyDeviceId>;
     type DummySyncCtx<I> = DummyDeviceSyncCtx<I, DummyDeviceId>;

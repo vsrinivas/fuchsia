@@ -49,12 +49,11 @@ pub(super) trait TcpBufferContext {
 impl<
         I: IpExt,
         B: BufferMut,
-        C,
+        C: InstantContext,
         SC: TcpBufferContext
-            + InstantContext
             + IpDeviceIdContext<I>
-            + AsMut<TcpSockets<I, SC::DeviceId, SC::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
-            + AsRef<TcpSockets<I, SC::DeviceId, SC::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
+            + AsMut<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
+            + AsRef<TcpSockets<I, SC::DeviceId, C::Instant, SC::ReceiveBuffer, SC::SendBuffer>>
             + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
     > BufferIpTransportContext<I, C, SC, B> for TcpIpTransportContext
 {
@@ -93,7 +92,7 @@ impl<
                 return Ok(());
             }
         };
-        let now = sync_ctx.now();
+        let now = ctx.now();
 
         let conn_addr = ConnIpAddr::<TcpPosixSocketSpec<_, _, _, _, _>> {
             local_ip: local_ip,

@@ -85,7 +85,7 @@ use core::time::Duration;
 use packet::{BufferMut, Serializer};
 use rand::{CryptoRng, RngCore};
 
-use crate::{BlanketCoreContext, EventDispatcher, Instant, NonSyncContext, SyncCtx, TimerId};
+use crate::{BlanketCoreContext, EventDispatcher, Instant, NonSyncContext, SyncCtx};
 
 /// A marker trait indicating that the implementor is not the [`DummySyncCtx`]
 /// type found in test environments.
@@ -109,7 +109,7 @@ pub trait InstantContext {
     /// through [`TimerContext`]. This type may represent some sort of
     /// real-world time (e.g., [`std::time::Instant`]), or may be mocked in
     /// testing using a fake clock.
-    type Instant: Instant;
+    type Instant: Instant + 'static;
 
     /// Returns the current instant.
     ///
@@ -118,24 +118,12 @@ pub trait InstantContext {
     fn now(&self) -> Self::Instant;
 }
 
-// Temporary blanket impl until we switch over entirely to the traits defined in
-// this module.
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> InstantContext
-    for SyncCtx<D, C, NonSyncCtx>
-{
-    type Instant = C::Instant;
-
-    fn now(&self) -> Self::Instant {
-        self.ctx.now()
-    }
-}
-
 /// An [`InstantContext`] which stores a cached value for the current time.
 ///
 /// `CachedInstantCtx`s are constructed via [`new_cached_instant_context`].
 pub(crate) struct CachedInstantCtx<I>(I);
 
-impl<I: Instant> InstantContext for CachedInstantCtx<I> {
+impl<I: Instant + 'static> InstantContext for CachedInstantCtx<I> {
     type Instant = I;
     fn now(&self) -> I {
         self.0.clone()
@@ -201,30 +189,6 @@ pub trait TimerContext<Id>: InstantContext {
     /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no
     /// timer with the given ID exists, `scheduled_instant` will return `None`.
     fn scheduled_instant(&self, id: Id) -> Option<Self::Instant>;
-}
-
-impl<D: EventDispatcher, C: BlanketCoreContext, NonSyncCtx: NonSyncContext> TimerContext<TimerId>
-    for SyncCtx<D, C, NonSyncCtx>
-{
-    fn schedule_timer_instant(
-        &mut self,
-        time: Self::Instant,
-        id: TimerId,
-    ) -> Option<Self::Instant> {
-        self.ctx.schedule_timer_instant(time, id)
-    }
-
-    fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
-        self.ctx.cancel_timer(id)
-    }
-
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.ctx.cancel_timers_with(f)
-    }
-
-    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
-        self.ctx.scheduled_instant(id)
-    }
 }
 
 /// A handler for timer firing events.
@@ -777,14 +741,14 @@ pub(crate) mod testutil {
         ///
         /// `trigger_next_timer` triggers the next timer, if any, advances the
         /// internal clock to the timer's scheduled time, and returns its ID.
-        fn trigger_next_timer<C, F: FnMut(&mut Self, &mut C, Id)>(
+        fn trigger_next_timer<C, F: FnMut(&mut C, &mut Self, Id)>(
             &mut self,
             ctx: &mut C,
             mut f: F,
         ) -> Option<Id> {
             self.as_mut().timers.pop().map(|InstantAndData(t, id)| {
                 self.as_mut().instant.time = t;
-                f(self, ctx, id.clone());
+                f(ctx, self, id.clone());
                 id
             })
         }
@@ -797,7 +761,7 @@ pub(crate) mod testutil {
         /// # Panics
         ///
         /// Panics if `instant` is in the past.
-        fn trigger_timers_until_instant<C, F: FnMut(&mut Self, &mut C, Id)>(
+        fn trigger_timers_until_instant<C, F: FnMut(&mut C, &mut Self, Id)>(
             &mut self,
             ctx: &mut C,
             instant: DummyInstant,
@@ -826,7 +790,7 @@ pub(crate) mod testutil {
         /// until then, inclusive, by calling `f` on them.
         ///
         /// Returns the timers which were triggered.
-        fn trigger_timers_for<C, F: FnMut(&mut Self, &mut C, Id)>(
+        fn trigger_timers_for<C, F: FnMut(&mut C, &mut Self, Id)>(
             &mut self,
             ctx: &mut C,
             duration: Duration,
@@ -854,7 +818,7 @@ pub(crate) mod testutil {
         fn trigger_timers_and_expect_unordered<
             C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, &mut C, Id),
+            F: FnMut(&mut C, &mut Self, Id),
         >(
             &mut self,
             ctx: &mut C,
@@ -891,7 +855,7 @@ pub(crate) mod testutil {
         fn trigger_timers_until_and_expect_unordered<
             C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, &mut C, Id),
+            F: FnMut(&mut C, &mut Self, Id),
         >(
             &mut self,
             ctx: &mut C,
@@ -929,7 +893,7 @@ pub(crate) mod testutil {
         fn trigger_timers_for_and_expect<
             C,
             I: IntoIterator<Item = Id>,
-            F: FnMut(&mut Self, &mut C, Id),
+            F: FnMut(&mut C, &mut Self, Id),
         >(
             &mut self,
             ctx: &mut C,
@@ -1050,24 +1014,40 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) struct DummyNonSyncCtx {
+    /// A test helper used to provide an implementation of a non-synchronized
+    /// context.
+    pub(crate) struct DummyNonSyncCtx<TimerId> {
         rng: FakeCryptoRng<XorShiftRng>,
+        timers: DummyTimerCtx<TimerId>,
     }
 
-    impl Default for DummyNonSyncCtx {
+    impl<TimerId> Default for DummyNonSyncCtx<TimerId> {
         fn default() -> Self {
-            Self { rng: FakeCryptoRng::new_xorshift(0) }
+            Self { rng: FakeCryptoRng::new_xorshift(0), timers: DummyTimerCtx::default() }
         }
     }
 
-    impl DummyNonSyncCtx {
+    impl<TimerId> DummyNonSyncCtx<TimerId> {
         /// Seed the testing RNG with a specific value.
         pub(crate) fn seed_rng(&mut self, seed: u128) {
             self.rng = FakeCryptoRng::new_xorshift(seed);
         }
+
+        /// Move the clock forward by the given duration without firing any
+        /// timers.
+        ///
+        /// If any timers are scheduled to fire in the given duration, future
+        /// use of this `DummySyncCtx` may have surprising or buggy behavior.
+        pub(crate) fn sleep_skip_timers(&mut self, duration: Duration) {
+            self.timers.instant.sleep(duration);
+        }
+
+        pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<TimerId> {
+            &self.timers
+        }
     }
 
-    impl RngContext for DummyNonSyncCtx {
+    impl<TimerId> RngContext for DummyNonSyncCtx<TimerId> {
         type Rng = FakeCryptoRng<XorShiftRng>;
 
         fn rng(&self) -> &Self::Rng {
@@ -1079,9 +1059,45 @@ pub(crate) mod testutil {
         }
     }
 
+    impl<Id> AsRef<DummyInstantCtx> for DummyNonSyncCtx<Id> {
+        fn as_ref(&self) -> &DummyInstantCtx {
+            self.timers.as_ref()
+        }
+    }
+
+    impl<Id> AsRef<DummyTimerCtx<Id>> for DummyNonSyncCtx<Id> {
+        fn as_ref(&self) -> &DummyTimerCtx<Id> {
+            &self.timers
+        }
+    }
+
+    impl<Id> AsMut<DummyTimerCtx<Id>> for DummyNonSyncCtx<Id> {
+        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
+            &mut self.timers
+        }
+    }
+
+    impl<Id: Debug + PartialEq> TimerContext<Id> for DummyNonSyncCtx<Id> {
+        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
+            self.timers.schedule_timer_instant(time, id)
+        }
+
+        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
+            self.timers.cancel_timer(id)
+        }
+
+        fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F) {
+            self.timers.cancel_timers_with(f);
+        }
+
+        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
+            self.timers.scheduled_instant(id)
+        }
+    }
+
     pub(crate) struct DummyCtx<S, TimerId, Meta, Event: Debug, DeviceId> {
-        pub(crate) sync_ctx: DummySyncCtx<S, TimerId, Meta, Event, DeviceId>,
-        pub(crate) non_sync_ctx: DummyNonSyncCtx,
+        pub(crate) sync_ctx: DummySyncCtx<S, Meta, Event, DeviceId>,
+        pub(crate) non_sync_ctx: DummyNonSyncCtx<TimerId>,
     }
 
     impl<S: Default, Id, Meta, Event: Debug, DeviceId> Default
@@ -1103,7 +1119,7 @@ pub(crate) mod testutil {
         for DummyCtx<S, Id, Meta, Event, DeviceId>
     {
         fn as_ref(&self) -> &DummyInstantCtx {
-            self.sync_ctx.timers.as_ref()
+            self.non_sync_ctx.timers.as_ref()
         }
     }
 
@@ -1111,7 +1127,7 @@ pub(crate) mod testutil {
         for DummyCtx<S, Id, Meta, Event, DeviceId>
     {
         fn as_ref(&self) -> &DummyTimerCtx<Id> {
-            &self.sync_ctx.timers
+            &self.non_sync_ctx.timers
         }
     }
 
@@ -1119,7 +1135,7 @@ pub(crate) mod testutil {
         for DummyCtx<S, Id, Meta, Event, DeviceId>
     {
         fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
-            &mut self.sync_ctx.timers
+            &mut self.non_sync_ctx.timers
         }
     }
 
@@ -1146,7 +1162,6 @@ pub(crate) mod testutil {
             DummyCtx {
                 sync_ctx: DummySyncCtx {
                     state,
-                    timers: DummyTimerCtx::default(),
                     frames: DummyFrameCtx::default(),
                     counters: DummyCounterCtx::default(),
                     events: DummyEventCtx::default(),
@@ -1156,59 +1171,38 @@ pub(crate) mod testutil {
             }
         }
 
-        pub(crate) fn with_sync_ctx(sync_ctx: DummySyncCtx<S, Id, Meta, Event, DeviceId>) -> Self {
+        pub(crate) fn with_sync_ctx(sync_ctx: DummySyncCtx<S, Meta, Event, DeviceId>) -> Self {
             DummyCtx { sync_ctx, non_sync_ctx: DummyNonSyncCtx::default() }
         }
     }
 
-    /// A wrapper for a [`DummyTimerCtx`] and some other state.
-    ///
-    /// `DummySyncCtx` pairs some arbitrary state, `S`, with a `DummyTimerCtx`, a
-    /// `DummyFrameCtx`, and a `DummyCounterCtx`. It implements
-    /// [`InstantContext`], [`TimerContext`], [`FrameContext`], and
-    /// [`CounterContext`]. It also provides getters for `S`. If the type, `S`,
-    /// is meant to implement some other trait, then the caller is advised to
-    /// instead implement that trait for `DummySyncCtx<S, Id, Meta, Event>`. This
-    /// allows for full test mocks to be written with a minimum of boilerplate
-    /// code.
-    pub(crate) struct DummySyncCtx<S, TimerId, Meta, Event: Debug, DeviceId> {
+    /// A test helper used to provide an implementation of a synchronized
+    /// context.
+    pub(crate) struct DummySyncCtx<S, Meta, Event: Debug, DeviceId> {
         state: S,
-        timers: DummyTimerCtx<TimerId>,
         frames: DummyFrameCtx<Meta>,
         counters: DummyCounterCtx,
         events: DummyEventCtx<Event>,
         _devices_marker: PhantomData<DeviceId>,
     }
 
-    impl<S: Default, Id, Meta, Event: Debug, DeviceId> Default
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        fn default() -> DummySyncCtx<S, Id, Meta, Event, DeviceId> {
+    impl<S: Default, Meta, Event: Debug, DeviceId> Default for DummySyncCtx<S, Meta, Event, DeviceId> {
+        fn default() -> DummySyncCtx<S, Meta, Event, DeviceId> {
             DummySyncCtx::with_state(S::default())
         }
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId> DummySyncCtx<S, Id, Meta, Event, DeviceId> {
+    impl<S, Meta, Event: Debug, DeviceId> DummySyncCtx<S, Meta, Event, DeviceId> {
         /// Constructs a `DummySyncCtx` with the given state and default
         /// `DummyTimerCtx`, `DummyFrameCtx`, and `DummyCounterCtx`.
         pub(crate) fn with_state(state: S) -> Self {
             DummySyncCtx {
                 state,
-                timers: DummyTimerCtx::default(),
                 frames: DummyFrameCtx::default(),
                 counters: DummyCounterCtx::default(),
                 events: DummyEventCtx::default(),
                 _devices_marker: PhantomData,
             }
-        }
-
-        /// Move the clock forward by the given duration without firing any
-        /// timers.
-        ///
-        /// If any timers are scheduled to fire in the given duration, future
-        /// use of this `DummySyncCtx` may have surprising or buggy behavior.
-        pub(crate) fn sleep_skip_timers(&mut self, duration: Duration) {
-            self.timers.instant.sleep(duration);
         }
 
         /// Get an immutable reference to the inner state.
@@ -1244,93 +1238,41 @@ pub(crate) mod testutil {
             self.counters.counters.borrow().get(ctr).cloned().unwrap_or(0)
         }
 
-        pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<Id> {
-            &self.timers
-        }
-
-        pub(crate) fn timer_ctx_mut(&mut self) -> &mut DummyTimerCtx<Id> {
-            &mut self.timers
-        }
-
         pub(crate) fn take_events(&mut self) -> Vec<Event> {
             self.events.take()
         }
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId> AsRef<DummyInstantCtx>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        fn as_ref(&self) -> &DummyInstantCtx {
-            self.timers.as_ref()
-        }
-    }
-
-    impl<S, Id, Meta, Event: Debug, DeviceId> AsRef<DummyTimerCtx<Id>>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        fn as_ref(&self) -> &DummyTimerCtx<Id> {
-            &self.timers
-        }
-    }
-
-    impl<S, Id, Meta, Event: Debug, DeviceId> AsMut<DummyTimerCtx<Id>>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
-            &mut self.timers
-        }
-    }
-
-    impl<S, Id, Meta, Event: Debug, DeviceId> AsMut<DummyFrameCtx<Meta>>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+    impl<S, Meta, Event: Debug, DeviceId> AsMut<DummyFrameCtx<Meta>>
+        for DummySyncCtx<S, Meta, Event, DeviceId>
     {
         fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
             &mut self.frames
         }
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId> AsRef<DummyCounterCtx>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+    impl<S, Meta, Event: Debug, DeviceId> AsRef<DummyCounterCtx>
+        for DummySyncCtx<S, Meta, Event, DeviceId>
     {
         fn as_ref(&self) -> &DummyCounterCtx {
             &self.counters
         }
     }
 
-    impl<S, Id: Debug + PartialEq, Meta, Event: Debug, DeviceId> TimerContext<Id>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
-    {
-        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
-            self.timers.schedule_timer_instant(time, id)
-        }
-
-        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
-            self.timers.cancel_timer(id)
-        }
-
-        fn cancel_timers_with<F: FnMut(&Id) -> bool>(&mut self, f: F) {
-            self.timers.cancel_timers_with(f);
-        }
-
-        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
-            self.timers.scheduled_instant(id)
-        }
-    }
-
-    impl<S, Id, Meta, Event: Debug, DeviceId> EventContext<Event>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+    impl<S, Meta, Event: Debug, DeviceId> EventContext<Event>
+        for DummySyncCtx<S, Meta, Event, DeviceId>
     {
         fn on_event(&mut self, event: Event) {
             self.events.on_event(event)
         }
     }
 
-    impl<B: BufferMut, S, Id, Meta, Event: Debug, DeviceId> FrameContext<DummyNonSyncCtx, B, Meta>
-        for DummySyncCtx<S, Id, Meta, Event, DeviceId>
+    impl<B: BufferMut, S, Id, Meta, Event: Debug, DeviceId>
+        FrameContext<DummyNonSyncCtx<Id>, B, Meta> for DummySyncCtx<S, Meta, Event, DeviceId>
     {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
-            ctx: &mut DummyNonSyncCtx,
+            ctx: &mut DummyNonSyncCtx<Id>,
             metadata: Meta,
             frame: SS,
         ) -> Result<(), SS> {
@@ -1734,7 +1676,7 @@ pub(crate) mod testutil {
         pub(crate) fn sync_ctx<K: Into<CtxId>>(
             &mut self,
             context: K,
-        ) -> &mut DummySyncCtx<S, Id, SendMeta, Event, DeviceId> {
+        ) -> &mut DummySyncCtx<S, SendMeta, Event, DeviceId> {
             let DummyCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
             sync_ctx
         }
@@ -1807,11 +1749,11 @@ pub(crate) mod testutil {
         fn test_dummy_timer_context() {
             // An implementation of `TimerContext` that uses `usize` timer IDs
             // and stores every timer in a `Vec`.
-            impl<M, E: Debug, D> TimerHandler<DummyNonSyncCtx, usize>
-                for DummySyncCtx<Vec<(usize, DummyInstant)>, usize, M, E, D>
+            impl<M, E: Debug, D> TimerHandler<DummyNonSyncCtx<usize>, usize>
+                for DummySyncCtx<Vec<(usize, DummyInstant)>, M, E, D>
             {
-                fn handle_timer(&mut self, _ctx: &mut DummyNonSyncCtx, id: usize) {
-                    let now = self.now();
+                fn handle_timer(&mut self, ctx: &mut DummyNonSyncCtx<usize>, id: usize) {
+                    let now = ctx.now();
                     self.get_mut().push((id, now));
                 }
             }
@@ -1819,7 +1761,6 @@ pub(crate) mod testutil {
             let new_ctx = || {
                 DummyCtx::with_sync_ctx(DummySyncCtx::<
                     Vec<(usize, DummyInstant)>,
-                    usize,
                     (),
                     (),
                     DummyDeviceId,
@@ -1831,7 +1772,7 @@ pub(crate) mod testutil {
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 None
             );
             assert_eq!(sync_ctx.get_ref().as_slice(), []);
@@ -1840,31 +1781,31 @@ pub(crate) mod testutil {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
 
             // No timer with id `0` exists yet.
-            assert_eq!(sync_ctx.scheduled_instant(0), None);
+            assert_eq!(non_sync_ctx.scheduled_instant(0), None);
 
-            assert_eq!(sync_ctx.schedule_timer(ONE_SEC, 0), None);
+            assert_eq!(non_sync_ctx.schedule_timer(ONE_SEC, 0), None);
 
             // Timer with id `0` scheduled to execute at `ONE_SEC_INSTANT`.
-            assert_eq!(sync_ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
+            assert_eq!(non_sync_ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
 
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 Some(0)
             );
             assert_eq!(sync_ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
 
             // After the timer fires, it should not still be scheduled at some
             // instant.
-            assert_eq!(sync_ctx.scheduled_instant(0), None);
+            assert_eq!(non_sync_ctx.scheduled_instant(0), None);
 
             // The time should have been advanced.
-            assert_eq!(sync_ctx.now(), ONE_SEC_INSTANT);
+            assert_eq!(non_sync_ctx.now(), ONE_SEC_INSTANT);
 
             // Once it's been triggered, it should be canceled and not
             // triggerable again.
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 None
             );
             assert_eq!(sync_ctx.get_ref().as_slice(), []);
@@ -1872,30 +1813,33 @@ pub(crate) mod testutil {
             // If we schedule a timer but then cancel it, it shouldn't fire.
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
 
-            assert_eq!(sync_ctx.schedule_timer(ONE_SEC, 0), None);
-            assert_eq!(sync_ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
+            assert_eq!(non_sync_ctx.schedule_timer(ONE_SEC, 0), None);
+            assert_eq!(non_sync_ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
             assert_eq!(
-                sync_ctx.trigger_next_timer(&mut non_sync_ctx, TimerHandler::handle_timer),
+                non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 None
             );
             assert_eq!(sync_ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then schedule the same ID again, the
             // second timer should overwrite the first one.
-            let DummyCtx { mut sync_ctx, non_sync_ctx: _ } = new_ctx();
-            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
-            assert_eq!(sync_ctx.schedule_timer(ONE_SEC, 0), Some(Duration::from_secs(0).into()));
-            assert_eq!(sync_ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
+            let DummyCtx { sync_ctx: _, mut non_sync_ctx } = new_ctx();
+            assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
+            assert_eq!(
+                non_sync_ctx.schedule_timer(ONE_SEC, 0),
+                Some(Duration::from_secs(0).into())
+            );
+            assert_eq!(non_sync_ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
 
             // If we schedule three timers and then run `trigger_timers_until`
             // with the appropriate value, only two of them should fire.
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
-            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(0), 0), None,);
-            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(1), 1), None,);
-            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(2), 2), None,);
+            assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(0), 0), None,);
+            assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(1), 1), None,);
+            assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(2), 2), None,);
             assert_eq!(
-                sync_ctx.trigger_timers_until_instant(
-                    &mut non_sync_ctx,
+                non_sync_ctx.trigger_timers_until_instant(
+                    &mut sync_ctx,
                     ONE_SEC_INSTANT,
                     TimerHandler::handle_timer
                 ),
@@ -1909,14 +1853,17 @@ pub(crate) mod testutil {
             );
 
             // They should be canceled now.
-            assert_eq!(sync_ctx.cancel_timer(0), None);
-            assert_eq!(sync_ctx.cancel_timer(1), None);
+            assert_eq!(non_sync_ctx.cancel_timer(0), None);
+            assert_eq!(non_sync_ctx.cancel_timer(1), None);
 
             // The clock should have been updated.
-            assert_eq!(sync_ctx.now(), ONE_SEC_INSTANT);
+            assert_eq!(non_sync_ctx.now(), ONE_SEC_INSTANT);
 
             // The last timer should not have fired.
-            assert_eq!(sync_ctx.cancel_timer(2), Some(DummyInstant::from(Duration::from_secs(2))));
+            assert_eq!(
+                non_sync_ctx.cancel_timer(2),
+                Some(DummyInstant::from(Duration::from_secs(2)))
+            );
         }
 
         #[test]
@@ -1926,20 +1873,19 @@ pub(crate) mod testutil {
             let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
                 DummyCtx::with_sync_ctx(DummySyncCtx::<
                     Vec<(usize, DummyInstant)>,
-                    usize,
                     (),
                     (),
                     DummyDeviceId,
                 >::default());
-            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
-            assert_eq!(sync_ctx.schedule_timer(Duration::from_secs(2), 1), None);
-            sync_ctx.trigger_timers_until_and_expect_unordered(
-                &mut non_sync_ctx,
+            assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
+            assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(2), 1), None);
+            non_sync_ctx.trigger_timers_until_and_expect_unordered(
+                &mut sync_ctx,
                 ONE_SEC_INSTANT,
                 vec![0],
                 TimerHandler::handle_timer,
             );
-            assert_eq!(sync_ctx.now(), ONE_SEC_INSTANT);
+            assert_eq!(non_sync_ctx.now(), ONE_SEC_INSTANT);
         }
     }
 }
