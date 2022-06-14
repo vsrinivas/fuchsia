@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_ACPI_H_
 #define ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_ACPI_H_
 
+#include <stdio.h>
 #include <zircon/boot/driver-config.h>
 
 #include "item-base.h"
@@ -25,7 +26,7 @@ class AcpiRsdpItem : public SingleOptionalItem<uint64_t, ZBI_TYPE_ACPI_RSDP> {
  public:
   // This sets a payload of the physical address the parser is using.
   // If Init is not called, no item will be produced.
-  void Init(const acpi_lite::AcpiParser& parser);
+  void Init(const acpi_lite::AcpiParser& parser, const char* shim_name, FILE* log);
 };
 
 // This can supply a ZBI_TYPE_KERNEL_DRIVER item based on the serial console
@@ -34,7 +35,7 @@ class AcpiUartItem
     : public boot_shim::SingleVariantItemBase<AcpiUartItem, dcfg_simple_t, dcfg_simple_pio_t> {
  public:
   // This initializes the data from ACPI tables.
-  void Init(const acpi_lite::AcpiParserInterface& parser);
+  void Init(const acpi_lite::AcpiParserInterface& parser, const char* shim_name, FILE* log);
 
   static constexpr zbi_header_t ItemHeader(const dcfg_simple_t& cfg) {
     return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = KDRV_I8250_MMIO_UART};

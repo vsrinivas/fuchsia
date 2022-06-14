@@ -14,6 +14,7 @@ zx_library("boot-shim") {
     "lib/boot-shim/acpi.h",
     "lib/boot-shim/boot-shim.h",
     "lib/boot-shim/efi.h",
+    "lib/boot-shim/efi-boot-shim.h",
     "lib/boot-shim/item-base.h",
     "lib/boot-shim/pool-mem-config.h",
     "lib/boot-shim/test-serial-number.h",
@@ -30,7 +31,7 @@ zx_library("boot-shim") {
     # <lib/boot-shim/item-base.h> has #include <lib/zbitl/image.h>.
     "//zircon/system/ulib/zbitl",
 
-    # <lib/boot-shim/item-base.h> #include <lib/fitx/result.h>
+    # <lib/boot-shim/item-base.h> has #include <lib/fitx/result.h>
     "//zircon/system/ulib/zxc",
 
     # <lib/boot-shim/efi.h> #include <efi/system-table.h>
@@ -41,6 +42,7 @@ zx_library("boot-shim") {
     "acpi.cc",
     "boot-shim.cc",
     "cmdline.cc",
+    "efi-boot-shim.cc",
     "efi.cc",
     "pool-mem-config.cc",
     "test-serial-number.cc",
@@ -51,6 +53,7 @@ zx_library("boot-shim") {
     "//zircon/kernel/lib/acpi_lite",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/phys/lib/memalloc",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/uart",
   ]
@@ -82,6 +85,7 @@ group("tests") {
 test("boot-shim-unittests") {
   sources = [
     "acpi-tests.cc",
+    "efi-boot-shim-tests.cc",
     "efi-tests.cc",
     "pool-mem-config-tests.cc",
     "test-serial-number-tests.cc",

@@ -26,6 +26,8 @@ struct BufferOwner {
 
 class TestHelper {
  public:
+  static constexpr size_t kDefaultBufferSize = 4096;
+
   TestHelper();
 
   // Cannot be copied or moved.
@@ -42,7 +44,7 @@ class TestHelper {
 
   void ExpectLogLines(std::initializer_list<std::string_view> expected);
 
-  BufferOwner GetZbiBuffer(size_t size = 4096);
+  BufferOwner GetZbiBuffer(size_t size = kDefaultBufferSize);
 
  private:
   [[maybe_unused]] char* log_buffer_ = nullptr;

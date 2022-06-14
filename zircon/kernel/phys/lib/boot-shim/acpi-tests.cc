@@ -21,7 +21,7 @@ void AcpiTest(const Parser* parser, const T& expected_payload) {
   TestShim shim(__func__, test.log());
 
   if (parser) {
-    shim.template Get<Item>().Init(*parser);
+    shim.template InitGetItem<Item>(*parser);
   }
 
   auto [buffer, owner] = test.GetZbiBuffer();

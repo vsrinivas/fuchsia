@@ -311,9 +311,7 @@ class View {
     iterator& operator++() {  // prefix
       Assert(__func__);
       view_->StartIteration();
-      const uint32_t next_item_offset =
-          offset_ + static_cast<uint32_t>(sizeof(zbi_header_t)) + ZBI_ALIGN(value_.header->length);
-      Update(next_item_offset);
+      Update(next_item_offset());
       return *this;
     }
 
@@ -356,6 +354,13 @@ class View {
     // Private fields accessed by Image<Storage>::Append().
     template <typename ImageStorage>
     friend class Image;
+
+    uint32_t next_item_offset() const {
+      return offset_ + static_cast<uint32_t>(sizeof(zbi_header_t)) +
+             ZBI_ALIGN(value_.header->length);
+    }
+
+    bool next_is_end() const { return next_item_offset() == view_->size_bytes(); }
 
     // The default-constructed state is almost the same as the end() state:
     // nothing but operator==() should ever be called if view_ is nullptr.
@@ -512,9 +517,7 @@ class View {
   iterator end() { return {this, true}; }
 
   size_t size_bytes() {
-    if (std::holds_alternative<Unused>(error_)) {
-      ZX_ASSERT(limit_ == 0);
-
+    if (limit_ == 0 && std::holds_alternative<Unused>(error_)) {
       // Taking the size before doing begin() takes extra work.
       auto capacity_error = Traits::Capacity(storage());
       if (capacity_error.is_ok()) {
@@ -953,11 +956,7 @@ class View {
     return fitx::ok(header);
   }
 
-  void set_limit(uint32_t limit) {
-    if (!std::holds_alternative<Unused>(error_)) {
-      limit_ = limit;
-    }
-  }
+  void set_limit(uint32_t limit) { limit_ = limit; }
 
  private:
   struct Unused {};

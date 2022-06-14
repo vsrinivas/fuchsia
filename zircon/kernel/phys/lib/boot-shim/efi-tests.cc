@@ -11,23 +11,32 @@
 #include <lib/boot-shim/test-helper.h>
 #include <zircon/boot/image.h>
 
+#include <efi/boot-services.h>
 #include <efi/system-table.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
-template <class Item, uint32_t Type, typename T>
-void EfiTest(const efi_system_table* systab, const T& expected_payload) {
+template <class Item, uint32_t Type,
+          size_t BufferSize = boot_shim::testing::TestHelper::kDefaultBufferSize, typename T,
+          typename... Args>
+void EfiTest(const T& expected_payload, Args&&... args) {
   using TestShim = boot_shim::BootShim<Item>;
 
   boot_shim::testing::TestHelper test;
   TestShim shim(__func__, test.log());
 
-  if (systab) {
-    shim.template Get<Item>().Init(systab);
+  if constexpr (sizeof...(Args) > 0) {
+    auto init = [&]() { return shim.template Get<Item>().Init(std::forward<Args>(args)...); };
+    if constexpr (std::is_void_v<decltype(init())>) {
+      init();
+    } else {
+      auto result = init();
+      EXPECT_TRUE(result.is_ok(), "EFI error %#zx", result.error_value());
+    }
   }
 
-  auto [buffer, owner] = test.GetZbiBuffer();
+  auto [buffer, owner] = test.GetZbiBuffer(BufferSize);
   typename TestShim::DataZbi zbi(buffer);
   ASSERT_TRUE(zbi.clear().is_ok());
 
@@ -54,15 +63,15 @@ void EfiTest(const efi_system_table* systab, const T& expected_payload) {
 }
 
 TEST(BootShimTests, EfiSystemTableNone) {
-  ASSERT_NO_FATAL_FAILURE((EfiTest<boot_shim::EfiSystemTableItem, ZBI_TYPE_EFI_SYSTEM_TABLE>(
-      nullptr, std::monostate{})));
+  ASSERT_NO_FATAL_FAILURE(
+      (EfiTest<boot_shim::EfiSystemTableItem, ZBI_TYPE_EFI_SYSTEM_TABLE>(std::monostate{})));
 }
 
 TEST(BootShimTests, EfiSystemTable) {
   constexpr efi_system_table kTable = {};
   const uint64_t expected_payload = reinterpret_cast<uintptr_t>(&kTable);
   ASSERT_NO_FATAL_FAILURE((EfiTest<boot_shim::EfiSystemTableItem, ZBI_TYPE_EFI_SYSTEM_TABLE>(
-      &kTable, expected_payload)));
+      expected_payload, &kTable)));
 }
 
 TEST(BootShimTests, EfiGetVendorTable) {
@@ -82,8 +91,7 @@ TEST(BootShimTests, EfiGetVendorTable) {
 }
 
 TEST(BootShimTests, EfiSmbiosNone) {
-  ASSERT_NO_FATAL_FAILURE(
-      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(nullptr, std::monostate{})));
+  ASSERT_NO_FATAL_FAILURE((EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(std::monostate{})));
 }
 
 TEST(BootShimTests, EfiSmbios) {
@@ -97,7 +105,7 @@ TEST(BootShimTests, EfiSmbios) {
   };
   const uint64_t expected_payload = reinterpret_cast<uintptr_t>(kFakeSmbios.data());
   ASSERT_NO_FATAL_FAILURE(
-      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(&kSystemTable, expected_payload)));
+      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(expected_payload, &kSystemTable)));
 }
 
 TEST(BootShimTests, EfiSmbiosV3) {
@@ -111,7 +119,7 @@ TEST(BootShimTests, EfiSmbiosV3) {
   };
   const uint64_t expected_payload = reinterpret_cast<uintptr_t>(kFakeSmbios.data());
   ASSERT_NO_FATAL_FAILURE(
-      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(&kSystemTable, expected_payload)));
+      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(expected_payload, &kSystemTable)));
 }
 
 // Mock up some ACPI tables in memory.  This is sample ACPI data from an Intel
@@ -202,5 +210,4 @@ TEST(BootShimTests, EfiGetAcpi) {
   ASSERT_TRUE(result.is_ok(), "status %d", result.status_value());
   EXPECT_EQ(result->rsdp_pa(), kRsdpPa);
 }
-
 }  // namespace

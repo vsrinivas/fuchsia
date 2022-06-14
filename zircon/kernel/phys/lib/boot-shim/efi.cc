@@ -14,6 +14,7 @@
 
 #include <efi/system-table.h>
 #include <efi/types.h>
+#include <fbl/no_destructor.h>
 
 namespace boot_shim {
 namespace {
@@ -71,9 +72,9 @@ zx::status<acpi_lite::AcpiParser> EfiGetAcpi(const efi_system_table* systab) {
                                              {ACPI_TABLE_GUID, kRsdPtr},
                                              {ACPI_20_TABLE_GUID, kRsdPtr},
                                          })) {
-    static DirectPhysMemReader phys_mem_reader;
+    static fbl::NoDestructor<DirectPhysMemReader> phys_mem_reader;
     zx_paddr_t paddr = reinterpret_cast<uintptr_t>(table);
-    return acpi_lite::AcpiParser::Init(phys_mem_reader, paddr);
+    return acpi_lite::AcpiParser::Init(*phys_mem_reader, paddr);
   }
   return zx::error(ZX_ERR_NOT_FOUND);
 }

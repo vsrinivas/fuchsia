@@ -12,6 +12,15 @@
 
 namespace boot_shim {
 
+bool BootShimBase::Check(const char* what, fitx::result<std::string_view> result) const {
+  if (result.is_error()) {
+    fprintf(log_, "%s: %s: %.*s", shim_name_, what, static_cast<int>(result.error_value().size()),
+            result.error_value().data());
+    return false;
+  }
+  return true;
+}
+
 bool BootShimBase::Check(const char* what, fitx::result<InputZbi::Error> result) const {
   if (result.is_error()) {
     fprintf(log_, "%s: %s: ", shim_name_, what);

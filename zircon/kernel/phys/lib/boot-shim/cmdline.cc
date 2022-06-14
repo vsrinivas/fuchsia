@@ -39,6 +39,14 @@ size_t BootShimBase::Cmdline::Collect(std::optional<ItemBase::WritableBytes> pay
     }
   }
 
+  auto add_strings = [add_one = [&add](std::string_view str) {
+    add(" ");
+    add(str);
+  }](auto strings) { std::for_each(strings.begin(), strings.end(), add_one); };
+
+  add_strings(strings_);
+  add_strings(cstr_);
+
   return total;
 }
 

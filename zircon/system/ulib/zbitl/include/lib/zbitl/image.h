@@ -200,7 +200,7 @@ class Image : public View<Storage> {
   // at the same item is returned; old iterators to this item are invalidated.
   fitx::result<Error, iterator> TrimLastItem(iterator item, uint32_t new_length) {
     ZX_ASSERT(item != this->end());
-    ZX_ASSERT(std::next(item) == this->end());
+    ZX_ASSERT(item.next_is_end());
 
     const uint32_t old_length = item->header->length;
     ZX_ASSERT(new_length <= ZBI_ALIGN(old_length));

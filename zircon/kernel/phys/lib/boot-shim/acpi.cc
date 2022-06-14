@@ -9,9 +9,12 @@
 
 namespace boot_shim {
 
-void AcpiRsdpItem::Init(const acpi_lite::AcpiParser& parser) { set_payload(parser.rsdp_pa()); }
+void AcpiRsdpItem::Init(const acpi_lite::AcpiParser& parser, const char* shim_name, FILE* log) {
+  set_payload(parser.rsdp_pa());
+}
 
-void AcpiUartItem::Init(const acpi_lite::AcpiParserInterface& parser) {
+void AcpiUartItem::Init(const acpi_lite::AcpiParserInterface& parser, const char* shim_name,
+                        FILE* log) {
   set_payload();  // Clear out any old state in case we find nothing below.
   if (auto dbg2 = acpi_lite::GetDebugPort(parser); dbg2.is_ok()) {
     switch (dbg2->type) {
@@ -23,6 +26,7 @@ void AcpiUartItem::Init(const acpi_lite::AcpiParserInterface& parser) {
         break;
     }
   }
+  // acpi_lite logs on its own when it fails.
 }
 
 }  // namespace boot_shim

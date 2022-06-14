@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_BOOT_SHIM_H_
 #define ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_BOOT_SHIM_H_
 
+#include <lib/stdcompat/span.h>
 #include <stdio.h>
 
 #include <array>
@@ -32,6 +33,8 @@ class BootShimBase : public ItemBase {
 
   FILE* log() const { return log_; }
 
+  bool Check(const char* what, fitx::result<std::string_view> result) const;
+
   bool Check(const char* what, fitx::result<InputZbi::Error> result) const;
 
   bool Check(const char* what, fitx::result<InputZbi::CopyError<WritableBytes>> result) const;
@@ -47,6 +50,9 @@ class BootShimBase : public ItemBase {
 
     constexpr std::string_view operator[](Index i) const { return chunks_[i]; }
 
+    void set_strings(cpp20::span<std::string_view> strings) { strings_ = strings; }
+    void set_cstr(cpp20::span<const char*> cstr) { cstr_ = cstr; }
+
     size_t size_bytes() const;
     fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
 
@@ -54,6 +60,8 @@ class BootShimBase : public ItemBase {
     size_t Collect(std::optional<WritableBytes> payload = std::nullopt) const;
 
     std::array<std::string_view, kCount> chunks_;
+    cpp20::span<std::string_view> strings_;
+    cpp20::span<const char*> cstr_;
   };
 
   void Log(const Cmdline& cmdline, ByteView ramdisk) const;
@@ -121,6 +129,16 @@ class BootShim : public BootShimBase {
     return *this;
   }
 
+  constexpr BootShim& set_cmdline_strings(cpp20::span<std::string_view> strings) {
+    Get<Cmdline>().set_strings(strings);
+    return *this;
+  }
+
+  constexpr BootShim& set_cmdline_cstrings(cpp20::span<const char*> cstrings) {
+    Get<Cmdline>().set_cstr(cstrings);
+    return *this;
+  }
+
   // Log how things look after calling set_* methods.
   void Log(ByteView ramdisk) const { BootShimBase::Log(Get<Cmdline>(), ramdisk); }
 
@@ -150,6 +168,18 @@ class BootShim : public BootShimBase {
   constexpr const T& Get() const {
     static_assert(std::is_same_v<T, Cmdline> || (std::is_same_v<T, Items> || ...));
     return std::get<T>(items_);
+  }
+
+  // This calls item.Init(args..., shim_name(), log()).
+  template <class Item, typename... Args>
+  decltype(auto) InitItem(Item& item, Args&&... args) {
+    return item.Init(std::forward<Args>(args)..., shim_name(), log());
+  }
+
+  // This calls the Get<Item>() item method Init(args..., shim_name(), log()).
+  template <class Item, typename... Args>
+  decltype(auto) InitGetItem(Args&&... args) {
+    return InitItem(Get<Item>(), std::forward<Args>(args)...);
   }
 
   // Returns callback(Items&...).
