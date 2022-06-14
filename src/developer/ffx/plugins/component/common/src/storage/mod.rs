@@ -9,10 +9,11 @@ use {
 };
 
 mod copy;
+mod delete;
 mod list;
 mod make_directory;
 
-pub use {copy::copy, list::list, make_directory::make_directory};
+pub use {copy::copy, delete::delete, list::list, make_directory::make_directory};
 
 pub const REMOTE_PATH_HELP: &'static str = "Remote paths have the following format:
 

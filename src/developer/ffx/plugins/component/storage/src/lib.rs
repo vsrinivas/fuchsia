@@ -6,7 +6,7 @@ use {
     anyhow::Result,
     errors::ffx_error,
     ffx_component::connect_to_lifecycle_controller,
-    ffx_component::storage::{copy, list, make_directory},
+    ffx_component::storage::{copy, delete, list, make_directory},
     ffx_component_storage_args::{StorageCommand, SubcommandEnum},
     ffx_core::ffx_plugin,
     fidl::endpoints::ServerEnd,
@@ -56,6 +56,7 @@ async fn storage_cmd(storage_admin: StorageAdminProxy, subcommand: SubcommandEnu
         SubcommandEnum::Copy(args) => {
             copy(storage_admin, args.source_path, args.destination_path).await
         }
+        SubcommandEnum::Delete(args) => delete(storage_admin, args.path).await,
         SubcommandEnum::List(args) => print_list(storage_admin, args.path).await,
         SubcommandEnum::MakeDirectory(args) => make_directory(storage_admin, args.path).await,
     }

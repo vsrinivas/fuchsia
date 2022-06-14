@@ -25,10 +25,10 @@ rustc_library("ffx_component") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tempfile",
   ]
-
   sources = [
     "src/lib.rs",
     "src/storage/copy.rs",
+    "src/storage/delete.rs",
     "src/storage/list.rs",
     "src/storage/make_directory.rs",
     "src/storage/mod.rs",

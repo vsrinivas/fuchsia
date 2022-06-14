@@ -37,7 +37,7 @@ impl Directory {
             .as_ref()
             .as_os_str()
             .to_str()
-            .ok_or_else(|| format_err!("Could not convert path to string"))?;
+            .ok_or_else(|| format_err!("could not convert path to string"))?;
         let proxy =
             fuchsia_fs::directory::open_in_namespace(path_str, fio::OpenFlags::RIGHT_READABLE)?;
         let path = path.as_ref().to_path_buf();
@@ -64,11 +64,11 @@ impl Directory {
         let path = self.path.join(relative_path.as_ref());
         let relative_path = match relative_path.as_ref().to_str() {
             Some(relative_path) => relative_path,
-            None => return Err(format_err!("Could not convert relative path to &str")),
+            None => return Err(format_err!("could not convert relative path to &str")),
         };
         match open_directory_no_describe(&self.proxy, relative_path, flags) {
             Ok(proxy) => Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) }),
-            Err(e) => Err(format_err!("Could not open dir `{}`: {}", path.as_path().display(), e)),
+            Err(e) => Err(format_err!("could not open dir `{}`: {}", path.as_path().display(), e)),
         }
     }
 
@@ -77,7 +77,7 @@ impl Directory {
         let path = self.path.join(relative_path.as_ref());
         let relative_path = match relative_path.as_ref().to_str() {
             Some(relative_path) => relative_path,
-            None => return Err(format_err!("Relative path is not valid unicode")),
+            None => return Err(format_err!("relative path is not valid unicode")),
         };
         let proxy =
             match open_file_no_describe(&self.proxy, relative_path, fio::OpenFlags::RIGHT_READABLE)
@@ -85,7 +85,7 @@ impl Directory {
                 Ok(proxy) => proxy,
                 Err(e) => {
                     return Err(format_err!(
-                        "Could not open file `{}`: {}",
+                        "could not open file `{}`: {}",
                         path.as_path().display(),
                         e
                     ))
@@ -95,7 +95,7 @@ impl Directory {
         match read_to_string(&proxy).await {
             Ok(data) => Ok(data),
             Err(e) => Err(format_err!(
-                "Could not read file `{}` as string: {}",
+                "could not read file `{}` as string: {}",
                 path.as_path().display(),
                 e
             )),
@@ -107,7 +107,7 @@ impl Directory {
         let path = self.path.join(relative_path.as_ref());
         let relative_path = match relative_path.as_ref().to_str() {
             Some(relative_path) => relative_path,
-            None => return Err(format_err!("Relative path is not valid unicode")),
+            None => return Err(format_err!("relative path is not valid unicode")),
         };
         let proxy =
             match open_file_no_describe(&self.proxy, relative_path, fio::OpenFlags::RIGHT_READABLE)
@@ -115,7 +115,7 @@ impl Directory {
                 Ok(proxy) => proxy,
                 Err(e) => {
                     return Err(format_err!(
-                        "Could not open file `{}`: {}",
+                        "could not open file `{}`: {}",
                         path.as_path().display(),
                         e
                     ))
@@ -124,7 +124,7 @@ impl Directory {
 
         match read(&proxy).await {
             Ok(data) => Ok(data),
-            Err(e) => Err(format_err!("Could not read file `{}`: {}", path.as_path().display(), e)),
+            Err(e) => Err(format_err!("could not read file `{}`: {}", path.as_path().display(), e)),
         }
     }
 
@@ -134,7 +134,30 @@ impl Directory {
         match self.entries().await {
             Ok(entries) => Ok(entries.iter().any(|s| s == filename)),
             Err(e) => Err(format_err!(
-                "Could not check if `{}` exists in `{}`: {}",
+                "could not check if `{}` exists in `{}`: {}",
+                filename,
+                self.path.as_path().display(),
+                e
+            )),
+        }
+    }
+
+    // Remove the given `filename` from the directory. Note that while the file will be removed from
+    // the directory, it will be destroyed only if there are no other references to it.
+    pub async fn remove(&self, filename: &str) -> Result<()> {
+        let options = fio::UnlinkOptions::EMPTY;
+        match self.proxy.unlink(filename, options).await {
+            Ok(r) => match r {
+                Ok(()) => Ok(()),
+                Err(e) => Err(format_err!(
+                    "could not delete `{}` from `{}`: {}",
+                    filename,
+                    self.path.as_path().display(),
+                    e
+                )),
+            },
+            Err(e) => Err(format_err!(
+                "proxy error while deleting `{}` from `{}`: {}",
                 filename,
                 self.path.as_path().display(),
                 e
@@ -148,7 +171,7 @@ impl Directory {
         let path = self.path.join(relative_path.as_ref());
         let relative_path = match relative_path.as_ref().to_str() {
             Some(relative_path) => relative_path,
-            None => return Err(format_err!("Relative path is not valid unicode")),
+            None => return Err(format_err!("relative path is not valid unicode")),
         };
 
         let file = match open_file_no_describe(
@@ -159,7 +182,7 @@ impl Directory {
             Ok(proxy) => proxy,
             Err(e) => {
                 return Err(format_err!(
-                    "Could not open file `{}`: {}",
+                    "could not open file `{}`: {}",
                     path.as_path().display(),
                     e
                 ))
@@ -170,18 +193,18 @@ impl Directory {
             .resize(0)
             .await
             .map_err(|e| {
-                format_err!("Could not truncate file `{}`: {}", path.as_path().display(), e)
+                format_err!("could not truncate file `{}`: {}", path.as_path().display(), e)
             })?
             .map_err(Status::from_raw)
             .map_err(|status| {
-                format_err!("Could not truncate file `{}`: {}", path.as_path().display(), status)
+                format_err!("could not truncate file `{}`: {}", path.as_path().display(), status)
             })?;
 
         match write(&file, data).await {
             Ok(()) => {}
             Err(e) => {
                 return Err(format_err!(
-                    "Could not write to file `{}`: {}",
+                    "could not write to file `{}`: {}",
                     path.as_path().display(),
                     e
                 ))
@@ -191,7 +214,7 @@ impl Directory {
         match close(file).await {
             Ok(()) => Ok(()),
             Err(e) => {
-                Err(format_err!("Could not close file `{}`: {}", path.as_path().display(), e))
+                Err(format_err!("could not close file `{}`: {}", path.as_path().display(), e))
             }
         }
     }
@@ -202,7 +225,7 @@ impl Directory {
         match readdir(&self.proxy).await {
             Ok(entries) => Ok(entries.into_iter().map(|e| e.name).collect()),
             Err(e) => Err(format_err!(
-                "Could not get entries of `{}`: {}",
+                "could not get entries of `{}`: {}",
                 self.path.as_path().display(),
                 e
             )),
