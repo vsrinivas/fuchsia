@@ -93,7 +93,7 @@ if (is_host) {
       sources += [ "${root_build_dir}/${file_name}" ]
     }
 
-    if (custom_signing_script != "") {
+    if (custom_signing_script != "" || use_vboot) {
       sources += [
         "$root_build_dir/fuchsia.zbi.signed",
         "$root_build_dir/zedboot.zbi.signed",
