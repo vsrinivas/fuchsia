@@ -220,7 +220,7 @@ func NewPackageServer(ctx context.Context, repoPath, remoteRepoURL, remoteBlobUR
 	// is canceled.
 	pkgSrvStarted := make(chan struct{})
 	go func() {
-		addr := fmt.Sprintf(":%d", port)
+		addr := fmt.Sprintf("0.0.0.0:%d", port)
 		logger.Debugf(ctx, "starting package server on %s", addr)
 		l, err := net.Listen("tcp", addr)
 		if err != nil {

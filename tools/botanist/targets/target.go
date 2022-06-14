@@ -424,7 +424,12 @@ func remoteScopedLocalHost(ctx context.Context, client *sshutil.Client) (string,
 	if len(tokens) != 4 {
 		return "", fmt.Errorf("$SSH_CONNECTION should be four space-separated values and not %q", val)
 	}
-	host := escapePercentSign("[" + tokens[0] + "]")
+	host := tokens[0]
+	// If the host is an IPv6 address with a zone, surround it with brackets
+	// and escape the percent sign.
+	if strings.Contains(host, "%") {
+		host = "[" + escapePercentSign(host) + "]"
+	}
 	return host, nil
 }
 
