@@ -140,3 +140,16 @@ macro_rules! mode {
 
 // Public re-export of macros allows them to be used like regular rust items.
 pub(crate) use mode;
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[::fuchsia::test]
+    fn test_file_mode_from_string() {
+        assert_eq!(FileMode::from_string(b"0123"), Ok(FileMode(0o123)));
+        assert!(FileMode::from_string(b"123").is_err());
+        assert!(FileMode::from_string(b"\x80").is_err());
+        assert!(FileMode::from_string(b"0999").is_err());
+    }
+}

@@ -414,4 +414,13 @@ mod test {
         );
         usr.name.unlink(b"bin", UnlinkKind::Directory).expect("failed to unlink /usr/bin");
     }
+
+    #[::fuchsia::test]
+    fn test_data() {
+        let fs = TmpFs::new_with_data(b"mode=0123,uid=42,gid=84");
+        let info = fs.root().node.info();
+        assert_eq!(info.mode, mode!(IFDIR, 0o123));
+        assert_eq!(info.uid, 42);
+        assert_eq!(info.gid, 84);
+    }
 }
