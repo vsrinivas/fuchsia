@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":unittests" ]
+}
+
+executable("unittests") {
+  output_name = "screen_capture2_unittests"
+
+  testonly = true
+
+  sources = [ "screen_capture2_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
+    "//src/ui/scenic/lib/allocation",
+    "//src/ui/scenic/lib/screen_capture2",
+    "//src/ui/scenic/lib/utils",
+    "//third_party/googletest:gmock",
+  ]
+}

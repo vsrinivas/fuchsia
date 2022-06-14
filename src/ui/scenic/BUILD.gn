@@ -55,6 +55,7 @@ group("tests") {
     ":scenic_unittests",
     ":scenic_util_tests",
     ":scheduling_unittests",
+    ":screen_capture2_unittests",
     ":screen_capture_unittests",
     ":view_tree_unittests",
     "tests",
@@ -264,6 +265,16 @@ fuchsia_unittest_package("scheduling_unittests") {
 fuchsia_unittest_package("screen_capture_unittests") {
   manifest = "meta/screen_capture_unittests.cml"
   deps = [ "lib/screen_capture/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("screen_capture2_unittests") {
+  manifest = "meta/screen_capture2_unittests.cml"
+  deps = [ "lib/screen_capture2/tests:unittests" ] + scenic_test_deps
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

@@ -1,0 +1,16 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("screen_capture2") {
+  sources = [
+    "screen_capture2.cc",
+    "screen_capture2.h",
+  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.composition.internal" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/ui/scenic/lib/utils",
+  ]
+}
