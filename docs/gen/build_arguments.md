@@ -1452,19 +1452,7 @@ From //build/images/args.gni:77
 Set to true to enable distributed compilation using RBE.
 This may affect Rust and C++ compiles.
 
-**Current value for `target_cpu = "arm64"`:** `false`
-
-From //out/not-default/args.gn:5
-
-**Overridden from the default:** `false`
-
-From //build/toolchain/rbe.gni:74
-
-**Current value for `target_cpu = "x64"`:** `false`
-
-From //out/not-default/args.gn:5
-
-**Overridden from the default:** `false`
+**Current value (from the default):** `false`
 
 From //build/toolchain/rbe.gni:74
 
@@ -2399,7 +2387,7 @@ Debug build.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:5
 
 **Overridden from the default:** `true`
 
@@ -2407,7 +2395,7 @@ From //build/config/BUILDCONFIG.gn:24
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:5
 
 **Overridden from the default:** `true`
 
@@ -3941,7 +3929,19 @@ From //build/toolchain/rbe.gni:66
 ### rust_rbe_enable
 Set to true to enable distributed compilation using RBE.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //out/not-default/args.gn:6
+
+**Overridden from the default:** `false`
+
+From //build/toolchain/rbe.gni:33
+
+**Current value for `target_cpu = "x64"`:** `false`
+
+From //out/not-default/args.gn:6
+
+**Overridden from the default:** `false`
 
 From //build/toolchain/rbe.gni:33
 
