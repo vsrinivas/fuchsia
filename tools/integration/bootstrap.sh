@@ -71,9 +71,9 @@ main() {
     esac
   done
 
-  # Build in a temporary directory where we can arrange the module.
-  #
-  # Avoid "TMPDIR" since Go looks at that environment variable.
+  # Build in a temporary directory where we can arrange the module. Use `mktemp`
+  # instead of directly referencing $TMPDIR or a similar environment variable
+  # that may not be set on all platforms.
   BUILD_DIR=$(mktemp -d)
   trap 'rm -rf $BUILD_DIR' EXIT
   cd "$BUILD_DIR"
@@ -81,9 +81,13 @@ main() {
     ln -s "$FUCHSIA_ROOT"/third_party/golibs/$target .
   done
   ln -s "$FUCHSIA_ROOT"/tools .
-  readonly go_bin=$FUCHSIA_ROOT/prebuilt/third_party/go/$(host_platform)/bin/go
-  GOCACHE="${TMPDIR}/go-build" GOPROXY=off $go_bin build \
-    -o "${output}" ./tools/integration/fint/cmd/fint
+
+  GOCACHE_DIR=$(mktemp -d)
+  trap 'rm -rf $GOCACHE_DIR' EXIT
+
+  readonly go_bin="$FUCHSIA_ROOT/prebuilt/third_party/go/$(host_platform)/bin/go"
+  GOCACHE="$GOCACHE_DIR" GOPROXY=off $go_bin build \
+    -o "$output" ./tools/integration/fint/cmd/fint
 }
 
 main "$@"
