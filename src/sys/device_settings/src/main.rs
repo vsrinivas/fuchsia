@@ -5,14 +5,13 @@
 use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog as syslog;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::{future, io, StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::sync::Arc;
+use tracing::{error, info};
 
 // Include the generated FIDL bindings for the `DeviceSetting` service.
 use fidl_fuchsia_devicesettings::{
@@ -39,11 +38,11 @@ impl DeviceSettingsManagerServer {
         let mut map = self.watchers.lock();
         if let Some(m) = map.get_mut(key) {
             m.retain(|w| {
-                if let Err(e) = w.on_change_settings(t) {
-                    if e.is_closed() {
+                if let Err(err) = w.on_change_settings(t) {
+                    if err.is_closed() {
                         return false;
                     }
-                    fx_log_err!("Error call watcher: {:?}", e);
+                    error!(?err, "Error call watcher");
                 }
                 return true;
             });
@@ -95,11 +94,11 @@ fn spawn_device_settings_server(
                             return future::ready(responder.send(0, Status::ErrInvalidSetting));
                         };
                         match read_file(file) {
-                            Err(e) => {
-                                if e.kind() == io::ErrorKind::NotFound {
+                            Err(err) => {
+                                if err.kind() == io::ErrorKind::NotFound {
                                     responder.send(0, Status::ErrNotSet)
                                 } else {
-                                    fx_log_err!("reading integer: {:?}", e);
+                                    error!(?err, "reading integer");
                                     responder.send(0, Status::ErrRead)
                                 }
                             }
@@ -116,11 +115,11 @@ fn spawn_device_settings_server(
                             return future::ready(responder.send("", Status::ErrInvalidSetting));
                         };
                         match read_file(file) {
-                            Err(e) => {
-                                if e.kind() == io::ErrorKind::NotFound {
+                            Err(err) => {
+                                if err.kind() == io::ErrorKind::NotFound {
                                     responder.send("", Status::ErrNotSet)
                                 } else {
-                                    fx_log_err!("reading string: {:?}", e);
+                                    error!(?err, "reading string");
                                     responder.send("", Status::ErrRead)
                                 }
                             }
@@ -130,18 +129,18 @@ fn spawn_device_settings_server(
                     DeviceSettingsManagerRequest::SetInteger { key, val, responder } => {
                         match state.set_key(&key, val.to_string().as_bytes(), ValueType::Number) {
                             Ok(r) => responder.send(r),
-                            Err(e) => {
-                                fx_log_err!("setting integer: {:?}", e);
+                            Err(err) => {
+                                error!(?err, "setting integer");
                                 responder.send(false)
                             }
                         }
                     }
                     DeviceSettingsManagerRequest::SetString { key, val, responder } => {
-                        fx_log_info!("setting string key: {:?}, val: {:?}", key, val);
+                        info!(?key, ?val, "setting string");
                         match state.set_key(&key, val.as_bytes(), ValueType::Text) {
                             Ok(r) => responder.send(r),
-                            Err(e) => {
-                                fx_log_err!("setting string: {:?}", e);
+                            Err(err) => {
+                                error!(?err, "setting string");
                                 responder.send(false)
                             }
                         }
@@ -151,8 +150,8 @@ fn spawn_device_settings_server(
                             return future::ready(responder.send(Status::ErrInvalidSetting));
                         }
                         match watcher.into_proxy() {
-                            Err(e) => {
-                                fx_log_err!("getting watcher proxy: {:?}", e);
+                            Err(err) => {
+                                error!(?err, "getting watcher proxy");
                                 responder.send(Status::ErrUnknown)
                             }
                             Ok(w) => {
@@ -166,22 +165,19 @@ fn spawn_device_settings_server(
                 })
             })
             .map_ok(|_| ())
-            .unwrap_or_else(|e| eprintln!("error running device settings server: {:?}", e)),
+            .unwrap_or_else(|err| error!(?err, "error running device settings server")),
     )
     .detach()
 }
 
-fn main() {
-    if let Err(e) = main_ds() {
-        fx_log_err!("{:?}", e);
+#[fuchsia::main(threads = 2, logging_tags = ["device_settings"])]
+async fn main() {
+    if let Err(err) = main_ds().await {
+        error!(?err, "Error running main");
     }
 }
 
-fn main_ds() -> Result<(), Error> {
-    syslog::init_with_tags(&["device_settings"])?;
-    let mut core =
-        fasync::SendExecutor::new(/* num_threads */ 2).context("unable to create executor")?;
-
+async fn main_ds() -> Result<(), Error> {
     let watchers = Arc::new(Mutex::new(HashMap::new()));
     // Attempt to create data directory
     fs::create_dir_all(DATA_DIR).context("creating directory")?;
@@ -202,7 +198,7 @@ fn main_ds() -> Result<(), Error> {
     });
     fs.take_and_serve_directory_handle()?;
 
-    Ok(core.run(fs.collect()))
+    Ok(fs.collect().await)
 }
 
 #[cfg(test)]

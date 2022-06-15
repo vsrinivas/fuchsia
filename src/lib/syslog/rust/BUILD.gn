@@ -178,7 +178,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/component_manager/lib/logger:*",
   "//src/sys/component_manager/src/elf_runner/tests/lifecycle:*",
   "//src/sys/component_manager/stress_tests:*",
-  "//src/sys/device_settings:*",
   "//src/sys/fuzzing/manager:*",
   "//src/sys/fuzzing/registry:*",
   "//src/sys/live_usb:*",
