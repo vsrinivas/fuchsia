@@ -162,8 +162,24 @@ fbl::String PrintValue(const std::tuple<Ts...>& value) {
   return fbl::String(buffer, current);
 }
 
+template <typename T>
+constexpr bool is_nullptr_v = std::is_null_pointer_v<std::remove_reference_t<T>>;
+
+template <typename StringTypeA, class StringTypeB>
+typename std::enable_if<is_nullptr_v<StringTypeA> ^ is_nullptr_v<StringTypeB>, bool>::type StrCmp(
+    StringTypeA&&, StringTypeB&&) {
+  return false;
+}
+
 template <typename StringTypeA, typename StringTypeB>
-inline bool StrCmp(StringTypeA&& actual, StringTypeB&& expected) {
+typename std::enable_if<is_nullptr_v<StringTypeA> && is_nullptr_v<StringTypeB>, bool>::type StrCmp(
+    StringTypeA&&, StringTypeB&&) {
+  return true;
+}
+
+template <typename StringTypeA, typename StringTypeB>
+typename std::enable_if<!(is_nullptr_v<StringTypeA> || is_nullptr_v<StringTypeB>), bool>::type
+StrCmp(StringTypeA&& actual, StringTypeB&& expected) {
   std::string_view actual_sv = internal::ToStringView(actual);
   std::string_view expected_sv = internal::ToStringView(expected);
   return actual_sv == expected_sv;

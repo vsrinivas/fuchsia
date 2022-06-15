@@ -249,6 +249,8 @@ TEST(ZxTestAssertionTest, AssertStrEq) {
   EXPECT_STREQ(str1, str1, "ASSERT_STREQ failed to identify equal strings.");
   ASSERT_STREQ(str1, str2, "ASSERT_STREQ failed to identify equal strings.");
   ASSERT_STREQ(str1, str1, "ASSERT_STREQ failed to identify equal strings.");
+  EXPECT_STREQ(nullptr, nullptr);
+  ASSERT_STREQ(nullptr, nullptr);
   TEST_CHECKPOINT();
 }
 
@@ -269,6 +271,8 @@ TEST(ZxTestAssertionTest, AssertStrEqFailure) {
   const char* str2 = "b";
 
   EXPECT_STREQ(str1, str2, "ASSERT_STREQ failed to identify equal strings.");
+  EXPECT_STREQ(nullptr, str1);
+  EXPECT_STREQ(str1, nullptr);
   TEST_CHECKPOINT();
 }
 
