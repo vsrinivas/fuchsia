@@ -9,7 +9,6 @@ use {
         error::ModelError,
     },
     async_trait::async_trait,
-    cm_moniker::InstancedChildMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityName, ChildRef, CollectionDecl, DependencyType, EnvironmentDecl,
         ExposeDecl, OfferDecl, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl,
@@ -18,7 +17,7 @@ use {
         UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     futures::future::select_all,
-    moniker::ChildMonikerBase,
+    moniker::{ChildMoniker, ChildMonikerBase},
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,
@@ -252,15 +251,15 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
 }
 
 /// Identifies a component in this realm. This can either be the component
-/// itself, or one of its children, identified by an instanced moniker.
+/// itself, or one of its children.
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub enum ComponentRef {
     Self_,
-    Child(InstancedChildMoniker),
+    Child(ChildMoniker),
 }
 
-impl From<InstancedChildMoniker> for ComponentRef {
-    fn from(moniker: InstancedChildMoniker) -> Self {
+impl From<ChildMoniker> for ComponentRef {
+    fn from(moniker: ChildMoniker) -> Self {
         ComponentRef::Child(moniker)
     }
 }
@@ -317,11 +316,10 @@ pub trait Component {
     /// returns `None` if none match. In the case of dynamic children, it's
     /// possible for multiple children to match a given `name` and `collection`,
     /// but at most one of them can be live.
-    fn find_live_child(&self, name: &String, collection: &Option<String>) -> Option<Child> {
+    fn find_child(&self, name: &String, collection: &Option<String>) -> Option<Child> {
         self.children().into_iter().find(|child| {
             child.moniker.name() == name
                 && child.moniker.collection() == collection.as_ref().map(|s| s.as_str())
-                && child.is_live
         })
     }
 }
@@ -334,14 +332,10 @@ pub trait Component {
 pub struct Child {
     /// The moniker identifying the name of the child, complete with
     /// `instance_id`.
-    pub moniker: InstancedChildMoniker,
+    pub moniker: ChildMoniker,
 
     /// Name of the environment associated with this child, if any.
     pub environment_name: Option<String>,
-
-    /// True if this child is static, or dynamic and "live". False if this is a
-    /// dynamic component that is being deleted, but has not yet been destroyed.
-    pub is_live: bool,
 }
 
 /// For a given Component, identify capability dependencies between the
@@ -469,7 +463,7 @@ fn get_dependencies_from_uses(instance: &impl Component) -> HashSet<(ComponentRe
             }
         }
 
-        let child = match instance.find_live_child(child_name, &None) {
+        let child = match instance.find_child(child_name, &None) {
             Some(child) => child.moniker.clone().into(),
             None => {
                 log::error!("use source doesn't exist: (name: {:?})", child_name);
@@ -594,7 +588,7 @@ fn get_dependency_from_offer(
 fn find_offer_sources(instance: &impl Component, source: &OfferSource) -> Vec<ComponentRef> {
     match source {
         OfferSource::Child(ChildRef { name, collection }) => {
-            match instance.find_live_child(name, collection) {
+            match instance.find_child(name, collection) {
                 Some(child) => vec![child.moniker.clone().into()],
                 None => {
                     log::error!(
@@ -657,7 +651,7 @@ fn find_storage_source(instance: &impl Component, name: &CapabilityName) -> Vec<
 
     match decl.source {
         StorageDirectorySource::Child(child_name) => {
-            match instance.find_live_child(&child_name, &None) {
+            match instance.find_child(&child_name, &None) {
                 Some(child) => vec![child.moniker.clone().into()],
                 None => {
                     log::error!(
@@ -681,7 +675,7 @@ fn find_storage_source(instance: &impl Component, name: &CapabilityName) -> Vec<
 fn find_offer_targets(instance: &impl Component, target: &OfferTarget) -> Vec<ComponentRef> {
     match target {
         OfferTarget::Child(ChildRef { name, collection }) => {
-            match instance.find_live_child(name, collection) {
+            match instance.find_child(name, collection) {
                 Some(child) => vec![child.moniker.into()],
                 None => {
                     log::error!(
@@ -757,7 +751,7 @@ fn find_environment_sources(
         .flat_map(|source| match source {
             RegistrationSource::Self_ => vec![ComponentRef::Self_],
             RegistrationSource::Child(child_name) => {
-                match instance.find_live_child(&child_name, &None) {
+                match instance.find_child(&child_name, &None) {
                     Some(child) => vec![child.moniker.into()],
                     None => {
                         log::error!(
@@ -859,9 +853,8 @@ mod tests {
                 .children
                 .iter()
                 .map(|c| Child {
-                    moniker: InstancedChildMoniker::static_child(c.name.clone()),
+                    moniker: ChildMoniker::new(c.name.clone(), None),
                     environment_name: c.environment.clone(),
-                    is_live: true,
                 })
                 .chain(self.dynamic_children.iter().cloned())
                 .collect()
@@ -873,7 +866,7 @@ mod tests {
     /// Returns a `ComponentRef` for a child by parsing the moniker. Panics if
     /// the moniker is malformed.
     fn child(moniker: &str) -> ComponentRef {
-        InstancedChildMoniker::from(moniker).into()
+        ChildMoniker::from(moniker).into()
     }
 
     #[fuchsia::test]
@@ -899,8 +892,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0")],
-                child("childA:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA")],
+                child("childA") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -930,8 +923,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0")],
-                child("childA:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA")],
+                child("childA") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -958,8 +951,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0")],
-                child("childA:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA")],
+                child("childA") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1006,9 +999,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![],
-                child("childB:0") => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![],
+                child("childB") => hashset![child("childA")],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1034,9 +1027,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1062,9 +1055,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1090,9 +1083,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![child("childB:0")],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![child("childB")],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1120,16 +1113,8 @@ mod tests {
                 // NOTE: The environment must be set in the `Child`, even though
                 // it can theoretically be inferred from the collection
                 // declaration.
-                Child {
-                    moniker: "coll:dyn1:0".into(),
-                    environment_name: Some("env".to_string()),
-                    is_live: true,
-                },
-                Child {
-                    moniker: "coll:dyn2:1".into(),
-                    environment_name: Some("env".to_string()),
-                    is_live: true,
-                },
+                Child { moniker: "coll:dyn1".into(), environment_name: Some("env".to_string()) },
+                Child { moniker: "coll:dyn2".into(), environment_name: Some("env".to_string()) },
             ],
             dynamic_offers: vec![],
         };
@@ -1137,16 +1122,16 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("coll:dyn1:0"),
-                    child("coll:dyn2:1"),
+                    child("childA"),
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
                 ],
-                child("childA:0") => hashset![
-                    child("coll:dyn1:0"),
-                    child("coll:dyn2:1"),
+                child("childA") => hashset![
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
                 ],
-                child("coll:dyn1:0") => hashset![],
-                child("coll:dyn2:1") => hashset![],
+                child("coll:dyn1") => hashset![],
+                child("coll:dyn2") => hashset![],
             },
             process_component_dependencies(&instance)
         )
@@ -1184,13 +1169,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("childC:0")
+                    child("childA"),
+                    child("childB"),
+                    child("childC")
                 ],
-                child("childA:0") => hashset![child("childB:0")],
-                child("childB:0") => hashset![child("childC:0")],
-                child("childC:0") => hashset![],
+                child("childA") => hashset![child("childB")],
+                child("childB") => hashset![child("childC")],
+                child("childC") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1226,13 +1211,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("childC:0")
+                    child("childA"),
+                    child("childB"),
+                    child("childC")
                 ],
-                child("childA:0") => hashset![child("childB:0")],
-                child("childB:0") => hashset![child("childC:0")],
-                child("childC:0") => hashset![],
+                child("childA") => hashset![child("childB")],
+                child("childB") => hashset![child("childC")],
+                child("childC") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1258,9 +1243,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1286,9 +1271,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![child("childB:0")],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![child("childB")],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1328,13 +1313,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("childC:0")
+                    child("childA"),
+                    child("childB"),
+                    child("childC")
                 ],
-                child("childA:0") => hashset![child("childB:0")],
-                child("childB:0") => hashset![child("childC:0")],
-                child("childC:0") => hashset![],
+                child("childA") => hashset![child("childB")],
+                child("childB") => hashset![child("childC")],
+                child("childC") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1367,13 +1352,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("childC:0")
+                    child("childA"),
+                    child("childB"),
+                    child("childC")
                 ],
-                child("childA:0") => hashset![child("childC:0")],
-                child("childB:0") => hashset![child("childC:0")],
-                child("childC:0") => hashset![],
+                child("childA") => hashset![child("childC")],
+                child("childB") => hashset![child("childC")],
+                child("childC") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1404,14 +1389,12 @@ mod tests {
                 // NOTE: The environment must be set in the `Child`, even though
                 // it can theoretically be inferred from the collection declaration.
                 Child {
-                    moniker: "coll:dyn1:0".into(),
+                    moniker: "coll:dyn1".into(),
                     environment_name: Some("resolver_env".to_string()),
-                    is_live: true,
                 },
                 Child {
-                    moniker: "coll:dyn2:1".into(),
+                    moniker: "coll:dyn2".into(),
                     environment_name: Some("resolver_env".to_string()),
-                    is_live: true,
                 },
             ],
             dynamic_offers: vec![],
@@ -1420,13 +1403,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("coll:dyn1:0"),
-                    child("coll:dyn2:1"),
+                    child("childA"),
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
                 ],
-                child("childA:0") => hashset![child("coll:dyn1:0"), child("coll:dyn2:1")],
-                child("coll:dyn1:0") => hashset![],
-                child("coll:dyn2:1") => hashset![],
+                child("childA") => hashset![child("coll:dyn1"), child("coll:dyn2")],
+                child("coll:dyn1") => hashset![],
+                child("coll:dyn2") => hashset![],
             },
             process_component_dependencies(&instance)
         )
@@ -1455,10 +1438,10 @@ mod tests {
         let instance = FakeComponent {
             decl,
             dynamic_children: vec![
-                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn3:3".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn4:4".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn1".into(), environment_name: None },
+                Child { moniker: "coll:dyn2".into(), environment_name: None },
+                Child { moniker: "coll:dyn3".into(), environment_name: None },
+                Child { moniker: "coll:dyn4".into(), environment_name: None },
             ],
             dynamic_offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
@@ -1495,22 +1478,22 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("coll:dyn1:1"),
-                    child("coll:dyn2:2"),
-                    child("coll:dyn3:3"),
-                    child("coll:dyn4:4"),
+                    child("childA"),
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
+                    child("coll:dyn3"),
+                    child("coll:dyn4"),
                 ],
-                child("childA:0") => hashset![
-                    child("coll:dyn1:1"),
-                    child("coll:dyn2:2"),
-                    child("coll:dyn3:3"),
-                    child("coll:dyn4:4"),
+                child("childA") => hashset![
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
+                    child("coll:dyn3"),
+                    child("coll:dyn4"),
                 ],
-                child("coll:dyn1:1") => hashset![child("coll:dyn2:2"), child("coll:dyn3:3")],
-                child("coll:dyn2:2") => hashset![],
-                child("coll:dyn3:3") => hashset![],
-                child("coll:dyn4:4") => hashset![],
+                child("coll:dyn1") => hashset![child("coll:dyn2"), child("coll:dyn3")],
+                child("coll:dyn2") => hashset![],
+                child("coll:dyn3") => hashset![],
+                child("coll:dyn4") => hashset![],
             },
             process_component_dependencies(&instance)
         )
@@ -1526,10 +1509,10 @@ mod tests {
         let instance = FakeComponent {
             decl,
             dynamic_children: vec![
-                Child { moniker: "coll1:dyn1:1".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll1:dyn2:2".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll2:dyn1:3".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll2:dyn2:4".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll1:dyn1".into(), environment_name: None },
+                Child { moniker: "coll1:dyn2".into(), environment_name: None },
+                Child { moniker: "coll2:dyn1".into(), environment_name: None },
+                Child { moniker: "coll2:dyn2".into(), environment_name: None },
             ],
             dynamic_offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
@@ -1566,15 +1549,15 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("coll1:dyn1:1"),
-                    child("coll1:dyn2:2"),
-                    child("coll2:dyn1:3"),
-                    child("coll2:dyn2:4"),
+                    child("coll1:dyn1"),
+                    child("coll1:dyn2"),
+                    child("coll2:dyn1"),
+                    child("coll2:dyn2"),
                 ],
-                child("coll1:dyn1:1") => hashset![child("coll2:dyn1:3")],
-                child("coll1:dyn2:2") => hashset![],
-                child("coll2:dyn1:3") => hashset![],
-                child("coll2:dyn2:4") => hashset![child("coll1:dyn1:1")],
+                child("coll1:dyn1") => hashset![child("coll2:dyn1")],
+                child("coll1:dyn2") => hashset![],
+                child("coll2:dyn1") => hashset![],
+                child("coll2:dyn2") => hashset![child("coll1:dyn1")],
             },
             process_component_dependencies(&instance)
         )
@@ -1586,8 +1569,8 @@ mod tests {
         let instance = FakeComponent {
             decl,
             dynamic_children: vec![
-                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn1".into(), environment_name: None },
+                Child { moniker: "coll:dyn2".into(), environment_name: None },
             ],
             dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Parent,
@@ -1605,11 +1588,11 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("coll:dyn1:1"),
-                    child("coll:dyn2:2"),
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
                 ],
-                child("coll:dyn1:1") => hashset![],
-                child("coll:dyn2:2") => hashset![],
+                child("coll:dyn1") => hashset![],
+                child("coll:dyn2") => hashset![],
             },
             process_component_dependencies(&instance)
         )
@@ -1621,8 +1604,8 @@ mod tests {
         let instance = FakeComponent {
             decl,
             dynamic_children: vec![
-                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn1".into(), environment_name: None },
+                Child { moniker: "coll:dyn2".into(), environment_name: None },
             ],
             dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
@@ -1640,11 +1623,11 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("coll:dyn1:1"),
-                    child("coll:dyn2:2"),
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
                 ],
-                child("coll:dyn1:1") => hashset![],
-                child("coll:dyn2:2") => hashset![],
+                child("coll:dyn1") => hashset![],
+                child("coll:dyn2") => hashset![],
             },
             process_component_dependencies(&instance)
         )
@@ -1661,8 +1644,8 @@ mod tests {
         let instance = FakeComponent {
             decl,
             dynamic_children: vec![
-                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn1".into(), environment_name: None },
+                Child { moniker: "coll:dyn2".into(), environment_name: None },
             ],
             dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Child(ChildRef {
@@ -1683,99 +1666,15 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("coll:dyn1:1"),
-                    child("coll:dyn2:2"),
+                    child("childA"),
+                    child("childB"),
+                    child("coll:dyn1"),
+                    child("coll:dyn2"),
                 ],
-                child("childA:0") => hashset![child("coll:dyn1:1")],
-                child("childB:0") => hashset![],
-                child("coll:dyn1:1") => hashset![],
-                child("coll:dyn2:2") => hashset![],
-            },
-            process_component_dependencies(&instance)
-        )
-    }
-
-    #[fuchsia::test]
-    fn test_dynamic_offer_deleted_source() {
-        let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
-
-        let instance = FakeComponent {
-            decl,
-            dynamic_children: vec![
-                Child { moniker: "coll:dyn1:0".into(), environment_name: None, is_live: false },
-                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
-            ],
-            dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Child(ChildRef {
-                    name: "dyn1".to_string(),
-                    collection: Some("coll".to_string()),
-                }),
-                target: OfferTarget::Child(ChildRef {
-                    name: "dyn2".to_string(),
-                    collection: Some("coll".to_string()),
-                }),
-                source_name: "test.protocol".into(),
-                target_name: "test.protocol".into(),
-                dependency_type: DependencyType::Strong,
-                availability: Availability::Required,
-            })],
-        };
-
-        pretty_assertions::assert_eq!(
-            hashmap! {
-                ComponentRef::Self_ => hashset![
-                    child("coll:dyn1:0"),
-                    child("coll:dyn1:1"),
-                    child("coll:dyn2:2"),
-                ],
-                child("coll:dyn1:0") => hashset![],
-                child("coll:dyn1:1") => hashset![child("coll:dyn2:2")],
-                child("coll:dyn2:2") => hashset![],
-            },
-            process_component_dependencies(&instance)
-        )
-    }
-
-    #[fuchsia::test]
-    fn test_dynamic_offer_deleted_target() {
-        let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
-
-        let instance = FakeComponent {
-            decl,
-            dynamic_children: vec![
-                Child { moniker: "coll:dyn1:0".into(), environment_name: None, is_live: false },
-                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
-                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
-            ],
-            dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Child(ChildRef {
-                    name: "dyn2".to_string(),
-                    collection: Some("coll".to_string()),
-                }),
-                target: OfferTarget::Child(ChildRef {
-                    name: "dyn1".to_string(),
-                    collection: Some("coll".to_string()),
-                }),
-                source_name: "test.protocol".into(),
-                target_name: "test.protocol".into(),
-                dependency_type: DependencyType::Strong,
-                availability: Availability::Required,
-            })],
-        };
-
-        pretty_assertions::assert_eq!(
-            hashmap! {
-                ComponentRef::Self_ => hashset![
-                    child("coll:dyn1:0"),
-                    child("coll:dyn1:1"),
-                    child("coll:dyn2:2"),
-                ],
-                child("coll:dyn1:0") => hashset![],
-                child("coll:dyn1:1") => hashset![],
-                child("coll:dyn2:2") => hashset![child("coll:dyn1:1")],
+                child("childA") => hashset![child("coll:dyn1")],
+                child("childB") => hashset![],
+                child("coll:dyn1") => hashset![],
+                child("coll:dyn2") => hashset![],
             },
             process_component_dependencies(&instance)
         )
@@ -1823,9 +1722,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1880,9 +1779,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![],
-                child("childB:0") => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![],
+                child("childB") => hashset![child("childA")],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -1938,13 +1837,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("childC:0"),
+                    child("childA"),
+                    child("childB"),
+                    child("childC"),
                 ],
-                child("childA:0") => hashset![],
-                child("childB:0") => hashset![child("childA:0"), child("childC:0")],
-                child("childC:0") => hashset![],
+                child("childA") => hashset![],
+                child("childB") => hashset![child("childA"), child("childC")],
+                child("childC") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2008,13 +1907,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("childC:0"),
+                    child("childA"),
+                    child("childB"),
+                    child("childC"),
                 ],
-                child("childA:0") => hashset![child("childC:0")],
-                child("childB:0") => hashset![child("childC:0")],
-                child("childC:0") => hashset![],
+                child("childA") => hashset![child("childC")],
+                child("childB") => hashset![child("childC")],
+                child("childC") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2069,13 +1968,13 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                    child("childA:0"),
-                    child("childB:0"),
-                    child("childC:0"),
+                    child("childA"),
+                    child("childB"),
+                    child("childC"),
                 ],
-                child("childA:0") => hashset![child("childB:0")],
-                child("childB:0") => hashset![child("childC:0")],
-                child("childC:0") => hashset![],
+                child("childA") => hashset![child("childB")],
+                child("childB") => hashset![child("childC")],
+                child("childC") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2183,17 +2082,17 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![
-                   child("childA:0"),
-                   child("childB:0"),
-                   child("childC:0"),
-                   child("childD:0"),
-                   child("childE:0"),
+                   child("childA"),
+                   child("childB"),
+                   child("childC"),
+                   child("childD"),
+                   child("childE"),
                 ],
-                child("childA:0") => hashset![child("childB:0"), child("childC:0")],
-                child("childB:0") => hashset![child("childD:0")],
-                child("childC:0") => hashset![child("childD:0"), child("childE:0")],
-                child("childD:0") => hashset![],
-                child("childE:0") => hashset![],
+                child("childA") => hashset![child("childB"), child("childC")],
+                child("childB") => hashset![child("childD")],
+                child("childC") => hashset![child("childD"), child("childE")],
+                child("childD") => hashset![],
+                child("childE") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2224,8 +2123,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0")],
-                child("childA:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA")],
+                child("childA") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         );
@@ -2256,8 +2155,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0")],
-                child("childA:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA")],
+                child("childA") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         );
@@ -2294,7 +2193,7 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![],
-                child("childA:0") => hashset![ComponentRef::Self_],
+                child("childA") => hashset![ComponentRef::Self_],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2342,9 +2241,9 @@ mod tests {
                 // childB is a dependent because we consider all children
                 // dependent, unless the component uses something from the
                 // child.
-                ComponentRef::Self_ => hashset![child("childB:0")],
-                child("childA:0") => hashset![ComponentRef::Self_],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childB")],
+                child("childA") => hashset![ComponentRef::Self_],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         );
@@ -2414,8 +2313,8 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 ComponentRef::Self_ => hashset![],
-                child("childA:0") => hashset![ComponentRef::Self_],
-                child("childB:0") => hashset![child("childA:0")],
+                child("childA") => hashset![ComponentRef::Self_],
+                child("childB") => hashset![child("childA")],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2451,8 +2350,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0")],
-                child("childA:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA")],
+                child("childA") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2507,9 +2406,9 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 // childB is a dependent because its use-from-child has a 'weak' dependency.
-                ComponentRef::Self_ => hashset![child("childB:0")],
-                child("childA:0") => hashset![ComponentRef::Self_],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childB")],
+                child("childA") => hashset![ComponentRef::Self_],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2544,9 +2443,9 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
-                child("childA:0") => hashset![child("childB:0")],
-                child("childB:0") => hashset![],
+                ComponentRef::Self_ => hashset![child("childA"), child("childB")],
+                child("childA") => hashset![child("childB")],
+                child("childB") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2687,8 +2586,8 @@ mod tests {
         assert!(is_executing(&component_a).await);
         assert!(is_executing(&component_b).await);
         assert!(is_executing(&component_c).await);
-        assert!(has_child(&component_container, "coll:a:1").await);
-        assert!(has_child(&component_container, "coll:b:2").await);
+        assert!(has_child(&component_container, "coll:a").await);
+        assert!(has_child(&component_container, "coll:b").await);
 
         let component_a_info = ComponentInfo::new(component_a).await;
         let component_b_info = ComponentInfo::new(component_b).await;
@@ -2701,9 +2600,9 @@ mod tests {
             .await
             .expect("shutdown failed");
         component_container_info.check_is_shut_down(&test.runner).await;
-        assert!(!has_child(&component_container_info.component, "coll:a:1").await);
-        assert!(!has_child(&component_container_info.component, "coll:b:2").await);
-        assert!(has_child(&component_container_info.component, "c:0").await);
+        assert!(!has_child(&component_container_info.component, "coll:a").await);
+        assert!(!has_child(&component_container_info.component, "coll:b").await);
+        assert!(has_child(&component_container_info.component, "c").await);
         component_a_info.check_is_shut_down(&test.runner).await;
         component_b_info.check_is_shut_down(&test.runner).await;
 
@@ -2817,8 +2716,8 @@ mod tests {
         assert!(is_executing(&component_a).await);
         assert!(is_executing(&component_b).await);
         assert!(is_executing(&component_c).await);
-        assert!(has_child(&component_container, "coll:a:1").await);
-        assert!(has_child(&component_container, "coll:b:2").await);
+        assert!(has_child(&component_container, "coll:a").await);
+        assert!(has_child(&component_container, "coll:b").await);
 
         let component_a_info = ComponentInfo::new(component_a).await;
         let component_b_info = ComponentInfo::new(component_b).await;
@@ -2831,9 +2730,9 @@ mod tests {
             .await
             .expect("shutdown failed");
         component_container_info.check_is_shut_down(&test.runner).await;
-        assert!(!has_child(&component_container_info.component, "coll:a:1").await);
-        assert!(!has_child(&component_container_info.component, "coll:b:2").await);
-        assert!(has_child(&component_container_info.component, "c:0").await);
+        assert!(!has_child(&component_container_info.component, "coll:a").await);
+        assert!(!has_child(&component_container_info.component, "coll:b").await);
+        assert!(has_child(&component_container_info.component, "c").await);
         component_a_info.check_is_shut_down(&test.runner).await;
         component_b_info.check_is_shut_down(&test.runner).await;
 
@@ -2940,7 +2839,7 @@ mod tests {
             let state = component_a.lock_state().await;
             match *state {
                 InstanceState::Resolved(ref s) => {
-                    s.get_live_child(&ChildMoniker::from("b")).expect("child b not found")
+                    s.get_child(&"b".into()).expect("child b not found")
                 }
                 _ => panic!("not resolved"),
             }

@@ -1146,7 +1146,7 @@ where
                 let moniker = target.abs_moniker();
                 let child_component = {
                     let child_moniker = ChildMoniker::new(name.clone(), None);
-                    target.lock_resolved_state().await?.get_live_child(&child_moniker).ok_or_else(
+                    target.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
                         || {
                             RoutingError::use_from_child_instance_not_found(
                                 &child_moniker,
@@ -1286,7 +1286,7 @@ where
             RegistrationSource::Child(child) => {
                 let child_component = {
                     let child_moniker = ChildMoniker::new(child.clone(), None);
-                    target.lock_resolved_state().await?.get_live_child(&child_moniker).ok_or_else(
+                    target.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
                         || RoutingError::EnvironmentFromChildInstanceNotFound {
                             child_moniker,
                             moniker: target.abs_moniker().clone(),
@@ -1521,7 +1521,7 @@ where
         OfferSource::Child(child) => {
             let child_component = {
                 let child_moniker = ChildMoniker::new(child.name.clone(), child.collection.clone());
-                component.lock_resolved_state().await?.get_live_child(&child_moniker).ok_or_else(
+                component.lock_resolved_state().await?.get_child(&child_moniker).ok_or_else(
                     || RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker,
                         moniker: component.abs_moniker().clone(),
@@ -1621,7 +1621,7 @@ where
                         target
                             .lock_resolved_state()
                             .await?
-                            .get_live_child(&child_moniker)
+                            .get_child(&child_moniker)
                             .ok_or_else(|| RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,
                                 moniker: target.abs_moniker().clone(),

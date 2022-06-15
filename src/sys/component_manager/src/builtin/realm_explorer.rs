@@ -105,7 +105,7 @@ impl RealmExplorer {
             let execution = instance.lock_execution().await;
             match &*state {
                 InstanceState::Resolved(r) => {
-                    let children = r.live_children().map(|(_, c)| c.clone()).collect();
+                    let children = r.children().map(|(_, c)| c.clone()).collect();
                     if execution.runtime.is_some() {
                         (fsys::InstanceState::Started, children)
                     } else {

@@ -1179,7 +1179,7 @@ mod tests {
 
         let get_child = root_instance
             .resolve()
-            .map(|locked| locked.get_live_child(&ChildMoniker::new("child".to_string(), None)))?;
+            .map(|locked| locked.get_child(&ChildMoniker::new("child".to_string(), None)))?;
         assert!(get_child.is_some());
         assert_eq!(get_child.as_ref().unwrap().abs_moniker(), child_instance.abs_moniker());
         assert_eq!(get_child.unwrap().instanced_moniker(), child_instance.instanced_moniker());

@@ -240,7 +240,7 @@ fn get_subcomponents(
                         | InstanceState::Discovered
                         | InstanceState::Destroyed => {}
                         InstanceState::Resolved(ref s) => {
-                            for (_, child) in s.live_children() {
+                            for (_, child) in s.children() {
                                 pending.push(child.clone());
                             }
                         }

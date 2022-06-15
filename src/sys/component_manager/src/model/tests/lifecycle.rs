@@ -416,7 +416,7 @@ async fn bind_action_sequence() {
                 InstanceState::Resolved(ref s) => s,
                 _ => panic!("not resolved"),
             };
-            let realm = root_state.get_child(&"system:0".into()).unwrap();
+            let realm = root_state.get_child(&"system".into()).unwrap();
             let actions = realm.lock_actions().await;
             assert!(actions.contains(&ActionKey::Discover));
             assert!(!actions.contains(&ActionKey::Resolve));

@@ -66,7 +66,7 @@ pub mod tests {
         ActionSet::register(component_a.clone(), StopAction::new(false, false))
             .await
             .expect("stop failed");
-        assert!(is_stopped(&component_root, &"a:0".into()).await);
+        assert!(is_stopped(&component_root, &"a".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -84,7 +84,7 @@ pub mod tests {
         ActionSet::register(component_a.clone(), StopAction::new(false, false))
             .await
             .expect("stop failed");
-        assert!(is_stopped(&component_root, &"a:0".into()).await);
+        assert!(is_stopped(&component_root, &"a".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -118,8 +118,8 @@ pub mod tests {
         ActionSet::register(component_a.clone(), StopAction::new(false, true))
             .await
             .expect("stop failed");
-        assert!(is_stopped(&component_root, &"a:0".into()).await);
-        assert!(is_stopped(&component_a, &"aa:0".into()).await);
+        assert!(is_stopped(&component_root, &"a".into()).await);
+        assert!(is_stopped(&component_a, &"aa".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -143,8 +143,8 @@ pub mod tests {
         ActionSet::register(component_a.clone(), StopAction::new(false, true))
             .await
             .expect("stop failed");
-        assert!(is_stopped(&component_root, &"a:0".into()).await);
-        assert!(is_stopped(&component_a, &"aa:0".into()).await);
+        assert!(is_stopped(&component_root, &"a".into()).await);
+        assert!(is_stopped(&component_a, &"aa".into()).await);
         {
             let events: Vec<_> = test
                 .test_hook

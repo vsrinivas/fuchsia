@@ -61,7 +61,7 @@ async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => {
                 let mut nfs = vec![];
-                for (m, _) in s.all_children().iter() {
+                for (m, _) in s.instanced_children() {
                     let component = component.clone();
                     let m = m.clone();
                     let nf = async move {
@@ -128,7 +128,8 @@ pub mod tests {
             starter::Starter,
             testing::{
                 test_helpers::{
-                    component_decl_with_test_runner, execution_is_shut_down, has_child, ActionsTest,
+                    component_decl_with_test_runner, execution_is_shut_down, get_instance_id,
+                    has_child, ActionsTest,
                 },
                 test_hook::Lifecycle,
             },
@@ -344,7 +345,7 @@ pub mod tests {
         let component_root = test.look_up(vec![].into()).await;
         let component_a = match *component_root.lock_state().await {
             InstanceState::Resolved(ref s) => {
-                s.get_live_child(&ChildMoniker::from("a")).expect("child a not found")
+                s.get_child(&ChildMoniker::from("a")).expect("child a not found")
             }
             _ => panic!("not resolved"),
         };
@@ -427,7 +428,7 @@ pub mod tests {
         let component_root = test.look_up(vec![].into()).await;
         let component_a = match *component_root.lock_state().await {
             InstanceState::Resolved(ref s) => {
-                s.get_live_child(&ChildMoniker::from("a")).expect("child a not found")
+                s.get_child(&ChildMoniker::from("a")).expect("child a not found")
             }
             _ => panic!("not resolved"),
         };
@@ -532,7 +533,7 @@ pub mod tests {
         // Get component_b without resolving it.
         let component_b = match *component_a.lock_state().await {
             InstanceState::Resolved(ref s) => {
-                s.get_live_child(&ChildMoniker::from("b")).expect("child b not found")
+                s.get_child(&ChildMoniker::from("b")).expect("child b not found")
             }
             _ => panic!("not resolved"),
         };
@@ -630,7 +631,7 @@ pub mod tests {
             let state = component_root.lock_state().await;
             let children: Vec<_> = match *state {
                 InstanceState::Resolved(ref s) => {
-                    s.all_children().keys().map(|m| m.clone()).collect()
+                    s.instanced_children().map(|(k, _)| k.clone()).collect()
                 }
                 _ => {
                     panic!("not resolved");
@@ -743,9 +744,7 @@ pub mod tests {
         {
             let state = component_root.lock_state().await;
             let children: Vec<_> = match *state {
-                InstanceState::Resolved(ref s) => {
-                    s.all_children().keys().map(|m| m.clone()).collect()
-                }
+                InstanceState::Resolved(ref s) => s.instanced_children().map(|(k, _)| k).collect(),
                 _ => panic!("not resolved"),
             };
             assert_eq!(children, Vec::<InstancedChildMoniker>::new());
@@ -862,8 +861,8 @@ pub mod tests {
         ActionSet::register(component_root.clone(), DestroyChildAction::new("a:0".into()))
             .await
             .expect_err("destroy succeeded unexpectedly");
-        assert!(has_child(&component_root, "a:0").await);
-        assert!(!has_child(&component_a, "b:0").await);
+        assert!(has_child(&component_root, "a").await);
+        assert!(!has_child(&component_a, "b").await);
         assert!(!is_destroyed(&component_a).await);
         assert!(is_destroyed(&component_b).await);
         assert!(is_destroyed(&component_c).await);
@@ -894,7 +893,7 @@ pub mod tests {
         ActionSet::register(component_root.clone(), DestroyChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(!has_child(&component_root, "a:0").await);
+        assert!(!has_child(&component_root, "a").await);
         assert!(is_destroyed(&component_a).await);
         assert!(is_destroyed(&component_b).await);
         assert!(is_destroyed(&component_c).await);
@@ -966,8 +965,7 @@ pub mod tests {
         // Run the second destroy fut, it should leave the newly created `a` alone
         destroy_fut_2.await.expect("destroy failed");
         let component_a = test.look_up(vec!["coll:a"].into()).await;
-        assert!(!has_child(&component_root, "coll:a:1").await);
-        assert!(has_child(&component_root, "coll:a:2").await);
+        assert_eq!(get_instance_id(&component_root, "coll:a").await, 2);
         assert!(!is_child_deleted(&component_root, &component_a).await);
 
         {

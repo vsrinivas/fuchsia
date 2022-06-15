@@ -242,12 +242,12 @@ impl ResolvedInstanceInterface for ComponentInstanceForAnalyzer {
         self.decl.collections.clone()
     }
 
-    fn get_live_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self>> {
+    fn get_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self>> {
         self.children.read().expect("failed to acquire read lock").get(moniker).map(Arc::clone)
     }
 
     // This is a static model with no notion of a collection.
-    fn live_children_in_collection(&self, _collection: &str) -> Vec<(ChildMoniker, Arc<Self>)> {
+    fn children_in_collection(&self, _collection: &str) -> Vec<(ChildMoniker, Arc<Self>)> {
         vec![]
     }
 

@@ -130,7 +130,7 @@ pub async fn execution_is_shut_down(component: &ComponentInstance) -> bool {
 /// Returns true if the given live child exists.
 pub async fn has_live_child<'a>(component: &'a ComponentInstance, child: &'a str) -> bool {
     match *component.lock_state().await {
-        InstanceState::Resolved(ref s) => s.get_live_child(&child.into()).is_some(),
+        InstanceState::Resolved(ref s) => s.get_child(&child.into()).is_some(),
         _ => panic!("not resolved"),
     }
 }
@@ -138,7 +138,9 @@ pub async fn has_live_child<'a>(component: &'a ComponentInstance, child: &'a str
 /// Returns true if the given child (live or deleting) exists.
 pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -> bool {
     match *component.lock_state().await {
-        InstanceState::Resolved(ref s) => s.all_children().contains_key(&moniker.into()),
+        InstanceState::Resolved(ref s) => {
+            s.children().map(|(k, _)| k.clone()).any(|m| m == moniker.into())
+        }
         InstanceState::Destroyed => false,
         _ => panic!("not resolved"),
     }
@@ -147,7 +149,7 @@ pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -
 /// Return the instance id of the given live child.
 pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a str) -> u32 {
     match *component.lock_state().await {
-        InstanceState::Resolved(ref s) => s.get_live_child_instance_id(&moniker.into()).unwrap(),
+        InstanceState::Resolved(ref s) => s.get_child_instance_id(&moniker.into()).unwrap(),
         _ => panic!("not resolved"),
     }
 }
@@ -155,7 +157,7 @@ pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a 
 /// Return all monikers of the live children of the given `component`.
 pub async fn get_live_children(component: &ComponentInstance) -> HashSet<ChildMoniker> {
     match *component.lock_state().await {
-        InstanceState::Resolved(ref s) => s.live_children().map(|(m, _)| m.clone()).collect(),
+        InstanceState::Resolved(ref s) => s.children().map(|(m, _)| m.clone()).collect(),
         InstanceState::Destroyed => HashSet::new(),
         _ => panic!("not resolved"),
     }
@@ -167,7 +169,7 @@ pub async fn get_live_child<'a>(
     child: &'a str,
 ) -> Arc<ComponentInstance> {
     match *component.lock_state().await {
-        InstanceState::Resolved(ref s) => s.get_live_child(&child.into()).unwrap().clone(),
+        InstanceState::Resolved(ref s) => s.get_child(&child.into()).unwrap().clone(),
         _ => panic!("not resolved"),
     }
 }

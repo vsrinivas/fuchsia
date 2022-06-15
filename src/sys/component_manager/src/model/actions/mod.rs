@@ -427,8 +427,7 @@ pub mod tests {
 pub(crate) mod test_utils {
     use {
         crate::model::component::{ComponentInstance, InstanceState},
-        cm_moniker::InstancedChildMoniker,
-        moniker::AbsoluteMonikerBase,
+        moniker::{AbsoluteMonikerBase, ChildMoniker},
         routing::component_instance::ComponentInstanceInterface,
     };
 
@@ -440,12 +439,12 @@ pub(crate) mod test_utils {
     /// it does not exist in the InstanceState of its parent. Assumes the parent is not destroyed
     /// yet.
     pub async fn is_child_deleted(parent: &ComponentInstance, child: &ComponentInstance) -> bool {
-        let child_moniker =
+        let instanced_moniker =
             child.instanced_moniker().leaf().expect("Root component cannot be destroyed");
 
         // Verify the parent-child relationship
         assert_eq!(
-            parent.instanced_moniker().child(child_moniker.clone()),
+            parent.instanced_moniker().child(instanced_moniker.clone()),
             *child.instanced_moniker()
         );
 
@@ -457,20 +456,17 @@ pub(crate) mod test_utils {
 
         let child_state = child.lock_state().await;
         let child_execution = child.lock_execution().await;
-        let found_child_moniker = parent_resolved_state.all_children().get(child_moniker);
+        let found_child = parent_resolved_state.get_child(child.child_moniker().unwrap());
 
-        found_child_moniker.is_none()
+        found_child.is_none()
             && matches!(*child_state, InstanceState::Destroyed)
             && child_execution.runtime.is_none()
             && child_execution.is_shut_down()
     }
 
-    pub async fn is_stopped(
-        component: &ComponentInstance,
-        instanced_moniker: &InstancedChildMoniker,
-    ) -> bool {
+    pub async fn is_stopped(component: &ComponentInstance, moniker: &ChildMoniker) -> bool {
         match *component.lock_state().await {
-            InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
+            InstanceState::Resolved(ref s) => match s.get_child(moniker) {
                 Some(child) => {
                     let child_execution = child.lock_execution().await;
                     child_execution.runtime.is_none()

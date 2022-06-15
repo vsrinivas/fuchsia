@@ -47,7 +47,7 @@ async fn do_destroy_child(
         let state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref s) => {
-                let child = s.get_live_child(&moniker.without_instance_id()).map(|r| r.clone());
+                let child = s.get_child(&moniker.without_instance_id()).map(|r| r.clone());
                 child
             }
             InstanceState::Destroyed => None,
@@ -77,7 +77,7 @@ async fn do_destroy_child(
             let mut state = component.lock_state().await;
             match *state {
                 InstanceState::Resolved(ref mut s) => {
-                    s.remove_child(&moniker);
+                    s.remove_child(&moniker.without_instance_id());
                 }
                 InstanceState::Destroyed => {}
                 InstanceState::New | InstanceState::Discovered => {

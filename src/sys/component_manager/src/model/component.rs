@@ -737,14 +737,11 @@ impl ComponentInstance {
         self: &Arc<Self>,
         child_moniker: &ChildMoniker,
     ) -> Result<(), ModelError> {
-        let tup = {
+        let instanced_moniker = {
             let state = self.lock_resolved_state().await?;
-            state.live_children.get(&child_moniker).map(|t| t.clone())
+            state.get_child_instanced_moniker(&child_moniker)
         };
-        if let Some(tup) = tup {
-            let (instance, _) = tup;
-            let instanced_moniker =
-                InstancedChildMoniker::from_child_moniker(child_moniker, instance);
+        if let Some(instanced_moniker) = instanced_moniker {
             ActionSet::register(self.clone(), DestroyChildAction::new(instanced_moniker)).await
         } else {
             Err(ModelError::instance_not_found_in_realm(
@@ -898,7 +895,7 @@ impl ComponentInstance {
     ) -> Result<(), ModelError> {
         let child_instances: Vec<_> = {
             let state = self.lock_resolved_state().await?;
-            state.all_children().values().map(|m| m.clone()).collect()
+            state.children().map(|(_, v)| v.clone()).collect()
         };
 
         let mut futures = vec![];
@@ -974,7 +971,7 @@ impl ComponentInstance {
                 })
                 .collect();
             let instanced_monikers: Vec<_> =
-                state.all_children().keys().map(|m| m.clone()).collect();
+                state.instanced_children().map(|(k, _)| k.clone()).collect();
             (transient_colls, instanced_monikers)
         };
         let mut futures = vec![];
@@ -1069,7 +1066,7 @@ impl ComponentInstance {
             let state = self.lock_state().await;
             match *state {
                 InstanceState::Resolved(ref s) => s
-                    .live_children()
+                    .children()
                     .filter_map(|(_, r)| match r.startup {
                         fdecl::StartupMode::Eager => Some(r.clone()),
                         fdecl::StartupMode::Lazy => None,
@@ -1384,18 +1381,10 @@ impl shutdown::Component for ResolvedInstanceState {
 
     fn children(&self) -> Vec<shutdown::Child> {
         // Includes both static and dynamic children.
-        ResolvedInstanceState::all_children(self)
-            .iter()
+        ResolvedInstanceState::children(self)
             .map(|(moniker, instance)| shutdown::Child {
                 moniker: moniker.clone(),
                 environment_name: instance.environment().name().map(|n| n.to_string()),
-                // Component is live if `live_children` contains its partial
-                // moniker, and the `instance_id` of the live child matches.
-                is_live: self
-                    .live_children
-                    .get(&moniker.without_instance_id())
-                    .map(|(live_instance_id, _)| *live_instance_id)
-                    == Some(moniker.instance()),
             })
             .collect()
     }
@@ -1408,12 +1397,8 @@ pub struct ResolvedInstanceState {
     execution_scope: ExecutionScope,
     /// The component's declaration.
     decl: ComponentDecl,
-    // TODO(fxbug.dev/100652): `children` and `live_children` contain the same data now, merge
-    // them.
-    /// All child instances, indexed by instanced moniker.
-    children: HashMap<InstancedChildMoniker, Arc<ComponentInstance>>,
-    /// Child instances that have not been deleted, indexed by child moniker.
-    live_children: HashMap<ChildMoniker, (InstanceId, Arc<ComponentInstance>)>,
+    /// All child instances, indexed by child moniker.
+    children: HashMap<ChildMoniker, (InstanceId, Arc<ComponentInstance>)>,
     /// The next unique identifier for a dynamic children created in this realm.
     /// (Static instances receive identifier 0.)
     next_dynamic_instance_id: InstanceId,
@@ -1466,7 +1451,6 @@ impl ResolvedInstanceState {
             execution_scope: ExecutionScope::new(),
             decl: decl.clone(),
             children: HashMap::new(),
-            live_children: HashMap::new(),
             next_dynamic_instance_id: 1,
             environments: Self::instantiate_environments(component, &decl),
             exposed_dir,
@@ -1498,22 +1482,22 @@ impl ResolvedInstanceState {
         &self.execution_scope
     }
 
-    /// Returns an iterator over live children.
-    pub fn live_children(&self) -> impl Iterator<Item = (&ChildMoniker, &Arc<ComponentInstance>)> {
-        self.live_children.iter().map(|(k, v)| (k, &v.1))
+    /// Returns an iterator over all children.
+    pub fn children(&self) -> impl Iterator<Item = (&ChildMoniker, &Arc<ComponentInstance>)> {
+        self.children.iter().map(|(k, v)| (k, &v.1))
     }
 
-    /// Returns a reference to a live child.
-    pub fn get_live_child(&self, m: &ChildMoniker) -> Option<Arc<ComponentInstance>> {
-        self.live_children.get(m).map(|(_, v)| v.clone())
+    /// Returns a reference to a child.
+    pub fn get_child(&self, m: &ChildMoniker) -> Option<Arc<ComponentInstance>> {
+        self.children.get(m).map(|(_, v)| v.clone())
     }
 
-    /// Returns a vector of the live children in `collection`.
-    pub fn live_children_in_collection(
+    /// Returns a vector of the children in `collection`.
+    pub fn children_in_collection(
         &self,
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<ComponentInstance>)> {
-        self.live_children()
+        self.children()
             .filter(move |(m, _)| match m.collection() {
                 Some(name) if name == collection => true,
                 _ => false,
@@ -1528,36 +1512,32 @@ impl ResolvedInstanceState {
         self.children
             .iter()
             .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
-            .map(|(_, component)| component.clone())
+            .map(|(_, t)| {
+                let (_, component) = t;
+                component.clone()
+            })
             .collect()
     }
 
-    /// Returns a live child's instance id.
-    pub fn get_live_child_instance_id(&self, m: &ChildMoniker) -> Option<InstanceId> {
-        self.live_children.get(m).map(|(i, _)| *i)
+    /// Returns a child's instance id.
+    pub fn get_child_instance_id(&self, m: &ChildMoniker) -> Option<InstanceId> {
+        self.children.get(m).map(|(i, _)| *i)
     }
 
     /// Given a `ChildMoniker` returns the `InstancedChildMoniker`
-    pub fn get_live_child_moniker(&self, m: &ChildMoniker) -> Option<InstancedChildMoniker> {
-        self.live_children.get(m).map(|(i, _)| InstancedChildMoniker::from_child_moniker(m, *i))
+    pub fn get_child_instanced_moniker(&self, m: &ChildMoniker) -> Option<InstancedChildMoniker> {
+        self.children.get(m).map(|(i, _)| InstancedChildMoniker::from_child_moniker(m, *i))
     }
 
-    pub fn get_all_child_monikers(&self, m: &ChildMoniker) -> Vec<InstancedChildMoniker> {
-        self.children
-            .iter()
-            .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
-            .map(|(child, _)| child.clone())
-            .collect()
-    }
-
-    /// Returns a reference to the list of all children.
-    pub fn all_children(&self) -> &HashMap<InstancedChildMoniker, Arc<ComponentInstance>> {
-        &self.children
-    }
-
-    /// Returns a child `ComponentInstance`. The child may or may not be live.
-    pub fn get_child(&self, cm: &InstancedChildMoniker) -> Option<Arc<ComponentInstance>> {
-        self.children.get(cm).map(|i| i.clone())
+    /// Returns a reference to the list of all children, with instanced monikers.
+    pub fn instanced_children(
+        &self,
+    ) -> impl Iterator<Item = (InstancedChildMoniker, &Arc<ComponentInstance>)> {
+        self.children.iter().map(|(k, v)| {
+            let (instance_id, component) = v;
+            let moniker = InstancedChildMoniker::from_child_moniker(k, *instance_id);
+            (moniker, component)
+        })
     }
 
     /// Returns the exposed directory bound to this instance.
@@ -1587,7 +1567,7 @@ impl ResolvedInstanceState {
         moniker: &InstancedAbsoluteMoniker,
         child_moniker: &ChildMoniker,
     ) -> Option<InstancedAbsoluteMoniker> {
-        match self.get_live_child_instance_id(child_moniker) {
+        match self.get_child_instance_id(child_moniker) {
             Some(instance_id) => Some(
                 moniker
                     .child(InstancedChildMoniker::from_child_moniker(child_moniker, instance_id)),
@@ -1596,21 +1576,9 @@ impl ResolvedInstanceState {
         }
     }
 
-    /// Returns all deleting children.
-    pub fn get_deleting_children(&self) -> HashMap<InstancedChildMoniker, Arc<ComponentInstance>> {
-        let mut deleting_children = HashMap::new();
-        for (m, r) in self.all_children().iter() {
-            if self.get_live_child(&m.without_instance_id()).is_none() {
-                deleting_children.insert(m.clone(), r.clone());
-            }
-        }
-        deleting_children
-    }
-
     /// Removes a child.
-    pub fn remove_child(&mut self, instanced_moniker: &InstancedChildMoniker) {
-        let child_moniker = instanced_moniker.without_instance_id();
-        if self.live_children.remove(&child_moniker).is_none() {
+    pub fn remove_child(&mut self, moniker: &ChildMoniker) {
+        if self.children.remove(moniker).is_none() {
             return;
         }
 
@@ -1620,18 +1588,16 @@ impl ResolvedInstanceState {
             use cm_rust::OfferDeclCommon;
             let source_matches = offer.source()
                 == &cm_rust::OfferSource::Child(cm_rust::ChildRef {
-                    name: child_moniker.name.clone(),
-                    collection: child_moniker.collection.clone(),
+                    name: moniker.name.clone(),
+                    collection: moniker.collection.clone(),
                 });
             let target_matches = offer.target()
                 == &cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                    name: child_moniker.name.clone(),
-                    collection: child_moniker.collection.clone(),
+                    name: moniker.name.clone(),
+                    collection: moniker.collection.clone(),
                 });
             !source_matches && !target_matches
         });
-
-        self.children.remove(&instanced_moniker);
     }
 
     /// Creates a set of Environments instantiated from their EnvironmentDecls.
@@ -1734,7 +1700,7 @@ impl ResolvedInstanceState {
             instance_id,
         );
         let child_moniker = instanced_moniker.without_instance_id();
-        if self.get_live_child(&child_moniker).is_some() {
+        if self.get_child(&child_moniker).is_some() {
             return None;
         }
         let child = ComponentInstance::new(
@@ -1749,8 +1715,7 @@ impl ResolvedInstanceState {
             numbered_handles,
             component.persistent_storage_for_child(collection),
         );
-        self.children.insert(instanced_moniker, child.clone());
-        self.live_children.insert(child_moniker, (instance_id, child.clone()));
+        self.children.insert(child_moniker, (instance_id, child.clone()));
         if let Some(dynamic_offers) = dynamic_offers {
             self.dynamic_offers.extend(dynamic_offers.into_iter());
         }
@@ -1791,15 +1756,15 @@ impl ResolvedInstanceInterface for ResolvedInstanceState {
         self.decl.collections.clone()
     }
 
-    fn get_live_child(&self, moniker: &ChildMoniker) -> Option<Arc<ComponentInstance>> {
-        ResolvedInstanceState::get_live_child(self, moniker)
+    fn get_child(&self, moniker: &ChildMoniker) -> Option<Arc<ComponentInstance>> {
+        ResolvedInstanceState::get_child(self, moniker)
     }
 
-    fn live_children_in_collection(
+    fn children_in_collection(
         &self,
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<ComponentInstance>)> {
-        ResolvedInstanceState::live_children_in_collection(self, collection)
+        ResolvedInstanceState::children_in_collection(self, collection)
     }
 
     fn address(&self) -> ComponentAddress {
@@ -2897,16 +2862,14 @@ pub mod tests {
         assert_eq!(
             vec![
                 shutdown::Child {
-                    moniker: "a:0".into(),
+                    moniker: "a".into(),
                     environment_name: Some("env_a".to_string()),
-                    is_live: true
                 },
                 shutdown::Child {
-                    moniker: "b:0".into(),
+                    moniker: "b".into(),
                     environment_name: Some("env_b".to_string()),
-                    is_live: true
                 },
-                shutdown::Child { moniker: "c:0".into(), environment_name: None, is_live: true },
+                shutdown::Child { moniker: "c".into(), environment_name: None },
             ],
             children
         );
@@ -3009,29 +2972,15 @@ pub mod tests {
             pretty_assertions::assert_eq!(
                 vec![
                     shutdown::Child {
-                        moniker: "a:0".into(),
+                        moniker: "a".into(),
                         environment_name: Some("env_a".to_string()),
-                        is_live: true
                     },
+                    shutdown::Child { moniker: "b".into(), environment_name: None },
+                    shutdown::Child { moniker: "coll_1:a".into(), environment_name: None },
+                    shutdown::Child { moniker: "coll_1:b".into(), environment_name: None },
                     shutdown::Child {
-                        moniker: "b:0".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:a:1".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:b:2".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_2:a:3".into(),
+                        moniker: "coll_2:a".into(),
                         environment_name: Some("env_b".to_string()),
-                        is_live: true
                     },
                 ],
                 children
@@ -3056,24 +3005,14 @@ pub mod tests {
             pretty_assertions::assert_eq!(
                 vec![
                     shutdown::Child {
-                        moniker: "a:0".into(),
+                        moniker: "a".into(),
                         environment_name: Some("env_a".to_string()),
-                        is_live: true
                     },
+                    shutdown::Child { moniker: "b".into(), environment_name: None },
+                    shutdown::Child { moniker: "coll_1:a".into(), environment_name: None },
                     shutdown::Child {
-                        moniker: "b:0".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:a:1".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_2:a:3".into(),
+                        moniker: "coll_2:a".into(),
                         environment_name: Some("env_b".to_string()),
-                        is_live: true
                     },
                 ],
                 children
@@ -3129,29 +3068,15 @@ pub mod tests {
             pretty_assertions::assert_eq!(
                 vec![
                     shutdown::Child {
-                        moniker: "a:0".into(),
+                        moniker: "a".into(),
                         environment_name: Some("env_a".to_string()),
-                        is_live: true
                     },
+                    shutdown::Child { moniker: "b".into(), environment_name: None },
+                    shutdown::Child { moniker: "coll_1:a".into(), environment_name: None },
+                    shutdown::Child { moniker: "coll_1:b".into(), environment_name: None },
                     shutdown::Child {
-                        moniker: "b:0".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:a:1".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_1:b:4".into(),
-                        environment_name: None,
-                        is_live: true
-                    },
-                    shutdown::Child {
-                        moniker: "coll_2:a:3".into(),
+                        moniker: "coll_2:a".into(),
                         environment_name: Some("env_b".to_string()),
-                        is_live: true
                     },
                 ],
                 children

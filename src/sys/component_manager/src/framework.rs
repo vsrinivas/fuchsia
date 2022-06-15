@@ -314,7 +314,7 @@ impl RealmCapabilityHost {
             }
         })?;
         let child_moniker = ChildMoniker::new(child.name, child.collection);
-        Ok(state.get_live_child(&child_moniker).map(|r| r.clone()))
+        Ok(state.get_child(&child_moniker).map(|r| r.clone()))
     }
 
     async fn list_children(
@@ -331,7 +331,7 @@ impl RealmCapabilityHost {
         let decl = state.decl();
         decl.find_collection(&collection.name).ok_or(fcomponent::Error::CollectionNotFound)?;
         let mut children: Vec<_> = state
-            .live_children()
+            .children()
             .filter_map(|(m, _)| match m.collection() {
                 Some(c) => {
                     if c == collection.name {
@@ -1059,7 +1059,7 @@ mod tests {
         event.resume();
 
         // "a" is fully deleted now.
-        assert!(!has_child(test.component(), "coll:a:1").await);
+        assert!(!has_child(test.component(), "coll:a").await);
         {
             let actual_children = get_live_children(test.component()).await;
             let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
@@ -1194,7 +1194,7 @@ mod tests {
 
         let child = {
             let state = test.component().lock_resolved_state().await.unwrap();
-            let child = state.all_children().iter().next().unwrap();
+            let child = state.children().next().unwrap();
             assert_eq!("a", child.0.name());
             child.1.clone()
         };

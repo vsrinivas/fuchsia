@@ -85,7 +85,7 @@ where
         let components: Vec<(ChildMoniker, Arc<C>)> = component
             .lock_resolved_state()
             .await?
-            .live_children_in_collection(&self.collection_name);
+            .children_in_collection(&self.collection_name);
         for (moniker, child_component) in components {
             let child_exposes = child_component.lock_resolved_state().await.map(|c| c.exposes());
             match child_exposes {
@@ -114,7 +114,7 @@ where
             collection_component
                 .lock_resolved_state()
                 .await?
-                .live_children_in_collection(&self.collection_name)
+                .children_in_collection(&self.collection_name)
                 .into_iter()
                 .find(|child| child.0.name() == instance)
                 .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {

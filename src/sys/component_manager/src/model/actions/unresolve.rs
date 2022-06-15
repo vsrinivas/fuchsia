@@ -76,7 +76,7 @@ async fn unresolve_resolved_children(component: &Arc<ComponentInstance>) -> Resu
         // Collect only the resolved children. It is not required that all children are resolved for
         // successful recursion. It's also unnecessary to unresolve components that are not
         // resolved, so don't include them.
-        for (_, child_instance) in state.live_children() {
+        for (_, child_instance) in state.children() {
             let child_state = child_instance.lock_state().await;
             if matches!(*child_state, InstanceState::Resolved(_)) {
                 resolved_children.push(child_instance.clone());
@@ -426,7 +426,7 @@ pub mod tests {
         let component_root = test.look_up(vec![].into()).await;
         let component_a = match *component_root.lock_state().await {
             InstanceState::Resolved(ref s) => {
-                s.get_live_child(&ChildMoniker::from("a")).expect("child a not found")
+                s.get_child(&ChildMoniker::from("a")).expect("child a not found")
             }
             _ => panic!("not resolved"),
         };

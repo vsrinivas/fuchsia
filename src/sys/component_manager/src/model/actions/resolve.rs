@@ -172,11 +172,11 @@ pub mod tests {
         // Stop, then it's ok to resolve again.
         ActionSet::register(component_a.clone(), StopAction::new(false, true)).await.unwrap();
         assert!(is_resolved(&component_a).await);
-        assert!(is_stopped(&component_root, &"a:0".into()).await);
+        assert!(is_stopped(&component_root, &"a".into()).await);
 
         ActionSet::register(component_a.clone(), ResolveAction::new()).await.unwrap();
         assert!(is_resolved(&component_a).await);
-        assert!(is_stopped(&component_root, &"a:0".into()).await);
+        assert!(is_stopped(&component_root, &"a".into()).await);
 
         // Start it again then shut it down.
         ActionSet::register(component_a.clone(), StartAction::new(StartReason::Debug))
@@ -190,6 +190,6 @@ pub mod tests {
             Err(ModelError::InstanceShutDown { .. })
         );
         assert!(is_resolved(&component_a).await);
-        assert!(is_stopped(&component_root, &"a:0".into()).await);
+        assert!(is_stopped(&component_root, &"a".into()).await);
     }
 }

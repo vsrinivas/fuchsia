@@ -104,10 +104,10 @@ pub trait ResolvedInstanceInterface: Send + Sync {
     fn collections(&self) -> Vec<CollectionDecl>;
 
     /// Returns a live child of this instance.
-    fn get_live_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self::Component>>;
+    fn get_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self::Component>>;
 
     /// Returns a vector of the live children in `collection`.
-    fn live_children_in_collection(
+    fn children_in_collection(
         &self,
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<Self::Component>)>;
@@ -132,7 +132,7 @@ pub trait ResolvedInstanceInterfaceExt: ResolvedInstanceInterface {
             OfferSource::Framework | OfferSource::Self_ | OfferSource::Parent => true,
             OfferSource::Void => false,
             OfferSource::Child(cm_rust::ChildRef { name, collection }) => {
-                self.get_live_child(&ChildMoniker::new(name.clone(), collection.clone())).is_some()
+                self.get_child(&ChildMoniker::new(name.clone(), collection.clone())).is_some()
             }
             OfferSource::Collection(collection_name) => {
                 self.collections().into_iter().any(|collection| collection.name == *collection_name)
@@ -178,15 +178,15 @@ where
         T::Target::collections(&*self)
     }
 
-    fn get_live_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self::Component>> {
-        T::Target::get_live_child(&*self, moniker)
+    fn get_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self::Component>> {
+        T::Target::get_child(&*self, moniker)
     }
 
-    fn live_children_in_collection(
+    fn children_in_collection(
         &self,
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<Self::Component>)> {
-        T::Target::live_children_in_collection(&*self, collection)
+        T::Target::children_in_collection(&*self, collection)
     }
 
     fn address(&self) -> ComponentAddress {

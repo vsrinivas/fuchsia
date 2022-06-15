@@ -390,6 +390,7 @@ pub type EventResult = Result<EventPayload, EventError>;
 #[derive(Clone, Debug)]
 pub struct Event {
     /// Moniker of component that this event applies to
+    // TODO: Change to ExtendedMoniker
     pub target_moniker: InstancedExtendedMoniker,
 
     /// Component url of the component that this event applies to
