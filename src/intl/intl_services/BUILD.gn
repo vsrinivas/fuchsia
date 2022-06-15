@@ -28,7 +28,7 @@ group("small") {
 
 group("tests") {
   testonly = true
-  public_deps = [ "tests" ]
+  public_deps = []
 }
 
 source_set("lib") {
