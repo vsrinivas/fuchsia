@@ -55,10 +55,11 @@ type Shard struct {
 }
 
 // CreatePackageRepo creates a package repository for the given shard.
-func (s *Shard) CreatePackageRepo(globalRepoMetadata string) error {
+func (s *Shard) CreatePackageRepo(buildDir string, globalRepoMetadata string) error {
 	// The path to the package repository should be unique so as to not
 	// conflict with other shards' repositories.
-	localRepo := fmt.Sprintf("repo_%s", url.PathEscape(s.Name))
+	localRepoRel := fmt.Sprintf("repo_%s", url.PathEscape(s.Name))
+	localRepo := filepath.Join(buildDir, localRepoRel)
 	// Remove the localRepo if it exists in the incremental build cache.
 	if err := os.RemoveAll(localRepo); err != nil {
 		return err
@@ -112,8 +113,8 @@ func (s *Shard) CreatePackageRepo(globalRepoMetadata string) error {
 		}
 	}
 
-	s.PkgRepo = localRepo
-	s.AddDeps([]string{localRepo})
+	s.PkgRepo = localRepoRel
+	s.AddDeps([]string{localRepoRel})
 	return nil
 }
 

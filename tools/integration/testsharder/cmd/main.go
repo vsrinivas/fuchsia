@@ -249,7 +249,7 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 				if len(pkgRepos) < 1 {
 					return errors.New("build did not generate a package repository")
 				}
-				if err := s.CreatePackageRepo(pkgRepos[0].Path); err != nil {
+				if err := s.CreatePackageRepo(flags.buildDir, pkgRepos[0].Path); err != nil {
 					return err
 				}
 			}
