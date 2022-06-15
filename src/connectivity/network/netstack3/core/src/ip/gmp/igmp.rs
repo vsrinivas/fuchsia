@@ -595,11 +595,11 @@ mod tests {
     type DummySyncCtx = crate::context::testutil::DummySyncCtx<
         DummyIgmpCtx,
         IgmpPacketMetadata<DummyDeviceId>,
+        (),
         DummyDeviceId,
     >;
 
-    type DummyNonSyncCtx =
-        crate::context::testutil::DummyNonSyncCtx<IgmpTimerId<DummyDeviceId>, ()>;
+    type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<IgmpTimerId<DummyDeviceId>>;
 
     impl IgmpContext<DummyNonSyncCtx> for DummySyncCtx {
         fn get_ip_addr_subnet(&self, _device: DummyDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
@@ -1324,9 +1324,9 @@ mod tests {
                 },
             );
         };
-        let check_sent_report = |non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx| {
+        let check_sent_report = |sync_ctx: &mut crate::testutil::DummySyncCtx| {
             assert_matches::assert_matches!(
-                &non_sync_ctx.take_frames()[..],
+                &sync_ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
@@ -1347,9 +1347,9 @@ mod tests {
                 }
             );
         };
-        let check_sent_leave = |non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx| {
+        let check_sent_leave = |sync_ctx: &mut crate::testutil::DummySyncCtx| {
             assert_matches::assert_matches!(
-                &non_sync_ctx.take_frames()[..],
+                &sync_ctx.dispatcher.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
@@ -1381,7 +1381,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
-        check_sent_report(&mut non_sync_ctx);
+        check_sent_report(&mut sync_ctx);
 
         // Disable IGMP.
         set_config(
@@ -1390,7 +1390,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: false },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        check_sent_leave(&mut non_sync_ctx);
+        check_sent_leave(&mut sync_ctx);
 
         // Enable IGMP but disable IPv4.
         //
@@ -1401,7 +1401,7 @@ mod tests {
             TestConfig { ip_enabled: false, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&non_sync_ctx.take_frames()[..], []);
+        assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Disable IGMP but enable IPv4.
         //
@@ -1412,7 +1412,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: false },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&non_sync_ctx.take_frames()[..], []);
+        assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
 
         // Enable IGMP.
         set_config(
@@ -1421,7 +1421,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
-        check_sent_report(&mut non_sync_ctx);
+        check_sent_report(&mut sync_ctx);
 
         // Disable IPv4.
         set_config(
@@ -1430,7 +1430,7 @@ mod tests {
             TestConfig { ip_enabled: false, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        check_sent_leave(&mut non_sync_ctx);
+        check_sent_leave(&mut sync_ctx);
 
         // Enable IPv4.
         set_config(
@@ -1439,6 +1439,6 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
-        check_sent_report(&mut non_sync_ctx);
+        check_sent_report(&mut sync_ctx);
     }
 }

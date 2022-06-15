@@ -223,45 +223,9 @@ impl<I: Instant> Default for StackState<I> {
     }
 }
 
-/// The non synchronized context for the stack with a buffer.
-pub trait BufferNonSyncContextInner<B: BufferMut>: DeviceLayerEventDispatcher<B> {}
-impl<B: BufferMut, C: DeviceLayerEventDispatcher<B>> BufferNonSyncContextInner<B> for C {}
-
-/// The non synchronized context for the stack with a buffer.
-pub trait BufferNonSyncContext<B: BufferMut>:
-    NonSyncContext + BufferNonSyncContextInner<B>
-{
-}
-impl<B: BufferMut, C: NonSyncContext + BufferNonSyncContextInner<B>> BufferNonSyncContext<B> for C {}
-
 /// The non-synchronized context for the stack.
-pub trait NonSyncContext:
-    BufferNonSyncContextInner<Buf<Vec<u8>>>
-    + BufferNonSyncContextInner<EmptyBuf>
-    + RngContext
-    + TimerContext<TimerId>
-    + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
-    + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
-    + EventContext<IpLayerEvent<DeviceId, Ipv4>>
-    + EventContext<IpLayerEvent<DeviceId, Ipv6>>
-    + EventContext<DadEvent<DeviceId>>
-    + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>
-{
-}
-impl<
-        C: BufferNonSyncContextInner<Buf<Vec<u8>>>
-            + BufferNonSyncContextInner<EmptyBuf>
-            + RngContext
-            + TimerContext<TimerId>
-            + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
-            + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
-            + EventContext<IpLayerEvent<DeviceId, Ipv4>>
-            + EventContext<IpLayerEvent<DeviceId, Ipv6>>
-            + EventContext<DadEvent<DeviceId>>
-            + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>,
-    > NonSyncContext for C
-{
-}
+pub trait NonSyncContext: RngContext + TimerContext<TimerId> {}
+impl<C: RngContext + TimerContext<TimerId>> NonSyncContext for C {}
 
 /// The synchronized context.
 pub struct SyncCtx<D: EventDispatcher, NonSyncCtx: NonSyncContext> {
@@ -455,6 +419,7 @@ pub trait Instant: Sized + Ord + Copy + Clone + Debug + Send + Sync {
 /// DeviceLayerEventDispatcher<B>`.
 pub trait BufferDispatcher<B: BufferMut>:
     EventDispatcher
+    + DeviceLayerEventDispatcher<B>
     + BufferIcmpContext<Ipv4, B>
     + BufferIcmpContext<Ipv6, B>
     + BufferUdpContext<Ipv4, B>
@@ -464,6 +429,7 @@ pub trait BufferDispatcher<B: BufferMut>:
 impl<
         B: BufferMut,
         D: EventDispatcher
+            + DeviceLayerEventDispatcher<B>
             + BufferIcmpContext<Ipv4, B>
             + BufferIcmpContext<Ipv6, B>
             + BufferUdpContext<Ipv4, B>
@@ -484,7 +450,9 @@ impl<
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
 pub trait EventDispatcher:
-    IcmpContext<Ipv4>
+    DeviceLayerEventDispatcher<Buf<Vec<u8>>>
+    + DeviceLayerEventDispatcher<EmptyBuf>
+    + IcmpContext<Ipv4>
     + IcmpContext<Ipv6>
     + BufferIcmpContext<Ipv4, Buf<Vec<u8>>>
     + BufferIcmpContext<Ipv4, EmptyBuf>
@@ -496,11 +464,19 @@ pub trait EventDispatcher:
     + BufferUdpContext<Ipv4, EmptyBuf>
     + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
     + BufferUdpContext<Ipv6, EmptyBuf>
+    + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
+    + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
+    + EventContext<IpLayerEvent<DeviceId, Ipv4>>
+    + EventContext<IpLayerEvent<DeviceId, Ipv6>>
+    + EventContext<DadEvent<DeviceId>>
+    + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>
 {
 }
 
 impl<
-        D: IcmpContext<Ipv4>
+        D: DeviceLayerEventDispatcher<Buf<Vec<u8>>>
+            + DeviceLayerEventDispatcher<EmptyBuf>
+            + IcmpContext<Ipv4>
             + IcmpContext<Ipv6>
             + BufferIcmpContext<Ipv4, Buf<Vec<u8>>>
             + BufferIcmpContext<Ipv4, EmptyBuf>
@@ -511,7 +487,13 @@ impl<
             + BufferUdpContext<Ipv4, Buf<Vec<u8>>>
             + BufferUdpContext<Ipv4, EmptyBuf>
             + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
-            + BufferUdpContext<Ipv6, EmptyBuf>,
+            + BufferUdpContext<Ipv6, EmptyBuf>
+            + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
+            + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
+            + EventContext<IpLayerEvent<DeviceId, Ipv4>>
+            + EventContext<IpLayerEvent<DeviceId, Ipv6>>
+            + EventContext<DadEvent<DeviceId>>
+            + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>,
     > EventDispatcher for D
 {
 }

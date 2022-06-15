@@ -253,13 +253,13 @@ pub enum IpDeviceEvent<DeviceId, I: Ip> {
 pub(crate) trait IpDeviceNonSyncContext<
     I: IpDeviceIpExt<<Self as InstantContext>::Instant, DeviceId>,
     DeviceId,
->: RngContext + TimerContext<I::Timer> + EventContext<IpDeviceEvent<DeviceId, I>>
+>: RngContext + TimerContext<I::Timer>
 {
 }
 impl<
         DeviceId,
         I: IpDeviceIpExt<<C as InstantContext>::Instant, DeviceId>,
-        C: RngContext + TimerContext<I::Timer> + EventContext<IpDeviceEvent<DeviceId, I>>,
+        C: RngContext + TimerContext<I::Timer>,
     > IpDeviceNonSyncContext<I, DeviceId> for C
 {
 }
@@ -268,7 +268,7 @@ impl<
 pub(crate) trait IpDeviceContext<
     I: IpDeviceIpExt<C::Instant, Self::DeviceId>,
     C: IpDeviceNonSyncContext<I, Self::DeviceId>,
->: IpDeviceIdContext<I>
+>: IpDeviceIdContext<I> + EventContext<IpDeviceEvent<Self::DeviceId, I>>
 {
     /// Gets immutable access to an IP device's state.
     fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &I::State;
@@ -474,7 +474,7 @@ fn enable_ipv6_device<
         .collect::<Vec<_>>()
         .into_iter()
         .for_each(|addr| {
-            ctx.on_event(IpDeviceEvent::AddressStateChanged {
+            sync_ctx.on_event(IpDeviceEvent::AddressStateChanged {
                 device: device_id,
                 addr: *addr,
                 state: IpAddressState::Tentative,
@@ -883,12 +883,12 @@ pub(crate) fn add_ipv4_addr_subnet<
     C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>,
 >(
     sync_ctx: &mut SC,
-    ctx: &mut C,
+    _ctx: &mut C,
     device_id: SC::DeviceId,
     addr_sub: AddrSubnet<Ipv4Addr>,
 ) -> Result<(), ExistsError> {
     sync_ctx.get_ip_device_state_mut(device_id).ip_state.add_addr(addr_sub).map(|()| {
-        ctx.on_event(IpDeviceEvent::AddressAdded {
+        sync_ctx.on_event(IpDeviceEvent::AddressAdded {
             device: device_id,
             addr: addr_sub,
             state: IpAddressState::Assigned,
@@ -950,7 +950,7 @@ pub(crate) fn add_ipv6_addr_subnet<
                 addr_sub.addr().to_solicited_node_address(),
             );
 
-            ctx.on_event(IpDeviceEvent::AddressAdded {
+            sync_ctx.on_event(IpDeviceEvent::AddressAdded {
                 device: device_id,
                 addr: addr_sub.to_witness(),
                 state: IpAddressState::Tentative,
@@ -975,12 +975,12 @@ pub(crate) fn del_ipv4_addr<
     C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>,
 >(
     sync_ctx: &mut SC,
-    ctx: &mut C,
+    _ctx: &mut C,
     device_id: SC::DeviceId,
     addr: &SpecifiedAddr<Ipv4Addr>,
 ) -> Result<(), NotFoundError> {
     sync_ctx.get_ip_device_state_mut(device_id).ip_state.remove_addr(&addr).map(|addr| {
-        ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr.addr() })
+        sync_ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr.addr() })
     })
 }
 
@@ -1008,7 +1008,7 @@ pub(crate) fn del_ipv6_addr_with_reason<
         AddrConfig::Manual => {}
     }
 
-    ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr_sub.addr() });
+    sync_ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr_sub.addr() });
 
     Ok(())
 }

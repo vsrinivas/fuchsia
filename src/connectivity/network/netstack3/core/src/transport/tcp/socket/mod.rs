@@ -508,10 +508,11 @@ mod tests {
     type TcpSyncCtx<I> = DummySyncCtx<
         TcpState<I>,
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
+        (),
         DummyDeviceId,
     >;
 
-    type TcpNonSyncCtx = DummyNonSyncCtx<(), ()>;
+    type TcpNonSyncCtx = DummyNonSyncCtx<()>;
 
     impl<I: TcpTestIpExt> TcpBufferContext for TcpSyncCtx<I> {
         type ReceiveBuffer = RingBuffer;

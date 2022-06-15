@@ -1003,10 +1003,10 @@ mod tests {
     }
 
     type DummyNonSyncCtx =
-        crate::context::testutil::DummyNonSyncCtx<EthernetTimerId<DummyDeviceId>, ()>;
+        crate::context::testutil::DummyNonSyncCtx<EthernetTimerId<DummyDeviceId>>;
 
     type DummyCtx =
-        crate::context::testutil::DummySyncCtx<DummyEthernetCtx, DummyDeviceId, DummyDeviceId>;
+        crate::context::testutil::DummySyncCtx<DummyEthernetCtx, DummyDeviceId, (), DummyDeviceId>;
 
     impl
         StateContext<
@@ -1380,7 +1380,7 @@ mod tests {
             frame_dst,
             buf.clone(),
         );
-        assert_empty(non_sync_ctx.frames_sent().iter());
+        assert_empty(sync_ctx.dispatcher.frames_sent().iter());
 
         // Set routing and expect packets to be forwarded.
         set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut non_sync_ctx, device, true)
@@ -1398,9 +1398,10 @@ mod tests {
             frame_dst,
             buf.clone(),
         );
-        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
         let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto, ttl) =
-            parse_ip_packet_in_ethernet_frame::<I>(&non_sync_ctx.frames_sent()[0].1[..]).unwrap();
+            parse_ip_packet_in_ethernet_frame::<I>(&sync_ctx.dispatcher.frames_sent()[0].1[..])
+                .unwrap();
         assert_eq!(src_ip.get(), packet_src_ip);
         assert_eq!(config.remote_ip.get(), packet_dst_ip);
         assert_eq!(proto, IpProto::Tcp.into());
@@ -1428,8 +1429,8 @@ mod tests {
             frame_dst,
             buf_unknown_dest,
         );
-        assert_eq!(non_sync_ctx.frames_sent().len(), 2);
-        check_icmp::<I>(&non_sync_ctx.frames_sent()[1].1);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
+        check_icmp::<I>(&sync_ctx.dispatcher.frames_sent()[1].1);
 
         // Attempt to unset router
         set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut non_sync_ctx, device, false)
@@ -1445,7 +1446,7 @@ mod tests {
             frame_dst,
             buf.clone(),
         );
-        assert_eq!(non_sync_ctx.frames_sent().len(), 2);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
     }
 
     #[ip_test]

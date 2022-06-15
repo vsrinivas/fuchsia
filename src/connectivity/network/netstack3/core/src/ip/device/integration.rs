@@ -292,7 +292,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
 }
 
 fn send_ndp_packet<
-    C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
     S: Serializer<Buffer = EmptyBuf>,
     M: IcmpMessage<Ipv6, &'static [u8]>,
@@ -329,10 +329,8 @@ fn send_ndp_packet<
     .map_err(|s| s.into_inner())
 }
 
-impl<
-        C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
-    > Ipv6LayerDadContext<C> for SC
+impl<C: IpLayerNonSyncContext, SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>>
+    Ipv6LayerDadContext<C> for SC
 {
     fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
@@ -375,7 +373,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
 }
 
 impl<
-        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId> + IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
         SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf> + device::Ipv6DeviceContext<C>,
     > Ipv6LayerRsContext<C> for SC
 {

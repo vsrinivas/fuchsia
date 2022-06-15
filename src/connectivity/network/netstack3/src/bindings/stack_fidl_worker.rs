@@ -181,7 +181,7 @@ where
             let Ctx { sync_ctx, non_sync_ctx } = &mut *ctx;
             let eth_id = netstack3_core::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
 
-            let devices: &mut Devices = non_sync_ctx.as_mut();
+            let devices: &mut Devices = sync_ctx.dispatcher.as_mut();
             devices
                 .add_device(eth_id, |id| {
                     let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK)
@@ -235,10 +235,10 @@ where
 impl<'a, C> LockedFidlWorker<'a, C>
 where
     C: LockableContext,
-    C::NonSyncCtx: AsMut<Devices>,
+    C::Dispatcher: AsMut<Devices>,
 {
     fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.ctx.non_sync_ctx.as_mut().remove_device(id) {
+        match self.ctx.sync_ctx.dispatcher.as_mut().remove_device(id) {
             Some(_info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
                 Ok(())
@@ -254,7 +254,7 @@ where
 impl<'a, C> LockedFidlWorker<'a, C>
 where
     C: LockableContext,
-    C::NonSyncCtx: AsRef<Devices>,
+    C::Dispatcher: AsRef<Devices>,
 {
     fn fidl_add_interface_address(
         mut self,
@@ -264,7 +264,7 @@ where
         let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
         let device_info =
-            non_sync_ctx.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            sync_ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         let device_id = device_info.core_id();
 
         add_ip_addr_subnet(
@@ -284,7 +284,7 @@ where
         let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
         let device_info =
-            non_sync_ctx.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            sync_ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         let device_id = device_info.core_id();
         let addr: SpecifiedAddr<_> = addr.addr.try_into_core().map_err(IntoFidl::into_fidl)?;
 
@@ -292,10 +292,10 @@ where
     }
 
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
+        let Ctx { sync_ctx, non_sync_ctx: _ } = self.ctx.deref();
 
         get_all_routes(sync_ctx)
-            .filter_map(|entry| match entry.try_into_fidl_with_ctx(&non_sync_ctx) {
+            .filter_map(|entry| match entry.try_into_fidl_with_ctx(&sync_ctx.dispatcher) {
                 Ok(entry) => Some(entry),
                 Err(e) => {
                     error!("Failed to map forwarding entry into FIDL: {:?}", e);
@@ -311,7 +311,7 @@ where
     ) -> Result<(), fidl_net_stack::Error> {
         let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
-        let entry = match AddableEntryEither::try_from_fidl_with_ctx(&non_sync_ctx, entry) {
+        let entry = match AddableEntryEither::try_from_fidl_with_ctx(&sync_ctx.dispatcher, entry) {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
         };
@@ -340,8 +340,8 @@ where
 impl<'a, C> LockedFidlWorker<'a, C>
 where
     C: LockableContext,
-    C::NonSyncCtx: DeviceStatusNotifier,
-    C::NonSyncCtx: AsRef<Devices> + AsMut<Devices>,
+    C::Dispatcher: DeviceStatusNotifier,
+    C::Dispatcher: AsRef<Devices> + AsMut<Devices>,
 {
     fn fidl_enable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         self.ctx.update_device_state(id, |dev_info| {

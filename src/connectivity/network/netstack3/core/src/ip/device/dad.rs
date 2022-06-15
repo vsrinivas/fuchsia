@@ -74,23 +74,19 @@ pub enum DadEvent<DeviceId> {
 }
 
 /// The non-synchronized execution context for DAD.
-pub(super) trait DadNonSyncContext<DeviceId>:
-    TimerContext<DadTimerId<DeviceId>> + EventContext<DadEvent<DeviceId>>
-{
-}
-impl<DeviceId, C: TimerContext<DadTimerId<DeviceId>> + EventContext<DadEvent<DeviceId>>>
-    DadNonSyncContext<DeviceId> for C
-{
-}
+pub(super) trait DadNonSyncContext<DeviceId>: TimerContext<DadTimerId<DeviceId>> {}
+impl<DeviceId, C: TimerContext<DadTimerId<DeviceId>>> DadNonSyncContext<DeviceId> for C {}
 
 /// The execution context for DAD.
 pub(super) trait DadContext<C: DadNonSyncContext<Self::DeviceId>>:
-    Ipv6DeviceDadContext<C> + Ipv6LayerDadContext<C>
+    Ipv6DeviceDadContext<C> + Ipv6LayerDadContext<C> + EventContext<DadEvent<Self::DeviceId>>
 {
 }
 
-impl<C: DadNonSyncContext<SC::DeviceId>, SC: Ipv6DeviceDadContext<C> + Ipv6LayerDadContext<C>>
-    DadContext<C> for SC
+impl<
+        C: DadNonSyncContext<SC::DeviceId>,
+        SC: Ipv6DeviceDadContext<C> + Ipv6LayerDadContext<C> + EventContext<DadEvent<SC::DeviceId>>,
+    > DadContext<C> for SC
 {
 }
 
@@ -150,7 +146,7 @@ impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC
         match remaining {
             None => {
                 *state = AddressState::Assigned;
-                ctx.on_event(DadEvent::AddressAssigned { device: device_id, addr });
+                self.on_event(DadEvent::AddressAssigned { device: device_id, addr });
             }
             Some(non_zero_remaining) => {
                 *remaining = NonZeroU8::new(non_zero_remaining.get() - 1);
@@ -236,9 +232,10 @@ mod tests {
         message: NeighborSolicitation,
     }
 
-    type MockNonSyncCtx = DummyNonSyncCtx<DadTimerId<DummyDeviceId>, DadEvent<DummyDeviceId>>;
+    type MockNonSyncCtx = DummyNonSyncCtx<DadTimerId<DummyDeviceId>>;
 
-    type MockCtx<'a> = DummySyncCtx<MockDadContext<'a>, DadMessageMeta, DummyDeviceId>;
+    type MockCtx<'a> =
+        DummySyncCtx<MockDadContext<'a>, DadMessageMeta, DadEvent<DummyDeviceId>, DummyDeviceId>;
 
     impl<'a> Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx<'a> {
         fn get_address_state_mut(
@@ -346,7 +343,7 @@ mod tests {
             sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Assigned);
         assert_eq!(
-            non_sync_ctx.take_events(),
+            sync_ctx.take_events(),
             &[DadEvent::AddressAssigned { device: DummyDeviceId, addr: DAD_ADDRESS }][..]
         );
     }
@@ -427,7 +424,7 @@ mod tests {
             sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Assigned);
         assert_eq!(
-            non_sync_ctx.take_events(),
+            sync_ctx.take_events(),
             &[DadEvent::AddressAssigned { device: DummyDeviceId, addr: DAD_ADDRESS }][..]
         );
     }

@@ -849,7 +849,7 @@ mod tests {
 
     type MockCtx<I> =
         DummyCtx<DummyFragmentContext<I>, FragmentCacheKey<<I as Ip>::Addr>, (), (), ()>;
-    type MockSyncCtx<I> = DummySyncCtx<DummyFragmentContext<I>, (), ()>;
+    type MockSyncCtx<I> = DummySyncCtx<DummyFragmentContext<I>, (), (), ()>;
 
     impl<I: Ip> FragmentStateContext<I, DummyInstant> for MockSyncCtx<I> {
         fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I, DummyInstant> {

@@ -75,8 +75,7 @@ use crate::{
             IpSocketContext, IpSocketHandler,
         },
     },
-    BufferDispatcher, BufferNonSyncContext, EventDispatcher, Instant, NonSyncContext, StackState,
-    SyncCtx,
+    BufferDispatcher, EventDispatcher, Instant, NonSyncContext, StackState, SyncCtx,
 };
 
 /// Default IPv4 TTL.
@@ -447,33 +446,32 @@ pub enum IpLayerEvent<DeviceId, I: Ip> {
 }
 
 /// The non-synchronized execution context for the IP layer.
-pub(crate) trait IpLayerNonSyncContext<I: Ip, DeviceId>:
-    InstantContext + EventContext<IpLayerEvent<DeviceId, I>>
-{
-}
-impl<I: Ip, DeviceId, C: InstantContext + EventContext<IpLayerEvent<DeviceId, I>>>
-    IpLayerNonSyncContext<I, DeviceId> for C
-{
-}
+pub(crate) trait IpLayerNonSyncContext: InstantContext {}
+impl<C: InstantContext> IpLayerNonSyncContext for C {}
 
 /// The execution context for the IP layer.
 pub(crate) trait IpLayerContext<
     I: IpLayerStateIpExt<C::Instant, Self::DeviceId>,
-    C: IpLayerNonSyncContext<I, <Self as IpDeviceIdContext<I>>::DeviceId>,
->: IpStateContext<I, C::Instant> + IpDeviceContext<I, C>
+    C: IpLayerNonSyncContext,
+>:
+    IpStateContext<I, C::Instant>
+    + IpDeviceContext<I, C>
+    + EventContext<IpLayerEvent<Self::DeviceId, I>>
 {
 }
 
 impl<
         I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
-        C: IpLayerNonSyncContext<I, <SC as IpDeviceIdContext<I>>::DeviceId>,
-        SC: IpStateContext<I, C::Instant> + IpDeviceContext<I, C>,
+        C: IpLayerNonSyncContext,
+        SC: IpStateContext<I, C::Instant>
+            + IpDeviceContext<I, C>
+            + EventContext<IpLayerEvent<SC::DeviceId, I>>,
     > IpLayerContext<I, C> for SC
 {
 }
 
 impl<
-        C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId> + IpLayerNonSyncContext<Ipv4, SC::DeviceId>,
+        C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId> + IpLayerNonSyncContext,
         SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C>,
     > IpSocketContext<Ipv4, C> for SC
 {
@@ -534,7 +532,7 @@ impl<
 }
 
 impl<
-        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId> + IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId> + IpLayerNonSyncContext,
         SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>,
     > IpSocketContext<Ipv6, C> for SC
 {
@@ -676,8 +674,8 @@ pub(crate) trait BufferIpDeviceContext<I: IpLayerIpExt, C, B: BufferMut>:
 
 /// The execution context for the IP layer requiring buffer.
 pub(crate) trait BufferIpLayerContext<
-    I: IpLayerStateIpExt<C::Instant, Self::DeviceId> + IcmpHandlerIpExt,
-    C: IpLayerNonSyncContext<I, Self::DeviceId>,
+    I: IpLayerStateIpExt<C::Instant, <Self as IpDeviceIdContext<I>>::DeviceId> + IcmpHandlerIpExt,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
 >:
     BufferTransportContext<I, C, B>
@@ -689,8 +687,8 @@ pub(crate) trait BufferIpLayerContext<
 }
 
 impl<
-        I: IpLayerStateIpExt<C::Instant, Self::DeviceId> + IcmpHandlerIpExt,
-        C: IpLayerNonSyncContext<I, SC::DeviceId>,
+        I: IpLayerStateIpExt<C::Instant, <SC as IpDeviceIdContext<I>>::DeviceId> + IcmpHandlerIpExt,
+        C: IpLayerNonSyncContext,
         B: BufferMut,
         SC: BufferTransportContext<I, C, B>
             + BufferIpDeviceContext<I, C, B>
@@ -835,8 +833,8 @@ impl IpDeviceId for DummyDeviceId {
 }
 
 #[cfg(test)]
-impl<I: Ip, S, Meta, D: IpDeviceId + 'static> IpDeviceIdContext<I>
-    for crate::context::testutil::DummySyncCtx<S, Meta, D>
+impl<I: Ip, S, Meta, Event: Debug, D: IpDeviceId + 'static> IpDeviceIdContext<I>
+    for crate::context::testutil::DummySyncCtx<S, Meta, Event, D>
 {
     type DeviceId = D;
 
@@ -1076,7 +1074,7 @@ pub(crate) fn handle_timer<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
 /// coming from a device, i.e., `device` given is `None`,
 /// `dispatch_receive_ip_packet` will also panic.
 fn dispatch_receive_ipv4_packet<
-    C: IpLayerNonSyncContext<Ipv4, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
     SC: BufferIpLayerContext<Ipv4, C, B>,
 >(
@@ -1150,7 +1148,7 @@ fn dispatch_receive_ipv4_packet<
 /// `dispatch_receive_ipv6_packet` has the same semantics as
 /// `dispatch_receive_ipv4_packet`, but for IPv6.
 fn dispatch_receive_ipv6_packet<
-    C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
     SC: BufferIpLayerContext<Ipv6, C, B>,
 >(
@@ -1365,7 +1363,7 @@ macro_rules! try_parse_ip_packet {
 pub(crate) fn receive_ip_packet<
     B: BufferMut,
     D: BufferDispatcher<B>,
-    NonSyncCtx: BufferNonSyncContext<B>,
+    NonSyncCtx: NonSyncContext,
     I: Ip,
 >(
     sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
@@ -1385,7 +1383,7 @@ pub(crate) fn receive_ip_packet<
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
 pub(crate) fn receive_ipv4_packet<
-    C: IpLayerNonSyncContext<Ipv4, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
     SC: BufferIpLayerContext<Ipv4, C, B> + BufferIpLayerContext<Ipv4, C, Buf<Vec<u8>>>,
 >(
@@ -1599,7 +1597,7 @@ pub(crate) fn receive_ipv4_packet<
 /// `frame_dst` specifies whether this packet was received in a broadcast or
 /// unicast link-layer frame.
 pub(crate) fn receive_ipv6_packet<
-    C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     B: BufferMut,
     SC: BufferIpLayerContext<Ipv6, C, B> + BufferIpLayerContext<Ipv6, C, Buf<Vec<u8>>>,
 >(
@@ -1923,10 +1921,7 @@ impl Display for DropReason {
 }
 
 /// Computes the action to take in order to process a received IPv4 packet.
-fn receive_ipv4_packet_action<
-    C: IpLayerNonSyncContext<Ipv4, SC::DeviceId>,
-    SC: IpLayerContext<Ipv4, C>,
->(
+fn receive_ipv4_packet_action<C: IpLayerNonSyncContext, SC: IpLayerContext<Ipv4, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -1961,10 +1956,7 @@ fn receive_ipv4_packet_action<
 }
 
 /// Computes the action to take in order to process a received IPv6 packet.
-fn receive_ipv6_packet_action<
-    C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
-    SC: IpLayerContext<Ipv6, C>,
->(
+fn receive_ipv6_packet_action<C: IpLayerNonSyncContext, SC: IpLayerContext<Ipv6, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device: SC::DeviceId,
@@ -2035,7 +2027,7 @@ fn receive_ipv6_packet_action<
 /// [`receive_ipv4_packet_action`] and [`receive_ipv6_packet_action`].
 fn receive_ip_packet_action_common<
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
-    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2076,7 +2068,7 @@ fn receive_ip_packet_action_common<
 // Look up the route to a host.
 fn lookup_route<
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
-    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &SC,
@@ -2092,7 +2084,7 @@ fn lookup_route<
 fn get_ip_layer_state_inner_mut<
     'a,
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
-    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &'a mut SC,
@@ -2105,7 +2097,7 @@ fn get_ip_layer_state_inner_mut<
 /// is already in the table.
 pub(crate) fn add_route<
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
-    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2120,7 +2112,7 @@ pub(crate) fn add_route<
 /// subnet is already in the table.
 pub(crate) fn add_device_route<
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
-    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2129,7 +2121,7 @@ pub(crate) fn add_device_route<
     device: SC::DeviceId,
 ) -> Result<(), ExistsError> {
     get_ip_layer_state_inner_mut(sync_ctx, ctx).table.add_device_route(subnet, device).map(|()| {
-        ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
+        sync_ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
     })
 }
 
@@ -2137,7 +2129,7 @@ pub(crate) fn add_device_route<
 /// route was found to be deleted.
 pub(crate) fn del_route<
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
-    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
@@ -2146,7 +2138,7 @@ pub(crate) fn del_route<
 ) -> Result<(), NotFoundError> {
     get_ip_layer_state_inner_mut(sync_ctx, ctx).table.del_route(subnet).map(|removed| {
         removed.into_iter().for_each(|Entry { subnet, device, gateway }| match gateway {
-            None => ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
+            None => sync_ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
             Some(SpecifiedAddr { .. }) => (),
         });
     })
@@ -2155,7 +2147,7 @@ pub(crate) fn del_route<
 pub(crate) fn del_device_routes<
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
-    C: IpLayerNonSyncContext<I, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -2230,7 +2222,7 @@ trait BufferIpLayerHandler<I: Ip, C, B: BufferMut>: IpDeviceIdContext<I> {
 
 impl<
         B: BufferMut,
-        C: IpLayerNonSyncContext<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>,
+        C: IpLayerNonSyncContext,
         SC: BufferIpDeviceContext<Ipv6, C, B> + IpStateContext<Ipv6, C::Instant> + NonTestCtxMarker,
     > BufferIpLayerHandler<Ipv6, C, B> for SC
 {
@@ -2252,7 +2244,7 @@ impl<
 /// and the device is a non-loopback device.
 pub(crate) fn send_ipv4_packet_from_device<
     B: BufferMut,
-    C: IpLayerNonSyncContext<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: BufferIpDeviceContext<Ipv4, C, B> + IpStateContext<Ipv4, C::Instant>,
     S: Serializer<Buffer = B>,
 >(
@@ -2300,7 +2292,7 @@ pub(crate) fn send_ipv4_packet_from_device<
 /// and the device is a non-loopback device.
 pub(crate) fn send_ipv6_packet_from_device<
     B: BufferMut,
-    C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+    C: IpLayerNonSyncContext,
     SC: BufferIpDeviceContext<Ipv6, C, B>,
     S: Serializer<Buffer = B>,
 >(
@@ -2340,7 +2332,7 @@ pub(crate) fn send_ipv6_packet_from_device<
 }
 
 impl<
-        C: IpLayerNonSyncContext<Ipv4, SC::DeviceId>,
+        C: IpLayerNonSyncContext,
         SC: IpTransportLayerContext<Ipv4, C>
             + IcmpContext<Ipv4>
             + StateContext<C, IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, SC::DeviceId>>>
@@ -2384,7 +2376,7 @@ impl<
 }
 
 impl<
-        C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+        C: IpLayerNonSyncContext,
         SC: IpTransportLayerContext<Ipv6, C>
             + IcmpContext<Ipv6>
             + StateContext<C, IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, SC::DeviceId>>>
@@ -2469,8 +2461,7 @@ mod tests {
         ip::device::set_routing_enabled,
         testutil::{
             assert_empty, get_counter_val, handle_timer, new_rng, DummyCtx,
-            DummyEventDispatcherBuilder, DummyNonSyncCtx, TestIpExt, DUMMY_CONFIG_V4,
-            DUMMY_CONFIG_V6,
+            DummyEventDispatcherBuilder, DummySyncCtx, TestIpExt, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
         },
         Ctx, DeviceId,
     };
@@ -2484,13 +2475,13 @@ mod tests {
     /// frame in `net` is an ICMP packet with code set to `code`, and pointer
     /// set to `pointer`.
     fn verify_icmp_for_unrecognized_ext_hdr_option(
-        ctx: &mut DummyNonSyncCtx,
+        ctx: &mut DummySyncCtx,
         code: Icmpv6ParameterProblemCode,
         pointer: u32,
         offset: usize,
     ) {
         // Check the ICMP that bob attempted to send to alice
-        let device_frames = ctx.frames_sent();
+        let device_frames = ctx.dispatcher.frames_sent();
         assert!(!device_frames.is_empty());
         let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
         let _frame =
@@ -2748,9 +2739,9 @@ mod tests {
             FrameDestination::Unicast,
             buf,
         );
-        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
         verify_icmp_for_unrecognized_ext_hdr_option(
-            &mut non_sync_ctx,
+            &mut sync_ctx,
             Icmpv6ParameterProblemCode::ErroneousHeaderField,
             42,
             0,
@@ -2779,7 +2770,7 @@ mod tests {
         receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ipv6_packet"), 1);
-        assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // Test with unrecognized option type set with
         // action = discard.
@@ -2791,7 +2782,7 @@ mod tests {
         );
         receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // Test with unrecognized option type set with
         // action = discard & send icmp
@@ -2805,9 +2796,9 @@ mod tests {
         receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
-            &mut non_sync_ctx,
+            &mut sync_ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
             48,
             expected_icmps - 1,
@@ -2825,9 +2816,9 @@ mod tests {
         receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
-            &mut non_sync_ctx,
+            &mut sync_ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
             48,
             expected_icmps - 1,
@@ -2845,9 +2836,9 @@ mod tests {
         receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
-            &mut non_sync_ctx,
+            &mut sync_ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
             48,
             expected_icmps - 1,
@@ -2865,7 +2856,7 @@ mod tests {
         // Do not expect an ICMP response for this packet
         receive_ipv6_packet(&mut sync_ctx, &mut non_sync_ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(non_sync_ctx.frames_sent().len(), expected_icmps);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // None of our tests should have sent an icmpv4 packet, or dispatched an
         // IP packet after the first.
@@ -3190,10 +3181,10 @@ mod tests {
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv6_packet_too_big"), 1);
 
         // Should have sent out one frame though.
-        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
 
         // Received packet should be a Packet Too Big ICMP error message.
-        let buf = &non_sync_ctx.frames_sent()[0].1[..];
+        let buf = &sync_ctx.dispatcher.frames_sent()[0].1[..];
         // The original packet's TTL gets decremented so we decrement here
         // to validate the rest of the icmp message body.
         let ipv6_packet_buf_mut: &mut [u8] = ipv6_packet_buf.as_mut();
@@ -3590,7 +3581,7 @@ mod tests {
         // unrecognized so an ICMP parameter problem response SHOULD be sent,
         // but the netstack chooses to just drop the packet since we are not
         // required to send the ICMP response.
-        assert_empty(non_sync_ctx.frames_sent().iter());
+        assert_empty(sync_ctx.dispatcher.frames_sent().iter());
     }
 
     #[test]
@@ -3628,8 +3619,8 @@ mod tests {
         // Should have dispatched the packet but resulted in an ICMP error.
         assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ipv4_packet"), 1);
         assert_eq!(get_counter_val(&mut sync_ctx, "send_icmpv4_dest_unreachable"), 1);
-        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
-        let buf = &non_sync_ctx.frames_sent()[0].1[..];
+        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        let buf = &sync_ctx.dispatcher.frames_sent()[0].1[..];
         let (_, _, _, _, _, _, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpDestUnreachable, _>(
                 buf,

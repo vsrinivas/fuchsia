@@ -57,7 +57,7 @@ use crate::{
         },
         IpDeviceId, IpDeviceIdContext,
     },
-    BufferDispatcher, BufferNonSyncContext, EventDispatcher, Instant, NonSyncContext, SyncCtx,
+    BufferDispatcher, EventDispatcher, Instant, NonSyncContext, SyncCtx,
 };
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -139,7 +139,7 @@ impl<
 {
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: BufferNonSyncContext<B>>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
     RecvFrameContext<NonSyncCtx, B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>>
     for SyncCtx<D, NonSyncCtx>
 {
@@ -159,7 +159,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: BufferNonSyncContext<B>>
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: BufferNonSyncContext<B>>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
     RecvFrameContext<NonSyncCtx, B, RecvIpFrameMeta<EthernetDeviceId, Ipv6>>
     for SyncCtx<D, NonSyncCtx>
 {
@@ -332,8 +332,8 @@ impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSy
 
 fn send_ip_frame<
     B: BufferMut,
-    D: EventDispatcher,
-    NonSyncCtx: BufferNonSyncContext<B>,
+    D: BufferDispatcher<B>,
+    NonSyncCtx: NonSyncContext,
     S: Serializer<Buffer = B>,
     A: IpAddress,
 >(
@@ -351,7 +351,7 @@ fn send_ip_frame<
     }
 }
 
-impl<B: BufferMut, D: EventDispatcher, NonSyncCtx: BufferNonSyncContext<B>>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
     BufferIpDeviceContext<Ipv4, NonSyncCtx, B> for SyncCtx<D, NonSyncCtx>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
@@ -426,7 +426,7 @@ impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCt
     }
 }
 
-impl<B: BufferMut, D: EventDispatcher, NonSyncCtx: BufferNonSyncContext<B>>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
     BufferIpDeviceContext<Ipv6, NonSyncCtx, B> for SyncCtx<D, NonSyncCtx>
 {
     fn send_ip_frame<S: Serializer<Buffer = B>>(
@@ -440,16 +440,16 @@ impl<B: BufferMut, D: EventDispatcher, NonSyncCtx: BufferNonSyncContext<B>>
     }
 }
 
-impl<B: BufferMut, D: EventDispatcher, NonSyncCtx: BufferNonSyncContext<B>>
+impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
     FrameContext<NonSyncCtx, B, EthernetDeviceId> for SyncCtx<D, NonSyncCtx>
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        ctx: &mut NonSyncCtx,
+        _ctx: &mut NonSyncCtx,
         device: EthernetDeviceId,
         frame: S,
     ) -> Result<(), S> {
-        DeviceLayerEventDispatcher::send_frame(ctx, device.into(), frame)
+        DeviceLayerEventDispatcher::send_frame(&mut self.dispatcher, device.into(), frame)
     }
 }
 
@@ -751,7 +751,7 @@ pub fn add_loopback_device<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
 }
 
 /// Receive a device layer frame from the network.
-pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: BufferNonSyncContext<B>>(
+pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
     sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
@@ -1012,7 +1012,7 @@ pub(crate) mod testutil {
     pub(crate) fn receive_frame_or_panic<
         B: BufferMut,
         D: BufferDispatcher<B>,
-        NonSyncCtx: BufferNonSyncContext<B>,
+        NonSyncCtx: NonSyncContext,
     >(
         Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<D, NonSyncCtx>,
         device: DeviceId,

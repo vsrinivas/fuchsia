@@ -19,8 +19,7 @@ use crate::{
         reassembly::FragmentStateContext,
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
         socket::{BufferIpSocketContext, IpSock, IpSocketContext, IpSocketNonSyncContext},
-        IpDeviceIdContext, IpLayerNonSyncContext, IpPacketFragmentCache, IpStateContext,
-        SendIpPacketMeta,
+        IpDeviceIdContext, IpPacketFragmentCache, IpStateContext, SendIpPacketMeta,
     },
     Instant,
 };
@@ -87,8 +86,7 @@ impl<C, I: Instant, SC: IpStateContext<Ipv6, I>>
 
 impl<
         B: BufferMut,
-        C: IpSocketNonSyncContext
-            + IpLayerNonSyncContext<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>,
+        C: IpSocketNonSyncContext,
         SC: ip::BufferIpDeviceContext<Ipv4, C, B>
             + IpStateContext<Ipv4, C::Instant>
             + IpSocketContext<Ipv4, C>
@@ -111,8 +109,7 @@ impl<
 
 impl<
         B: BufferMut,
-        C: IpSocketNonSyncContext
-            + IpLayerNonSyncContext<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>,
+        C: IpSocketNonSyncContext,
         SC: ip::BufferIpDeviceContext<Ipv6, C, B>
             + IpStateContext<Ipv6, C::Instant>
             + IpSocketContext<Ipv6, C>

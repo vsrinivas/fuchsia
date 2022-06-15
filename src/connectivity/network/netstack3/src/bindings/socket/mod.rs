@@ -20,7 +20,6 @@ use netstack3_core::{
 };
 
 use crate::bindings::{
-    devices::Devices,
     util::{IntoCore as _, IntoFidl as _},
     LockableContext,
 };
@@ -43,7 +42,6 @@ pub(crate) async fn serve<C>(
 where
     C: LockableContext,
     C::Dispatcher: datagram::SocketWorkerDispatcher,
-    C::NonSyncCtx: AsRef<Devices>,
     C: Clone + Send + Sync + 'static,
 {
     stream
