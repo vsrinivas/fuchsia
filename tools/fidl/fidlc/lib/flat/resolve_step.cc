@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 
 #include "fidl/diagnostics.h"
+#include "fidl/flat_ast.h"
 
 namespace fidl::flat {
 
@@ -98,6 +99,11 @@ void ResolveStep::VisitElement(Element* element, Context context) {
     case Element::Kind::kTypeAlias: {
       auto alias_decl = static_cast<TypeAlias*>(element);
       VisitTypeConstructor(alias_decl->partial_type_ctor.get(), context);
+      break;
+    }
+    case Element::Kind::kNewType: {
+      auto new_type = static_cast<NewType*>(element);
+      VisitTypeConstructor(new_type->type_ctor.get(), context);
       break;
     }
     case Element::Kind::kConst: {

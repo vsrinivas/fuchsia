@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include "fidl/diagnostics.h"
 #include "fidl/flat/type_resolver.h"
 #include "fidl/flat/visitor.h"
 #include "fidl/flat_ast.h"
@@ -397,7 +398,15 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
                               layout.resolved().name(), 1, num_constraints);
       }
       break;
-
+    // Currently, we are disallowing optional on new-types. And since new-types are semi-opaque
+    // wrappers around types, we need not bother about other constraints. So no constraints for
+    // you, new-types!
+    case Decl::Kind::kNewType:
+      if (num_constraints > 0) {
+        return resolver->Fail(ErrNewTypeCannotHaveConstraint, constraints.span.value(),
+                              layout.resolved().name());
+      }
+      break;
     case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
@@ -539,6 +548,12 @@ types::Resourceness Type::Resourceness() const {
     case Decl::Kind::kUnion:
       ZX_ASSERT_MSG(decl->compiled, "accessing resourceness of not-yet-compiled union");
       return static_cast<const Union*>(decl)->resourceness.value();
+    case Decl::Kind::kNewType: {
+      const auto* new_type = static_cast<const NewType*>(decl);
+      const auto* underlying_type = new_type->type_ctor->type;
+      ZX_ASSERT_MSG(underlying_type, "accessing resourceness of not-yet-compiled new-type");
+      return underlying_type->Resourceness();
+    }
     case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:

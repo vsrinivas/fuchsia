@@ -129,6 +129,7 @@ const Type* Typespace::Creator::Create() {
   switch (target->kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
+    case Decl::Kind::kNewType:
     case Decl::Kind::kStruct:
     case Decl::Kind::kTable:
     case Decl::Kind::kUnion:

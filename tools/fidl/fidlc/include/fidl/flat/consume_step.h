@@ -27,6 +27,7 @@ class ConsumeStep : public Compiler::Step {
   void ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
+  void ConsumeNewType(std::unique_ptr<raw::TypeDecl> type_decl);
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
 
   // Layouts

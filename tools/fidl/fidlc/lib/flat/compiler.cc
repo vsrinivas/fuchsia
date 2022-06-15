@@ -349,6 +349,11 @@ class CalcDepedencies {
         VisitTypeConstructor(alias_decl->partial_type_ctor.get());
         break;
       }
+      case Decl::Kind::kNewType: {
+        auto new_type_decl = static_cast<const NewType*>(decl);
+        VisitTypeConstructor(new_type_decl->type_ctor.get());
+        break;
+      }
       case Decl::Kind::kUnion: {
         auto union_decl = static_cast<const Union*>(decl);
         for (auto& member : union_decl->members) {
@@ -427,6 +432,7 @@ std::unique_ptr<Compilation> Libraries::Filter(const VersionSelection* version_s
     filter(&dst->builtins, src.builtins);
     filter(&dst->consts, src.consts);
     filter(&dst->enums, src.enums);
+    filter(&dst->new_types, src.new_types);
     filter(&dst->protocols, src.protocols);
     filter(&dst->resources, src.resources);
     filter(&dst->services, src.services);

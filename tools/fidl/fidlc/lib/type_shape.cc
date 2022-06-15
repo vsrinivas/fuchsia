@@ -160,6 +160,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
@@ -184,6 +185,10 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Service& object) override { return DataSize(kHandleSize); }
+
+  std::any Visit(const flat::NewType& object) override {
+    return UnalignedSize(object.type_ctor->type);
+  }
 
   std::any Visit(const flat::Struct& object) override {
     DataSize size = 0;
@@ -270,6 +275,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
@@ -289,6 +295,8 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   std::any Visit(const flat::Bits& object) override { return Alignment(object.subtype_ctor->type); }
 
   std::any Visit(const flat::Service& object) override { return DataSize(kHandleSize); }
+
+  std::any Visit(const flat::NewType& object) override { return Alignment(object.type_ctor->type); }
 
   std::any Visit(const flat::Struct& object) override {
     if (object.recursive) {
@@ -382,8 +390,9 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
-          case flat::Decl::Kind::kTable:
+          case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
+          case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
             ZX_PANIC("Depth(flat::IdentifierType&) called on invalid nullable kind");
         }
@@ -396,16 +405,21 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
             return DataSize(0);
-          case flat::Decl::Kind::kUnion:
+          case flat::Decl::Kind::kNewType:
+          case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
-          case flat::Decl::Kind::kStruct:
+          case flat::Decl::Kind::kUnion:
             return Depth(object.type_decl);
           case flat::Decl::Kind::kBuiltin:
             ZX_PANIC("unexpected builtin");
         }
+      default:
+        ZX_PANIC("unexpected nullability type");
     }
   }
+
+  std::any Visit(const flat::NewType& object) override { return Depth(object.type_ctor->type); }
 
   std::any Visit(const flat::BoxType& object) override {
     // The nullable struct case will add one, no need to do it here.
@@ -595,6 +609,10 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
     return max_handles;
   }
 
+  std::any Visit(const flat::NewType& object) override {
+    return MaxHandles(object.type_ctor->type);
+  }
+
   std::any Visit(const flat::Struct::Member& object) override {
     return MaxHandles(object.type_ctor->type);
   }
@@ -681,6 +699,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
@@ -690,6 +709,10 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
       case types::Nullability::kNonnullable:
         return MaxOutOfLine(object.type_decl);
     }
+  }
+
+  std::any Visit(const flat::NewType& object) override {
+    return MaxOutOfLine(object.type_ctor->type);
   }
 
   std::any Visit(const flat::BoxType& object) override { return MaxOutOfLine(object.boxed_type); }
@@ -849,6 +872,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
           case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
+          case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
           case flat::Decl::Kind::kTypeAlias:
@@ -857,6 +881,10 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
       case types::Nullability::kNonnullable:
         return HasPadding(object.type_decl);
     }
+  }
+
+  std::any Visit(const flat::NewType& object) override {
+    return HasPadding(object.type_ctor->type);
   }
 
   std::any Visit(const flat::BoxType& object) override { return HasPadding(object.boxed_type); }
@@ -959,6 +987,10 @@ class HasEnvelopeVisitor final : public TypeShapeVisitor<bool> {
     return HasEnvelope(object.type_decl, wire_format());
   }
 
+  std::any Visit(const flat::NewType& object) override {
+    return HasEnvelope(object.type_ctor->type, wire_format());
+  }
+
   std::any Visit(const flat::BoxType& object) override {
     return HasEnvelope(object.boxed_type, wire_format());
   }
@@ -1027,6 +1059,10 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
     }
 
     return HasFlexibleEnvelope(object.type_decl, wire_format());
+  }
+
+  std::any Visit(const flat::NewType& object) override {
+    return HasFlexibleEnvelope(object.type_ctor->type, wire_format());
   }
 
   std::any Visit(const flat::BoxType& object) override {

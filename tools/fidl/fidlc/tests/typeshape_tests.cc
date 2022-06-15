@@ -193,6 +193,98 @@ type EmptyWithOtherThings = struct {
                                                                           }));
 }
 
+TEST(TypeshapeTests, GoodSimpleNewTypes) {
+  TestLibrary test_library(R"FIDL(library example;
+
+type BoolAndU32 = struct {
+    b bool;
+    u uint32;
+};
+type NewBoolAndU32 = BoolAndU32;
+
+type BitsImplicit = strict bits {
+    VALUE = 1;
+};
+type NewBitsImplicit = BitsImplicit;
+
+
+type TableWithBoolAndU32 = table {
+    1: b bool;
+    2: u uint32;
+};
+type NewTableWithBoolAndU32 = TableWithBoolAndU32;
+
+type BoolAndU64 = struct {
+    b bool;
+    u uint64;
+};
+type UnionOfThings = strict union {
+    1: ob bool;
+    2: bu BoolAndU64;
+};
+type NewUnionOfThings = UnionOfThings;
+)FIDL");
+  test_library.EnableFlag(fidl::ExperimentalFlags::Flag::kAllowNewTypes);
+  ASSERT_COMPILED(test_library);
+
+  auto new_bool_and_u32_struct = test_library.LookupNewType("NewBoolAndU32");
+  ASSERT_NOT_NULL(new_bool_and_u32_struct);
+  ASSERT_NO_FAILURES(CheckTypeShape(new_bool_and_u32_struct, Expected{
+                                                                 .inline_size = 8,
+                                                                 .alignment = 4,
+                                                                 .has_padding = true,
+                                                             }));
+
+  auto new_bits_implicit = test_library.LookupNewType("NewBitsImplicit");
+  EXPECT_NOT_NULL(new_bits_implicit);
+  ASSERT_NO_FAILURES(CheckTypeShape(new_bits_implicit, Expected{
+                                                           .inline_size = 4,
+                                                           .alignment = 4,
+                                                       }));
+
+  auto new_bool_and_u32_table = test_library.LookupNewType("NewTableWithBoolAndU32");
+  ASSERT_NOT_NULL(new_bool_and_u32_table);
+  ASSERT_NO_FAILURES(CheckTypeShape(new_bool_and_u32_table,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 48,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_envelope = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_envelope = true,
+                                        .has_flexible_envelope = true,
+                                    }));
+
+  auto new_union = test_library.LookupNewType("NewUnionOfThings");
+  ASSERT_NOT_NULL(new_union);
+  ASSERT_NO_FAILURES(CheckTypeShape(new_union,
+                                    Expected{
+                                        .inline_size = 24,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .depth = 1,
+                                        .has_padding = true,
+                                        .has_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .depth = 1,
+                                        .has_padding = true,
+                                        .has_envelope = true,
+                                    }));
+}
+
 TEST(TypeshapeTests, GoodSimpleStructs) {
   TestLibrary test_library(R"FIDL(library example;
 

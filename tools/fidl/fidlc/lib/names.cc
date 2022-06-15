@@ -419,6 +419,8 @@ std::string NameFlatCType(const flat::Type* type) {
             return "fidl_table_t";
           case flat::Decl::Kind::kProtocol:
             return "zx_handle_t";
+          case flat::Decl::Kind::kNewType:
+            ZX_PANIC("c-codegen for new-types not implemented");
           case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:

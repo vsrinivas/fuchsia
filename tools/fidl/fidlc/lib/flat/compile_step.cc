@@ -206,6 +206,9 @@ void CompileStep::CompileDecl(Decl* decl) {
     case Decl::Kind::kTypeAlias:
       CompileTypeAlias(static_cast<TypeAlias*>(decl));
       break;
+    case Decl::Kind::kNewType:
+      CompileNewType(static_cast<NewType*>(decl));
+      break;
   }  // switch
 }
 
@@ -1323,6 +1326,11 @@ void CompileStep::CompileUnion(Union* union_declaration) {
 void CompileStep::CompileTypeAlias(TypeAlias* type_alias) {
   CompileAttributeList(type_alias->attributes.get());
   CompileTypeConstructor(type_alias->partial_type_ctor.get());
+}
+
+void CompileStep::CompileNewType(NewType* new_type) {
+  CompileAttributeList(new_type->attributes.get());
+  CompileTypeConstructor(new_type->type_ctor.get());
 }
 
 void CompileStep::CompileTypeConstructor(TypeConstructor* type_ctor) {

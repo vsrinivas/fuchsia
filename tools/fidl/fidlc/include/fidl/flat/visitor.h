@@ -23,6 +23,7 @@ struct Object::VisitorAny {
   virtual std::any Visit(const BoxType&) = 0;
   virtual std::any Visit(const Enum&) = 0;
   virtual std::any Visit(const Bits&) = 0;
+  virtual std::any Visit(const NewType&) = 0;
   virtual std::any Visit(const Service&) = 0;
   virtual std::any Visit(const Struct&) = 0;
   virtual std::any Visit(const Struct::Member&) = 0;

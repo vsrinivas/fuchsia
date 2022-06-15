@@ -251,6 +251,8 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
         case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
           ZX_PANIC("bad decl kind for member");
+        case flat::Decl::Kind::kNewType:
+          ZX_PANIC("c-codegen for new-types not implemented");
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kProtocol:
@@ -308,6 +310,8 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
         case flat::Decl::Kind::kService:
         case flat::Decl::Kind::kTypeAlias:
           ZX_PANIC("bad decl kind for member");
+        case flat::Decl::Kind::kNewType:
+          ZX_PANIC("c-codegen for new-types not implemented");
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
         case flat::Decl::Kind::kProtocol:
@@ -530,6 +534,8 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
           case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kTypeAlias:
             ZX_PANIC("bad decl kind for member");
+          case flat::Decl::Kind::kNewType:
+            ZX_PANIC("c-codegen for new-types not implemented");
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kProtocol:
@@ -1450,6 +1456,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                 ZX_PANIC("c-codegen for tables not implemented");
               case flat::Decl::Kind::kUnion:
                 ZX_PANIC("c-codegen for unions not implemented");
+              case flat::Decl::Kind::kNewType:
+                ZX_PANIC("c-codegen for new-types not implemented");
               case flat::Decl::Kind::kStruct:
                 switch (member.nullability) {
                   case types::Nullability::kNullable:
@@ -1575,6 +1583,8 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
             case flat::Decl::Kind::kService:
             case flat::Decl::Kind::kTypeAlias:
               ZX_PANIC("bad decl kind for member");
+            case flat::Decl::Kind::kNewType:
+              ZX_PANIC("c-codegen for new-types not implemented");
             case flat::Decl::Kind::kBits:
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kProtocol:
@@ -1728,6 +1738,9 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
+      case flat::Decl::Kind::kNewType:
+        // TODO(fxbug.dev/7807): Do more than nothing.
+        break;
       case flat::Decl::Kind::kProtocol: {
         auto iter = named_protocols.find(decl);
         if (iter != named_protocols.end()) {
@@ -1772,6 +1785,7 @@ std::ostringstream CGenerator::ProduceHeader() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kNewType:
       case flat::Decl::Kind::kResource:
       case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:
@@ -1815,6 +1829,9 @@ std::ostringstream CGenerator::ProduceHeader() {
         // Enums can be entirely forward declared, as they have no
         // dependencies other than standard headers.
         break;
+      case flat::Decl::Kind::kNewType:
+        // TODO(fxbug.dev/7807): Do more than nothing.
+        break;
       case flat::Decl::Kind::kProtocol: {
         auto iter = named_protocols.find(decl);
         if (iter != named_protocols.end()) {
@@ -1855,6 +1872,7 @@ std::ostringstream CGenerator::ProduceHeader() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kNewType:
       case flat::Decl::Kind::kResource:
       case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:
@@ -1902,6 +1920,7 @@ std::ostringstream CGenerator::ProduceClient() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kNewType:
       case flat::Decl::Kind::kResource:
       case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:
@@ -1946,6 +1965,7 @@ std::ostringstream CGenerator::ProduceServer() {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
+      case flat::Decl::Kind::kNewType:
       case flat::Decl::Kind::kResource:
       case flat::Decl::Kind::kService:
       case flat::Decl::Kind::kStruct:

@@ -100,6 +100,8 @@ std::string Display(flat::Element::Kind k) {
       return "enum member";
     case flat::Element::Kind::kLibrary:
       return "library";
+    case flat::Element::Kind::kNewType:
+      return "new-type";
     case flat::Element::Kind::kProtocol:
       return "protocol";
     case flat::Element::Kind::kProtocolCompose:
@@ -164,6 +166,7 @@ std::string Display(const flat::Element* e) {
     case flat::Element::Kind::kBuiltin:
     case flat::Element::Kind::kConst:
     case flat::Element::Kind::kEnum:
+    case flat::Element::Kind::kNewType:
     case flat::Element::Kind::kProtocol:
     case flat::Element::Kind::kResource:
     case flat::Element::Kind::kService:

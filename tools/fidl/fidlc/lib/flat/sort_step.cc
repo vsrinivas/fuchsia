@@ -214,6 +214,11 @@ CalcDependencies::CalcDependencies(const Decl* decl) : library_(decl->name.libra
       VisitTypeConstructor(type_alias_decl->partial_type_ctor.get());
       break;
     }
+    case Decl::Kind::kNewType: {
+      auto new_type_decl = static_cast<const NewType*>(decl);
+      VisitTypeConstructor(new_type_decl->type_ctor.get());
+      break;
+    }
   }
 }
 

@@ -307,6 +307,15 @@ class TestLibrary final : public SharedInterface {
     return nullptr;
   }
 
+  const fidl::flat::NewType* LookupNewType(std::string_view name) {
+    for (const auto& new_type_decl : compilation_->declarations.new_types) {
+      if (new_type_decl->GetName() == name) {
+        return new_type_decl;
+      }
+    }
+    return nullptr;
+  }
+
   const fidl::flat::Table* LookupTable(std::string_view name) {
     for (const auto& table_decl : compilation_->declarations.tables) {
       if (table_decl->GetName() == name) {

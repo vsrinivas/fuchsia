@@ -14,6 +14,7 @@ class ExperimentalFlags {
  public:
   using FlagSet = uint32_t;
   enum class Flag : FlagSet {
+    kAllowNewTypes = 0b100,
     kNewSyntaxOnly = 0b1000,
     kUnknownInteractions = 0b10000,
     kNoOptionalStructs = 0b100000,

@@ -93,6 +93,10 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
       return types::Resourceness::kValue;
+    case Decl::Kind::kNewType: {
+      const auto* new_type = static_cast<const NewType*>(decl);
+      return EffectiveResourceness(new_type->type_ctor->type);
+    }
     case Decl::Kind::kProtocol:
       return types::Resourceness::kResource;
     case Decl::Kind::kStruct:
@@ -264,6 +268,11 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
     case Decl::Kind::kService:
       ZX_PANIC("unexpected kind");
 
+    case Decl::Kind::kNewType: {
+      const auto* new_type = static_cast<const NewType*>(decl);
+      CheckHandleTransportUsages(new_type->type_ctor->type, transport, protocol, source_span, seen);
+      return;
+    }
     case Decl::Kind::kStruct: {
       const Struct* s = static_cast<const Struct*>(decl);
       for (auto& member : s->members) {

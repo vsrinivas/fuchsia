@@ -36,6 +36,7 @@ test("fidlc-test") {
     "lint_findings_tests.cc",
     "lint_tests.cc",
     "method_tests.cc",
+    "new_type_tests.cc",
     "ordinals_tests.cc",
     "parsing_tests.cc",
     "protocol_tests.cc",

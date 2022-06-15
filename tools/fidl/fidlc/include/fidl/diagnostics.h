@@ -425,6 +425,8 @@ constexpr ErrorDef<flat::Name> ErrResourceRightsPropertyMustReferToBits(
 constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>,
                    std::vector<std::string_view>>
     ErrUnusedImport("Library {} imports {} but does not use it. Either use {}, or remove import.");
+constexpr ErrorDef<flat::Name> ErrNewTypeCannotHaveConstraint(
+    "{} is a new-type, which cannot carry constraints");
 
 }  // namespace fidl
 

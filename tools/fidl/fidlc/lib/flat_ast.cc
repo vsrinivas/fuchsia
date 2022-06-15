@@ -24,6 +24,7 @@ bool Element::IsDecl() const {
     case Kind::kTable:
     case Kind::kTypeAlias:
     case Kind::kUnion:
+    case Kind::kNewType:
       return true;
     case Kind::kLibrary:
     case Kind::kBitsMember:
@@ -217,6 +218,7 @@ void Decl::ForEachMember(const fit::function<void(Element*)>& fn) {
     case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kTypeAlias:
+    case Decl::Kind::kNewType:
       break;
     case Decl::Kind::kBits:
       for (auto& member : static_cast<Bits*>(this)->members) {
@@ -300,6 +302,8 @@ Decl* Library::Declarations::Insert(std::unique_ptr<Decl> decl) {
       return StoreDecl(std::move(decl), &all, &type_aliases);
     case Decl::Kind::kUnion:
       return StoreDecl(std::move(decl), &all, &unions);
+    case Decl::Kind::kNewType:
+      return StoreDecl(std::move(decl), &all, &new_types);
   }
 }
 
@@ -435,6 +439,10 @@ std::unique_ptr<Decl> TypeAlias::SplitImpl(VersionRange range) const {
   return std::make_unique<TypeAlias>(attributes->Clone(), name, partial_type_ctor->Clone());
 }
 
+std::unique_ptr<Decl> NewType::SplitImpl(VersionRange range) const {
+  return std::make_unique<NewType>(attributes->Clone(), name, type_ctor->Clone());
+}
+
 Enum::Member Enum::Member::Copy() const {
   return Member(name, value->Clone(), attributes->Clone());
 }
@@ -479,6 +487,7 @@ Resource::Property Resource::Property::Copy() const {
 
 std::any Bits::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any Enum::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+std::any NewType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any Protocol::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any Service::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any Struct::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }

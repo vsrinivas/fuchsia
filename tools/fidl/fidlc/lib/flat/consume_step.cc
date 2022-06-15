@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include "fidl/experimental_flags.h"
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat_ast.h"
 #include "fidl/raw_ast.h"
@@ -870,8 +871,12 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
 void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   auto name = Name::CreateSourced(library(), type_decl->identifier->span());
   auto& layout_ref = type_decl->type_ctor->layout_ref;
-  // TODO(fxbug.dev/7807)
+
   if (layout_ref->kind == raw::LayoutReference::Kind::kNamed) {
+    if (experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewTypes)) {
+      ConsumeNewType(std::move(type_decl));
+      return;
+    }
     auto named_ref = static_cast<raw::NamedLayoutReference*>(layout_ref.get());
     Fail(ErrNewTypesNotAllowed, type_decl->span(), name, named_ref->span().data());
     return;
@@ -880,6 +885,24 @@ void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   ConsumeTypeConstructor(std::move(type_decl->type_ctor), NamingContext::Create(name),
                          std::move(type_decl->attributes),
                          /*out_type=*/nullptr, /*out_inline_decl=*/nullptr);
+}
+
+void ConsumeStep::ConsumeNewType(std::unique_ptr<raw::TypeDecl> type_decl) {
+  ZX_ASSERT(type_decl->type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kNamed);
+  ZX_ASSERT(experimental_flags().IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewTypes));
+
+  std::unique_ptr<AttributeList> attributes;
+  ConsumeAttributeList(std::move(type_decl->attributes), &attributes);
+
+  auto new_type_name = Name::CreateSourced(library(), type_decl->identifier->span());
+
+  std::unique_ptr<TypeConstructor> new_type_ctor;
+  if (!ConsumeTypeConstructor(std::move(type_decl->type_ctor), NamingContext::Create(new_type_name),
+                              &new_type_ctor))
+    return;
+
+  RegisterDecl(std::make_unique<NewType>(std::move(attributes), std::move(new_type_name),
+                                         std::move(new_type_ctor)));
 }
 
 const raw::Literal* ConsumeStep::ConsumeLiteral(std::unique_ptr<raw::Literal> raw_literal) {

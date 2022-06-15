@@ -157,6 +157,7 @@ struct Compilation {
     std::vector<const Builtin*> builtins;
     std::vector<const Const*> consts;
     std::vector<const Enum*> enums;
+    std::vector<const NewType*> new_types;
     std::vector<const Protocol*> protocols;
     std::vector<const Resource*> resources;
     std::vector<const Service*> services;

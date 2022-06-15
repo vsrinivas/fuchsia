@@ -20,6 +20,7 @@ Name Reference::Target::name() const {
     case Element::Kind::kBuiltin:
     case Element::Kind::kConst:
     case Element::Kind::kEnum:
+    case Element::Kind::kNewType:
     case Element::Kind::kProtocol:
     case Element::Kind::kResource:
     case Element::Kind::kService:

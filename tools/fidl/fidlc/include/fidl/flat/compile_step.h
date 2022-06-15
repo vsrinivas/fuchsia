@@ -41,6 +41,7 @@ class CompileStep : public Compiler::Step {
   void CompileTable(Table* table_declaration);
   void CompileUnion(Union* union_declaration);
   void CompileTypeAlias(TypeAlias* type_alias);
+  void CompileNewType(NewType* new_type);
   void CompileTypeConstructor(TypeConstructor* type_ctor);
 
   // Resolve methods

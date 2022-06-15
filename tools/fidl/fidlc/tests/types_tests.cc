@@ -194,11 +194,10 @@ type TypeDecl = struct {
 TEST(NewSyntaxTests, BadTypeDeclOfNewTypeErrors) {
   TestLibrary library(R"FIDL(
 library example;
-
 type S = struct{};
 type N = S;
 )FIDL");
-
+  // allow_new_types is disabled, hence this should fail.
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNewTypesNotAllowed);
 }
 

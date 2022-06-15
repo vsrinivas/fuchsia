@@ -67,6 +67,7 @@ struct Element {
     kEnum,
     kEnumMember,
     kLibrary,
+    kNewType,
     kProtocol,
     kProtocolCompose,
     kProtocolMethod,
@@ -111,6 +112,7 @@ struct Decl : public Element {
     kBuiltin,
     kConst,
     kEnum,
+    kNewType,
     kProtocol,
     kResource,
     kService,
@@ -130,6 +132,8 @@ struct Decl : public Element {
         return Element::Kind::kConst;
       case Kind::kEnum:
         return Element::Kind::kEnum;
+      case Kind::kNewType:
+        return Element::Kind::kNewType;
       case Kind::kProtocol:
         return Element::Kind::kProtocol;
       case Kind::kResource:
@@ -848,6 +852,23 @@ struct TypeAlias final : public Decl {
   std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
+struct NewType final : public TypeDecl {
+  NewType(std::unique_ptr<AttributeList> attributes, Name name,
+          std::unique_ptr<TypeConstructor> type_ctor)
+      : TypeDecl(Kind::kNewType, std::move(attributes), std::move(name)),
+        type_ctor(std::move(type_ctor)) {}
+
+  // Note that unlike in TypeAlias, we are not calling this partial type constructor. Whether or
+  // not all the constraints for this type are applied is irrelevant to us down the line - all we
+  // care is that we have a type constructor to define a type.
+  std::unique_ptr<TypeConstructor> type_ctor;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+ private:
+  std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
+};
+
 // This class is used to manage a library's set of direct dependencies, i.e.
 // those imported with "using" statements.
 class Dependencies {
@@ -930,6 +951,7 @@ struct Library final : public Element {
     std::vector<std::unique_ptr<Builtin>> builtins;
     std::vector<std::unique_ptr<Const>> consts;
     std::vector<std::unique_ptr<Enum>> enums;
+    std::vector<std::unique_ptr<NewType>> new_types;
     std::vector<std::unique_ptr<Protocol>> protocols;
     std::vector<std::unique_ptr<Resource>> resources;
     std::vector<std::unique_ptr<Service>> services;

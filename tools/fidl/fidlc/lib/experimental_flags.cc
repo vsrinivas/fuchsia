@@ -25,6 +25,7 @@ std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlag
     {"new_syntax_only", Flag::kNewSyntaxOnly},
     {"unknown_interactions", Flag::kUnknownInteractions},
     {"no_optional_structs", Flag::kNoOptionalStructs},
+    {"allow_new_types", Flag::kAllowNewTypes},
 };
 
 }  // namespace fidl

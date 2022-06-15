@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/diagnostics_json.h>
-
 #include <fstream>
 
 #include "error_test.h"
+#include "fidl/diagnostics_json.h"
+#include "fidl/experimental_flags.h"
 #include "test_library.h"
 #include "unittest_helpers.h"
 
@@ -87,13 +87,13 @@ TEST(JsonDiagnosticsTests, BadMultipleErrors) {
   TestLibrary library(R"FIDL(
 library example;
 
-type Foo = strict bits {}; // Error: must have at least one member
-
-type Table = table {
-    1: s string;
+type Foo = enum : string { // Error: enums may only be of integral primitive type
+    A = 1;
 };
 
-type NewType = Table;  // Error: new type not allowed
+type Bar = table {
+    2: x uint32; // Error: missing ordinal 1 (ordinals must be dense)
+};
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& diagnostics = library.Diagnostics();
@@ -101,21 +101,21 @@ type NewType = Table;  // Error: new type not allowed
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
-    "message": "must have at least one member",
+    "message": "enums may only be of integral primitive type, found string",
     "path": "example.fidl",
     "start_line": 4,
-    "start_char": 11,
+    "start_char": 5,
     "end_line": 4,
-    "end_char": 25
+    "end_char": 8
   },
   {
     "category": "fidlc/error",
-    "message": "newtypes not allowed: type declaration NewType defines a new type of the existing Table type, which is not yet supported",
+    "message": "missing ordinal 1 (ordinals must be dense); consider marking it reserved",
     "path": "example.fidl",
-    "start_line": 10,
-    "start_char": 0,
-    "end_line": 10,
-    "end_char": 20
+    "start_line": 9,
+    "start_char": 4,
+    "end_line": 9,
+    "end_char": 6
   }
 ])JSON");
 }
