@@ -40,6 +40,9 @@ func SaveResults() (string, error) {
 		if err := writeFile(filepath.Join("license", "patterns", filename), []byte(p.Re.String())); err != nil {
 			return "", err
 		}
+		if len(p.Matches) == 0 {
+			continue
+		}
 		var m strings.Builder
 		for _, match := range p.Matches {
 			m.WriteString(match.FilePath)
@@ -81,12 +84,6 @@ func SaveResults() (string, error) {
 	}
 	b.WriteString(s)
 
-	s, err = savePackageInfo("world", world.Config, world.Metrics)
-	if err != nil {
-		return "", err
-	}
-	b.WriteString(s)
-
 	err = RunChecks()
 	if err != nil {
 		if Config.ExitOnError {
@@ -97,11 +94,18 @@ func SaveResults() (string, error) {
 	}
 
 	if Config.OutputLicenseFile {
-		s, err = expandTemplates()
+		s1, err := expandTemplates()
 		if err != nil {
 			return "", err
 		}
-		b.WriteString(s)
+
+		s2, err := savePackageInfo("world", world.Config, world.Metrics)
+		if err != nil {
+			return "", err
+		}
+
+		b.WriteString(s2)
+		b.WriteString(s1)
 	} else {
 		b.WriteString("Not expanding templates.\n")
 	}

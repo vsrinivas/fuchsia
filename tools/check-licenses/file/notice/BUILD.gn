@@ -8,6 +8,7 @@ import("//build/testing/host_test_data.gni")
 
 go_library("notice") {
   sources = [
+    "android.go",
     "chromium.go",
     "data.go",
     "flutter.go",

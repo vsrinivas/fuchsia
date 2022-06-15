@@ -7,7 +7,9 @@ package world
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
@@ -23,11 +25,56 @@ type CSVData struct {
 }
 
 type CSVEntry struct {
-	Project string
-	Path    string
-	Package string
-	Left    string
-	Right   string
+	Project     string
+	Path        string
+	LicenseType string
+	Url         string
+	Package     string
+	Left        string
+	Right       string
+
+	// For compliance worksheet
+	BeingSurfaced      string
+	SourceCodeIncluded string
+}
+
+func NewCSVEntry() {
+}
+
+func (csv *CSVEntry) Merge(other *CSVEntry) {
+	if !strings.Contains(csv.LicenseType, other.LicenseType+";") {
+		csv.LicenseType = fmt.Sprintf("%v; %v", csv.LicenseType, other.LicenseType)
+	}
+	if !strings.Contains(csv.Package, other.Package+";") {
+		csv.Package = fmt.Sprintf("%v; %v", csv.Package, other.Package)
+	}
+	csv.Left = fmt.Sprintf("%v; %v", csv.Left, other.Left)
+}
+
+func (w *World) GetMergedCSVEntries() *CSVData {
+	data := w.GetCSVEntries()
+
+	csvMap := make(map[string]*CSVEntry, 0)
+	for _, left := range data.Entries {
+		if right, ok := csvMap[left.Path]; ok {
+			right.Merge(left)
+		} else {
+			csvMap[left.Path] = left
+		}
+	}
+
+	newEntries := make([]*CSVEntry, 0)
+	for _, csv := range csvMap {
+		if csv.Package == csv.Project {
+			csv.Project = "Various"
+		}
+		newEntries = append(newEntries, csv)
+	}
+	sort.Slice(newEntries, func(i, j int) bool {
+		return newEntries[i].Path < newEntries[j].Path
+	})
+	data.Entries = newEntries
+	return data
 }
 
 func (w *World) GetCSVEntries() *CSVData {
@@ -67,11 +114,35 @@ func (w *World) GetCSVEntries() *CSVData {
 			for _, d := range l.Data {
 				numLicenses += 1
 				e := &CSVEntry{
-					Project: p.Name,
-					Path:    l.Path,
-					Package: d.LibraryName,
+					Project:            p.Name,
+					Path:               l.Path,
+					Package:            d.LibraryName,
+					LicenseType:        d.LicenseType,
+					BeingSurfaced:      "Yes",
+					SourceCodeIncluded: "No",
 				}
 
+				if e.Package == "" {
+					e.Package = e.Project
+				}
+
+				if strings.Contains(e.Path, Config.FuchsiaDir) {
+					e.Path, _ = filepath.Rel(Config.FuchsiaDir, e.Path)
+				}
+
+				if !p.ShouldBeDisplayed {
+					e.BeingSurfaced = "No"
+				}
+
+				if p.SourceCodeIncluded {
+					e.SourceCodeIncluded = "Yes"
+				}
+
+				if l.Url != "" {
+					e.Url = fmt.Sprintf(`=HYPERLINK("%v", "%v")`, l.Url, e.Path)
+				}
+
+				e.Left = fmt.Sprintf("line %v", d.LineNumber)
 				if w.Diff != nil {
 					status := "missing"
 
@@ -112,7 +183,6 @@ func (w *World) GetCSVEntries() *CSVData {
 						}
 					}
 
-					e.Left = fmt.Sprintf("line %v", d.LineNumber)
 					e.Right = status
 				}
 				entries = append(entries, e)
@@ -123,6 +193,9 @@ func (w *World) GetCSVEntries() *CSVData {
 	if w.Diff != nil {
 		csvData.Header = fmt.Sprintf("Found %v licenses out of %v | partial found %v [missing %v]", numFound, numLicenses, numPartiallyFound, numMissing)
 	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Path < entries[j].Path
+	})
 	csvData.Entries = entries
 	return csvData
 }

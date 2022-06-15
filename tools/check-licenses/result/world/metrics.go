@@ -15,8 +15,9 @@ type ResultMetrics struct {
 }
 
 const (
-	GnDesc = "GN Desc"
-	GnGen  = "GN Gen"
+	GnDesc      = "GN Desc"
+	GnGen       = "GN Gen"
+	X20Licenses = "X20 Licenses"
 )
 
 var Metrics *ResultMetrics

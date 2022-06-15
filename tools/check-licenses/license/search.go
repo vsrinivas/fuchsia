@@ -66,7 +66,7 @@ func search(f *file.File, patterns []*Pattern) ([]*SearchResult, error) {
 func RecordUnusedPatterns() {
 	for _, p := range AllPatterns {
 		if len(p.Matches) == 0 {
-			plusVal(NumUnusedPatterns, p.Name)
+			plusVal(NumUnusedPatterns, fmt.Sprintf("%v-%v-%v", p.Category, p.Type, p.Name))
 		}
 	}
 }

@@ -3,6 +3,7 @@
         "fuchsiaDir": "{FUCHSIA_DIR}",
         "outDir": "{OUT_DIR}",
         "outputs": [
+            "compliance.csv",
             "summary.csv",
             "summary_diff.csv",
             "license_texts_grouped_by_project.txt",

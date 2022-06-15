@@ -19,14 +19,15 @@ import (
 // For more info, see the following article:
 //   https://fuchsia.dev/fuchsia-src/development/source_code/third-party-metadata
 type Project struct {
-	Root            string
-	ReadmePath      string
-	Files           []*file.File
-	SearchableFiles []*file.File
-	LicenseFileType file.FileType
-	RegularFileType file.FileType
-	CustomFields    []string
-	SearchResults   []*license.SearchResult
+	Root               string
+	ReadmePath         string
+	Files              []*file.File
+	SearchableFiles    []*file.File
+	LicenseFileType    file.FileType
+	LicenseFileTypeMap map[string]file.FileType
+	RegularFileType    file.FileType
+	CustomFields       []string
+	SearchResults      []*license.SearchResult
 
 	// These fields are taken directly from the README.fuchsia files
 	Name               string
@@ -37,6 +38,10 @@ type Project struct {
 	UpstreamGit        string
 	Description        string
 	LocalModifications string
+
+	// For Compliance worksheet
+	ShouldBeDisplayed  bool
+	SourceCodeIncluded bool
 }
 
 // Order implements sort.Interface for []*Project based on the Root field.
@@ -50,6 +55,8 @@ func (a Order) Less(i, j int) bool { return a[i].Root < a[j].Root }
 func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 	var err error
 	licenseFilePaths := make([]string, 0)
+	licenseFileUrls := make([]string, 0)
+	licenseFileIndex := 0
 
 	// Make all projectRootPath values relative to Config.FuchsiaDir.
 	if strings.Contains(projectRootPath, Config.FuchsiaDir) {
@@ -116,10 +123,13 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 	}
 
 	p := &Project{
-		Root:            projectRootPath,
-		ReadmePath:      readmePath,
-		LicenseFileType: file.SingleLicense,
-		RegularFileType: file.Any,
+		Root:               projectRootPath,
+		ReadmePath:         readmePath,
+		LicenseFileType:    file.SingleLicense,
+		LicenseFileTypeMap: make(map[string]file.FileType, 0),
+		RegularFileType:    file.Any,
+		ShouldBeDisplayed:  true,
+		SourceCodeIncluded: false,
 	}
 
 	f, err := os.Open(readmePath)
@@ -150,7 +160,16 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 			f := strings.TrimSpace(strings.TrimPrefix(line, "License File:"))
 			if len(f) > 0 {
 				licenseFilePaths = append(licenseFilePaths, f)
+				licenseFileUrls = append(licenseFileUrls, "")
+				licenseFileIndex = len(licenseFilePaths) - 1
 			}
+			multiline = ""
+		} else if strings.HasPrefix(line, "License URL:") {
+			url := strings.TrimSpace(strings.TrimPrefix(line, "License URL:"))
+			for len(licenseFileUrls) < licenseFileIndex {
+				licenseFileUrls = append(licenseFileUrls, "")
+			}
+			licenseFileUrls[licenseFileIndex] = url
 			multiline = ""
 		} else if strings.HasPrefix(line, "Upstream Git:") {
 			p.UpstreamGit = strings.TrimSpace(strings.TrimPrefix(line, "Upstream Git:"))
@@ -186,14 +205,24 @@ func NewProject(readmePath string, projectRootPath string) (*Project, error) {
 		return nil, err
 	}
 
-	for _, l := range licenseFilePaths {
+	for i, l := range licenseFilePaths {
+		licenseFileType := p.LicenseFileType
+		if _, ok := p.LicenseFileTypeMap[l]; ok {
+			licenseFileType = p.LicenseFileTypeMap[l]
+		}
+
 		l = filepath.Join(Config.FuchsiaDir, p.Root, l)
 		l = filepath.Clean(l)
 
-		licenseFile, err := file.NewFile(l, p.LicenseFileType)
+		licenseFile, err := file.NewFile(l, licenseFileType)
 		if err != nil {
 			return nil, err
 		}
+
+		if licenseFileUrls[i] != "" {
+			licenseFile.Url = licenseFileUrls[i]
+		}
+
 		p.LicenseFile = append(p.LicenseFile, licenseFile)
 	}
 
@@ -209,10 +238,21 @@ func (p *Project) processCustomFields() error {
 	for _, line := range p.CustomFields {
 		if strings.HasPrefix(line, "license format:") {
 			ft := strings.TrimSpace(strings.TrimPrefix(line, "license format:"))
-			if val, ok := file.FileTypes[ft]; ok {
-				p.LicenseFileType = val
+
+			if strings.Contains(ft, ":") {
+				filename := strings.TrimSpace(strings.Split(ft, ":")[1])
+				ft = strings.TrimSpace(strings.Split(ft, ":")[0])
+
+				if _, ok := file.FileTypes[ft]; !ok {
+					return fmt.Errorf("Format %v isn't a valid License Format.", ft)
+				}
+
+				p.LicenseFileTypeMap[filename] = file.FileTypes[ft]
 			} else {
-				return fmt.Errorf("Format %v isn't a valid License Format.", ft)
+				if _, ok := file.FileTypes[ft]; !ok {
+					return fmt.Errorf("Format %v isn't a valid License Format.", ft)
+				}
+				p.LicenseFileType = file.FileTypes[ft]
 			}
 		} else if strings.HasPrefix(line, "file format:") {
 			ft := strings.TrimSpace(strings.TrimPrefix(line, "file format:"))

@@ -66,7 +66,12 @@ func NewWorld() (*World, error) {
 		Patterns:  allPatterns,
 		Projects:  allProjects,
 	}
+
 	if err := w.FilterProjects(); err != nil {
+		return nil, err
+	}
+
+	if err := w.AddLicenseUrls(); err != nil {
 		return nil, err
 	}
 

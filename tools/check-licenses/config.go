@@ -22,13 +22,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/result/world"
 )
 
-const (
-	Product = "{PRODUCT}"
-	Board   = "{BOARD}"
-	Arch    = "{ARCH}"
-	Eng     = "{ENG}"
-)
-
 var (
 	ConfigVars map[string]string
 )

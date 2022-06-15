@@ -23,6 +23,7 @@ type FileData struct {
 	LibraryName string
 	LineNumber  int
 	Data        []byte
+	LicenseType string
 
 	hash string
 }
@@ -96,6 +97,19 @@ func NewFileData(path string, content []byte, filetype FileType) ([]*FileData, e
 		}
 	case MultiLicenseFlutter:
 		ndata, err := notice.ParseFlutter(path, content)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range ndata {
+			data = append(data, &FileData{
+				FilePath:    path,
+				LineNumber:  d.LineNumber,
+				LibraryName: d.LibraryName,
+				Data:        bytes.TrimSpace(d.LicenseText),
+			})
+		}
+	case MultiLicenseAndroid:
+		ndata, err := notice.ParseAndroid(path, content)
 		if err != nil {
 			return nil, err
 		}

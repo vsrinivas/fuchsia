@@ -21,6 +21,7 @@ const (
 	SingleLicense                 = "single_license"
 	MultiLicenseChromium          = "multi_license_chromium"
 	MultiLicenseFlutter           = "multi_license_flutter"
+	MultiLicenseAndroid           = "multi_license_android"
 	MultiLicenseGoogle            = "multi_license_google"
 )
 
@@ -33,6 +34,7 @@ func init() {
 		"single_license":         SingleLicense,
 		"multi_license_chromium": MultiLicenseChromium,
 		"multi_license_flutter":  MultiLicenseFlutter,
+		"multi_license_android":  MultiLicenseAndroid,
 		"multi_license_google":   MultiLicenseGoogle,
 	}
 }

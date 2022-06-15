@@ -124,6 +124,7 @@ func (p *Pattern) Search(d *file.FileData) bool {
 	// This should be faster than running the regex search.
 	if _, ok := p.PreviousMatches[d.Hash()]; ok && !p.isHeader {
 		p.Matches = append(p.Matches, d)
+		d.LicenseType = p.Type
 		return true
 	} else if _, ok := p.PreviousMismatches[d.Hash()]; ok {
 		return false
@@ -136,6 +137,7 @@ func (p *Pattern) Search(d *file.FileData) bool {
 		if p.isHeader {
 			d.SetData(m)
 		}
+		d.LicenseType = p.Type
 
 		p.Matches = append(p.Matches, d)
 		p.PreviousMatches[d.Hash()] = true

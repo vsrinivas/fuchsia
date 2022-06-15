@@ -14,6 +14,7 @@ import (
 type File struct {
 	Name string
 	Path string `json:"path"`
+	Url  string `json:"url"`
 	Data []*FileData
 	Text []byte
 }

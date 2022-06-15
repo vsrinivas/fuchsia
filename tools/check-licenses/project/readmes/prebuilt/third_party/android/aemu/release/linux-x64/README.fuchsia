@@ -1,4 +1,4 @@
 Name: AEMU
 License File: NOTICE.txt
 License File: LICENSE
-Description: TODO(jcecil), need to process the NOTICE file differently than the LICENSE file.
+check-licenses: license format: multi_license_android: NOTICE.txt

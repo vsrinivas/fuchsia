@@ -5,8 +5,10 @@
 package project
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
@@ -47,10 +49,12 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 	}
 
 	p := &Project{
-		Name:            projectName,
-		Root:            projectRootPath,
-		LicenseFileType: file.SingleLicense,
-		RegularFileType: file.Any,
+		Name:               projectName,
+		Root:               projectRootPath,
+		LicenseFileType:    file.SingleLicense,
+		RegularFileType:    file.Any,
+		ShouldBeDisplayed:  true,
+		SourceCodeIncluded: false,
 	}
 
 	for _, l := range licenseFilePaths {
@@ -62,6 +66,26 @@ func NewSpecialProject(projectRootPath string) (*Project, error) {
 			return nil, err
 		}
 		p.LicenseFile = append(p.LicenseFile, licenseFile)
+
+		if strings.Contains(l, "dart-pkg") {
+			licenseFile.Url = fmt.Sprintf("https://pub.dev/packages/%v/license", projectName)
+		}
+
+		if strings.Contains(l, "golibs") {
+			re := regexp.MustCompile(`(.*golibs\/vendor\/)`)
+			url := re.ReplaceAllString(l, "")
+			url = strings.ReplaceAll(url, "/LICENSE", "")
+			url = fmt.Sprintf("https://pkg.go.dev/%v?tab=licenses", url)
+			licenseFile.Url = url
+		}
+
+		if strings.Contains(l, "rust_crates") {
+			rel := l
+			if strings.Contains(l, Config.FuchsiaDir) {
+				rel, _ = filepath.Rel(Config.FuchsiaDir, l)
+			}
+			licenseFile.Url = fmt.Sprintf("https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/%v", rel)
+		}
 	}
 
 	plusVal(NumProjects, p.Root)
