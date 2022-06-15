@@ -19,7 +19,7 @@
 #if __has_feature(undefined_behavior_sanitizer)
 
 #define STUB_HANDLER(name, ...)                                               \
-  [[gnu::weak]] __EXPORT extern "C" void __ubsan_handle_##name(__VA_ARGS__) { \
+  __EXPORT extern "C" [[gnu::weak]] void __ubsan_handle_##name(__VA_ARGS__) { \
     CRASH_WITH_UNIQUE_BACKTRACE();                                            \
   }
 
