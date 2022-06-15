@@ -241,6 +241,12 @@ template("fuchsia_package") {
       if (verify_elf) {
         deps += [ ":$package_manifest_verify_target" ]
       }
+
+      # Ensure that even if the top-level package restricts its visibility,
+      # this pm_build target is visible to the top-level package.
+      if (defined(visibility)) {
+        visibility += [ ":${invoker.target_name}" ]
+      }
     }
 
     group(target_name) {
