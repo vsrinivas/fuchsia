@@ -49,7 +49,6 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
-    "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/update-package",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:anyhow",
