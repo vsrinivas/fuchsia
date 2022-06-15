@@ -25,7 +25,7 @@ group("integration") {
 
 fuchsia_unittest_package("msd_arm_mali_nonhardware_tests") {
   deps = [ "unit_tests:msd_arm_mali_nonhardware_tests" ]
-  manifest = "meta/msd_arm_mali_nonhardware_tests.cmx"
+  manifest = "meta/msd_arm_mali_nonhardware_tests.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -35,7 +35,7 @@ fuchsia_unittest_package("msd_arm_mali_nonhardware_tests") {
 
 fuchsia_unittest_package("msd-arm-mali-integration-tests") {
   deps = [ "integration" ]
-  manifest = "meta/msd_arm_mali_integration_tests.cmx"
+  manifest = "meta/msd_arm_mali_integration_tests.cml"
   test_specs = {
     environments = arm_gpu_envs
     log_settings = {
