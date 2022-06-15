@@ -380,6 +380,7 @@ fn send_mouse_event(
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled: Handled::No,
+        trace_id: None,
     }) {
         Err(e) => fx_log_err!("Failed to send MouseEvent with error: {:?}", e),
         _ => {}

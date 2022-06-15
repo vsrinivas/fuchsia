@@ -70,6 +70,7 @@ where
                         device_event: input_event.device_event,
                         device_descriptor: input_event.device_descriptor,
                         event_time: input_event.event_time,
+                        trace_id: input_event.trace_id,
                     },
                 )
                 .await
@@ -111,6 +112,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn blanket_impl_passes_unhandled_events_to_wrapped_handler() {
+        const TRACE_ID: Option<u64> = Some(1234);
         let (event_sender, mut event_receiver) = mpsc::unbounded();
         let handler = std::rc::Rc::new(FakeUnhandledInputHandler {
             event_sender,
@@ -123,6 +125,7 @@ mod tests {
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
                 handled: Handled::No,
+                trace_id: TRACE_ID,
             })
             .await;
         assert_eq!(
@@ -131,6 +134,7 @@ mod tests {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
+                trace_id: TRACE_ID,
             })
         )
     }
@@ -147,6 +151,7 @@ mod tests {
             device_descriptor: InputDeviceDescriptor::Fake,
             event_time: zx::Time::from_nanos(1),
             handled: Handled::No,
+            trace_id: None,
         };
         let expected_propagated_event = input_event.clone().into_handled_if(mark_events_handled);
         pretty_assertions::assert_eq!(
@@ -169,6 +174,7 @@ mod tests {
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
                 handled: Handled::Yes,
+                trace_id: None,
             })
             .await;
 
@@ -194,6 +200,7 @@ mod tests {
                     device_descriptor: InputDeviceDescriptor::Fake,
                     event_time: zx::Time::from_nanos(1),
                     handled: Handled::Yes,
+                    trace_id: None,
                 })
                 .await
                 .as_slice(),
@@ -202,6 +209,7 @@ mod tests {
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
                 handled: Handled::Yes,
+                trace_id: None,
             }]
         );
     }

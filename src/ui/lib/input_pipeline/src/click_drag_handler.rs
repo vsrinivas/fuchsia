@@ -50,6 +50,7 @@ impl TryFrom<input_device::UnhandledInputEvent> for RelativeMouseEvent {
                     }),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
+                trace_id: _,
             } => Ok(RelativeMouseEvent {
                 displacement: position,
                 phase,
@@ -80,6 +81,7 @@ impl From<RelativeMouseEvent> for input_device::InputEvent {
             ),
             event_time: relative_mouse_event.event_time,
             handled: relative_mouse_event.handled,
+            trace_id: None,
         }
     }
 }
@@ -397,6 +399,7 @@ mod tests {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
             device_descriptor: DEVICE_DESCRIPTOR.clone(),
             event_time: zx::Time::from_nanos(event_time),
+            trace_id: None,
         }
     }
 

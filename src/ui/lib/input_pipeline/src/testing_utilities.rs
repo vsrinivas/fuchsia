@@ -62,6 +62,7 @@ pub fn create_input_event(
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled,
+        trace_id: None,
     }
 }
 
@@ -183,6 +184,7 @@ pub fn create_fake_input_event(event_time: zx::Time) -> input_device::InputEvent
         device_event: input_device::InputDeviceEvent::Fake,
         device_descriptor: input_device::InputDeviceDescriptor::Fake,
         handled: input_device::Handled::No,
+        trace_id: None,
     }
 }
 
@@ -194,6 +196,7 @@ pub fn create_fake_handled_input_event(event_time: zx::Time) -> input_device::In
         device_event: input_device::InputDeviceEvent::Fake,
         device_descriptor: input_device::InputDeviceDescriptor::Fake,
         handled: input_device::Handled::Yes,
+        trace_id: None,
     }
 }
 
@@ -257,6 +260,7 @@ pub fn create_consumer_controls_event_with_handled(
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled,
+        trace_id: None,
     }
 }
 
@@ -362,6 +366,7 @@ pub fn create_mouse_event_with_handled(
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled,
+        trace_id: None,
     }
 }
 
@@ -498,6 +503,7 @@ pub fn create_touch_event_with_handled(
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled: handled,
+        trace_id: None,
     }
 }
 

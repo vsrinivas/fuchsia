@@ -29,6 +29,7 @@ impl UnhandledInputHandler for ShortcutHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
                 device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
                 event_time,
+                trace_id: _,
             } => {
                 let key_event = create_key_event(
                     &keyboard_device_event.get_key(),
@@ -149,6 +150,7 @@ mod tests {
             device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
             device_descriptor,
             event_time,
+            trace_id: None,
         }
     }
 

@@ -82,6 +82,7 @@ impl InputHandler for MouseInjectorHandler {
                     input_device::InputDeviceDescriptor::Mouse(ref mouse_device_descriptor),
                 event_time,
                 handled: input_device::Handled::No,
+                trace_id: _,
             } => {
                 // TODO(fxbug.dev/90317): Investigate latency introduced by waiting for update_cursor_renderer
                 if let Err(e) =
@@ -119,6 +120,7 @@ impl InputHandler for MouseInjectorHandler {
                     input_device::InputDeviceDescriptor::Touch(ref _touch_device_descriptor),
                 event_time: _,
                 handled: _,
+                trace_id: _,
             } => {
                 // Hide the cursor on touch input.
                 // TODO(fxbug.dev/90290): Remove this workaround when we have a
@@ -136,6 +138,7 @@ impl InputHandler for MouseInjectorHandler {
                 device_descriptor: input_device::InputDeviceDescriptor::MouseConfig,
                 event_time: _,
                 handled: _,
+                trace_id: _,
             } => {
                 // Immersive mode hides the cursor and is a temporary workaround
                 // until we have a cursor API that makes it possible for UI

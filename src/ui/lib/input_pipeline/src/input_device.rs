@@ -39,6 +39,8 @@ pub struct InputEvent {
 
     /// The handled state of the event.
     pub handled: Handled,
+
+    pub trace_id: Option<u64>,
 }
 
 /// An [`UnhandledInputEvent`] is like an [`InputEvent`], except that the data represents an
@@ -57,6 +59,8 @@ pub struct UnhandledInputEvent {
 
     /// The time in nanoseconds when the event was first recorded.
     pub event_time: zx::Time,
+
+    pub trace_id: Option<u64>,
 }
 
 /// An [`InputDeviceEvent`] represents an input event from an input device.
@@ -298,6 +302,7 @@ impl std::convert::From<UnhandledInputEvent> for InputEvent {
             device_descriptor: event.device_descriptor,
             event_time: event.event_time,
             handled: Handled::No,
+            trace_id: event.trace_id,
         }
     }
 }
@@ -320,6 +325,7 @@ impl std::convert::TryFrom<InputEvent> for UnhandledInputEvent {
                 device_event: event.device_event,
                 device_descriptor: event.device_descriptor,
                 event_time: event.event_time,
+                trace_id: event.trace_id,
             }),
         }
     }
@@ -660,6 +666,7 @@ mod tests {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
+                trace_id: None,
             })
             .handled,
             Handled::No
@@ -669,17 +676,20 @@ mod tests {
     #[fuchsia::test]
     fn unhandled_to_generic_conversion_preserves_fields() {
         const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
+        const TRACE_ID: Option<u64> = Some(1234);
         assert_matches!(
             InputEvent::from(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
+                trace_id: TRACE_ID,
             }),
             InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
                 handled: _,
+                trace_id: TRACE_ID,
             }
         );
     }
@@ -692,6 +702,7 @@ mod tests {
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: zx::Time::from_nanos(1),
                 handled: Handled::Yes,
+                trace_id: None,
             }),
             Err(_)
         )
@@ -700,17 +711,20 @@ mod tests {
     #[fuchsia::test]
     fn generic_to_unhandled_conversion_preserves_fields_for_unhandled_events() {
         const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
+        const TRACE_ID: Option<u64> = Some(1234);
         assert_matches!(
             UnhandledInputEvent::try_from(InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
                 handled: Handled::No,
+                trace_id: TRACE_ID,
             }),
             Ok(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
                 event_time: EVENT_TIME,
+                trace_id: TRACE_ID,
             })
         )
     }
@@ -723,6 +737,7 @@ mod tests {
             device_descriptor: InputDeviceDescriptor::Fake,
             event_time: zx::Time::from_nanos(1),
             handled: initially_handled,
+            trace_id: None,
         };
         pretty_assertions::assert_eq!(event.into_handled_if(true).handled, Handled::Yes);
     }
@@ -735,6 +750,7 @@ mod tests {
             device_descriptor: InputDeviceDescriptor::Fake,
             event_time: zx::Time::from_nanos(1),
             handled: initially_handled.clone(),
+            trace_id: None,
         };
         pretty_assertions::assert_eq!(event.into_handled_if(false).handled, initially_handled);
     }
@@ -747,6 +763,7 @@ mod tests {
             device_descriptor: InputDeviceDescriptor::Fake,
             event_time: zx::Time::from_nanos(1),
             handled: initially_handled,
+            trace_id: None,
         };
         pretty_assertions::assert_eq!(event.into_handled().handled, Handled::Yes);
     }

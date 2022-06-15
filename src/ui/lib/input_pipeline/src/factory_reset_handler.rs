@@ -356,6 +356,7 @@ impl UnhandledInputHandler for FactoryResetHandler {
                 device_event: input_device::InputDeviceEvent::ConsumerControls(ref event),
                 device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
                 event_time: _,
+                trace_id: _,
             } => {
                 match self.factory_reset_state() {
                     FactoryResetState::Idle => {
@@ -472,6 +473,7 @@ mod tests {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: zx::Time::get_monotonic(),
+            trace_id: None,
         }
     }
 
@@ -484,6 +486,7 @@ mod tests {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: zx::Time::get_monotonic(),
+            trace_id: None,
         }
     }
 

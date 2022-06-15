@@ -36,6 +36,7 @@ impl UnhandledInputHandler for ImmersiveModeShortcutHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
                 device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
                 event_time,
+                trace_id: _,
             } if keyboard_device_event.get_event_type() == KeyEventType::Pressed
                 && keyboard_device_event.get_key() == Key::I
                 && keyboard_device_event.get_unsided_modifiers()
@@ -50,6 +51,7 @@ impl UnhandledInputHandler for ImmersiveModeShortcutHandler {
                         device_descriptor: input_device::InputDeviceDescriptor::MouseConfig,
                         event_time: event_time,
                         handled: input_device::Handled::No,
+                        trace_id: None,
                     },
                 ];
             }
@@ -87,6 +89,7 @@ mod tests {
                 keyboard_binding::KeyboardDeviceDescriptor { keys: vec![Key::I, Key::J] },
             ),
             event_time: fuchsia_zircon::Time::from_nanos(event_time),
+            trace_id: None,
         }
     }
 

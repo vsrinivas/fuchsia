@@ -197,6 +197,7 @@ fn send_consumer_controls_event(
         device_descriptor: device_descriptor.clone(),
         event_time,
         handled: Handled::No,
+        trace_id: None,
     }) {
         fx_log_err!("Failed to send ConsumerControlsEvent with error: {:?}", e);
     }

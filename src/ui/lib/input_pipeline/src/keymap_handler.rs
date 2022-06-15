@@ -44,6 +44,7 @@ impl UnhandledInputHandler for KeymapHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(event),
                 device_descriptor,
                 event_time,
+                trace_id: _,
             } => vec![input_device::InputEvent::from(self.process_keyboard_event(
                 event,
                 device_descriptor,
@@ -93,6 +94,7 @@ impl KeymapHandler {
             ),
             device_descriptor,
             event_time,
+            trace_id: None,
         }
     }
 }

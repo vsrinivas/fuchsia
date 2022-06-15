@@ -39,6 +39,7 @@ impl UnhandledInputHandler for ModifierHandler {
                 device_event: InputDeviceEvent::Keyboard(mut event),
                 device_descriptor,
                 event_time,
+                trace_id: _,
             } => {
                 self.modifier_state.borrow_mut().update(event.get_event_type(), event.get_key());
                 self.lock_state.borrow_mut().update(event.get_event_type(), event.get_key());
@@ -51,6 +52,7 @@ impl UnhandledInputHandler for ModifierHandler {
                     device_descriptor,
                     event_time,
                     handled: Handled::No,
+                    trace_id: None,
                 }]
             }
             // Pass other events through.
@@ -85,6 +87,7 @@ mod tests {
             device_event: InputDeviceEvent::Keyboard(event),
             event_time: zx::Time::from_nanos(42),
             device_descriptor: InputDeviceDescriptor::Fake,
+            trace_id: None,
         }
     }
 

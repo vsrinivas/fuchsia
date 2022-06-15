@@ -597,6 +597,7 @@ mod tests {
             ),
             event_time: zx::Time::get_monotonic(),
             handled: input_device::Handled::No,
+            trace_id: None,
         };
         match sender.try_send(input_event.clone()) {
             Err(_) => assert!(false),

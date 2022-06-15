@@ -41,6 +41,7 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
                     }),
                 device_descriptor: device_descriptor @ input_device::InputDeviceDescriptor::Mouse(_),
                 event_time,
+                trace_id: _,
             } => {
                 let scaled_motion = self.scale_motion(raw_motion, event_time);
                 let input_event = input_device::InputEvent {
@@ -57,6 +58,7 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
                     device_descriptor,
                     event_time,
                     handled: input_device::Handled::No,
+                    trace_id: None,
                 };
                 vec![input_event]
             }
@@ -298,6 +300,7 @@ mod tests {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
             device_descriptor: DEVICE_DESCRIPTOR.clone(),
             event_time: zx::Time::from_nanos(event_time),
+            trace_id: None,
         }
     }
 
@@ -370,6 +373,7 @@ mod tests {
                 }),
                 device_descriptor: DEVICE_DESCRIPTOR.clone(),
                 event_time: zx::Time::from_nanos(0),
+                trace_id: None,
             };
             handler.clone().handle_unhandled_input_event(input_event).await;
 
@@ -385,6 +389,7 @@ mod tests {
                 }),
                 device_descriptor: DEVICE_DESCRIPTOR.clone(),
                 event_time: zx::Time::from_nanos(duration.into_nanos()),
+                trace_id: None,
             };
             let transformed_events =
                 handler.clone().handle_unhandled_input_event(input_event).await;

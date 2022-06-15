@@ -124,6 +124,7 @@ impl TryInto<InputEvent> for AnyEvent {
                 device_descriptor: device_descriptor.clone(),
                 event_time,
                 handled,
+                trace_id: None,
             }),
             _ => Err(anyhow!("not an InputEvent: {:?}", &self)),
         }
@@ -232,6 +233,7 @@ impl Autorepeater {
                             device_descriptor,
                             event_time,
                             handled,
+                            trace_id: _,
                         } if handled == Handled::No => unbounded_send_logged(
                             &event_sink,
                             AnyEvent::Keyboard(k, device_descriptor, event_time, handled),
@@ -242,6 +244,7 @@ impl Autorepeater {
                             device_descriptor: _,
                             event_time: _,
                             handled: _,
+                            trace_id: _,
                         } => unbounded_send_logged(&event_sink, AnyEvent::NonKeyboard(event))
                             .context("while forwarding a non-keyboard event"),
                     }
@@ -477,8 +480,8 @@ mod tests {
     fn remove_event_time(events: Vec<InputEvent>) -> Vec<InputEvent> {
         events
             .into_iter()
-            .map(|InputEvent { device_event, device_descriptor, event_time: _, handled }| {
-                InputEvent { device_event, device_descriptor, event_time: zx::Time::ZERO, handled }
+            .map(|InputEvent { device_event, device_descriptor, event_time: _, handled, trace_id: _ }| {
+                InputEvent { device_event, device_descriptor, event_time: zx::Time::ZERO, handled, trace_id: None }
             })
             .collect()
     }

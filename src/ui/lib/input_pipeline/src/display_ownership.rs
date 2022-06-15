@@ -243,6 +243,7 @@ fn into_input_event(keyboard_event: KeyboardEvent, event_time: Time) -> input_de
         device_descriptor: empty_keyboard_device_descriptor(),
         event_time,
         handled: input_device::Handled::No,
+        trace_id: None,
     }
 }
 
