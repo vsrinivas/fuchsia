@@ -9,13 +9,13 @@ use fidl_fuchsia_stash::{
     ListItem, ListIteratorMarker, ListIteratorRequest, ListIteratorRequestStream, Value,
 };
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
 use measure_tape_for_stash::Measurable as _;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tracing::warn;
 
 use crate::store;
 
@@ -165,10 +165,10 @@ impl Accessor {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| {
+            .unwrap_or_else(|err: anyhow::Error| {
                 // TODO(fxbug.dev/62386) - determine which errors are stash failures and log them
                 // with error severity
-                fx_log_warn!("error running list prefix interface: {:?}", e)
+                warn!(?err, "error running list prefix interface")
             }),
         )
         .detach();
@@ -254,10 +254,10 @@ impl Accessor {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| {
+            .unwrap_or_else(|err: anyhow::Error| {
                 // TODO(fxbug.dev/62386) - determine which errors are stash failures and log them
                 // with error severity
-                fx_log_warn!("error running get prefix interface: {:?}", e)
+                warn!(?err, "error running get prefix interface");
             }),
         )
         .detach();
@@ -401,7 +401,7 @@ mod tests {
         res
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_value() {
         let test_client_name = "test_client".to_string();
         let test_key = "test_key".to_string();
@@ -420,7 +420,7 @@ mod tests {
         assert_eq!(0, acc.fields_updated.lock().await.len());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_value() {
         let test_client_name = "test_client".to_string();
         let test_key = "test_key".to_string();
@@ -447,7 +447,7 @@ mod tests {
         assert_eq!(0, acc.fields_updated.lock().await.len());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_delete_value() {
         let test_client_name = "test_client".to_string();
 
@@ -482,7 +482,7 @@ mod tests {
         assert_eq!(0, acc.fields_updated.lock().await.len());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_prefix() {
         let test_client_name = "test_client".to_string();
 
@@ -549,7 +549,7 @@ mod tests {
         run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_prefix_paging() {
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
@@ -614,7 +614,7 @@ mod tests {
         run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_prefix() {
         let tmp_dir = TempDir::new().unwrap();
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
@@ -700,7 +700,7 @@ mod tests {
         run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_delete_prefix() {
         let test_client_name = "test_client".to_string();
 
@@ -740,7 +740,7 @@ mod tests {
         assert_eq!(vec!["b", "b/c", "bbbbb"], actual);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_commit_different_accessors() {
         let test_client_name = "test_client".to_string();
 
@@ -777,7 +777,7 @@ mod tests {
         assert_eq!(0, acc2.fields_updated.lock().await.len());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_commit_reuse_accessor() {
         let test_client_name = "test_client".to_string();
 
@@ -811,7 +811,7 @@ mod tests {
         assert_eq!(None, sm.lock().await.get_value(&test_client_name, &"b".to_string()));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush() {
         let test_client_name = "test_client".to_string();
         let tmp_dir = TempDir::new().unwrap();
@@ -839,7 +839,7 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush_readonly_fails() {
         let test_client_name = "test_client".to_string();
         let tmp_dir = TempDir::new().unwrap();
@@ -851,7 +851,7 @@ mod tests {
         assert_eq!(acc.flush().await, Err(fidl_fuchsia_stash::FlushError::ReadOnly));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_flush_commit_fails() {
         let test_client_name = "test_client".to_string();
         let tmp_dir = TempDir::new().unwrap();
@@ -865,7 +865,7 @@ mod tests {
         assert_eq!(acc.flush().await, Err(fidl_fuchsia_stash::FlushError::CommitFailed));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_delete_prefix_considers_current_commit() {
         let test_client_name = "test_client".to_string();
 
@@ -892,7 +892,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_list_prefix_considers_current_commit() {
         let test_client_name = "test_client".to_string();
 
@@ -918,7 +918,7 @@ mod tests {
         assert_eq!(vec!["a", "aa", "aaa", "b", "bb", "bbb"], res);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_prefix_considers_current_commit() {
         let test_client_name = "test_client".to_string();
 

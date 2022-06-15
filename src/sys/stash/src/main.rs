@@ -11,7 +11,6 @@ use fidl::prelude::*;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::{self as inspect, health::Reporter};
-use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use std::convert::{TryFrom, TryInto};
@@ -19,6 +18,7 @@ use std::env;
 use std::path::PathBuf;
 use std::process;
 use std::sync::Arc;
+use tracing::error;
 
 mod accessor;
 mod instance;
@@ -72,9 +72,8 @@ impl TryFrom<Vec<String>> for StashSettings {
     }
 }
 
-fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["stash"])?;
-
+#[fuchsia::main(logging_tags = ["stash"])]
+async fn main() -> Result<(), Error> {
     let r_opts: Result<StashSettings, Error> = env::args().collect::<Vec<String>>().try_into();
 
     match r_opts {
@@ -84,7 +83,6 @@ fn main() -> Result<(), Error> {
             process::exit(1);
         }
         Ok(opts) => {
-            let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
             let store_manager =
                 Arc::new(Mutex::new(store::StoreManager::new(PathBuf::from(&opts.backing_file))?));
 
@@ -106,7 +104,7 @@ fn main() -> Result<(), Error> {
 
             fs.take_and_serve_directory_handle()?;
             inspect::component::health().set_ok();
-            executor.run_singlethreaded(fs.collect::<()>());
+            fs.collect::<()>().await;
         }
     }
     Ok(())
@@ -164,7 +162,7 @@ fn stash_server(
             }
             Ok(())
         }
-        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
+        .unwrap_or_else(|err: anyhow::Error| error!(?err, "couldn't run stash service")),
     )
     .detach();
 }

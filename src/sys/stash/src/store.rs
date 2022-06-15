@@ -13,12 +13,12 @@ use anyhow::{format_err, Context, Error};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use fidl_fuchsia_mem;
 use fidl_fuchsia_stash::{KeyValue, ListItem, Value, ValueType};
-use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon as zx;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Cursor, ErrorKind, Read, Write};
 use std::path::PathBuf;
+use tracing::info;
 
 pub type ClientName = String;
 pub type Key = String;
@@ -203,7 +203,7 @@ impl StoreManager {
                 if e.kind() != ErrorKind::NotFound {
                     return Err(format_err!(format!("{}", e)));
                 }
-                fx_log_info!("store file doesn't exist, using empty store");
+                info!("store file doesn't exist, using empty store");
                 Store::default()
             }
         };
