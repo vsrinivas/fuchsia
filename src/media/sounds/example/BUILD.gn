@@ -39,16 +39,7 @@ resource("data") {
   outputs = [ "data/sfx.wav" ]
 }
 
-fuchsia_component("soundplayer_v1") {
-  component_name = "soundplayer_example"
-  manifest = "meta/soundplayer_example.cmx"
-  deps = [
-    ":bin",
-    ":data",
-  ]
-}
-
-fuchsia_component("soundplayer_v2") {
+fuchsia_component("soundplayer") {
   component_name = "soundplayer_example"
   manifest = "meta/soundplayer_example.cml"
   deps = [
@@ -58,8 +49,5 @@ fuchsia_component("soundplayer_v2") {
 }
 
 fuchsia_package("soundplayer_example") {
-  deps = [
-    ":soundplayer_v1",
-    ":soundplayer_v2",
-  ]
+  deps = [ ":soundplayer" ]
 }

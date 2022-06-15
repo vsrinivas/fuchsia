@@ -36,10 +36,10 @@ component runs. To add custom sounds, do the following:
     $ ffx session launch fuchsia-pkg://fuchsia.com/soundplayer_example#meta/soundplayer_example.cm
     ```
 
-1.  Use `ffx component show` to discover the session component's "Instance ID":
+1.  Use `ffx session show` to discover the session component's "Instance ID":
 
     ```bash
-    $ ffx component show session
+    $ ffx session show
                 Moniker: /core/session-manager/session:session
                     URL: fuchsia-pkg://fuchsia.com/soundplayer_example#meta/soundplayer_example.cm
                     Type: CML dynamic component
@@ -58,5 +58,5 @@ component runs. To add custom sounds, do the following:
 1.  Start the component instance:
 
     ```bash
-    $ ffx component start /core/session-manager/session:session
+    $ ffx session restart
     ```

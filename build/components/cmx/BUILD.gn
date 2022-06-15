@@ -396,7 +396,6 @@ group("cmx_allowlist") {
     "//src/media/playback/mediaplayer:*",
     "//src/media/sessions:*",
     "//src/media/sessions/examples:*",
-    "//src/media/sounds/example:*",
     "//src/media/stream_processors/test:*",
     "//src/modular:*",
     "//src/modular/bin/basemgr:*",
