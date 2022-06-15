@@ -61,6 +61,13 @@ struct Opt {
     #[argh(option)]
     tarball_dir: Option<PathBuf>,
 
+    /// path for depfile if clidoc is invoked as a BUILD action
+    /// if set, will output a depfile based on inputs at specified location
+    /// depfile is only supported with tarball_dir flag.
+    /// depfile is a Ninja term and does not need to be split into 2 words.
+    #[argh(option)]
+    depfile: Option<PathBuf>,
+
     /// commands to run, otherwise defaults to internal list of commands.
     /// relative paths are on the input_path. Absolute paths are used as-is.
     #[argh(positional)]
@@ -200,6 +207,24 @@ fn run(opt: Opt) -> Result<()> {
     info!("Generated documentation at dir: {}", &output_path.display());
 
     if let Some(tardir) = opt.tarball_dir {
+        // First check if depfile is needed as well since this will probably be invoked
+        // as part of a BUILD action.
+        if let Some(depfile_path) = opt.depfile {
+            info!("Creating depfile at {:?} with {:?}", depfile_path, cmd_paths);
+            let mut f = File::create(depfile_path).expect("Unable to create file");
+            for cmd_path in cmd_paths.iter() {
+                // Documented tools live in host_x64 path of build directory
+                let p = PathBuf::from("host_x64");
+                let tool = cmd_path.file_name();
+                write!(
+                    f,
+                    "{}: {}\n",
+                    tardir.display(),
+                    p.join(tool.expect("get toolname")).display()
+                )?;
+            }
+        }
+
         info!("Tarballing output at {:?}", tardir);
         let tar_gz = File::create(tardir)?;
         let enc = GzEncoder::new(tar_gz, Compression::default());

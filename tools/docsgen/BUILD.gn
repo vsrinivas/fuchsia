@@ -136,6 +136,7 @@ compiled_action("invoke_clidoc") {
   tool = "//tools/clidoc:clidoc_bin"
   tool_output_name = "clidoc"
   testonly = true
+  depfile = "$target_out_dir/$target_name.d"
   deps = [ "//tools:tools" ]
   metadata = {
     # Record metadata for the //tools/docsgen build API.
@@ -160,6 +161,8 @@ compiled_action("invoke_clidoc") {
     # TODO (https://fxbug.dev/86553) to rename tarball-dir.
     "--tarball-dir",
     rebase_path("$target_out_dir/$clidoc_tarfile", root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
   ]
 }
 
