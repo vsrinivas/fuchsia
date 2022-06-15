@@ -4,6 +4,8 @@
 
 #include "decoder_fuzzer.h"
 
+#include <fuchsia/sysmem/cpp/fidl.h>
+
 #include <fuzzer/FuzzedDataProvider.h>
 
 // A version of fbl::round_up that works on CheckedNumerics.
@@ -102,14 +104,31 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
       fuchsia::media::StreamBufferPartialSettings());
   EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-  // Set the codec output format to the linear format
   auto output_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
       CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
       fuchsia::media::StreamBufferPartialSettings());
+  EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
+
+  // Set the codec output format to either linear or tiled depending on the fuzzer
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   buffer_collection.settings.has_image_format_constraints = true;
-  buffer_collection.settings.image_format_constraints =
-      output_constraints.image_format_constraints.at(0);
+
+  if (output_image_format_array_[output_image_format_idx_]) {
+    const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
+    ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
+                linear_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+    buffer_collection.settings.image_format_constraints = linear_constraints;
+  } else {
+    const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
+    ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
+                tiled_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+    buffer_collection.settings.image_format_constraints = tiled_constraints;
+  }
+
+  output_image_format_idx_ = (output_image_format_idx_ + 1u) % output_image_format_array_.size();
+
   decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
 
   decoder_->CoreCodecStartStream();
@@ -167,13 +186,20 @@ void VaapiFuzzerTestFixture::ConfigureOutputBuffers(uint32_t output_packet_count
 }
 
 void VaapiFuzzerTestFixture::RunFuzzer(std::string mime_type, const uint8_t *data, size_t size) {
-  CodecAndStreamInit(mime_type);
-
   FuzzedDataProvider provider(data, size);
+
   // Test both with and without sending end of stream after all the data.
   // * Test with to help ensure that the decoder is attempting to decode all the data.
   // * Test without to double-check that tearing down without an end of stream doesn't cause issues.
   bool set_end_of_stream = provider.ConsumeBool();
+
+  // Test both linear and tiled outputs
+  for (size_t i = 0; i < output_image_format_array_.size(); i += 1u) {
+    output_image_format_array_[i] = provider.ConsumeBool();
+  }
+  output_image_format_idx_ = 0u;
+
+  CodecAndStreamInit(mime_type);
 
   ParseDataIntoInputPackets(provider);
   if (set_end_of_stream) {
@@ -198,11 +224,26 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
       fuchsia::media::StreamBufferPartialSettings());
   EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-  // Fake out the client setting buffer constraints on sysmem
+  // Set the codec output format to either linear or tiled depending on the fuzzer
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   buffer_collection.settings.has_image_format_constraints = true;
-  buffer_collection.settings.image_format_constraints =
-      output_constraints.image_format_constraints.at(0);
+
+  if (output_image_format_array_[output_image_format_idx_]) {
+    const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
+    ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
+                linear_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+    buffer_collection.settings.image_format_constraints = linear_constraints;
+  } else {
+    const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
+    ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
+                tiled_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+    buffer_collection.settings.image_format_constraints = tiled_constraints;
+  }
+
+  output_image_format_idx_ = (output_image_format_idx_ + 1u) % output_image_format_array_.size();
+
   decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
 
   // Should be enough to handle a large fraction of bear.h264 output without recycling.

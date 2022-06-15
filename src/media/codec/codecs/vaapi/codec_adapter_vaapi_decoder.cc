@@ -745,6 +745,8 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
       }
 
       // Trigger a mid stream output constraints change
+      // TODO(fxbug.dev/102737): We always request a output reconfiguration. This may or may not be
+      // needed.
       events_->onCoreCodecMidStreamOutputConstraintsChange(true);
 
       gfx::Size pic_size = media_decoder_->GetPicSize();
@@ -940,7 +942,7 @@ void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
 }
 
 void CodecAdapterVaApiDecoder::CoreCodecMidStreamOutputBufferReConfigFinish() {
-  ZX_DEBUG_ASSERT(!surface_buffer_manager_);
+  surface_buffer_manager_.reset();
 
   if (IsOutputTiled()) {
     surface_buffer_manager_ = std::make_unique<TiledBufferManager>(lock_);

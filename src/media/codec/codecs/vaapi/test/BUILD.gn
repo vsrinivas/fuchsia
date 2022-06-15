@@ -82,6 +82,7 @@ source_set("decoder_fuzzer") {
     "//sdk/fidl/fuchsia.mediacodec",
     "//third_party/googletest:gtest",
   ]
+  deps = [ "//sdk/fidl/fuchsia.sysmem" ]
 }
 
 cpp_fuzzer("vaapi_h264_decode_fuzzer") {
