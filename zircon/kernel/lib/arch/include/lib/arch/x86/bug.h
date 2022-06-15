@@ -147,6 +147,7 @@ inline bool HasX86MdsBugs(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelSilvermont:
     case Microarchitecture::kIntelAirmont:
       return true;
+    case Microarchitecture::kIntelTigerLake:
     case Microarchitecture::kIntelBonnell:
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
@@ -188,6 +189,7 @@ inline bool HasX86TaaBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelWestmere:  // Does not implement TSX.
     case Microarchitecture::kIntelSandyBridge:
     case Microarchitecture::kIntelIvyBridge:
+    case Microarchitecture::kIntelTigerLake:
     case Microarchitecture::kIntelBonnell:
     case Microarchitecture::kIntelSilvermont:
     case Microarchitecture::kIntelAirmont:
@@ -246,6 +248,7 @@ inline bool HasX86SsbBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelSkylake:
     case Microarchitecture::kIntelSkylakeServer:
     case Microarchitecture::kIntelCannonLake:
+    case Microarchitecture::kIntelTigerLake:
     case Microarchitecture::kIntelBonnell:
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
@@ -342,6 +345,7 @@ inline bool HasX86MeltdownBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelAirmont:
       return true;
     case Microarchitecture::kIntelSkylakeServer:
+    case Microarchitecture::kIntelTigerLake:
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
     case Microarchitecture::kIntelTremont:
@@ -381,6 +385,7 @@ inline bool HasX86L1tfBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     case Microarchitecture::kIntelBonnell:
       return true;
     case Microarchitecture::kIntelSkylakeServer:
+    case Microarchitecture::kIntelTigerLake:
     case Microarchitecture::kIntelSilvermont:
     case Microarchitecture::kIntelAirmont:
     case Microarchitecture::kIntelGoldmont:
