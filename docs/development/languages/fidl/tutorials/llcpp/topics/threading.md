@@ -380,8 +380,8 @@ request:
 ```
 
 We could destroy the server object at the end of the `unbound_handler` callback.
-Here the code accomplishes this by moving the `std::unique_ptr` containing the
-server into the callback.
+Here the code accomplishes this by deleting the heap allocated server at the end
+of the callback.
 
 ```cpp
 class EchoImpl {

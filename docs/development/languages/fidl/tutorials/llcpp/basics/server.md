@@ -41,10 +41,7 @@ To create a component:
 1. Add a `main()` function to `examples/fidl/llcpp/server/main.cc`:
 
    ```cpp
-   #include <iostream>
-
    int main(int argc, const char** argv) {
-     std::cout << "Hello, world!" << std::endl;
      return 0;
    }
    ```
@@ -182,17 +179,17 @@ This complete process is described in further detail in the
 
 This new code requires the following additional dependencies:
 
-* `"//zircon/system/ulib/async-loop:async-loop-cpp"` and
-  `"//zircon/system/ulib/async-loop:async-loop-default"`: These libraries contain
-  the async loop code.
-* `"//sdk/lib/fdio"` and `"//zircon/system/ulib/svc"`: These libraries are used
-  to interact with the components environment (e.g. for serving protocols).
+* `"//zircon/system/ulib/async-loop:async-loop-cpp"`: This library contains the
+  asynchronous event loop code.
+* `"//sdk/lib/sys/component/llcpp"`: This library is used to publish
+  capabilities, e.g. protocols, to the component's outgoing directory.
+* `"//sdk/lib/syslog/cpp"`: This library is used to log messages.
 
 1.  Add the library targets as dependencies of your `executable` in
     `examples/fidl/llcpp/server/BUILD.gn`:
 
     ```gn
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="bin" highlight="6,7,8,9,10" %}
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="bin" highlight="6,7,8" %}
     ```
 
 1.  Import these dependencies at the top of `examples/fidl/llcpp/server/main.cc`:
@@ -204,7 +201,7 @@ This new code requires the following additional dependencies:
 ### Initialize the event loop
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,31" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,30" %}
 ```
 
 The event loop is used to asynchronously listen for incoming connections and
@@ -214,40 +211,41 @@ channel.
 
 At the end of the main function, the code runs the loop to completion.
 
-### Serve component's service directory
+### Serve component's outgoing directory
 
-The `svc::Outgoing` class serves the service directory ("/svc") for a given
-component. This directory is where the outgoing FIDL protocols are installed so
-that they can be provided to other components. The `ServeFromStartupInfo()`
-function sets up the service directory with the startup handle. The startup
-handle is a handle provided to every component by the system, so that they can
-serve capabilities (e.g. FIDL protocols) to other components.
+The `component::OutgoingDirectory` class serves the outgoing directory for a
+given component. This directory is where the outgoing FIDL protocols are
+installed so that they can be provided to other components. The
+`ServeFromStartupInfo()` function sets up the outgoing directory with the
+startup handle. The startup handle is a handle provided to every component by
+the system, so that they can serve capabilities (e.g. FIDL protocols) to other
+components.
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="7,8,9,10,11,12,13,14,15,16,17" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="7,8,9,10,11,12,13,14" %}
 ```
 
 ### Serve the protocol {#server-handler}
 
-The server then registers the Echo protocol using `ougoing.svc_dir()->AddEntry()`.
+The server then registers the Echo protocol using `outgoing.AddProtocol`.
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="17,18,19,20,21,22,23,24,25,26,27,28,29,30" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="16,17,18,19,20,21,22,23,24,25,26,27" %}
 ```
 
-The call to `AddEntry` installs a handler for the name of the FIDL protocol
-(`fuchsia_examples::Echo::Name`, which is the string `"fuchsia.examples.Echo"`).
-The handler will call the lambda function that we created, and this lambda
-function will construct an `EchoImpl` with the
+The call to `AddProtocol` installs a handler for the name of the FIDL protocol
+(`fidl::DiscoverableProtocolName<fuchsia_examples::Echo>`, which is the string
+`"fuchsia.examples.Echo"`). The handler will call the lambda function that we
+created, and this lambda function will construct an `EchoImpl` with the
 `fidl::ServerEnd<fuchsia_examples::Echo>`, which internally wraps a
 `zx::channel`, that represents a request from a client. The `EchoImpl` stays
-alive until it is unbound, at which point it deletes itself.
+alive the connection is torn down, at which point it deletes itself.
 
-When the handler is called (i.e. when a client has requested to connect to the
-`/svc/fuchsia.examples.Echo` protocol), it binds the incoming channel to our
+When the handler is called (i.e. when a client has requested to connect to
+`/svc/fuchsia.examples.Echo`), it binds the incoming channel to our
 `Echo` implementation, which will start listening for `Echo` requests on that
 channel and dispatch them to the `EchoImpl` instance. `EchoImpl`'s constructor
-creates a `fidl::ServerBindingRef` which is used to send events back to the
+populates a `fidl::ServerBindingRef` which is used to send events back to the
 client.
 
 ## Test the server

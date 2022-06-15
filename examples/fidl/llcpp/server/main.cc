@@ -2,25 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 // [START fidl_includes]
 #include <fidl/fuchsia.examples/cpp/wire.h>
 // [END fidl_includes]
 
 // [START includes]
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/stdcompat/optional.h>
-#include <lib/svc/outgoing.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-#include <zircon/status.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/syslog/cpp/macros.h>
 // [END includes]
-
-class EchoImpl;
 
 // [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by
@@ -29,15 +19,15 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
   // [START bind_server]
   // Bind this implementation to a channel.
-  EchoImpl(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_examples::Echo> request)
-      : binding_(fidl::BindServer(dispatcher, std::move(request), this,
+  EchoImpl(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_examples::Echo> server_end)
+      : binding_(fidl::BindServer(dispatcher, std::move(server_end), this,
                                   // This is a fidl::OnUnboundFn<EchoImpl>.
                                   [this](EchoImpl* impl, fidl::UnbindInfo info,
                                          fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
                                     if (info.is_peer_closed()) {
-                                      std::cout << "Client disconnected" << std::endl;
+                                      FX_LOGS(INFO) << "Client disconnected";
                                     } else if (!info.is_user_initiated()) {
-                                      std::cerr << "server error: " << info << std::endl;
+                                      FX_LOGS(ERROR) << "Server error: " << info;
                                     }
                                     delete this;
                                   })) {}
@@ -71,33 +61,34 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
 int main(int argc, char** argv) {
   // Initialize the async loop. The Echo server will use the dispatcher of this
   // loop to listen for incoming requests.
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
-  // Create an Outgoing class which will serve requests from the /svc/ directory.
-  svc::Outgoing outgoing(loop.dispatcher());
-  zx_status_t status = outgoing.ServeFromStartupInfo();
-  if (status != ZX_OK) {
-    std::cerr << "error: ServeFromStartupInfo returned: " << status << " ("
-              << zx_status_get_string(status) << ")" << std::endl;
+  // Create an OutgoingDirectory class which will serve incoming requests.
+  component::OutgoingDirectory outgoing = component::OutgoingDirectory::Create(dispatcher);
+
+  zx::status result = outgoing.ServeFromStartupInfo();
+  if (result.is_error()) {
+    FX_LOGS(ERROR) << "Failed to serve outgoing directory: " << result.status_string();
     return -1;
   }
 
   // Register a handler for components trying to connect to fuchsia.examples.Echo.
-  status = outgoing.svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_examples::Echo>,
-      fbl::MakeRefCounted<fs::Service>(
-          [dispatcher](fidl::ServerEnd<fuchsia_examples::Echo> request) mutable {
-            std::cout << "Incoming connection for "
-                      << fidl::DiscoverableProtocolName<fuchsia_examples::Echo> << std::endl;
-            // [START create_server]
-            // Create an instance of our EchoImpl that destroys itself when the connection closes.
-            new EchoImpl(dispatcher, std::move(request));
-            // [END create_server]
-            return ZX_OK;
-          }));
+  result = outgoing.AddProtocol<fuchsia_examples::Echo>(
+      [dispatcher](fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
+        FX_LOGS(INFO) << "Incoming connection for "
+                      << fidl::DiscoverableProtocolName<fuchsia_examples::Echo>;
+        // [START create_server]
+        // Create an instance of our EchoImpl that destroys itself when the connection closes.
+        new EchoImpl(dispatcher, std::move(server_end));
+        // [END create_server]
+      });
+  if (result.is_error()) {
+    FX_LOGS(ERROR) << "Failed to add Echo protocol: " << result.status_string();
+    return -1;
+  }
 
-  std::cout << "Running echo server" << std::endl;
+  FX_LOGS(INFO) << "Running echo server";
   loop.Run();
   return 0;
 }
