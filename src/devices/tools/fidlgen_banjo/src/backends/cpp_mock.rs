@@ -414,7 +414,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                                     name
                                 } else {
                                     match ir.get_declaration(identifier).unwrap() {
-                                        Declaration::Interface => {
+                                        Declaration::Protocol => {
                                             if not_callback(identifier, ir).unwrap() {
                                                 let ty_name =
                                                     type_to_cpp_str(&param._type, false, ir)
@@ -474,7 +474,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
     fn codegen_mock(&self, declarations: &Vec<Decl<'_>>, ir: &FidlIr) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_protocol)
+            .filter_map(filter_protocol(ProtocolType::Protocol))
             .map(|data| {
                 Ok(format!(
                     include_str!("templates/cpp/mock.h"),
@@ -503,7 +503,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
         let mut need_cpp_tuple_header = false;
         let mut need_cpp_vector_header = false;
 
-        declarations.iter().filter_map(filter_protocol).for_each(|data| {
+        declarations.iter().filter_map(filter_protocol(ProtocolType::Protocol)).for_each(|data| {
             data.methods.iter().for_each(|method| {
                 if method.has_request {
                     method.request_parameters(ir).unwrap().as_ref().unwrap().iter().for_each(

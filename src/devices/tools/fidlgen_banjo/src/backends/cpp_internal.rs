@@ -79,7 +79,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
     fn codegen_protocol(&self, declarations: &Vec<Decl<'_>>, ir: &FidlIr) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_protocol)
+            .filter_map(filter_protocol(ProtocolType::Protocol))
             .map(|data| {
                 let name = data.name.get_name();
                 Ok(format!(
@@ -100,7 +100,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
     ) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_interface)
+            .filter_map(filter_protocol(ProtocolType::Interface))
             .map(|data| {
                 let name = data.name.get_name();
                 Ok(format!(

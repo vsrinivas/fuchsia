@@ -18,7 +18,7 @@ pub enum Decl<'a> {
     Const { data: &'a fidl::Const },
     Enum { data: &'a fidl::Enum },
     Bits { data: &'a fidl::Bits },
-    Interface { data: &'a fidl::Interface },
+    Protocol { data: &'a fidl::Protocol },
     Struct { data: &'a fidl::Struct },
     Table { data: &'a fidl::Table },
     TypeAlias { data: &'a fidl::TypeAlias },
@@ -38,8 +38,8 @@ pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
             Declaration::Bits => Some(Ok(Decl::Bits {
                 data: ir.bits_declarations.iter().filter(|e| e.name == *ident).next()?,
             })),
-            Declaration::Interface => Some(Ok(Decl::Interface {
-                data: ir.interface_declarations.iter().filter(|e| e.name == *ident).next()?,
+            Declaration::Protocol => Some(Ok(Decl::Protocol {
+                data: ir.protocol_declarations.iter().filter(|e| e.name == *ident).next()?,
             })),
             Declaration::Struct => {
                 let matched = ir.struct_declarations.iter().find_map(|e| {
@@ -97,31 +97,15 @@ impl From<&Option<Vec<Attribute>>> for ProtocolType {
     }
 }
 
-pub fn filter_protocol<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
-    match declaration {
-        Decl::Interface { data } => {
-            if !for_banjo_transport(&data.maybe_attributes) {
-                return None;
-            }
-            match ProtocolType::from(&data.maybe_attributes) {
-                ProtocolType::Protocol => Some(data),
-                _ => None,
-            }
-        }
-        _ => None,
-    }
-}
-
-pub fn filter_interface<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
-    match declaration {
-        Decl::Interface { data } => {
-            if !for_banjo_transport(&data.maybe_attributes) {
-                return None;
-            }
-            match ProtocolType::from(&data.maybe_attributes) {
-                ProtocolType::Interface => Some(data),
-                _ => None,
-            }
+pub fn filter_protocol<'b>(
+    protocol_type: ProtocolType,
+) -> impl Fn(&Decl<'b>) -> Option<&'b Protocol> {
+    move |declaration| match declaration {
+        Decl::Protocol { data }
+            if for_banjo_transport(&data.maybe_attributes)
+                && ProtocolType::from(&data.maybe_attributes) == protocol_type =>
+        {
+            Some(data)
         }
         _ => None,
     }
@@ -309,8 +293,8 @@ pub fn not_callback(id: &CompoundIdentifier, ir: &FidlIr) -> Result<bool, Error>
     if ir.is_external_decl(id)? {
         // This is a workaround for the fact that FidlIr doesn't contain attributes for external
         // libraries.
-        if &Declaration::Interface != ir.get_declaration(id)? {
-            return Err(anyhow!("Expected an interface an interface"));
+        if &Declaration::Protocol != ir.get_declaration(id)? {
+            return Err(anyhow!("Expected a protocol"));
         }
         if id.get_name().ends_with("Callback") {
             return Ok(false);
@@ -409,7 +393,7 @@ pub fn type_to_cpp_str(ty: &Type, wrappers: bool, ir: &FidlIr) -> Result<String,
             | Declaration::Union
             | Declaration::Enum
             | Declaration::Bits => Ok(format!("{}_t", to_c_name(&identifier.get_name()))),
-            Declaration::Interface => {
+            Declaration::Protocol => {
                 let c_name = to_c_name(&identifier.get_name());
                 if not_callback(identifier, ir)? {
                     return Ok(format!("{}_protocol_t", c_name));
@@ -490,7 +474,7 @@ pub fn get_in_params(
                         return Ok(format!("{} {}", ty_name, name));
                     }
                     match ir.get_declaration(identifier).unwrap() {
-                        Declaration::Interface => {
+                        Declaration::Protocol => {
                             if transform && not_callback(identifier, ir)? {
                                 let ty_name = protocol_to_ops_cpp_str(identifier, ir).unwrap();
                                 Ok(format!(

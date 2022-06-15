@@ -451,7 +451,7 @@ fn generate_bind_library(input: &str) -> Result<String, Error> {
         .declarations
         .0
         .iter()
-        .filter(|entry| matches!(entry.1, Declaration::Interface))
+        .filter(|entry| matches!(entry.1, Declaration::Protocol))
         .map(|entry| convert_to_bind_library_enum(entry.0, &library_name))
         .collect::<Result<Vec<String>, _>>()?
         .join("\n");

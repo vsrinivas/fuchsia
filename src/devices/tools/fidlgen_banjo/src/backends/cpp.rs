@@ -259,7 +259,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     .filter_map(|param| {
                         if let Type::Identifier { ref identifier, .. } = param._type {
                             match ir.get_declaration(identifier).unwrap() {
-                                Declaration::Interface => {
+                                Declaration::Protocol => {
                                     if not_callback(identifier, ir).unwrap() {
                                         return Some((
                                             to_c_name(&param.name.0),
@@ -314,7 +314,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     ) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_interface)
+            .filter_map(filter_protocol(ProtocolType::Interface))
             .map(|data| {
                 let name = data.name.get_name();
                 Ok(format!(
@@ -343,7 +343,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     ) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_protocol)
+            .filter_map(filter_protocol(ProtocolType::Protocol))
             .map(|data| {
                 let name = data.name.get_name();
                 Ok(format!(
@@ -392,7 +392,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 .iter()
                 .filter_map(|decl| {
                     // Find all protocols and extract their methods.
-                    if let Decl::Interface { ref data } = *decl {
+                    if let Decl::Protocol { ref data } = *decl {
                         Some(&data.methods)
                     } else {
                         None
@@ -442,7 +442,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     fn codegen_examples(&self, declarations: &Vec<Decl<'_>>, ir: &FidlIr) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_protocol)
+            .filter_map(filter_protocol(ProtocolType::Protocol))
             .map(|data| {
                 let name = data.name.get_name();
                 let example_decls = data

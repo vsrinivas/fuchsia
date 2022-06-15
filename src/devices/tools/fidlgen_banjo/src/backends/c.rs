@@ -46,7 +46,7 @@ fn type_to_c_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
             Declaration::Struct | Declaration::Table | Declaration::Union | Declaration::Enum => {
                 Ok(format!("{}_t", to_c_name(&identifier.get_name())))
             }
-            Declaration::Interface => {
+            Declaration::Protocol => {
                 let c_name = to_c_name(&identifier.get_name());
                 if not_callback(identifier, ir)? {
                     return Ok(format!("{}_protocol_t", c_name));
@@ -259,7 +259,7 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
                         return Ok(format!("{} {}", ty_name, c_name));
                     }
                     match ir.get_declaration(identifier).unwrap() {
-                        Declaration::Interface => {
+                        Declaration::Protocol => {
                             if transform && not_callback(identifier, ir)? {
                                 let ty_name = protocol_to_ops_c_str(identifier, ir).unwrap();
                                 Ok(format!(
@@ -756,7 +756,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(format!(include_str!("templates/c/protocol_ops.h"), c_name = to_c_name(name), fns = fns))
     }
 
-    fn codegen_protocol_helper(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
+    fn codegen_protocol_helper(&self, data: &'a Protocol, ir: &FidlIr) -> Result<String, Error> {
         if ProtocolType::from(&data.maybe_attributes) == ProtocolType::Callback
             || !for_banjo_transport(&data.maybe_attributes)
         {
@@ -845,7 +845,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .map(|x| x.join("\n"))
     }
 
-    fn codegen_protocol_def(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
+    fn codegen_protocol_def(&self, data: &'a Protocol, ir: &FidlIr) -> Result<String, Error> {
         if !for_banjo_transport(&data.maybe_attributes) {
             return Ok("".to_string());
         }
@@ -910,7 +910,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .join(""))
     }
 
-    fn codegen_protocol_decl(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
+    fn codegen_protocol_decl(&self, data: &'a Protocol, ir: &FidlIr) -> Result<String, Error> {
         if !for_banjo_transport(&data.maybe_attributes) {
             return Ok("".to_string());
         }
@@ -967,7 +967,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Const { data } => Some(self.codegen_constant_decl(data, &ir)),
                 Decl::Enum { data } => Some(self.codegen_enum_decl(data, &ir)),
                 Decl::Bits { data } => Some(self.codegen_bits_decl(data, &ir)),
-                Decl::Interface { data } => Some(self.codegen_protocol_decl(data, &ir)),
+                Decl::Protocol { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
                 Decl::Table { data } => Some(self.codegen_table_decl(data)),
                 Decl::TypeAlias { data } => Some(self.codegen_alias_decl(data, &ir)),
@@ -979,7 +979,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
         let definitions = decl_order
             .iter()
             .filter_map(|decl| match decl {
-                Decl::Interface { data } => Some(self.codegen_protocol_def(data, &ir)),
+                Decl::Protocol { data } => Some(self.codegen_protocol_def(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_def(data, &ir)),
                 Decl::Table { data } => Some(self.codegen_table_def(data, &ir)),
                 Decl::Union { data } => Some(self.codegen_union_def(data, &ir)),
@@ -991,7 +991,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
         let helpers = decl_order
             .iter()
             .filter_map(|decl| match decl {
-                Decl::Interface { data } => Some(self.codegen_protocol_helper(data, &ir)),
+                Decl::Protocol { data } => Some(self.codegen_protocol_helper(data, &ir)),
                 _ => None,
             })
             .collect::<Result<Vec<_>, Error>>()?

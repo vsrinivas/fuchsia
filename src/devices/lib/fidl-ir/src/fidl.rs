@@ -117,8 +117,7 @@ pub enum Declaration {
     Bits,
     Const,
     Enum,
-    #[serde(rename = "protocol")]
-    Interface,
+    Protocol,
     Service,
     ExperimentalResource,
     Struct,
@@ -137,8 +136,7 @@ pub enum ExternalDeclaration {
     Bits,
     Const,
     Enum,
-    #[serde(rename = "protocol")]
-    Interface,
+    Protocol,
     Service,
     ExperimentalResource,
     Struct { resource: bool },
@@ -453,7 +451,7 @@ pub struct Method {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Interface {
+pub struct Protocol {
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub name: CompoundIdentifier,
     pub location: Option<Location>,
@@ -599,8 +597,7 @@ pub struct FidlIr {
     pub const_declarations: Vec<Const>,
     pub enum_declarations: Vec<Enum>,
     pub experimental_resource_declarations: Vec<Resource>,
-    #[serde(rename = "protocol_declarations")]
-    pub interface_declarations: Vec<Interface>,
+    pub protocol_declarations: Vec<Protocol>,
     pub service_declarations: Vec<Service>,
     pub struct_declarations: Vec<Struct>,
     pub external_struct_declarations: Vec<Struct>,
@@ -657,7 +654,7 @@ impl FidlIr {
                         ExternalDeclaration::Bits => &Declaration::Bits,
                         ExternalDeclaration::Const => &Declaration::Const,
                         ExternalDeclaration::Enum => &Declaration::Enum,
-                        ExternalDeclaration::Interface => &Declaration::Interface,
+                        ExternalDeclaration::Protocol => &Declaration::Protocol,
                         ExternalDeclaration::Service => &Declaration::Service,
                         ExternalDeclaration::ExperimentalResource => {
                             &Declaration::ExperimentalResource
@@ -703,16 +700,16 @@ impl FidlIr {
     }
 
     pub fn is_protocol(&self, identifier: &CompoundIdentifier) -> bool {
-        self.get_declaration(identifier).map_or(false, |decl| decl == &Declaration::Interface)
+        self.get_declaration(identifier).map_or(false, |decl| decl == &Declaration::Protocol)
     }
 
     pub fn get_protocol_attributes(
         &self,
         identifier: &CompoundIdentifier,
     ) -> Result<&Option<Vec<Attribute>>, Error> {
-        if let Some(Declaration::Interface) = self.declarations.0.get(identifier) {
+        if let Some(Declaration::Protocol) = self.declarations.0.get(identifier) {
             return Ok(&self
-                .interface_declarations
+                .protocol_declarations
                 .iter()
                 .filter(|e| e.name == *identifier)
                 .next()
@@ -750,7 +747,7 @@ impl FidlIr {
     fn build_message_body_type_names(&mut self) -> Result<(), Error> {
         if self.message_body_type_names.is_none() {
             let mut message_body_type_names = HashSet::<CompoundIdentifier>::new();
-            self.interface_declarations.iter().map(|protocol| {
+            self.protocol_declarations.iter().map(|protocol| {
                 protocol.methods.iter().map(|method| {
                     if method.maybe_request_payload.is_some() {
                         match method.maybe_request_payload.as_ref().unwrap() {
