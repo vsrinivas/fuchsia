@@ -66,20 +66,21 @@ def main():
     golden = read_file(args.golden)
     current = read_file(args.current)
 
-    if args.bless:
-        shutil.copyfile(args.current, args.golden)
-    elif golden != current:
-        # Compute paths relative to the Fuchsia directory for the message
-        # below.
-        fuchsia_dir = args.fuchsia_dir if args.fuchsia_dir else '../..'
-        fuchsia_dir = os.path.abspath(fuchsia_dir)
-        golden_path = os.path.relpath(args.golden, fuchsia_dir)
-        current_path = os.path.relpath(args.current, fuchsia_dir)
-        print(
-            MISMATCH_MSG.format(
-                current_path=current_path, golden_path=golden_path),
-            file=sys.stderr)
-        return 1
+    if golden != current:
+        if args.bless:
+            shutil.copyfile(args.current, args.golden)
+        else:
+            # Compute paths relative to the Fuchsia directory for the message
+            # below.
+            fuchsia_dir = args.fuchsia_dir if args.fuchsia_dir else '../..'
+            fuchsia_dir = os.path.abspath(fuchsia_dir)
+            golden_path = os.path.relpath(args.golden, fuchsia_dir)
+            current_path = os.path.relpath(args.current, fuchsia_dir)
+            print(
+                MISMATCH_MSG.format(
+                    current_path=current_path, golden_path=golden_path),
+                file=sys.stderr)
+            return 1
 
     with open(args.stamp, 'w') as stamp_file:
         stamp_file.write('Golden!\n')
