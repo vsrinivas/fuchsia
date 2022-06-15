@@ -381,14 +381,13 @@ zx_status_t AmlGpu::Bind() {
     GPU_ERROR("could not get reset_register fragment");
     return ZX_ERR_NO_RESOURCES;
   }
-  zx::channel register_client_end, register_server_end;
-  if ((status = zx::channel::create(0, &register_client_end, &register_server_end)) != ZX_OK) {
-    GPU_ERROR("could not create channel %d\n", status);
-    return status;
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_registers::Device>();
+  if (endpoints.is_error()) {
+    GPU_ERROR("could not create channel %s\n", endpoints.status_string());
+    return endpoints.error_value();
   }
-  reset_register.Connect(std::move(register_server_end));
-  reset_register_ =
-      fidl::WireSyncClient<fuchsia_hardware_registers::Device>(std::move(register_client_end));
+  reset_register.Connect(endpoints->server.TakeChannel());
+  reset_register_ = fidl::WireSyncClient(std::move(endpoints->client));
 
   if (info.pid == PDEV_PID_AMLOGIC_S905D3 && properties_.supports_protected_mode) {
     // S905D3 needs to use an SMC into the TEE to do protected mode switching.

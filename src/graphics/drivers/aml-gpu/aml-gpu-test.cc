@@ -53,11 +53,9 @@ class TestAmlGpu {
     async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
     loop.StartThread();
     mock_registers::MockRegistersDevice reset_mock(loop.dispatcher());
-    zx::channel client_end, server_end;
-    ASSERT_OK(zx::channel::create(0, &client_end, &server_end));
-    reset_mock.RegistersConnect(std::move(server_end));
-    aml_gpu.reset_register_ =
-        fidl::WireSyncClient<fuchsia_hardware_registers::Device>(std::move(client_end));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_registers::Device>();
+    reset_mock.RegistersConnect(endpoints->server.TakeChannel());
+    aml_gpu.reset_register_ = fidl::WireSyncClient(std::move(endpoints->client));
     reset_mock.fidl_service()->ExpectWrite<uint32_t>(aml_gpu.gpu_block_->reset0_mask_offset,
                                                      aml_registers::MALI_RESET0_MASK, 0);
     reset_mock.fidl_service()->ExpectWrite<uint32_t>(aml_gpu.gpu_block_->reset0_level_offset,
@@ -99,12 +97,13 @@ class TestAmlGpu {
 
     {
       fidl::Arena allocator;
-      Metadata metadata(allocator);
-      metadata.set_supports_protected_mode(false);
+      auto metadata = Metadata::Builder(allocator);
+      metadata.supports_protected_mode(false);
       {
+        auto built_metadata = metadata.Build();
         // TODO(fxbug.dev/45252): Use FIDL at rest.
         fidl::unstable::OwnedEncodedMessage<Metadata> encoded_metadata(
-            fidl::internal::WireFormatVersion::kV2, &metadata);
+            fidl::internal::WireFormatVersion::kV2, &built_metadata);
         ASSERT_TRUE(encoded_metadata.ok());
         auto message_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
         EXPECT_OK(aml_gpu.ProcessMetadata(std::vector<uint8_t>(
@@ -117,12 +116,13 @@ class TestAmlGpu {
 
     {
       fidl::Arena allocator;
-      Metadata metadata(allocator);
-      metadata.set_supports_protected_mode(true);
+      auto metadata = Metadata::Builder(allocator);
+      metadata.supports_protected_mode(true);
       {
+        auto built_metadata = metadata.Build();
         // TODO(fxbug.dev/45252): Use FIDL at rest.
         fidl::unstable::OwnedEncodedMessage<Metadata> encoded_metadata(
-            fidl::internal::WireFormatVersion::kV2, &metadata);
+            fidl::internal::WireFormatVersion::kV2, &built_metadata);
         ASSERT_TRUE(encoded_metadata.ok());
         auto message_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
         EXPECT_OK(aml_gpu.ProcessMetadata(std::vector<uint8_t>(
