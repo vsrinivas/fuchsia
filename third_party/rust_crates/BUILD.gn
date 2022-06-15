@@ -751,6 +751,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("schemars") {
+  public_deps = [ ":schemars-v0_8_10" ]
+}
+
 group("scopeguard") {
   public_deps = [ ":scopeguard-v1_1_0" ]
 }
@@ -3982,6 +3986,29 @@ rust_library("downcast-v0_10_0") {
   visibility = [ ":*" ]
 }
 
+rust_library("dyn-clone-v1_0_5") {
+  crate_name = "dyn_clone"
+  crate_root = "//third_party/rust_crates/vendor/dyn-clone/src/lib.rs"
+  output_name = "dyn_clone-6a4f417762877a3"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=6a4f417762877a3",
+    "-Cextra-filename=-6a4f417762877a3",
+  ]
+
+  visibility = [ ":*" ]
+}
+
 rust_library("easy-parallel-v3_1_0") {
   crate_name = "easy_parallel"
   crate_root = "//third_party/rust_crates/vendor/easy-parallel/src/lib.rs"
@@ -5669,6 +5696,7 @@ rust_library("indexmap-v1_7_0") {
 
   deps = []
   deps += [ ":hashbrown-v0_11_2" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -5677,6 +5705,8 @@ rust_library("indexmap-v1_7_0") {
     "--edition=2018",
     "-Cmetadata=701c6bd73c75516d",
     "-Cextra-filename=-701c6bd73c75516d",
+    "--cfg=feature=\"serde\"",
+    "--cfg=feature=\"serde-1\"",
     "--cfg=has_std",
   ]
 
@@ -10108,6 +10138,70 @@ rust_library("schannel-v0_1_19") {
   visibility = [ ":*" ]
 }
 
+rust_library("schemars-v0_8_10") {
+  crate_name = "schemars"
+  crate_root = "//third_party/rust_crates/vendor/schemars/src/lib.rs"
+  output_name = "schemars-418da217f5a1778c"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":dyn-clone-v1_0_5" ]
+  deps += [ ":indexmap-v1_7_0" ]
+  deps += [ ":schemars_derive-v0_8_10($host_toolchain)" ]
+  deps += [ ":serde-v1_0_116" ]
+  deps += [ ":serde_json-v1_0_59" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=418da217f5a1778c",
+    "-Cextra-filename=-418da217f5a1778c",
+    "--cfg=feature=\"chrono\"",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"derive\"",
+    "--cfg=feature=\"indexmap\"",
+    "--cfg=feature=\"preserve_order\"",
+    "--cfg=feature=\"schemars_derive\"",
+    "--cfg=std_atomic64",
+    "--cfg=std_atomic",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_proc_macro("schemars_derive-v0_8_10") {
+  crate_name = "schemars_derive"
+  crate_root = "//third_party/rust_crates/vendor/schemars_derive/src/lib.rs"
+  output_name = "schemars_derive-5b2df8822511f6d5"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":proc-macro2-v1_0_36" ]
+  deps += [ ":quote-v1_0_18" ]
+  deps += [ ":serde_derive_internals-v0_26_0" ]
+  deps += [ ":syn-v1_0_74" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=5b2df8822511f6d5",
+    "-Cextra-filename=-5b2df8822511f6d5",
+  ]
+
+  visibility = [ ":*" ]
+}
+
 rust_library("scopeguard-v1_1_0") {
   crate_name = "scopeguard"
   crate_root = "//third_party/rust_crates/vendor/scopeguard/src/lib.rs"
@@ -10398,6 +10492,32 @@ rust_proc_macro("serde_derive-v1_0_116") {
     "-Cextra-filename=-5a8d3d0247af7cfd",
     "--cfg=feature=\"default\"",
     "--cfg=underscore_consts",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("serde_derive_internals-v0_26_0") {
+  crate_name = "serde_derive_internals"
+  crate_root = "//third_party/rust_crates/vendor/serde_derive_internals/lib.rs"
+  output_name = "serde_derive_internals-2c76cdeea6fc3318"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":proc-macro2-v1_0_36" ]
+  deps += [ ":quote-v1_0_18" ]
+  deps += [ ":syn-v1_0_74" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=2c76cdeea6fc3318",
+    "-Cextra-filename=-2c76cdeea6fc3318",
   ]
 
   visibility = [ ":*" ]

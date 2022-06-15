@@ -164,6 +164,7 @@ rustc-hash = "1.0.1"
 # tokio to 1.x.
 #rustls = { version = "0.19.1", features = ["dangerous_configuration"] }
 rustls = { path = "forks/rustls", features = ["dangerous_configuration"] }
+schemars = { version = "0.8", features = ["chrono", "preserve_order"] }
 scopeguard = "1.1.0"
 scrypt = "0.8.0"
 serde = { version = "1.0.116", features = ["derive"] }
@@ -533,6 +534,9 @@ rustflags = ["--cfg=integer128", "--cfg=must_use_return", "--cfg=maybe_uninit"]
 [gn.package.proc-macro-nested."0.1.7"]
 rustflags = []
 env_vars = ["OUT_DIR=../../../compat/proc-macro-nested", "PATH_SEPARATOR=/"]
+
+[gn.package.schemars."0.8.10"]
+rustflags = ["--cfg=std_atomic64", "--cfg=std_atomic"]
 
 # We always want to optimize scrypt for speed, because a single key derivation
 # that takes 150 msec when speed-optimized takes 20 seconds (!) when not
