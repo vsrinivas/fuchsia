@@ -387,3 +387,64 @@ func TestInterfacesWatcherDuplicateAddress(t *testing.T) {
 		}
 	}
 }
+
+// TestInterfacesWatcherDeepCopyAddresses ensures that changes to address
+// properties do not get retroactively applied to events enqueued in the past.
+func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
+	eventChan := make(chan interfaceEvent)
+	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
+
+	go interfaceWatcherEventLoop(eventChan, watcherChan)
+	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan})
+	si := &interfaceStateImpl{watcherChan: watcherChan}
+
+	ifs := addNoopEndpoint(t, ns, "")
+
+	// Add an address.
+	protocolAddr := tcpip.ProtocolAddress{
+		Protocol: header.IPv4ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address:   tcpip.Address(net.IPv4(1, 2, 3, 4).To4()),
+			PrefixLen: 16,
+		},
+	}
+	if ok, reason := ifs.addAddress(protocolAddr, stack.AddressProperties{}); !ok {
+		t.Fatalf("ifs.addAddress(%s, {}): %s", protocolAddr.AddressWithPrefix, reason)
+	}
+
+	// Initialize a watcher so that there is a queued Existing event with the
+	// address.
+	watcher := initWatcher(t, si)
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			t.Fatalf("failed to close watcher: %s", err)
+		}
+	}()
+
+	validUntil1 := time.Hour.Nanoseconds()
+	validUntil2 := 2 * validUntil1
+	ifs.mu.Lock()
+	ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, protocolAddr.AddressWithPrefix, time.Monotonic(validUntil1))
+	ifs.ns.onAddressValidUntilChangeLocked(ifs.nicid, protocolAddr.AddressWithPrefix, time.Monotonic(validUntil2))
+	ifs.mu.Unlock()
+
+	// Read all the queued events.
+	var wantAddr interfaces.Address
+	wantAddr.SetAddr(fidlconv.ToNetSubnet(protocolAddr.AddressWithPrefix))
+	wantAddr.SetValidUntil(int64(zx.TimensecInfinite))
+	wantProperties := initialProperties(ifs, ns.name(ifs.nicid))
+	wantProperties.SetAddresses([]interfaces.Address{wantAddr})
+	watcher.expectEvent(t, interfaces.EventWithExisting(wantProperties))
+
+	watcher.expectIdleEvent(t)
+
+	var wantChange interfaces.Properties
+	wantChange.SetId(uint64(ifs.nicid))
+	wantAddr.SetValidUntil(validUntil1)
+	wantChange.SetAddresses([]interfaces.Address{wantAddr})
+	watcher.expectEvent(t, interfaces.EventWithChanged(wantChange))
+
+	wantAddr.SetValidUntil(validUntil2)
+	wantChange.SetAddresses([]interfaces.Address{wantAddr})
+	watcher.expectEvent(t, interfaces.EventWithChanged(wantChange))
+}

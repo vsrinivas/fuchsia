@@ -419,6 +419,9 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 			impl.mu.queue = make([]interfaces.Event, 0, maxInterfaceWatcherQueueLen)
 
 			for _, properties := range propertiesMap {
+				// Must make a deep copy of the addresses so that updates to the slice
+				// don't accidentally change the event added to the queue.
+				properties.SetAddresses(append([]interfaces.Address(nil), properties.GetAddresses()...))
 				impl.mu.queue = append(impl.mu.queue, interfaces.EventWithExisting(properties))
 			}
 			impl.mu.queue = append(impl.mu.queue, interfaces.EventWithIdle(interfaces.Empty{}))
