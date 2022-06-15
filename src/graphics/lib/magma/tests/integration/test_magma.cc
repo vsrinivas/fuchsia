@@ -366,7 +366,7 @@ class TestConnection {
 
     magma_buffer_t buffer;
     ASSERT_EQ(MAGMA_STATUS_OK, magma_import(connection_, handle, &buffer));
-    EXPECT_EQ(magma_get_buffer_id(buffer), exported_id);
+    EXPECT_NE(magma_get_buffer_id(buffer), exported_id);
 
     magma_release_buffer(connection_, buffer);
   }
@@ -631,7 +631,7 @@ class TestConnection {
 
     magma_semaphore_t semaphore;
     ASSERT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
-    EXPECT_EQ(magma_get_semaphore_id(semaphore), exported_id);
+    EXPECT_NE(magma_get_semaphore_id(semaphore), exported_id);
 
     magma_release_semaphore(connection_, semaphore);
   }

@@ -4,6 +4,7 @@
 
 #include "magma.h"
 
+#include <atomic>
 #include <chrono>
 #include <map>
 
@@ -19,6 +20,25 @@
 #include "platform_thread.h"
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
+
+namespace {
+
+class IdGenerator {
+ public:
+  uint64_t get() {
+    uint64_t id = counter_.fetch_add(1);
+    DASSERT(id);
+    return id;
+  }
+
+ private:
+  std::atomic_uint64_t counter_ = 1;
+};
+
+IdGenerator s_buffer_id_generator;
+IdGenerator s_semaphore_id_generator;
+
+}  // namespace
 
 magma_status_t magma_device_import(uint32_t device_handle, magma_device_t* device) {
   auto platform_device_client = magma::PlatformDeviceClient::Create(device_handle);
@@ -94,6 +114,8 @@ magma_status_t magma_create_buffer(magma_connection_t connection, uint64_t size,
   if (!platform_buffer->duplicate_handle(&handle))
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
 
+  platform_buffer->set_local_id(s_buffer_id_generator.get());
+
   magma_status_t result =
       magma::PlatformConnectionClient::cast(connection)
           ->ImportObject(handle, magma::PlatformObject::BUFFER, platform_buffer->id());
@@ -165,6 +187,8 @@ magma_status_t magma_import(magma_connection_t connection, uint32_t buffer_handl
   uint32_t handle;
   if (!platform_buffer->duplicate_handle(&handle))
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
+
+  platform_buffer->set_local_id(s_buffer_id_generator.get());
 
   magma_status_t result =
       magma::PlatformConnectionClient::cast(connection)
@@ -292,6 +316,8 @@ magma_status_t magma_create_semaphore(magma_connection_t connection,
   auto semaphore = magma::PlatformSemaphore::Create();
   if (!semaphore)
     return MAGMA_STATUS_MEMORY_ERROR;
+
+  semaphore->set_local_id(s_semaphore_id_generator.get());
 
   uint32_t handle;
   if (!semaphore->duplicate_handle(&handle))
@@ -432,6 +458,8 @@ magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t se
   auto platform_semaphore = magma::PlatformSemaphore::Import(semaphore_handle);
   if (!platform_semaphore)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "PlatformSemaphore::Import failed");
+
+  platform_semaphore->set_local_id(s_semaphore_id_generator.get());
 
   uint32_t handle;
   if (!platform_semaphore->duplicate_handle(&handle))
