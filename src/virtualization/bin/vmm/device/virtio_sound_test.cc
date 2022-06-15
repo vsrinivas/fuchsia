@@ -1456,7 +1456,8 @@ TEST_F(VirtioSoundTest, PcmOutputXferMultiple) {
   }
 }
 
-TEST_F(VirtioSoundTest, PcmOutputXferThenRelease) {
+// TODO(fxbug.dev/99083): Re-enable this test once the flake is fixed.
+TEST_F(VirtioSoundTest, DISABLED_PcmOutputXferThenRelease) {
   constexpr uint32_t kBufferBytes = 64;
   constexpr uint32_t kPeriodBytes = 8;
   uint32_t expected_latency_bytes;
