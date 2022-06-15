@@ -609,17 +609,10 @@ impl UpdateChecker for RealUpdateChecker {
 
 // For mocking
 pub trait TargetChannelUpdater: Send + Sync + 'static {
-    fn update(&self) -> BoxFuture<'_, ()>;
     fn get_target_channel_update_url(&self) -> Option<String>;
 }
 
 impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<S> {
-    fn update(&self) -> BoxFuture<'_, ()> {
-        TargetChannelManager::update(self)
-            .unwrap_or_else(|e| fx_log_err!("while updating target channel: {:#}", anyhow!(e)))
-            .boxed()
-    }
-
     fn get_target_channel_update_url(&self) -> Option<String> {
         TargetChannelManager::get_target_channel_update_url(self)
     }
@@ -794,10 +787,6 @@ pub(crate) mod tests {
         }
     }
     impl TargetChannelUpdater for FakeTargetChannelUpdater {
-        fn update(&self) -> BoxFuture<'_, ()> {
-            async move {}.boxed()
-        }
-
         fn get_target_channel_update_url(&self) -> Option<String> {
             Some(self.update_url.clone())
         }
