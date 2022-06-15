@@ -12,7 +12,6 @@ use {
         RealmOptions, SandboxRequest, SandboxRequestStream,
     },
     fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_sys2 as fsys2,
-    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
         self as fcomponent, Capability, ChildOptions, LocalComponentHandles, RealmBuilder,
@@ -25,7 +24,6 @@ use {
         channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryFutureExt as _,
         TryStreamExt as _,
     },
-    log::{debug, error, info, warn},
     std::{
         borrow::Cow,
         collections::hash_map::{Entry, HashMap},
@@ -35,6 +33,7 @@ use {
         },
     },
     thiserror::Error,
+    tracing::{debug, error, info, warn},
     vfs::directory::{
         entry::DirectoryEntry, helper::DirectlyMutable as _,
         mutable::simple::Simple as SimpleMutableDir,
@@ -560,17 +559,17 @@ impl ManagedRealm {
                                         .unwrap_or_else(|e| {
                                             // PEER_CLOSED errors are expected
                                             // to happen during test teardown.
-                                            let level = if e.is_closed() {
-                                                log::Level::Warn
+                                            if e.is_closed() {
+                                                warn!(
+                                                    "failed to serve device on path {}: {}",
+                                                    path_clone, e
+                                                );
                                             } else {
-                                                log::Level::Error
-                                            };
-                                            log::log!(
-                                                level,
-                                                "failed to serve device on path {}: {}",
-                                                path_clone,
-                                                e
-                                            );
+                                                error!(
+                                                    "failed to serve device on path {}: {}",
+                                                    path_clone, e
+                                                );
+                                            }
                                         });
                                 },
                             ),
@@ -955,9 +954,8 @@ async fn handle_sandbox(
     }
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main()]
 async fn main() -> Result {
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
     info!("starting...");
 
     let mut fs = ServiceFs::new_local();
@@ -982,7 +980,7 @@ mod tests {
     use {
         fidl::endpoints::Proxy as _, fidl_fuchsia_device as fdevice,
         fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netemul_test as fnetemul_test,
-        fidl_fuchsia_netemul_test::CounterMarker, fixture::fixture,
+        fidl_fuchsia_netemul_test::CounterMarker, fixture::fixture, fuchsia_async as fasync,
         fuchsia_vfs_watcher as fvfs_watcher, std::convert::TryFrom as _,
     };
 

@@ -73,8 +73,6 @@ third_party_rust_crate_log_visibility = [
   "//src/connectivity/network/testing/netemul/configurable-netstack/tests:*",
   "//src/connectivity/network/testing/netemul/doc/runner-test:*",
   "//src/connectivity/network/testing/netemul/runner:*",
-  "//src/connectivity/network/testing/netemul/service:*",
-  "//src/connectivity/network/testing/netemul/test-support:*",
   "//src/connectivity/network/testing/network-test-realm/ffx:*",
   "//src/connectivity/network/testing/network-test-realm/ffx:*",
   "//src/connectivity/network/testing/network-test-realm/service:*",

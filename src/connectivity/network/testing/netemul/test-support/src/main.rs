@@ -5,15 +5,14 @@
 use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_netemul_test::{CounterRequest, CounterRequestStream},
-    fuchsia_async as fasync,
     fuchsia_component::{
         client,
         server::{ServiceFs, ServiceFsDir},
     },
     futures::prelude::*,
-    log::{error, info},
     std::sync::Arc,
     std::sync::Mutex,
+    tracing::{error, info},
 };
 
 struct CounterData {
@@ -93,10 +92,9 @@ struct Args {
     starting_value: u32,
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main()]
 async fn main() -> Result<(), Error> {
     let Args { starting_value } = argh::from_env();
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
     let mut fs = ServiceFs::new();
     let inspector = fuchsia_inspect::component::inspector();
     let data = {
