@@ -90,7 +90,10 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
                                                 const fs_management::MountOptions& options,
                                                 zx::channel block_device_client,
                                                 fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
+  FX_LOGS(INFO) << "FilesystemMounter::MountFilesystem(" << binary << ")";
   std::string device_path = GetDevicePath(block_device_client);
+  FX_LOGS(INFO) << "Mounting device " << device_path << " with " << binary << " at "
+                << FsManager::MountPointPath(point);
 
   std::optional endpoints_or = fshost_.TakeMountPointServerEnd(point);
   if (!endpoints_or.has_value()) {
