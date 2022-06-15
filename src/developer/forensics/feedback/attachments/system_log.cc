@@ -32,6 +32,9 @@
 namespace forensics::feedback {
 namespace {
 
+constexpr int32_t kDefaultLogSeverity = 0;
+const std::vector<std::string> kDefaultTags = {};
+
 size_t AppendRepeated(const size_t last_msg_repeated, std::string& append_to) {
   auto repeated_str = last_msg_repeated == 1
                           ? feedback_data::kRepeatedOnceFormatStr
@@ -56,13 +59,17 @@ bool LogBuffer::Add(LogSink::MessageOr message) {
   // Assume timestamp 0 if no messages have been added yet.
   const int64_t last_timestamp = (messages_.empty()) ? 0 : messages_.back().timestamp;
   const auto& msg = (message.is_ok()) ? message.value().msg : message.error();
+  const auto& severity = (message.is_ok()) ? message.value().severity : kDefaultLogSeverity;
+  const auto& tags = (message.is_ok()) ? message.value().tags : kDefaultTags;
 
   // Adds a new message to |messages_| and updates internal accounting.
-  auto AddNew = [this, &message, &msg, last_timestamp] {
+  auto AddNew = [this, &message, &msg, &severity, &tags, last_timestamp] {
     messages_.emplace_back(message, last_timestamp);
     size_ += messages_.back().msg.size();
 
     last_msg_ = msg;
+    last_severity_ = severity;
+    last_tags = tags;
     last_msg_repeated_ = 0;
     is_sorted_ &= messages_.back().timestamp >= last_timestamp;
 
@@ -80,7 +87,7 @@ bool LogBuffer::Add(LogSink::MessageOr message) {
   }
 
   // The most recent message is repeated, don't need to create new data.
-  if (last_msg_ == msg) {
+  if (last_msg_ == msg && last_severity_ == severity && last_tags == tags) {
     ++last_msg_repeated_;
     return true;
   }
@@ -95,8 +102,7 @@ bool LogBuffer::Add(LogSink::MessageOr message) {
 
 void LogBuffer::NotifyInterruption() {
   messages_.clear();
-  last_msg_ = "";
-  last_msg_repeated_ = 0u;
+  ResetLastMessage();
   is_sorted_ = true;
   size_ = 0u;
 
@@ -159,8 +165,7 @@ void LogBuffer::Sort() {
   // LOG MESSAGE A
   //
   // in a final system log.
-  last_msg_ = "";
-  last_msg_repeated_ = 0;
+  ResetLastMessage();
 }
 
 void LogBuffer::RunActions(const int64_t timestamp) {
@@ -181,6 +186,13 @@ void LogBuffer::EnforceCapacity() {
     size_ -= messages_.front().msg.size();
     messages_.pop_front();
   }
+}
+
+void LogBuffer::ResetLastMessage() {
+  last_msg_ = "";
+  last_severity_ = 0;
+  last_tags = {};
+  last_msg_repeated_ = 0u;
 }
 
 LogBuffer::Message::Message(const LogSink::MessageOr& message, int64_t default_timestamp)

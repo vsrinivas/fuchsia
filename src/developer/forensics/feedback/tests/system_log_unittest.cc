@@ -37,6 +37,9 @@ namespace {
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
+constexpr syslog::LogSeverity kLogInfo = syslog::LOG_INFO;
+constexpr syslog::LogSeverity kLogWarning = syslog::LOG_WARNING;
+
 std::string MessageJson(const int id) {
   return fxl::StringPrintf(
       R"JSON(
@@ -223,14 +226,16 @@ class SimpleRedactor : public RedactorBase {
   std::string RedactedCanary() const override { return ""; }
 };
 
-feedback_data::LogSink::MessageOr ToMessage(const std::string& msg) {
+feedback_data::LogSink::MessageOr ToMessage(const std::string& msg,
+                                            syslog::LogSeverity severity = kLogInfo,
+                                            std::vector<std::string> tags = {"tag1", "tag2"}) {
   return ::fpromise::ok(fuchsia::logger::LogMessage{
       .pid = 100,
       .tid = 101,
       .time = (zx::sec(1) + zx::msec(10)).get(),
-      .severity = syslog::LOG_INFO,
+      .severity = severity,
       .dropped_logs = 0,
-      .tags = {"tag1", "tag2"},
+      .tags = std::move(tags),
       .msg = msg,
   });
 }
@@ -240,7 +245,7 @@ feedback_data::LogSink::MessageOr ToMessage(const std::string& msg, const zx::du
       .pid = 100,
       .tid = 101,
       .time = time.get(),
-      .severity = syslog::LOG_INFO,
+      .severity = kLogInfo,
       .dropped_logs = 0,
       .tags = {"tag1", "tag2"},
       .msg = msg,
@@ -431,8 +436,48 @@ TEST(LogBufferTest, RepeatedMessage) {
   EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
   EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
 
+  // Exact same message, severity and tags: should be deduplicated
   EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
 !!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+}
+
+TEST(LogBufferTest, DoNotDeduplicateIfDifferentMessage) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
+[00001.010][00100][00101][tag1, tag2] INFO: log 2
+)");
+}
+
+TEST(LogBufferTest, DoNotDeduplicateIfDifferentSeverity) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", kLogInfo)));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", kLogWarning)));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
+[00001.010][00100][00101][tag1, tag2] WARN: log 1
+)");
+}
+
+TEST(LogBufferTest, DoNotDeduplicateIfDifferentTags) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", kLogInfo, {"tag1", "tag2"})));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", kLogInfo, {"tag1"})));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
+[00001.010][00100][00101][tag1] INFO: log 1
 )");
 }
 
@@ -457,6 +502,19 @@ TEST(LogBufferTest, RepeatedError) {
 
   EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
 !!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+}
+
+TEST(LogBufferTest, DoNotDeduplicateIfDifferentError) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! Failed to format chunk: ERRORS ERR 2 !!!
 )");
 }
 

@@ -18,6 +18,8 @@ namespace system_log_recorder {
 namespace {
 
 const std::string kDroppedFormatStr = "!!! DROPPED %lu MESSAGES !!!\n";
+constexpr int32_t kDefaultLogSeverity = 0;
+const std::vector<std::string> kDefaultTags = {};
 
 std::string MakeRepeatedWarning(const size_t message_count) {
   if (message_count == 2) {
@@ -52,6 +54,13 @@ void LogMessageStore::AddToBuffer(const std::string& str) {
   buffer_stats_.Use(StorageSize::Bytes(encoded.size()));
 }
 
+void LogMessageStore::ResetLastPushedMessage() {
+  last_pushed_message_ = "";
+  last_pushed_severity_ = 0;
+  last_pushed_tags = {};
+  last_pushed_message_count_ = 0;
+}
+
 bool LogMessageStore::Add(LogSink::MessageOr message) {
   TRACE_DURATION("feedback:io", "LogMessageStore::Add");
 
@@ -59,15 +68,15 @@ bool LogMessageStore::Add(LogSink::MessageOr message) {
 
   const auto& log_msg =
       (message.is_ok()) ? redactor_->Redact(message.value().msg) : message.error();
+  const auto& log_severity = (message.is_ok()) ? message.value().severity : kDefaultLogSeverity;
+  const auto& log_tags = (message.is_ok()) ? message.value().tags : kDefaultTags;
 
-  // 1. Early return if the incoming message is the same as last time.
-  if (last_pushed_message_ == log_msg) {
+  // 1. Early return if the incoming message, severity and tags are the same as last time.
+  if (last_pushed_message_ == log_msg && last_pushed_severity_ == log_severity &&
+      last_pushed_tags == log_tags) {
     last_pushed_message_count_++;
     return true;
   }
-  // received new message, clear repeat variables.
-  last_pushed_message_ = "";
-  repeat_buffer_count_ = 0;
 
   // 2. Push the repeated message if any.
   if (last_pushed_message_count_ > 1) {
@@ -76,7 +85,9 @@ bool LogMessageStore::Add(LogSink::MessageOr message) {
     // control its (small) size.
     AddToBuffer(repeated_msg);
   }
-  last_pushed_message_count_ = 0;
+  // received new message, clear repeat variables.
+  ResetLastPushedMessage();
+  repeat_buffer_count_ = 0;
 
   // 3. Early return on full buffer when there is a rate limit.
   if (buffer_rate_limit_ && buffer_stats_.IsFull()) {
@@ -92,6 +103,8 @@ bool LogMessageStore::Add(LogSink::MessageOr message) {
   if (!buffer_rate_limit_ || buffer_stats_.CanUse(StorageSize::Bytes(str.size()))) {
     AddToBuffer(str);
     last_pushed_message_ = log_msg;
+    last_pushed_severity_ = log_severity;
+    last_pushed_tags = log_tags;
     last_pushed_message_count_ = 1;
     return true;
   } else {
@@ -120,8 +133,7 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
   // Optionally log whether some messages were dropped.
   if (num_messages_dropped_ > 0) {
     AddToBuffer(fxl::StringPrintf(kDroppedFormatStr.c_str(), num_messages_dropped_));
-    last_pushed_message_ = "";
-    last_pushed_message_count_ = 0;
+    ResetLastPushedMessage();
   }
 
   // Optionally log important message at the end.
@@ -129,8 +141,7 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
     AddToBuffer(to_append_.value());
     to_append_ = std::nullopt;
     // We are changing the last message so we want to reset the last message pushed.
-    last_pushed_message_ = "";
-    last_pushed_message_count_ = 0;
+    ResetLastPushedMessage();
   }
 
   // We assume all messages end with a newline character.
@@ -146,8 +157,7 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
     encoder_->Reset();
     // We reset the last message pushed and its count so that we don't have a block starting with a
     // repeated message without the actual message.
-    last_pushed_message_ = "";
-    last_pushed_message_count_ = 0;
+    ResetLastPushedMessage();
     *end_of_block = true;
   } else {
     *end_of_block = false;

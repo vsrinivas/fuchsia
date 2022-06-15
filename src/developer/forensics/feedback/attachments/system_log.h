@@ -65,10 +65,15 @@ class LogBuffer : public feedback_data::LogSink {
   void RunActions(int64_t timestamp);
   void EnforceCapacity();
 
+  // Resets variables keeping track of the last message
+  void ResetLastMessage();
+
   RedactorBase* redactor_;
   std::deque<Message> messages_;
 
   std::string last_msg_{};
+  int32_t last_severity_{};
+  std::vector<std::string> last_tags{};
   size_t last_msg_repeated_{0u};
 
   bool is_sorted_{true};

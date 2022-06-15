@@ -86,6 +86,9 @@ class LogMessageStore : public LogSink {
   // the buffer and the block.
   void AddToBuffer(const std::string& str);
 
+  // Resets variables keeping track of the last pushed message
+  void ResetLastPushedMessage();
+
   std::mutex mtx_;
   std::deque<std::string> buffer_;
 
@@ -96,6 +99,8 @@ class LogMessageStore : public LogSink {
   size_t num_messages_dropped_ = 0;
   size_t last_pushed_message_count_ = 0;
   std::string last_pushed_message_;
+  int32_t last_pushed_severity_;
+  std::vector<std::string> last_pushed_tags;
   size_t repeat_buffer_count_ = 0;
   std::optional<std::string> to_append_ = std::nullopt;
 

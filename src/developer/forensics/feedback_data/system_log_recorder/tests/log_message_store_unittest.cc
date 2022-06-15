@@ -424,6 +424,44 @@ TEST(LogMessageStoreTest, VerifyRepetitionMessage_WhenMessageChanges) {
   EXPECT_FALSE(end_of_block);
 }
 
+TEST(LogMessageStoreTest, VerifyRepetitionMessage_WhenSeverityChanges) {
+  bool end_of_block;
+  // Set up the store to hold 3 log line. Verify that a repetition message appears after input
+  // repetition and before the input severity change.
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2 + kRepeatedFormatStrSize,
+                        MakeIdentityRedactor(), MakeIdentityEncoder());
+  store.TurnOnRateLimiting();
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_WARNING, "line 0")));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[15604.000][07559][07687][] WARN: line 0
+)");
+  EXPECT_FALSE(end_of_block);
+}
+
+TEST(LogMessageStoreTest, VerifyRepetitionMessage_WhenTagsChange) {
+  bool end_of_block;
+  // Set up the store to hold 4 log lines. Verify that a repetition message appears after
+  // input repetition and before the input change.
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 3 + kRepeatedFormatStrSize,
+                        MakeIdentityRedactor(), MakeIdentityEncoder());
+  store.TurnOnRateLimiting();
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::duration(0), {"tag1"})));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::duration(0), {"tag1"})));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::duration(0), {"tag1", "tag2"})));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][tag1] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[15604.000][07559][07687][tag1, tag2] INFO: line 0
+)");
+  EXPECT_FALSE(end_of_block);
+}
+
 TEST(LogMessageStoreTest, VerifyDroppedRepeatedMessage_OnBufferFull) {
   bool end_of_block;
   // Set up the store to hold 1 log line. Verify that repeated messages that occur after the
