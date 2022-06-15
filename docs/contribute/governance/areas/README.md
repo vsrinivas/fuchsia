@@ -74,7 +74,7 @@ Most of the APIs exposed by drivers are in the `fuchsia.hardware.*` namespaces.
 
 Other APIs are distributed under the corresponding area (e.g. Bluetooth, WLAN,
 Graphics, HCI) that the driver tackles. Although these APIs do not live under
-`fuchisa.hardware.*` namespace they might interact with hardware, or other
+`fuchsia.hardware.*` namespace they might interact with hardware, or other
 drivers that interact with hardware.
 
 Examples:
