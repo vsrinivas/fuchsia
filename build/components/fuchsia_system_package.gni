@@ -11,22 +11,10 @@ import("fuchsia_package.gni")
 # reachable from the //build/input:system_image target, and optionally
 # for //build/images:base_packages and //build/images:meta_packages.
 #
-# System packages should be rare, and can be added to the system image in
-# two different ways:
-#
-#   1) By adding them to the //build/input:system_image dependency tree,
-#      which should _only_ list fuchsia_system_package() intances. The
-#      build will complain if it finds a non-driver fuchsia_package()
-#      there.
-#
-#   2) By adding them to the //build/images:base_packages or
-#      //build/images:meta_packages dependency trees. This is useful when
-#      a base package requires the content of a specific extra
-#      fuchsia_system_package() to be installed in the system image as well.
-#
-#      Such a package instance must set the "allowed_in_extra_deps" parameter
-#      below. The build system will complain if it finds an unmarked extra
-#      fuchsia_system_package() in this set.
+# System packages should be rare, and can be added to the system image
+# by adding them to the //build/input:system_image dependency tree,
+# should _only_ list fuchsia_system_package() intances. The
+# build will complain if it finds a non-driver fuchsia_package().
 #
 # Parameters:
 #
@@ -34,12 +22,6 @@ import("fuchsia_package.gni")
 #     The name of the package.
 #     Type: string
 #     Default: target_name
-#
-#   allowed_in_extra_deps (optional)
-#     Set to true to allow this package to be part of extra dependency
-#     trees used to build the system image. This is useful when this
-#     package is required by another base or meta package, but shouldn't
-#     be part of the default system image dependency tree otherwise.
 #
 #   data_deps
 #   deps
@@ -61,7 +43,6 @@ template("fuchsia_system_package") {
                              "visibility",
                            ])
 
-    system_image_package_allowed_in_extra_deps =
-        defined(invoker.allowed_in_extra_deps) && invoker.allowed_in_extra_deps
+    is_system_package = true
   }
 }

@@ -76,11 +76,10 @@ import("//tools/configc/build/config.gni")
 #     Type: boolean
 #     Default: true
 #
-#   system_image_package_allowed_in_extra_deps (optional)
+#   is_system_package (optional)
 #     Used internally to implement fuchsia_system_package(), do not use!
-#     If defined, this is a fuchsia_system_package(), and the argument value
-#     determines whether it is allowed in extra dependency trees beside
-#     the one from //build/input:system_image.
+#     If this is true, this is a fuchsia_system_package(), and it is allowed
+#     to be included in //build/input:system_image.
 #     Type: boolean
 #
 #   is_driver_package (optional)
@@ -177,10 +176,8 @@ template("fuchsia_package") {
     not_needed([ "_is_driver_package" ])
 
     _is_system_package = false
-    if (defined(invoker.system_image_package_allowed_in_extra_deps)) {
-      _is_system_package = true
-      _is_system_package_allowed_in_extra_deps =
-          invoker.system_image_package_allowed_in_extra_deps
+    if (defined(invoker.is_system_package)) {
+      _is_system_package = invoker.is_system_package
     }
 
     # Build package
@@ -228,29 +225,10 @@ template("fuchsia_package") {
           {
             label = get_label_info(":$target_name", "label_with_toolchain")
             fini_manifest = rebase_path(_files.fini_manifest, root_build_dir)
-            if (_is_system_package) {
-              system_image_package_allowed_in_extra_deps =
-                  _is_system_package_allowed_in_extra_deps
-            }
           },
         ]
         system_image_package_barrier = []
 
-        # Used by image assembly to locate the package_manifest json file for
-        # this package, if it's allowed in the extra deps.
-        if (_is_system_package) {
-          if (_is_system_package_allowed_in_extra_deps) {
-            # This is the path that the pm_build() template will create in the
-            # `package_output_manifest` metadata key.
-            system_image_extra_package_manifest = [
-              {
-                package_manifest =
-                    rebase_path(_files.package_manifest, root_build_dir)
-                label = get_label_info(":$target_name", "label_with_toolchain")
-              },
-            ]
-          }
-        }
         system_image_extra_package_manifest_barrier = []
         test_component_manifest_barrier = []
         test_component_manifest_program_barrier = []
