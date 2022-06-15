@@ -59,7 +59,7 @@ use crate::{
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap},
-    BufferDispatcher, BufferNonSyncContext, EventDispatcher, NonSyncContext, SyncCtx,
+    BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
 
 /// The default number of ICMP error messages to send per second.
@@ -2599,12 +2599,8 @@ fn receive_icmp_echo_reply<
 ///
 /// `send_icmpv4_echo_request` panics if `conn` is not associated with an ICMPv4
 /// connection.
-pub fn send_icmpv4_echo_request<
-    B: BufferMut,
-    D: BufferDispatcher<B>,
-    NonSyncCtx: BufferNonSyncContext<B>,
->(
-    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn send_icmpv4_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
@@ -2619,12 +2615,8 @@ pub fn send_icmpv4_echo_request<
 ///
 /// `send_icmpv6_echo_request` panics if `conn` is not associated with an ICMPv6
 /// connection.
-pub fn send_icmpv6_echo_request<
-    B: BufferMut,
-    D: BufferDispatcher<B>,
-    NonSyncCtx: BufferNonSyncContext<B>,
->(
-    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn send_icmpv6_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
@@ -2685,8 +2677,8 @@ pub enum IcmpSockCreationError {
 }
 
 /// Creates a new unbound ICMPv4 socket.
-pub fn create_icmpv4_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn create_icmpv4_unbound<NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<NonSyncCtx>,
 ) -> IcmpUnboundId<Ipv4> {
     create_icmpv4_unbound_inner(ctx)
 }
@@ -2702,8 +2694,8 @@ fn create_icmpv4_unbound_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C
 }
 
 /// Creates a new unbound ICMPv6 socket.
-pub fn create_icmpv6_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn create_icmpv6_unbound<NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<NonSyncCtx>,
 ) -> IcmpUnboundId<Ipv6> {
     create_icmpv6_unbound_inner(ctx)
 }
@@ -2723,8 +2715,8 @@ fn create_icmpv6_unbound_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C
 /// # Panics
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
-pub fn remove_icmpv4_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn remove_icmpv4_unbound<NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<NonSyncCtx>,
     id: IcmpUnboundId<Ipv4>,
 ) {
     remove_icmpv4_unbound_inner(ctx, id)
@@ -2746,8 +2738,8 @@ fn remove_icmpv4_unbound_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C
 /// # Panics
 ///
 /// Panics if `id` is not a valid [`IcmpUnboundId`].
-pub fn remove_icmpv6_unbound<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn remove_icmpv6_unbound<NonSyncCtx: NonSyncContext>(
+    ctx: &mut SyncCtx<NonSyncCtx>,
     id: IcmpUnboundId<Ipv6>,
 ) {
     remove_icmpv6_unbound_inner(ctx, id)
@@ -2776,8 +2768,8 @@ fn remove_icmpv6_unbound_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C
 /// # Panics
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
-pub fn connect_icmpv4<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn connect_icmpv4<NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: IcmpUnboundId<Ipv4>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
@@ -2815,8 +2807,8 @@ fn connect_icmpv4_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C>>(
 /// # Panics
 ///
 /// Panics if `id` is an invalid [`IcmpUnboundId`].
-pub fn connect_icmpv6<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+pub fn connect_icmpv6<NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     id: IcmpUnboundId<Ipv6>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
@@ -2900,20 +2892,16 @@ mod tests {
     };
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
-        fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+        fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
+            sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Self::Addr>>,
             remote_addr: SpecifiedAddr<Self::Addr>,
             icmp_id: u16,
         ) -> Result<IcmpConnId<Self>, IcmpSockCreationError>;
 
-        fn send_icmp_echo_request<
-            B: BufferMut,
-            D: BufferDispatcher<B>,
-            NonSyncCtx: BufferNonSyncContext<B>,
-        >(
-            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+        fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
+            sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Self>,
             seq_num: u16,
@@ -2922,8 +2910,8 @@ mod tests {
     }
 
     impl TestIpExt for Ipv4 {
-        fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+        fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
+            sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
             remote_addr: SpecifiedAddr<Ipv4Addr>,
@@ -2933,12 +2921,8 @@ mod tests {
             connect_icmpv4(sync_ctx, ctx, unbound, local_addr, remote_addr, icmp_id)
         }
 
-        fn send_icmp_echo_request<
-            B: BufferMut,
-            D: BufferDispatcher<B>,
-            NonSyncCtx: BufferNonSyncContext<B>,
-        >(
-            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+        fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
+            sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Ipv4>,
             seq_num: u16,
@@ -2949,8 +2933,8 @@ mod tests {
     }
 
     impl TestIpExt for Ipv6 {
-        fn new_icmp_connection<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+        fn new_icmp_connection<NonSyncCtx: NonSyncContext>(
+            sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
             remote_addr: SpecifiedAddr<Ipv6Addr>,
@@ -2960,12 +2944,8 @@ mod tests {
             connect_icmpv6(sync_ctx, ctx, unbound, local_addr, remote_addr, icmp_id)
         }
 
-        fn send_icmp_echo_request<
-            B: BufferMut,
-            D: BufferDispatcher<B>,
-            NonSyncCtx: BufferNonSyncContext<B>,
-        >(
-            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+        fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
+            sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             conn: IcmpConnId<Ipv6>,
             seq_num: u16,

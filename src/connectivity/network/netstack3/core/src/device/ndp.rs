@@ -1358,7 +1358,7 @@ mod tests {
             receive_ipv6_packet, SendIpPacketMeta,
         },
         testutil::{
-            assert_empty, get_counter_val, handle_timer, set_logger_for_test, DummyEventDispatcher,
+            assert_empty, get_counter_val, handle_timer, set_logger_for_test,
             DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V6,
         },
         Ctx, Instant, StackStateBuilder, TimerId, TimerIdInner,
@@ -1732,9 +1732,9 @@ mod tests {
         let stack_builder = StackStateBuilder::default();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
-            local.build_with(stack_builder.clone(), DummyEventDispatcher::default()),
+            local.build_with(stack_builder.clone()),
             "remote",
-            remote.build_with(stack_builder, DummyEventDispatcher::default()),
+            remote.build_with(stack_builder),
         );
 
         // Create the devices (will start DAD at the same time).

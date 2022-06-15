@@ -14,7 +14,7 @@
 use alloc::vec;
 
 use net_types::{ip::Ipv4, Witness as _};
-use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
+use packet::{Buf, InnerPacketBuilder, Serializer};
 use packet_formats::{
     ethernet::{
         testutil::{
@@ -32,12 +32,10 @@ use packet_formats::{
 
 use crate::{
     device::{receive_frame, DeviceId},
-    ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     testutil::{
         benchmarks::{black_box, Bencher},
         DummyEventDispatcherBuilder, DummyNonSyncCtx, DUMMY_CONFIG_V4,
     },
-    transport::udp::{BufferUdpContext, UdpContext},
     Ctx, StackStateBuilder,
 };
 
@@ -46,33 +44,6 @@ use crate::{
 // option is disabled when running `cargo check`, but enabled when running
 // `cargo test`.
 
-#[derive(Default)]
-struct BenchmarkEventDispatcher;
-
-impl<I: IcmpIpExt> UdpContext<I> for BenchmarkEventDispatcher {}
-
-impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for BenchmarkEventDispatcher {}
-
-impl<I: IcmpIpExt> IcmpContext<I> for BenchmarkEventDispatcher {
-    fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
-        unimplemented!()
-    }
-}
-
-impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BenchmarkEventDispatcher {
-    fn receive_icmp_echo_reply(
-        &mut self,
-        _conn: IcmpConnId<I>,
-        _src_ip: I::Addr,
-        _dst_ip: I::Addr,
-        _id: u16,
-        _seq_num: u16,
-        _data: B,
-    ) {
-        unimplemented!()
-    }
-}
-
 // Benchmark the minimum possible time to forward an IPv4 packet by stripping
 // out all interesting computation. We have the simplest possible setup - a
 // forwarding table with a single entry, and a single device - and we receive an
@@ -80,10 +51,8 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BenchmarkEventDispa
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let Ctx { mut sync_ctx, mut non_sync_ctx } =
-        DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build_with::<_, DummyNonSyncCtx>(
-            StackStateBuilder::default(),
-            BenchmarkEventDispatcher::default(),
-        );
+        DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+            .build_with::<DummyNonSyncCtx>(StackStateBuilder::default());
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut sync_ctx,
         &mut non_sync_ctx,

@@ -4,7 +4,6 @@
 
 //! The loopback device.
 
-use alloc::vec::Vec;
 use core::convert::Infallible as Never;
 
 use net_types::{ip::IpAddress, SpecifiedAddr};
@@ -12,7 +11,7 @@ use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 use crate::{
     device::{DeviceIdInner, FrameDestination},
-    BufferDispatcher, EventDispatcher, NonSyncContext, SyncCtx,
+    NonSyncContext, SyncCtx,
 };
 
 pub(super) struct LoopbackDeviceState {
@@ -27,12 +26,11 @@ impl LoopbackDeviceState {
 
 pub(super) fn send_ip_frame<
     B: BufferMut,
-    D: BufferDispatcher<Buf<Vec<u8>>>,
     NonSyncCtx: NonSyncContext,
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
-    sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     _local_addr: SpecifiedAddr<A>,
     body: S,
@@ -43,7 +41,7 @@ pub(super) fn send_ip_frame<
         .map_a(|b| Buf::new(b.as_ref().to_vec(), ..))
         .into_inner();
 
-    crate::ip::receive_ip_packet::<_, _, _, A::Version>(
+    crate::ip::receive_ip_packet::<_, _, A::Version>(
         sync_ctx,
         ctx,
         DeviceIdInner::Loopback.into(),
@@ -54,9 +52,7 @@ pub(super) fn send_ip_frame<
 }
 
 /// Gets the MTU associated with this device.
-pub(super) fn get_mtu<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    ctx: &SyncCtx<D, NonSyncCtx>,
-) -> u32 {
+pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(ctx: &SyncCtx<NonSyncCtx>) -> u32 {
     ctx.state.device.loopback.as_ref().unwrap().link.mtu
 }
 
@@ -74,7 +70,7 @@ mod tests {
             DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DummyNonSyncCtx, DummySyncCtx,
             TestIpExt,
         },
-        Ctx, EventDispatcher, NonSyncContext, SyncCtx,
+        Ctx, NonSyncContext, SyncCtx,
     };
 
     #[test]
@@ -90,14 +86,13 @@ mod tests {
 
         fn test<
             I: TestIpExt + IpDeviceStateIpExt<NonSyncCtx::Instant>,
-            D: EventDispatcher,
             NonSyncCtx: NonSyncContext,
         >(
-            sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
+            sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             device: DeviceId,
             get_ip_state: for<'a> fn(
-                &'a SyncCtx<D, NonSyncCtx>,
+                &'a SyncCtx<NonSyncCtx>,
                 DeviceId,
             ) -> &'a IpDeviceState<NonSyncCtx::Instant, I>,
         ) {
@@ -143,13 +138,13 @@ mod tests {
             );
         }
 
-        test::<Ipv4, _, _>(
+        test::<Ipv4, _>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,
             crate::ip::device::get_ipv4_device_state::<DummyNonSyncCtx, DummySyncCtx>,
         );
-        test::<Ipv6, _, _>(
+        test::<Ipv6, _>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             device,

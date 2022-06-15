@@ -1159,17 +1159,14 @@ mod tests {
 
     use crate::{
         ip::gmp::GmpDelayedReportTimerId,
-        testutil::{
-            assert_empty, DummyCtx, DummyEventDispatcher, DummyNonSyncCtx, DummySyncCtx,
-            TestIpExt as _,
-        },
+        testutil::{assert_empty, DummyCtx, DummyNonSyncCtx, DummySyncCtx, TestIpExt as _},
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     #[test]
     fn enable_disable_ipv6() {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            Ctx::new(StackStateBuilder::default().build(), DummyEventDispatcher::default());
+            Ctx::new(StackStateBuilder::default().build());
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
         let device_id =

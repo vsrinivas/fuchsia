@@ -58,9 +58,9 @@ use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{EventContext, InstantContext, RngContext, TimerContext},
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    IpDeviceConfiguration, IpExt, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext,
-    SlaacConfiguration, TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpDeviceConfiguration, IpExt,
+    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, TimerId,
+    UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -74,10 +74,7 @@ use netstack3_core::{
 /// ```
 const DEFAULT_LOOPBACK_MTU: u32 = 65536;
 
-pub(crate) trait LockableContext:
-    for<'a> Lockable<'a, Ctx<Self::Dispatcher, Self::NonSyncCtx>>
-{
-    type Dispatcher: EventDispatcher;
+pub(crate) trait LockableContext: for<'a> Lockable<'a, Ctx<Self::NonSyncCtx>> {
     type NonSyncCtx: NonSyncContext + Send;
 }
 
@@ -103,16 +100,6 @@ pub(crate) trait InterfaceEventProducerFactory {
 
 type IcmpEchoSockets = socket::datagram::SocketCollectionPair<socket::datagram::IcmpEcho>;
 type UdpSockets = socket::datagram::SocketCollectionPair<socket::datagram::Udp>;
-
-/// `BindingsDispatcher` is the dispatcher used by [`Netstack`] and it
-/// implements the regular network stack operation, sending outgoing frames to
-/// the appropriate devices, and proxying calls to their appropriate submodules.
-///
-/// Implementation of some traits required by [`EventDispatcher`] may be in this
-/// crate's submodules, closer to where the implementation logic makes more
-/// sense.
-#[derive(Default)]
-pub(crate) struct BindingsDispatcher {}
 
 impl DeviceStatusNotifier for BindingsNonSyncCtxImpl {
     fn device_status_changed(&mut self, _id: u64) {
@@ -155,9 +142,9 @@ impl AsMut<Devices> for BindingsNonSyncCtxImpl {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsNonSyncCtxImpl>> for Netstack {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher, BindingsNonSyncCtxImpl>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher, BindingsNonSyncCtxImpl>>;
+impl<'a> Lockable<'a, Ctx<BindingsNonSyncCtxImpl>> for Netstack {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsNonSyncCtxImpl>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsNonSyncCtxImpl>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -187,9 +174,8 @@ impl AsMut<UdpSockets> for BindingsNonSyncCtxImpl {
     }
 }
 
-impl<D, NonSyncCtx> timers::TimerHandler<TimerId> for Ctx<D, NonSyncCtx>
+impl<NonSyncCtx> timers::TimerHandler<TimerId> for Ctx<NonSyncCtx>
 where
-    D: EventDispatcher + Send + Sync + 'static,
     NonSyncCtx: NonSyncContext + AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
 {
     fn handle_expired_timer(&mut self, timer: TimerId) {
@@ -205,10 +191,9 @@ where
 impl<C> timers::TimerContext<TimerId> for C
 where
     C: LockableContext + Clone + Send + Sync + 'static,
-    C::Dispatcher: Send + Sync + 'static,
     C::NonSyncCtx: AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
 {
-    type Handler = Ctx<C::Dispatcher, C::NonSyncCtx>;
+    type Handler = Ctx<C::NonSyncCtx>;
 }
 
 impl<D> ConversionContext for D
@@ -491,9 +476,8 @@ trait MutableDeviceState {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
 }
 
-impl<D, NonSyncCtx> MutableDeviceState for Ctx<D, NonSyncCtx>
+impl<NonSyncCtx> MutableDeviceState for Ctx<NonSyncCtx>
 where
-    D: EventDispatcher,
     NonSyncCtx: NonSyncContext + DeviceStatusNotifier + AsRef<Devices> + AsMut<Devices>,
 {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
@@ -517,11 +501,8 @@ trait InterfaceControl {
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 }
 
-fn set_interface_enabled<
-    D: EventDispatcher,
-    NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>,
->(
-    Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<D, NonSyncCtx>,
+fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>>(
+    Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<NonSyncCtx>,
     id: u64,
     should_enable: bool,
 ) -> Result<(), fidl_net_stack::Error> {
@@ -574,9 +555,8 @@ fn set_interface_enabled<
     Ok(())
 }
 
-impl<D, NonSyncCtx> InterfaceControl for Ctx<D, NonSyncCtx>
+impl<NonSyncCtx> InterfaceControl for Ctx<NonSyncCtx>
 where
-    D: EventDispatcher,
     NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>,
 {
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
@@ -588,7 +568,7 @@ where
     }
 }
 
-type NetstackContext = Arc<Mutex<Ctx<BindingsDispatcher, BindingsNonSyncCtxImpl>>>;
+type NetstackContext = Arc<Mutex<Ctx<BindingsNonSyncCtxImpl>>>;
 
 /// The netstack.
 ///
@@ -620,7 +600,6 @@ impl Default for NetstackSeed {
 }
 
 impl LockableContext for Netstack {
-    type Dispatcher = BindingsDispatcher;
     type NonSyncCtx = BindingsNonSyncCtxImpl;
 }
 

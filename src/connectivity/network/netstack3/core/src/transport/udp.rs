@@ -59,7 +59,7 @@ use crate::{
         },
         AddrVec, Bound, BoundSocketMap, InsertError,
     },
-    EventDispatcher, NonSyncContext, SyncCtx,
+    NonSyncContext, SyncCtx,
 };
 
 /// A builder for UDP layer state.
@@ -930,8 +930,8 @@ impl<
 {
 }
 
-impl<I: IpExt, D: EventDispatcher, NonSyncCtx: NonSyncContext>
-    StateContext<NonSyncCtx, UdpState<I, DeviceId>> for SyncCtx<D, NonSyncCtx>
+impl<I: IpExt, NonSyncCtx: NonSyncContext> StateContext<NonSyncCtx, UdpState<I, DeviceId>>
+    for SyncCtx<NonSyncCtx>
 {
     fn get_state_with(&self, _id0: ()) -> &UdpState<I, DeviceId> {
         // Since `specialize_ip` doesn't support multiple trait bounds (ie, `I:
@@ -940,8 +940,8 @@ impl<I: IpExt, D: EventDispatcher, NonSyncCtx: NonSyncContext>
         trait Ip: IpExt {}
         impl<I: IpExt> Ip for I {}
         #[specialize_ip]
-        fn get<I: Ip, D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-            ctx: &SyncCtx<D, NonSyncCtx>,
+        fn get<I: Ip, NonSyncCtx: NonSyncContext>(
+            ctx: &SyncCtx<NonSyncCtx>,
         ) -> &UdpState<I, DeviceId> {
             #[ipv4]
             return &ctx.state.transport.udpv4;
@@ -959,8 +959,8 @@ impl<I: IpExt, D: EventDispatcher, NonSyncCtx: NonSyncContext>
         trait Ip: IpExt {}
         impl<I: IpExt> Ip for I {}
         #[specialize_ip]
-        fn get<I: Ip, D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-            ctx: &mut SyncCtx<D, NonSyncCtx>,
+        fn get<I: Ip, NonSyncCtx: NonSyncContext>(
+            ctx: &mut SyncCtx<NonSyncCtx>,
         ) -> &mut UdpState<I, DeviceId> {
             #[ipv4]
             return &mut ctx.state.transport.udpv4;

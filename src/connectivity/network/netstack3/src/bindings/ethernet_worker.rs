@@ -15,7 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error, info, trace};
-use netstack3_core::{receive_frame, BufferDispatcher, BufferNonSyncContext, Ctx};
+use netstack3_core::{receive_frame, BufferNonSyncContext, Ctx};
 use packet::serialize::Buf;
 use std::ops::DerefMut as _;
 
@@ -50,14 +50,8 @@ impl<C> EthernetWorker<C> {
 // TODO(https://github.com/rust-lang/rust/issues/52662): Replace the duplicate associated type with
 // a bound on the parent trait's associated type.
 pub(crate) trait EthernetWorkerContext:
-    LockableContext<
-        Dispatcher = <Self as EthernetWorkerContext>::Dispatcher,
-        NonSyncCtx = <Self as EthernetWorkerContext>::NonSyncCtx,
-    > + Send
-    + Sync
-    + 'static
+    LockableContext<NonSyncCtx = <Self as EthernetWorkerContext>::NonSyncCtx> + Send + Sync + 'static
 {
-    type Dispatcher: for<'a> BufferDispatcher<Buf<&'a mut [u8]>> + Send + Sync;
     type NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>>
         + AsRef<Devices>
         + AsMut<Devices>
@@ -69,7 +63,6 @@ pub(crate) trait EthernetWorkerContext:
 impl<T> EthernetWorkerContext for T
 where
     T: LockableContext + Send + Sync + 'static,
-    T::Dispatcher: for<'a> BufferDispatcher<Buf<&'a mut [u8]>> + Send + Sync,
     T::NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>>
         + AsRef<Devices>
         + AsMut<Devices>
@@ -77,7 +70,6 @@ where
         + Send
         + Sync,
 {
-    type Dispatcher = T::Dispatcher;
     type NonSyncCtx = T::NonSyncCtx;
 }
 

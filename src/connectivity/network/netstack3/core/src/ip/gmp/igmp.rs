@@ -559,8 +559,7 @@ mod tests {
             DummyDeviceId,
         },
         testutil::{
-            assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcher,
-            DummyEventDispatcherConfig, TestIpExt as _,
+            assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcherConfig, TestIpExt as _,
         },
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
@@ -1286,7 +1285,7 @@ mod tests {
         } = Ipv4::DUMMY_CONFIG;
 
         let crate::testutil::DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            Ctx::new(StackStateBuilder::default().build(), DummyEventDispatcher::default());
+            Ctx::new(StackStateBuilder::default().build());
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv4::MINIMUM_LINK_MTU.into());
         crate::ip::device::add_ipv4_addr_subnet(

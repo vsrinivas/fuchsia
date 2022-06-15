@@ -22,9 +22,7 @@ use packet_formats::{
     ipv6::Ipv6PacketBuilder, tcp::TcpSegmentBuilder, udp::UdpPacketBuilder,
 };
 
-use crate::{
-    context::testutil::DummyTimerCtxExt, testutil::DummyEventDispatcher, Ctx, DeviceId, TimerId,
-};
+use crate::{context::testutil::DummyTimerCtxExt, Ctx, DeviceId, TimerId};
 
 mod print_on_panic {
     use core::fmt::{self, Display, Formatter};
@@ -327,7 +325,7 @@ fn dispatch(
 pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     print_on_panic::initialize_logging();
 
-    let mut ctx = Ctx::with_default_state(DummyEventDispatcher::default());
+    let mut ctx = crate::testutil::DummyCtx::default();
     let FuzzInput { actions } = input;
 
     let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;

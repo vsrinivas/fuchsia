@@ -85,7 +85,7 @@ use core::time::Duration;
 use packet::{BufferMut, Serializer};
 use rand::{CryptoRng, RngCore};
 
-use crate::{EventDispatcher, Instant, NonSyncContext, SyncCtx};
+use crate::{Instant, NonSyncContext, SyncCtx};
 
 /// A marker trait indicating that the implementor is not the [`DummySyncCtx`]
 /// type found in test environments.
@@ -96,7 +96,7 @@ use crate::{EventDispatcher, Instant, NonSyncContext, SyncCtx};
 /// [this issue]: https://github.com/rust-lang/rust/issues/97811
 pub(crate) trait NonTestCtxMarker {}
 
-impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> NonTestCtxMarker for SyncCtx<D, NonSyncCtx> {}
+impl<NonSyncCtx: NonSyncContext> NonTestCtxMarker for SyncCtx<NonSyncCtx> {}
 
 /// A context that provides access to a monotonic clock.
 pub trait InstantContext {
@@ -315,7 +315,7 @@ pub trait CounterContext {
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> CounterContext for SyncCtx<D, NonSyncCtx> {
+impl<NonSyncCtx: NonSyncContext> CounterContext for SyncCtx<NonSyncCtx> {
     // TODO(rheacock): This is tricky because it's used in test only macro
     // code so the compiler thinks `key` is unused. Remove this when this is
     // no longer a problem.

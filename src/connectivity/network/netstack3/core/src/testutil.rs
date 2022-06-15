@@ -37,7 +37,7 @@ use crate::{
         AddableEntryEither, IpLayerEvent, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    Ctx, EventDispatcher, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
+    Ctx, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
 };
 
 /// Asserts that an iterable object produces zero items.
@@ -114,8 +114,8 @@ pub(crate) struct DummyNonSyncCtxState {
 // prevent code from attempting to read from this context (code which only
 // accesses the frame contents rather than the frame metadata will still
 // compile).
-pub(crate) type DummyCtx = Ctx<DummyEventDispatcher, DummyNonSyncCtx>;
-pub(crate) type DummySyncCtx = SyncCtx<DummyEventDispatcher, DummyNonSyncCtx>;
+pub(crate) type DummyCtx = Ctx<DummyNonSyncCtx>;
+pub(crate) type DummySyncCtx = SyncCtx<DummyNonSyncCtx>;
 pub(crate) type DummyNonSyncCtx =
     crate::context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>;
 
@@ -519,17 +519,16 @@ impl DummyEventDispatcherBuilder {
     ) -> DummyCtx {
         let mut stack_builder = StackStateBuilder::default();
         f(&mut stack_builder);
-        self.build_with(stack_builder, Default::default())
+        self.build_with(stack_builder)
     }
 
     /// Build a `Ctx` from the present configuration with a caller-provided
     /// dispatcher and `StackStateBuilder`.
-    pub(crate) fn build_with<D: EventDispatcher, NonSyncCtx: NonSyncContext + Default>(
+    pub(crate) fn build_with<NonSyncCtx: NonSyncContext + Default>(
         self,
         state_builder: StackStateBuilder,
-        dispatcher: D,
-    ) -> Ctx<D, NonSyncCtx> {
-        let mut ctx = Ctx::new(state_builder.build(), dispatcher);
+    ) -> Ctx<NonSyncCtx> {
+        let mut ctx = Ctx::new(state_builder.build());
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let DummyEventDispatcherBuilder {
@@ -614,14 +613,6 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
         IpAddr::V6(ip) => builder.add_ndp_table_entry(device, UnicastAddr::new(ip).unwrap(), mac),
     }
 }
-
-/// A dummy `EventDispatcher` used for testing.
-///
-/// A `DummyEventDispatcher` implements the `EventDispatcher` interface for
-/// testing purposes. It provides facilities to inspect the history of what
-/// events have been emitted to the system.
-#[derive(Default)]
-pub(crate) struct DummyEventDispatcher {}
 
 impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyNonSyncCtx {
     fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {

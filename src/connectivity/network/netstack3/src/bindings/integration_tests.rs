@@ -25,8 +25,8 @@ use netstack3_core::{
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
-    Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt, NonSyncContext, TimerId,
-    UdpBoundId, UdpContext,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt, NonSyncContext, TimerId, UdpBoundId,
+    UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -40,8 +40,8 @@ use crate::bindings::{
     },
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsDispatcher, BindingsNonSyncCtxImpl, DeviceStatusNotifier, LockableContext,
-    RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU,
+    BindingsNonSyncCtxImpl, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
+    StackTime, DEFAULT_LOOPBACK_MTU,
 };
 
 /// log::Log implementation that uses stdout.
@@ -245,7 +245,7 @@ where
 #[derive(Clone)]
 /// A netstack context for testing.
 pub(crate) struct TestContext {
-    ctx: Arc<Mutex<Ctx<BindingsDispatcher, TestNonSyncCtx>>>,
+    ctx: Arc<Mutex<Ctx<TestNonSyncCtx>>>,
     _interfaces_worker: Arc<super::interfaces_watcher::Worker>,
     interfaces_sink: super::interfaces_watcher::WorkerInterfaceSink,
 }
@@ -271,16 +271,15 @@ impl super::InterfaceEventProducerFactory for TestContext {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<BindingsDispatcher, TestNonSyncCtx>> for TestContext {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher, TestNonSyncCtx>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher, TestNonSyncCtx>>;
+impl<'a> Lockable<'a, Ctx<TestNonSyncCtx>> for TestContext {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<TestNonSyncCtx>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestNonSyncCtx>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
 }
 
 impl LockableContext for TestContext {
-    type Dispatcher = BindingsDispatcher;
     type NonSyncCtx = TestNonSyncCtx;
 }
 
@@ -398,11 +397,8 @@ impl TestStack {
     }
 
     /// Helper function to invoke a closure that provides a locked
-    /// [`Ctx<BindingsDispatcher, BindingsContext>`] provided by this `TestStack`.
-    pub(crate) async fn with_ctx<
-        R,
-        F: FnOnce(&mut Ctx<BindingsDispatcher, TestNonSyncCtx>) -> R,
-    >(
+    /// [`Ctx< BindingsContext>`] provided by this `TestStack`.
+    pub(crate) async fn with_ctx<R, F: FnOnce(&mut Ctx<TestNonSyncCtx>) -> R>(
         &mut self,
         f: F,
     ) -> R {
@@ -411,9 +407,7 @@ impl TestStack {
     }
 
     /// Acquire a lock on this `TestStack`'s context.
-    pub(crate) async fn ctx(
-        &self,
-    ) -> <TestContext as Lockable<'_, Ctx<BindingsDispatcher, TestNonSyncCtx>>>::Guard {
+    pub(crate) async fn ctx(&self) -> <TestContext as Lockable<'_, Ctx<TestNonSyncCtx>>>::Guard {
         self.ctx.lock().await
     }
 
@@ -464,7 +458,7 @@ impl TestSetup {
     pub(crate) async fn ctx(
         &mut self,
         i: usize,
-    ) -> <TestContext as Lockable<'_, Ctx<BindingsDispatcher, TestNonSyncCtx>>>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<TestNonSyncCtx>>>::Guard {
         self.get(i).ctx.lock().await
     }
 
@@ -854,8 +848,8 @@ async fn test_ethernet_link_up_down() {
         .expect("error receiving frame");
 }
 
-fn check_ip_enabled<D: EventDispatcher, NonSyncCtx: NonSyncContext>(
-    Ctx { sync_ctx, non_sync_ctx: _ }: &mut Ctx<D, NonSyncCtx>,
+fn check_ip_enabled<NonSyncCtx: NonSyncContext>(
+    Ctx { sync_ctx, non_sync_ctx: _ }: &mut Ctx<NonSyncCtx>,
     core_id: DeviceId,
     expected: bool,
 ) {
