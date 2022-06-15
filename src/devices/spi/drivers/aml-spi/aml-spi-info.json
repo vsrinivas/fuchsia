@@ -4,7 +4,8 @@
     "families": [],
     "models": [
         "T931",
-        "S905D3"
+        "S905D3",
+        "A5"
     ],
     "areas": [
         "SPI"

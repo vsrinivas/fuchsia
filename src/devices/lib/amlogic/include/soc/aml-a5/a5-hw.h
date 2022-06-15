@@ -24,6 +24,8 @@
 #define A5_I2C_D_BASE 0xfe06c000
 
 // spicc
+#define A5_SPICC1_BASE 0xfe052000
+#define A5_SPICC1_LENGTH 0x1000
 
 // Peripherals - datasheet is nondescript about this section, but it contains
 //  top level ethernet control and temp sensor registers
@@ -87,6 +89,8 @@
 #define A5_SD_EMMC_A_IRQ 208  // 176+32
 #define A5_SD_EMMC_B_IRQ 209  // 177+32
 #define A5_SD_EMMC_C_IRQ 210  // 178+32
+
+#define A5_SPICC1_IRQ 216  // 184+32
 
 // PWM
 #define A5_PWM_LENGTH 0x2000  // applies to each PWM bank

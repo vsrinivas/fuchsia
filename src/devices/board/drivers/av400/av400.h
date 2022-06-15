@@ -32,6 +32,13 @@ enum {
   BTI_USB,
   BTI_MALI,
   BTI_VIDEO,
+  BTI_SPI1,
+};
+
+// Av400 SPI bus arbiters (should match spi_channels[] in av400-spi.cc  ).
+enum {
+  AV400_SPICC0,
+  AV400_SPICC1,
 };
 
 // MAC address metadata indices.
@@ -66,6 +73,7 @@ class Av400 : public Av400Type {
   zx_status_t I2cInit();
   zx_status_t RegistersInit();
   zx_status_t EmmcInit();
+  zx_status_t SpiInit();
 
   int Thread();
 
