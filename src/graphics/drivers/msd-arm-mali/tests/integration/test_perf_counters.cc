@@ -16,9 +16,11 @@
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "mali_utils.h"
 #include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"
 
 namespace {
+
 class TestConnection : public magma::TestDeviceBase {
  public:
   TestConnection() : magma::TestDeviceBase(MAGMA_VENDOR_ID_MALI) {
@@ -53,6 +55,12 @@ class TestConnection : public magma::TestDeviceBase {
   }
 
   void TestPerfCounters() {
+    {
+      mali_utils::AtomHelper handler(connection_, context_id_);
+      // The hardware can't store performance counters when protected mode is
+      // enabled. Submit a non-protected atom to switch to normal mode.
+      handler.SubmitCommandBuffer(mali_utils::AtomHelper::NORMAL, 1, 0, false);
+    }
     EXPECT_TRUE(AccessPerfCounters());
 
     magma_buffer_t buffer;

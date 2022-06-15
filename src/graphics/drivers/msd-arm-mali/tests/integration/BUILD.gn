@@ -14,6 +14,8 @@ executable("msd_arm_mali_integration_tests") {
   testonly = true
 
   sources = [
+    "mali_utils.cc",
+    "mali_utils.h",
     "run_unit_tests.cc",
     "test_fault_recovery.cc",
     "test_icd_list.cc",
