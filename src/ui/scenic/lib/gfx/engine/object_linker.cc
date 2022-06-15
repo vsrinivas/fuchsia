@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -219,11 +220,27 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
   static_assert(ZX_FIFO_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   static_assert(ZX_SOCKET_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   auto waiter = std::make_unique<async::Wait>(
-      endpoint_handle, __ZX_OBJECT_PEER_CLOSED, 0, std::bind([this, endpoint_id, is_import]() {
-        auto& endpoints = is_import ? imports_ : exports_;
+      endpoint_handle, __ZX_OBJECT_PEER_CLOSED, 0,
+      [this, endpoint_id, is_import](async_dispatcher_t*, async::Wait*, zx_status_t status,
+                                     const zx_packet_signal_t*) {
+        if (status == ZX_ERR_CANCELED) {
+          // (1) Can happen if this callback's dispatcher is shutting down.
+          //     Both GFX and Flatland run these callbacks on the main (render) thread,
+          //     so it is okay to exit early.
+          // (2) Can happen if the async::Wait object was itself destroyed as part of
+          //     DestroyEndpoint. That path invalidates the peer eagerly, so it is okay
+          //     to exit early.
+          return;
+        }
+
         auto access = GetScopedAccess();
+        auto& endpoints = is_import ? imports_ : exports_;
         auto endpoint_iter = endpoints.find(endpoint_id);
-        FX_DCHECK(endpoint_iter != endpoints.end());
+        if (endpoint_iter == endpoints.end()) {
+          // Can happen if this callback executes after the async::Wait object
+          // gets destroyed on another (Flatland) thread, and the cancel was lost.
+          return;
+        }
         Endpoint& endpoint = endpoint_iter->second;
 
         // Invalidate the endpoint.  If Initialize() has
@@ -236,7 +253,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
         if (endpoint.link) {
           endpoint.link->Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true);
         }
-      }));
+      });
 
   zx_status_t status = waiter->Begin(wait_dispatcher_);
   FX_DCHECK(status == ZX_OK);
