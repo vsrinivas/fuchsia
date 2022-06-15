@@ -90,55 +90,12 @@ fuchsia_component("fuchsia-pkg-testing-tests-component") {
   deps = [ ":fuchsia-pkg-testing_test" ]
 }
 
-rustc_test("pkgfs_test") {
-  name = "pkgfs_test"
-  edition = "2018"
-  source_root = "tests/lib.rs"
-  deps = [
-    ":fuchsia-pkg-testing",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg",
-    "//src/sys/pkg/lib/pkgfs",
-    "//src/sys/pkg/testing/blobfs-ramdisk",
-    "//src/sys/pkg/testing/pkgfs-ramdisk",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:openat",
-    "//third_party/rust_crates:serde_json",
-  ]
-
-  sources = [
-    "tests/gc_test.rs",
-    "tests/get_buffer.rs",
-    "tests/lib.rs",
-    "tests/pkgfs_test.rs",
-  ]
-}
-
-fuchsia_component("pkgfs-test-component") {
-  testonly = true
-  component_name = "pkgfs-test"
-  manifest = "meta/pkgfs-test.cmx"
-  deps = [ ":pkgfs_test" ]
-}
-
 fuchsia_test_package("fuchsia-pkg-testing-tests") {
-  test_components = [
-    ":fuchsia-pkg-testing-tests-component",
-    ":pkgfs-test-component",
-  ]
+  test_components = [ ":fuchsia-pkg-testing-tests-component" ]
   deps = [
     "//src/connectivity/network/dns:component-legacy",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
-    "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
 }
@@ -147,7 +104,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":fuchsia-pkg-testing-tests",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/sys/pkg/bin/pm:pm",
   ]
 }

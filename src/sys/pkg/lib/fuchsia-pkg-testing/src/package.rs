@@ -923,7 +923,7 @@ mod tests {
         let pkg = Package::identity().await?;
         let pkg_dir = make_this_package_dir()?;
 
-        fs::remove_file(pkg_dir.path().join("bin/pkgsvr"))?;
+        fs::remove_file(pkg_dir.path().join("bin/fuchsia_pkg_testing_lib_test"))?;
 
         let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
@@ -932,7 +932,7 @@ mod tests {
 
         assert_matches!(
             pkg.verify_contents(&pkg_dir_proxy).await,
-            Err(VerificationError::MissingFile{ref path}) if path == "bin/pkgsvr");
+            Err(VerificationError::MissingFile{ref path}) if path == "bin/fuchsia_pkg_testing_lib_test");
 
         Ok(())
     }
@@ -942,7 +942,7 @@ mod tests {
         let pkg = Package::identity().await?;
         let pkg_dir = make_this_package_dir()?;
 
-        fs::write(pkg_dir.path().join("bin/pkgsvr"), "broken".as_bytes())?;
+        fs::write(pkg_dir.path().join("bin/fuchsia_pkg_testing_lib_test"), "broken".as_bytes())?;
 
         let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
             pkg_dir.path().to_str().unwrap(),
@@ -951,7 +951,7 @@ mod tests {
 
         assert_matches!(
             pkg.verify_contents(&pkg_dir_proxy).await,
-            Err(VerificationError::DifferentFileData{ref path}) if path == "bin/pkgsvr");
+            Err(VerificationError::DifferentFileData{ref path}) if path == "bin/fuchsia_pkg_testing_lib_test");
 
         Ok(())
     }

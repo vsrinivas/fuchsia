@@ -346,7 +346,7 @@ async fn get_buffer() {
 async fn get_buffer_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
 
-    // For non-meta files, GetBuffer() calls with supported flags should succeed.
+    // GetBuffer() calls with supported flags should succeed for files that are not meta-as-file.
     for size in [0, 1, 4095, 4096, 4097] {
         for path in [format!("file_{}", size), format!("meta/file_{}", size)] {
             if path == "file_0" {
