@@ -12,6 +12,17 @@ import sys
 # Intentionally ignores the version numbers of the protoc compiler and plugins
 # that are embedded in the files.
 
+MISMATCH_MSG = '''\
+Error: Golden file mismatch! To print the differences, run:
+
+  diff -burN {current_path} {golden_path}
+
+To acknowledge this change, please run:
+
+  cp {current_path} {golden_path}
+
+'''
+
 
 def filter_line(line):
     """Filter input .pb.go line to ignore non-problematic differences."""
@@ -58,22 +69,15 @@ def main():
     if args.bless:
         shutil.copyfile(args.current, args.golden)
     elif golden != current:
-        # Compute paths relative to the Fuchsia directory for the messages
+        # Compute paths relative to the Fuchsia directory for the message
         # below.
         fuchsia_dir = args.fuchsia_dir if args.fuchsia_dir else '../..'
         fuchsia_dir = os.path.abspath(fuchsia_dir)
         golden_path = os.path.relpath(args.golden, fuchsia_dir)
         current_path = os.path.relpath(args.current, fuchsia_dir)
         print(
-            f'''Error: Golden file mismatch! To print the differences, run:
-
-  diff -burN {current_path} {golden_path}
-
-To acknowledge this change, please run:
-
-  cp {current_path} {golden_path}
-
-''',
+            MISMATCH_MSG.format(
+                current_path=current_path, golden_path=golden_path),
             file=sys.stderr)
         return 1
 
