@@ -871,7 +871,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:96
+From //build/toolchain/rbe.gni:125
 
 ### check_rustc_determinism
 Check of determinism of rustc targets by running locally twice
@@ -896,7 +896,7 @@ Ignores:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:88
+From //build/toolchain/rbe.gni:117
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1458,7 +1458,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:45
+From //build/toolchain/rbe.gni:74
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1466,7 +1466,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:45
+From //build/toolchain/rbe.gni:74
 
 ### enable_virtual_heap
 Enables the use of a virtually managed kernel heap instead of one managed
@@ -3784,43 +3784,7 @@ One of {local,remote}:
 
 **Current value (from the default):** `""`
 
-From //build/toolchain/rbe.gni:63
-
-### rbe_rust
-See //build/toolchain/rbe_defaults.gni for the documentation on these
-global structured variables.
-We cannot provide defaults here because they would be overridden
-by the same definitions imported in //products/bringup.gni.
-
-**Current value for `target_cpu = "arm64"`:**
-```
-{
-  check = ""
-  enable = false
-  exec_strategy = "remote"
-}
-```
-
-From //build/toolchain/rbe_defaults.gni:8
-
-**Overridden from the default:** `{ }`
-
-From //build/toolchain/rbe.gni:36
-
-**Current value for `target_cpu = "x64"`:**
-```
-{
-  check = ""
-  enable = false
-  exec_strategy = "remote"
-}
-```
-
-From //build/toolchain/rbe_defaults.gni:8
-
-**Overridden from the default:** `{ }`
-
-From //build/toolchain/rbe.gni:36
+From //build/toolchain/rbe.gni:92
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
@@ -3945,6 +3909,54 @@ Sets the default LTO type for rustc bulids.
 **Current value (from the default):** `""`
 
 From //build/rust/config.gni:41
+
+### rust_rbe_check
+Run one of the more expensive checks, intended for CI.
+All of these require rbe_rust.enable=true.
+
+One of:
+  * "": No additional check.
+  * "determinism":
+      Check of determinism of rustc targets by running locally twice
+      and comparing outputs, failing if any differences are found.
+      Even though this check doesn't involve RBE, it uses the same
+      wrapper script, which knows what output files to expect and
+      compare.
+
+      Build outputs that depend on time are discouraged because they
+      impact caching.
+      If your result depends on the current time, this check will
+      definitely fail.  If it depends on only the date, there is still
+      a nonzero chance of failure, if the rerun falls on the next day.
+
+  * "consistency":
+      Check consistency between local and remote rust compiles,
+      by running both and comparing results.
+
+
+**Current value (from the default):** `""`
+
+From //build/toolchain/rbe.gni:66
+
+### rust_rbe_enable
+Set to true to enable distributed compilation using RBE.
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/rbe.gni:33
+
+### rust_rbe_exec_strategy
+One of:
+  * "remote": Execute action remotely on cache miss.
+        The remote cache is always updated with this result.
+  * "local": Lookup action in the remote cache, but execute action
+        locally on cache miss.  The locally produced result is
+        not uploaded to the remote cache.
+  (There are other rewrapper options that are not exposed.)
+
+**Current value (from the default):** `"remote"`
+
+From //build/toolchain/rbe.gni:42
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
@@ -4746,7 +4758,7 @@ Requires GN args:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:54
+From //build/toolchain/rbe.gni:83
 
 ### use_spinel_for_carnelian_examples
 Include a config in the example packages to attempt to use Spinel
