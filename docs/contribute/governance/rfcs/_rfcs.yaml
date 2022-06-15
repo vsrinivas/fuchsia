@@ -2152,6 +2152,20 @@
   reviewers: ['dschuyler@google.com', 'jamesr@google.com', 'jeremymanson@google.com', 'neelsa@google.com', 'sebmarchand@google.com', 'sethladd@google.com']
   submitted: '2022-05-13'
   reviewed: '2022-05-31'
+  
+- name: 'RFC-0166'
+  title: 'One UI Stack'
+  short_description: 'Clarifies plans and policy to move all Fuchsia Products to a single graphics and input stack.'
+  authors: ['neelsa@google.com']
+  file: '0166_ui_stack.md'
+  area: ['UI']
+  issue: ['100308']
+  gerrit_change_id: ['676347']
+  status: 'Iterate'
+  reviewers: ['jjosh@google.com', 'emircan@google.com', 'jaeheon@google.com', 'lucasradaelli@google.com', 'quiche@google.com', 'dworsham@google.com']
+  consulted: ['yeg@google.com']
+  submitted: '2022-05-04'
+  reviewed: '2022-06-03'
 
 - name: 'RFC-0167'
   title: 'Packages in early userspace bootstrapping'
