@@ -10,6 +10,7 @@
         runner: "elf",
         binary: "bin/fxfs",
         args: [ "component" ],
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {

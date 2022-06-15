@@ -95,6 +95,8 @@ async fn main() -> Result<(), Error> {
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
                     .ok_or(MissingStartupHandle)?
                     .into(),
+                fuchsia_runtime::take_startup_handle(HandleType::Lifecycle.into())
+                    .map(|h| h.into()),
             )
             .await;
     }

@@ -26,6 +26,7 @@ use {
     fidl_fuchsia_fxfs::{CryptProxy, VolumesMarker, VolumesRequest, VolumesRequestStream},
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fs_inspect::{FsInspect, FsInspectTree},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::TryStreamExt,
@@ -100,8 +101,11 @@ impl Component {
     }
 
     /// Runs Fxfs as a component.
-    // TODO(fxbug.dev/99591): Add support for lifecycle methods.
-    pub async fn run(self: Arc<Self>, outgoing_dir: zx::Channel) -> Result<(), Error> {
+    pub async fn run(
+        self: Arc<Self>,
+        outgoing_dir: zx::Channel,
+        lifecycle_channel: Option<zx::Channel>,
+    ) -> Result<(), Error> {
         self.outgoing_dir
             .add_entry(
                 "diagnostics",
@@ -181,6 +185,15 @@ impl Component {
             Path::dot(),
             outgoing_dir.into(),
         );
+
+        if let Some(channel) = lifecycle_channel {
+            let me = self.clone();
+            self.scope.spawn(async move {
+                if let Err(e) = me.handle_lifecycle_requests(channel).await {
+                    warn!(error = e.as_value(), "handle_lifecycle_requests");
+                }
+            });
+        }
 
         self.scope.wait().await;
 
@@ -331,21 +344,25 @@ impl Component {
         match req {
             AdminRequest::Shutdown { responder } => {
                 info!("Received shutdown request");
-                let state = self.state.lock().unwrap().maybe_stop();
-                if let Some(state) = state {
-                    let _ = self
-                        .outgoing_dir
-                        .remove_entry_impl("root".into(), /* must_be_directory: */ false);
-                    state.volumes.terminate().await;
-                    let _ = state.fs.close().await;
-                }
-                info!("Filesystem terminated");
-                responder.send().unwrap_or_else(|e| {
-                    warn!(error = e.as_value(), "Failed to send shutdown response")
-                });
+                self.shutdown().await;
+                responder
+                    .send()
+                    .unwrap_or_else(|e| warn!("Failed to send shutdown response: {}", e));
                 return Ok(true);
             }
         }
+    }
+
+    async fn shutdown(&self) {
+        let state = self.state.lock().unwrap().maybe_stop();
+        if let Some(state) = state {
+            let _ = self
+                .outgoing_dir
+                .remove_entry_impl("root".into(), /* must_be_directory: */ false);
+            state.volumes.terminate().await;
+            let _ = state.fs.close().await;
+        }
+        info!("Filesystem terminated");
     }
 
     async fn handle_volumes_requests(&self, mut stream: VolumesRequestStream) {
@@ -411,6 +428,19 @@ impl Component {
 
         Ok(())
     }
+
+    async fn handle_lifecycle_requests(&self, lifecycle_channel: zx::Channel) -> Result<(), Error> {
+        let mut stream =
+            LifecycleRequestStream::from_channel(fasync::Channel::from_channel(lifecycle_channel)?);
+        match stream.try_next().await.context("Reading request")? {
+            Some(LifecycleRequest::Stop { .. }) => {
+                info!("Received Lifecycle::Stop request");
+                self.shutdown().await;
+            }
+            None => {}
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -418,20 +448,26 @@ mod tests {
     use {
         super::Component,
         crate::{filesystem::FxFilesystem, object_store::volume::root_volume},
-        fidl::encoding::Decodable,
+        fidl::{encoding::Decodable, endpoints::Proxy},
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_fs_startup::{StartOptions, StartupMarker},
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio,
+        fidl_fuchsia_process_lifecycle::{LifecycleMarker, LifecycleProxy},
+        fuchsia_async as fasync,
         fuchsia_component::client::connect_to_protocol_at_dir_svc,
+        fuchsia_zircon as zx,
+        futures::future::{BoxFuture, FusedFuture},
         futures::{future::FutureExt, pin_mut, select},
         ramdevice_client::{wait_for_device, RamdiskClientBuilder},
         remote_block_device::RemoteBlockClient,
+        std::pin::Pin,
         storage_device::block_device::BlockDevice,
         storage_device::DeviceHolder,
     };
 
-    #[fasync::run(2, test)]
-    async fn test_lifecycle() {
+    async fn run_test(
+        callback: impl Fn(&fio::DirectoryProxy, LifecycleProxy) -> BoxFuture<'static, ()>,
+    ) -> Pin<Box<impl FusedFuture>> {
         const WAIT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
         wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
             .expect("ramctl did not appear");
@@ -464,14 +500,22 @@ mod tests {
         let (client_end, server_end) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
-        let task1 = async {
-            Component::new().run(server_end.into_channel()).await.expect("Failed to run component");
-        }
-        .fuse();
+        let (lifecycle_client, lifecycle_server) =
+            fidl::endpoints::create_proxy::<LifecycleMarker>().unwrap();
 
-        let task2 = async {
-            let startup_proxy = connect_to_protocol_at_dir_svc::<StartupMarker>(&client_end)
-                .expect("Unable to connect to Startup protocol");
+        let mut component_task = Box::pin(
+            async {
+                Component::new()
+                    .run(server_end.into_channel(), Some(lifecycle_server.into_channel()))
+                    .await
+                    .expect("Failed to run component");
+            }
+            .fuse(),
+        );
+
+        let startup_proxy = connect_to_protocol_at_dir_svc::<StartupMarker>(&client_end)
+            .expect("Unable to connect to Startup protocol");
+        let task = async {
             startup_proxy
                 .start(
                     ramdisk.open().expect("Unable to open ramdisk").into(),
@@ -480,18 +524,51 @@ mod tests {
                 .await
                 .expect("Start failed (FIDL)")
                 .expect("Start failed");
-
-            let admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(&client_end)
-                .expect("Unable to connect to Admin protocol");
-            admin_proxy.shutdown().await.expect("shutdown failed");
+            callback(&client_end, lifecycle_client).await;
         }
         .fuse();
 
-        pin_mut!(task1, task2);
+        pin_mut!(task);
 
-        select! {
-            () = task1 => panic!("Component terminated!"),
-            () = task2 => {}
+        loop {
+            select! {
+                () = component_task => {},
+                () = task => break,
+            }
         }
+
+        component_task
+    }
+
+    #[fasync::run(2, test)]
+    async fn test_shutdown() {
+        let component_task = run_test(|client, _| {
+            let admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(client)
+                .expect("Unable to connect to Admin protocol");
+            async move {
+                admin_proxy.shutdown().await.expect("shutdown failed");
+            }
+            .boxed()
+        })
+        .await;
+        assert!(!component_task.is_terminated());
+    }
+
+    #[fasync::run(2, test)]
+    async fn test_lifecycle_stop() {
+        let component_task = run_test(|_, lifecycle_client| {
+            lifecycle_client.stop().expect("Stop failed");
+            async move {
+                fasync::OnSignals::new(
+                    &lifecycle_client.into_channel().expect("into_channel failed"),
+                    zx::Signals::CHANNEL_PEER_CLOSED,
+                )
+                .await
+                .expect("OnSignals failed");
+            }
+            .boxed()
+        })
+        .await;
+        component_task.await;
     }
 }
