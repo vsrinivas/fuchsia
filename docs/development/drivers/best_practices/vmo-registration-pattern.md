@@ -1,5 +1,8 @@
 # VMO Registration Pattern
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 ## Summary
 
 When transferring bulk data between applications and peripheral hardware, it

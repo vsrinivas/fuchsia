@@ -1,4 +1,8 @@
 # Mock DDK
+
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 *A driver unit testing framework*
 
 Note: The fake-ddk library has been deprecated, and an effort is underway to migrate

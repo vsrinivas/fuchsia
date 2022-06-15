@@ -1,5 +1,8 @@
 # Bind Debugger
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 The debugger can be used to run a bind program against a particular device. It
 outputs a trace of the bind program's execution, describing why the driver
 would or would not bind to the device.

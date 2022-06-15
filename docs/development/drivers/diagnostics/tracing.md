@@ -1,5 +1,8 @@
 # Adding tracing to device drivers
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 This document describes how to add tracing to device drivers.
 
 ## Overview

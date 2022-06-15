@@ -1,5 +1,8 @@
 # Digital Audio Interface (DAI)
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 The DAI interface is a FIDL protocol exposed by DAI drivers. The DAI interface
 controls the configuration of a DAI link for audio data transfer.
 

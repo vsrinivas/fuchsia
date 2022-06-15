@@ -6,6 +6,9 @@
 
 # USB mass storage driver
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 The USB mass storage driver is used to communicate with mass storage devices
 such as flash drives, external hard drives, and other types of removable media
 connected through USB. The USB mass storage driver is split into two parts.

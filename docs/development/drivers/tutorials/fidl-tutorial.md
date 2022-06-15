@@ -1,5 +1,8 @@
 # FIDL tutorial
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 This guide explains how to go about adding exporting a FIDL protocol from a
 driver and utilize it in another driver. This guide assumes familiarity with the
 following concepts:

@@ -1,5 +1,8 @@
 # Scripting Layer for Fuchsia (SL4F)
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Scripting Layer for Fuchsia ([SL4F](/src/testing/sl4f/)) is an HTTP server that
 allows end-to-end tests to access [driver services](#facades-in-sl4f) (for
 instance, Audio, Screen, Input, Diagnostics, and WebDriver) on a Fuchsia device.

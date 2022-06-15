@@ -1,5 +1,8 @@
 # Using the C++ DDK Template Library
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 In this section, we'll look at the C++ DDK Template Library, or "**DDKTL**" for short.
 It's a set of C++ templated classes that simplify the work of writing a driver
 by providing mixins that ensure type safety and perform basic functionality.

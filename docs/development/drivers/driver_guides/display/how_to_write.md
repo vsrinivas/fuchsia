@@ -1,5 +1,10 @@
 # How to write a display driver
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1). Also the workflows documented on
+this page may only be specific to the Fuchsia source checkout
+(`fuchsia.git`) environment.
+
 So you've decided to bring up a new board. Before you dive into coding, ensure
 that you have everything you need by answering these questions:
 

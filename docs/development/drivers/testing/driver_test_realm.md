@@ -1,4 +1,8 @@
 # DriverTestRealm
+
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 *A driver integration testing framework*
 
 Note: The isolated-devmgr library has been deprecated. Please use the driver_test_realm

@@ -1,5 +1,8 @@
 # SDMMC drivers architecture
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 The SDMMC driver stack is divided into two main components: platform drivers
 that talk directly to controller hardware, and the core driver that handles
 protocol-specific device initialization and communication. The core driver is

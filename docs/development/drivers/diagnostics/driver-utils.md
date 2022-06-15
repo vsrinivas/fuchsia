@@ -1,5 +1,8 @@
 # Driver utilities
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Driver utilities are Fuchsia applications that communicate with devices used for
 diagnostics and exported by drivers. For example Inter-Integrated Circuit (I2C)
 devices can be scanned and communicated through the

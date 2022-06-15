@@ -9,7 +9,7 @@
 # Getting Started
 
 Caution: The pages in this section may contain information that is specific to the
-previous version of the driver framework (DFv1).
+legacy version of the driver framework (DFv1).
 
 Writing a device driver is often viewed as a daunting task, fraught with complexities
 and requiring arcane knowledge of little-known kernel secrets.

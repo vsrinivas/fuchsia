@@ -1,5 +1,8 @@
 # Driver testing
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 ## Manual hardware unit tests
 
 A driver may choose to implement the `run_unit_tests()` driver op, which

@@ -1,4 +1,9 @@
-# Building drivers {#building-drivers}
+# Building drivers
+
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1). Also the workflows documented on
+this page may only be specific to the Fuchsia source checkout
+(`fuchsia.git`) environment.
 
 This document demonstrates how to build a driver, highlighting best
 practices for defining packages, components, and drivers.

@@ -1,5 +1,8 @@
 # Audio Drivers Architecture
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 In Fuchsia there are many ways drivers can be architected as defined by the
 number of drivers used, how they communicate and their responsibilities. Audio
 drivers responsibilities are determined by the interface(s) exposed to driver

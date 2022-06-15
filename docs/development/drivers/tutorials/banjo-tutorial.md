@@ -1,5 +1,8 @@
 # Banjo tutorial
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Banjo is a "transpiler" (like [FIDL's
 `fidlc`](/docs/development/languages/fidl/README.md))
 &mdash; a program that converts an interface definition language (**IDL**) into target language

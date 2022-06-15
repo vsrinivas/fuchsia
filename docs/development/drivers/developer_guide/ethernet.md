@@ -1,5 +1,10 @@
 # Ethernet Devices
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1). Also the workflows documented on
+this page may only be specific to the Fuchsia source checkout
+(`fuchsia.git`) environment.
+
 ## Overview
 
 This chapter looks into the details of ethernet drivers, using the Intel driver code
@@ -39,8 +44,8 @@ The top half manages the ethernet interface to the system.
 
 # Intel PCI-based ethernet
 
-> NOTE: this driver has been removed from the tree in favor of a port of the FreeBSD driver,
-> but the discussion here is still relevant for understanding device drivers in Fuchsia.
+Important: this driver has been removed from the tree in favor of a port of the FreeBSD driver,
+but the discussion here is still relevant for understanding device drivers in Fuchsia.
 
 The Intel ethernet driver can be found in `//src/connectivity/ethernet/drivers/intel-ethernet`,
 and consists of the following files:

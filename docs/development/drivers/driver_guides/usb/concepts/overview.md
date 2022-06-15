@@ -6,6 +6,9 @@
 
 # USB system overview
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Zircon provides a full featured USB subsystem enabling the development of USB
 host and peripheral devices. Low, full, high, and super-speed devices are
 supported as well as various standard auto-negotiation mechanisms.

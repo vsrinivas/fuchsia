@@ -1,5 +1,10 @@
 # Drivers rubric
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1). Also the workflows documented on
+this page may only be specific to the Fuchsia source checkout
+(`fuchsia.git`) environment.
+
 ## Overview
 
 This document describes the rules for writing new drivers.

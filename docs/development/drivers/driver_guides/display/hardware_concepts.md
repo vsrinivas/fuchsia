@@ -1,4 +1,7 @@
-## What does a display controller do?
+# What does a display controller do?
+
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
 
 Display controllers (DCs) are responsible for compositing one or more source
 images into a display output signal. Some DCs are capable of producing multiple
@@ -20,7 +23,7 @@ into a final display image.
 with [timing generators](#display-timing) for encoding into the right electrical
 signal for a [connector port](#port) (DisplayPort, HDMI, DVI, etc.)
 
-### Plane types {#plane}
+## Plane types {#plane}
 
 Display
 : A plane that is "screen-sized" and is blended normally.
@@ -45,7 +48,7 @@ Cursor:
   this plane by adjusting its position and only very occasionally changing its
   source image.
 
-### Color spaces {#color-space}
+## Color spaces {#color-space}
 
 Color spaces consist of a color model, e.g. RGB or CMYK, and a mapping function
 to convert values in that color space to a reference space such as CIELAB or
@@ -59,7 +62,7 @@ values means "twice as much light". Perceptual color spaces are meant to mimic
 non-linear human visual perception, so doubling the values would instead mean
 "twice as bright".
 
-### Pixel formats {#pixel-format}
+## Pixel formats {#pixel-format}
 
 Pixel formats and color spaces are often confused, and this leads to color
 accuracy bugs. Take the RGB_888_24 pixel format for example: each pixel is
@@ -73,7 +76,7 @@ composite them all, and convert the resulting image into a color space that is
 appropriate for the output device. The HDMI spec mandates that monitors support
 at least sRGB.
 
-### Gamma correction {#gamma-correction}
+## Gamma correction {#gamma-correction}
 
 For a detailed explanation, see [this excellent blog post by John
 Novak][novak-gamma]{:.external}.
@@ -84,7 +87,7 @@ composite such images for display on a monitor, the controller must convert
 every plane image into a linear color space ("degamma"), blend them, and then
 convert back ("regamma") to sRGB and a pixel format supported by the monitor.
 
-### EDID {#edid}
+## EDID {#edid}
 
 Extended Display Identification Data (EDID) is a VESA metadata format for
 display devices to describe their capabilities to a video source. Many displays
@@ -96,7 +99,7 @@ color.
 Not all fields of EDID will apply to all display devices, e.g. projectors have
 no physical dimensions.
 
-### Pipes {#pipe}
+## Pipes {#pipe}
 
 Pipes are a common abstraction in the theory of operation for display
 controllers. Each pipe is dedicated to producing a single output image to be
@@ -106,7 +109,7 @@ displays. This separation of responsibilities allows drivers to support display
 "mirroring" by using the same final image as the input to multiple encoder/port
 pairs.
 
-### Ports {#port}
+## Ports {#port}
 
 Ports are physical connectors that can be used to attach one or more displays.
 Example port types are [DisplayPort][display-port]{:.external},
@@ -114,13 +117,13 @@ Example port types are [DisplayPort][display-port]{:.external},
 Some port specs allow multiple displays to be connected through daisychaining,
 e.g. DisplayPort's Multi-stream Transport (MST).
 
-### Encoders {#encoder}
+## Encoders {#encoder}
 
 Encoders transform the output images of a [pipe](#pipe) into signals to be
 transmitted by one or more [ports](#port). For example, [HDMI][hdmi]{:.external}
 connectors use [TMDS][tmds]{:.external} which is an 8b/10b encoding.
 
-### Display timing {#display-timing}
+## Display timing {#display-timing}
 
 Display timing is a collection of intervals that together describe how to encode
 a signal for a specific panel. While these intervals are _related_ to the

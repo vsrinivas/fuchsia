@@ -6,6 +6,9 @@
 
 # Configuration
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Hardware peripherals are attached to the CPU through a bus, such as the PCI bus.
 
 During bootup, the BIOS (or equivalent platform startup software)

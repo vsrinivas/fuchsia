@@ -1,5 +1,8 @@
 # Audio Codec Interface
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 The codec interface is meant to be used when the codecs are secondary to a
 controller driver. This interface is a FIDL protocol exposed by codec drivers.
 In this arrangement the codec drivers are not directly exposing a streaming

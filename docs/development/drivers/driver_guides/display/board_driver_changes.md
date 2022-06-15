@@ -1,5 +1,10 @@
 # Modifying board drivers
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1). Also the workflows documented on
+this page may only be specific to the Fuchsia source checkout
+(`fuchsia.git`) environment.
+
 Most system on chip (SoC) board rely on explicitly enumerated hardware
 resources, rather than discovery mechanisms like ACPI that are common on
 workstations, servers, or laptops. To add support for an SoC's display

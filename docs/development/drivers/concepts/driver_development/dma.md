@@ -1,5 +1,8 @@
 # DMA
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 Direct Memory Access (**DMA**) is a feature that allows hardware to access
 memory without CPU intervention.
 At the highest level, the hardware is given the source and destination of the

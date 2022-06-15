@@ -1,5 +1,8 @@
 # Audio Driver Streaming Interface
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1).
+
 This document describes the audio streaming interface exposed by audio drivers
 in Fuchsia. It is meant to serve as a reference for both users and
 driver-authors, and to unambiguously define the interface contract that drivers

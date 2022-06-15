@@ -1,5 +1,10 @@
 # Fuchsia driver development
 
+Caution: This page may contain information that is specific to the legacy
+version of the driver framework (DFv1). Also the workflows documented on
+this page may only be specific to the Fuchsia source checkout
+(`fuchsia.git`) environment.
+
 Fuchsia drivers are shared libraries that are dynamically loaded in driver host
 processes in user space. The process of loading a driver is controlled by the
 driver manager. See
