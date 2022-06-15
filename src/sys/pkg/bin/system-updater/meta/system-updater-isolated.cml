@@ -36,6 +36,11 @@
             path: "/data",
         },
         {
+            directory: "pkgfs-system",
+            rights: [ "r*" ],
+            path: "/pkgfs/system",
+        },
+        {
             directory: "build-info",
             rights: [ "r*" ],
             path: "/config/build-info",

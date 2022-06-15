@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::update::{BuildInfo, SOURCE_EPOCH_RAW},
+    crate::update::{BuildInfo, SystemInfo, SOURCE_EPOCH_RAW},
     anyhow::{anyhow, Error},
     bounded_node::BoundedNode,
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
@@ -190,7 +190,7 @@ impl UpdateHistory {
         data_sink: &'a DataSinkProxy,
         boot_manager: &'a BootManagerProxy,
         build_info: &'a impl BuildInfo,
-        pkgfs_system: &'a Option<pkgfs::system::Client>,
+        system_info: &'a impl SystemInfo,
     ) -> impl Future<Output = PendingAttempt> + 'a {
         let latest_target_version = self.latest_successful_target_version().cloned();
 
@@ -202,7 +202,7 @@ impl UpdateHistory {
                 data_sink,
                 boot_manager,
                 build_info,
-                pkgfs_system,
+                system_info,
                 SOURCE_EPOCH_RAW,
             )
             .await;
@@ -380,8 +380,8 @@ mod serde_system_time {
 #[cfg(test)]
 mod tests {
     use {
-        super::{version::mock_pkgfs_system, *},
-        crate::update::environment::NamespaceBuildInfo,
+        super::*,
+        crate::update::environment::{FakeSystemInfo, NamespaceBuildInfo},
         anyhow::anyhow,
         fidl_fuchsia_update_installer_ext::{
             Initiator, PrepareFailureReason, UpdateInfo, UpdateInfoAndProgress,
@@ -420,7 +420,7 @@ mod tests {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
-        let (pkgfs_system, _pkgfs_dir) = mock_pkgfs_system("").await;
+        let system_info = FakeSystemInfo(None);
         let opts = Options {
             initiator: Initiator::User,
             allow_attach_to_existing_attempt: false,
@@ -434,7 +434,7 @@ mod tests {
                 &data_sink,
                 &boot_manager,
                 &NamespaceBuildInfo,
-                &Some(pkgfs_system),
+                &system_info,
             )
             .await;
         history.record_update_attempt(update_attempt.finish(
@@ -894,7 +894,7 @@ mod tests {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
-        let (pkgfs_system, _pkgfs_dir) = mock_pkgfs_system("").await;
+        let system_info = FakeSystemInfo(None);
 
         assert_eq!(
             history
@@ -909,7 +909,7 @@ mod tests {
                     &data_sink,
                     &boot_manager,
                     &NamespaceBuildInfo,
-                    &Some(pkgfs_system),
+                    &system_info,
                 )
                 .await
                 .source_version,

@@ -31,13 +31,11 @@
         },
         {
             directory: "pkgfs-system",
-            from: "parent",
             rights: [ "r*" ],
             path: "/pkgfs/system",
         },
         {
             directory: "build-info",
-            from: "parent",
             rights: [ "r*" ],
             path: "/config/build-info",
         },

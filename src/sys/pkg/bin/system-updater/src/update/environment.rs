@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_hardware_power_statecontrol::{
         AdminMarker as PowerStateControlMarker, AdminProxy as PowerStateControlProxy,
     },
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
     fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy, RetainedPackagesProxy},
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
@@ -32,6 +33,13 @@ pub trait BuildInfo {
     async fn version(&self) -> Result<Option<String>, Error>;
 }
 
+/// A trait to provide access to the current system image hash.
+#[async_trait]
+pub trait SystemInfo {
+    /// Get the hash of the current system_image package, if there is one.
+    async fn system_image_hash(&self) -> Result<Option<fuchsia_hash::Hash>, Error>;
+}
+
 pub trait EnvironmentConnector {
     fn connect() -> Result<Environment, Error>;
 }
@@ -45,7 +53,11 @@ impl EnvironmentConnector for NamespaceEnvironmentConnector {
 
 /// The collection of external data files and services an update attempt will utilize to perform
 /// the update.
-pub struct Environment<B = NamespaceBuildInfo, C = NamespaceCobaltConnector> {
+pub struct Environment<
+    B = NamespaceBuildInfo,
+    C = NamespaceCobaltConnector,
+    S = NamespaceSystemInfo,
+> {
     pub data_sink: DataSinkProxy,
     pub boot_manager: BootManagerProxy,
     pub pkg_resolver: PackageResolverProxy,
@@ -55,7 +67,7 @@ pub struct Environment<B = NamespaceBuildInfo, C = NamespaceCobaltConnector> {
     pub power_state_control: PowerStateControlProxy,
     pub build_info: B,
     pub cobalt_connector: C,
-    pub pkgfs_system: Option<pkgfs::system::Client>,
+    pub system_info: S,
 }
 
 impl Environment {
@@ -80,7 +92,7 @@ impl Environment {
                 .context("connect to fuchsia.hardware.power.statecontrol.Admin")?,
             build_info: NamespaceBuildInfo,
             cobalt_connector: NamespaceCobaltConnector,
-            pkgfs_system: pkgfs::system::Client::open_from_namespace().ok(),
+            system_info: NamespaceSystemInfo,
         })
     }
 }
@@ -136,5 +148,41 @@ impl BuildInfo for NamespaceBuildInfo {
     }
     async fn version(&self) -> Result<Option<String>, Error> {
         self.read_file("version").await
+    }
+}
+
+#[derive(Debug)]
+pub struct NamespaceSystemInfo;
+
+#[async_trait]
+impl SystemInfo for NamespaceSystemInfo {
+    async fn system_image_hash(&self) -> Result<Option<fuchsia_hash::Hash>, Error> {
+        let proxy = if let Ok(proxy) = fuchsia_fs::directory::open_in_namespace(
+            "/pkgfs/system",
+            fio::OpenFlags::RIGHT_READABLE,
+        ) {
+            proxy
+        } else {
+            // system-updater will always have /pkgfs/system in its namespace because its manifest
+            // requests it, but on configurations that do not have a system_image package it will
+            // not be routed a directory, so we can't just check for NOT_FOUND.
+            return Ok(None);
+        };
+        fuchsia_pkg::PackageDirectory::from_proxy(proxy)
+            .merkle_root()
+            .await
+            .context("reading hash of system_image package")
+            .map(Some)
+    }
+}
+
+#[cfg(test)]
+pub(crate) struct FakeSystemInfo(pub(crate) Option<fuchsia_hash::Hash>);
+
+#[cfg(test)]
+#[async_trait]
+impl SystemInfo for FakeSystemInfo {
+    async fn system_image_hash(&self) -> Result<Option<fuchsia_hash::Hash>, Error> {
+        Ok(self.0)
     }
 }

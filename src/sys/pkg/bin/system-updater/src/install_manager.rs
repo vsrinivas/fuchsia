@@ -316,7 +316,10 @@ where
 mod tests {
     use {
         super::*,
-        crate::update::{ConfigBuilder, Environment, NamespaceBuildInfo, NamespaceCobaltConnector},
+        crate::update::{
+            ConfigBuilder, Environment, NamespaceBuildInfo, NamespaceCobaltConnector,
+            NamespaceSystemInfo,
+        },
         async_trait::async_trait,
         event_queue::ClosedClient,
         fidl_fuchsia_hardware_power_statecontrol::AdminMarker as PowerStateControlMarker,
@@ -376,7 +379,7 @@ mod tests {
                 power_state_control,
                 build_info: NamespaceBuildInfo,
                 cobalt_connector: NamespaceCobaltConnector,
-                pkgfs_system: None,
+                system_info: NamespaceSystemInfo,
             })
         }
     }

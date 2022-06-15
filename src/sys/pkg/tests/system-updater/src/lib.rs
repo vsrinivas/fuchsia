@@ -81,6 +81,7 @@ struct TestEnvBuilder {
     blocked_protocols: HashSet<Protocol>,
     mount_data: bool,
     history: Option<serde_json::Value>,
+    system_image_hash: Option<fuchsia_hash::Hash>,
 }
 
 impl TestEnvBuilder {
@@ -90,6 +91,7 @@ impl TestEnvBuilder {
             blocked_protocols: HashSet::new(),
             mount_data: true,
             history: None,
+            system_image_hash: None,
         }
     }
 
@@ -116,8 +118,20 @@ impl TestEnvBuilder {
         self
     }
 
+    fn system_image_hash(mut self, system_image: fuchsia_hash::Hash) -> Self {
+        assert_eq!(self.system_image_hash, None);
+        self.system_image_hash = Some(system_image);
+        self
+    }
+
     async fn build(self) -> TestEnv {
-        let Self { paver_service_builder, blocked_protocols, mount_data, history } = self;
+        let Self {
+            paver_service_builder,
+            blocked_protocols,
+            mount_data,
+            history,
+            system_image_hash,
+        } = self;
 
         let test_dir = TempDir::new().expect("create test tempdir");
 
@@ -150,6 +164,19 @@ impl TestEnvBuilder {
 
         fs.add_remote("data", data);
         fs.dir("config").add_remote("build-info", build_info);
+
+        if let Some(hash) = system_image_hash {
+            let system_image_path = test_dir.path().join("pkgfs-system");
+            create_dir(&system_image_path).expect("crate system-image dir");
+            let mut meta = File::create(system_image_path.join("meta")).unwrap();
+            let () = meta.write_all(hash.to_string().as_bytes()).unwrap();
+            let pkgfs_system = fuchsia_fs::directory::open_in_namespace(
+                system_image_path.to_str().unwrap(),
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            )
+            .unwrap();
+            fs.add_remote("pkgfs-system", pkgfs_system);
+        }
 
         // A buffer to store all the interactions the system-updater has with external services.
         let interactions = Arc::new(Mutex::new(vec![]));
@@ -344,6 +371,22 @@ impl TestEnvBuilder {
                     Route::new()
                         .capability(
                             Capability::directory("data").path("/data").rights(fio::RW_STAR_DIR),
+                        )
+                        .from(&fake_capabilities)
+                        .to(&system_updater),
+                )
+                .await
+                .unwrap();
+        }
+
+        if system_image_hash.is_some() {
+            builder
+                .add_route(
+                    Route::new()
+                        .capability(
+                            Capability::directory("pkgfs-system")
+                                .path("/pkgfs-system")
+                                .rights(fio::R_STAR_DIR),
                         )
                         .from(&fake_capabilities)
                         .to(&system_updater),

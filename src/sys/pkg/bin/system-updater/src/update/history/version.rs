@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::update::{paver, BuildInfo},
+    crate::update::{paver, BuildInfo, SystemInfo},
     anyhow::{anyhow, Error},
     epoch::EpochFile,
     fidl_fuchsia_mem::Buffer,
@@ -118,14 +118,23 @@ impl Version {
         data_sink: &DataSinkProxy,
         boot_manager: &BootManagerProxy,
         build_info: &impl BuildInfo,
-        pkgfs_system: &Option<pkgfs::system::Client>,
+        system_info: &impl SystemInfo,
         source_epoch_raw: &str,
     ) -> Self {
-        let system_image_hash =
-            get_system_image_hash_from_pkgfs_system(pkgfs_system).await.unwrap_or_else(|e| {
+        let system_image_hash = match system_info.system_image_hash().await {
+            Ok(Some(hash)) => hash.to_string(),
+            Ok(None) => {
+                fx_log_warn!(
+                    "Current system has no system_image package, so there is no system_image \
+                     package hash to associate with this update attempt."
+                );
+                "".to_string()
+            }
+            Err(e) => {
                 fx_log_err!("Failed to read system image hash: {:#}", anyhow!(e));
                 "".to_string()
-            });
+            }
+        };
         let (vbmeta_hash, zbi_hash) =
             get_vbmeta_and_zbi_hash_from_environment(data_sink, boot_manager).await.unwrap_or_else(
                 |e| {
@@ -205,15 +214,6 @@ async fn get_image_hash_from_update_package(
     Ok(sha256_hash_with_no_trailing_zeros(buffer)?)
 }
 
-async fn get_system_image_hash_from_pkgfs_system(
-    pkgfs_system: &Option<pkgfs::system::Client>,
-) -> Result<String, Error> {
-    match pkgfs_system.as_ref() {
-        Some(pkgfs_system) => Ok(pkgfs_system.hash().await?.to_string()),
-        None => Err(anyhow!("pkgfs/system not available")),
-    }
-}
-
 async fn get_vbmeta_and_zbi_hash_from_environment(
     data_sink: &DataSinkProxy,
     boot_manager: &BootManagerProxy,
@@ -242,26 +242,6 @@ fn sha256_hash_with_no_trailing_zeros(buffer: Buffer) -> Result<String, Error> {
         fx_log_warn!("entire buffer is 0, size: {}", buffer.size);
     }
     Ok(Sha256::hash(&data[..size]).to_string())
-}
-
-#[cfg(test)]
-pub(super) async fn mock_pkgfs_system(
-    system_image_hash: impl AsRef<[u8]>,
-) -> (pkgfs::system::Client, tempfile::TempDir) {
-    let pkgfs_dir = tempfile::tempdir().expect("/tmp to exist");
-    std::fs::create_dir(pkgfs_dir.path().join("system")).expect("create dir");
-    fuchsia_fs::file::write_in_namespace(
-        pkgfs_dir.path().join("system/meta").to_str().unwrap(),
-        system_image_hash,
-    )
-    .await
-    .expect("write to temp dir");
-    let pkgfs_proxy = fuchsia_fs::directory::open_in_namespace(
-        pkgfs_dir.path().to_str().unwrap(),
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
-    )
-    .expect("temp dir to open");
-    (pkgfs::system::Client::open_from_pkgfs_root(&pkgfs_proxy).unwrap(), pkgfs_dir)
 }
 
 #[cfg(test)]
@@ -336,9 +316,9 @@ mod tests {
         );
         let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
-        let (pkgfs_system, _pkgfs_dir) =
-            mock_pkgfs_system("838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67")
-                .await;
+        let system_info = crate::update::environment::FakeSystemInfo(Some(
+            "838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67".parse().unwrap(),
+        ));
         let last_target_version = Version {
             update_hash: "2937013f2181810606b2a799b05bda2849f3e369a20982a4138f0e0a55984ce4"
                 .to_string(),
@@ -358,7 +338,7 @@ mod tests {
                 &data_sink,
                 &boot_manager,
                 &NamespaceBuildInfo,
-                &Some(pkgfs_system),
+                &system_info,
                 &make_epoch_json(1)
             )
             .await,

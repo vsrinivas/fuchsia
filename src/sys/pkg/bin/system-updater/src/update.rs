@@ -40,7 +40,7 @@ pub(super) use {
     config::Config,
     environment::{
         BuildInfo, CobaltConnector, Environment, EnvironmentConnector,
-        NamespaceEnvironmentConnector,
+        NamespaceEnvironmentConnector, SystemInfo,
     },
     genutil::GeneratorExt,
     history::{UpdateAttempt, UpdateHistory},
@@ -51,7 +51,7 @@ pub(super) use {
 #[cfg(test)]
 pub(super) use {
     config::ConfigBuilder,
-    environment::{NamespaceBuildInfo, NamespaceCobaltConnector},
+    environment::{NamespaceBuildInfo, NamespaceCobaltConnector, NamespaceSystemInfo},
 };
 
 const COBALT_FLUSH_TIMEOUT: Duration = Duration::from_secs(30);
@@ -202,7 +202,7 @@ async fn update(
         &env.data_sink,
         &env.boot_manager,
         &env.build_info,
-        &env.pkgfs_system,
+        &env.system_info,
     );
     let attempt = attempt_fut.await;
     let source_version = attempt.source_version().clone();

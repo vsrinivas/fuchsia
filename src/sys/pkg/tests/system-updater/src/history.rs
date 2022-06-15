@@ -121,7 +121,12 @@ fn strip_start_time(mut value: serde_json::Value) -> serde_json::Value {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_history() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder()
+        .system_image_hash(
+            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
+        )
+        .build()
+        .await;
 
     assert_eq!(env.read_history(), None);
 
@@ -157,16 +162,20 @@ async fn writes_history() {
             "content": [{
                 "source": {
                     "update_hash": "",
-                    "system_image_hash": "",
-                    "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "system_image_hash":
+                        "0000000000000000000000000000000000000000000000000000000000000000",
+                    "vbmeta_hash":
+                        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "build_version": "0.1.0.0",
                     "epoch": SOURCE_EPOCH.to_string()
                 },
                 "target": {
                     "update_hash": UPDATE_HASH,
-                    "system_image_hash": "838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67",
-                    "vbmeta_hash": "a0c6f07a4b3a17fb9348db981de3c5602e2685d626599be1bd909195c694a57b",
+                    "system_image_hash":
+                        "838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67",
+                    "vbmeta_hash":
+                        "a0c6f07a4b3a17fb9348db981de3c5602e2685d626599be1bd909195c694a57b",
                     "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
                     "build_version": "0.2.0.0",
                     "epoch": SOURCE_EPOCH.to_string()
