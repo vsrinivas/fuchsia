@@ -58,26 +58,6 @@ FORBIDDEN_DIRS = {
 }
 
 
-def parse_packages_file(dot_packages_path):
-    """ parse the list of packages and paths in .packages file """
-    packages = []
-    with open(dot_packages_path, encoding='utf-8') as dot_packages:
-        # The packages specification says both '\r' and '\n' are valid line
-        # delimiters, which matches Python's 'universal newline' concept.
-        # Packages specification: https://github.com/dart-lang/dart_enhancement_proposals/blob/HEAD/Accepted/0005%20-%20Package%20Specification/DEP-pkgspec.md
-        contents = dot_packages.read()
-        for line in contents.splitlines():
-            if line.startswith('#'):
-                continue
-            delim = line.find(':')
-            if delim == -1:
-                continue
-            name = line[:delim]
-            path = line[delim + 1:-1]
-            packages.append((name, path))
-    return packages
-
-
 def get_deps(package_name, parsed_yaml, dep_type):
     if dep_type in parsed_yaml and parsed_yaml[dep_type]:
         deps = parsed_yaml[dep_type]
@@ -327,7 +307,7 @@ def main():
         os.mkdir(pub_cache_dir)
         env = os.environ
         env['PUB_CACHE'] = pub_cache_dir
-        pub_get = [args.dart, 'pub', 'get', '--legacy-packages-file']
+        pub_get = [args.dart, 'pub', 'get']
         if args.debug:
             pub_get.append('-v')
         subprocess.check_call(pub_get, cwd=importer_dir, env=env)
@@ -342,27 +322,37 @@ def main():
                 # Only process the root of the output tree.
                 break
 
-        pub_packages = parse_packages_file(
-            os.path.join(importer_dir, '.packages'))
+        package_config_json = json.load(
+            open(
+                os.path.join(importer_dir, '.dart_tool/package_config.json'),
+                encoding='utf-8'))
+        pub_packages = package_config_json['packages']
         package_config = {
             'configVersion': 2,
             'packages': [],
             'generator': os.path.basename(__file__)
         }
         for package in pub_packages:
-            if package[0] in packages:
+            package_name = package['name']
+
+            if package_name in packages:
                 # Skip canonical packages.
                 continue
-            if not package[1].startswith('file://'):
+            if not package['rootUri'].startswith('file://'):
                 continue
-            source_dir = package[1][len('file://'):]
-            package_name = package[0]
+
+            # We expect the package_config.json file to point to a directory called 'lib' (packageUri)
+            # inside the overall package, which will contain the LICENSE file
+            # and other potentially useful directories like 'bin'.
+            source_base_dir = package['rootUri'][len('file://'):]
+            source_dir = os.path.join(source_base_dir, package['packageUri'])
+
             if not valid_package_path(package_name, source_dir):
                 continue
             if source_dir.find('pub.dartlang.org') == -1:
                 print(
                     'Package %s not from dartlang (%s), ignoring' %
-                    (package[0], source_dir))
+                    (package_name, source_dir))
                 continue
             # Don't import packages that live canonically in the tree.
             if package_name in LOCAL_PACKAGES:
@@ -372,10 +362,6 @@ def main():
                     'Warning: dependency on forbidden package %s' %
                     package_name)
                 continue
-            # We expect the .packages file to point to a directory called 'lib'
-            # inside the overall package, which will contain the LICENSE file
-            # and other potentially useful directories like 'bin'.
-            source_base_dir = os.path.dirname(os.path.abspath(source_dir))
             name_with_version = os.path.basename(source_base_dir)
             has_license = any(
                 os.path.exists(os.path.join(source_base_dir, file_name))
