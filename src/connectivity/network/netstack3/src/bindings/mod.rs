@@ -113,24 +113,11 @@ type UdpSockets = socket::datagram::SocketCollectionPair<socket::datagram::Udp>;
 /// sense.
 #[derive(Default)]
 pub(crate) struct BindingsDispatcher {
-    devices: Devices,
     icmp_echo_sockets: IcmpEchoSockets,
     udp_sockets: UdpSockets,
 }
 
-impl AsRef<Devices> for BindingsDispatcher {
-    fn as_ref(&self) -> &Devices {
-        &self.devices
-    }
-}
-
-impl AsMut<Devices> for BindingsDispatcher {
-    fn as_mut(&mut self) -> &mut Devices {
-        &mut self.devices
-    }
-}
-
-impl DeviceStatusNotifier for BindingsDispatcher {
+impl DeviceStatusNotifier for BindingsNonSyncCtxImpl {
     fn device_status_changed(&mut self, _id: u64) {
         // NOTE(brunodalbo) we may want to do more things here in the future,
         // for now this is only intercepted for testing
@@ -142,6 +129,7 @@ impl DeviceStatusNotifier for BindingsDispatcher {
 pub(crate) struct BindingsNonSyncCtxImpl {
     rng: OsRng,
     timers: timers::TimerDispatcher<TimerId>,
+    devices: Devices,
 }
 
 impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
@@ -153,6 +141,18 @@ impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
 impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
     fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
         &mut self.timers
+    }
+}
+
+impl AsRef<Devices> for BindingsNonSyncCtxImpl {
+    fn as_ref(&self) -> &Devices {
+        &self.devices
+    }
+}
+
+impl AsMut<Devices> for BindingsNonSyncCtxImpl {
+    fn as_mut(&mut self) -> &mut Devices {
+        &mut self.devices
     }
 }
 
@@ -289,7 +289,7 @@ impl TimerContext<TimerId> for BindingsNonSyncCtxImpl {
     }
 }
 
-impl<B> DeviceLayerEventDispatcher<B> for BindingsDispatcher
+impl<B> DeviceLayerEventDispatcher<B> for BindingsNonSyncCtxImpl
 where
     B: BufferMut,
 {
@@ -404,7 +404,7 @@ where
     }
 }
 
-impl<I: Ip> EventContext<netstack3_core::IpDeviceEvent<DeviceId, I>> for BindingsDispatcher {
+impl<I: Ip> EventContext<netstack3_core::IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
     fn on_event(&mut self, event: netstack3_core::IpDeviceEvent<DeviceId, I>) {
         let (device, event) = match event {
             netstack3_core::IpDeviceEvent::AddressAdded { device, addr, state } => (
@@ -432,7 +432,7 @@ impl<I: Ip> EventContext<netstack3_core::IpDeviceEvent<DeviceId, I>> for Binding
     }
 }
 
-impl<I: Ip> EventContext<netstack3_core::IpLayerEvent<DeviceId, I>> for BindingsDispatcher {
+impl<I: Ip> EventContext<netstack3_core::IpLayerEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
     fn on_event(&mut self, event: netstack3_core::IpLayerEvent<DeviceId, I>) {
         let (device, subnet, has_default_route) = match event {
             netstack3_core::IpLayerEvent::DeviceRouteAdded { device, subnet } => {
@@ -453,7 +453,7 @@ impl<I: Ip> EventContext<netstack3_core::IpLayerEvent<DeviceId, I>> for Bindings
     }
 }
 
-impl EventContext<netstack3_core::DadEvent<DeviceId>> for BindingsDispatcher {
+impl EventContext<netstack3_core::DadEvent<DeviceId>> for BindingsNonSyncCtxImpl {
     fn on_event(&mut self, event: netstack3_core::DadEvent<DeviceId>) {
         match event {
             netstack3_core::DadEvent::AddressAssigned { device, addr } => {
@@ -467,14 +467,14 @@ impl EventContext<netstack3_core::DadEvent<DeviceId>> for BindingsDispatcher {
     }
 }
 
-impl EventContext<netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>> for BindingsDispatcher {
+impl EventContext<netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>> for BindingsNonSyncCtxImpl {
     fn on_event(&mut self, _event: netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>) {
         // TODO(https://fxbug.dev/97203): Update forwarding table in response to
         // the event.
     }
 }
 
-impl BindingsDispatcher {
+impl BindingsNonSyncCtxImpl {
     fn notify_interface_update(&self, device: DeviceId, event: InterfaceUpdate) {
         self.devices
             .get_core_device(device)
@@ -494,14 +494,13 @@ trait MutableDeviceState {
 
 impl<D, NonSyncCtx> MutableDeviceState for Ctx<D, NonSyncCtx>
 where
-    D: EventDispatcher + AsMut<Devices> + DeviceStatusNotifier,
-
-    NonSyncCtx: NonSyncContext,
+    D: EventDispatcher,
+    NonSyncCtx: NonSyncContext + DeviceStatusNotifier + AsRef<Devices> + AsMut<Devices>,
 {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
-        if let Some(device_info) = self.sync_ctx.dispatcher.as_mut().get_device_mut(id) {
+        if let Some(device_info) = self.non_sync_ctx.as_mut().get_device_mut(id) {
             f(device_info);
-            self.sync_ctx.dispatcher.device_status_changed(id)
+            self.non_sync_ctx.device_status_changed(id)
         }
     }
 }
@@ -520,15 +519,14 @@ trait InterfaceControl {
 }
 
 fn set_interface_enabled<
-    D: EventDispatcher + AsRef<Devices> + AsMut<Devices>,
-    NonSyncCtx: NonSyncContext,
+    D: EventDispatcher,
+    NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>,
 >(
     Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<D, NonSyncCtx>,
     id: u64,
     should_enable: bool,
 ) -> Result<(), fidl_net_stack::Error> {
-    let device =
-        sync_ctx.dispatcher.as_mut().get_device_mut(id).ok_or(fidl_net_stack::Error::NotFound)?;
+    let device = non_sync_ctx.as_mut().get_device_mut(id).ok_or(fidl_net_stack::Error::NotFound)?;
     let core_id = device.core_id();
 
     let (dev_enabled, events) = match device.info_mut() {
@@ -579,9 +577,8 @@ fn set_interface_enabled<
 
 impl<D, NonSyncCtx> InterfaceControl for Ctx<D, NonSyncCtx>
 where
-    D: EventDispatcher + AsRef<Devices> + AsMut<Devices>,
-
-    NonSyncCtx: NonSyncContext,
+    D: EventDispatcher,
+    NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>,
 {
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         set_interface_enabled(self, id, true /* should_enable */)
@@ -690,7 +687,7 @@ impl NetstackSeed {
             // loopback addresses and on-link routes to the loopback subnets.
             let loopback = netstack3_core::add_loopback_device(sync_ctx, DEFAULT_LOOPBACK_MTU)
                 .expect("error adding loopback device");
-            let devices: &mut Devices = sync_ctx.dispatcher.as_mut();
+            let devices: &mut Devices = non_sync_ctx.as_mut();
             let _binding_id: u64 = devices
                 .add_device(loopback, |id| {
                     const LOOPBACK_NAME: &'static str = "lo";
@@ -775,7 +772,7 @@ impl NetstackSeed {
             .expect("error adding IPv6 loopback on-link subnet route");
 
             // Start servicing timers.
-            let BindingsNonSyncCtxImpl { rng: _, timers } = non_sync_ctx;
+            let BindingsNonSyncCtxImpl { rng: _, timers, devices: _ } = non_sync_ctx;
             timers.spawn(netstack.clone());
         }
 

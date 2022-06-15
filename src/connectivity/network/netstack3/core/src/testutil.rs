@@ -111,9 +111,20 @@ pub(crate) mod benchmarks {
 pub(crate) type DummyCtx = Ctx<DummyEventDispatcher, DummyNonSyncCtx>;
 
 pub(crate) type DummySyncCtx = SyncCtx<DummyEventDispatcher, DummyNonSyncCtx>;
-pub(crate) type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<TimerId>;
+pub(crate) type DummyNonSyncCtx =
+    crate::context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent>;
 
 impl NonSyncContext for DummyNonSyncCtx {}
+
+impl DummyNonSyncCtx {
+    pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId, Vec<u8>)> {
+        self.frame_ctx_mut().take_frames()
+    }
+
+    pub(crate) fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
+        self.frame_ctx().frames()
+    }
+}
 
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
 ///
@@ -606,21 +617,25 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
 /// events have been emitted to the system.
 #[derive(Default)]
 pub(crate) struct DummyEventDispatcher {
-    events: DummyEventCtx<DispatchedEvent>,
-    frames: DummyFrameCtx<DeviceId>,
     icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
 }
 
-impl AsMut<DummyEventCtx<DispatchedEvent>> for DummySyncCtx {
+impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyNonSyncCtx {
     fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
-        &mut self.dispatcher.events
+        self.event_ctx_mut()
+    }
+}
+
+impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
+        self.non_sync_ctx.frame_ctx_mut()
     }
 }
 
 impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
-        self.sync_ctx.as_mut()
+        self.non_sync_ctx.as_mut()
     }
 }
 
@@ -633,12 +648,6 @@ impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
 impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
         self.non_sync_ctx.as_mut()
-    }
-}
-
-impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
-    fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
-        &mut self.sync_ctx.dispatcher.frames
     }
 }
 
@@ -670,14 +679,6 @@ impl TestutilIpExt for Ipv6 {
 }
 
 impl DummyEventDispatcher {
-    pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId, Vec<u8>)> {
-        self.frames.take_frames()
-    }
-
-    pub(crate) fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
-        self.frames.frames()
-    }
-
     /// Takes all the received ICMP replies for a given `conn`.
     pub(crate) fn take_icmp_replies<I: TestutilIpExt>(
         &mut self,
@@ -727,13 +728,13 @@ impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyEventDispatcher {
     }
 }
 
-impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
+impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
-        self.frames.send_frame(&mut (), device, frame)
+        self.frame_ctx_mut().send_frame(&mut (), device, frame)
     }
 }
 
@@ -748,21 +749,21 @@ impl From<Ipv6RouteDiscoveryEvent<DeviceId>> for DispatchedEvent {
     }
 }
 
-impl<I: Ip> EventContext<IpLayerEvent<DeviceId, I>> for DummyEventDispatcher {
+impl<I: Ip> EventContext<IpLayerEvent<DeviceId, I>> for DummyNonSyncCtx {
     fn on_event(&mut self, _event: IpLayerEvent<DeviceId, I>) {}
 }
 
-impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for DummyEventDispatcher {
+impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for DummyNonSyncCtx {
     fn on_event(&mut self, _event: IpDeviceEvent<DeviceId, I>) {}
 }
 
-impl EventContext<DadEvent<DeviceId>> for DummyEventDispatcher {
+impl EventContext<DadEvent<DeviceId>> for DummyNonSyncCtx {
     fn on_event(&mut self, _event: DadEvent<DeviceId>) {}
 }
 
-impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyEventDispatcher {
+impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyNonSyncCtx {
     fn on_event(&mut self, event: Ipv6RouteDiscoveryEvent<DeviceId>) {
-        self.events.on_event(DispatchedEvent::from(event))
+        self.on_event(DispatchedEvent::from(event))
     }
 }
 
@@ -1121,9 +1122,9 @@ mod tests {
         );
 
         net.collect_frames();
-        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_empty(net.iter_pending_frames());
 
         // Bob and Calvin should get any packet sent by Alice.
@@ -1131,14 +1132,14 @@ mod tests {
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
             send_packet(sync_ctx, non_sync_ctx, ip_a, ip_b, device);
         });
-        assert_eq!(net.sync_ctx("alice").dispatcher.frames_sent().len(), 1);
-        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
+        assert_eq!(net.non_sync_ctx("alice").frames_sent().len(), 1);
+        assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 2);
         assert!(net
             .iter_pending_frames()
@@ -1153,14 +1154,14 @@ mod tests {
         net.with_context("bob", |Ctx { sync_ctx, non_sync_ctx }| {
             send_packet(sync_ctx, non_sync_ctx, ip_b, ip_a, device);
         });
-        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
-        assert_eq!(net.sync_ctx("bob").dispatcher.frames_sent().len(), 1);
-        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
+        assert_eq!(net.non_sync_ctx("bob").frames_sent().len(), 1);
+        assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 1);
         assert!(net
             .iter_pending_frames()
@@ -1172,14 +1173,14 @@ mod tests {
         net.with_context("calvin", |Ctx { sync_ctx, non_sync_ctx }| {
             send_packet(sync_ctx, non_sync_ctx, ip_c, ip_a, device);
         });
-        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
-        assert_eq!(net.sync_ctx("calvin").dispatcher.frames_sent().len(), 1);
+        assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
+        assert_eq!(net.non_sync_ctx("calvin").frames_sent().len(), 1);
         assert_empty(net.iter_pending_frames());
         net.collect_frames();
-        assert_empty(net.sync_ctx("alice").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("bob").dispatcher.frames_sent().iter());
-        assert_empty(net.sync_ctx("calvin").dispatcher.frames_sent().iter());
+        assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
+        assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_empty(net.iter_pending_frames());
     }
 }

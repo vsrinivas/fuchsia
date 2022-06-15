@@ -511,11 +511,10 @@ mod tests {
     type MockSyncCtx = crate::context::testutil::DummySyncCtx<
         DummyMldCtx,
         MldFrameMetadata<DummyDeviceId>,
-        (),
         DummyDeviceId,
     >;
     type MockNonSyncCtx =
-        crate::context::testutil::DummyNonSyncCtx<MldDelayedReportTimerId<DummyDeviceId>>;
+        crate::context::testutil::DummyNonSyncCtx<MldDelayedReportTimerId<DummyDeviceId>, ()>;
 
     impl MldContext<MockNonSyncCtx> for MockSyncCtx {
         fn get_ipv6_link_local_addr(
@@ -1242,10 +1241,10 @@ mod tests {
                 },
             );
         };
-        let check_sent_report = |sync_ctx: &mut crate::testutil::DummySyncCtx,
+        let check_sent_report = |non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
                                  specified_source: bool| {
             assert_matches::assert_matches!(
-                &sync_ctx.dispatcher.take_frames()[..],
+                &non_sync_ctx.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
@@ -1273,10 +1272,10 @@ mod tests {
                 }
             );
         };
-        let check_sent_done = |sync_ctx: &mut crate::testutil::DummySyncCtx,
+        let check_sent_done = |non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
                                specified_source: bool| {
             assert_matches::assert_matches!(
-                &sync_ctx.dispatcher.take_frames()[..],
+                &non_sync_ctx.take_frames()[..],
                 [(egress_device, frame)] => {
                     assert_eq!(egress_device, &device_id);
                     let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
@@ -1315,7 +1314,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
-        check_sent_report(&mut sync_ctx, false);
+        check_sent_report(&mut non_sync_ctx, false);
 
         // Disable MLD.
         set_config(
@@ -1324,7 +1323,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: false },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        check_sent_done(&mut sync_ctx, true);
+        check_sent_done(&mut non_sync_ctx, true);
 
         // Enable MLD but disable IPv6.
         //
@@ -1335,7 +1334,7 @@ mod tests {
             TestConfig { ip_enabled: false, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
+        assert_matches::assert_matches!(&non_sync_ctx.take_frames()[..], []);
 
         // Disable MLD but enable IPv6.
         //
@@ -1346,7 +1345,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: false },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        assert_matches::assert_matches!(&sync_ctx.dispatcher.take_frames()[..], []);
+        assert_matches::assert_matches!(&non_sync_ctx.take_frames()[..], []);
 
         // Enable MLD.
         set_config(
@@ -1355,7 +1354,7 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
-        check_sent_report(&mut sync_ctx, true);
+        check_sent_report(&mut non_sync_ctx, true);
 
         // Disable IPv6.
         set_config(
@@ -1364,7 +1363,7 @@ mod tests {
             TestConfig { ip_enabled: false, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        check_sent_done(&mut sync_ctx, false);
+        check_sent_done(&mut non_sync_ctx, false);
 
         // Enable IPv6.
         set_config(
@@ -1373,6 +1372,6 @@ mod tests {
             TestConfig { ip_enabled: true, gmp_enabled: true },
         );
         non_sync_ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range)]);
-        check_sent_report(&mut sync_ctx, false);
+        check_sent_report(&mut non_sync_ctx, false);
     }
 }

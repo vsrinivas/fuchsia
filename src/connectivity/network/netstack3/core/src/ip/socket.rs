@@ -852,11 +852,11 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId: IpDeviceId + 'static,
-        > IpSocketContext<I, DummyNonSyncCtx<Id>> for DummySyncCtx<S, Meta, Event, DeviceId>
+        > IpSocketContext<I, DummyNonSyncCtx<Id, Event>> for DummySyncCtx<S, Meta, DeviceId>
     {
         fn lookup_route(
             &self,
-            _ctx: &mut DummyNonSyncCtx<Id>,
+            _ctx: &mut DummyNonSyncCtx<Id, Event>,
             device: Option<Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
@@ -906,18 +906,18 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId,
-        > BufferIpSocketContext<I, DummyNonSyncCtx<Id>, B>
-        for DummySyncCtx<S, Meta, Event, DeviceId>
+        > BufferIpSocketContext<I, DummyNonSyncCtx<Id, Event>, B>
+        for DummySyncCtx<S, Meta, DeviceId>
     where
-        DummySyncCtx<S, Meta, Event, DeviceId>: FrameContext<
-                DummyNonSyncCtx<Id>,
+        DummySyncCtx<S, Meta, DeviceId>: FrameContext<
+                DummyNonSyncCtx<Id, Event>,
                 B,
                 SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
-            > + IpSocketContext<I, DummyNonSyncCtx<Id>>,
+            > + IpSocketContext<I, DummyNonSyncCtx<Id, Event>>,
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
-            ctx: &mut DummyNonSyncCtx<Id>,
+            ctx: &mut DummyNonSyncCtx<Id, Event>,
             meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
             body: SS,
         ) -> Result<(), SS> {
@@ -1047,7 +1047,7 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::{device::DeviceId, testutil::*, Ctx, SyncCtx};
+    use crate::{device::DeviceId, testutil::*, Ctx};
 
     enum AddressType {
         LocallyOwned,
@@ -1530,7 +1530,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 0);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 0);
 
         #[ipv4]
         assert_eq!(get_counter_val(&mut sync_ctx, "dispatch_receive_ipv4_packet"), 1);
@@ -1626,7 +1626,7 @@ mod tests {
             assert_eq!(ttl, 1);
         };
         let mut packet_count = 0;
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_count);
+        assert_eq!(non_sync_ctx.frames_sent().len(), packet_count);
 
         // Send a packet on the socket and make sure that the right contents
         // are sent.
@@ -1638,14 +1638,14 @@ mod tests {
             None,
         )
         .unwrap();
-        let mut check_sent_frame = |sync_ctx: &SyncCtx<DummyEventDispatcher, _>| {
+        let mut check_sent_frame = |non_sync_ctx: &crate::testutil::DummyNonSyncCtx| {
             packet_count += 1;
-            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_count);
-            let (dev, frame) = &sync_ctx.dispatcher.frames_sent()[packet_count - 1];
+            assert_eq!(non_sync_ctx.frames_sent().len(), packet_count);
+            let (dev, frame) = &non_sync_ctx.frames_sent()[packet_count - 1];
             assert_eq!(dev, &DeviceId::new_ethernet(0));
             check_frame(&frame, packet_count);
         };
-        check_sent_frame(&sync_ctx);
+        check_sent_frame(&non_sync_ctx);
 
         // Send a packet while imposing an MTU that is large enough to fit the
         // packet.
@@ -1659,7 +1659,7 @@ mod tests {
             Some(Ipv6::MINIMUM_LINK_MTU.into()),
         );
         assert_matches::assert_matches!(res, Ok(()));
-        check_sent_frame(&sync_ctx);
+        check_sent_frame(&non_sync_ctx);
 
         // Send a packet on the socket while imposing an MTU which will not
         // allow a packet to be sent.
@@ -1672,7 +1672,7 @@ mod tests {
         );
         assert_matches::assert_matches!(res, Err((_, IpSockSendError::Mtu)));
 
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_count);
+        assert_eq!(non_sync_ctx.frames_sent().len(), packet_count);
         // Try sending a packet which will be larger than the device's MTU,
         // and make sure it fails.
         let res = BufferIpSocketHandler::<I, _, _>::send_ip_packet(

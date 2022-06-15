@@ -4,7 +4,6 @@
 
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom as _;
-use std::num::NonZeroU16;
 use std::ops::{Deref as _, DerefMut as _};
 use std::sync::{Arc, Once};
 
@@ -21,15 +20,13 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
-    context::EventContext,
+    context::{EventContext, InstantContext, RngContext, TimerContext},
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
-    icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
-    Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt, NonSyncContext, UdpBoundId,
-    UdpContext,
+    update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, Ctx, DeviceId,
+    DeviceLayerEventDispatcher, EventDispatcher, NonSyncContext, TimerId,
 };
 use packet::{Buf, BufferMut, Serializer};
-use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
+use rand::rngs::OsRng;
 
 use crate::bindings::{
     context::Lockable,
@@ -37,10 +34,9 @@ use crate::bindings::{
         CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
         NetdeviceInfo,
     },
-    socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, BindingsNonSyncCtxImpl, DeviceStatusNotifier, LockableContext,
-    RequestStreamExt as _, DEFAULT_LOOPBACK_MTU,
+    RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU,
 };
 
 /// log::Log implementation that uses stdout.
@@ -82,20 +78,20 @@ pub(crate) fn set_logger_for_test() {
 /// correct [`EventDispatcher`] are re-implemented by it so any events can be
 /// short circuited into internal event watchers as opposed to routing into the
 /// internal [`BindingsDispatcherState]`.
-pub(crate) struct TestDispatcher {
-    disp: BindingsDispatcher,
+pub(crate) struct TestNonSyncCtx {
+    ctx: BindingsNonSyncCtxImpl,
     /// A oneshot signal that is hit whenever changes to interface status occur
     /// and it is set.
     status_changed_signal: Option<futures::channel::oneshot::Sender<()>>,
 }
 
-impl Default for TestDispatcher {
-    fn default() -> TestDispatcher {
-        TestDispatcher { disp: BindingsDispatcher::default(), status_changed_signal: None }
+impl Default for TestNonSyncCtx {
+    fn default() -> TestNonSyncCtx {
+        TestNonSyncCtx { ctx: Default::default(), status_changed_signal: None }
     }
 }
 
-impl TestDispatcher {
+impl TestNonSyncCtx {
     /// Shorthand method to get a [`DeviceInfo`] from the device's bindings
     /// identifier.
     fn get_device_info(&self, id: u64) -> Option<&DeviceInfo> {
@@ -103,110 +99,91 @@ impl TestDispatcher {
     }
 }
 
-impl DeviceStatusNotifier for TestDispatcher {
+impl DeviceStatusNotifier for TestNonSyncCtx {
     fn device_status_changed(&mut self, id: u64) {
         if let Some(s) = self.status_changed_signal.take() {
             s.send(()).unwrap();
         }
         // we can always send that forward to the real dispatcher, no need to
         // short-circuit it.
-        self.disp.device_status_changed(id);
+        self.ctx.device_status_changed(id);
     }
 }
 
-impl<T> AsRef<T> for TestDispatcher
+impl<T> AsRef<T> for TestNonSyncCtx
 where
-    BindingsDispatcher: AsRef<T>,
+    BindingsNonSyncCtxImpl: AsRef<T>,
 {
     fn as_ref(&self) -> &T {
-        self.disp.as_ref()
+        self.ctx.as_ref()
     }
 }
 
-impl<T> AsMut<T> for TestDispatcher
+impl<T> AsMut<T> for TestNonSyncCtx
 where
-    BindingsDispatcher: AsMut<T>,
+    BindingsNonSyncCtxImpl: AsMut<T>,
 {
     fn as_mut(&mut self) -> &mut T {
-        self.disp.as_mut()
+        self.ctx.as_mut()
     }
 }
 
-impl<I: SocketCollectionIpExt<Udp> + IcmpIpExt> UdpContext<I> for TestDispatcher {
-    fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
-        UdpContext::receive_icmp_error(&mut self.disp, id, err)
+impl RngContext for TestNonSyncCtx {
+    type Rng = OsRng;
+
+    fn rng(&self) -> &OsRng {
+        &self.ctx.rng
+    }
+
+    fn rng_mut(&mut self) -> &mut OsRng {
+        &mut self.ctx.rng
     }
 }
 
-impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
-    for TestDispatcher
-{
-    fn receive_udp_from_conn(
-        &mut self,
-        conn: netstack3_core::UdpConnId<I>,
-        src_ip: I::Addr,
-        src_port: NonZeroU16,
-        body: &B,
-    ) {
-        self.disp.receive_udp_from_conn(conn, src_ip, src_port, body)
-    }
+impl InstantContext for TestNonSyncCtx {
+    type Instant = StackTime;
 
-    /// Receive a UDP packet for a listener.
-    fn receive_udp_from_listen(
-        &mut self,
-        listener: netstack3_core::UdpListenerId<I>,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        src_port: Option<NonZeroU16>,
-        body: &B,
-    ) {
-        self.disp.receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body)
+    fn now(&self) -> StackTime {
+        self.ctx.now()
     }
 }
 
-impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestDispatcher {
+impl TimerContext<TimerId> for TestNonSyncCtx {
+    fn schedule_timer_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
+        self.ctx.schedule_timer_instant(time, id)
+    }
+
+    fn cancel_timer(&mut self, id: TimerId) -> Option<StackTime> {
+        self.ctx.cancel_timer(id)
+    }
+
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        self.ctx.cancel_timers_with(f);
+    }
+
+    fn scheduled_instant(&self, id: TimerId) -> Option<StackTime> {
+        self.ctx.scheduled_instant(id)
+    }
+}
+
+impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
-        self.disp.send_frame(device, frame)
+        self.ctx.send_frame(device, frame)
     }
 }
 
-impl<I: SocketCollectionIpExt<IcmpEcho> + IcmpIpExt> IcmpContext<I> for TestDispatcher {
-    fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
-        IcmpContext::<I>::receive_icmp_error(&mut self.disp, conn, seq_num, err)
-    }
-}
-
-impl<I, B> BufferIcmpContext<I, B> for TestDispatcher
-where
-    I: SocketCollectionIpExt<IcmpEcho> + IcmpIpExt,
-    B: BufferMut,
-    IcmpEchoReply: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
-{
-    fn receive_icmp_echo_reply(
-        &mut self,
-        conn: IcmpConnId<I>,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        id: u16,
-        seq_num: u16,
-        data: B,
-    ) {
-        self.disp.receive_icmp_echo_reply(conn, src_ip, dst_ip, id, seq_num, data)
-    }
-}
-
-impl<T: 'static + Send> EventContext<T> for TestDispatcher {
+impl<T: 'static + Send> EventContext<T> for TestNonSyncCtx {
     fn on_event(&mut self, _event: T) {}
 }
 
 #[derive(Clone)]
 /// A netstack context for testing.
 pub(crate) struct TestContext {
-    ctx: Arc<Mutex<Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>>,
+    ctx: Arc<Mutex<Ctx<BindingsDispatcher, TestNonSyncCtx>>>,
     _interfaces_worker: Arc<super::interfaces_watcher::Worker>,
     interfaces_sink: super::interfaces_watcher::WorkerInterfaceSink,
 }
@@ -232,17 +209,17 @@ impl super::InterfaceEventProducerFactory for TestContext {
     }
 }
 
-impl<'a> Lockable<'a, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>> for TestContext {
-    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>;
+impl<'a> Lockable<'a, Ctx<BindingsDispatcher, TestNonSyncCtx>> for TestContext {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher, TestNonSyncCtx>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher, TestNonSyncCtx>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
 }
 
 impl LockableContext for TestContext {
-    type Dispatcher = TestDispatcher;
-    type NonSyncCtx = BindingsNonSyncCtxImpl;
+    type Dispatcher = BindingsDispatcher;
+    type NonSyncCtx = TestNonSyncCtx;
 }
 
 /// A holder for a [`TestContext`].
@@ -326,15 +303,14 @@ impl TestStack {
             let signal = {
                 let mut ctx = self.ctx.lock().await;
                 if check_status(
-                    ctx.sync_ctx
-                        .dispatcher
+                    ctx.non_sync_ctx
                         .get_device_info(if_id)
                         .expect("Wait for interface status on unknown device"),
                 ) {
                     return;
                 }
                 let (sender, receiver) = futures::channel::oneshot::channel();
-                ctx.sync_ctx.dispatcher.status_changed_signal = Some(sender);
+                ctx.non_sync_ctx.status_changed_signal = Some(sender);
                 receiver
             };
             let () = signal.await.expect("Stream ended before it was signalled");
@@ -360,10 +336,10 @@ impl TestStack {
     }
 
     /// Helper function to invoke a closure that provides a locked
-    /// [`Ctx<TestDispatcher, BindingsContext>`] provided by this `TestStack`.
+    /// [`Ctx<BindingsDispatcher, BindingsContext>`] provided by this `TestStack`.
     pub(crate) async fn with_ctx<
         R,
-        F: FnOnce(&mut Ctx<TestDispatcher, BindingsNonSyncCtxImpl>) -> R,
+        F: FnOnce(&mut Ctx<BindingsDispatcher, TestNonSyncCtx>) -> R,
     >(
         &mut self,
         f: F,
@@ -375,14 +351,14 @@ impl TestStack {
     /// Acquire a lock on this `TestStack`'s context.
     pub(crate) async fn ctx(
         &self,
-    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<BindingsDispatcher, TestNonSyncCtx>>>::Guard {
         self.ctx.lock().await
     }
 
     async fn get_interface_info(&self, id: u64) -> InterfaceInfo {
         let ctx = self.ctx().await;
-        let Ctx { sync_ctx, non_sync_ctx: _ } = ctx.deref();
-        let device = sync_ctx.dispatcher.get_device_info(id).expect("device");
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref();
+        let device = non_sync_ctx.get_device_info(id).expect("device");
         let addresses = get_all_ip_addr_subnets(sync_ctx, device.core_id())
             .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
             .collect();
@@ -426,7 +402,7 @@ impl TestSetup {
     pub(crate) async fn ctx(
         &mut self,
         i: usize,
-    ) -> <TestContext as Lockable<'_, Ctx<TestDispatcher, BindingsNonSyncCtxImpl>>>::Guard {
+    ) -> <TestContext as Lockable<'_, Ctx<BindingsDispatcher, TestNonSyncCtx>>>::Guard {
         self.get(i).ctx.lock().await
     }
 
@@ -711,7 +687,7 @@ async fn test_add_remove_interface() {
     // remove the interface:
     let () = stack.del_ethernet_interface(if_id).await.squash_result().expect("Remove interface");
     // ensure the interface disappeared from records:
-    assert_matches!(test_stack.ctx.lock().await.sync_ctx.dispatcher.get_device_info(if_id), None);
+    assert_matches!(test_stack.ctx.lock().await.non_sync_ctx.get_device_info(if_id), None);
 
     // if we try to remove it again, NotFound should be returned:
     let res =
@@ -741,7 +717,7 @@ async fn test_ethernet_link_up_down() {
     // Ensure that the device has been enabled in the core.
     let core_id = {
         let mut ctx = test_stack.ctx().await;
-        let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+        let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id();
         check_ip_enabled(ctx.deref_mut(), core_id, true);
         core_id
     };
@@ -801,7 +777,7 @@ async fn test_ethernet_link_up_down() {
     let core_id = t
         .get(0)
         .with_ctx(|ctx| {
-            let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+            let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id();
             check_ip_enabled(ctx, core_id, true);
             core_id
         })
@@ -859,7 +835,7 @@ async fn test_disable_enable_interface() {
     // Ensure that the device has been disabled in the core.
     let core_id = {
         let mut ctx = test_stack.ctx().await;
-        let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+        let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id();
         check_ip_enabled(ctx.deref_mut(), core_id, false);
         core_id
     };
@@ -927,7 +903,7 @@ async fn test_phy_admin_interface_state_interaction() {
     // Ensure that the device has been disabled in the core.
     let core_id = {
         let mut ctx = test_stack.ctx().await;
-        let core_id = ctx.sync_ctx.dispatcher.get_device_info(if_id).unwrap().core_id();
+        let core_id = ctx.non_sync_ctx.get_device_info(if_id).unwrap().core_id();
         check_ip_enabled(ctx.deref_mut(), core_id, false);
         core_id
     };
@@ -1165,7 +1141,7 @@ async fn test_list_del_routes() {
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
-    let device = test_stack.ctx().await.sync_ctx.dispatcher.get_core_id(if_id);
+    let device = test_stack.ctx().await.non_sync_ctx.get_core_id(if_id);
     let route1_subnet_bytes = [192, 168, 0, 0];
     let route1_subnet_prefix = 24;
     let route1 = AddableEntryEither::new(
@@ -1201,8 +1177,7 @@ async fn test_list_del_routes() {
                 routes
                     .into_iter()
                     .map(|e| {
-                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.sync_ctx.dispatcher, e)
-                            .unwrap()
+                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.non_sync_ctx, e).unwrap()
                     })
                     .collect::<HashSet<_>>()
             })
@@ -1239,8 +1214,7 @@ async fn test_list_del_routes() {
                 routes
                     .into_iter()
                     .map(|e| {
-                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.sync_ctx.dispatcher, e)
-                            .unwrap()
+                        AddableEntryEither::try_from_fidl_with_ctx(&ctx.non_sync_ctx, e).unwrap()
                     })
                     .collect::<HashSet<_>>()
             })

@@ -59,7 +59,7 @@ use crate::{
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap},
-    BufferDispatcher, EventDispatcher, NonSyncContext, SyncCtx,
+    BufferDispatcher, BufferNonSyncContext, EventDispatcher, NonSyncContext, SyncCtx,
 };
 
 /// The default number of ICMP error messages to send per second.
@@ -2616,7 +2616,7 @@ fn receive_icmp_echo_reply<
 pub fn send_icmpv4_echo_request<
     B: BufferMut,
     D: BufferDispatcher<B>,
-    NonSyncCtx: NonSyncContext,
+    NonSyncCtx: BufferNonSyncContext<B>,
 >(
     sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
@@ -2636,7 +2636,7 @@ pub fn send_icmpv4_echo_request<
 pub fn send_icmpv6_echo_request<
     B: BufferMut,
     D: BufferDispatcher<B>,
-    NonSyncCtx: NonSyncContext,
+    NonSyncCtx: BufferNonSyncContext<B>,
 >(
     sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
     ctx: &mut NonSyncCtx,
@@ -2925,7 +2925,7 @@ mod tests {
         fn send_icmp_echo_request<
             B: BufferMut,
             D: BufferDispatcher<B>,
-            NonSyncCtx: NonSyncContext,
+            NonSyncCtx: BufferNonSyncContext<B>,
         >(
             sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
@@ -2950,7 +2950,7 @@ mod tests {
         fn send_icmp_echo_request<
             B: BufferMut,
             D: BufferDispatcher<B>,
-            NonSyncCtx: NonSyncContext,
+            NonSyncCtx: BufferNonSyncContext<B>,
         >(
             sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
@@ -2977,7 +2977,7 @@ mod tests {
         fn send_icmp_echo_request<
             B: BufferMut,
             D: BufferDispatcher<B>,
-            NonSyncCtx: NonSyncContext,
+            NonSyncCtx: BufferNonSyncContext<B>,
         >(
             sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
             ctx: &mut NonSyncCtx,
@@ -3068,10 +3068,10 @@ mod tests {
         }
 
         if let Some((expect_message, expect_code)) = expect_message_code {
-            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+            assert_eq!(non_sync_ctx.frames_sent().len(), 1);
             let (src_mac, dst_mac, src_ip, dst_ip, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<I, _, M, _>(
-                    &sync_ctx.dispatcher.frames_sent()[0].1,
+                    &non_sync_ctx.frames_sent()[0].1,
                     f,
                 )
                 .unwrap();
@@ -3083,7 +3083,7 @@ mod tests {
             assert_eq!(message, expect_message);
             assert_eq!(code, expect_code);
         } else {
-            assert_empty(sync_ctx.dispatcher.frames_sent().iter());
+            assert_empty(non_sync_ctx.frames_sent().iter());
         }
     }
 
@@ -3839,11 +3839,10 @@ mod tests {
             type $outer_sync_ctx = DummySyncCtx<
                 $inner,
                 SendIpPacketMeta<$ip, DummyDeviceId, SpecifiedAddr<<$ip as Ip>::Addr>>,
-                (),
                 DummyDeviceId,
             >;
 
-            type $outer_non_sync_ctx = DummyNonSyncCtx<()>;
+            type $outer_non_sync_ctx = DummyNonSyncCtx<(), ()>;
 
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {

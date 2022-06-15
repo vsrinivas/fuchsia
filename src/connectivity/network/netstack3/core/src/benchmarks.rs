@@ -31,8 +31,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::EventContext,
-    device::{receive_frame, DeviceId, DeviceLayerEventDispatcher},
+    device::{receive_frame, DeviceId},
     ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     testutil::{
         benchmarks::{black_box, Bencher},
@@ -48,29 +47,11 @@ use crate::{
 // `cargo test`.
 
 #[derive(Default)]
-struct BenchmarkEventDispatcher {
-    #[cfg(debug_assertions)]
-    frames_sent: usize,
-}
+struct BenchmarkEventDispatcher;
 
 impl<I: IcmpIpExt> UdpContext<I> for BenchmarkEventDispatcher {}
 
 impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for BenchmarkEventDispatcher {}
-
-impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
-    fn send_frame<S: Serializer<Buffer = B>>(
-        &mut self,
-        _device: DeviceId,
-        frame: S,
-    ) -> Result<(), S> {
-        let _: B = black_box(frame.serialize_no_alloc_outer()).map_err(|(_, ser)| ser)?;
-        #[cfg(debug_assertions)]
-        {
-            self.frames_sent += 1;
-        }
-        Ok(())
-    }
-}
 
 impl<I: IcmpIpExt> IcmpContext<I> for BenchmarkEventDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
@@ -90,10 +71,6 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BenchmarkEventDispa
     ) {
         unimplemented!()
     }
-}
-
-impl<T> EventContext<T> for BenchmarkEventDispatcher {
-    fn on_event(&mut self, _event: T) {}
 }
 
 // Benchmark the minimum possible time to forward an IPv4 packet by stripping
@@ -169,7 +146,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
 
         #[cfg(debug_assertions)]
         {
-            assert_eq!(sync_ctx.dispatcher.frames_sent, iters);
+            assert_eq!(non_sync_ctx.frames_sent().len(), iters);
         }
 
         // Since we modified the buffer in-place, it now has the wrong source

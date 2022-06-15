@@ -37,11 +37,11 @@ use netstack3_core::{
     get_udp_listener_info, get_udp_posix_reuse_port, icmp, listen_udp, remove_udp_conn,
     remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
     set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BufferDispatcher,
-    BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap, IdMapCollection,
-    IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError, LocalAddressError,
-    NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
-    UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
-    UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
+    BufferNonSyncContext, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
+    IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError,
+    LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId,
+    UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
+    UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -646,7 +646,11 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError>;
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+    fn send_icmp_echo_request<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        NonSyncCtx: BufferNonSyncContext<B>,
+    >(
         sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
@@ -654,7 +658,7 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
         body: B,
     ) -> Result<(), (B, IcmpSendError)>;
 
-    fn send_conn<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+    fn send_conn<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: BufferNonSyncContext<B>>(
         sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
@@ -738,7 +742,11 @@ impl IcmpEchoIpExt for Ipv4 {
         )
     }
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+    fn send_icmp_echo_request<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        NonSyncCtx: BufferNonSyncContext<B>,
+    >(
         sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
@@ -784,7 +792,11 @@ impl IcmpEchoIpExt for Ipv6 {
         )
     }
 
-    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>(
+    fn send_icmp_echo_request<
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        NonSyncCtx: BufferNonSyncContext<B>,
+    >(
         sync_ctx: &mut SyncCtx<D, NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: icmp::IcmpConnId<Self>,
@@ -919,8 +931,12 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, NonSyncCtx: NonSyncContext>
     }
 }
 
-impl<I: IcmpEchoIpExt, B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext>
-    BufferTransportState<I, B, NonSyncCtx, SyncCtx<D, NonSyncCtx>> for IcmpEcho
+impl<
+        I: IcmpEchoIpExt,
+        B: BufferMut,
+        D: BufferDispatcher<B>,
+        NonSyncCtx: BufferNonSyncContext<B>,
+    > BufferTransportState<I, B, NonSyncCtx, SyncCtx<D, NonSyncCtx>> for IcmpEcho
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
@@ -1127,6 +1143,7 @@ pub(super) fn spawn_worker<C>(
 where
     C: LockableContext,
     C::Dispatcher: SocketWorkerDispatcher,
+    C::NonSyncCtx: AsRef<Devices>,
     C: Clone + Send + Sync + 'static,
 {
     match (domain, proto) {
@@ -1197,7 +1214,7 @@ where
     > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
         + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
         + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
-    <SC as RequestHandlerContext<I, T>>::Dispatcher: AsRef<
+    <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<
         Devices<
             <SyncCtx<
                 <SC as RequestHandlerContext<I, T>>::Dispatcher,
@@ -1863,7 +1880,7 @@ where
 }
 
 pub(crate) trait RequestHandlerDispatcher<I, T>:
-    EventDispatcher + AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>> + AsRef<Devices>
+    EventDispatcher + AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>
 where
     I: IpExt,
     T: Transport<Ipv4>,
@@ -1879,7 +1896,7 @@ where
     T: Transport<Ipv6>,
     T: Transport<I>,
     D: EventDispatcher,
-    D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>> + AsRef<Devices>,
+    D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>,
 {
 }
 
@@ -1902,7 +1919,7 @@ where
     T: Transport<I>,
 {
     type Dispatcher: RequestHandlerDispatcher<I, T>;
-    type NonSyncCtx: NonSyncContext;
+    type NonSyncCtx: NonSyncContext + AsRef<Devices>;
 }
 
 impl<I, T, C> RequestHandlerContext<I, T> for C
@@ -1913,6 +1930,7 @@ where
     T: Transport<I>,
     C: LockableContext,
     C::Dispatcher: RequestHandlerDispatcher<I, T>,
+    C::NonSyncCtx: AsRef<Devices>,
 {
     type Dispatcher = C::Dispatcher;
     type NonSyncCtx = C::NonSyncCtx;
@@ -2330,7 +2348,7 @@ where
     > as IpDeviceIdContext<I>>::DeviceId: IdMapCollectionKey
         + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
         + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
-    <SC as RequestHandlerContext<I, T>>::Dispatcher: AsRef<
+    <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<
         Devices<
             <SyncCtx<
                 <SC as RequestHandlerContext<I, T>>::Dispatcher,
@@ -2429,7 +2447,7 @@ where
     fn bind_to_device(mut self, index: Option<u64>) -> Result<(), fposix::Errno> {
         let device = index
             .map(|index| {
-                TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.sync_ctx.dispatcher, index)
+                TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.non_sync_ctx, index)
                     .map_err(|DeviceNotFoundError {}| fposix::Errno::Enodev)
             })
             .transpose()?;
@@ -2449,10 +2467,9 @@ where
             None => return Ok(None),
             Some(d) => d,
         };
-        let index = device
-            .try_into_fidl_with_ctx(&self.ctx.sync_ctx.dispatcher)
-            .map_err(IntoErrno::into_errno)?;
-        Ok(self.ctx.sync_ctx.dispatcher.as_ref().get_device(index).map(|device_info| {
+        let index =
+            device.try_into_fidl_with_ctx(&self.ctx.non_sync_ctx).map_err(IntoErrno::into_errno)?;
+        Ok(self.ctx.non_sync_ctx.as_ref().get_device(index).map(|device_info| {
             let CommonInfo { name, mtu: _, admin_enabled: _, events: _ } =
                 device_info.info().common_info();
             name.to_string()

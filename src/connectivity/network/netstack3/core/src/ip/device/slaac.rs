@@ -1475,8 +1475,8 @@ mod tests {
         non_slaac_addr: Option<UnicastAddr<Ipv6Addr>>,
     }
 
-    type MockCtx = DummySyncCtx<MockSlaacContext, (), (), DummyDeviceId>;
-    type MockNonSyncCtx = DummyNonSyncCtx<SlaacTimerId<DummyDeviceId>>;
+    type MockCtx = DummySyncCtx<MockSlaacContext, (), DummyDeviceId>;
+    type MockNonSyncCtx = DummyNonSyncCtx<SlaacTimerId<DummyDeviceId>, ()>;
 
     impl SlaacStateContext<MockNonSyncCtx> for MockCtx {
         fn get_config(

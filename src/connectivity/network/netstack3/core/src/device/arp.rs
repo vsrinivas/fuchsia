@@ -801,10 +801,10 @@ mod tests {
         }
     }
 
-    type MockNonSyncCtx = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>>;
+    type MockNonSyncCtx = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>, ()>;
 
     type MockCtx =
-        DummySyncCtx<DummyArpCtx, ArpFrameMetadata<EthernetLinkDevice, ()>, (), DummyDeviceId>;
+        DummySyncCtx<DummyArpCtx, ArpFrameMetadata<EthernetLinkDevice, ()>, DummyDeviceId>;
 
     impl ArpDeviceIdContext<EthernetLinkDevice> for MockCtx {
         type DeviceId = ();
@@ -1052,12 +1052,11 @@ mod tests {
         // Cancelling timers matches on the DeviceId, so setup a context that
         // uses IDs. The test doesn't use the context functions, so it's okay
         // that they return the same info.
-        type MockNonSyncCtx2 = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>>;
+        type MockNonSyncCtx2 = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>, ()>;
 
         type MockCtx2 = crate::context::testutil::DummySyncCtx<
             DummyArpCtx,
             ArpFrameMetadata<EthernetLinkDevice, usize>,
-            (),
             DummyDeviceId,
         >;
 
