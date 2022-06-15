@@ -11,7 +11,8 @@
             "license_all_grouped_by_license_pattern_deduped.txt",
             "license_meta_grouped_by_license_pattern_deduped.txt",
             "license_texts_grouped_by_license_pattern_deduped.txt",
-            "license_texts_grouped_by_license_pattern_deduped.html"
+            "license_texts_grouped_by_license_pattern_deduped.html",
+            "compliance_merged.csv"
         ],
         "templates": [
             {
