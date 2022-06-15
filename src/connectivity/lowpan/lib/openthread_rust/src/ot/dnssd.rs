@@ -122,22 +122,16 @@ impl<'a> DnsTxtEntry<'a> {
 
 impl<'a> std::fmt::Debug for DnsTxtEntry<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fn ascii_dump(data: &[u8]) -> String {
-            let vec = data.iter().copied().flat_map(std::ascii::escape_default).collect::<Vec<_>>();
-            std::str::from_utf8(&vec).unwrap().to_string()
-        }
-        match (self.key(), self.value()) {
-            (Some(key), Some(value)) => write!(f, "{}={}", key, ascii_dump(value)),
-            (Some(key), None) => write!(f, "{}", key),
-            (None, Some(value)) => write!(f, "{}", ascii_dump(value)),
-            (None, None) => Ok(()),
-        }
+        f.debug_struct("DnsTxtEntry")
+            .field("key_field", &self.key_field())
+            .field("value_field", &self.value_field().map(ascii_dump))
+            .finish()
     }
 }
 
 impl<'a> std::fmt::Display for DnsTxtEntry<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
+        write!(f, "{}", ascii_dump(&self.to_vec()))
     }
 }
 
@@ -519,6 +513,23 @@ impl<T: Dnssd> DnssdExt for T {}
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_dnstxtentry_new() {
+        let cstring = CString::new("CRA").unwrap();
+        assert_eq!(
+            DnsTxtEntry::try_new(Some(&cstring), Some(b"300")).unwrap().to_string(),
+            "CRA=300".to_string()
+        );
+        assert_eq!(
+            DnsTxtEntry::try_new(None, Some(b"CRA=300")).unwrap().to_string(),
+            "CRA=300".to_string()
+        );
+        assert_eq!(
+            DnsTxtEntry::try_new(Some(&cstring), None).unwrap().to_string(),
+            "CRA".to_string()
+        );
+    }
 
     #[test]
     fn test_split_txt() {

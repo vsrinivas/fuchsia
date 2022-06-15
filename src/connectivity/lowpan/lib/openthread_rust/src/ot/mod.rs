@@ -173,6 +173,12 @@ pub fn set_logging_level(level: LogLevel) {
     }
 }
 
+/// Converts a byte string into an ASCII [`String`], properly escaped.
+pub(crate) fn ascii_dump(data: &[u8]) -> String {
+    let vec = data.iter().copied().flat_map(std::ascii::escape_default).collect::<Vec<_>>();
+    std::str::from_utf8(&vec).unwrap().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

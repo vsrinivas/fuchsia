@@ -69,6 +69,7 @@ pub(crate) mod prelude_internal {
     pub use futures::prelude::*;
     pub use log::{debug, error, info, trace, warn};
     pub use num::FromPrimitive as _;
+    pub(crate) use ot::ascii_dump;
     pub use ot::Result;
     pub use ot::{
         types::*, BorderRouter, Boxable, Error, Instance, InstanceInterface, Ip6, Link, Message,
