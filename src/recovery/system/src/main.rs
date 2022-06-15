@@ -139,6 +139,8 @@ const WIFI_SSID: &'static str = "WiFi SSID";
 const WIFI_PASSWORD: &'static str = "WiFi Password";
 #[cfg(feature = "http_setup_server")]
 const WIFI_CONNECT: &'static str = "WiFi Connect";
+#[cfg(feature = "http_setup_server")]
+const UPDATE: &'static str = "Update";
 
 const PATH_TO_FDR_RESTRICTION_CONFIG: &'static str = "/config/data/check_fdr_restriction.json";
 
@@ -432,6 +434,19 @@ impl RenderResources {
                         info_text,
                     );
 
+                    let button_text = UPDATE;
+                    let info_text = " ";
+                    RenderResources::build_button_group(
+                        face,
+                        body_text_size,
+                        button_text_size,
+                        &mut buttons,
+                        builder,
+                        wrap_width,
+                        &button_text,
+                        info_text,
+                    );
+
                     // End row button_row
                     builder.end_group();
                 }
@@ -442,13 +457,15 @@ impl RenderResources {
         scene.layout(target_size);
         #[cfg(feature = "http_setup_server")]
         {
-            if buttons.len() >= 3 {
+            if buttons.len() >= 4 {
                 buttons[0].set_focused(&mut scene, true);
                 buttons[1].set_focused(&mut scene, true);
                 buttons[2].set_focused(
                     &mut scene,
                     wifi_ssid.is_some() && wifi_connected == &WiFiMessages::Connected(false),
                 );
+                buttons[3]
+                    .set_focused(&mut scene, wifi_connected == &WiFiMessages::Connected(true));
             }
             Self { scene, buttons }
         }
@@ -848,6 +865,27 @@ impl RecoveryViewAssistant {
                             };
                             fasync::Task::local(f).detach();
                         }
+                    }
+                    UPDATE => {
+                        let local_app_sender = self.app_sender.clone();
+                        let view_key = self.view_key.clone();
+                        local_app_sender.queue_message(
+                            MessageTarget::View(view_key),
+                            make_message(RecoveryMessages::StartingOta),
+                        );
+                        let f = async move {
+                            let res = ota::run_wellknown_ota().await;
+                            match res {
+                                Ok(_) => println!("OTA Success!"),
+                                Err(ref e) => println!("OTA Error..... {:?}", e),
+                            }
+
+                            local_app_sender.queue_message(
+                                MessageTarget::View(view_key),
+                                make_message(RecoveryMessages::OtaFinished { result: res }),
+                            );
+                        };
+                        fasync::Task::local(f).detach();
                     }
                     _ => {}
                 }

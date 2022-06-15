@@ -291,6 +291,11 @@ pub async fn run_devhost_ota(cfg: DevhostConfig) -> Result<(), Error> {
     ota_env.do_ota("devhost", "20200101.1.1").await
 }
 
+pub async fn run_wellknown_ota() -> Result<(), Error> {
+    println!("Recovery: ERROR - Wellknown OTA not implemented");
+    bail!("run_wellknown_ota is not implemented")
+}
+
 #[cfg(test)]
 mod tests {
     use {
