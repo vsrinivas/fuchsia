@@ -311,8 +311,15 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
   auto vk_loader = escher_->device()->dispatch_loader();
 
   // Grab the collection Properties from Vulkan.
-  auto properties = escher::ESCHER_CHECKED_VK_RESULT(
-      vk_device.getBufferCollectionPropertiesFUCHSIA(collection, vk_loader));
+  // TODO(fxbug.dev/102299): Add unittests to cover the case where sysmem client
+  // token gets invalidated when importing images.
+  auto properties_rv = vk_device.getBufferCollectionPropertiesFUCHSIA(collection, vk_loader);
+  if (properties_rv.result != vk::Result::eSuccess) {
+    FX_LOGS(WARNING) << "Cannot get buffer collection properties; the token may "
+                        "have been invalidated.";
+    return nullptr;
+  }
+  auto properties = properties_rv.value;
 
   // Check the provided index against actually allocated number of buffers.
   if (properties.bufferCount <= metadata.vmo_index) {
