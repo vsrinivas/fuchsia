@@ -44,7 +44,7 @@ import("//build/toolchain/restat.gni")
 #   strip
 #     Optional: Override default tool names.
 #
-#   use_ccache, use_goma, use_reclient_cxx_experimental
+#   use_ccache, use_goma, cxx_rbe_enable
 #     Optional: Override the global setting, useful to opt out of
 #     ccache/goma in a particular toolchain.
 #
@@ -62,17 +62,14 @@ template("clang_toolchain") {
            "clang_toolchain() must specify a \"toolchain_os\"")
 
     compiler_prefix = ""
-    if (defined(invoker.use_reclient_cxx_experimental)) {
-      use_reclient_cxx_experimental = invoker.use_reclient_cxx_experimental
+    if (defined(invoker.cxx_rbe_enable)) {
+      cxx_rbe_enable = invoker.cxx_rbe_enable
     }
     if (defined(invoker.use_goma)) {
       use_goma = invoker.use_goma
     }
-    if (use_reclient_cxx_experimental) {
-      assert(enable_rbe,
-             "enable_rbe=true is required with use_reclient_cxx_experimental")
-      compiler_prefix =
-          rebase_path("//build/rbe/cxx-remote-wrapper.sh") + " -- "
+    if (cxx_rbe_enable) {
+      compiler_prefix = rebase_path(cxx_remote_wrapper, root_build_dir) + " -- "
       not_needed([ "use_goma" ])
     } else if (use_goma) {
       compiler_prefix = rebase_path(goma_dir, root_build_dir) + "/gomacc"
@@ -123,9 +120,9 @@ template("clang_toolchain") {
           !check_rustc_consistency || !check_rustc_determinism,
           "Only one of {check_rustc_consistency,check_rustc_determinism} may be true.")
       assert(
-          rust_rbe_check == "" || rust_rbe_check == "consistency" ||
+          rust_rbe_check == "none" || rust_rbe_check == "consistency" ||
               rust_rbe_check == "determinism",
-          "rust_rbe_check must be one of {,consistency,determinism}, but got: ${rust_rbe_check}.")
+          "rust_rbe_check must be one of {none,consistency,determinism}, but got: ${rust_rbe_check}.")
       if (check_rustc_consistency || rust_rbe_check == "consistency") {
         # Compare local vs. remote build.
         # Allow caching.

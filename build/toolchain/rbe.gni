@@ -29,12 +29,18 @@ cxx_remote_wrapper = "//build/rbe/cxx-remote-wrapper.sh"
 cxx_rbe_deps = rbe_common_tools + rbe_common_scripts + [ cxx_remote_wrapper ]
 
 declare_args() {
-  # Set to true to enable distributed compilation using RBE.
+  #########################
+  ### Rust RBE controls ###
+  #########################
+
+  # Set to true to enable distributed compilation of Rust using RBE.
   rust_rbe_enable = false
 
   # One of:
+  #
   #   * "remote": Execute action remotely on cache miss.
   #         The remote cache is always updated with this result.
+  #
   #   * "local": Lookup action in the remote cache, but execute action
   #         locally on cache miss.  The locally produced result is
   #         not uploaded to the remote cache.
@@ -42,10 +48,12 @@ declare_args() {
   rust_rbe_exec_strategy = "remote"
 
   # Run one of the more expensive checks, intended for CI.
-  # All of these require rbe_rust.enable=true.
+  # All of these require rust_rbe_enable=true.
   #
   # One of:
-  #   * "": No additional check.
+  #
+  #   * "none": No additional check.
+  #
   #   * "determinism":
   #       Check of determinism of rustc targets by running locally twice
   #       and comparing outputs, failing if any differences are found.
@@ -63,7 +71,52 @@ declare_args() {
   #       Check consistency between local and remote rust compiles,
   #       by running both and comparing results.
   #
-  rust_rbe_check = ""
+  rust_rbe_check = "none"
+
+  ########################
+  ### C++ RBE controls ###
+  ########################
+
+  # Set to true to enable distributed compilation of C++ using RBE.
+  # Enabling this takes precedence over `use_goma`.
+  cxx_rbe_enable = false
+
+  # One of:
+  #
+  #   * "remote": Execute action remotely on cache miss.
+  #         The remote cache is always updated with this result.
+  #
+  #   * "local": Lookup action in the remote cache, but execute action
+  #         locally on cache miss.  The locally produced result is
+  #         not uploaded to the remote cache.
+  #   (There are other rewrapper options that are not exposed.)
+  cxx_rbe_exec_strategy = "remote"
+
+  # Run one of the more expensive checks, intended for CI.
+  # All of these require cxx_rbe_enable=true.
+  #
+  # One of:
+  #
+  #   * "none": No additional check.
+  #
+  #   * "determinism":
+  #       Check of determinism of C++ targets by running locally twice
+  #       and comparing outputs, failing if any differences are found.
+  #       Even though this check doesn't involve RBE, it uses the same
+  #       wrapper script, which knows what output files to expect and
+  #       compare.
+  #
+  #       Build outputs that depend on time are discouraged because they
+  #       impact caching.
+  #       If your result depends on the current time, this check will
+  #       definitely fail.  If it depends on only the date, there is still
+  #       a nonzero chance of failure, if the rerun falls on the next day.
+  #
+  #   * "consistency":
+  #       Check consistency between local and remote C++ compiles,
+  #       by running both and comparing results.
+  #
+  cxx_rbe_check = "none"
 
   #########################################
   ### DEPRECATED LEGACY variables below ###
