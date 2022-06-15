@@ -343,6 +343,31 @@ protocol EventSource {
     }) error fuchsia.component.Error;
 };
 
+/// Subscribe to events in component manager.
+@discoverable
+protocol EventSource2 {
+    /// Subscribes to the events of the provided EventTypes.
+    ///
+    /// Returns a EventStreamSync which can be used
+    /// to expect the registered types.
+    ///
+    /// Errors:
+    /// - `RESOURCE_UNAVAILABLE` when the component hasn't been granted the capability to subscribe
+    ///   to some event in the requested `events`.
+    Subscribe(resource struct {
+        events vector<fuchsia.component.name>:MAX;
+        stream server_end:EventStream2;
+    }) -> (struct {}) error fuchsia.component.Error;
+};
+
+/// Listener for events on the component hierarchy.
+@discoverable
+protocol EventStream2 {
+    GetNext() -> (resource struct {
+        events vector<Event>:MAX;
+    });
+};
+
 /// Listener for events on the component hierarchy. The server won't wait for the client
 /// to handle the request before sending more events.
 @discoverable

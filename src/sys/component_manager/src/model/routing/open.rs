@@ -18,6 +18,7 @@ use {
 /// A container for the data needed to open a capability.
 pub enum OpenOptions<'a> {
     Directory(OpenDirectoryOptions<'a>),
+    EventStream(OpenEventStreamOptions<'a>),
     Protocol(OpenProtocolOptions<'a>),
     Resolver(OpenResolverOptions<'a>),
     Runner(OpenRunnerOptions<'a>),
@@ -61,6 +62,12 @@ impl<'a> OpenOptions<'a> {
                     server_chan,
                 }))
             }
+            RouteRequest::UseEventStream(_) => Ok(Self::EventStream(OpenEventStreamOptions {
+                flags,
+                open_mode,
+                relative_path,
+                server_chan,
+            })),
             // TODO(fxbug.dev/50716): This StartReason is wrong. We need to refactor the Storage
             // capability to plumb through the correct StartReason.
             RouteRequest::UseStorage(_) => Ok(Self::Storage(OpenStorageOptions {
@@ -110,6 +117,13 @@ pub struct OpenStorageOptions<'a> {
     pub open_mode: u32,
     pub server_chan: &'a mut zx::Channel,
     pub start_reason: StartReason,
+}
+
+pub struct OpenEventStreamOptions<'a> {
+    pub flags: fio::OpenFlags,
+    pub open_mode: u32,
+    pub relative_path: String,
+    pub server_chan: &'a mut zx::Channel,
 }
 
 /// A request to open a capability at its source.
@@ -188,6 +202,18 @@ impl<'a> OpenRequest<'a> {
                         source,
                         target,
                         server_chan: open_runner_options.server_chan,
+                    };
+                }
+            }
+            RouteSource::EventStream(source) => {
+                if let OpenOptions::EventStream(open_event_stream_options) = options {
+                    return Self {
+                        flags: open_event_stream_options.flags,
+                        open_mode: open_event_stream_options.open_mode,
+                        relative_path: PathBuf::new(),
+                        source,
+                        target,
+                        server_chan: open_event_stream_options.server_chan,
                     };
                 }
             }

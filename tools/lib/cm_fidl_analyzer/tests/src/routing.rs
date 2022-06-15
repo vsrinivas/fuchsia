@@ -20,8 +20,8 @@ use {
         OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferServiceDecl,
         OfferSource, OfferStorageDecl, OfferTarget, ProtocolDecl, RegistrationSource, ResolverDecl,
         ResolverRegistration, RunnerDecl, RunnerRegistration, ServiceDecl, StorageDecl,
-        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
-        UseServiceDecl, UseSource, UseStorageDecl,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl,
+        UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -29,7 +29,9 @@ use {
     },
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_sys2 as fsys,
+    fuchsia_async::futures::FutureExt,
+    fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     routing::{
         component_id_index::ComponentIdIndex,
@@ -40,7 +42,9 @@ use {
         rights::{READ_RIGHTS, WRITE_RIGHTS},
         RegistrationDecl,
     },
-    routing_test_helpers::{CheckUse, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder},
+    routing_test_helpers::{
+        CheckUse, ComponentEventRoute, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder,
+    },
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
@@ -53,6 +57,8 @@ use {
 };
 
 const TEST_URL_PREFIX: &str = "test:///";
+// Placeholder for when a component resolves to itself, and its name is unknown as a result.
+const USE_TARGET_PLACEHOLDER_NAME: &str = "target";
 
 fn make_test_url(component_name: &str) -> String {
     format!("{}{}", TEST_URL_PREFIX, component_name)
@@ -214,6 +220,45 @@ impl TestModelError {
 }
 
 impl RoutingTestForAnalyzer {
+    fn assert_event_stream_scope(
+        &self,
+        use_decl: &UseEventStreamDecl,
+        scope: &Vec<ComponentEventRoute>,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) {
+        // Perform secondary routing to find scope
+        let mut map = vec![];
+        ComponentModelForAnalyzer::route_event_stream_sync(use_decl.clone(), &target, &mut map)
+            .expect("Expected event_stream routing to succeed.");
+        let mut route = use_decl
+            .scope
+            .as_ref()
+            .map(|scope| {
+                let route = ComponentEventRoute {
+                    component: USE_TARGET_PLACEHOLDER_NAME.to_string(),
+                    scope: Some(
+                        scope
+                            .iter()
+                            .map(|s| match s {
+                                cm_rust::EventScope::Child(child) => child.name.to_string(),
+                                cm_rust::EventScope::Collection(collection) => {
+                                    collection.to_string()
+                                }
+                            })
+                            .collect(),
+                    ),
+                };
+                vec![route]
+            })
+            .unwrap_or_default();
+        map.reverse();
+        let search_name = use_decl.source_name.clone();
+
+        // Generate a unified route from the component topology
+        generate_unified_route(map, search_name, &mut route);
+        assert_eq!(scope, &route);
+    }
+
     fn find_matching_use(
         &self,
         check: CheckUse,
@@ -286,6 +331,21 @@ impl RoutingTestForAnalyzer {
                     .ok_or(TestModelError::UseDeclNotFound),
                 expected_res,
             ),
+            CheckUse::EventStream { path, scope: _, name, expected_res } => (
+                decl.uses
+                    .iter()
+                    .find_map(|u| match u {
+                        UseDecl::EventStream(d)
+                            if d.source_name.to_string() == name.to_string()
+                                && path == d.target_path =>
+                        {
+                            Some(u.clone())
+                        }
+                        _ => None,
+                    })
+                    .ok_or(TestModelError::UseDeclNotFound),
+                expected_res,
+            ),
         }
     }
 
@@ -297,6 +357,7 @@ impl RoutingTestForAnalyzer {
         match check {
             CheckUse::Directory { path, expected_res, .. }
             | CheckUse::Protocol { path, expected_res, .. }
+            | CheckUse::EventStream { path, expected_res, .. }
             | CheckUse::Service { path, expected_res, .. } => (
                 decl.exposes
                     .iter()
@@ -312,6 +373,98 @@ impl RoutingTestForAnalyzer {
     }
 }
 
+/// Converts a component framework route to a strongly-typed stringified route
+/// which can be compared against a string of paths for testing purposes.
+fn generate_unified_route(
+    map: Vec<Arc<ComponentInstanceForAnalyzer>>,
+    mut search_name: CapabilityName,
+    route: &mut Vec<ComponentEventRoute>,
+) {
+    for component in &map {
+        add_component_to_route(component, &mut search_name, route);
+    }
+}
+
+/// Adds a specified component to the route
+fn add_component_to_route(
+    component: &Arc<ComponentInstanceForAnalyzer>,
+    search_name: &mut CapabilityName,
+    route: &mut Vec<ComponentEventRoute>,
+) {
+    let locked_state = component.lock_resolved_state().now_or_never().unwrap().unwrap();
+    let offers = locked_state.offers();
+    let exposes = locked_state.exposes();
+    let mut component_route = ComponentEventRoute {
+        component: if let Some(moniker) = component.child_moniker() {
+            moniker.name.clone()
+        } else {
+            "/".to_string()
+        },
+        scope: None,
+    };
+    scan_event_stream_offers(offers, search_name, &mut component_route);
+    scan_event_stream_exposes(exposes, search_name, &mut component_route);
+    route.push(component_route);
+}
+
+/// Scans exposes for event streams and serializes any scopes that are found to the component_route
+fn scan_event_stream_exposes(
+    exposes: Vec<ExposeDecl>,
+    search_name: &mut CapabilityName,
+    component_route: &mut ComponentEventRoute,
+) {
+    for expose in exposes {
+        // Found match, continue up tree.
+        if let cm_rust::ExposeDecl::EventStream(stream) = expose {
+            if stream.source_name == *search_name {
+                if let Some(scopes) = stream.scope {
+                    component_route.scope = Some(
+                        scopes
+                            .iter()
+                            .map(|s| match s {
+                                cm_rust::EventScope::Child(child) => child.name.to_string(),
+                                cm_rust::EventScope::Collection(collection) => {
+                                    collection.to_string()
+                                }
+                            })
+                            .collect(),
+                    );
+                }
+                *search_name = stream.target_name;
+            }
+        }
+    }
+}
+
+/// Scans offers for event streams and serializes any scopes that are found to the component route
+fn scan_event_stream_offers(
+    offers: Vec<OfferDecl>,
+    search_name: &mut CapabilityName,
+    component_route: &mut ComponentEventRoute,
+) {
+    for offer in offers {
+        if let cm_rust::OfferDecl::EventStream(stream) = offer {
+            // Found match, continue up tree.
+            if stream.source_name == *search_name {
+                if let Some(scopes) = stream.scope {
+                    component_route.scope = Some(
+                        scopes
+                            .iter()
+                            .map(|s| match s {
+                                cm_rust::EventScope::Child(child) => child.name.to_string(),
+                                cm_rust::EventScope::Collection(collection) => {
+                                    collection.to_string()
+                                }
+                            })
+                            .collect(),
+                    );
+                }
+                *search_name = stream.target_name;
+            }
+        }
+    }
+}
+
 #[async_trait]
 impl RoutingTestModel for RoutingTestForAnalyzer {
     type C = ComponentInstanceForAnalyzer;
@@ -319,7 +472,12 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let target_id = NodePath::new(moniker.path().clone());
         let target = self.model.get_instance(&target_id).expect("target instance not found");
-
+        let scope =
+            if let CheckUse::EventStream { path: _, ref scope, name: _, expected_res: _ } = check {
+                Some(scope.clone())
+            } else {
+                None
+            };
         let (find_decl, expected) = self.find_matching_use(check, target.decl_for_testing());
 
         // If `find_decl` is not OK, check that `expected` has a matching error.
@@ -348,7 +506,17 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                             ExpectedResult::ErrWithNoEpitaph => {}
                         },
                         Ok(_) => match expected {
-                            ExpectedResult::Ok => {}
+                            ExpectedResult::Ok => {
+                                if let UseDecl::EventStream(use_decl) = use_decl {
+                                    self.assert_event_stream_scope(
+                                        use_decl,
+                                        scope
+                                            .as_ref()
+                                            .expect("scope should be non-null for event streams"),
+                                        &target,
+                                    );
+                                }
+                            }
                             _ => panic!("capability use succeeded, expected failure"),
                         },
                     }
@@ -439,7 +607,15 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, routing_test_helpers::instantiate_common_routing_tests};
+    use {
+        super::*,
+        cm_rust::{
+            EventScope, EventStreamDecl, ExposeEventStreamDecl, OfferEventStreamDecl,
+            UseEventStreamDecl,
+        },
+        routing_test_helpers::instantiate_common_routing_tests,
+        std::str::FromStr,
+    };
 
     instantiate_common_routing_tests! { RoutingTestBuilderForAnalyzer }
 
@@ -730,6 +906,373 @@ mod tests {
             .expect("expected results of program runner check")
             .result
             .is_ok());
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// b: uses framework events "started", and "capability_requested"
+    #[fuchsia::test]
+    pub async fn test_use_event_stream_from_framework_2() {
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Framework,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
+                            collection: None,
+                            name: "a".to_string(),
+                        })]),
+                        availability: Availability::Required,
+                    }))
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Framework,
+                        source_name: "capability_requested".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
+                            collection: None,
+                            name: "a".to_string(),
+                        })]),
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "capability_requested".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
+        model
+            .check_use(
+                vec!["b"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "target".to_string(),
+                        scope: Some(vec!["a".to_string()]),
+                    }],
+                    name: "capability_requested".into(),
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["b"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "target".to_string(),
+                        scope: Some(vec!["a".to_string()]),
+                    }],
+                    name: "started".into(),
+                },
+            )
+            .await;
+    }
+
+    /// Tests exposing an event_stream from a child through its parent down to another
+    /// unrelated child.
+    ///        a
+    ///         \
+    ///          b
+    ///          /\
+    ///          c f
+    ///          /\
+    ///          d e
+    /// c exposes started with a scope of e (but not d)
+    /// to b, which then offers that to f.
+    #[fuchsia::test]
+    pub async fn test_expose_event_stream_with_scope_2() {
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Child(ChildRef {
+                            name: "c".to_string(),
+                            collection: None,
+                        }),
+                        source_name: "started".into(),
+                        scope: None,
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "f".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("c")
+                    .add_lazy_child("f")
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::EventStream(ExposeEventStreamDecl {
+                        source: ExposeSource::Framework,
+                        source_name: "started".into(),
+                        scope: Some(vec![EventScope::Child(ChildRef {
+                            name: "e".to_string(),
+                            collection: None,
+                        })]),
+                        target: ExposeTarget::Parent,
+                        target_name: CapabilityName::from("started"),
+                    }))
+                    .add_lazy_child("d")
+                    .add_lazy_child("e")
+                    .build(),
+            ),
+            ("d", ComponentDeclBuilder::new().build()),
+            ("e", ComponentDeclBuilder::new().build()),
+            (
+                "f",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "started".into(),
+        })]);
+
+        let model = builder.build().await;
+        model
+            .check_use(
+                vec!["b", "f"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![
+                        ComponentEventRoute {
+                            component: "c".to_string(),
+                            scope: Some(vec!["e".to_string()]),
+                        },
+                        ComponentEventRoute { component: "b".to_string(), scope: None },
+                    ],
+                    name: "started".into(),
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// b: uses framework events "started", and "capability_requested"
+    #[fuchsia::test]
+    pub async fn test_use_event_stream_from_above_root_2() {
+        let components = vec![(
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    source: UseSource::Parent,
+                    source_name: "started".into(),
+                    target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: None,
+                    availability: Availability::Required,
+                }))
+                .build(),
+        )];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "started".into(),
+        })]);
+
+        let model = builder.build().await;
+        model
+            .check_use(
+                vec![].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![],
+                    name: "started".into(),
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///   /\
+    ///  b  c
+    ///    / \
+    ///   d   e
+    /// c: uses framework events "started", and "capability_requested",
+    /// scoped to b and c.
+    /// d receives started which is scoped to b, c, and e.
+    #[fuchsia::test]
+    pub async fn test_use_event_stream_from_above_root_and_downscoped_2() {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Parent,
+                        source_name: "started".into(),
+                        scope: Some(vec![
+                            EventScope::Child(ChildRef { name: "b".to_string(), collection: None }),
+                            EventScope::Child(ChildRef { name: "c".to_string(), collection: None }),
+                        ]),
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "b".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Parent,
+                        source_name: "started".into(),
+                        scope: Some(vec![
+                            EventScope::Child(ChildRef { name: "b".to_string(), collection: None }),
+                            EventScope::Child(ChildRef { name: "c".to_string(), collection: None }),
+                        ]),
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "c".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Parent,
+                        source_name: "started".into(),
+                        scope: Some(vec![EventScope::Child(ChildRef {
+                            name: "e".to_string(),
+                            collection: None,
+                        })]),
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "d".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("d")
+                    .add_lazy_child("e")
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+            ("e", ComponentDeclBuilder::new().build()),
+        ];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "started".into(),
+        })]);
+
+        let model = builder.build().await;
+        model
+            .check_use(
+                vec!["b"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "/".to_string(),
+                        scope: Some(vec!["b".to_string(), "c".to_string()]),
+                    }],
+                    name: "started".into(),
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["c"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "/".to_string(),
+                        scope: Some(vec!["b".to_string(), "c".to_string()]),
+                    }],
+                    name: "started".into(),
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["c", "d"].into(), // Should get e's event from parent
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![
+                        ComponentEventRoute {
+                            component: "/".to_string(),
+                            scope: Some(vec!["b".to_string(), "c".to_string()]),
+                        },
+                        ComponentEventRoute {
+                            component: "c".to_string(),
+                            scope: Some(vec!["e".to_string()]),
+                        },
+                    ],
+                    name: "started".into(),
+                },
+            )
+            .await;
     }
 
     ///  a

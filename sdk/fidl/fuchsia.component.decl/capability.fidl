@@ -14,6 +14,8 @@ type Capability = flexible union {
     5: runner Runner;
     6: resolver Resolver;
     7: event Event;
+    @available(added=8)
+    8: event_stream EventStream;
 };
 
 /// Declares a service capability backed by this component.
@@ -117,6 +119,17 @@ type Resolver = table {
 /// `internal.Config`.
 type Event = table {
     /// The name of this event.
+    /// Must be non-empty, unique among built-in capabilities.
+    1: name name;
+};
+
+/// Declares an event_stream capability
+/// This type cannot be used in `fuchsia.component.decl.Component`. It is only
+/// used for the framework's built-in capabilities declared in
+/// `internal.Config`.
+@available(added=8)
+type EventStream = table {
+    /// The name of this event stream.
     /// Must be non-empty, unique among built-in capabilities.
     1: name name;
 };

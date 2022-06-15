@@ -13,9 +13,9 @@ use {
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, DirectoryDecl,
-        EventDecl, ExposeDecl, ExposeDirectoryDecl, ExposeEventStreamDecl, ExposeProtocolDecl,
-        ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, OfferDecl,
-        OfferDirectoryDecl, OfferEventDecl, OfferEventStreamDecl, OfferProtocolDecl,
+        EventDecl, EventStreamDecl, ExposeDecl, ExposeDirectoryDecl, ExposeEventStreamDecl,
+        ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource,
+        OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferEventStreamDecl, OfferProtocolDecl,
         OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferStorageDecl,
         ProtocolDecl, RegistrationSource, ResolverDecl, RunnerDecl, ServiceDecl, StorageDecl,
         UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
@@ -243,6 +243,7 @@ pub enum InternalCapability {
     Directory(CapabilityName),
     Runner(CapabilityName),
     Event(CapabilityName),
+    EventStream(CapabilityName),
     Resolver(CapabilityName),
     Storage(CapabilityName),
 }
@@ -266,6 +267,7 @@ impl InternalCapability {
             InternalCapability::Directory(_) => CapabilityTypeName::Directory,
             InternalCapability::Runner(_) => CapabilityTypeName::Runner,
             InternalCapability::Event(_) => CapabilityTypeName::Event,
+            InternalCapability::EventStream(_) => CapabilityTypeName::EventStream,
             InternalCapability::Resolver(_) => CapabilityTypeName::Resolver,
             InternalCapability::Storage(_) => CapabilityTypeName::Storage,
         }
@@ -278,6 +280,7 @@ impl InternalCapability {
             InternalCapability::Directory(name) => &name,
             InternalCapability::Runner(name) => &name,
             InternalCapability::Event(name) => &name,
+            InternalCapability::EventStream(name) => &name,
             InternalCapability::Resolver(name) => &name,
             InternalCapability::Storage(name) => &name,
         }
@@ -334,6 +337,12 @@ impl From<EventDecl> for InternalCapability {
     }
 }
 
+impl From<EventStreamDecl> for InternalCapability {
+    fn from(event: EventStreamDecl) -> Self {
+        Self::EventStream(event.name)
+    }
+}
+
 impl From<StorageDecl> for InternalCapability {
     fn from(storage: StorageDecl) -> Self {
         Self::Storage(storage.name)
@@ -355,6 +364,7 @@ pub enum ComponentCapability {
     Resolver(ResolverDecl),
     Service(ServiceDecl),
     Event(EventDecl),
+    EventStream(EventStreamDecl),
 }
 
 impl ComponentCapability {
@@ -421,6 +431,7 @@ impl ComponentCapability {
             ComponentCapability::Resolver(_) => CapabilityTypeName::Resolver,
             ComponentCapability::Service(_) => CapabilityTypeName::Service,
             ComponentCapability::Event(_) => CapabilityTypeName::Event,
+            ComponentCapability::EventStream(_) => CapabilityTypeName::EventStream,
         }
     }
 
@@ -447,6 +458,7 @@ impl ComponentCapability {
             ComponentCapability::Resolver(resolver) => Some(&resolver.name),
             ComponentCapability::Service(service) => Some(&service.name),
             ComponentCapability::Event(event) => Some(&event.name),
+            ComponentCapability::EventStream(event) => Some(&event.name),
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Protocol(UseProtocolDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Directory(UseDirectoryDecl { source_name, .. }) => Some(source_name),

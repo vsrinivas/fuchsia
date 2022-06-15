@@ -6,16 +6,18 @@ use {
     crate::{
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{
             component::{ComponentInstance, InstanceState, StartReason},
             error::ModelError,
-            hooks::HooksRegistration,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
             starter::Starter,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
     },
     ::routing::{
+        capability_source::InternalCapability,
         component_id_index::ComponentInstanceId,
         component_instance::ComponentInstanceInterface,
         config::{
@@ -26,8 +28,9 @@ use {
     ::routing_test_helpers::{generate_storage_path, RoutingTestModel, RoutingTestModelBuilder},
     anyhow::anyhow,
     async_trait::async_trait,
-    cm_moniker::InstancedRelativeMoniker,
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     cm_rust::*,
+    cm_task_scope::TaskScope,
     cm_types::Url,
     fidl::{
         self,
@@ -38,7 +41,7 @@ use {
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    futures::prelude::*,
+    futures::{prelude::*, TryStreamExt},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     std::{
         collections::{HashMap, HashSet},
@@ -46,7 +49,7 @@ use {
         default::Default,
         fs,
         path::{Path, PathBuf},
-        sync::Arc,
+        sync::{Arc, Weak},
     },
     tempfile::TempDir,
     vfs::directory::entry::DirectoryEntry,
@@ -239,6 +242,145 @@ pub struct RoutingTest {
     test_dir: TempDir,
     pub test_dir_proxy: fio::DirectoryProxy,
     root_component_name: String,
+    _event_source: Arc<FakeEventSourceFactory>,
+}
+
+// TODO(fxbug.dev/81980): Remove this once RFC-121 is fully implemented.
+// Event source v2 (supporting event streams)
+#[derive(Clone)]
+pub struct FakeEventSourceV2 {}
+
+impl FakeEventSourceV2 {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+// TODO(fxbug.dev/81980): Remove this once RFC-121 is fully implemented.
+pub async fn serve_fake_event_source_v2_sync(
+    _event_source: FakeEventSourceV2,
+    stream: fsys::EventSource2RequestStream,
+) {
+    let result = stream
+        .try_for_each_concurrent(None, move |request| async move {
+            match request {
+                fsys::EventSource2Request::Subscribe { events: _, stream: _, responder } => {
+                    responder.send(&mut Ok(()))?;
+                }
+            }
+            Ok(())
+        })
+        .await;
+    result.unwrap();
+}
+
+#[async_trait]
+impl CapabilityProvider for FakeEventSourceV2 {
+    async fn open(
+        self: Box<Self>,
+        task_scope: TaskScope,
+        _flags: fio::OpenFlags,
+        _open_mode: u32,
+        _relative_path: PathBuf,
+        server_end: &mut zx::Channel,
+    ) -> Result<(), ModelError> {
+        let server_end = cm_util::channel::take_channel(server_end);
+        let stream = ServerEnd::<fsys::EventSource2Marker>::new(server_end)
+            .into_stream()
+            .expect("could not convert channel into stream");
+        task_scope
+            .add_task(async move {
+                serve_fake_event_source_v2_sync(*self, stream).await;
+            })
+            .await;
+        Ok(())
+    }
+}
+
+// TODO(fxbug.dev/81980): Remove this once RFC-121 is fully implemented.
+/// Allows to create `EventSource`s and tracks all the created ones.
+pub struct FakeEventSourceFactory {}
+
+impl FakeEventSourceFactory {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    /// Creates the subscription to the required events.
+    /// `DirectoryReady` used to track events and associate them with the component that needs them
+    /// as well as the scoped that will be allowed. Also the EventSource protocol capability.
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        vec![
+            // This hook provides the EventSource capability to components in the tree
+            HooksRegistration::new(
+                "FakeEventSourceFactory",
+                vec![EventType::CapabilityRouted],
+                Arc::downgrade(self) as Weak<dyn Hook>,
+            ),
+        ]
+    }
+
+    /// Creates a `EventSource` for the given `target_moniker`.
+    pub async fn create_v2(&self) -> Result<FakeEventSourceV2, ModelError> {
+        Ok(FakeEventSourceV2::new())
+    }
+
+    /// Returns an EventSource. An EventSource holds an InstancedAbsoluteMoniker that
+    /// corresponds to the component in which it will receive events.
+    async fn on_capability_routed_async(
+        self: Arc<Self>,
+        capability_decl: &InternalCapability,
+        _target_moniker: InstancedAbsoluteMoniker,
+        capability: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
+        match capability_decl {
+            InternalCapability::EventStream(_name) => {
+                let event_source = self.create_v2().await?;
+                return Ok(Some(Box::new(event_source.clone())));
+            }
+            _ => {}
+        }
+        Ok(capability)
+    }
+}
+
+#[async_trait]
+impl Hook for FakeEventSourceFactory {
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        let target_moniker = event
+            .target_moniker
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
+        match &event.result {
+            Ok(EventPayload::CapabilityRouted {
+                source: CapabilitySource::Builtin { capability, .. },
+                capability_provider,
+            }) => {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_capability_routed_async(
+                        &capability,
+                        target_moniker.clone(),
+                        capability_provider.take(),
+                    )
+                    .await?;
+            }
+            Ok(EventPayload::CapabilityRouted {
+                source: CapabilitySource::Framework { capability, .. },
+                capability_provider,
+            }) => {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_capability_routed_async(
+                        &capability,
+                        target_moniker.clone(),
+                        capability_provider.take(),
+                    )
+                    .await?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
 }
 
 impl RoutingTest {
@@ -324,6 +466,8 @@ impl RoutingTest {
         let model = builtin_environment.model.clone();
         model.root().hooks.install(builder.additional_hooks.clone()).await;
         model.root().hooks.install(echo_service.hooks()).await;
+        let event_stuff = Arc::new(FakeEventSourceFactory::new());
+        model.root().hooks.install(event_stuff.hooks()).await;
 
         Self {
             components: builder.components,
@@ -334,6 +478,7 @@ impl RoutingTest {
             test_dir,
             test_dir_proxy,
             root_component_name: builder.root_component.clone(),
+            _event_source: event_stuff,
         }
     }
 
@@ -477,9 +622,9 @@ impl RoutingTest {
                 UseDecl::Protocol(s) => Some(s.target_path.dirname),
                 UseDecl::Storage(s) => Some(s.target_path.to_string()),
                 UseDecl::Event(_) | UseDecl::EventStreamDeprecated(_) => None,
-                UseDecl::EventStream(_) => {
+                UseDecl::EventStream(s) => {
                     // TODO(fxbug.dev/81980): Route EventStream path
-                    None
+                    Some(s.target_path.dirname)
                 }
             })
             .collect();
@@ -855,6 +1000,11 @@ impl RoutingTestModel for RoutingTest {
                 // not allowed.
                 capability_util::subscribe_to_event_stream(&namespace, expected_res, request).await;
             }
+            routing_test_helpers::CheckUse::EventStream { path, .. } => {
+                // Fails if the component did not use the protocol EventSource or if the event is
+                // not allowed.
+                capability_util::subscribe_to_event_stream_v2(&namespace, path).await;
+            }
         }
     }
 
@@ -898,6 +1048,9 @@ impl RoutingTestModel for RoutingTest {
             }
             CheckUse::Event { .. } => {
                 panic!("event capabilities can't be exposed");
+            }
+            CheckUse::EventStream { .. } => {
+                panic!("unimplemented");
             }
         }
     }
@@ -1224,6 +1377,17 @@ pub mod capability_util {
         let client_end =
             ClientEnd::<T>::new(member_proxy.into_channel().unwrap().into_zx_channel());
         client_end.into_proxy().unwrap()
+    }
+
+    pub async fn subscribe_to_event_stream_v2(namespace: &ManagedNamespace, path: CapabilityPath) {
+        let event_source_proxy =
+            connect_to_svc_in_namespace::<fsys::EventSource2Marker>(namespace, &path).await;
+        let (_client_end, stream) =
+            fidl::endpoints::create_proxy::<fsys::EventStream2Marker>().unwrap();
+        // Bind the future to a variable in order to avoid using `event` across an await.
+        let subscribe_future =
+            event_source_proxy.subscribe(&mut vec!["test_event"].into_iter(), stream);
+        subscribe_future.await.unwrap().unwrap();
     }
 
     /// Verifies that it's possible to subscribe to the given `event` by connecting to an

@@ -13,13 +13,15 @@ use {
     async_trait::async_trait,
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
-        Availability, CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName,
-        ComponentDecl, DependencyType, DictionaryValue, EventDecl, EventMode, ExposeDecl,
-        ExposeDirectoryDecl, ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource,
-        ExposeTarget, NameMapping, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
+        Availability, CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,
+        ComponentDecl, DependencyType, DictionaryValue, EventDecl, EventMode, EventScope,
+        EventStreamDecl, ExposeDecl, ExposeDirectoryDecl, ExposeEventStreamDecl,
+        ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, ExposeTarget,
+        NameMapping, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferEventStreamDecl,
         OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferTarget,
         ProgramDecl, ProtocolDecl, RegistrationSource, RunnerDecl, RunnerRegistration, ServiceDecl,
-        UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
+        UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl,
+        UseServiceDecl, UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -50,6 +52,7 @@ use {
         convert::{TryFrom, TryInto},
         marker::PhantomData,
         path::{Path, PathBuf},
+        str::FromStr,
         sync::Arc,
     },
 };
@@ -105,6 +108,17 @@ pub enum ExpectedResult {
     ErrWithNoEpitaph,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ComponentEventRoute {
+    /// Name of the component this was routed through
+    pub component: String,
+    /// Downscoping that was applied on behalf of the component
+    /// None means that no downscoping was applied.
+    /// Each String is the name of a child component to which the downscope
+    /// applies.
+    pub scope: Option<Vec<String>>,
+}
+
 pub enum CheckUse {
     Protocol {
         path: CapabilityPath,
@@ -144,6 +158,12 @@ pub enum CheckUse {
     },
     Event {
         request: EventSubscription,
+        expected_res: ExpectedResult,
+    },
+    EventStream {
+        path: CapabilityPath,
+        scope: Vec<ComponentEventRoute>,
+        name: CapabilityName,
         expected_res: ExpectedResult,
     },
 }
@@ -322,6 +342,10 @@ macro_rules! instantiate_common_routing_tests {
             test_use_protocol_component_provided_debug_capability_policy_from_child,
             test_use_protocol_component_provided_debug_capability_policy_from_grandchild,
             test_use_event_from_framework,
+            test_use_event_stream_from_framework,
+            test_use_event_stream_from_above_root,
+            test_expose_event_stream_with_scope,
+            test_use_event_stream_from_above_root_and_downscoped,
             test_can_offer_capability_requested_event,
             test_use_event_from_parent,
             test_use_event_from_grandparent,
@@ -366,7 +390,6 @@ macro_rules! instantiate_common_routing_tests {
 pub struct CommonRoutingTest<T: RoutingTestModelBuilder> {
     builder: PhantomData<T>,
 }
-
 impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
     pub fn new() -> Self {
         Self { builder: PhantomData }
@@ -2829,6 +2852,369 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 CheckUse::Protocol {
                     path: CapabilityPath::try_from("/svc/valid").unwrap(),
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// b: uses framework events "started", and "capability_requested"
+    pub async fn test_use_event_stream_from_framework(&self) {
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Framework,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
+                            collection: None,
+                            name: "a".to_string(),
+                        })]),
+                        availability: Availability::Required,
+                    }))
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Framework,
+                        source_name: "capability_requested".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
+                            collection: None,
+                            name: "a".to_string(),
+                        })]),
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![
+            CapabilityDecl::EventStream(EventStreamDecl { name: "capability_requested".into() }),
+            CapabilityDecl::EventStream(EventStreamDecl { name: "started".into() }),
+        ]);
+        let model = builder.build().await;
+
+        model
+            .check_use(
+                vec!["b"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "target".to_string(),
+                        scope: Some(vec!["a".to_string()]),
+                    }],
+                    name: "capability_requested".into(),
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["b"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "target".to_string(),
+                        scope: Some(vec!["a".to_string()]),
+                    }],
+                    name: "started".into(),
+                },
+            )
+            .await;
+    }
+
+    /// Tests exposing an event_stream from a child through its parent down to another
+    /// unrelated child.
+    ///        a
+    ///         \
+    ///          b
+    ///          /\
+    ///          c f
+    ///          /\
+    ///          d e
+    /// c exposes started with a scope of e (but not d)
+    /// to b, which then offers that to f.
+    pub async fn test_expose_event_stream_with_scope(&self) {
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Child(ChildRef {
+                            name: "c".to_string(),
+                            collection: None,
+                        }),
+                        source_name: "started".into(),
+                        scope: None,
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "f".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("c")
+                    .add_lazy_child("f")
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::EventStream(ExposeEventStreamDecl {
+                        source: ExposeSource::Framework,
+                        source_name: "started".into(),
+                        scope: Some(vec![EventScope::Child(ChildRef {
+                            name: "e".to_string(),
+                            collection: None,
+                        })]),
+                        target: ExposeTarget::Parent,
+                        target_name: CapabilityName::from("started"),
+                    }))
+                    .add_lazy_child("d")
+                    .add_lazy_child("e")
+                    .build(),
+            ),
+            ("d", ComponentDeclBuilder::new().build()),
+            ("e", ComponentDeclBuilder::new().build()),
+            (
+                "f",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "started".into(),
+        })]);
+
+        let model = builder.build().await;
+        model
+            .check_use(
+                vec!["b", "f"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![
+                        ComponentEventRoute {
+                            component: "c".to_string(),
+                            scope: Some(vec!["e".to_string()]),
+                        },
+                        ComponentEventRoute { component: "b".to_string(), scope: None },
+                    ],
+                    name: "started".into(),
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// b: uses framework events "started", and "capability_requested"
+    pub async fn test_use_event_stream_from_above_root(&self) {
+        let components = vec![(
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
+                    source: UseSource::Parent,
+                    source_name: "started".into(),
+                    target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: None,
+                    availability: Availability::Required,
+                }))
+                .build(),
+        )];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "started".into(),
+        })]);
+
+        let model = builder.build().await;
+        model
+            .check_use(
+                vec![].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![],
+                    name: "started".into(),
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///   /\
+    ///  b  c
+    ///    / \
+    ///   d   e
+    /// c: uses framework events "started", and "capability_requested",
+    /// scoped to b and c.
+    /// d receives started which is scoped to b, c, and e.
+    pub async fn test_use_event_stream_from_above_root_and_downscoped(&self) {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Parent,
+                        source_name: "started".into(),
+                        scope: Some(vec![
+                            EventScope::Child(ChildRef { name: "b".to_string(), collection: None }),
+                            EventScope::Child(ChildRef { name: "c".to_string(), collection: None }),
+                        ]),
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "b".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Parent,
+                        source_name: "started".into(),
+                        scope: Some(vec![
+                            EventScope::Child(ChildRef { name: "b".to_string(), collection: None }),
+                            EventScope::Child(ChildRef { name: "c".to_string(), collection: None }),
+                        ]),
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "c".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
+                        source: OfferSource::Parent,
+                        source_name: "started".into(),
+                        scope: Some(vec![EventScope::Child(ChildRef {
+                            name: "e".to_string(),
+                            collection: None,
+                        })]),
+                        filter: None,
+                        target: OfferTarget::Child(ChildRef {
+                            name: "d".to_string(),
+                            collection: None,
+                        }),
+                        target_name: CapabilityName::from("started"),
+                        availability: Availability::Required,
+                    }))
+                    .add_lazy_child("d")
+                    .add_lazy_child("e")
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        source: UseSource::Parent,
+                        source_name: "started".into(),
+                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        scope: None,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+            ("e", ComponentDeclBuilder::new().build()),
+        ];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "started".into(),
+        })]);
+
+        let model = builder.build().await;
+        model
+            .check_use(
+                vec!["b"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "/".to_string(),
+                        scope: Some(vec!["b".to_string(), "c".to_string()]),
+                    }],
+                    name: "started".into(),
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["c"].into(),
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![ComponentEventRoute {
+                        component: "/".to_string(),
+                        scope: Some(vec!["b".to_string(), "c".to_string()]),
+                    }],
+                    name: "started".into(),
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["c", "d"].into(), // Should get e's event from parent
+                CheckUse::EventStream {
+                    expected_res: ExpectedResult::Ok,
+                    path: CapabilityPath::from_str("/event/stream").unwrap(),
+                    scope: vec![
+                        ComponentEventRoute {
+                            component: "/".to_string(),
+                            scope: Some(vec!["b".to_string(), "c".to_string()]),
+                        },
+                        ComponentEventRoute {
+                            component: "c".to_string(),
+                            scope: Some(vec!["e".to_string()]),
+                        },
+                    ],
+                    name: "started".into(),
                 },
             )
             .await;

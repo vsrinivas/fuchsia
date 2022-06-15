@@ -53,6 +53,11 @@
         "name": "fuchsia.component.decl/Capability.event"
     },
     {
+        "declaration": "fuchsia.component.decl/EventStream",
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.event_stream"
+    },
+    {
         "declaration": "fuchsia.component.decl/Protocol",
         "kind": "union/member",
         "name": "fuchsia.component.decl/Capability.protocol"
@@ -516,6 +521,15 @@
     {
         "kind": "table",
         "name": "fuchsia.component.decl/Event"
+    },
+    {
+        "declaration": "string:100",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/EventStream.name"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/EventStream"
     },
     {
         "declaration": "string:100",

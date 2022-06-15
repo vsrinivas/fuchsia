@@ -135,12 +135,6 @@ where
     U: UseDeclCommon + ErrorNotFoundFromParent + Into<UseDecl> + Clone,
     O: OfferDeclCommon + ErrorNotFoundFromParent + FromEnum<OfferDecl> + Into<OfferDecl> + Clone,
 {
-    /// Routes a capability from its `Use` declaration to its source by following `Offer`
-    /// declarations.
-    /// `sources` defines what are the valid sources of the capability.
-    /// See [`AllowedSourcesBuilder`].
-    /// `visitor` is invoked for each `Offer` declaration in the routing path, as well as the final
-    /// `Capability` declaration if `sources` permits.
     pub async fn route<C, S, V, M>(
         self,
         use_decl: U,
@@ -148,6 +142,33 @@ where
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
+    where
+        C: ComponentInstanceInterface + 'static,
+        S: Sources,
+        V: OfferVisitor<OfferDecl = O>,
+        V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        M: DebugRouteMapper + 'static,
+    {
+        let mut route = vec![];
+        self.route_extended_strategy(use_decl, use_target, sources, visitor, mapper, &mut route)
+            .await
+    }
+
+    /// Routes a capability from its `Use` declaration to its source by following `Offer`
+    /// declarations.
+    /// `sources` defines what are the valid sources of the capability.
+    /// See [`AllowedSourcesBuilder`].
+    /// `visitor` is invoked for each `Offer` declaration in the routing path, as well as the final
+    /// `Capability` declaration if `sources` permits.
+    pub async fn route_extended_strategy<C, S, V, M>(
+        self,
+        use_decl: U,
+        use_target: Arc<C>,
+        sources: S,
+        visitor: &mut V,
+        mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -167,6 +188,7 @@ where
                         sources,
                         visitor,
                         mapper,
+                        route,
                     )
                     .await
                 } else {
@@ -192,6 +214,7 @@ where
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -200,7 +223,7 @@ where
         V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
         M: DebugRouteMapper,
     {
-        match Offer::route(offer_decl, offer_target, &sources, visitor, mapper).await? {
+        match Offer::route(offer_decl, offer_target, &sources, visitor, mapper, route).await? {
             OfferResult::Source(source) => Ok(source),
             OfferResult::OfferFromChild(_, _) => {
                 // This condition should not happen since cm_fidl_validator ensures
@@ -245,12 +268,6 @@ where
         + Clone
         + 'static,
 {
-    /// Routes a capability from its `Use` declaration to its source by following `Offer` and
-    /// `Expose` declarations.
-    /// `sources` defines what are the valid sources of the capability.
-    /// See [`AllowedSourcesBuilder`].
-    /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as well
-    /// as the final `Capability` declaration if `sources` permits.
     pub async fn route<C, S, V, M>(
         self,
         use_decl: U,
@@ -268,17 +285,47 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
+        let mut route = vec![];
+        self.route_extended_strategy(use_decl, use_target, sources, visitor, mapper, &mut route)
+            .await
+    }
+
+    /// Routes a capability from its `Use` declaration to its source by following `Offer` and
+    /// `Expose` declarations.
+    /// `sources` defines what are the valid sources of the capability.
+    /// See [`AllowedSourcesBuilder`].
+    /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as well
+    /// as the final `Capability` declaration if `sources` permits.
+    pub async fn route_extended_strategy<C, S, V, M>(
+        self,
+        use_decl: U,
+        use_target: Arc<C>,
+        sources: S,
+        visitor: &mut V,
+        mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
+    where
+        C: ComponentInstanceInterface + 'static,
+        S: Sources + 'static,
+        V: OfferVisitor<OfferDecl = O>,
+        V: ExposeVisitor<ExposeDecl = E>,
+        V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
+        M: DebugRouteMapper + 'static,
+    {
         match Use::route(use_decl, use_target.clone(), &sources, visitor, mapper).await? {
             UseResult::Source(source) => return Ok(source),
             UseResult::FromParent(offers, component) => {
                 if offers.len() == 1 {
                     let offer_opt: Option<&O> = offers.first();
-                    self.route_from_offer(
+                    self.route_from_offer_extended(
                         offer_opt.unwrap().clone(),
                         component,
                         sources,
                         visitor,
                         mapper,
+                        route,
                     )
                     .await
                 } else {
@@ -300,7 +347,15 @@ where
                             use_decl.source_name().clone(),
                         )
                     })?;
-                self.route_from_expose(expose_decl, child_component, sources, visitor, mapper).await
+                self.route_from_expose_extended(
+                    expose_decl,
+                    child_component,
+                    sources,
+                    visitor,
+                    mapper,
+                    route,
+                )
+                .await
             }
         }
     }
@@ -330,12 +385,6 @@ where
         + Clone
         + 'static,
 {
-    /// Routes a capability from its environment `Registration` declaration to its source by
-    /// following `Offer` and `Expose` declarations.
-    /// `sources` defines what are the valid sources of the capability.
-    /// See [`AllowedSourcesBuilder`].
-    /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as
-    /// well as the final `Capability` declaration if `sources` permits.
     pub async fn route<C, S, V, M>(
         self,
         registration_decl: R,
@@ -353,6 +402,42 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
+        let mut route = vec![];
+        self.route_extended_strategy(
+            registration_decl,
+            registration_target,
+            sources,
+            visitor,
+            mapper,
+            &mut route,
+        )
+        .await
+    }
+
+    /// Routes a capability from its environment `Registration` declaration to its source by
+    /// following `Offer` and `Expose` declarations.
+    /// `sources` defines what are the valid sources of the capability.
+    /// See [`AllowedSourcesBuilder`].
+    /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as
+    /// well as the final `Capability` declaration if `sources` permits.
+    pub async fn route_extended_strategy<C, S, V, M>(
+        self,
+        registration_decl: R,
+        registration_target: Arc<C>,
+        sources: S,
+        visitor: &mut V,
+        mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
+    where
+        C: ComponentInstanceInterface + 'static,
+        S: Sources + 'static,
+        V: OfferVisitor<OfferDecl = O>,
+        V: ExposeVisitor<ExposeDecl = E>,
+        V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
+        M: DebugRouteMapper + 'static,
+    {
         match Registration::route(registration_decl, registration_target, &sources, visitor, mapper)
             .await?
         {
@@ -360,12 +445,13 @@ where
             RegistrationResult::FromParent(offers, component) => {
                 if offers.len() == 1 {
                     let offer_opt: Option<&O> = offers.first();
-                    self.route_from_offer(
+                    self.route_from_offer_extended(
                         offer_opt.unwrap().clone(),
                         component,
                         sources,
                         visitor,
                         mapper,
+                        route,
                     )
                     .await
                 } else {
@@ -373,7 +459,8 @@ where
                 }
             }
             RegistrationResult::FromChild(expose, component) => {
-                self.route_from_expose(expose, component, sources, visitor, mapper).await
+                self.route_from_expose_extended(expose, component, sources, visitor, mapper, route)
+                    .await
             }
         }
     }
@@ -397,12 +484,6 @@ where
         + Clone
         + 'static,
 {
-    /// Routes a capability from its `Offer` declaration to its source by following `Offer` and
-    /// `Expose` declarations.
-    /// `sources` defines what are the valid sources of the capability.
-    /// See [`AllowedSourcesBuilder`].
-    /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as well
-    /// as the final `Capability` declaration if `sources` permits.
     pub async fn route_from_offer<C, S, V, M>(
         self,
         offer_decl: O,
@@ -420,15 +501,52 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
-        match Offer::route(offer_decl, offer_target, &sources, visitor, mapper).await? {
+        let mut route = vec![];
+        self.route_from_offer_extended(
+            offer_decl,
+            offer_target,
+            sources,
+            visitor,
+            mapper,
+            &mut route,
+        )
+        .await
+    }
+
+    /// Routes a capability from its `Offer` declaration to its source by following `Offer` and
+    /// `Expose` declarations.
+    /// `sources` defines what are the valid sources of the capability.
+    /// See [`AllowedSourcesBuilder`].
+    /// `visitor` is invoked for each `Offer` and `Expose` declaration in the routing path, as well
+    /// as the final `Capability` declaration if `sources` permits.
+    pub async fn route_from_offer_extended<C, S, V, M>(
+        self,
+        offer_decl: O,
+        offer_target: Arc<C>,
+        sources: S,
+        visitor: &mut V,
+        mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
+    where
+        C: ComponentInstanceInterface + 'static,
+        S: Sources + 'static,
+        V: OfferVisitor<OfferDecl = O>,
+        V: ExposeVisitor<ExposeDecl = E>,
+        V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
+        M: DebugRouteMapper + 'static,
+    {
+        match Offer::route(offer_decl, offer_target, &sources, visitor, mapper, route).await? {
             OfferResult::Source(source) => return Ok(source),
             OfferResult::OfferFromChild(offer, component) => {
                 let offer_decl: OfferDecl = offer.clone().into();
 
                 let (expose, component) = change_directions(offer, component).await?;
 
-                let capability_source =
-                    self.route_from_expose(expose, component, sources, visitor, mapper).await?;
+                let capability_source = self
+                    .route_from_expose_extended(expose, component, sources, visitor, mapper, route)
+                    .await?;
                 if let OfferDecl::Service(offer_service_decl) = offer_decl {
                     if offer_service_decl.source_instance_filter.is_some()
                         || offer_service_decl.renamed_instances.is_some()
@@ -555,12 +673,6 @@ where
         + Clone
         + 'static,
 {
-    /// Routes a capability from its `Expose` declaration to its source by following `Expose`
-    /// declarations.
-    /// `sources` defines what are the valid sources of the capability.
-    /// See [`AllowedSourcesBuilder`].
-    /// `visitor` is invoked for each `Expose` declaration in the routing path, as well
-    /// as the final `Capability` declaration if `sources` permits.
     pub async fn route_from_expose<C, S, V, M>(
         self,
         expose_decl: E,
@@ -577,7 +689,42 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
-        match Expose::route(expose_decl, expose_target, &sources, visitor, mapper).await? {
+        let mut route = vec![];
+        self.route_from_expose_extended(
+            expose_decl,
+            expose_target,
+            sources,
+            visitor,
+            mapper,
+            &mut route,
+        )
+        .await
+    }
+
+    /// Routes a capability from its `Expose` declaration to its source by following `Expose`
+    /// declarations.
+    /// `sources` defines what are the valid sources of the capability.
+    /// See [`AllowedSourcesBuilder`].
+    /// `visitor` is invoked for each `Expose` declaration in the routing path, as well
+    /// as the final `Capability` declaration if `sources` permits.
+    pub async fn route_from_expose_extended<C, S, V, M>(
+        self,
+        expose_decl: E,
+        expose_target: Arc<C>,
+        sources: S,
+        visitor: &mut V,
+        mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
+    where
+        C: ComponentInstanceInterface + 'static,
+        S: Sources + 'static,
+        V: ExposeVisitor<ExposeDecl = E>,
+        V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
+        M: DebugRouteMapper + 'static,
+    {
+        match Expose::route(expose_decl, expose_target, &sources, visitor, mapper, route).await? {
             ExposeResult::Source(source) => Ok(source),
             ExposeResult::ExposeFromCollection(
                 expose_decl,
@@ -1199,6 +1346,7 @@ where
         sources: &S,
         visitor: &mut V,
         mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
     ) -> Result<OfferResult<C, O>, RoutingError>
     where
         C: ComponentInstanceInterface,
@@ -1210,7 +1358,7 @@ where
         loop {
             mapper.add_offer(target.abs_moniker().clone(), offer.clone().into());
             OfferVisitor::visit(visitor, &offer)?;
-
+            route.push(target.clone());
             match offer.source() {
                 OfferSource::Void => {
                     return Err(RoutingError::offer_from_void(
@@ -1426,6 +1574,7 @@ where
         sources: &S,
         visitor: &mut V,
         mapper: &mut M,
+        route: &mut Vec<Arc<C>>,
     ) -> Result<ExposeResult<C, E>, RoutingError>
     where
         C: ComponentInstanceInterface,
@@ -1437,7 +1586,7 @@ where
         loop {
             mapper.add_expose(target.abs_moniker().clone(), expose.clone().into());
             ExposeVisitor::visit(visitor, &expose)?;
-
+            route.push(target.clone());
             match expose.source() {
                 ExposeSource::Self_ => {
                     let target_capabilities = target.lock_resolved_state().await?.capabilities();

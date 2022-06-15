@@ -14,7 +14,8 @@ use {
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityPath, CapabilityTypeName, ComponentDecl, ExposeDecl,
-        ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseStorageDecl,
+        ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseEventStreamDecl,
+        UseStorageDecl,
     },
     fidl::prelude::*,
     fidl_fuchsia_sys2 as fsys,
@@ -36,8 +37,8 @@ use {
         },
         error::{ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
-        route_capability, route_storage_and_backing_directory, DebugRouteMapper, RouteRequest,
-        RouteSource,
+        route_capability, route_event_stream_capability, route_storage_and_backing_directory,
+        DebugRouteMapper, RouteRequest, RouteSource,
     },
     serde::{Deserialize, Serialize},
     std::{
@@ -647,6 +648,16 @@ impl ComponentModelForAnalyzer {
                     Err(err) => (Err(err.into()), capability),
                 }
             }
+            UseDecl::EventStream(use_event_stream_decl) => {
+                let capability = use_event_stream_decl.source_name.clone();
+                match Self::route_capability_sync(
+                    RouteRequest::UseEventStream(use_event_stream_decl),
+                    target,
+                ) {
+                    Ok((source, route)) => (Ok((source, vec![route])), capability),
+                    Err(err) => (Err(err.into()), capability),
+                }
+            }
             _ => unimplemented![],
         };
         match route_result {
@@ -842,6 +853,7 @@ impl ComponentModelForAnalyzer {
         match route_source {
             RouteSource::Directory(source, _) => self.check_directory_source(source),
             RouteSource::Event(_) => Ok(()),
+            RouteSource::EventStream(source) => self.check_protocol_source(source),
             RouteSource::Protocol(source) => self.check_protocol_source(source),
             RouteSource::Service(source) => self.check_service_source(source),
             RouteSource::StorageBackingDirectory(source) => self.check_storage_source(source),
@@ -1007,6 +1019,22 @@ impl ComponentModelForAnalyzer {
         RoutingError>
     {
         route_capability(request, target).now_or_never().expect("future was not ready immediately")
+    }
+
+    pub fn route_event_stream_sync(
+        request: UseEventStreamDecl,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+        map: &mut Vec<Arc<ComponentInstanceForAnalyzer>>,
+    ) -> Result<
+        (
+            RouteSource<ComponentInstanceForAnalyzer>,
+            <<ComponentInstanceForAnalyzer as ComponentInstanceInterface>::DebugRouteMapper as DebugRouteMapper>::RouteMap,
+        ),
+        RoutingError>
+    {
+        route_event_stream_capability(request, target, map)
+            .now_or_never()
+            .expect("future was not ready immediately")
     }
 
     // Routes a storage capability and its backing directory from a `ComponentInstanceForAnalyzer` and

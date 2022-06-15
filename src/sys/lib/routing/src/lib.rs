@@ -39,13 +39,15 @@ use {
     },
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
-        CapabilityDecl, CapabilityName, DirectoryDecl, EventDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource,
-        OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferResolverDecl,
+        CapabilityDecl, CapabilityName, DirectoryDecl, EventDecl, EventStreamDecl, ExposeDecl,
+        ExposeDirectoryDecl, ExposeEventStreamDecl, ExposeProtocolDecl, ExposeResolverDecl,
+        ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
+        OfferEventDecl, OfferEventStreamDecl, OfferProtocolDecl, OfferResolverDecl,
         OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferStorageDecl, ProtocolDecl,
         RegistrationDeclCommon, RegistrationSource, ResolverDecl, ResolverRegistration, RunnerDecl,
         RunnerRegistration, ServiceDecl, SourceName, StorageDecl, StorageDirectorySource, UseDecl,
-        UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
+        UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseServiceDecl,
+        UseSource, UseStorageDecl,
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     from_enum::FromEnum,
@@ -77,6 +79,7 @@ pub enum RouteRequest {
     // Route a capability from a UseDecl.
     UseDirectory(UseDirectoryDecl),
     UseEvent(UseEventDecl),
+    UseEventStream(UseEventStreamDecl),
     UseProtocol(UseProtocolDecl),
     UseService(UseServiceDecl),
     UseStorage(UseStorageDecl),
@@ -87,6 +90,7 @@ pub enum RouteRequest {
 pub enum RouteSource<C: ComponentInstanceInterface> {
     Directory(CapabilitySourceInterface<C>, DirectoryState),
     Event(CapabilitySourceInterface<C>),
+    EventStream(CapabilitySourceInterface<C>),
     Protocol(CapabilitySourceInterface<C>),
     Resolver(CapabilitySourceInterface<C>),
     Runner(CapabilitySourceInterface<C>),
@@ -179,6 +183,9 @@ where
         RouteRequest::UseEvent(use_event_decl) => {
             route_event(use_event_decl, target, &mut mapper).await?
         }
+        RouteRequest::UseEventStream(use_event_stream_decl) => {
+            route_event_stream(use_event_stream_decl, target, &mut mapper).await?
+        }
         RouteRequest::UseProtocol(use_protocol_decl) => {
             route_protocol(use_protocol_decl, target, &mut mapper).await?
         }
@@ -189,6 +196,23 @@ where
             route_storage(use_storage_decl, target, &mut mapper).await?
         }
     };
+    Ok((source, mapper.get_route()))
+}
+
+/// Routes a capability to its source.
+///
+/// If the capability is not allowed to be routed to the `target`, per the
+/// [`crate::model::policy::GlobalPolicyChecker`], then an error is returned.
+pub async fn route_event_stream_capability<C>(
+    request: UseEventStreamDecl,
+    target: &Arc<C>,
+    route: &mut Vec<Arc<C>>,
+) -> Result<(RouteSource<C>, <C::DebugRouteMapper as DebugRouteMapper>::RouteMap), RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let mut mapper = C::new_route_mapper();
+    let source = route_event_stream_with_route(request, target, &mut mapper, route).await?;
     Ok((source, mapper.get_route()))
 }
 
@@ -834,6 +858,63 @@ where
     Ok(RouteSource::Event(source))
 }
 
+make_noop_visitor!(EventStreamVisitor, {
+    OfferDecl => OfferEventStreamDecl,
+    ExposeDecl => ExposeEventStreamDecl,
+    CapabilityDecl => EventStreamDecl,
+});
+
+/// Routes an EventStream capability from `target` to its source, starting from `use_decl`.
+async fn route_event_stream<C>(
+    use_decl: UseEventStreamDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let allowed_sources =
+        AllowedSourcesBuilder::new().framework(InternalCapability::EventStream).builtin();
+
+    let source = RoutingStrategy::new()
+        .use_::<UseEventStreamDecl>()
+        .offer::<OfferEventStreamDecl>()
+        .expose::<ExposeEventStreamDecl>()
+        .route(use_decl, target.clone(), allowed_sources, &mut EventStreamVisitor, mapper)
+        .await?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::EventStream(source))
+}
+
+/// Routes an EventStream capability from `target` to its source, starting from `use_decl`.
+async fn route_event_stream_with_route<C>(
+    use_decl: UseEventStreamDecl,
+    target: &Arc<C>,
+    mapper: &mut C::DebugRouteMapper,
+    route: &mut Vec<Arc<C>>,
+) -> Result<RouteSource<C>, RoutingError>
+where
+    C: ComponentInstanceInterface + 'static,
+{
+    let allowed_sources =
+        AllowedSourcesBuilder::new().framework(InternalCapability::EventStream).builtin();
+    let source = RoutingStrategy::new()
+        .use_::<UseEventStreamDecl>()
+        .offer::<OfferEventStreamDecl>()
+        .expose::<ExposeEventStreamDecl>()
+        .route_extended_strategy(
+            use_decl,
+            target.clone(),
+            allowed_sources,
+            &mut EventStreamVisitor,
+            mapper,
+            route,
+        )
+        .await?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    Ok(RouteSource::EventStream(source))
+}
+
 /// Intermediate type to masquerade as Registration-style routing start point for the storage
 /// backing directory capability.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
@@ -943,6 +1024,20 @@ impl ErrorNotFoundInChild for UseProtocolDecl {
     }
 }
 
+impl ErrorNotFoundInChild for UseEventStreamDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: ChildMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::UseFromChildExposeNotFound {
+            child_moniker,
+            moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
 impl ErrorNotFoundInChild for OfferProtocolDecl {
     fn error_not_found_in_child(
         moniker: AbsoluteMoniker,
@@ -957,7 +1052,35 @@ impl ErrorNotFoundInChild for OfferProtocolDecl {
     }
 }
 
+impl ErrorNotFoundInChild for OfferEventStreamDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: ChildMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::OfferFromChildExposeNotFound {
+            moniker,
+            child_moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
 impl ErrorNotFoundInChild for ExposeProtocolDecl {
+    fn error_not_found_in_child(
+        moniker: AbsoluteMoniker,
+        child_moniker: ChildMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::ExposeFromChildExposeNotFound {
+            moniker,
+            child_moniker,
+            capability_id: capability_name.into(),
+        }
+    }
+}
+
+impl ErrorNotFoundInChild for ExposeEventStreamDecl {
     fn error_not_found_in_child(
         moniker: AbsoluteMoniker,
         child_moniker: ChildMoniker,
@@ -1285,7 +1408,25 @@ impl ErrorNotFoundFromParent for UseEventDecl {
     }
 }
 
+impl ErrorNotFoundFromParent for UseEventStreamDecl {
+    fn error_not_found_from_parent(
+        moniker: AbsoluteMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::UseFromParentNotFound { moniker, capability_id: capability_name.into() }
+    }
+}
+
 impl ErrorNotFoundFromParent for OfferEventDecl {
+    fn error_not_found_from_parent(
+        moniker: AbsoluteMoniker,
+        capability_name: CapabilityName,
+    ) -> RoutingError {
+        RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
+    }
+}
+
+impl ErrorNotFoundFromParent for OfferEventStreamDecl {
     fn error_not_found_from_parent(
         moniker: AbsoluteMoniker,
         capability_name: CapabilityName,

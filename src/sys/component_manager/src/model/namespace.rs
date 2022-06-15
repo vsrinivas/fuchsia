@@ -9,8 +9,8 @@ use {
             component::{ComponentInstance, Package, Runtime, StartReason, WeakComponentInstance},
             error::ModelError,
             routing::{
-                self, route_and_open_capability, OpenDirectoryOptions, OpenOptions,
-                OpenProtocolOptions, OpenServiceOptions, OpenStorageOptions,
+                self, route_and_open_capability, OpenDirectoryOptions, OpenEventStreamOptions,
+                OpenOptions, OpenProtocolOptions, OpenServiceOptions, OpenStorageOptions,
             },
         },
     },
@@ -135,8 +135,13 @@ impl IncomingNamespace {
                     // as these are capabilities used by the framework itself
                     // and not given to components directly.
                 }
-                cm_rust::UseDecl::EventStream(_) => {
-                    // TODO(fxbug.dev/81980): install EventStream at the requested path.
+                cm_rust::UseDecl::EventStream(s) => {
+                    Self::add_service_or_protocol_use(
+                        &mut svc_dirs,
+                        UseDecl::EventStream(s.clone()),
+                        &s.target_path,
+                        component.clone(),
+                    )?;
                 }
             }
         }
@@ -370,6 +375,7 @@ impl IncomingNamespace {
         component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let not_found_component_copy = component.clone();
+        let use_clone = use_.clone();
         let route_open_fn =
             move |scope: ExecutionScope,
                   flags: fio::OpenFlags,
@@ -415,6 +421,17 @@ impl IncomingNamespace {
                                      }
                                  ))
                             },
+                            UseDecl::EventStream(stream)=> {
+                                (RouteRequest::UseEventStream(stream.clone()),
+                                 OpenOptions::EventStream(
+                                     OpenEventStreamOptions{
+                                         flags,
+                                         open_mode: mode,
+                                         relative_path: relative_path.into_string(),
+                                         server_chan: &mut server_end
+                                     }
+                                 ))
+                            },
                             _ => panic!("add_service_or_protocol_use called with non-service or protocol capability"),
                         }
                     };
@@ -438,10 +455,17 @@ impl IncomingNamespace {
                 not_found_component_copy,
             )
         });
-        service_dir
-            .clone()
-            .add_entry(&capability_path.basename, remote(route_open_fn))
-            .expect("could not add service to directory");
+        // NOTE: UseEventStream is special, in that we can route a single stream from multiple
+        // sources (merging them).
+        if matches!(use_clone, UseDecl::EventStream(_)) {
+            // Ignore duplication error if already exists
+            service_dir.clone().add_entry(&capability_path.basename, remote(route_open_fn)).ok();
+        } else {
+            service_dir
+                .clone()
+                .add_entry(&capability_path.basename, remote(route_open_fn))
+                .expect("could not add service to directory");
+        }
         Ok(())
     }
 

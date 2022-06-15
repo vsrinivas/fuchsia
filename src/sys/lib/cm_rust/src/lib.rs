@@ -739,6 +739,7 @@ pub enum CapabilityDecl {
     Runner(RunnerDecl),
     Resolver(ResolverDecl),
     Event(EventDecl),
+    EventStream(EventStreamDecl),
 }
 
 impl CapabilityDeclCommon for CapabilityDecl {
@@ -751,6 +752,7 @@ impl CapabilityDeclCommon for CapabilityDecl {
             Self::Runner(c) => c.name(),
             Self::Resolver(c) => c.name(),
             Self::Event(c) => c.name(),
+            Self::EventStream(c) => c.name(),
         }
     }
 }
@@ -823,6 +825,13 @@ pub struct EventDecl {
     pub name: CapabilityName,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fdecl::EventStream")]
+pub struct EventStreamDecl {
+    pub name: CapabilityName,
+}
+
 impl CapabilityDecl {
     pub fn name(&self) -> &CapabilityName {
         match self {
@@ -833,6 +842,7 @@ impl CapabilityDecl {
             CapabilityDecl::Service(decl) => decl.name(),
             CapabilityDecl::Storage(decl) => decl.name(),
             CapabilityDecl::Event(decl) => decl.name(),
+            CapabilityDecl::EventStream(decl) => decl.name(),
         }
     }
 
@@ -845,6 +855,7 @@ impl CapabilityDecl {
             CapabilityDecl::Service(decl) => decl.source_path.as_ref(),
             CapabilityDecl::Storage(_) => None,
             CapabilityDecl::Event(_) => None,
+            CapabilityDecl::EventStream(_) => None,
         }
     }
 }
@@ -1470,7 +1481,7 @@ impl SourceName for UseDecl {
 /// Unlike a `CapabilityPath`, a `CapabilityName` doesn't encode any form
 /// of hierarchy.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct CapabilityName(pub String);
 
 impl CapabilityName {
