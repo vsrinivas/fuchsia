@@ -14,7 +14,7 @@ use futures::TryStreamExt as _;
 use net_declare::fidl_mac;
 use netstack_testing_common::{
     devices::{create_tun_device, create_tun_port, install_device},
-    realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _},
+    realms::{Netstack, Netstack2, TestRealmExt as _, TestSandboxExt as _},
 };
 use netstack_testing_macros::variants_test;
 
@@ -66,11 +66,10 @@ async fn get_mac(
     mac.map(|option| option.map(|box_| *box_))
 }
 
-// TODO(https://fxbug.dev/88797): Parameterize by Netstack to test NS3.
-#[fuchsia::test]
-async fn get_mac_not_found() {
+#[variants_test]
+async fn get_mac_not_found<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>("get_mac").expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let debug_interfaces =
         realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
 
@@ -82,11 +81,10 @@ async fn get_mac_not_found() {
     );
 }
 
-// TODO(https://fxbug.dev/88797): Parameterize by Netstack to test NS3.
-#[fuchsia::test]
-async fn get_mac_loopback() {
+#[variants_test]
+async fn get_mac_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>("get_mac").expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let debug_interfaces =
         realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
 
@@ -125,7 +123,7 @@ async fn add_pure_ip_interface(
     admin_control
 }
 
-// TODO(https://fxbug.dev/88797): Parameterize by Netstack to test NS3.
+// TODO(https://fxbug.dev/100871): Parameterize by Netstack to test NS3.
 #[fuchsia::test]
 async fn get_mac_pure_ip() {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
@@ -147,8 +145,7 @@ async fn get_mac_pure_ip() {
 }
 
 #[variants_test]
-async fn get_mac_netemul_endpoint<E: netemul::Endpoint>(name: &str) {
-    type N = Netstack2; // TODO(https://fxbug.dev/88797): Test against NS3.
+async fn get_mac_netemul_endpoint<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let debug_interfaces =

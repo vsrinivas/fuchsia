@@ -49,6 +49,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
@@ -62,6 +63,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/bindings/context.rs",
+    "src/bindings/debug_fidl_worker.rs",
     "src/bindings/devices.rs",
     "src/bindings/ethernet_worker.rs",
     "src/bindings/integration_tests.rs",

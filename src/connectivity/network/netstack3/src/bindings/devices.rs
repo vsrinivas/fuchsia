@@ -9,6 +9,8 @@ use fidl_fuchsia_hardware_ethernet::Features;
 use net_types::{ethernet::Mac, UnicastAddr};
 use netstack3_core::{DeviceId, Entry, IdMapCollection, IdMapCollectionKey};
 
+pub const LOOPBACK_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
+
 pub type BindingId = u64;
 
 /// Keeps tabs on devices.

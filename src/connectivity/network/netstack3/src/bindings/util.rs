@@ -7,8 +7,11 @@ use core::{convert::Infallible as Never, num::NonZeroU64};
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_posix as fposix;
-use net_types::ip::{
-    AddrSubnetEither, AddrSubnetError, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither, SubnetError,
+use net_types::{
+    ethernet::Mac,
+    ip::{
+        AddrSubnetEither, AddrSubnetError, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither, SubnetError,
+    },
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{AddRouteError, AddableEntryEither, DeviceId, EntryEither, NetstackError};
@@ -226,6 +229,22 @@ impl TryIntoFidl<fidl_net::Ipv6Address> for Ipv6Addr {
 
     fn try_into_fidl(self) -> Result<fidl_net::Ipv6Address, Never> {
         Ok(fidl_net::Ipv6Address { addr: self.ipv6_bytes() })
+    }
+}
+
+impl TryFromFidl<fidl_net::MacAddress> for Mac {
+    type Error = Never;
+
+    fn try_from_fidl(mac: fidl_net::MacAddress) -> Result<Mac, Never> {
+        Ok(Mac::new(mac.octets))
+    }
+}
+
+impl TryIntoFidl<fidl_net::MacAddress> for Mac {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net::MacAddress, Never> {
+        Ok(fidl_net::MacAddress { octets: self.bytes() })
     }
 }
 

@@ -13,6 +13,7 @@ mod macros;
 mod integration_tests;
 
 mod context;
+mod debug_fidl_worker;
 mod devices;
 mod ethernet_worker;
 mod interfaces_admin;
@@ -30,9 +31,7 @@ use std::ops::DerefMut as _;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fidl::endpoints::{
-    ControlHandle as _, DiscoverableProtocolMarker, RequestStream, Responder as _,
-};
+use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
@@ -40,7 +39,7 @@ use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc, lock::Mutex, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _,
 };
-use log::{debug, error, warn};
+use log::{debug, error};
 use packet::{BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 use rand::rngs::OsRng;
@@ -805,82 +804,48 @@ impl NetstackSeed {
             services.map(WorkItem::Incoming),
             task_stream.map(WorkItem::Task),
         );
-        let work_items_fut = work_items
-            .for_each_concurrent(None, |wi| async {
-                match wi {
-                    WorkItem::Incoming(Service::Stack(stack)) => {
-                        stack
-                            .serve_with(|rs| {
-                                stack_fidl_worker::StackFidlWorker::serve(netstack.clone(), rs)
-                            })
-                            .await
-                    }
-                    WorkItem::Incoming(Service::Socket(socket)) => {
-                        socket.serve_with(|rs| socket::serve(netstack.clone(), rs)).await
-                    }
-                    WorkItem::Incoming(Service::Interfaces(interfaces)) => {
-                        interfaces
-                            .serve_with(|rs| {
-                                interfaces_watcher::serve(
-                                    rs, interfaces_watcher_sink.clone()
-                                )
-                            })
-                            .await
-                    }
-                    WorkItem::Incoming(Service::InterfacesAdmin(installer)) => {
-                        log::debug!(
-                            "serving {}",
-                            fidl_fuchsia_net_interfaces_admin::InstallerMarker::PROTOCOL_NAME
-                        );
-                        interfaces_admin::serve(netstack.clone(), installer)
-                            .map_err(anyhow::Error::from)
-                            .forward(task_sink.clone().sink_map_err(anyhow::Error::from))
-                            .await
-                            .unwrap_or_else(|e| {
-                                log::warn!(
-                                    "error serving {}: {:?}",
-                                    fidl_fuchsia_net_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
-                                    e
-                                )
-                            })
-                    }
-                    WorkItem::Incoming(Service::Debug(debug)) => {
-                        // TODO(https://fxbug.dev/88797): Implement this
-                        // properly. This protocol is stubbed out to allow
-                        // shared integration test code with Netstack2.
-                        debug
-                            .serve_with(|rs| rs.try_for_each(|req| async move {
-                                match req {
-                                    fidl_fuchsia_net_debug::InterfacesRequest::GetAdmin {
-                                        id: _,
-                                        control,
-                                        control_handle: _,
-                                    } => {
-                                        let () = control
-                                            .close_with_epitaph(zx::Status::NOT_SUPPORTED)
-                                            .unwrap_or_else(|e| if e.is_closed() {
-                                                debug!("control handle closed before sending epitaph: {:?}", e)
-                                            } else {
-                                                error!("failed to send epitaph: {:?}", e)
-                                            });
-                                        warn!(
-                                            "TODO(https://fxbug.dev/88797): fuchsia.net.debug/Interfaces not implemented"
-                                        );
-                                    }
-                                    fidl_fuchsia_net_debug::InterfacesRequest::GetMac {
-                                        id: _,
-                                        responder,
-                                    } => {
-                                        responder.control_handle().shutdown_with_epitaph(zx::Status::NOT_SUPPORTED)
-                                    }
-                                }
-                                Result::<(), fidl::Error>::Ok(())
-                            }))
-                            .await
-                    }
-                    WorkItem::Task(task) => task.await
+        let work_items_fut = work_items.for_each_concurrent(None, |wi| async {
+            match wi {
+                WorkItem::Incoming(Service::Stack(stack)) => {
+                    stack
+                        .serve_with(|rs| {
+                            stack_fidl_worker::StackFidlWorker::serve(netstack.clone(), rs)
+                        })
+                        .await
                 }
-            });
+                WorkItem::Incoming(Service::Socket(socket)) => {
+                    socket.serve_with(|rs| socket::serve(netstack.clone(), rs)).await
+                }
+                WorkItem::Incoming(Service::Interfaces(interfaces)) => {
+                    interfaces
+                        .serve_with(|rs| {
+                            interfaces_watcher::serve(rs, interfaces_watcher_sink.clone())
+                        })
+                        .await
+                }
+                WorkItem::Incoming(Service::InterfacesAdmin(installer)) => {
+                    log::debug!(
+                        "serving {}",
+                        fidl_fuchsia_net_interfaces_admin::InstallerMarker::PROTOCOL_NAME
+                    );
+                    interfaces_admin::serve(netstack.clone(), installer)
+                        .map_err(anyhow::Error::from)
+                        .forward(task_sink.clone().sink_map_err(anyhow::Error::from))
+                        .await
+                        .unwrap_or_else(|e| {
+                            log::warn!(
+                                "error serving {}: {:?}",
+                                fidl_fuchsia_net_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
+                                e
+                            )
+                        })
+                }
+                WorkItem::Incoming(Service::Debug(debug)) => {
+                    debug.serve_with(|rs| debug_fidl_worker::serve(netstack.clone(), rs)).await
+                }
+                WorkItem::Task(task) => task.await,
+            }
+        });
 
         let ((), ()) = futures::future::join(work_items_fut, interfaces_worker_task).await;
         debug!("Services stream finished");
