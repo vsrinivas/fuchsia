@@ -61,7 +61,7 @@ template("validate_json") {
       tool = "//build/tools/json_validator"
     }
 
-    stamp_file = "$target_gen_dir/$target_name.verified"
+    stamp_file = "$target_gen_dir/$target_name.json_validated"
 
     inputs = [
       invoker.data,
@@ -81,6 +81,66 @@ template("validate_json") {
     }
 
     args += [
+      rebase_path(invoker.schema, root_build_dir),
+      rebase_path(invoker.data, root_build_dir),
+      rebase_path(stamp_file, root_build_dir),
+    ]
+  }
+}
+
+# Validate a JSON5 file against a JSON schema.
+#
+#   data (required)
+#     [file] JSON5 file to validate.
+#     If this file is not valid JSON5, or does not meet the schema, then this
+#     target will fail to build.
+#
+#   schema (required)
+#     [file] Schema to use for validation.
+#
+#   sources (optional)
+#     [list of files] Additional schema files referenced by schema.
+#     Additional schema files used by the original schema file must be listed
+#     here for validation to be re-run when they change.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   validate_json5("validate_my_json") {
+#     data = "my_file.json5"
+#     schema = "my_schema.json"
+#   }
+template("validate_json5") {
+  assert(defined(invoker.data), "data is required")
+  assert(defined(invoker.schema), "schema is required")
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//build/tools/json_validator:json_validator_valico"
+    stamp_file = "$target_gen_dir/$target_name.json5_validated"
+
+    inputs = [
+      invoker.data,
+      invoker.schema,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--json5",
       rebase_path(invoker.schema, root_build_dir),
       rebase_path(invoker.data, root_build_dir),
       rebase_path(stamp_file, root_build_dir),
