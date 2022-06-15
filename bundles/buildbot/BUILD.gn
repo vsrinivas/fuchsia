@@ -133,7 +133,6 @@ group("core_base_packages") {
     "//src/identity/bin/account_manager:account_manager",
     "//src/identity/bin/dev_auth_provider:dev_auth_provider",
     "//src/identity/bin/dev_authenticator:dev_authenticator",
-    "//src/identity/bin/token_manager_factory:token_manager_factory",
     "//src/intl/intl_services:pkg",
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_inner",
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",

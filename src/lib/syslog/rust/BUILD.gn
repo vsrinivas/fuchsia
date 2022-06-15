@@ -123,7 +123,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/identity/bin/dev_auth_provider:*",
   "//src/identity/bin/google_auth_provider:*",
   "//src/identity/bin/password_authenticator:*",
-  "//src/identity/bin/token_manager_factory:*",
   "//src/identity/tests/account_manager_integration:*",
   "//src/identity/tools/accountctl:*",
   "//src/identity/tools/sktool:*",

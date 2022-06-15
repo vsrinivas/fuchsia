@@ -134,7 +134,6 @@ third_party_rust_crate_log_visibility = [
   "//src/identity/bin/dev_authenticator:*",
   "//src/identity/bin/google_auth_provider:*",
   "//src/identity/bin/password_authenticator:*",
-  "//src/identity/bin/token_manager_factory:*",
   "//src/identity/lib/account_common:*",
   "//src/identity/lib/identity_common:*",
   "//src/identity/lib/token_cache:*",

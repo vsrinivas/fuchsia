@@ -16,7 +16,6 @@ group("bin") {
     "dev_authenticator",
     "google_auth_provider",
     "password_authenticator",
-    "token_manager_factory",
   ]
 }
 
@@ -64,19 +63,11 @@ fuchsia_test_package("identity_bin_unittests") {
   ]
 }
 
-# Tier 1 should be included in products that only require token management
-# without support for platform-level accounts or authentication.
-group("tier_1") {
-  public_deps = [
-    "google_auth_provider",
-    "token_manager_factory",
-  ]
-}
-
-# Tier 2 should be included in products that require platform-level accounts
-# (i.e. representations of the people using the Fuchsia device). It provides
-# authentication, data isolation, and token management for these accounts.
-group("tier_2") {
+# Account system should be included in products that require platform-level
+# accounts (i.e. representations of the people using the Fuchsia device).
+# It provides authentication, data isolation, and token management for these
+# accounts.
+group("account_system") {
   public_deps = [
     "account",
     "account_handler",
@@ -87,8 +78,8 @@ group("tier_2") {
   ]
 }
 
-# This temporary group should be used in place of Tier 2 until the account
-# system is re-enabled following an extended lack of maintenance. It
+# This temporary group should be used in place of account_system until the
+# account system is re-enabled following an extended lack of maintenance. It
 # provides a minimal implementation of the account API supporting only one
 # account with only one authentication mechanism.
 group("minimal_auth") {

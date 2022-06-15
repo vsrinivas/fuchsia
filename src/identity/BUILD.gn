@@ -20,7 +20,6 @@ group("tests") {
     "lib:tests",
     "tests/account_manager_integration",
     "tests/password_authenticator_integration",
-    "tests/token_manager_integration",
     "tools:tests",
   ]
 }

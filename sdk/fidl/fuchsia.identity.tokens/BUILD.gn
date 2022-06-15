@@ -12,12 +12,8 @@ fidl("fuchsia.identity.tokens") {
     "common.fidl",
     "overview.fidl",
     "token_manager.fidl",
-    "token_manager_factory.fidl",
     "token_types.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.auth",
-    "//zircon/vdso/zx",
-  ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
