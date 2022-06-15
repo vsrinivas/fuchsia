@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.requestflexibleenvelope/Protocol",
       "location": {
@@ -693,7 +693,7 @@
     "test.requestflexibleenvelope/Protocol"
   ],
   "declarations": {
-    "test.requestflexibleenvelope/Protocol": "interface",
+    "test.requestflexibleenvelope/Protocol": "protocol",
     "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest": "struct",
     "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse": "struct",
     "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest": "struct",

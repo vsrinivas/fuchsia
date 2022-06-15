@@ -5,7 +5,7 @@
       "name": "test.errorsyntax.parent",
       "declarations": {
         "test.errorsyntax.parent/ParentUsesErrorSyntax": {
-          "kind": "interface"
+          "kind": "protocol"
         },
         "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest": {
           "kind": "struct",
@@ -30,7 +30,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.errorsyntax/ExampleUseOfErrorSyntax",
       "location": {
@@ -937,7 +937,7 @@
     "test.errorsyntax/ExampleUseOfErrorSyntax"
   ],
   "declarations": {
-    "test.errorsyntax/ExampleUseOfErrorSyntax": "interface",
+    "test.errorsyntax/ExampleUseOfErrorSyntax": "protocol",
     "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest": "struct",
     "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse": "struct",
     "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response": "struct",

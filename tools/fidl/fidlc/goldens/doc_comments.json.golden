@@ -778,7 +778,7 @@
     }
   ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.doccomments/Interface",
       "location": {
@@ -1613,7 +1613,7 @@
     "test.doccomments/C": "const",
     "test.doccomments/MyFlexibleEnum": "enum",
     "test.doccomments/MyStrictEnum": "enum",
-    "test.doccomments/Interface": "interface",
+    "test.doccomments/Interface": "protocol",
     "test.doccomments/Service": "service",
     "test.doccomments/Struct": "struct",
     "test.doccomments/Table": "table",

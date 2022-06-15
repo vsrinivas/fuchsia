@@ -1511,7 +1511,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.fidlcodec.examples/FidlCodecTestInterface",
       "location": {

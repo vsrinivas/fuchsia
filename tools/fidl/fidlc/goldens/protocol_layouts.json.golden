@@ -5,7 +5,7 @@
       "name": "test.protocollayouts.imported",
       "declarations": {
         "test.protocollayouts.imported/ComposedProtocol": {
-          "kind": "interface"
+          "kind": "protocol"
         },
         "test.protocollayouts.imported/ComposedProtocolOnAnonComposedWithErrorRequest": {
           "kind": "struct",
@@ -82,7 +82,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.protocollayouts/MainProtocol",
       "location": {
@@ -4249,7 +4249,7 @@
     "test.protocollayouts/MainProtocol"
   ],
   "declarations": {
-    "test.protocollayouts/MainProtocol": "interface",
+    "test.protocollayouts/MainProtocol": "protocol",
     "test.protocollayouts/MainProtocolOnAnonWithErrorRequest": "struct",
     "test.protocollayouts/MainProtocolOnImportWithErrorRequest": "struct",
     "test.protocollayouts/MainProtocolOnLocalWithErrorRequest": "struct",

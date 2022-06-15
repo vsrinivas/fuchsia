@@ -5,10 +5,10 @@
       "name": "test.dependent",
       "declarations": {
         "test.dependent/ContainsAllowed": {
-          "kind": "interface"
+          "kind": "protocol"
         },
         "test.dependent/ContainsDenied": {
-          "kind": "interface"
+          "kind": "protocol"
         },
         "test.dependent/ContainsDeniedAlwaysDeniedRequest": {
           "kind": "struct",
@@ -264,7 +264,7 @@
     }
   ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.bindingsdenylist/Allowed",
       "location": {
@@ -5911,13 +5911,13 @@
     "test.bindingsdenylist/OnlySyzkaller": "bits",
     "test.bindingsdenylist/AllBindings": "const",
     "test.bindingsdenylist/OnlyDart": "enum",
-    "test.bindingsdenylist/Allowed": "interface",
-    "test.bindingsdenylist/ContainsAllowed": "interface",
-    "test.bindingsdenylist/Denied": "interface",
-    "test.bindingsdenylist/DenyEachBinding": "interface",
-    "test.bindingsdenylist/ImportsSameNameContext": "interface",
-    "test.bindingsdenylist/OnlyCppAndDeps": "interface",
-    "test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
+    "test.bindingsdenylist/Allowed": "protocol",
+    "test.bindingsdenylist/ContainsAllowed": "protocol",
+    "test.bindingsdenylist/Denied": "protocol",
+    "test.bindingsdenylist/DenyEachBinding": "protocol",
+    "test.bindingsdenylist/ImportsSameNameContext": "protocol",
+    "test.bindingsdenylist/OnlyCppAndDeps": "protocol",
+    "test.bindingsdenylist/OnlyLibfuzzerAndDeps": "protocol",
     "test.bindingsdenylist/OnlyHlcpp": "service",
     "test.bindingsdenylist/AllowedDeniedTopResponse": "struct",
     "test.bindingsdenylist/Allowed_Denied_Response": "struct",

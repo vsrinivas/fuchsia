@@ -117,6 +117,7 @@ pub enum Declaration {
     Bits,
     Const,
     Enum,
+    #[serde(rename = "protocol")]
     Interface,
     Service,
     ExperimentalResource,
@@ -136,6 +137,7 @@ pub enum ExternalDeclaration {
     Bits,
     Const,
     Enum,
+    #[serde(rename = "protocol")]
     Interface,
     Service,
     ExperimentalResource,
@@ -597,6 +599,7 @@ pub struct FidlIr {
     pub const_declarations: Vec<Const>,
     pub enum_declarations: Vec<Enum>,
     pub experimental_resource_declarations: Vec<Resource>,
+    #[serde(rename = "protocol_declarations")]
     pub interface_declarations: Vec<Interface>,
     pub service_declarations: Vec<Service>,
     pub struct_declarations: Vec<Struct>,

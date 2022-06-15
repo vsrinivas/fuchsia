@@ -1254,7 +1254,7 @@ const (
 	ConstDeclType     DeclType = "const"
 	BitsDeclType      DeclType = "bits"
 	EnumDeclType      DeclType = "enum"
-	ProtocolDeclType  DeclType = "interface"
+	ProtocolDeclType  DeclType = "protocol"
 	ServiceDeclType   DeclType = "service"
 	StructDeclType    DeclType = "struct"
 	TableDeclType     DeclType = "table"
@@ -1293,7 +1293,7 @@ type Root struct {
 	Consts          []Const                     `json:"const_declarations,omitempty"`
 	Bits            []Bits                      `json:"bits_declarations,omitempty"`
 	Enums           []Enum                      `json:"enum_declarations,omitempty"`
-	Protocols       []Protocol                  `json:"interface_declarations,omitempty"`
+	Protocols       []Protocol                  `json:"protocol_declarations,omitempty"`
 	Services        []Service                   `json:"service_declarations,omitempty"`
 	Structs         []Struct                    `json:"struct_declarations,omitempty"`
 	ExternalStructs []Struct                    `json:"external_struct_declarations,omitempty"`

@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.inheritancewithrecursivedecl/Child",
       "location": {
@@ -332,8 +332,8 @@
     "test.inheritancewithrecursivedecl/Child"
   ],
   "declarations": {
-    "test.inheritancewithrecursivedecl/Child": "interface",
-    "test.inheritancewithrecursivedecl/Parent": "interface",
+    "test.inheritancewithrecursivedecl/Child": "protocol",
+    "test.inheritancewithrecursivedecl/Parent": "protocol",
     "test.inheritancewithrecursivedecl/ChildSecondRequest": "struct",
     "test.inheritancewithrecursivedecl/ParentFirstRequest": "struct"
   }

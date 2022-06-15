@@ -56,6 +56,7 @@ pub struct FidlJson {
     pub bits_declarations: Vec<Value>,
     pub const_declarations: Vec<Value>,
     pub enum_declarations: Vec<Value>,
+    #[serde(rename = "protocol_declarations")]
     pub interface_declarations: Vec<Value>,
     pub table_declarations: Vec<Value>,
     pub type_alias_declarations: Vec<Value>,

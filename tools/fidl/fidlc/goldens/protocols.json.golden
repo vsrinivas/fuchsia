@@ -141,7 +141,7 @@
     }
   ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.protocols/ChannelProtocol",
       "location": {
@@ -6647,16 +6647,16 @@
   ],
   "declarations": {
     "test.protocols/ErrorEnum": "enum",
-    "test.protocols/ChannelProtocol": "interface",
-    "test.protocols/DiscoverableProtocol": "interface",
-    "test.protocols/HandleRightsProtocol": "interface",
-    "test.protocols/ManyParameters": "interface",
-    "test.protocols/MethodWithUnion": "interface",
-    "test.protocols/SyscallProtocol": "interface",
-    "test.protocols/Transitional": "interface",
-    "test.protocols/WithAndWithoutRequestResponse": "interface",
-    "test.protocols/WithErrorSyntax": "interface",
-    "test.protocols/WithProtocolEnds": "interface",
+    "test.protocols/ChannelProtocol": "protocol",
+    "test.protocols/DiscoverableProtocol": "protocol",
+    "test.protocols/HandleRightsProtocol": "protocol",
+    "test.protocols/ManyParameters": "protocol",
+    "test.protocols/MethodWithUnion": "protocol",
+    "test.protocols/SyscallProtocol": "protocol",
+    "test.protocols/Transitional": "protocol",
+    "test.protocols/WithAndWithoutRequestResponse": "protocol",
+    "test.protocols/WithErrorSyntax": "protocol",
+    "test.protocols/WithProtocolEnds": "protocol",
     "test.protocols/ChannelProtocolEventARequest": "struct",
     "test.protocols/ChannelProtocolMethodARequest": "struct",
     "test.protocols/ChannelProtocolMethodBRequest": "struct",

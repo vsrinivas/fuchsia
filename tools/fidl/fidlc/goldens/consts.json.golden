@@ -1086,7 +1086,7 @@
     }
   ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [],
+  "protocol_declarations": [],
   "service_declarations": [],
   "struct_declarations": [],
   "external_struct_declarations": [],

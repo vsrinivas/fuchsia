@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.error/Example",
       "location": {
@@ -526,7 +526,7 @@
     "test.error/Example"
   ],
   "declarations": {
-    "test.error/Example": "interface",
+    "test.error/Example": "protocol",
     "test.error/ExampleFooRequest": "struct",
     "test.error/ExampleFooTopResponse": "struct",
     "test.error/Example_foo_Response": "struct",

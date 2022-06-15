@@ -28,7 +28,7 @@ class Library {
       bits: this.ir.bits_declarations,
       const : this.ir.const_declarations,
       enum: this.ir.enum_declarations,
-      interface: this.ir.interface_declarations,
+      protocol: this.ir.protocol_declarations,
       service: this.ir.service_declarations,
       struct: this.ir.struct_declarations,
       external_struct: this.ir.external_struct_declarations,
@@ -39,7 +39,7 @@ class Library {
     }
 
     // Match each method with its request and response payloads.
-    for (let protocol of this.ir.interface_declarations) {
+    for (let protocol of this.ir.protocol_declarations) {
       for (let method of protocol.methods) {
         if (!method.has_request || !method.maybe_request_payload) {
           method.maybe_request = [];
@@ -87,7 +87,7 @@ class Library {
    * library that represents that protocol.
    */
   lookupProtocol(name) {
-    const decl = this._findDeclaration(this.ir.interface_declarations, name);
+    const decl = this._findDeclaration(this.ir.protocol_declarations, name);
     if (decl === null) {
       throw new Error(`No such protocol ${name}`);
     }
@@ -650,8 +650,8 @@ var fidling_handler = {
                 return constToValue(c);
               }
             }
-            for (let i = 0; i < val.ir.interface_declarations.length; i++) {
-              let p = val.ir.interface_declarations[i];
+            for (let i = 0; i < val.ir.protocol_declarations.length; i++) {
+              let p = val.ir.protocol_declarations[i];
               if (p.name == maybeName) {
                 return p;
               }

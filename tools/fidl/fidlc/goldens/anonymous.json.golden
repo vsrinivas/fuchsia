@@ -298,7 +298,7 @@
     }
   ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.anonymous/SomeProtocol",
       "location": {
@@ -1696,7 +1696,7 @@
     "test.anonymous/Flags": "bits",
     "test.anonymous/Op": "enum",
     "test.anonymous/SomeProtocol_SomeMethod_Error": "enum",
-    "test.anonymous/SomeProtocol": "interface",
+    "test.anonymous/SomeProtocol": "protocol",
     "test.anonymous/OverrideTest": "struct",
     "test.anonymous/SomeProtocolSomeMethodRequest": "struct",
     "test.anonymous/SomeProtocolSomeMethodTopResponse": "struct",

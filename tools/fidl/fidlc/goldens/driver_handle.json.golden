@@ -86,7 +86,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.driverhandle/DriverProtocol",
       "location": {
@@ -680,8 +680,8 @@
     "test.driverhandle/ClientEndWrapper"
   ],
   "declarations": {
-    "test.driverhandle/DriverProtocol": "interface",
-    "test.driverhandle/HandlesInProtocol": "interface",
+    "test.driverhandle/DriverProtocol": "protocol",
+    "test.driverhandle/HandlesInProtocol": "protocol",
     "test.driverhandle/ClientEndWrapper": "struct",
     "test.driverhandle/HandlesInProtocolSendHandlesRequest": "struct",
     "test.driverhandle/ServerEndWrapper": "struct",

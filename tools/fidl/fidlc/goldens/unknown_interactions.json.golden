@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.unknowninteractions/Example",
       "location": {
@@ -443,7 +443,7 @@
     "test.unknowninteractions/Example"
   ],
   "declarations": {
-    "test.unknowninteractions/Example": "interface",
+    "test.unknowninteractions/Example": "protocol",
     "test.unknowninteractions/ExampleFlexibleTwoWayTopResponse": "struct",
     "test.unknowninteractions/Example_FlexibleTwoWay_Response": "struct",
     "test.unknowninteractions/Example_FlexibleTwoWay_Result": "union"

@@ -859,7 +859,7 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Compilation::Declarat
       GenerateDeclarationsEntry(count++, decl->name, "experimental_resource");
 
     for (const auto& decl : declarations.protocols)
-      GenerateDeclarationsEntry(count++, decl->name, "interface");
+      GenerateDeclarationsEntry(count++, decl->name, "protocol");
 
     for (const auto& decl : declarations.services)
       GenerateDeclarationsEntry(count++, decl->name, "service");
@@ -915,7 +915,7 @@ void JSONGenerator::GenerateExternalDeclarationsMember(
       GenerateExternalDeclarationsEntry(count++, decl->name, "experimental_resource", std::nullopt);
 
     for (const auto& decl : declarations.protocols)
-      GenerateExternalDeclarationsEntry(count++, decl->name, "interface", std::nullopt);
+      GenerateExternalDeclarationsEntry(count++, decl->name, "protocol", std::nullopt);
 
     for (const auto& decl : declarations.services)
       GenerateExternalDeclarationsEntry(count++, decl->name, "service", std::nullopt);
@@ -953,7 +953,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("enum_declarations", compilation_->declarations.enums);
     GenerateObjectMember("experimental_resource_declarations",
                          compilation_->declarations.resources);
-    GenerateObjectMember("interface_declarations", compilation_->declarations.protocols);
+    GenerateObjectMember("protocol_declarations", compilation_->declarations.protocols);
     GenerateObjectMember("service_declarations", compilation_->declarations.services);
     GenerateObjectMember("struct_declarations", compilation_->declarations.structs);
     GenerateObjectMember("external_struct_declarations", compilation_->external_structs);

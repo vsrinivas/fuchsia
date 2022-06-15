@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.driveroneway/OneWay",
       "location": {
@@ -259,7 +259,7 @@
     "test.driveroneway/OneWay"
   ],
   "declarations": {
-    "test.driveroneway/OneWay": "interface",
+    "test.driveroneway/OneWay": "protocol",
     "test.driveroneway/OneWaySendRequest": "struct",
     "test.driveroneway/Payload": "struct"
   }

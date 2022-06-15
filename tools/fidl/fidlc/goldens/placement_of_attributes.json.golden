@@ -215,7 +215,7 @@
     }
   ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.placementofattributes/ExampleProtocol",
       "location": {
@@ -808,7 +808,7 @@
     "test.placementofattributes/ExampleBits": "bits",
     "test.placementofattributes/EXAMPLE_CONST": "const",
     "test.placementofattributes/ExampleEnum": "enum",
-    "test.placementofattributes/ExampleProtocol": "interface",
+    "test.placementofattributes/ExampleProtocol": "protocol",
     "test.placementofattributes/ExampleProtocolMethodRequest": "struct",
     "test.placementofattributes/ExampleStruct": "struct",
     "test.placementofattributes/ExampleTable": "table",

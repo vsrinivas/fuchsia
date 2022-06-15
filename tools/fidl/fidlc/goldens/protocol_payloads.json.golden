@@ -5,7 +5,7 @@
       "name": "test.protocolpayloads.imported",
       "declarations": {
         "test.protocolpayloads.imported/ComposedProtocol": {
-          "kind": "interface"
+          "kind": "protocol"
         },
         "test.protocolpayloads.imported/ComposedProtocolOnComposedWithErrorRequest": {
           "kind": "struct",
@@ -34,7 +34,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.protocolpayloads/MainProtocol",
       "location": {
@@ -4021,7 +4021,7 @@
     "test.protocolpayloads/MainProtocol"
   ],
   "declarations": {
-    "test.protocolpayloads/MainProtocol": "interface",
+    "test.protocolpayloads/MainProtocol": "protocol",
     "test.protocolpayloads/LocalStructPayload": "struct",
     "test.protocolpayloads/MainProtocolOnAnonRequest": "struct",
     "test.protocolpayloads/MainProtocolOnAnonWithErrorRequest": "struct",

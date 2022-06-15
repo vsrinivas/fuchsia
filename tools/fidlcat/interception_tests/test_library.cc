@@ -121,7 +121,7 @@ std::string echo_service = R"({
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "fidl.examples.echo/Echo",
       "location": {
@@ -859,7 +859,7 @@ std::string echo_service = R"({
     "fidl.examples.echo/Echo"
   ],
   "declarations": {
-    "fidl.examples.echo/Echo": "interface",
+    "fidl.examples.echo/Echo": "protocol",
     "fidl.examples.echo/EchoEchoStringRequest": "struct",
     "fidl.examples.echo/EchoEchoStringTopResponse": "struct",
     "fidl.examples.echo/EchoEchoHandleRequest": "struct",

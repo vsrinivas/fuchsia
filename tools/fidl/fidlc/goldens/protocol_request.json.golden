@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.protocolrequest/Child",
       "location": {
@@ -522,8 +522,8 @@
     "test.protocolrequest/Child"
   ],
   "declarations": {
-    "test.protocolrequest/Child": "interface",
-    "test.protocolrequest/Parent": "interface",
+    "test.protocolrequest/Child": "protocol",
+    "test.protocolrequest/Parent": "protocol",
     "test.protocolrequest/ParentGetChildRequestTopResponse": "struct",
     "test.protocolrequest/ParentGetChildTopResponse": "struct",
     "test.protocolrequest/ParentTakeChildRequest": "struct",

@@ -623,7 +623,7 @@ bool SyscallLibraryLoader::LoadEnums(const rapidjson::Document& document, Syscal
 // static
 bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
                                           SyscallLibrary* library) {
-  for (const auto& interface : document["interface_declarations"].GetArray()) {
+  for (const auto& interface : document["protocol_declarations"].GetArray()) {
     if (!ValidateTransport(interface)) {
       fprintf(stderr, "Expected Transport to be Syscall.\n");
       return false;

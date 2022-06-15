@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.emptystruct/EmptyProtocol",
       "location": {
@@ -527,7 +527,7 @@
     "test.emptystruct/EmptyProtocol"
   ],
   "declarations": {
-    "test.emptystruct/EmptyProtocol": "interface",
+    "test.emptystruct/EmptyProtocol": "protocol",
     "test.emptystruct/Empty": "struct",
     "test.emptystruct/EmptyProtocolReceiveRequest": "struct",
     "test.emptystruct/EmptyProtocolSendAndReceiveRequest": "struct",

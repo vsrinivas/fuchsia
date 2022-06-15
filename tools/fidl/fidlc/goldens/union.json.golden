@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.union/TestProtocol",
       "location": {
@@ -3328,7 +3328,7 @@
     "test.union/XUnionContainingEmptyStruct"
   ],
   "declarations": {
-    "test.union/TestProtocol": "interface",
+    "test.union/TestProtocol": "protocol",
     "test.union/Empty": "struct",
     "test.union/NullableUnionStruct": "struct",
     "test.union/Pasta": "struct",

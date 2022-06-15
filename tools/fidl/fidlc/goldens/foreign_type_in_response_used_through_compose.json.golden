@@ -14,7 +14,7 @@
       "name": "test.middle",
       "declarations": {
         "test.middle/Middle": {
-          "kind": "interface"
+          "kind": "protocol"
         },
         "test.middle/MiddleGetFooTopResponse": {
           "kind": "struct",
@@ -27,7 +27,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.foreigntypeinresponseusedthroughcompose/Top",
       "location": {
@@ -213,6 +213,6 @@
     "test.foreigntypeinresponseusedthroughcompose/Top"
   ],
   "declarations": {
-    "test.foreigntypeinresponseusedthroughcompose/Top": "interface"
+    "test.foreigntypeinresponseusedthroughcompose/Top": "protocol"
   }
 }

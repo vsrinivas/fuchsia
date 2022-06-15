@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.service/FirstProtocol",
       "location": {
@@ -293,8 +293,8 @@
     "test.service/EmptyService"
   ],
   "declarations": {
-    "test.service/FirstProtocol": "interface",
-    "test.service/SecondProtocol": "interface",
+    "test.service/FirstProtocol": "protocol",
+    "test.service/SecondProtocol": "protocol",
     "test.service/EmptyService": "service",
     "test.service/MultiHeterogeneousMemberService": "service",
     "test.service/MultiHomogeneousMemberService": "service",

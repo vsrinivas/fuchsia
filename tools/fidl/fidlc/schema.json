@@ -350,7 +350,7 @@
                         "bits",
                         "const",
                         "enum",
-                        "interface",
+                        "protocol",
                         "service",
                         "experimental_resource",
                         "struct",
@@ -487,7 +487,7 @@
                                         "bits",
                                         "const",
                                         "enum",
-                                        "interface",
+                                        "protocol",
                                         "service",
                                         "experimental_resource",
                                         "type_alias"
@@ -714,7 +714,7 @@
             ],
             "type": "string"
         },
-        "interface": {
+        "protocol": {
             "additionalProperties": false,
             "description": "Definition of a protocol declaration",
             "patternProperties": {
@@ -739,7 +739,7 @@
                 "methods": {
                     "description": "List of methods and events",
                     "items": {
-                        "$ref": "#/definitions/interface-method"
+                        "$ref": "#/definitions/protocol-method"
                     },
                     "type": "array"
                 },
@@ -764,7 +764,7 @@
             ],
             "type": "object"
         },
-        "interface-method": {
+        "protocol-method": {
             "additionalProperties": false,
             "description": "Definition of a method or event",
             "patternProperties": {
@@ -839,7 +839,7 @@
             ],
             "type": "object"
         },
-        "interface-method-parameter": {
+        "protocol-method-parameter": {
             "additionalProperties": false,
             "description": "Definition of parameter or return of a method or event",
             "patternProperties": {
@@ -1877,10 +1877,10 @@
             },
             "type": "array"
         },
-        "interface_declarations": {
+        "protocol_declarations": {
             "description": "List of protocols, sorted by fully qualified name",
             "items": {
-                "$ref": "#/definitions/interface"
+                "$ref": "#/definitions/protocol"
             },
             "type": "array"
         },
@@ -1941,7 +1941,7 @@
         "const_declarations",
         "enum_declarations",
         "experimental_resource_declarations",
-        "interface_declarations",
+        "protocol_declarations",
         "service_declarations",
         "struct_declarations",
         "table_declarations",

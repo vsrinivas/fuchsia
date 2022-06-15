@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.drivertwoway/TwoWay",
       "location": {
@@ -326,7 +326,7 @@
     "test.drivertwoway/TwoWay"
   ],
   "declarations": {
-    "test.drivertwoway/TwoWay": "interface",
+    "test.drivertwoway/TwoWay": "protocol",
     "test.drivertwoway/TwoWayAddRequest": "struct",
     "test.drivertwoway/TwoWayAddTopResponse": "struct"
   }

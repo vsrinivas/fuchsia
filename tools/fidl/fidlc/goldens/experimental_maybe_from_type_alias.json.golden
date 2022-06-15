@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.experimentalmaybefromtypealias/MyProtocol",
       "location": {
@@ -2514,7 +2514,7 @@
     "test.experimentalmaybefromtypealias/Testing"
   ],
   "declarations": {
-    "test.experimentalmaybefromtypealias/MyProtocol": "interface",
+    "test.experimentalmaybefromtypealias/MyProtocol": "protocol",
     "test.experimentalmaybefromtypealias/Testing": "struct",
     "test.experimentalmaybefromtypealias/AliasOfArray": "type_alias",
     "test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray": "type_alias",

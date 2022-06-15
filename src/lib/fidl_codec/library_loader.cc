@@ -550,7 +550,7 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_defi
     // Make a set of the encoded compound identifiers of all types that are used as payloads for
     // for FIDL methods.
     std::set<std::string> message_body_type_names;
-    for (auto& protocol : json_definition_["interface_declarations"].GetArray()) {
+    for (auto& protocol : json_definition_["protocol_declarations"].GetArray()) {
       for (auto& method : protocol["methods"].GetArray()) {
         if (method.HasMember("maybe_request_payload")) {
           message_body_type_names.insert(method["maybe_request_payload"]["identifier"].GetString());
@@ -593,7 +593,7 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_defi
     }
   }
 
-  auto interfaces_array = json_definition_["interface_declarations"].GetArray();
+  auto interfaces_array = json_definition_["protocol_declarations"].GetArray();
   interfaces_.reserve(interfaces_array.Size());
 
   for (auto& decl : interfaces_array) {

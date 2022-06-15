@@ -97,7 +97,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.handles/DriverProtocol",
       "location": {
@@ -1905,8 +1905,8 @@
     "test.handles/DriverProtocol"
   ],
   "declarations": {
-    "test.handles/DriverProtocol": "interface",
-    "test.handles/SomeProtocol": "interface",
+    "test.handles/DriverProtocol": "protocol",
+    "test.handles/SomeProtocol": "protocol",
     "test.handles/FdfHandles": "struct",
     "test.handles/Handles": "struct",
     "test.handles/aliased_plain_handle": "type_alias",

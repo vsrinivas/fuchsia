@@ -86,7 +86,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.nullable/SimpleProtocol",
       "location": {
@@ -1132,7 +1132,7 @@
     "test.nullable/Int32Wrapper"
   ],
   "declarations": {
-    "test.nullable/SimpleProtocol": "interface",
+    "test.nullable/SimpleProtocol": "protocol",
     "test.nullable/Int32Wrapper": "struct",
     "test.nullable/SimpleProtocolAddRequest": "struct",
     "test.nullable/SimpleProtocolAddTopResponse": "struct",

@@ -5,7 +5,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.inheritance/sub",
       "location": {
@@ -372,8 +372,8 @@
     "test.inheritance/sub"
   ],
   "declarations": {
-    "test.inheritance/sub": "interface",
-    "test.inheritance/super": "interface",
+    "test.inheritance/sub": "protocol",
+    "test.inheritance/super": "protocol",
     "test.inheritance/SuperFooRequest": "struct",
     "test.inheritance/SuperFooTopResponse": "struct"
   }

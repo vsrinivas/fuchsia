@@ -5,7 +5,7 @@
       "name": "test.bottom",
       "declarations": {
         "test.bottom/Bottom": {
-          "kind": "interface"
+          "kind": "protocol"
         },
         "test.bottom/BottomGetFooTopResponse": {
           "kind": "struct",
@@ -21,7 +21,7 @@
       "name": "test.middle",
       "declarations": {
         "test.middle/Middle": {
-          "kind": "interface"
+          "kind": "protocol"
         }
       }
     }
@@ -30,7 +30,7 @@
   "const_declarations": [],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.transitivedependenciescompose/Top",
       "location": {
@@ -249,6 +249,6 @@
     "test.transitivedependenciescompose/Top"
   ],
   "declarations": {
-    "test.transitivedependenciescompose/Top": "interface"
+    "test.transitivedependenciescompose/Top": "protocol"
   }
 }

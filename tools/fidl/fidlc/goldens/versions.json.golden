@@ -516,7 +516,7 @@
     }
   ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [
+  "protocol_declarations": [
     {
       "name": "test.versions/OtherProtocol",
       "location": {
@@ -1634,8 +1634,8 @@
     "test.versions/ADDED_AT_HEAD": "const",
     "test.versions/Const": "const",
     "test.versions/Enum": "enum",
-    "test.versions/OtherProtocol": "interface",
-    "test.versions/Protocol": "interface",
+    "test.versions/OtherProtocol": "protocol",
+    "test.versions/Protocol": "protocol",
     "test.versions/Service": "service",
     "test.versions/Struct": "struct",
     "test.versions/Table": "table",
