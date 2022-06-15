@@ -1564,6 +1564,18 @@ pub fn translate_capabilities(
                 name: Some(n.clone().into()),
                 ..fdecl::Event::EMPTY
             }));
+        } else if let Some(ns) = &capability.event_stream {
+            if !as_builtin {
+                return Err(Error::internal(format!(
+                    "event_stream capabilities may only be declared as built-in capabilities"
+                )));
+            }
+            for n in ns {
+                out_capabilities.push(fdecl::Capability::EventStream(fdecl::EventStream {
+                    name: Some(n.clone().into()),
+                    ..fdecl::EventStream::EMPTY
+                }));
+            }
         } else {
             return Err(Error::internal(format!("no capability declaration recognized")));
         }

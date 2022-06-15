@@ -262,6 +262,12 @@ impl CapabilityId {
                 None,
                 capability.capability_type(),
             )?));
+        } else if let Some(n) = capability.event_stream() {
+            return Ok(Self::events_from(Self::get_one_or_many_names(
+                n,
+                None,
+                capability.capability_type(),
+            )?));
         }
 
         // Unsupported capability type.

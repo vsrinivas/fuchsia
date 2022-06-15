@@ -612,6 +612,9 @@ mod tests {
                 {
                     event: "foo_event",
                 },
+                {
+                    event_stream: "foo_event_stream",
+                }
             ],
             num_threads: 321,
             out_dir_contents: "svc",
@@ -741,6 +744,10 @@ mod tests {
                     fdecl::Capability::Event(fdecl::Event {
                         name: Some("foo_event".into()),
                         ..fdecl::Event::EMPTY
+                    }),
+                    fdecl::Capability::EventStream(fdecl::EventStream {
+                        name: Some("foo_event_stream".into()),
+                        ..fdecl::EventStream::EMPTY
                     }),
                 ]),
                 num_threads: Some(321),
