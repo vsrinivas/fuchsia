@@ -2,7 +2,7 @@
 
 # Scenic, the Fuchsia graphics engine
 
-# Introduction {#introduction}
+## Introduction {#introduction}
 
 Scenic is a system service that composes graphical objects from multiple
 processes into a shared scene graph. These objects are rendered within a
@@ -32,7 +32,7 @@ Scenic's responsibilities are:
 - Diagnostics: Scenic provides a diagnostic interface to help developers
   debug their models and measure performance.
 
-## Scenic and Fuchsia {#scenic-and-fuchsia}
+### Scenic and Fuchsia {#scenic-and-fuchsia}
 
 ![Diagram of Scenic within Fuchsia](/docs/concepts/ui/scenic/images/scenic_within_fuchsia_diagram.png)
 
@@ -58,9 +58,9 @@ using its _Input Reader_ library and continually forwards them to Scenic.
 Scenic is a client of the [_Vulkan graphics driver_](/src/graphics/lib/magma/)
 and the system _Display Driver_.
 
-# Concepts {#concepts}
+## Concepts {#concepts}
 
-## Scenic {#scenic}
+### Scenic {#scenic}
 
 The `Scenic` FIDL protocol is Scenic's front door. Each instance of the
 protocol represents a Scenic instance. Each Scenic instance is an isolated
@@ -87,7 +87,7 @@ inoperable and its rendering ceases.
 `Views` typically do not deal with the Scenic instance directly; instead
 they receive a Scenic `Session` from the view manager.
 
-## Sessions {#sessions}
+### Sessions {#sessions}
 
 The `Session` FIDL protocol is the primary API used by clients of Scenic to
 contribute graphical content in the form of `Resources`. Each session has
@@ -107,7 +107,7 @@ its links become inoperable.
 
 `Views` typically receive separate sessions from the view manager.
 
-## Resources {#resources}
+### Resources {#resources}
 
 `Resources` represent scene elements such as nodes, shapes, materials, and
 animations that belong to particular `Sessions`.
@@ -153,7 +153,7 @@ See also [Fences](#fences).
 This process of addition, modification, and removal may be repeated
 indefinitely to incrementally update resources within a session.
 
-### Nodes {#nodes}
+#### Nodes {#nodes}
 
 A `Node` resource represents a graphical object that can be assembled into
 a hierarchy called a `node tree` for rendering.
@@ -164,7 +164,7 @@ the lifecycle of Node-like resources and embedded Views.
 {# TODO: Discuss this in more detail, especially hierarchical modeling concepts #}
 {# such as per-node transforms, groups, adding and removing children, etc. #}
 
-### Scenes {#scenes}
+#### Scenes {#scenes}
 
 A `Scene` resource combines a tree of nodes with the scene-wide parameters
 needed to render it. A Scenic instance may contain multiple scenes but
@@ -177,7 +177,7 @@ A scene resource has the following properties:
 
 In order to render a scene, a `Camera` must be pointed at it.
 
-### Compositors {#compositors}
+#### Compositors {#compositors}
 
 Compositors are resources that come in two flavors: `DisplayCompositor` and
 `ImagePipeCompositor`; their job is to draw the content of a `LayerStack`
@@ -190,7 +190,7 @@ A `LayerStack` resource consists of an ordered list of `Layers`. Each layer
 can contain either an `Image` (perhaps transformed by a matrix), or a
 `Camera` that points at a `Scene` to be rendered (as described above).
 
-### Scenic Resource Graph {#scenic-resource-graph}
+#### Scenic Resource Graph {#scenic-resource-graph}
 
 ![Scenic Resource Graph](/docs/concepts/ui/scenic/images/scenic_resource_graph.png)
 
@@ -199,7 +199,7 @@ can contain either an `Image` (perhaps transformed by a matrix), or a
 {# Add sections to discuss all other kinds of resources: shapes, materials, #}
 {# links, memory, images, buffers, animations, variables, renderers etc. #}
 
-## Coordinate Frames and Units {#coordinate-frames-and-units}
+### Coordinate Frames and Units {#coordinate-frames-and-units}
 
 Scenic manages a global scene graph in a three dimensional space. Some of the characteristics of
 this space are defined by Scenic itself, whereas some are defined by the root presenter or even
@@ -207,21 +207,21 @@ other clients.
 
 ![Scenic Axes](/docs/concepts/ui/scenic/images/scenic_axes.png)
 
-### Units {#units}
+#### Units {#units}
 
 Units are configured by the root presenter. The default root presenter uses a device-independent
 scalable unit called "pips" for the root space. See [Units and Metrics](gfx/units_and_metrics.md) for
 details. What units are used for your view space depends on what transforms are applied to your
 view by your parent.
 
-### World Space {#world-space}
+#### World Space {#world-space}
 
 The Scenic world space is a right handed Cartesian space. It is configured by the root presenter
 which configures the view and projection parameters of the camera. The default root presenter
 will put the origin at the top left of the screen and make +X point right, +Y point down, and
 +Z point into the screen.
 
-### View Space {#view-space}
+#### View Space {#view-space}
 
 Ultimately the space of a given view depends on what transforms are applied to it by its parent
 View and the parent View's parent and so on. If no rotation transform is applied and all scale
@@ -232,7 +232,7 @@ The bounds of the root view are defined by a min and a max point as follows:
 
 ![Scenic Root View Bounds](/docs/concepts/ui/scenic/images/scenic_root_view_bounds.png)
 
-## Views and Bounds {#views-and-bounds}
+### Views and Bounds {#views-and-bounds}
 
 [View Bounds](/docs/development/graphics/scenic/concepts/view_bounds.md) shows how to set up your view bounds, how to debug
 them with wireframe rendering, and explains how view bounds interact with hit testing.
@@ -241,12 +241,12 @@ them with wireframe rendering, and explains how view bounds interact with hit te
 
 {# TODO(fxbug.dev/24431): Talk about synchronization. #}
 
-# Frame Scheduling {#frame-scheduling}
+## Frame Scheduling {#frame-scheduling}
 
 [Frame scheduling](frame_scheduling.md) explains how the frame scheduling API work and contains
 examples of how to use it.
 
-# Examples of using Scenic {#examples-of-using-scenic}
+## Examples of using Scenic {#examples-of-using-scenic}
 
 * [bouncing_ball](/src/ui/examples/bouncing_ball/README.md): Simple example that doesn't use any wrapper library.
 * [simplest_app](/src/ui/examples/simplest_app/README.md): Draws a background color that changes with user input.
@@ -254,16 +254,16 @@ examples of how to use it.
 * [tile](/src/ui/examples/tile_view/README.md): Simple window-manager-like app that embeds child views.
 * Other examples: [`//src/ui/examples`](/src/ui/examples)
 
-# API Guide {#api-guide}
+## API Guide {#api-guide}
 
-## Scenic client libraries
+### Scenic client libraries
 
 Scenic has convenience wrapper libraries for some languages. These can be used instead of using the FIDL API directly.
 
 * [C++ client library](/sdk/lib/ui/scenic/cpp) (see also examples: [simplest_app](/src/ui/examples/simplest_app/README.md), [spinning_square](/src/ui/examples/spinning_square_view/README.md), [simplest_embedder](/src/ui/examples/simplest_embedder/README.md), [tile](/src/ui/examples/tile_view/README.md))
 * [Rust client library](/src/lib/ui/fuchsia-scenic)
 
-## FIDL protocols {#fidl-protocols}
+### FIDL protocols {#fidl-protocols}
 
 The following files define and document the collection of FIDL protocols that
 make up Scenic.
