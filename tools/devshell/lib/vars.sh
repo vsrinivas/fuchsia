@@ -47,7 +47,10 @@ function fx-rbe-enabled {
     fx-warn "The 'enable_rbe' GN arg has been renamed to 'rust_rbe_enable'."
     fx-warn "Please update your ${FUCHSIA_BUILD_DIR}/args.gn file (fx args)."
   fi
+  # If RBE is enabled for any language, then the whole build needs to be
+  # wrapped with ${RBE_WRAPPER[@]}.
   grep -q -e "^[ \t]*rust_rbe_enable[ ]*=[ ]*true" \
+    -e "^[ \t]*cxx_rbe_enable[ ]*=[ ]*true" \
     -e "^[ \t]*enable_rbe[ ]*=[ ]*true" \
     "${FUCHSIA_BUILD_DIR}/args.gn"
 }

@@ -145,12 +145,20 @@ TEST_fx-rbe-enabled() {
   echo "" > "${ARGS_FILE}"
   BT_EXPECT_FAIL fx-rbe-enabled
 
-  # RBE is explicitly disabled.
+  # RBE for Rust is explicitly disabled.
   echo "rust_rbe_enable = false" > "${ARGS_FILE}"
   BT_EXPECT_FAIL fx-rbe-enabled
 
-  # RBE is enabled.
+  # RBE for Rust is enabled.
   echo "rust_rbe_enable = true" > "${ARGS_FILE}"
+  BT_EXPECT fx-rbe-enabled
+
+  # RBE for C++ is explicitly disabled.
+  echo "cxx_rbe_enable = false" > "${ARGS_FILE}"
+  BT_EXPECT_FAIL fx-rbe-enabled
+
+  # RBE for C++ is enabled.
+  echo "cxx_rbe_enable = true" > "${ARGS_FILE}"
   BT_EXPECT fx-rbe-enabled
 }
 
