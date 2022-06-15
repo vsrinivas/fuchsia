@@ -33,8 +33,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
 
   // Enable uart.
   UartFromCmdLine(gLegacyBoot.cmdline, gLegacyBoot.uart);
-  SetUartConsole(gLegacyBoot.uart);
-
+  LegacyBootSetUartConsole(gLegacyBoot.uart);
   LegacyBootShim shim(symbolize.name(), gLegacyBoot);
   shim.set_build_id(symbolize.BuildIdString());
 
