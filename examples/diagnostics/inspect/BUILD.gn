@@ -7,8 +7,6 @@ group("inspect") {
   deps = [
     "codelab",
     "cpp",
-
-    # "dart/inspect_mod",
     "rust",
     "rust-ergonomic",
   ]
@@ -19,9 +17,6 @@ group("tests") {
   deps = [
     "codelab:tests",
     "cpp:tests",
-
-    # TODO(fxb/38305): Re-enable test when unblocked and inspect paths are corrected
-    # "dart/inspect_mod:inspect-mod-test",
     "rust:tests",
     "rust-ergonomic:tests",
   ]
