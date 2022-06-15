@@ -387,10 +387,12 @@ class Vp9Decoder : public VideoDecoder {
 
   // The VP9 specification requires that 8 reference frames can be stored - they're saved in this
   // structure.
-  Frame* reference_frame_map_[8] = {};
+  static constexpr uint32_t kReferenceFrameCount = 8u;
+  Frame* reference_frame_map_[kReferenceFrameCount] = {};
 
   // Each frame that's being decoded can reference 3 of the frames that are in reference_frame_map_.
-  Frame* current_reference_frames_[3] = {};
+  static constexpr uint32_t kCurrentReferenceFrameCount = 3u;
+  Frame* current_reference_frames_[kCurrentReferenceFrameCount] = {};
 
   bool use_compressed_output_ = {};
   bool have_fatal_error_ = false;

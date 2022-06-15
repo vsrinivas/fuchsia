@@ -21,7 +21,7 @@ std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data, uint3
         static_cast<uint8_t*>(memmem(this_nal_start + 2, size - 2, start_code, sizeof(start_code)));
     if (next_nal_start && next_nal_start[-1] == 0)
       next_nal_start--;
-    uint32_t data_size = next_nal_start ? next_nal_start - this_nal_start : size;
+    uint64_t data_size = next_nal_start ? next_nal_start - this_nal_start : size;
     if (data_size > 0) {
       std::vector<uint8_t> new_data(data_size);
       memcpy(new_data.data(), this_nal_start, data_size);

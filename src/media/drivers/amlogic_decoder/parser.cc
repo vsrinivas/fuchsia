@@ -86,7 +86,7 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
     uint32_t buffer_address = truncate_to_32(instance->stream_buffer()->buffer().phys_base());
     ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(owner_->mmio()->parser);
     ParserVideoEndPtr::Get()
-        .FromValue(buffer_address + instance->stream_buffer()->buffer().size() - 8)
+        .FromValue(truncate_to_32(buffer_address + instance->stream_buffer()->buffer().size() - 8))
         .WriteTo(owner_->mmio()->parser);
 
     ParserEsControl::Get()
@@ -184,7 +184,8 @@ void Parser::SyncFromDecoderInstance(DecoderInstance* instance) {
   ZX_DEBUG_ASSERT(buffer_size <= std::numeric_limits<uint32_t>::max());
   uint32_t read_offset = instance->core()->GetReadOffset();
   uint32_t write_offset = instance->core()->GetStreamInputOffset();
-  SyncFromBufferParameters(buffer_phys_address, buffer_size, read_offset, write_offset);
+  SyncFromBufferParameters(buffer_phys_address, static_cast<uint32_t>(buffer_size), read_offset,
+                           write_offset);
 }
 
 void Parser::SyncToDecoderInstance(DecoderInstance* instance) {
@@ -295,7 +296,7 @@ zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
       .WriteTo(owner_->mmio()->parser);
   ParserFetchCmd::Get()
       .FromValue(0)
-      .set_len(io_buffer_size(&search_pattern_, 0))
+      .set_len(truncate_to_32(io_buffer_size(&search_pattern_, 0)))
       .set_fetch_endian(7)
       .WriteTo(owner_->mmio()->parser);
 

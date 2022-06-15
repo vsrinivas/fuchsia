@@ -8,6 +8,7 @@
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
 
+#include <limits>
 #include <vector>
 
 namespace amlogic_decoder {
@@ -245,8 +246,9 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type, uint8_t** 
 void FirmwareBlob::GetWholeBlob(uint8_t** data_out, uint32_t* size_out) {
   // This must not be called if LoadFirmware() failed.
   ZX_DEBUG_ASSERT(ptr_);
+  ZX_DEBUG_ASSERT(fw_size_ <= std::numeric_limits<uint32_t>::max());
   *data_out = reinterpret_cast<uint8_t*>(ptr_);
-  *size_out = fw_size_;
+  *size_out = static_cast<uint32_t>(fw_size_);
 }
 
 void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type, uint8_t* data,

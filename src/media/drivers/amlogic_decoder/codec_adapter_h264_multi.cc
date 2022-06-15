@@ -10,6 +10,7 @@
 #include <zircon/assert.h>
 #include <zircon/threads.h>
 
+#include <limits>
 #include <optional>
 
 #include <fbl/algorithm.h>
@@ -183,6 +184,12 @@ void CodecAdapterH264Multi::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   const CodecBuffer* buffer = frame->codec_buffer;
   ZX_DEBUG_ASSERT(buffer);
 
+  uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
+  if (total_size_bytes > std::numeric_limits<uint32_t>::max()) {
+    OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+    return;
+  }
+
   // The Codec interface requires that emitted frames are cache clean. We invalidate without
   // skipping over stride-width per line, at least partly because stride - width is small (possibly
   // always 0) for this decoder. But we do invalidate the UV section separately in case
@@ -220,8 +227,7 @@ void CodecAdapterH264Multi::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   packet->SetBuffer(buffer);
 
   packet->SetStartOffset(0);
-  uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
-  packet->SetValidLengthBytes(total_size_bytes);
+  packet->SetValidLengthBytes(static_cast<uint32_t>(total_size_bytes));
 
   if (frame->has_pts) {
     packet->SetTimstampIsh(frame->pts);
@@ -371,7 +377,8 @@ void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer
   // eliminates any dirty cache lines that might otherwise get flushed after HW has written to the
   // buffer.
   if (!IsOutputSecure()) {
-    buffer->CacheFlush(0, buffer->size());
+    ZX_DEBUG_ASSERT(buffer->size() <= std::numeric_limits<uint32_t>::max());
+    buffer->CacheFlush(0, static_cast<uint32_t>(buffer->size()));
   }
 
   all_output_buffers_.push_back(buffer);
@@ -414,7 +421,8 @@ void CodecAdapterH264Multi::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   // Eliminate any dirty CPU cache lines, so that later when we do a flush+invalidate after HW is
   // done writing to the buffer, we won't be writing over anything the HW wrote.
   if (!IsOutputSecure()) {
-    buffer->CacheFlush(0, buffer->size());
+    ZX_DEBUG_ASSERT(buffer->size() <= std::numeric_limits<uint32_t>::max());
+    buffer->CacheFlush(0, static_cast<uint32_t>(buffer->size()));
   }
 
   // Getting the buffer is all we needed the packet for.  The packet won't get
@@ -842,7 +850,9 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ReadMoreInputD
     result = std::move(parsed_input_data.value());
     if (result.codec_buffer && !IsPortSecure(kInputPort)) {
       // In case input is still dirty in CPU cache.
-      result.codec_buffer->CacheFlush(result.buffer_start_offset, result.length);
+      ZX_DEBUG_ASSERT(result.length <= std::numeric_limits<uint32_t>::max());
+      result.codec_buffer->CacheFlush(result.buffer_start_offset,
+                                      static_cast<uint32_t>(result.length));
     }
     if (item.packet()->has_timestamp_ish()) {
       result.pts = item.packet()->timestamp_ish();
@@ -1104,9 +1114,10 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ParseVideoAnne
     // Caller is required to ensure that data is within [base()..base()+size()).
     ZX_DEBUG_ASSERT(data >= buffer->base());
     ZX_DEBUG_ASSERT(data < buffer->base() + buffer->size());
+    ZX_DEBUG_ASSERT(data - buffer->base() <= std::numeric_limits<uint32_t>::max());
     ZX_DEBUG_ASSERT(return_input_packet);
     result.codec_buffer = buffer;
-    result.buffer_start_offset = data - buffer->base();
+    result.buffer_start_offset = static_cast<uint32_t>(data - buffer->base());
     result.return_input_packet = std::move(*return_input_packet);
   }
   return std::move(result);

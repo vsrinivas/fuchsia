@@ -7,6 +7,7 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/stdcompat/variant.h>
 #include <lib/trace/event.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include <cmath>
@@ -19,11 +20,13 @@
 #include "decoder_instance.h"
 #include "h264_utils.h"
 #include "lib/media/extend_bits/extend_bits.h"
+#include "macros.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/h264_decoder.h"
 #include "media/video/h264_level_limits.h"
 #include "parser.h"
 #include "registers.h"
+#include "src/media/lib/metrics/metrics.cb.h"
 #include "util.h"
 #include "watchdog.h"
 
@@ -2300,8 +2303,10 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
   DLOG("H264MultiDecoder::InitializedFrames");
   // not swapped out, not running
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForConfigChange);
-  uint32_t frame_count = frames.size();
   ZX_DEBUG_ASSERT(video_frames_.empty());
+  ZX_DEBUG_ASSERT(frames.size() <= std::numeric_limits<uint32_t>::max());
+  uint32_t frame_count = static_cast<uint32_t>(frames.size());
+
   for (uint32_t i = 0; i < frame_count; ++i) {
     auto frame = std::make_shared<VideoFrame>();
     // While we'd like to pass in IO_BUFFER_CONTIG, since we know the VMO was
@@ -2362,7 +2367,7 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
 
     uint32_t mb_width = coded_width / 16;
     uint32_t mb_height = coded_height / 16;
-    uint32_t colocated_buffer_size =
+    uint64_t colocated_buffer_size =
         fbl::round_up(mb_width * mb_height * kMvRefDataSizePerMb, ZX_PAGE_SIZE);
 
     auto create_result =
@@ -2455,6 +2460,7 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
                                             uint32_t buffer_start_offset) {
   TRACE_DURATION("media", "H264MultiDecoder::SubmitDataToHardware");
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
+  ZX_DEBUG_ASSERT(length <= std::numeric_limits<uint32_t>::max());
   zx_paddr_t phys_addr{};
   ZX_DEBUG_ASSERT(!phys_addr);
   if (codec_buffer) {
@@ -2511,9 +2517,9 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
     DLOG("data: 0x%p phys_addr: 0x%p length: 0x%zx buffer_start_offset: %u", data,
          reinterpret_cast<void*>(phys_addr), length, buffer_start_offset);
     if (phys_addr) {
-      status = owner_->parser()->ParseVideoPhysical(phys_addr, length);
+      status = owner_->parser()->ParseVideoPhysical(phys_addr, static_cast<uint32_t>(length));
     } else {
-      status = owner_->parser()->ParseVideo(data, length);
+      status = owner_->parser()->ParseVideo(data, static_cast<uint32_t>(length));
     }
     if (status != ZX_OK) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputHwError);
@@ -2532,7 +2538,7 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
 
     owner_->parser()->SyncToDecoderInstance(owner_->current_instance());
   } else {
-    zx_status_t status = owner_->ProcessVideoNoParser(data, length);
+    zx_status_t status = owner_->ProcessVideoNoParser(data, static_cast<uint32_t>(length));
     if (status != ZX_OK) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputProcessingError);
       LOG(ERROR, "Failed to write video");
@@ -2587,7 +2593,8 @@ void H264MultiDecoder::SwappedIn() {
   if (!stream_buffer_size_) {
     // Stash this early when we know it's safe to do so, since it's convoluted to get.  This decoder
     // deals with stream buffer details more than other decoders.
-    stream_buffer_size_ = owner_->current_instance()->stream_buffer()->buffer().size();
+    stream_buffer_size_ =
+        truncate_to_32(owner_->current_instance()->stream_buffer()->buffer().size());
     ZX_DEBUG_ASSERT(stream_buffer_size_ > kStreamBufferReadAlignment);
     ZX_DEBUG_ASSERT(stream_buffer_size_ % kStreamBufferReadAlignment == 0);
     ZX_DEBUG_ASSERT(stream_buffer_size_ % ZX_PAGE_SIZE == 0);

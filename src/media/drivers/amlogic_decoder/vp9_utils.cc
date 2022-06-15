@@ -81,11 +81,11 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8
   }
   ZX_DEBUG_ASSERT_MSG(total_frame_bytes <= frame_size, "total_frame_bytes: 0x%x frame_size: 0x%x",
                       total_frame_bytes, frame_size);
-  uint32_t output_offset = output_vector->size();
+  uint64_t output_offset = output_vector->size();
   // This can be called multiple times on the same output_vector overall, but
   // should be amortized O(1), since resizing larger inserts elements at the end
   // and inserting elements at the end is amortized O(1) for std::vector.
-  uint32_t output_vector_size_increase = kVp9AmlvHeaderSize * frame_sizes.size();
+  uint64_t output_vector_size_increase = kVp9AmlvHeaderSize * frame_sizes.size();
   if (like_secmem) {
     output_vector_size_increase += frame_size;
   } else {
@@ -139,7 +139,7 @@ fpromise::result<bool, fuchsia::media::StreamError> IsVp9KeyFrame(uint8_t frame_
   byte_0_shifter <<= 1;
   uint8_t profile_high_bit = byte_0_shifter >> 7;
   byte_0_shifter <<= 1;
-  uint8_t profile = (profile_high_bit << 1) | profile_low_bit;
+  uint8_t profile = static_cast<uint8_t>((profile_high_bit << 1) | profile_low_bit);
   if (profile == 3) {
     uint8_t reserved_zero = byte_0_shifter >> 7;
     byte_0_shifter <<= 1;

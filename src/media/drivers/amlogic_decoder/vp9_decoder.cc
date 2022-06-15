@@ -131,7 +131,7 @@ zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* ow
                                                          bool is_secure) {
   for (auto* buffer : buffers_) {
     bool buffer_is_secure = is_secure && buffer->can_be_protected();
-    uint32_t rounded_up_size = fbl::round_up(buffer->size() + kBufferOverrunPaddingBytes,
+    uint64_t rounded_up_size = fbl::round_up(buffer->size() + kBufferOverrunPaddingBytes,
                                              static_cast<uint32_t>(PAGE_SIZE));
     auto internal_buffer =
         InternalBuffer::Create(buffer->name(), &owner->SysmemAllocatorSyncPtr(), owner->bti(),
@@ -252,19 +252,19 @@ void Vp9Decoder::InitLoopFilter() {
 }
 
 void Vp9Decoder::UpdateLoopFilter(HardwareRenderParams* param) {
-  loop_filter_->mode_ref_delta_enabled = param->mode_ref_delta_enabled;
+  loop_filter_->mode_ref_delta_enabled = static_cast<uint8_t>(param->mode_ref_delta_enabled);
   loop_filter_->sharpness_level = param->sharpness_level;
   for (uint32_t i = 0; i < std::size(param->ref_deltas); i++)
-    loop_filter_->ref_deltas[i] = param->ref_deltas[i];
+    loop_filter_->ref_deltas[i] = static_cast<uint8_t>(param->ref_deltas[i]);
   for (uint32_t i = 0; i < std::size(param->mode_deltas); i++)
-    loop_filter_->mode_deltas[i] = param->mode_deltas[i];
+    loop_filter_->mode_deltas[i] = static_cast<uint8_t>(param->mode_deltas[i]);
 
-  segmentation_->enabled = param->segmentation_enabled;
-  segmentation_->abs_delta = param->segmentation_abs_delta;
+  segmentation_->enabled = static_cast<uint8_t>(param->segmentation_enabled);
+  segmentation_->abs_delta = static_cast<uint8_t>(param->segmentation_abs_delta);
   for (uint32_t i = 0; i < MAX_SEGMENTS; i++) {
     segmentation_->feature_mask[i] =
         (param->segmentation_loop_filter_info[i] & 0x8000) ? (1 << SEG_LVL_ALT_LF) : 0;
-    uint32_t abs_value = param->segmentation_loop_filter_info[i] & 0x3f;
+    uint16_t abs_value = param->segmentation_loop_filter_info[i] & 0x3f;
     segmentation_->feature_data[i][SEG_LVL_ALT_LF] =
         (param->segmentation_loop_filter_info[i] & 0x100) ? -abs_value : abs_value;
   }
@@ -409,7 +409,8 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   if (use_compressed_output_) {
     HevcSaoMmuVh0Addr::Get().FromValue(working_buffers_.mmu_vbh.addr32()).WriteTo(owner_->dosbus());
     HevcSaoMmuVh1Addr::Get()
-        .FromValue(working_buffers_.mmu_vbh.addr32() + working_buffers_.mmu_vbh.size() / 2)
+        .FromValue(
+            truncate_to_32(working_buffers_.mmu_vbh.addr32() + working_buffers_.mmu_vbh.size() / 2))
         .WriteTo(owner_->dosbus());
     HevcSaoCtrl5::Get()
         .ReadFrom(owner_->dosbus())
@@ -606,7 +607,7 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
                                      io_buffer_size(&video_frame->buffer, 0));
     frames_[i]->on_deck_frame = std::move(video_frame);
   }
-  valid_frames_count_ = frames.size();
+  valid_frames_count_ = truncate_to_32(frames.size());
   BarrierAfterFlush();
 
   ZX_DEBUG_ASSERT(waiting_for_new_frames_);
@@ -913,7 +914,8 @@ void Vp9Decoder::ConfigureMotionPrediction() {
 
     // This is the maximum allowable size, which can be greater than the intended allocated size if
     // the size was rounded up.
-    uint32_t last_end_addr = last_mv_mpred_addr + last_mpred_buffer_->mv_mpred_buffer->size();
+    uint32_t last_end_addr =
+        truncate_to_32(last_mv_mpred_addr + last_mpred_buffer_->mv_mpred_buffer->size());
     HevcMpredMvRdEndAddr::Get().FromValue(last_end_addr).WriteTo(owner_->dosbus());
   }
 }
@@ -996,7 +998,7 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
       ZX_DEBUG_ASSERT(frame_count * 4 <= working_buffers_.frame_map_mmu.size());
       for (uint32_t i = 0; i < frame_count; i++) {
         ZX_DEBUG_ASSERT(current_frame_->compressed_data.phys_list[i] != 0);
-        mmu_data[i] = current_frame_->compressed_data.phys_list[i] >> 12;
+        mmu_data[i] = static_cast<uint32_t>(current_frame_->compressed_data.phys_list[i] >> 12);
       }
       working_buffers_.frame_map_mmu.buffer().CacheFlush(0, frame_count * 4);
     }
@@ -1513,9 +1515,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
 
 void Vp9Decoder::SetRefFrames(HardwareRenderParams* params) {
   TRACE_DURATION("media", "Vp9Decoder::SetRefFrames");
-  uint32_t reference_frame_count = std::size(current_reference_frames_);
-  for (uint32_t i = 0; i < reference_frame_count; i++) {
-    uint32_t ref = (params->ref_info >> (((reference_frame_count - 1 - i) * 4) + 1)) & 0x7;
+  for (uint32_t i = 0; i < kCurrentReferenceFrameCount; i++) {
+    uint32_t ref = (params->ref_info >> (((kCurrentReferenceFrameCount - 1 - i) * 4) + 1)) & 0x7;
     assert(ref < std::size(reference_frame_map_));
     current_reference_frames_[i] = reference_frame_map_[ref];
   }

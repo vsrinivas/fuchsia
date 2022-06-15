@@ -9,6 +9,7 @@
 #include <lib/zx/bti.h>
 #include <zircon/threads.h>
 
+#include <limits>
 #include <optional>
 
 #include "amlogic_codec_adapter.h"
@@ -443,13 +444,18 @@ void CodecAdapterVp9::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   ZX_DEBUG_ASSERT(buffer);
   ZX_DEBUG_ASSERT(total_size_bytes <= buffer->size());
 
+  if (total_size_bytes > std::numeric_limits<uint32_t>::max()) {
+    OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+    return;
+  }
+
   CodecPacket* packet = GetFreePacket();
   // We know there will be a free packet thanks to SetCheckOutputReady().
   ZX_DEBUG_ASSERT(packet);
 
   packet->SetBuffer(buffer);
   packet->SetStartOffset(0);
-  packet->SetValidLengthBytes(total_size_bytes);
+  packet->SetValidLengthBytes(static_cast<uint32_t>(total_size_bytes));
 
   if (frame->has_pts) {
     packet->SetTimstampIsh(frame->pts);
@@ -1136,16 +1142,17 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       SplitSuperframe(reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
                       new_stream_ivf_len - kHeaderSkipBytes, &split_data, &frame_sizes);
       ZX_DEBUG_ASSERT(frame_sizes.size() == 1);
+      ZX_DEBUG_ASSERT(split_data.size() <= std::numeric_limits<uint32_t>::max());
       {  // scope lock
         std::lock_guard<std::mutex> lock(lock_);
         is_input_end_of_stream_queued_to_core_ = true;
       }  // ~lock
       SubmitDataToStreamBuffer(/*paddr_base=*/0, /*paddr_size=*/0, split_data.data(),
-                               split_data.size());
+                               static_cast<uint32_t>(split_data.size()));
       // Intentionally not including kFlushThroughZeroes - this only includes
       // data in AMLV frames.
       DLOG("UpdateDecodeSize() (EOS)");
-      decoder->UpdateDecodeSize(split_data.size());
+      decoder->UpdateDecodeSize(static_cast<uint32_t>(split_data.size()));
       return;
     }
 
@@ -1171,10 +1178,11 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       // These are enforced by codec_impl.cc as a packet arrives.
       ZX_DEBUG_ASSERT(len > 0);
       ZX_DEBUG_ASSERT(item.packet()->start_offset() + len <= item.packet()->buffer()->size());
+      uint64_t max_after_size = item.packet()->buffer()->size() - item.packet()->start_offset();
+      ZX_DEBUG_ASSERT(max_after_size <= std::numeric_limits<uint32_t>::max());
 
       zx_status_t status = video_->TeeVp9AddHeaders(
-          paddr_base, len, item.packet()->buffer()->size() - item.packet()->start_offset(),
-          &after_repack_len);
+          paddr_base, len, static_cast<uint32_t>(max_after_size), &after_repack_len);
       if (status != ZX_OK) {
         LOG(ERROR, "TeeVp9AddHeaders() failed - status: %d", status);
         OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
@@ -1189,7 +1197,8 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       // handling as we can regardless of whether IsPortSecure(kInputPort).
       SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes, /*like_secmem=*/true);
       ZX_DEBUG_ASSERT(!new_queued_frame_sizes.empty());
-      after_repack_len = split_data.size();
+      ZX_DEBUG_ASSERT(split_data.size() <= std::numeric_limits<uint32_t>::max());
+      after_repack_len = static_cast<uint32_t>(split_data.size());
       // Because like_sysmem true, the after_repack_len includes an extraneous superframe footer
       // size also, just like TeeVp9AddHeaders().
       ZX_DEBUG_ASSERT(after_repack_len == len + new_queued_frame_sizes.size() * kVp9AmlvHeaderSize);
@@ -1198,8 +1207,9 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     uint8_t* vaddr_base = nullptr;
     uint32_t vaddr_size = 0;
     if (!paddr_base) {
+      ZX_DEBUG_ASSERT(split_data.size() <= std::numeric_limits<uint32_t>::max());
       vaddr_base = split_data.data();
-      vaddr_size = split_data.size();
+      vaddr_size = static_cast<uint32_t>(split_data.size());
     }
 
     // For now, we only have known frame sizes for non-DRM streams.  In future we intend to have

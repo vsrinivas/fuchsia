@@ -16,12 +16,14 @@
 #include <lib/zx/clock.h>
 #include <memory.h>
 #include <stdint.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/smc.h>
 #include <zircon/threads.h>
 
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <thread>
@@ -274,7 +276,7 @@ zx_status_t AmlogicVideo::EnsureSecmemSessionIsConnected() {
 void AmlogicVideo::InitializeStreamInput(bool use_parser) {
   TRACE_DURATION("media", "AmlogicVideo::InitializeStreamInput");
   uint32_t buffer_address = truncate_to_32(stream_buffer_->buffer().phys_base());
-  auto buffer_size = stream_buffer_->buffer().size();
+  auto buffer_size = truncate_to_32(stream_buffer_->buffer().size());
   core_->InitializeStreamInput(use_parser, buffer_address, buffer_size);
 }
 
@@ -334,7 +336,8 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffe
 
 void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
   TRACE_DURATION("media", "AmlogicVideo::FreeCanvas");
-  canvas_.Free(canvas->index());
+  ZX_DEBUG_ASSERT(canvas->index() <= std::numeric_limits<uint8_t>::max());
+  canvas_.Free(static_cast<uint8_t>(canvas->index()));
 }
 
 void AmlogicVideo::SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const {
@@ -384,7 +387,7 @@ uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset
   if (read_offset > write_offset) {
     available_space = read_offset - write_offset;
   } else {
-    available_space = stream_buffer_->buffer().size() - write_offset + read_offset;
+    available_space = truncate_to_32(stream_buffer_->buffer().size() - write_offset + read_offset);
   }
   // Subtract 8 to ensure the read pointer doesn't become equal to the write
   // pointer, as that means the buffer is empty.
@@ -430,7 +433,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_
   while (len > 0) {
     uint32_t write_length = len;
     if (write_offset + len > stream_buffer_->buffer().size())
-      write_length = stream_buffer_->buffer().size() - write_offset;
+      write_length = truncate_to_32(stream_buffer_->buffer().size() - write_offset);
     memcpy(stream_buffer_->buffer().virt_base() + write_offset,
            static_cast<const uint8_t*>(data) + input_offset, write_length);
     stream_buffer_->buffer().CacheFlush(write_offset, write_length);
@@ -441,7 +444,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_
     input_offset += write_length;
   }
   BarrierAfterFlush();
-  core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() + write_offset);
+  core_->UpdateWritePointer(truncate_to_32(stream_buffer_->buffer().phys_base() + write_offset));
   return ZX_OK;
 }
 
@@ -587,8 +590,9 @@ void AmlogicVideo::SwapInCurrentInstance() {
     // Generally data will only be added after this decoder is swapped in, so
     // RestoreInputContext will handle that state.
     if (stream_buffer_->data_size() + stream_buffer_->padding_size() > 0) {
-      core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() + stream_buffer_->data_size() +
-                                stream_buffer_->padding_size());
+      core_->UpdateWritePointer(truncate_to_32(stream_buffer_->buffer().phys_base() +
+                                               stream_buffer_->data_size() +
+                                               stream_buffer_->padding_size()));
     }
   } else {
     if (core_->RestoreInputContext(current_instance_->input_context()) != ZX_OK) {

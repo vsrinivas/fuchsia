@@ -148,7 +148,6 @@ if (target_cpu == "arm64") {
       "registers.h",
       "secmem_session.cc",
       "secmem_session.h",
-      "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.c",
       "thread_role.h",
       "vdec1.cc",
       "vdec1.h",
@@ -214,6 +213,7 @@ if (target_cpu == "arm64") {
     deps = [
       ":test_support",
       "third_party/libvpx",
+      "third_party/vp9_adapt_probs",
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fdio",
       "//sdk/lib/fidl/cpp",
@@ -224,9 +224,6 @@ if (target_cpu == "arm64") {
     ]
     public_configs = [ ":sources_include_config" ]
     cflags = []
-
-    # TODO(fxb/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   source_set("test_sources") {
@@ -260,9 +257,6 @@ if (target_cpu == "arm64") {
       "tests/unit_tests/test_pts_manager.cc",
       "tests/unit_tests/test_vp9.cc",
     ]
-
-    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   resource("test_files") {
