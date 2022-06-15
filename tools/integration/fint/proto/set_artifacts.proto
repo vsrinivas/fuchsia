@@ -40,6 +40,11 @@ message SetArtifacts {
 
   Metadata metadata = 5;
 
-  // Where the caller should set up reproxy (RBE) before invoking `find build`.
-  bool enable_rbe = 6;
+  // Where the caller should set up reproxy (RBE) before invoking `fint build`.
+  bool enable_rbe = 6;  // deprecated.  renamed to `rust_rbe_enable`.
+
+  // If any of the following `*_rbe_enable` are true, the caller should set
+  // up reproxy (RBE) before invoking `fint build`.
+  bool rust_rbe_enable = 7;
+  bool cxx_rbe_enable = 8;
 }

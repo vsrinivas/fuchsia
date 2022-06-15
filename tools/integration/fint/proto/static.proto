@@ -132,9 +132,16 @@ message Static {
   // Whether to set --export-rust-project GN flag.
   bool export_rust_project = 30;
 
-  // Whether to use rbe for running ninja. Will be ignored (and rbe will not
+  // Whether to use rbe for running ninja. Will be ignored (and RBE will not
   // be used) when building with some experimental toolchain versions.
-  bool enable_rbe = 31;
+  bool enable_rbe = 31;  // Deprecated.  renamed to rust_rbe_enable.
+
+  // If true, build Rust targets with RBE/reclient.
+  bool rust_rbe_enable = 37;
+
+  // If true, build C++ targets with RBE/reclient.
+  // This takes precedence over `use_goma`.
+  bool cxx_rbe_enable = 38;
 
   // Whether we're performing an incremental build.
   bool incremental = 32;
@@ -169,4 +176,6 @@ message Static {
 
   // Extra args to pass to ninja.
   repeated string ninja_args = 36;
+
+  // Next tag: 39
 }

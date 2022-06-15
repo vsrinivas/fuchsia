@@ -98,7 +98,8 @@ func setImpl(
 			TargetArch: strings.ToLower(staticSpec.TargetArch.String()),
 			Variants:   staticSpec.Variants,
 		},
-		EnableRbe: staticSpec.EnableRbe,
+		RustRbeEnable: staticSpec.RustRbeEnable,
+		EnableRbe:     staticSpec.EnableRbe,
 	}
 
 	if contextSpec.ArtifactDir != "" {
@@ -257,7 +258,8 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 	}
 
 	vars["use_goma"] = staticSpec.UseGoma
-	vars["rust_rbe_enable"] = staticSpec.EnableRbe
+	// TODO(fangism): separate RBE values in staticSpec
+	vars["rust_rbe_enable"] = staticSpec.RustRbeEnable || staticSpec.EnableRbe
 
 	if staticSpec.Product != "" {
 		basename := filepath.Base(staticSpec.Product)
