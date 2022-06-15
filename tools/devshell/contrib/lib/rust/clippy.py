@@ -118,7 +118,7 @@ def build_targets(output_files, build_dir, fuchsia_dir, verbose, raw):
     prebuilt = PREBUILT_THIRD_PARTY_DIR
     if fuchsia_dir:
         prebuilt = Path(fuchsia_dir) / "prebuilt" / "third_party"
-    ninja = [prebuilt / "ninja" / HOST_PLATFORM / "ninja", "-C", build_dir]
+    ninja = [prebuilt / "ninja" / HOST_PLATFORM / "ninja", "-C", build_dir, "-k", "0"]
     if verbose:
         ninja += ["-v"]
     output = sys.stderr if raw else None
