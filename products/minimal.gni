@@ -27,6 +27,10 @@ product_system_image_deps = [ "//src/connectivity/bluetooth:core-system" ]
 
 core_realm_package_name = "core-minimal"
 core_realm_shards = [
+  # TODO(fxbug.dev/102772)
+  # The goal is to remove all developer packages and their capability routes from this product
+  # config. This will require some refactoring of core shards.
+  "//src/developer/tracing/bin/trace_manager:trace_manager_core_shard",
   "//src/connectivity/network:virtualization-core-shard",
   "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",

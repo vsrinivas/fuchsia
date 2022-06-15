@@ -65,6 +65,11 @@
             from: "self",
             to: "#test_manager",
         },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#test_manager",
+        },
 
         // Test realms may offer subdirectories of config-data to test
         // components. See:

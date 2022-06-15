@@ -49,10 +49,7 @@
         {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "#trace_manager",
-            to: [
-                "#appmgr",
-                "#test_manager",
-            ],
+            to: "#appmgr",
         },
 
         // Weak offers to resolve dependency cycles that would be caused by
