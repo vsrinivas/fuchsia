@@ -39,12 +39,44 @@ pub struct AdvertisingProxyHost {
     service_publisher: ServiceInstancePublisherProxy,
 }
 
-#[derive(Debug)]
-pub struct AdvertisingProxyService {
-    txt_data: Vec<u8>,
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct AdvertisingProxyServiceInfo {
+    txt: Vec<Vec<u8>>,
     port: u16,
     priority: u16,
     weight: u16,
+}
+
+impl AdvertisingProxyServiceInfo {
+    fn new(srp_service: &ot::SrpServerService) -> Self {
+        AdvertisingProxyServiceInfo {
+            txt: srp_service.txt_entries().map(|x| x.unwrap().to_vec()).collect::<Vec<_>>(),
+            port: srp_service.port(),
+            priority: srp_service.priority(),
+            weight: srp_service.weight(),
+        }
+    }
+
+    fn is_up_to_date(&self, srp_service: &ot::SrpServerService) -> bool {
+        !srp_service.is_deleted() && self == &AdvertisingProxyServiceInfo::new(srp_service)
+    }
+
+    fn into_service_instance_publication(self) -> ServiceInstancePublication {
+        ServiceInstancePublication {
+            port: Some(self.port),
+            text: Some(self.txt),
+            srv_priority: Some(self.priority),
+            srv_weight: Some(self.weight),
+            ..ServiceInstancePublication::EMPTY
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct AdvertisingProxyService {
+    info: Arc<Mutex<AdvertisingProxyServiceInfo>>,
+
+    control_handle: ServiceInstancePublicationResponder_ControlHandle,
 
     #[allow(dead_code)]
     task: Task<Result>,
@@ -52,11 +84,12 @@ pub struct AdvertisingProxyService {
 
 impl AdvertisingProxyService {
     fn is_up_to_date(&self, srp_service: &ot::SrpServerService) -> bool {
-        !srp_service.is_deleted()
-            && self.txt_data == srp_service.txt_data()
-            && self.weight == srp_service.weight()
-            && self.priority == srp_service.priority()
-            && self.port == srp_service.port()
+        self.info.lock().is_up_to_date(srp_service)
+    }
+
+    fn update(&self, info: AdvertisingProxyServiceInfo) -> Result<(), anyhow::Error> {
+        *self.info.lock() = info;
+        Ok(self.control_handle.send_reannounce()?)
     }
 }
 
@@ -241,47 +274,70 @@ impl AdvertisingProxyInner {
 
             if srp_service.is_deleted() {
                 // Delete the service.
-                debug!(
-                    "No longer advertising service {:?} on {:?}",
-                    srp_service.full_name_cstr(),
-                    LOCAL_DOMAIN
-                );
-                services.remove(srp_service.full_name_cstr());
+                if services.remove(srp_service.full_name_cstr()).is_some() {
+                    debug!(
+                        "No longer advertising service {:?} on {:?}",
+                        srp_service.full_name_cstr(),
+                        LOCAL_DOMAIN
+                    );
+                }
                 continue;
             }
 
-            let is_up_to_date = services
-                .get(srp_service.full_name_cstr())
-                .map(|s| s.is_up_to_date(srp_service))
-                .unwrap_or(false);
+            let service_name = srp_service.full_name_cstr().to_owned();
 
-            if is_up_to_date {
-                // Service is already up to date.
-                continue;
+            if let Some(service) = services.get(&service_name) {
+                let service_info = AdvertisingProxyServiceInfo::new(srp_service);
+                if !service.is_up_to_date(srp_service) {
+                    // Update the service.
+                    if let Err(err) = service.update(service_info) {
+                        warn!(
+                            "Unable to update service {:?}: {:?}. Will try re-adding.",
+                            local_service_name, err
+                        );
+                    } else {
+                        debug!(
+                            "Updated service {:?} on {:?} as {:?}",
+                            local_service_name, LOCAL_DOMAIN, local_instance_name
+                        );
+                        // Skip the add.
+                        continue;
+                    }
+                } else {
+                    // No update necessary.
+                    debug!(
+                        "Service {:?} is up to date on {:?} as {:?}",
+                        local_service_name, LOCAL_DOMAIN, local_instance_name
+                    );
+
+                    // Skip the add.
+                    continue;
+                }
             }
+
+            // Add the service.
+            let service_info = AdvertisingProxyServiceInfo::new(srp_service);
 
             debug!(
-                "Advertising service {:?} on {:?} as {:?}",
+                "Adding service {:?} on {:?} as {:?}",
                 local_service_name, LOCAL_DOMAIN, local_instance_name
             );
 
             if local_service_name.len() > MAX_DNSSD_SERVICE_LEN {
-                error!(
-                    "Unable publish service instance {:?}: Service too long (max {} chars)",
+                warn!(
+                    "Unable to publish service instance {:?}: Service too long (max {} chars)",
                     local_service_name, MAX_DNSSD_SERVICE_LEN
                 );
                 continue;
             }
 
             if local_instance_name.len() > MAX_DNSSD_INSTANCE_LEN {
-                error!(
-                    "Unable publish service instance {:?}: Instance name too long (max {} chars)",
-                    local_instance_name, MAX_DNSSD_INSTANCE_LEN
-                );
+                warn!(
+                "Unable to publish service instance {:?}: Instance name too long (max {} chars)",
+                local_instance_name, MAX_DNSSD_INSTANCE_LEN
+            );
                 continue;
             }
-
-            // (Re-)Add the service.
 
             let (client, server) = create_endpoints::<ServiceInstancePublicationResponder_Marker>()
                 .context("Failed to create FIDL endpoints")?;
@@ -291,10 +347,7 @@ impl AdvertisingProxyInner {
                 .publish_service_instance(
                     &local_service_name,
                     &local_instance_name,
-                    ServiceInstancePublicationOptions {
-                        perform_probe: Some(false),
-                        ..ServiceInstancePublicationOptions::EMPTY
-                    },
+                    ServiceInstancePublicationOptions::EMPTY,
                     client,
                 )
                 .map(|x| match x {
@@ -312,32 +365,23 @@ impl AdvertisingProxyInner {
                     }
                 });
 
-            // Make copies of all of the pertinent data for the publication responder.
-            let txt = srp_service.txt_entries().map(|x| x.unwrap().to_vec()).collect::<Vec<_>>();
-            let port = srp_service.port();
-            let weight = srp_service.weight();
-            let priority = srp_service.priority();
+            let service_info = Arc::new(Mutex::new(service_info));
+            let service_info_clone = service_info.clone();
 
-            let publish_responder_future =
-                server.into_stream().unwrap().map_err(Into::into).try_for_each(
-                    move |ServiceInstancePublicationResponder_Request::OnPublication {
-                              responder,
-                              ..
-                          }| {
-                        let txt = txt.clone();
-                        async move {
-                            responder
-                                .send(&mut Ok(ServiceInstancePublication {
-                                    port: Some(port),
-                                    text: Some(txt),
-                                    srv_priority: Some(priority),
-                                    srv_weight: Some(weight),
-                                    ..ServiceInstancePublication::EMPTY
-                                }))
-                                .map_err(Into::into)
-                        }
-                    },
-                );
+            let (pub_responder_stream, pub_responder_control) =
+                server.into_stream_and_control_handle().unwrap();
+
+            let publish_responder_future = pub_responder_stream.map_err(Into::into).try_for_each(
+                move |ServiceInstancePublicationResponder_Request::OnPublication {
+                          responder,
+                          ..
+                      }| {
+                    let info =
+                        service_info_clone.lock().clone().into_service_instance_publication();
+
+                    async move { responder.send(&mut Ok(info)).map_err(Into::into) }
+                },
+            );
 
             let future = futures::future::try_join(publish_init_future, publish_responder_future)
                 .map_ok(|_| ());
@@ -345,10 +389,8 @@ impl AdvertisingProxyInner {
             services.insert(
                 srp_service.full_name_cstr().to_owned(),
                 AdvertisingProxyService {
-                    txt_data: srp_service.txt_data().to_vec(),
-                    port: srp_service.port(),
-                    priority: srp_service.priority(),
-                    weight: srp_service.weight(),
+                    info: service_info,
+                    control_handle: pub_responder_control,
                     task: fuchsia_async::Task::spawn(future),
                 },
             );
