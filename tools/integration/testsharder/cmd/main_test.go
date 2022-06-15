@@ -141,9 +141,9 @@ func TestExecute(t *testing.T) {
 			},
 			packageRepos: []build.PackageRepo{
 				{
-					Path:    t.TempDir(),
-					Blobs:   filepath.Join(t.TempDir(), "blobs"),
-					Targets: filepath.Join(t.TempDir(), "targets.json"),
+					Path:    "pkg_repo1",
+					Blobs:   filepath.Join("pkg_repo1", "blobs"),
+					Targets: filepath.Join("pkg_repo1", "targets.json"),
 				},
 			},
 		},
@@ -293,6 +293,11 @@ func TestExecute(t *testing.T) {
 				t.Fatal(err)
 			}
 			writeDepFiles(t, tc.flags.buildDir, tc.testSpecs)
+			for _, repo := range tc.packageRepos {
+				if err := os.MkdirAll(filepath.Join(tc.flags.buildDir, repo.Path), 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
 
 			m := &fakeModules{
 				testSpecs:           tc.testSpecs,
