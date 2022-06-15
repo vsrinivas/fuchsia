@@ -315,30 +315,6 @@ driver_bind_rules("gt6853_touch_bind") {
   ]
 }
 
-driver_bind_rules("gtx8x_touch_bind") {
-  rules = "bind/gtx8x_touch.bind"
-  header_output = "gtx8x_touch_bind.h"
-  bind_output = "gtx8x_touch_bind.bc"
-  tests = "bind-tests/gtx8x_touch-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
-    "//src/devices/bind/fuchsia.gpio",
-    "//src/devices/bind/fuchsia.i2c",
-  ]
-}
-
-driver_bind_rules("ft3x27_touch_bind") {
-  rules = "bind/ft3x27_touch.bind"
-  header_output = "ft3x27_touch_bind.h"
-  bind_output = "ft3x27_touch_bind.bc"
-  tests = "bind-tests/ft3x27_touch-test.json"
-  deps = [
-    "//src/devices/bind/fuchsia.amlogic.platform.s905d3",
-    "//src/devices/bind/fuchsia.gpio",
-    "//src/devices/bind/fuchsia.i2c",
-  ]
-}
-
 driver_bind_rules("nelson_xhci_bind") {
   rules = "bind/nelson_xhci.bind"
   header_output = "nelson_xhci_bind.h"
@@ -434,9 +410,7 @@ fuchsia_driver("nelson-module-driver") {
     ":aml_secure_mem_bind_header",
     ":aml_thermal_pll_bind_header",
     ":brownout_protection_bind_header",
-    ":ft3x27_touch_bind_header",
     ":gt6853_touch_bind_header",
-    ":gtx8x_touch_bind_header",
     ":nelson-bind",
     ":nelson_aml_nna_bind_header",
     ":nelson_aml_sdio_bind_header",
@@ -480,7 +454,6 @@ fuchsia_driver("nelson-module-driver") {
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
     "//src/devices/lib/fidl-metadata",
-    "//src/devices/lib/focaltech",
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
     "//src/devices/lib/thermal",
@@ -529,9 +502,7 @@ group("tests") {
     ":aml_secure_mem_bind_test",
     ":aml_thermal_pll_bind_test",
     ":brownout_protection_bind_test",
-    ":ft3x27_touch_bind_test",
     ":gt6853_touch_bind_test",
-    ":gtx8x_touch_bind_test",
     ":nelson-bind_test",
     ":nelson_aml_nna_bind_test",
     ":nelson_aml_sdio_bind_test",

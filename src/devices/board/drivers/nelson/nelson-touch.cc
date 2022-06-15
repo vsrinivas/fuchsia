@@ -8,29 +8,11 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/focaltech/focaltech.h>
-#include <limits.h>
-#include <unistd.h>
 
-#include <fbl/algorithm.h>
-#include <soc/aml-s905d2/s905d2-gpio.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
-
-#include "nelson-gpios.h"
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/ft3x27_touch_bind.h"
 #include "src/devices/board/drivers/nelson/gt6853_touch_bind.h"
-#include "src/devices/board/drivers/nelson/gtx8x_touch_bind.h"
 
 namespace nelson {
-
-static const FocaltechMetadata device_info = {
-    .device_id = FOCALTECH_DEVICE_FT3X27,
-    .needs_firmware = false,
-};
-static const device_metadata_t ft3x27_touch_metadata[] = {
-    {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
-};
 
 static const pbus_boot_metadata_t touch_boot_metadata[] = {
     {
@@ -39,16 +21,10 @@ static const pbus_boot_metadata_t touch_boot_metadata[] = {
     },
 };
 
-// Composite binding rules for focaltech touch driver.
-
 zx_status_t Nelson::TouchInit() {
   const uint32_t display_id = GetDisplayId();
   zxlogf(INFO, "Board rev: %u", GetBoardRev());
   zxlogf(INFO, "Panel ID: 0b%d%d", display_id & 0b10 ? 1 : 0, display_id & 0b01 ? 1 : 0);
-
-  if (GetBoardRev() < BOARD_REV_P2) {
-    return TouchInitP1();
-  }
 
   const pbus_dev_t touch_dev = {
       .name = "gt6853-touch",
@@ -64,65 +40,6 @@ zx_status_t Nelson::TouchInit() {
     zxlogf(ERROR, "nelson_touch_init(gt6853): composite_device_add failed: %d", status);
     return status;
   }
-  return ZX_OK;
-}
-
-zx_status_t Nelson::TouchInitP1() {
-  /* Two variants of display are supported, one with BOE display panel and
-        ft3x27 touch controller, the other with INX panel and Goodix touch
-        controller.  This GPIO input is used to identify each.
-        Logic 0 for BOE/ft3x27 combination
-        Logic 1 for Innolux/Goodix combination
-  */
-  const uint8_t gpio_state = GetDisplayId() & 1;
-  zxlogf(INFO, "%s - Touch type: %s", __func__, (gpio_state ? "GTx8x" : "FT3x27"));
-  if (gpio_state) {
-    const zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_NELSON},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOODIX_GTX8X},
-    };
-
-    const composite_device_desc_t gt_comp_desc = {
-        .props = props,
-        .props_count = std::size(props),
-        .fragments = gtx8x_touch_fragments,
-        .fragments_count = std::size(gtx8x_touch_fragments),
-        .primary_fragment = "i2c",
-        .spawn_colocated = false,
-        .metadata_list = nullptr,
-        .metadata_count = 0,
-    };
-    zx_status_t status = DdkAddComposite("gtx8x-touch", &gt_comp_desc);
-    if (status != ZX_OK) {
-      zxlogf(INFO, "nelson_touch_init(gt92xx): composite_device_add failed: %d", status);
-      return status;
-    }
-  } else {
-    const zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_NELSON},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
-    };
-
-    const composite_device_desc_t ft_comp_desc = {
-        .props = props,
-        .props_count = std::size(props),
-        .fragments = ft3x27_touch_fragments,
-        .fragments_count = std::size(ft3x27_touch_fragments),
-        .primary_fragment = "i2c",
-        .spawn_colocated = false,
-        .metadata_list = ft3x27_touch_metadata,
-        .metadata_count = std::size(ft3x27_touch_metadata),
-    };
-
-    zx_status_t status = DdkAddComposite("ft3x27-touch", &ft_comp_desc);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d", __func__, status);
-      return status;
-    }
-  }
-
   return ZX_OK;
 }
 
