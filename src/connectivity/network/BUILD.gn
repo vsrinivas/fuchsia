@@ -70,6 +70,7 @@ fuchsia_package("network-legacy-deprecated") {
   deps = [
     "dns:component-legacy",
     "netstack:component-legacy",
+    "netstack:component-with-fast-udp-legacy",
     "netstack3:component-legacy",
   ]
 }
