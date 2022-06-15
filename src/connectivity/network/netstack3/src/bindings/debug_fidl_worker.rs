@@ -52,8 +52,7 @@ async fn handle_get_admin(
 async fn handle_get_mac(ns: Netstack, interface_id: u64) -> fnet_debug::InterfacesGetMacResult {
     debug!(interface_id, "handling fuchsia.net.debug.Interfaces::GetMac");
     let ctx = ns.ctx.lock().await;
-    ctx.sync_ctx
-        .dispatcher
+    ctx.non_sync_ctx
         .devices
         .get_device(interface_id)
         .ok_or(fnet_debug::InterfacesGetMacError::NotFound)

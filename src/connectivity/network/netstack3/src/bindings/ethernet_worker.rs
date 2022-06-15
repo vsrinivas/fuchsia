@@ -15,7 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error, info, trace};
-use netstack3_core::{receive_frame, BufferDispatcher, Ctx};
+use netstack3_core::{receive_frame, BufferDispatcher, BufferNonSyncContext, Ctx};
 use packet::serialize::Buf;
 use std::ops::DerefMut as _;
 
@@ -42,27 +42,6 @@ impl<C> EthernetWorker<C> {
     }
 }
 
-pub(crate) trait EthernetWorkerDispatcher:
-    for<'a> BufferDispatcher<Buf<&'a mut [u8]>>
-    + Send
-    + Sync
-    + AsRef<Devices>
-    + AsMut<Devices>
-    + DeviceStatusNotifier
-{
-}
-
-impl<T> EthernetWorkerDispatcher for T
-where
-    T: for<'a> BufferDispatcher<Buf<&'a mut [u8]>>,
-    T: Send,
-    T: Sync,
-    T: AsRef<Devices>,
-    T: AsMut<Devices>,
-    T: DeviceStatusNotifier,
-{
-}
-
 // TODO(https://github.com/rust-lang/rust/issues/20671): Replace the duplicate associated type with
 // a where clause bounding the parent trait's associated type.
 //
@@ -71,17 +50,35 @@ where
 // TODO(https://github.com/rust-lang/rust/issues/52662): Replace the duplicate associated type with
 // a bound on the parent trait's associated type.
 pub(crate) trait EthernetWorkerContext:
-    LockableContext<Dispatcher = <Self as EthernetWorkerContext>::Dispatcher> + Send + Sync + 'static
+    LockableContext<
+        Dispatcher = <Self as EthernetWorkerContext>::Dispatcher,
+        NonSyncCtx = <Self as EthernetWorkerContext>::NonSyncCtx,
+    > + Send
+    + Sync
+    + 'static
 {
-    type Dispatcher: EthernetWorkerDispatcher;
+    type Dispatcher: for<'a> BufferDispatcher<Buf<&'a mut [u8]>> + Send + Sync;
+    type NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>>
+        + AsRef<Devices>
+        + AsMut<Devices>
+        + DeviceStatusNotifier
+        + Send
+        + Sync;
 }
 
 impl<T> EthernetWorkerContext for T
 where
     T: LockableContext + Send + Sync + 'static,
-    T::Dispatcher: EthernetWorkerDispatcher,
+    T::Dispatcher: for<'a> BufferDispatcher<Buf<&'a mut [u8]>> + Send + Sync,
+    T::NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>>
+        + AsRef<Devices>
+        + AsMut<Devices>
+        + DeviceStatusNotifier
+        + Send
+        + Sync,
 {
     type Dispatcher = T::Dispatcher;
+    type NonSyncCtx = T::NonSyncCtx;
 }
 
 impl<C: EthernetWorkerContext> EthernetWorker<C> {
@@ -103,7 +100,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             // We need to call get_status even if we don't use the output, since
                             // calling it acks the message, and prevents the device from sending
                             // more status changed messages.
-                            if let Some(device) = ctx.sync_ctx.dispatcher.as_ref().get_device(id) {
+                            if let Some(device) = ctx.non_sync_ctx.as_ref().get_device(id) {
                                 let device = assert_matches!(
                                     device.info(),
                                     DeviceSpecificInfo::Ethernet(device) => device
@@ -144,7 +141,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             let mut ctx = ctx.lock().await; let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
 
                             if let Some(id) =
-                                AsRef::<Devices>::as_ref(&sync_ctx.dispatcher).get_core_id(id)
+                                AsRef::<Devices>::as_ref(non_sync_ctx).get_core_id(id)
                             {
                                 receive_frame(sync_ctx, non_sync_ctx,id, Buf::new(&mut buf[..len], ..))
                                     .unwrap_or_else(|e| error!("error receiving frame: {}", e))

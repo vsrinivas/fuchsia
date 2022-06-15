@@ -1494,7 +1494,7 @@ mod tests {
         // Check that we send the original neighbor solicitation, then resend a
         // few times if we don't receive a response.
         for packet_num in 0..usize::from(MAX_MULTICAST_SOLICIT) {
-            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), packet_num + 1);
+            assert_eq!(non_sync_ctx.frames_sent().len(), packet_num + 1);
 
             assert_eq!(
                 non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer).unwrap(),
@@ -1545,7 +1545,7 @@ mod tests {
             )
             .unwrap();
 
-            assert_empty(sync_ctx.dispatcher.frames_sent());
+            assert_empty(non_sync_ctx.frames_sent());
         });
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
             add_ip_addr_subnet(
@@ -1556,7 +1556,7 @@ mod tests {
             )
             .unwrap();
 
-            assert_empty(sync_ctx.dispatcher.frames_sent());
+            assert_empty(non_sync_ctx.frames_sent());
 
             crate::ip::send_ipv6_packet_from_device(
                 sync_ctx,
@@ -1575,7 +1575,7 @@ mod tests {
             .unwrap();
             // This should've triggered a neighbor solicitation to come out of
             // local.
-            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+            assert_eq!(non_sync_ctx.frames_sent().len(), 1);
             // A timer should've been started.
             assert_eq!(non_sync_ctx.timer_ctx().timers().len(), 1);
         });
@@ -1599,7 +1599,7 @@ mod tests {
             1,
             "remote received solicitation"
         );
-        assert_eq!(net.sync_ctx("remote").dispatcher.frames_sent().len(), 1);
+        assert_eq!(net.non_sync_ctx("remote").frames_sent().len(), 1);
 
         // Forward advertisement response back to local.
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
@@ -1640,12 +1640,12 @@ mod tests {
         assert_eq!(remote_neighbor.state, NeighborEntryState::Stale);
 
         // The local timer should've been unscheduled.
-        net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
+        net.with_context("local", |Ctx { sync_ctx: _, non_sync_ctx }| {
             assert_empty(non_sync_ctx.timer_ctx().timers());
 
             // Upon link layer resolution, the original ping request should've been
             // sent out.
-            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+            assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         });
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
         assert_eq!(
@@ -1755,7 +1755,7 @@ mod tests {
                 device_id
             );
             crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, update);
-            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+            assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         });
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
             assert_eq!(
@@ -1768,7 +1768,7 @@ mod tests {
                 device_id
             );
             crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, device_id, update);
-            assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+            assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         });
 
         // Both devices should be in the solicited-node multicast group.
@@ -2074,8 +2074,8 @@ mod tests {
         });
         // The local host should have sent out 3 packets while the remote one
         // should only have sent out 1.
-        assert_eq!(net.sync_ctx("local").dispatcher.frames_sent().len(), 3);
-        assert_eq!(net.sync_ctx("remote").dispatcher.frames_sent().len(), 1);
+        assert_eq!(net.non_sync_ctx("local").frames_sent().len(), 3);
+        assert_eq!(net.non_sync_ctx("remote").frames_sent().len(), 1);
 
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
 
@@ -2104,7 +2104,7 @@ mod tests {
         );
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, dev_id);
 
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
 
         crate::device::update_ipv6_configuration(
             &mut sync_ctx,
@@ -2130,7 +2130,7 @@ mod tests {
             .unwrap()
             .state
             .is_tentative());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
 
         // Send another NS.
         let local_timer_id =
@@ -2143,7 +2143,7 @@ mod tests {
             ),
             [local_timer_id]
         );
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 2);
 
         // Add another IP
         add_ip_addr_subnet(
@@ -2163,7 +2163,7 @@ mod tests {
             .unwrap()
             .state
             .is_tentative());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 3);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
         let remote_timer_id =
@@ -2186,7 +2186,7 @@ mod tests {
             .unwrap()
             .state
             .is_tentative());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 6);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 6);
 
         // Run to the end for DAD for local ip
         assert_eq!(
@@ -2207,7 +2207,7 @@ mod tests {
             .unwrap()
             .state
             .is_assigned());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 6);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 6);
 
         // No more timers.
         assert_eq!(non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer), None);
@@ -2236,7 +2236,7 @@ mod tests {
             },
         );
 
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
 
         // Add an IP.
         add_ip_addr_subnet(
@@ -2251,7 +2251,7 @@ mod tests {
             .unwrap()
             .state
             .is_tentative());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
 
         // Send another NS.
         let local_timer_id =
@@ -2264,7 +2264,7 @@ mod tests {
             ),
             [local_timer_id]
         );
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 2);
 
         // Add another IP
         add_ip_addr_subnet(
@@ -2284,7 +2284,7 @@ mod tests {
             .unwrap()
             .state
             .is_tentative());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 3);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 3);
 
         // Run 1s
         let remote_timer_id =
@@ -2307,7 +2307,7 @@ mod tests {
             .unwrap()
             .state
             .is_tentative());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 5);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 5);
 
         // Remove local ip
         del_ip_addr(&mut sync_ctx, &mut non_sync_ctx, dev_id, &local_ip().into_specified())
@@ -2318,7 +2318,7 @@ mod tests {
             .unwrap()
             .state
             .is_tentative());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 5);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 5);
 
         // Run to the end for DAD for local ip
         assert_eq!(
@@ -2335,7 +2335,7 @@ mod tests {
             .unwrap()
             .state
             .is_assigned());
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 6);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 6);
 
         // No more timers.
         assert_eq!(non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer), None);
@@ -2495,8 +2495,7 @@ mod tests {
             )
             .unwrap();
             let (buf, _, _, _) =
-                parse_ethernet_frame(&sync_ctx.dispatcher.frames_sent()[frame_offset].1[..])
-                    .unwrap();
+                parse_ethernet_frame(&ctx.frames_sent()[frame_offset].1[..]).unwrap();
             // Packet's hop limit should be 100.
             assert_eq!(buf[7], hop_limit);
         }
@@ -2694,7 +2693,7 @@ mod tests {
 
         let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
 
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
         let device_id = crate::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -2712,7 +2711,7 @@ mod tests {
                 config.max_router_solicitations = NonZeroU8::new(3);
             },
         );
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
 
         let time = non_sync_ctx.now();
         assert_eq!(
@@ -2722,10 +2721,10 @@ mod tests {
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(non_sync_ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &sync_ctx.dispatcher.frames_sent()[0].1,
+                &non_sync_ctx.frames_sent()[0].1,
                 |_| {},
             )
             .unwrap();
@@ -2740,7 +2739,7 @@ mod tests {
         assert_eq!(non_sync_ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &sync_ctx.dispatcher.frames_sent()[1].1,
+                &non_sync_ctx.frames_sent()[1].1,
                 |_| {},
             )
             .unwrap();
@@ -2764,7 +2763,7 @@ mod tests {
         assert_eq!(non_sync_ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &sync_ctx.dispatcher.frames_sent()[2].1,
+                &non_sync_ctx.frames_sent()[2].1,
                 |p| {
                     // We should have a source link layer option now because we
                     // have a source IP address set.
@@ -2782,10 +2781,10 @@ mod tests {
         // No more timers.
         assert_eq!(non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer), None);
         // Should have only sent 3 packets (Router solicitations).
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 3);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 3);
 
         let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
         let device_id = crate::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -2801,7 +2800,7 @@ mod tests {
                 config.max_router_solicitations = NonZeroU8::new(2);
             },
         );
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
 
         let time = non_sync_ctx.now();
         assert_eq!(
@@ -2811,7 +2810,7 @@ mod tests {
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(non_sync_ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
 
         // Should trigger 1 more router solicitations
         let time = non_sync_ctx.now();
@@ -2820,10 +2819,10 @@ mod tests {
             rs_timer_id(device_id.try_into().expect("expected ethernet ID")).into()
         );
         assert_eq!(non_sync_ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 2);
 
         // Each packet would be the same.
-        for f in sync_ctx.dispatcher.frames_sent() {
+        for f in non_sync_ctx.frames_sent() {
             let (src_mac, _, src_ip, _, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                     &f.1,
@@ -2852,7 +2851,7 @@ mod tests {
 
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
 
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
         assert_empty(non_sync_ctx.timer_ctx().timers());
 
         let device = crate::add_ethernet_device(
@@ -2876,7 +2875,7 @@ mod tests {
         let timer_id = rs_timer_id(device.try_into().expect("expected ethernet ID")).into();
 
         // Send the first router solicitation.
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
         non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         assert_eq!(
@@ -2886,10 +2885,10 @@ mod tests {
 
         // Should have sent a router solicitation and still have the timer
         // setup.
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         let (_, _dst_mac, _, _, _, _, _) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &sync_ctx.dispatcher.frames_sent()[0].1,
+                &non_sync_ctx.frames_sent()[0].1,
                 |_| {},
             )
             .unwrap();
@@ -2902,14 +2901,14 @@ mod tests {
 
         // Should have not sent any new packets, but unset the router
         // solicitation timer.
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         assert_empty(non_sync_ctx.timer_ctx().timers().iter().filter(|x| x.1 == timer_id));
 
         // Unsetting routing should succeed.
         set_ipv6_routing_enabled(&mut sync_ctx, &mut non_sync_ctx, device, false)
             .expect("error setting routing enabled");
         assert!(!is_ipv6_routing_enabled(&sync_ctx, device));
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 
         // Send the first router solicitation after being turned into a host.
@@ -2919,10 +2918,10 @@ mod tests {
         );
 
         // Should have sent a router solicitation.
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 2);
         assert_matches::assert_matches!(
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &sync_ctx.dispatcher.frames_sent()[1].1,
+                &non_sync_ctx.frames_sent()[1].1,
                 |_| {},
             ),
             Ok((_, _, _, _, _, _, _))
@@ -2946,7 +2945,7 @@ mod tests {
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
         assert_empty(non_sync_ctx.timer_ctx().timers());
 
         // Updating the IP should resolve immediately since DAD is turned off by
@@ -2966,7 +2965,7 @@ mod tests {
                 .state,
             AddressState::Assigned
         );
-        assert_empty(sync_ctx.dispatcher.frames_sent());
+        assert_empty(non_sync_ctx.frames_sent());
         assert_empty(non_sync_ctx.timer_ctx().timers());
 
         // Enable DAD for the device.
@@ -3005,7 +3004,7 @@ mod tests {
                 dad_transmits_remaining: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS - 1)
             }
         );
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         assert_eq!(non_sync_ctx.timer_ctx().timers().len(), 1);
 
         // Disable DAD during DAD.
@@ -3023,17 +3022,17 @@ mod tests {
             non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer).unwrap(),
             expected_timer_id
         );
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 2);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 2);
         assert_eq!(
             non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer).unwrap(),
             expected_timer_id
         );
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 3);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 3);
         assert_eq!(
             non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer).unwrap(),
             expected_timer_id
         );
-        assert_eq!(sync_ctx.dispatcher.frames_sent().len(), 3);
+        assert_eq!(non_sync_ctx.frames_sent().len(), 3);
         assert_eq!(
             NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
                 .find_addr(&dummy_config.remote_ip.try_into().unwrap())

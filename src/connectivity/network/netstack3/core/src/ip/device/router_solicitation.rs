@@ -202,8 +202,8 @@ mod tests {
         message: RouterSolicitation,
     }
 
-    type MockCtx<'a> = DummySyncCtx<MockRsContext<'a>, RsMessageMeta, (), DummyDeviceId>;
-    type MockNonSyncCtx = DummyNonSyncCtx<RsTimerId<DummyDeviceId>>;
+    type MockCtx<'a> = DummySyncCtx<MockRsContext<'a>, RsMessageMeta, DummyDeviceId>;
+    type MockNonSyncCtx = DummyNonSyncCtx<RsTimerId<DummyDeviceId>, ()>;
 
     impl<'a> Ipv6DeviceRsContext<MockNonSyncCtx> for MockCtx<'a> {
         fn get_max_router_solicitations(&self, DummyDeviceId: DummyDeviceId) -> Option<NonZeroU8> {
