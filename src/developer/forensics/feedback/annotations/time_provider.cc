@@ -38,7 +38,14 @@ ErrorOr<std::string> GetUtcTime(timekeeper::Clock* clock) {
 
 }  // namespace
 
-TimeProvider::TimeProvider(std::unique_ptr<timekeeper::Clock> clock) : clock_(std::move(clock)) {}
+TimeProvider::TimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
+                           std::unique_ptr<timekeeper::Clock> clock)
+    : clock_(std::move(clock)),
+      wait_for_clock_start_(this, clock_handle->get_handle(), ZX_CLOCK_STARTED, /*options=*/0) {
+  if (const zx_status_t status = wait_for_clock_start_.Begin(dispatcher); status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to wait for clock start";
+  }
+}
 
 std::set<std::string> TimeProvider::GetKeys() const {
   return {
@@ -48,10 +55,25 @@ std::set<std::string> TimeProvider::GetKeys() const {
 }
 
 Annotations TimeProvider::Get() {
+  const ErrorOr<std::string> utc_time =
+      is_utc_time_accurate_ ? GetUtcTime(clock_.get()) : Error::kMissingValue;
   return {
       {kDeviceUptimeKey, GetUptime()},
-      {kDeviceUtcTimeKey, GetUtcTime(clock_.get())},
+      {kDeviceUtcTimeKey, utc_time},
   };
+}
+
+void TimeProvider::OnClockStart(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FX_PLOGS(WARNING, status) << "Wait for clock start completed with error, trying again";
+
+    // Attempt to wait for the clock to start again.
+    wait->Begin(dispatcher);
+    return;
+  }
+
+  is_utc_time_accurate_ = true;
 }
 
 }  // namespace forensics::feedback

@@ -436,6 +436,21 @@ executable("target_channel_provider_unittest_exe") {
   ]
 }
 
+executable("time_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "time_provider_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback/annotations:time_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("timezone_provider_unittest_exe") {
   testonly = true
 
@@ -590,6 +605,10 @@ fuchsia_unittest_component("target_channel_provider_unittest") {
   deps = [ ":target_channel_provider_unittest_exe" ]
 }
 
+fuchsia_unittest_component("time_provider_unittest") {
+  deps = [ ":time_provider_unittest_exe" ]
+}
+
 fuchsia_unittest_component("timezone_provider_unittest") {
   deps = [ ":timezone_provider_unittest_exe" ]
 }
@@ -622,6 +641,7 @@ fuchsia_test_package("feedback-tests") {
     ":static_attachments_unittest",
     ":system_log_unittest",
     ":target_channel_provider_unittest",
+    ":time_provider_unittest",
     ":timezone_provider_unittest",
   ]
 
