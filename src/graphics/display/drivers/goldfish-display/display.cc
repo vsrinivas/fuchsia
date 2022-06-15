@@ -5,14 +5,20 @@
 #include "display.h"
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/pixelformat.h>
+#include <zircon/status.h>
 #include <zircon/threads.h>
 
 #include <algorithm>
@@ -23,6 +29,7 @@
 
 #include <fbl/auto_lock.h>
 
+#include "src/devices/lib/goldfish/pipe_headers/include/base.h"
 #include "src/graphics/display/drivers/goldfish-display/goldfish-display-bind.h"
 #include "src/graphics/display/drivers/goldfish-display/render_control.h"
 
@@ -65,7 +72,6 @@ Display::Display(zx_device_t* parent)
     : DisplayType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {
   if (parent) {
     control_ = parent;
-    pipe_ = parent;
   }
 }
 
@@ -85,13 +91,43 @@ zx_status_t Display::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish_pipe::GoldfishPipe>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  auto channel = endpoints->server.TakeChannel();
+
+  zx_status_t status = control_.ConnectToPipeDevice(std::move(channel));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: could not connect to pipe device: %s", kTag, zx_status_get_string(status));
+    return status;
+  }
+
+  pipe_ = fidl::BindSyncClient(std::move(endpoints->client));
   if (!pipe_.is_valid()) {
     zxlogf(ERROR, "%s: no pipe protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  rc_ = std::make_unique<RenderControl>(pipe_);
-  zx_status_t status = rc_->InitRcPipe();
+  // Create a second FIDL connection for use by RenderControl.
+  endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish_pipe::GoldfishPipe>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  channel = endpoints->server.TakeChannel();
+
+  status = control_.ConnectToPipeDevice(std::move(channel));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: could not connect to pipe device: %s", kTag, zx_status_get_string(status));
+    return status;
+  }
+
+  auto pipe_client = fidl::BindSyncClient(std::move(endpoints->client));
+
+  rc_ = std::make_unique<RenderControl>();
+  status = rc_->InitRcPipe(std::move(pipe_client));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: RenderControl failed to initialize: %d", kTag, status);
     return ZX_ERR_NOT_SUPPORTED;
@@ -560,13 +596,12 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
 
 zx_status_t Display::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
   fbl::AutoLock lock(&lock_);
-
-  zx_status_t status = pipe_.ConnectSysmem(std::move(connection));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to connect to sysmem: %d", kTag, status);
-    return status;
+  auto result = pipe_->ConnectSysmem(std::move(connection));
+  zx_status_t status = result.status();
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: failed to connect to sysmem: %s", kTag, result.status_string());
   }
-  return ZX_OK;
+  return status;
 }
 
 zx_status_t Display::DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,

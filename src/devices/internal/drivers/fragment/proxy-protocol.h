@@ -367,30 +367,6 @@ struct RegistersProxyResponse {
   ProxyResponse header;
 };
 
-// ZX_PROTOCOL_GOLDFISH_PIPE proxy support.
-enum class GoldfishPipeOp {
-  CREATE,
-  DESTROY,
-  SET_EVENT,
-  OPEN,
-  EXEC,
-  GET_BTI,
-  CONNECT_SYSMEM,
-  REGISTER_SYSMEM_HEAP,
-};
-
-struct GoldfishPipeProxyRequest {
-  ProxyRequest header;
-  GoldfishPipeOp op;
-  int32_t id;
-  uint64_t heap;
-};
-
-struct GoldfishPipeProxyResponse {
-  ProxyResponse header;
-  int32_t id;
-};
-
 // ZX_PROTOCOL_GOLDFISH_SYNC proxy support.
 enum class GoldfishSyncOp {
   CREATE_TIMELINE,

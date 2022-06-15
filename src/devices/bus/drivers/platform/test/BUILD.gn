@@ -181,39 +181,6 @@ fuchsia_driver_component("test-goldfish-address-space") {
   colocate = true
 }
 
-driver_bind_rules("test-goldfish-pipe-bind") {
-  rules = "test/test-goldfish-pipe.bind"
-  header_output = "test-goldfish-pipe-bind.h"
-  deps = [
-    "//src/devices/bind/fuchsia.platform",
-    "//src/devices/bind/fuchsia.test.platform",
-  ]
-}
-
-fuchsia_driver("test-goldfish-pipe-driver") {
-  output_name = "test-goldfish-pipe"
-  configs += [ "//build/config:all_source" ]
-  sources = [ "test/goldfish_pipe.cc" ]
-  deps = [
-    ":test-goldfish-pipe-bind",
-    "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//src/devices/lib/driver",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-fuchsia_driver_component("test-goldfish-pipe") {
-  component_name = "test-goldfish-pipe"
-  deps = [ ":test-goldfish-pipe-driver" ]
-  info = "test-driver-info.json"
-  colocate = true
-}
-
 driver_bind_rules("test-goldfish-sync-bind") {
   rules = "test/test-goldfish-sync.bind"
   header_output = "test-goldfish-sync-bind.h"
@@ -470,7 +437,6 @@ fuchsia_driver("test-composite-driver") {
     ":test-composite-bind",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.addressspace:fuchsia.hardware.goldfish.addressspace_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
@@ -566,7 +532,6 @@ fuchsia_unittest_package("platform-bus-test") {
     ":test-clock",
     ":test-composite",
     ":test-goldfish-address-space",
-    ":test-goldfish-pipe",
     ":test-goldfish-sync",
     ":test-gpio",
     ":test-i2c",

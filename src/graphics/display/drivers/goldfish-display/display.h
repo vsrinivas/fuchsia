@@ -5,12 +5,13 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_DISPLAY_H_
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
@@ -159,8 +160,12 @@ class Display : public DisplayType,
 
   fbl::Mutex lock_;
   ddk::GoldfishControlProtocolClient control_ TA_GUARDED(lock_);
-  ddk::GoldfishPipeProtocolClient pipe_ TA_GUARDED(lock_);
+  fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe_ TA_GUARDED(lock_);
   std::unique_ptr<RenderControl> rc_;
+  int32_t id_ = 0;
+  zx::bti bti_;
+  ddk::IoBuffer cmd_buffer_ TA_GUARDED(lock_);
+  ddk::IoBuffer io_buffer_ TA_GUARDED(lock_);
 
   std::map<uint64_t, Device> devices_;
   fbl::Mutex flush_lock_;

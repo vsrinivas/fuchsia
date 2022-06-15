@@ -5,10 +5,13 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/mmio/mmio.h>
+#include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/event.h>
@@ -93,12 +96,12 @@ class PipeChildDevice;
 using PipeChildDeviceType = ddk::Device<PipeChildDevice, ddk::Unbindable, ddk::Openable>;
 
 // |PipeChildDevice| is created by |PipeDevice| and serves the
-// |fuchsia.hardware.goldfish.Pipe| banjo protocol by forwarding all the
-// banjo requests to the parent device.
+// |fuchsia.hardware.goldfish.GoldfishPipe| FIDL protocol by forwarding all the
+// FIDL requests to the parent device.
 class PipeChildDevice : public PipeChildDeviceType,
-                        public ddk::GoldfishPipeProtocol<PipeChildDevice, ddk::base_protocol> {
+                        public fidl::WireServer<fuchsia_hardware_goldfish_pipe::GoldfishPipe> {
  public:
-  explicit PipeChildDevice(PipeDevice* parent);
+  explicit PipeChildDevice(PipeDevice* parent, async_dispatcher_t* dispatcher);
   ~PipeChildDevice() = default;
 
   zx_status_t Bind(cpp20::span<const zx_device_prop_t> props, const char* dev_name);
@@ -107,17 +110,22 @@ class PipeChildDevice : public PipeChildDeviceType,
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo);
-  zx_status_t GoldfishPipeSetEvent(int32_t id, zx::event pipe_event);
-  void GoldfishPipeDestroy(int32_t id);
-  void GoldfishPipeOpen(int32_t id);
-  void GoldfishPipeExec(int32_t id);
-  zx_status_t GoldfishPipeGetBti(zx::bti* out_bti);
-  zx_status_t GoldfishPipeConnectSysmem(zx::channel connection);
-  zx_status_t GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection);
+  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override;
+  void SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) override;
+  void Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer) override;
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
+  void Exec(ExecRequestView request, ExecCompleter::Sync& completer) override;
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
+  void ConnectSysmem(ConnectSysmemRequestView request,
+                     ConnectSysmemCompleter::Sync& completer) override;
+  void RegisterSysmemHeap(RegisterSysmemHeapRequestView request,
+                          RegisterSysmemHeapCompleter::Sync& completer) override;
 
  private:
   PipeDevice* parent_ = nullptr;
+  std::optional<svc::Outgoing> outgoing_;
+  async_dispatcher_t* dispatcher_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 }  // namespace goldfish

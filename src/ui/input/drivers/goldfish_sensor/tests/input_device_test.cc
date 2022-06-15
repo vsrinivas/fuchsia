@@ -4,9 +4,9 @@
 
 #include "src/ui/input/drivers/goldfish_sensor/input_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fidl/fuchsia.input.report/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/driver.h>

@@ -4,13 +4,16 @@
 
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/markers.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <lib/async-loop/loop.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmar.h>
@@ -27,6 +30,7 @@
 #include <fbl/auto_lock.h>
 #include <gtest/gtest.h>
 
+#include "src/devices/lib/goldfish/pipe_headers/include/base.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/graphics/drivers/misc/goldfish_control/render_control_commands.h"
 
@@ -37,7 +41,7 @@ namespace goldfish {
 namespace {
 
 // TODO(fxbug.dev/80642): Use //src/devices/lib/goldfish/fake_pipe instead.
-class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> {
+class FakePipe : public fidl::WireServer<fuchsia_hardware_goldfish_pipe::GoldfishPipe> {
  public:
   struct HeapInfo {
     fidl::ClientEnd<fuchsia_sysmem2::Heap> heap_client_end;
@@ -47,59 +51,65 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
     bool inaccessible_supported = false;
   };
 
-  FakePipe() : proto_({&goldfish_pipe_protocol_ops_, this}) {}
-
-  const goldfish_pipe_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
-    *out_id = kPipeId;
-    zx_status_t status = zx::vmo::create(PAGE_SIZE, 0u, out_vmo);
+  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override {
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(PAGE_SIZE, 0u, &vmo);
     if (status != ZX_OK) {
-      return status;
+      completer.Close(status);
+      return;
     }
-    status = out_vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &pipe_cmd_buffer_);
+    status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &pipe_cmd_buffer_);
     if (status != ZX_OK) {
-      return status;
+      completer.Close(status);
+      return;
     }
 
     pipe_created_ = true;
-    return ZX_OK;
+    completer.ReplySuccess(kPipeId, std::move(vmo));
   }
 
-  zx_status_t GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
-    if (id != kPipeId) {
-      return ZX_ERR_INVALID_ARGS;
+  void SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) override {
+    if (request->id != kPipeId) {
+      completer.Close(ZX_ERR_INVALID_ARGS);
+      return;
     }
-    if (!pipe_event.is_valid()) {
-      return ZX_ERR_BAD_HANDLE;
+    if (!request->pipe_event.is_valid()) {
+      completer.Close(ZX_ERR_BAD_HANDLE);
+      return;
     }
-    pipe_event_ = std::move(pipe_event);
-    return ZX_OK;
+    pipe_event_ = std::move(request->pipe_event);
+    completer.ReplySuccess();
   }
 
-  void GoldfishPipeDestroy(int32_t id) { pipe_cmd_buffer_.reset(); }
+  void Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer) override {
+    pipe_cmd_buffer_.reset();
+    completer.Reply();
+  }
 
-  void GoldfishPipeOpen(int32_t id) {
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
     auto mapping = MapCmdBuffer();
-    reinterpret_cast<pipe_cmd_buffer_t*>(mapping.start())->status = 0;
+    reinterpret_cast<PipeCmdBuffer*>(mapping.start())->status = 0;
 
     pipe_opened_ = true;
+    completer.Reply();
   }
 
-  void GoldfishPipeExec(int32_t id) {
+  void Exec(ExecRequestView request, ExecCompleter::Sync& completer) override {
     auto mapping = MapCmdBuffer();
-    pipe_cmd_buffer_t* cmd_buffer = reinterpret_cast<pipe_cmd_buffer_t*>(mapping.start());
+    PipeCmdBuffer* cmd_buffer = reinterpret_cast<PipeCmdBuffer*>(mapping.start());
     cmd_buffer->rw_params.consumed_size = cmd_buffer->rw_params.sizes[0];
     cmd_buffer->status = 0;
 
-    if (cmd_buffer->cmd == PIPE_CMD_CODE_WRITE) {
+    if (cmd_buffer->cmd ==
+        static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWrite)) {
       // Store io buffer contents.
       auto io_buffer = MapIoBuffer();
       io_buffer_contents_.emplace_back(std::vector<uint8_t>(io_buffer_size_, 0));
       memcpy(io_buffer_contents_.back().data(), io_buffer.start(), io_buffer_size_);
     }
 
-    if (cmd_buffer->cmd == PIPE_CMD_CODE_READ) {
+    if (cmd_buffer->cmd ==
+        static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kRead)) {
       auto io_buffer = MapIoBuffer();
       uint32_t op = *reinterpret_cast<uint32_t*>(io_buffer.start());
 
@@ -116,23 +126,32 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
           ZX_ASSERT_MSG(false, "invalid renderControl command (op %u)", op);
       }
     }
+
+    completer.Reply();
   }
 
-  zx_status_t GoldfishPipeGetBti(zx::bti* out_bti) {
-    zx_status_t status = fake_bti_create(out_bti->reset_and_get_address());
-    if (status == ZX_OK) {
-      bti_ = out_bti->borrow();
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override {
+    zx::bti bti;
+    zx_status_t status = fake_bti_create(bti.reset_and_get_address());
+    if (status != ZX_OK) {
+      completer.Close(status);
+      return;
     }
-    return status;
+    bti_ = bti.borrow();
+    completer.ReplySuccess(std::move(bti));
   }
 
-  zx_status_t GoldfishPipeConnectSysmem(zx::channel connection) { return ZX_OK; }
+  void ConnectSysmem(ConnectSysmemRequestView request,
+                     ConnectSysmemCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+  }
 
-  zx_status_t GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
-    heap_info_[heap] = {};
-    heap_info_[heap].heap_client_end =
-        fidl::ClientEnd<fuchsia_sysmem2::Heap>(std::move(connection));
-    return ZX_OK;
+  void RegisterSysmemHeap(RegisterSysmemHeapRequestView request,
+                          RegisterSysmemHeapCompleter::Sync& completer) override {
+    heap_info_[request->heap] = {};
+    heap_info_[request->heap].heap_client_end =
+        fidl::ClientEnd<fuchsia_sysmem2::Heap>(std::move(request->connection));
+    completer.ReplySuccess();
   }
 
   zx_status_t SetUpPipeDevice() {
@@ -152,7 +171,7 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
 
   fzl::VmoMapper MapCmdBuffer() const {
     fzl::VmoMapper mapping;
-    mapping.Map(pipe_cmd_buffer_, 0, sizeof(pipe_cmd_buffer_t), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+    mapping.Map(pipe_cmd_buffer_, 0, sizeof(PipeCmdBuffer), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     return mapping;
   }
 
@@ -244,7 +263,6 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
     return status;
   }
 
-  goldfish_pipe_protocol_t proto_;
   zx::unowned_bti bti_;
 
   static constexpr int32_t kPipeId = 1;
@@ -307,16 +325,28 @@ class FakeSync : public ddk::GoldfishSyncProtocol<FakeSync, ddk::base_protocol> 
 
 class ControlDeviceTest : public testing::Test {
  public:
-  ControlDeviceTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  ControlDeviceTest()
+      : loop_(&kAsyncLoopConfigNeverAttachToThread),
+        pipe_server_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override {
     fake_parent_ = MockDevice::FakeRootParent();
-    fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_PIPE, pipe_.proto()->ops, pipe_.proto()->ctx,
-                              "goldfish-pipe");
+    fake_parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
+        [this](zx::channel channel) {
+          fidl::BindServer(
+              pipe_server_loop_.dispatcher(),
+              fidl::ServerEnd<fuchsia_hardware_goldfish_pipe::GoldfishPipe>(std::move(channel)),
+              &pipe_);
+          return ZX_OK;
+        },
+        "goldfish-pipe");
     fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE, address_space_.proto()->ops,
                               address_space_.proto()->ctx, "goldfish-address-space");
     fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_SYNC, sync_.proto()->ops, sync_.proto()->ctx,
                               "goldfish-sync");
+
+    pipe_server_loop_.StartThread("goldfish-pipe-fidl-server");
 
     auto dut = std::make_unique<Control>(fake_parent_.get());
     ASSERT_OK(dut->Bind());
@@ -330,11 +360,13 @@ class ControlDeviceTest : public testing::Test {
     ASSERT_OK(pipe_.SetUpPipeDevice());
     ASSERT_TRUE(pipe_.IsPipeReady());
 
-    // Bind FIDL server.
+    // Bind control device FIDL server.
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::ControlDevice>();
     ASSERT_TRUE(endpoints.is_ok());
-    fidl_server_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
-                                    fake_dut->GetDeviceContext<Control>());
+
+    control_fidl_server_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
+                                            fake_dut->GetDeviceContext<Control>());
+
     loop_.StartThread("goldfish-control-device-fidl-server");
 
     fidl_client_ = fidl::BindSyncClient(std::move(endpoints->client));
@@ -355,8 +387,9 @@ class ControlDeviceTest : public testing::Test {
   std::shared_ptr<MockDevice> fake_parent_;
 
   async::Loop loop_;
-  std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish::ControlDevice>> fidl_server_ =
-      std::nullopt;
+  async::Loop pipe_server_loop_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish::ControlDevice>>
+      control_fidl_server_ = std::nullopt;
   fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> fidl_client_ = {};
 };
 

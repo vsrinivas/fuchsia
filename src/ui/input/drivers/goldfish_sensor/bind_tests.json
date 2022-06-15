@@ -11,7 +11,7 @@
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOLDFISH_PIPE_CONTROL",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.GOLDFISH",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.goldfish.BIND_PROTOCOL.PIPE"
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.goldfish.pipe.BIND_FIDL_PROTOCOL.PIPE"
         },
         "expected": "abort",
         "name": "bad DID"
@@ -21,7 +21,7 @@
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOLDFISH_PIPE_SENSOR",
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.GOLDFISH",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.goldfish.BIND_PROTOCOL.PIPE"
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.goldfish.pipe.BIND_FIDL_PROTOCOL.PIPE"
         },
         "expected": "match",
         "name": "goldfish-pipe-sensor"

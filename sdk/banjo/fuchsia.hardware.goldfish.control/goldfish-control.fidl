@@ -28,4 +28,11 @@ protocol GoldfishControl {
     }) -> (struct {
         ret zx.status;
     });
+
+    /// Connect a channel to a goldfish-pipe FIDL server.
+    ConnectToPipeDevice(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {
+        ret zx.status;
+    });
 };

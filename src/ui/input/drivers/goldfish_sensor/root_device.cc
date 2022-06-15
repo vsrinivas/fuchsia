@@ -21,6 +21,7 @@
 #include "src/ui/input/drivers/goldfish_sensor/goldfish_sensor-bind.h"
 #include "src/ui/input/drivers/goldfish_sensor/input_device.h"
 #include "src/ui/input/drivers/goldfish_sensor/parser.h"
+#include "zircon/status.h"
 
 namespace goldfish::sensor {
 namespace {
@@ -58,7 +59,6 @@ zx_status_t RootDevice::Create(void* ctx, zx_device_t* device) {
 
 RootDevice::RootDevice(zx_device_t* parent)
     : RootDeviceType(parent),
-      pipe_(parent),
       input_dev_loop_(&kAsyncLoopConfigNeverAttachToThread),
       pipe_io_loop_(&kAsyncLoopConfigNeverAttachToThread) {
   input_dev_loop_.StartThread("input-devices-event-thread");
@@ -71,8 +71,25 @@ RootDevice::~RootDevice() {
 }
 
 zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_devices) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish_pipe::GoldfishPipe>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, "%s: could not create FIDL endpoints: %s", kTag, endpoints.status_string());
+    return endpoints.status_value();
+  }
+
+  zx_status_t status = device_connect_fragment_fidl_protocol(
+      parent(), "goldfish-pipe",
+      fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
+      endpoints->server.TakeChannel().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: could not connect to goldfish-pipe protocol: %s", kTag,
+           zx_status_get_string(status));
+    return status;
+  }
+  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+
   auto_reader_ =
-      std::make_unique<PipeAutoReader>(&pipe_, kPipeName, pipe_io_loop_.dispatcher(),
+      std::make_unique<PipeAutoReader>(std::move(client), kPipeName, pipe_io_loop_.dispatcher(),
                                        fit::bind_member<&RootDevice::OnReadSensor>(this));
   if (!auto_reader_->valid()) {
     zxlogf(ERROR, "%s: PipeAutoReader() initialization failed", kTag);
@@ -112,7 +129,7 @@ zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_d
     }
   }
 
-  zx_status_t status = auto_reader_->BeginRead();
+  status = auto_reader_->BeginRead();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: BeginRead() failed: %d", kTag, status);
     return status;

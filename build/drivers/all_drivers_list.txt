@@ -109,7 +109,6 @@
 //src/devices/bus/drivers/platform/test:test-clock-driver
 //src/devices/bus/drivers/platform/test:test-composite-driver
 //src/devices/bus/drivers/platform/test:test-goldfish-address-space-driver
-//src/devices/bus/drivers/platform/test:test-goldfish-pipe-driver
 //src/devices/bus/drivers/platform/test:test-goldfish-sync-driver
 //src/devices/bus/drivers/platform/test:test-gpio-driver
 //src/devices/bus/drivers/platform/test:test-i2c-driver

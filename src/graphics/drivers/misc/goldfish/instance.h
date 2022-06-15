@@ -5,8 +5,8 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_INSTANCE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_INSTANCE_H_
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/device.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_GOLDFISH_PIPE_IO_PIPE_IO_H_
 #define SRC_DEVICES_LIB_GOLDFISH_PIPE_IO_PIPE_IO_H_
 
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/fit/function.h>
@@ -29,7 +29,8 @@ namespace goldfish {
 // like goldfish sensor pipe.
 class PipeIo {
  public:
-  PipeIo(const ddk::GoldfishPipeProtocolClient* pipe, const char* pipe_name);
+  PipeIo(fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe,
+         const char* pipe_name);
   ~PipeIo();
 
   template <class T>
@@ -214,7 +215,7 @@ class PipeIo {
   size_t io_buffer_size_ = 0u;
   zx::event pipe_event_;
 
-  const ddk::GoldfishPipeProtocolClient* pipe_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe_;
 };
 
 }  // namespace goldfish

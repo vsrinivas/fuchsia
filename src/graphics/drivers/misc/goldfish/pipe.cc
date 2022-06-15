@@ -8,8 +8,11 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/bti.h>
+#include <zircon/status.h>
 
 #include <fbl/auto_lock.h>
+
+#include "src/devices/lib/goldfish/pipe_headers/include/base.h"
 
 namespace goldfish {
 namespace {
@@ -35,10 +38,10 @@ Pipe::~Pipe() {
   fbl::AutoLock lock(&lock_);
   if (id_) {
     if (cmd_buffer_.is_valid()) {
-      auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+      auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
       buffer->id = id_;
-      buffer->cmd = PIPE_CMD_CODE_CLOSE;
-      buffer->status = PIPE_ERROR_INVAL;
+      buffer->cmd = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kClose);
+      buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
 
       pipe_->Exec(id_);
       ZX_DEBUG_ASSERT(!buffer->status);
@@ -56,20 +59,22 @@ void Pipe::Init() {
 
   zx_status_t status = pipe_->GetBti(&bti_);
   if (status != ZX_OK) {
-    FAIL_ASYNC(status, "[%s] Pipe::Pipe() GetBti failed", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() GetBti failed: %s", kTag, zx_status_get_string(status));
     return;
   }
 
   status = SetBufferSizeLocked(DEFAULT_BUFFER_SIZE);
   if (status != ZX_OK) {
-    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to set initial buffer size", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to set initial buffer size: %s", kTag,
+               zx_status_get_string(status));
     return;
   }
 
   zx::event event;
   status = zx::event::create(0, &event);
   if (status != ZX_OK) {
-    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to create event", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to create event: %s", kTag,
+               zx_status_get_string(status));
     return;
   }
   status = event.signal(0, SIGNALS);
@@ -78,12 +83,14 @@ void Pipe::Init() {
   zx::vmo vmo;
   status = pipe_->Create(&id_, &vmo);
   if (status != ZX_OK) {
-    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to create pipe", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to create pipe: %s", kTag,
+               zx_status_get_string(status));
     return;
   }
+
   status = pipe_->SetEvent(id_, std::move(event));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "[%s] Pipe::Pipe() failed to set event: %d", kTag, status);
+    zxlogf(ERROR, "[%s] Pipe::Pipe() failed to set event: %s", kTag, zx_status_get_string(status));
     return;
   }
 
@@ -93,10 +100,10 @@ void Pipe::Init() {
     return;
   }
 
-  auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+  auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
   buffer->id = id_;
-  buffer->cmd = PIPE_CMD_CODE_OPEN;
-  buffer->status = PIPE_ERROR_INVAL;
+  buffer->cmd = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kOpen);
+  buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
 
   pipe_->Open(id_);
   if (buffer->status) {
@@ -157,7 +164,7 @@ void Pipe::SetEvent(SetEventRequestView request, SetEventCompleter::Sync& comple
 
   zx_status_t status = pipe_->SetEvent(id_, std::move(request->event));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "[%s] SetEvent failed: %d", kTag, status);
+    zxlogf(ERROR, "[%s] SetEvent failed: %s", kTag, zx_status_get_string(status));
     completer.Close(ZX_ERR_INTERNAL);
     return;
   }
@@ -173,7 +180,8 @@ void Pipe::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& com
   zx::vmo vmo;
   zx_status_t status = buffer_.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "[%s] Pipe::GetBuffer() zx_vmo_duplicate failed: %d", kTag, status);
+    zxlogf(ERROR, "[%s] Pipe::GetBuffer() zx_vmo_duplicate failed: %s", kTag,
+           zx_status_get_string(status));
     completer.Close(status);
   } else {
     completer.Reply(ZX_OK, std::move(vmo));
@@ -193,7 +201,8 @@ void Pipe::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
 
   size_t actual;
   zx_status_t status =
-      TransferLocked(PIPE_CMD_CODE_READ, PIPE_CMD_CODE_WAKE_ON_READ,
+      TransferLocked(static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kRead),
+                     static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnRead),
                      fuchsia_hardware_goldfish::wire::kSignalReadable,
                      buffer_.phys + request->offset, request->count, 0, 0, &actual);
   completer.Reply(status, actual);
@@ -211,10 +220,11 @@ void Pipe::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   }
 
   size_t actual;
-  zx_status_t status =
-      TransferLocked(PIPE_CMD_CODE_WRITE, PIPE_CMD_CODE_WAKE_ON_WRITE,
-                     fuchsia_hardware_goldfish::wire::kSignalWritable,
-                     buffer_.phys + request->offset, request->count, 0, 0, &actual);
+  zx_status_t status = TransferLocked(
+      static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWrite),
+      static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnWrite),
+      fuchsia_hardware_goldfish::wire::kSignalWritable, buffer_.phys + request->offset,
+      request->count, 0, 0, &actual);
   completer.Reply(status, actual);
 }
 
@@ -239,16 +249,19 @@ void Pipe::DoCall(DoCallRequestView request, DoCallCompleter::Sync& completer) {
   zx_paddr_t read_paddr = 0u, write_paddr = 0u;
   // Set write command, signal and offset.
   if (request->count) {
-    cmd = request->read_count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_WRITE;
-    wake_cmd = PIPE_CMD_CODE_WAKE_ON_WRITE;
-    wake_signal = PIPE_CMD_CODE_WAKE_ON_WRITE;
+    cmd = request->read_count
+              ? static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kCall)
+              : static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWrite);
+    wake_cmd = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnWrite);
+    wake_signal = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnWrite);
     write_paddr = buffer_.phys + request->offset;
   }
   // Set read command, signal and offset.
   if (request->read_count) {
-    cmd = request->count ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_READ;
-    wake_cmd = PIPE_CMD_CODE_WAKE_ON_READ;
-    wake_signal = PIPE_CMD_CODE_WAKE_ON_READ;
+    cmd = request->count ? static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kCall)
+                         : static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kRead);
+    wake_cmd = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnRead);
+    wake_signal = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnRead);
     read_paddr = buffer_.phys + request->read_offset;
   }
 
@@ -266,10 +279,10 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
                                  size_t read_count, size_t* actual) {
   TRACE_DURATION("gfx", "Pipe::Transfer", "count", count, "read_count", read_count);
 
-  auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+  auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
   buffer->id = id_;
   buffer->cmd = cmd;
-  buffer->status = PIPE_ERROR_INVAL;
+  buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
   buffer->rw_params.ptrs[0] = paddr;
   buffer->rw_params.sizes[0] = static_cast<uint32_t>(count);
   buffer->rw_params.ptrs[1] = read_paddr;
@@ -287,14 +300,14 @@ zx_status_t Pipe::TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t sta
 
   *actual = 0;
   // Early out if error is not because of back-pressure.
-  if (buffer->status != PIPE_ERROR_AGAIN) {
+  if (buffer->status != static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kAgain)) {
     zxlogf(ERROR, "[%s] Pipe::Transfer() transfer failed: %d", kTag, buffer->status);
     return ZX_ERR_INTERNAL;
   }
 
   buffer->id = id_;
   buffer->cmd = wake_cmd;
-  buffer->status = PIPE_ERROR_INVAL;
+  buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
   pipe_->Exec(id_);
   if (buffer->status) {
     zxlogf(ERROR, "[%s] Pipe::Transfer() failed to request interrupt: %d", kTag, buffer->status);

@@ -4,6 +4,8 @@
 #include "display.h"
 
 #include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/ddk/device.h>
 #include <stdio.h>
 
@@ -22,8 +24,12 @@ constexpr size_t kNumDisplays = 2;
 constexpr size_t kMaxLayerCount = 3;  // This is the max size of layer array.
 }  // namespace
 
+class FakePipe : public fidl::WireServer<fuchsia_hardware_goldfish_pipe::GoldfishPipe> {};
+
 class GoldfishDisplayTest : public zxtest::Test {
  public:
+  GoldfishDisplayTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override;
   void TearDown() override;
   std::array<std::array<layer_t, kMaxLayerCount>, kNumDisplays> layer_ = {};
@@ -37,6 +43,10 @@ class GoldfishDisplayTest : public zxtest::Test {
 
   std::array<size_t, kNumDisplays> result_count_ = {};
   std::unique_ptr<Display> display_ = {};
+
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish_pipe::GoldfishPipe>> binding_;
+  async::Loop loop_;
+  FakePipe* fake_pipe_;
 };
 
 void GoldfishDisplayTest::SetUp() {

@@ -686,8 +686,6 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 
 zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
                                          fbl::RefPtr<DriverHost> target_driver_host) {
-  ZX_ASSERT(dev->flags & DEV_CTX_MUST_ISOLATE);
-
   zx_status_t status;
   if (dev->new_proxy() == nullptr && (status = dev->CreateNewProxy()) != ZX_OK) {
     LOGF(ERROR, "Cannot create new proxy device '%s': %s", dev->name().data(),
@@ -742,7 +740,8 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
   zx_status_t status;
   if (dev->has_outgoing_directory()) {
     VLOGF(1, "Preparing new proxy for %s", dev->name().data());
-    status = PrepareNewProxy(dev, nullptr);
+    auto target_driver_host = (dev->flags & DEV_CTX_MUST_ISOLATE) ? nullptr : dev->host();
+    status = PrepareNewProxy(dev, target_driver_host);
     if (status != ZX_OK) {
       return status;
     }

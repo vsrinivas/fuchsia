@@ -20,7 +20,6 @@ group("drivers") {
     "drivers/platform/test:test-clock",
     "drivers/platform/test:test-composite",
     "drivers/platform/test:test-goldfish-address-space",
-    "drivers/platform/test:test-goldfish-pipe",
     "drivers/platform/test:test-goldfish-sync",
     "drivers/platform/test:test-gpio",
     "drivers/platform/test:test-i2c",

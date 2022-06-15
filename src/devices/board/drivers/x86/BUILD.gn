@@ -53,6 +53,7 @@ driver_bind_rules("goldfish_control_2_bind") {
   deps = [
     "//src/devices/bind/fuchsia.goldfish",
     "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.hardware.goldfish.pipe",
   ]
 }
 

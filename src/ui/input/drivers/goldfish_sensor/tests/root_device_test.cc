@@ -4,8 +4,10 @@
 
 #include "src/ui/input/drivers/goldfish_sensor/root_device.h"
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.input.report/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/ddk/driver.h>
 
 #include <string>
@@ -13,6 +15,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.hardware.goldfish.pipe/cpp/markers.h"
 #include "src/devices/testing/goldfish/fake_pipe/fake_pipe.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
@@ -108,10 +111,22 @@ class TestRootDevice : public RootDevice {
 
 class RootDeviceTest : public ::testing::Test {
  public:
+  RootDeviceTest() : async_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override {
+    async_loop_.StartThread("goldfish-server-thread");
+
     fake_parent_ = MockDevice::FakeRootParent();
-    fake_parent_->AddProtocol(ZX_PROTOCOL_GOLDFISH_PIPE, fake_pipe_.proto()->ops,
-                              fake_pipe_.proto()->ctx);
+    fake_parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
+        [this](zx::channel channel) {
+          fidl::BindServer(
+              async_loop_.dispatcher(),
+              fidl::ServerEnd<fuchsia_hardware_goldfish_pipe::GoldfishPipe>(std::move(channel)),
+              &fake_pipe_);
+          return ZX_OK;
+        },
+        "goldfish-pipe");
 
     auto device = std::make_unique<TestRootDevice>(fake_parent_.get());
     ASSERT_EQ(device->Bind(), ZX_OK);
@@ -127,12 +142,15 @@ class RootDeviceTest : public ::testing::Test {
       device_async_remove(dut_->zxdev());
       mock_ddk::ReleaseFlaggedDevices(fake_parent_.get());
     }
+    async_loop_.Shutdown();
   }
 
  protected:
   std::shared_ptr<MockDevice> fake_parent_;
   TestRootDevice* dut_;
   testing::FakePipe fake_pipe_;
+  async::Loop async_loop_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish_pipe::GoldfishPipe>> binding_;
 };
 
 TEST_F(RootDeviceTest, SetupDevices) {

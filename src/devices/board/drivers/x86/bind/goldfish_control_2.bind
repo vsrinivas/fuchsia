@@ -6,9 +6,10 @@ composite goldfish_control_2;
 
 using fuchsia.goldfish;
 using fuchsia.google.platform;
+using fuchsia.hardware.goldfish.pipe;
 
 primary node "goldfish-pipe" {
-    fuchsia.BIND_PROTOCOL == fuchsia.goldfish.BIND_PROTOCOL.PIPE;
+    fuchsia.BIND_FIDL_PROTOCOL == fuchsia.hardware.goldfish.pipe.BIND_FIDL_PROTOCOL.PIPE;
     fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
     fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.GOLDFISH;
     fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOLDFISH_PIPE_CONTROL;

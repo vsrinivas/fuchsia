@@ -4,12 +4,14 @@
 
 #include "src/graphics/drivers/misc/goldfish/instance.h"
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/markers.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire_test_base.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #include <tuple>
@@ -32,7 +34,9 @@ class FakeInstance : public Instance {
   }
 };
 
-class FakePipeDevice : public PipeDevice {
+class FakePipeDevice
+    : public PipeDevice,
+      public fidl::testing::WireTestBase<fuchsia_hardware_goldfish_pipe::GoldfishPipe> {
  public:
   FakePipeDevice(zx_device_t* parent, acpi::Client client)
       : PipeDevice(parent, std::move(client)) {}
@@ -44,6 +48,25 @@ class FakePipeDevice : public PipeDevice {
   }
 
   zx_status_t GetBti(zx::bti* out_bti) { return fake_bti_create(out_bti->reset_and_get_address()); }
+
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override {
+    ASSERT_OK(GetBti(&bti_));
+    completer.ReplySuccess(std::move(bti_));
+  }
+
+  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override {
+    ASSERT_OK(Create(&id_, &vmo_));
+    completer.ReplySuccess(id_, std::move(vmo_));
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
+  zx::bti bti_;
+  zx::vmo vmo_;
+  int32_t id_ = 0;
 };
 
 // Test suite creating fake Instance on a mock Pipe device.
@@ -61,6 +84,19 @@ class InstanceDeviceTest : public zxtest::Test {
 
     pipe_device_ =
         std::make_unique<FakePipeDevice>(fake_root_.get(), std::move(acpi_result.value()));
+    fake_root_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
+        [this](zx::channel channel) {
+          fidl::BindServer(
+              loop_.dispatcher(),
+              fidl::ServerEnd<fuchsia_hardware_goldfish_pipe::GoldfishPipe>(std::move(channel)),
+              pipe_device_.get());
+          return ZX_OK;
+        },
+        "goldfish-pipe");
+
+    loop_.StartThread("goldfish-pipe-thread");
+
     auto dut = std::make_unique<FakeInstance>(fake_root_.get(), pipe_device_.get());
     ASSERT_OK(dut->Bind());
     // dut is now managed by the Driver Framework so we release the unique
@@ -73,7 +109,7 @@ class InstanceDeviceTest : public zxtest::Test {
     ASSERT_OK(endpoints.status_value());
 
     ASSERT_OK(dut_->Connect(loop_.dispatcher(), std::move(endpoints->server)));
-    fidl_client_.Bind(std::move(endpoints->client));
+    fidl_goldfish_client_.Bind(std::move(endpoints->client));
   }
 
   // |zxtest::Test|
@@ -89,7 +125,7 @@ class InstanceDeviceTest : public zxtest::Test {
   FakeInstance* dut_;
   std::shared_ptr<MockDevice> fake_root_;
 
-  fidl::WireSyncClient<fuchsia_hardware_goldfish::PipeDevice> fidl_client_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish::PipeDevice> fidl_goldfish_client_;
   async::Loop loop_;
 
  private:
@@ -100,7 +136,7 @@ TEST_F(InstanceDeviceTest, OpenPipe) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  ASSERT_TRUE(fidl_client_->OpenPipe(std::move(endpoints->server)).ok());
+  ASSERT_TRUE(fidl_goldfish_client_->OpenPipe(std::move(endpoints->server)).ok());
   loop_.RunUntilIdle();
 }
 
@@ -108,7 +144,7 @@ TEST_F(InstanceDeviceTest, OpenPipeCloseDutFirst) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
   ASSERT_TRUE(endpoints.is_ok());
 
-  ASSERT_TRUE(fidl_client_->OpenPipe(std::move(endpoints->server)).ok());
+  ASSERT_TRUE(fidl_goldfish_client_->OpenPipe(std::move(endpoints->server)).ok());
   loop_.RunUntilIdle();
 
   endpoints->client.reset();

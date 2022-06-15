@@ -4,8 +4,10 @@
 
 #include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 
 #include <string_view>
 #include <type_traits>
@@ -22,17 +24,35 @@ namespace {
 
 class PipeIoTest : public ::testing::Test {
  public:
+  PipeIoTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override {
-    pipe_client_ = ddk::GoldfishPipeProtocolClient(pipe_.proto());
-    io_ = std::make_unique<PipeIo>(&pipe_client_, "pipe");
+    loop_.StartThread("pipe-io-server");
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish_pipe::GoldfishPipe>();
+    EXPECT_EQ(endpoints.status_value(), ZX_OK);
+
+    binding_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &pipe_);
+    EXPECT_TRUE(binding_.has_value());
+
+    pipe_client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    io_ = std::make_unique<PipeIo>(std::move(pipe_client_), "pipe");
   }
 
-  void TearDown() override {}
+  void TearDown() override {
+    // The PipeIo object must be released before the shutdown of the loop,
+    // because PipeIo's destructor makes a FIDL call that relies on the server
+    // that is running in the loop.
+    io_.reset();
+    loop_.Shutdown();
+  }
 
  protected:
   testing::FakePipe pipe_;
-  ddk::GoldfishPipeProtocolClient pipe_client_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe_client_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish_pipe::GoldfishPipe>> binding_;
   std::unique_ptr<PipeIo> io_;
+  async::Loop loop_;
 };
 
 TEST_F(PipeIoTest, BlockingWrite) {
@@ -284,24 +304,41 @@ TEST_F(PipeIoTest, NonBlockingCall) {
   ASSERT_EQ(result.error_value(), ZX_ERR_SHOULD_WAIT);
 }
 
+// TODO(fxbug.dev/102293): Use a single test loop and async FIDL client.
 class PipeAutoReaderTest : public gtest::TestLoopFixture {
  public:
+  PipeAutoReaderTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
   void SetUp() override {
     TestLoopFixture::SetUp();
-    pipe_client_ = ddk::GoldfishPipeProtocolClient(pipe_.proto());
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish_pipe::GoldfishPipe>();
+    EXPECT_EQ(endpoints.status_value(), ZX_OK);
+
+    binding_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &pipe_);
+    EXPECT_TRUE(binding_.has_value());
+
+    pipe_client_ = fidl::BindSyncClient(std::move(endpoints->client));
+
+    loop_.StartThread("pipe-io-server");
   }
 
-  void TearDown() override { TestLoopFixture::TearDown(); }
+  void TearDown() override {
+    loop_.Shutdown();
+    TestLoopFixture::TearDown();
+  }
 
  protected:
   testing::FakePipe pipe_;
-  ddk::GoldfishPipeProtocolClient pipe_client_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe_client_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_goldfish_pipe::GoldfishPipe>> binding_;
+  async::Loop loop_;
 };
 
 TEST_F(PipeAutoReaderTest, AutoRead) {
   int sum = 0;
   std::unique_ptr<PipeAutoReader> reader = std::make_unique<PipeAutoReader>(
-      &pipe_client_, "pipe", dispatcher(), [&sum](PipeIo::ReadResult<char> result) {
+      std::move(pipe_client_), "pipe", dispatcher(), [&sum](PipeIo::ReadResult<char> result) {
         ASSERT_TRUE(result.is_ok());
         int val = 0;
         sscanf(result.value().data(), "%d", &val);

@@ -20,11 +20,15 @@
 
 #include <fbl/auto_lock.h>
 
+#include "src/devices/lib/goldfish/pipe_headers/include/base.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace goldfish {
 
-PipeIo::PipeIo(const ddk::GoldfishPipeProtocolClient* pipe, const char* pipe_name) : pipe_(pipe) {
+PipeIo::PipeIo(fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe,
+               const char* pipe_name) {
+  pipe_ = std::move(pipe);
+
   auto status = Init(pipe_name);
   if (status == ZX_OK) {
     valid_ = true;
@@ -34,67 +38,75 @@ PipeIo::PipeIo(const ddk::GoldfishPipeProtocolClient* pipe, const char* pipe_nam
 zx_status_t PipeIo::SetupPipe() {
   fbl::AutoLock lock(&lock_);
 
-  if (!pipe_->is_valid()) {
-    zxlogf(ERROR, "no pipe protocol");
+  if (!pipe_.is_valid()) {
+    zxlogf(ERROR, "%s: no pipe protocol", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t status = pipe_->GetBti(&bti_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "GetBti failed: %d", status);
-    return status;
+  auto result = pipe_->GetBti();
+  if (!result.ok()) {
+    zxlogf(ERROR, "%s: GetBti failed: %s", __func__, result.status_string());
+    return result.status();
   }
+  bti_ = std::move(result->value()->bti);
 
-  status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   io_buffer_size_ = io_buffer_.size();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Init IO buffer failed: %d", status);
+    zxlogf(ERROR, "%s: Init IO buffer failed: %s", __func__, zx_status_get_string(status));
     return status;
   }
 
   ZX_DEBUG_ASSERT(!pipe_event_.is_valid());
   status = zx::event::create(0u, &pipe_event_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "zx_event_create failed: %d", status);
+    zxlogf(ERROR, "%s: zx_event_create failed: %s", __func__, zx_status_get_string(status));
     return status;
   }
 
   zx::event pipe_event_dup;
   status = pipe_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &pipe_event_dup);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "zx_handle_duplicate failed: %d", status);
+    zxlogf(ERROR, "%s: zx_handle_duplicate failed: %s", __func__, zx_status_get_string(status));
     return status;
   }
 
-  zx::vmo vmo;
-  status = pipe_->Create(&id_, &vmo);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Create pipe failed: %d", status);
-    return status;
+  auto create_result = pipe_->Create();
+  if (!create_result.ok()) {
+    zxlogf(ERROR, "%s: Create pipe failed: %s", __func__, create_result.status_string());
+    return create_result.status();
   }
-  status = pipe_->SetEvent(id_, std::move(pipe_event_dup));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "SetEvent failed: %d", status);
-    return status;
+  id_ = create_result->value()->id;
+  zx::vmo vmo = std::move(create_result->value()->vmo);
+
+  auto set_event_result = pipe_->SetEvent(id_, std::move(pipe_event_dup));
+  if (!set_event_result.ok()) {
+    zxlogf(ERROR, "%s: SetEvent failed: %s", __func__, set_event_result.status_string());
+    return set_event_result.status();
   }
 
   status = cmd_buffer_.InitVmo(bti_.get(), vmo.get(), 0, IO_BUFFER_RW);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "InitVmo failed: %d", status);
+    zxlogf(ERROR, "%s: InitVmo failed: %s", __func__, zx_status_get_string(status));
     return status;
   }
 
   auto release_buffer =
       fit::defer([this]() TA_NO_THREAD_SAFETY_ANALYSIS { cmd_buffer_.release(); });
 
-  auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+  auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
   buffer->id = id_;
-  buffer->cmd = PIPE_CMD_CODE_OPEN;
-  buffer->status = PIPE_ERROR_INVAL;
+  buffer->cmd = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kOpen);
+  buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
 
-  pipe_->Open(id_);
+  auto open_result = pipe_->Open(id_);
+  if (!open_result.ok()) {
+    zxlogf(ERROR, "%s: Open failed: %s", __func__, open_result.status_string());
+    return ZX_ERR_INTERNAL;
+  }
+
   if (buffer->status) {
-    zxlogf(ERROR, "Open failed: %d", buffer->status);
+    zxlogf(ERROR, "%s: Open failed: %s", __func__, zx_status_get_string(buffer->status));
     return ZX_ERR_INTERNAL;
   }
 
@@ -128,20 +140,21 @@ PipeIo::~PipeIo() {
   fbl::AutoLock lock(&lock_);
   if (id_) {
     if (cmd_buffer_.is_valid()) {
-      auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+      auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
       buffer->id = id_;
-      buffer->cmd = PIPE_CMD_CODE_CLOSE;
-      buffer->status = PIPE_ERROR_INVAL;
+      buffer->cmd = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kClose);
+      buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
 
-      pipe_->Exec(id_);
-      ZX_DEBUG_ASSERT(!buffer->status);
+      __UNUSED auto result = pipe_->Exec(id_);
     }
-    pipe_->Destroy(id_);
+    __UNUSED auto destroy_result = pipe_->Destroy(id_);
+    // We don't check the return status as the pipe is destroyed on a
+    // best-effort basis.
   }
 }
 
 zx::status<uint32_t> PipeIo::TransferLocked(const TransferOp& op) {
-  auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+  auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
 
   buffer->rw_params.consumed_size = 0;
   buffer->rw_params.buffers_count = 1;
@@ -165,7 +178,7 @@ zx::status<uint32_t> PipeIo::TransferLocked(const TransferOp& op) {
 
 zx::status<uint32_t> PipeIo::TransferLocked(cpp20::span<const TransferOp> ops) {
   ZX_DEBUG_ASSERT(!ops.empty());
-  auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+  auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
 
   bool has_read = false;
   bool has_write = false;
@@ -208,12 +221,19 @@ zx::status<uint32_t> PipeIo::TransferLocked(cpp20::span<const TransferOp> ops) {
 
 zx::status<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_read) {
   ZX_DEBUG_ASSERT(has_write || has_read);
-  auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
+  auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
   buffer->id = id_;
   buffer->cmd =
-      has_read ? (has_write ? PIPE_CMD_CODE_CALL : PIPE_CMD_CODE_READ) : PIPE_CMD_CODE_WRITE;
-  buffer->status = PIPE_ERROR_INVAL;
-  pipe_->Exec(id_);
+      has_read
+          ? (has_write ? static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kCall)
+                       : static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kRead))
+          : static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWrite);
+  buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
+  auto result = pipe_->Exec(id_);
+  if (!result.ok()) {
+    zxlogf(ERROR, "[%s] Exec failed: %s", __func__, result.status_string());
+    return zx::error_status(ZX_ERR_INTERNAL);
+  }
 
   // Positive consumed size always indicate a successful transfer.
   if (buffer->rw_params.consumed_size) {
@@ -221,8 +241,9 @@ zx::status<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_
   }
 
   // Early out if error is not because of back-pressure.
-  if (buffer->status != PIPE_ERROR_AGAIN) {
-    zxlogf(ERROR, "Pipe::Transfer() transfer failed: %d", buffer->status);
+  if (buffer->status != static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kAgain)) {
+    zxlogf(ERROR, "[%s] Pipe::Transfer() transfer failed: %s", __func__,
+           zx_status_get_string(buffer->status));
     return zx::error_status(ZX_ERR_INTERNAL);
   }
 
@@ -236,9 +257,15 @@ zx::status<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_
   pipe_event_.signal(clear_events, 0u);
 
   buffer->id = id_;
-  buffer->cmd = has_write ? PIPE_CMD_CODE_WAKE_ON_WRITE : PIPE_CMD_CODE_WAKE_ON_READ;
-  buffer->status = PIPE_ERROR_INVAL;
-  pipe_->Exec(id_);
+  buffer->cmd =
+      has_write ? static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnWrite)
+                : static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWakeOnRead);
+  buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kInval);
+  auto result2 = pipe_->Exec(id_);
+  if (!result2.ok()) {
+    zxlogf(ERROR, "[%s] Pipe::Exec() failed: %s", __func__, result2.status_string());
+    return zx::error_status(ZX_ERR_INTERNAL);
+  }
 
   if (buffer->status) {
     zxlogf(ERROR, "Pipe::Transfer() failed to request interrupt: %d", buffer->status);

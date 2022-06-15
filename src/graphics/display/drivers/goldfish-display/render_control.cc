@@ -4,9 +4,13 @@
 
 #include "src/graphics/display/drivers/goldfish-display/render_control.h"
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/markers.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fidl/llcpp/channel.h>
 
 #include <memory>
+
+#include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
 
 namespace goldfish {
 
@@ -120,10 +124,9 @@ cpp20::span<const uint8_t> ToByteSpan(const T& t) {
 
 }  // namespace
 
-RenderControl::RenderControl(ddk::GoldfishPipeProtocolClient pipe) : pipe_(pipe) {}
-
-zx_status_t RenderControl::InitRcPipe() {
-  pipe_io_ = std::make_unique<PipeIo>(&pipe_, kPipeName);
+zx_status_t RenderControl::InitRcPipe(
+    fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe) {
+  pipe_io_ = std::make_unique<PipeIo>(std::move(pipe), kPipeName);
   if (!pipe_io_->valid()) {
     zxlogf(ERROR, "PipeIo failed to initialize");
     return ZX_ERR_NOT_SUPPORTED;

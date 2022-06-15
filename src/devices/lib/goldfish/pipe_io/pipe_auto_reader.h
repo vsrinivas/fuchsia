@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_GOLDFISH_PIPE_IO_PIPE_AUTO_READER_H_
 #define SRC_DEVICES_LIB_GOLDFISH_PIPE_IO_PIPE_AUTO_READER_H_
 
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
@@ -23,9 +23,10 @@ namespace goldfish {
 class PipeAutoReader : public PipeIo {
  public:
   using PipeMessageHandler = fit::function<void(PipeIo::ReadResult<char>)>;
-  PipeAutoReader(ddk::GoldfishPipeProtocolClient* pipe, const char* pipe_name,
-                 async_dispatcher_t* dispatcher, PipeMessageHandler handler = nullptr)
-      : PipeIo(pipe, pipe_name), dispatcher_(dispatcher), handler_(std::move(handler)) {}
+  PipeAutoReader(fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe,
+                 const char* pipe_name, async_dispatcher_t* dispatcher,
+                 PipeMessageHandler handler = nullptr)
+      : PipeIo(std::move(pipe), pipe_name), dispatcher_(dispatcher), handler_(std::move(handler)) {}
 
   void SetMessageHandler(PipeMessageHandler handler) { handler_ = std::move(handler); }
 

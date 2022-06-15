@@ -5,8 +5,8 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_H_
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/fidl/llcpp/server.h>
@@ -31,7 +31,7 @@ class Pipe : public fidl::WireServer<fuchsia_hardware_goldfish::Pipe> {
 
   Pipe(PipeDevice* pipe, async_dispatcher_t* dispatcher, OnBindFn on_bind, OnCloseFn on_close);
   // Public for std::unique_ptr<Pipe>:
-  ~Pipe();
+  ~Pipe() override;
 
   void Init();
 

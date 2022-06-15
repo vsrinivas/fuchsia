@@ -11,7 +11,6 @@
 #include <fuchsia/hardware/dsi/cpp/banjo.h>
 #include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/cpp/banjo.h>
@@ -60,7 +59,6 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::UsbModeSwitchProtocol<FragmentProxy>,
                       public ddk::VregProtocol<FragmentProxy>,
                       public ddk::GoldfishAddressSpaceProtocol<FragmentProxy>,
-                      public ddk::GoldfishPipeProtocol<FragmentProxy>,
                       public ddk::DsiProtocol<FragmentProxy>,
                       public ddk::GoldfishSyncProtocol<FragmentProxy>,
                       // TODO(fxbug.dev/32978): PciProxyBase implements
@@ -104,14 +102,6 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t EthBoardResetPhy();
   zx_status_t GoldfishAddressSpaceOpenChildDriver(address_space_child_driver_type_t type,
                                                   zx::channel request);
-  zx_status_t GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo);
-  zx_status_t GoldfishPipeSetEvent(int32_t id, zx::event pipe_event);
-  void GoldfishPipeDestroy(int32_t id);
-  void GoldfishPipeOpen(int32_t id);
-  void GoldfishPipeExec(int32_t id);
-  zx_status_t GoldfishPipeGetBti(zx::bti* out_bti);
-  zx_status_t GoldfishPipeConnectSysmem(zx::channel connection);
-  zx_status_t GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection);
   zx_status_t GoldfishSyncCreateTimeline(zx::channel request);
   zx_status_t GpioConfigIn(uint32_t flags);
   zx_status_t GpioConfigOut(uint8_t initial_value);

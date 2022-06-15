@@ -5,7 +5,7 @@
 #ifndef SRC_UI_INPUT_DRIVERS_GOLDFISH_SENSOR_ROOT_DEVICE_H_
 #define SRC_UI_INPUT_DRIVERS_GOLDFISH_SENSOR_ROOT_DEVICE_H_
 
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include <memory>
@@ -55,7 +55,6 @@ class RootDevice : public RootDeviceType {
   void OnReadSensor(PipeIo::ReadResult<char> result);
 
  private:
-  ddk::GoldfishPipeProtocolClient pipe_;
   std::unique_ptr<PipeAutoReader> auto_reader_;
   InputDeviceDispatcher input_devices_;
 

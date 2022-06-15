@@ -5,10 +5,10 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_CONTROL_CONTROL_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
@@ -86,6 +86,7 @@ class Control : public ControlType,
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   zx_status_t GoldfishControlGetColorBuffer(zx::vmo vmo, uint32_t* out_id);
   zx_status_t GoldfishControlCreateSyncFence(zx::eventpair event);
+  zx_status_t GoldfishControlConnectToPipeDevice(zx::channel channel);
 
   // Used by heaps. Removes a specific heap from the linked list.
   void RemoveHeap(Heap* heap);
@@ -131,7 +132,7 @@ class Control : public ControlType,
   zx_status_t CreateSyncKHRLocked(uint64_t* glsync_out, uint64_t* syncthread_out) TA_REQ(lock_);
 
   fbl::Mutex lock_;
-  ddk::GoldfishPipeProtocolClient pipe_;
+  fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe> pipe_;
   ddk::GoldfishControlProtocolClient control_;
   ddk::GoldfishAddressSpaceProtocolClient address_space_;
   ddk::GoldfishSyncProtocolClient sync_;

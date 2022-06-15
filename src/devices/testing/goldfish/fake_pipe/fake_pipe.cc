@@ -4,12 +4,13 @@
 
 #include "src/devices/testing/goldfish/fake_pipe/fake_pipe.h"
 
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
 
 #include <queue>
 #include <variant>
@@ -17,7 +18,7 @@
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 
-#include "fbl/auto_lock.h"
+#include "src/devices/lib/goldfish/pipe_headers/include/base.h"
 
 namespace goldfish::sensor {
 namespace testing {
@@ -30,47 +31,53 @@ const std::array<zx_paddr_t, 2> kFakeBtiPaddrs = {kIoBufferPaddr, kPinnedVmoPadd
 
 }  // namespace
 
-FakePipe::FakePipe() : proto_({&goldfish_pipe_protocol_ops_, this}) {}
+void FakePipe::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
+  fbl::AutoLock lock(&lock_);
 
-const goldfish_pipe_protocol_t* FakePipe::proto() const { return &proto_; }
-
-zx_status_t FakePipe::GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
-  *out_id = kPipeId;
-  zx_status_t status = zx::vmo::create(PAGE_SIZE, 0u, out_vmo);
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(PAGE_SIZE, 0u, &vmo);
+  vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED);
   if (status != ZX_OK) {
-    return status;
+    completer.Close(status);
+    return;
   }
-  status = out_vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &pipe_cmd_buffer_);
+  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &pipe_cmd_buffer_);
+  pipe_cmd_buffer_.set_cache_policy(ZX_CACHE_POLICY_UNCACHED);
   if (status != ZX_OK) {
-    return status;
+    completer.Close(status);
+    return;
   }
 
   pipe_created_ = true;
-  return ZX_OK;
+  completer.ReplySuccess(kPipeId, std::move(vmo));
 }
 
-zx_status_t FakePipe::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
-  if (id != kPipeId) {
-    return ZX_ERR_INVALID_ARGS;
+void FakePipe::SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) {
+  if (request->id != kPipeId) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
-  if (!pipe_event.is_valid()) {
-    return ZX_ERR_BAD_HANDLE;
+  if (!request->pipe_event.is_valid()) {
+    completer.Close(ZX_ERR_BAD_HANDLE);
+    return;
   }
-  pipe_event_ = std::move(pipe_event);
-  return ZX_OK;
+  pipe_event_ = std::move(request->pipe_event);
+  completer.ReplySuccess();
 }
 
-void FakePipe::GoldfishPipeDestroy(int32_t id) {
+void FakePipe::Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
 
   pipe_cmd_buffer_.reset();
+  completer.Reply();
 }
 
-void FakePipe::GoldfishPipeOpen(int32_t id) {
+void FakePipe::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
   auto mapping = MapCmdBuffer();
-  reinterpret_cast<pipe_cmd_buffer_t*>(mapping.start())->status = 0;
+  reinterpret_cast<PipeCmdBuffer*>(mapping.start())->status = 0;
 
   pipe_opened_ = true;
+  completer.Reply();
 }
 
 void FakePipe::EnqueueBytesToRead(const std::vector<uint8_t>& bytes) {
@@ -78,20 +85,23 @@ void FakePipe::EnqueueBytesToRead(const std::vector<uint8_t>& bytes) {
   bytes_to_read_.push(bytes);
 }
 
-void FakePipe::GoldfishPipeExec(int32_t id) {
+void FakePipe::Exec(ExecRequestView request, ExecCompleter::Sync& completer) {
   auto mapping = MapCmdBuffer();
-  pipe_cmd_buffer_t* cmd_buffer = reinterpret_cast<pipe_cmd_buffer_t*>(mapping.start());
+  PipeCmdBuffer* cmd_buffer = reinterpret_cast<PipeCmdBuffer*>(mapping.start());
   cmd_buffer->rw_params.consumed_size = 0;
   cmd_buffer->status = 0;
 
-  if (cmd_buffer->cmd == PIPE_CMD_CODE_WRITE || cmd_buffer->cmd == PIPE_CMD_CODE_CALL) {
+  if (cmd_buffer->cmd ==
+          static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kWrite) ||
+      cmd_buffer->cmd == static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kCall)) {
     // Store io buffer contents.
     auto io_buffer = MapIoBuffer();
 
     const size_t write_buffer_begin = 0;
-    const size_t write_buffer_end = cmd_buffer->cmd == PIPE_CMD_CODE_CALL
-                                        ? cmd_buffer->rw_params.read_index
-                                        : cmd_buffer->rw_params.buffers_count;
+    const size_t write_buffer_end =
+        cmd_buffer->cmd == static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kCall)
+            ? cmd_buffer->rw_params.read_index
+            : cmd_buffer->rw_params.buffers_count;
 
     for (size_t i = write_buffer_begin; i < write_buffer_end; i++) {
       auto phy_addr = cmd_buffer->rw_params.ptrs[i];
@@ -125,16 +135,19 @@ void FakePipe::GoldfishPipeExec(int32_t id) {
     }
   }
 
-  if (cmd_buffer->cmd == PIPE_CMD_CODE_READ || cmd_buffer->cmd == PIPE_CMD_CODE_CALL) {
+  if (cmd_buffer->cmd == static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kRead) ||
+      cmd_buffer->cmd == static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kCall)) {
     auto io_buffer = MapIoBuffer();
 
     const size_t read_buffer_begin =
-        cmd_buffer->cmd == PIPE_CMD_CODE_CALL ? cmd_buffer->rw_params.read_index : 0;
+        cmd_buffer->cmd == static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeCmdCode::kCall)
+            ? cmd_buffer->rw_params.read_index
+            : 0;
     const size_t read_buffer_end = cmd_buffer->rw_params.buffers_count;
 
     fbl::AutoLock lock(&lock_);
     if (bytes_to_read_.empty()) {
-      cmd_buffer->status = PIPE_ERROR_AGAIN;
+      cmd_buffer->status = static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kAgain);
       cmd_buffer->rw_params.consumed_size = 0;
     } else {
       cmd_buffer->status = 0;
@@ -169,23 +182,32 @@ void FakePipe::GoldfishPipeExec(int32_t id) {
       bytes_to_read_.pop();
     }
   }
+
+  completer.Reply();
 }
 
-zx_status_t FakePipe::GoldfishPipeGetBti(zx::bti* out_bti) {
+void FakePipe::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
 
+  zx::bti bti;
   zx_status_t status = fake_bti_create_with_paddrs(kFakeBtiPaddrs.data(), kFakeBtiPaddrs.size(),
-                                                   out_bti->reset_and_get_address());
-  if (status == ZX_OK) {
-    bti_ = out_bti->borrow();
+                                                   bti.reset_and_get_address());
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
   }
-  return status;
+  bti_ = bti.borrow();
+  completer.ReplySuccess(std::move(bti));
 }
 
-zx_status_t FakePipe::GoldfishPipeConnectSysmem(zx::channel connection) { return ZX_OK; }
+void FakePipe::ConnectSysmem(ConnectSysmemRequestView request,
+                             ConnectSysmemCompleter::Sync& completer) {
+  completer.ReplySuccess();
+}
 
-zx_status_t FakePipe::GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
-  return ZX_OK;
+void FakePipe::RegisterSysmemHeap(RegisterSysmemHeapRequestView request,
+                                  RegisterSysmemHeapCompleter::Sync& completer) {
+  completer.ReplySuccess();
 }
 
 zx_status_t FakePipe::SetUpPipeDevice() {
@@ -205,7 +227,7 @@ fzl::VmoMapper FakePipe::MapCmdBuffer() {
   fbl::AutoLock lock(&lock_);
 
   fzl::VmoMapper mapping;
-  mapping.Map(pipe_cmd_buffer_, 0, sizeof(pipe_cmd_buffer_t), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  mapping.Map(pipe_cmd_buffer_, 0, sizeof(PipeCmdBuffer), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   return mapping;
 }
 

@@ -5,7 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_RENDER_CONTROL_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_RENDER_CONTROL_H_
 
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/markers.h>
+#include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <zircon/types.h>
 
@@ -23,8 +24,8 @@ namespace goldfish {
 // https://android.googlesource.com/device/generic/goldfish-opengl/+/master/system/renderControl_enc/README
 class RenderControl {
  public:
-  explicit RenderControl(ddk::GoldfishPipeProtocolClient pipe);
-  zx_status_t InitRcPipe();
+  RenderControl() = default;
+  zx_status_t InitRcPipe(fidl::WireSyncClient<fuchsia_hardware_goldfish_pipe::GoldfishPipe>);
 
   int32_t GetFbParam(uint32_t param, int32_t default_value);
   using ColorBufferId = uint32_t;
@@ -49,7 +50,6 @@ class RenderControl {
   PipeIo* pipe_io() { return pipe_io_.get(); }
 
  private:
-  ddk::GoldfishPipeProtocolClient pipe_;
   std::unique_ptr<PipeIo> pipe_io_;
   DISALLOW_COPY_ASSIGN_AND_MOVE(RenderControl);
 };

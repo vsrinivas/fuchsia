@@ -16,17 +16,21 @@ driver_bind_rules("goldfish-bind") {
 
 common_deps = [
   ":goldfish-bind",
-  "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
+  "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
+  "//sdk/lib/driver_runtime:driver_runtime_cpp",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
+  "//src/devices/lib/driver:driver_runtime",
+  "//src/devices/lib/goldfish/pipe_headers",
   "//src/devices/lib/mmio",
   "//src/lib/ddk",
   "//src/lib/ddktl",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
   "//zircon/system/ulib/fbl",
+  "//zircon/system/ulib/svc",
   "//zircon/system/ulib/trace",
   "//zircon/system/ulib/trace:trace-driver",
   "//zircon/system/ulib/zircon-internal",
@@ -75,9 +79,9 @@ test("goldfish-pipe-device-test") {
     "pipe_device_test.cc",
   ]
   deps = common_deps + [
+           "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
            "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
            "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp_mock",
-           "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp_mock",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/mock-ddk",
            "//src/devices/lib/acpi/mock:mock-acpi",

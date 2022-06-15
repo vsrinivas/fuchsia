@@ -16,13 +16,14 @@ driver_bind_rules("goldfish_sensor-bind") {
   deps = [
     "//src/devices/bind/fuchsia.goldfish",
     "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.hardware.goldfish.pipe",
   ]
 }
 
 common_deps = [
   ":goldfish_sensor-bind",
-  "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
+  "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
   "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
   "//sdk/lib/input_report_reader:input_report_reader_sdk",
   "//sdk/lib/syslog/cpp:backend_legacy",
@@ -92,6 +93,7 @@ test("goldfish-sensor-unittest") {
            "//src/lib/fxl/test:gtest_main",
            "//src/lib/testing/loop_fixture",
            "//third_party/googletest:gtest",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
            "//zircon/system/ulib/sync",
            "//zircon/system/ulib/zircon-internal",

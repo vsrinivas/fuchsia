@@ -11,8 +11,9 @@ source_set("fake_pipe") {
   ]
 
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
     "//sdk/lib/fit",
+    "//src/devices/lib/goldfish/pipe_headers",
     "//src/devices/testing/fake-bti",
     "//src/lib/ddk",
     "//src/lib/ddktl",

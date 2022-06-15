@@ -5,9 +5,6 @@ library fuchsia.hardware.goldfish.pipe;
 
 using zx;
 
-/// Maximum number of buffers that can be used for read/write commands.
-const MAX_BUFFERS_PER_COMMAND uint32 = 336;
-
 /// Codes for supported pipe commands.
 type PipeCmdCode = strict enum : int32 {
     OPEN = 1;
@@ -35,49 +32,25 @@ type PipeError = strict enum : int32 {
     IO = -4;
 };
 
-/// Additional command parameters used for read/write commands.
-/// Note: This structure is known to both the virtual device and driver.
-@packed
-type PipeCmdReadWriteParams = struct {
-    buffers_count uint32;
-    consumed_size int32;
-    ptrs array<uint64, MAX_BUFFERS_PER_COMMAND>;
-    sizes array<uint32, MAX_BUFFERS_PER_COMMAND>;
-    read_index uint32;
-};
-
-/// Pipe command structure used for all commands.
-/// Note: This structure is known to both the virtual device and driver.
-@packed
-type PipeCmdBuffer = struct {
-    cmd int32;
-    id int32;
-    status int32;
-    reserved int32;
-    rw_params PipeCmdReadWriteParams;
-};
-
 /// This interface can be used to establish a goldfish pipe connection. The
 /// client is responsible for managing the command structure associated with
 /// the pipe and should issue a 'close' command before destroying a previously
 /// opened pipe. Failure to do so may result in host side resources that are
 /// not cleaned up properly.
-@transport("Banjo")
-@banjo_layout("ddk-protocol")
+@discoverable
 protocol GoldfishPipe {
     /// Create a new pipe connection. The |id| identifies the pipe and must be
     /// used for all subsequent commands. The memory that will be used as
     /// command structure is returned in |vmo|.
     Create() -> (resource struct {
-        s zx.status;
         id int32;
         vmo zx.handle:VMO;
-    });
+    }) error zx.status;
 
     /// Destroy a previously created pipe connection.
     Destroy(struct {
         id int32;
-    });
+    }) -> ();
 
     /// Set event used to signal device state. Discards existing event
     /// after having transferred device state to the new event, if event
@@ -89,9 +62,7 @@ protocol GoldfishPipe {
     SetEvent(resource struct {
         id int32;
         pipe_event zx.handle:EVENT;
-    }) -> (struct {
-        s zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Open pipe connection. This must be called before any other
     /// commands are issued and will cause the physical address of the
@@ -100,31 +71,26 @@ protocol GoldfishPipe {
     /// request is issued.
     Open(struct {
         id int32;
-    });
+    }) -> ();
 
     /// Execute pipe command stored in associated command structure.
     Exec(struct {
         id int32;
-    });
+    }) -> ();
 
     /// Get BTI that can be used create IO buffers for read/write commands.
     GetBti() -> (resource struct {
-        s zx.status;
         bti zx.handle:BTI;
-    });
+    }) error zx.status;
 
     /// Create a sysmem connection - used to implement fuchsia.hardware.sysmem.
     ConnectSysmem(resource struct {
         connection zx.handle:CHANNEL;
-    }) -> (struct {
-        s zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 
     /// Register a sysmem heap.
     RegisterSysmemHeap(resource struct {
         heap uint64;
         connection zx.handle:CHANNEL;
-    }) -> (struct {
-        s zx.status;
-    });
+    }) -> (struct {}) error zx.status;
 };

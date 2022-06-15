@@ -38,11 +38,6 @@ int TestBoard::Thread() {
     zxlogf(ERROR, "%s: GoldfishAddressSpaceInit failed: %d", __func__, status);
   }
 
-  status = GoldfishPipeInit();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GoldfishPipeInit failed: %d", __func__, status);
-  }
-
   status = GoldfishSyncInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GoldfishSyncInit failed: %d", __func__, status);
@@ -142,9 +137,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   const zx_bind_inst_t goldfish_address_space_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE),
   };
-  const zx_bind_inst_t goldfish_pipe_match[] = {
-      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
-  };
   const zx_bind_inst_t goldfish_sync_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_SYNC),
   };
@@ -186,9 +178,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   };
   device_fragment_part_t goldfish_address_space_fragment[] = {
       {std::size(goldfish_address_space_match), goldfish_address_space_match},
-  };
-  device_fragment_part_t goldfish_pipe_fragment[] = {
-      {std::size(goldfish_pipe_match), goldfish_pipe_match},
   };
   device_fragment_part_t goldfish_sync_fragment[] = {
       {std::size(goldfish_sync_match), goldfish_sync_match},
@@ -305,7 +294,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   device_fragment_t goldfish_composite[] = {
       {"goldfish-address", std::size(goldfish_address_space_fragment),
        goldfish_address_space_fragment},
-      {"goldfish-pipe", std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
       {"goldfish-sync", std::size(goldfish_sync_fragment), goldfish_sync_fragment},
   };
 
