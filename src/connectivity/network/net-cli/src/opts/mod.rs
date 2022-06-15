@@ -593,7 +593,7 @@ macro_rules! route_struct {
             )]
             /// the outgoing network interface of the route
             pub interface: InterfaceIdentifier,
-            #[argh(option)]
+            #[argh(option, default = "0")]
             /// the metric for the route
             pub metric: u32,
         }
