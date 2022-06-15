@@ -77,7 +77,6 @@ third_party_rust_crate_log_visibility = [
   "//src/connectivity/network/testing/network-test-realm/ffx:*",
   "//src/connectivity/network/testing/network-test-realm/service:*",
   "//src/connectivity/network/testing/network-test-realm/tests/unreliable-echo:*",
-  "//src/connectivity/network/tests/integration/management:*",
   "//src/connectivity/overnet/examples/echo:*",
   "//src/connectivity/overnet/lib/ascendd:*",
   "//src/connectivity/overnet/lib/core:*",

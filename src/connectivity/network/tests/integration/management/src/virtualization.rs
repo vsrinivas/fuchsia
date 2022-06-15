@@ -14,7 +14,6 @@ use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext};
 use fidl_fuchsia_net_virtualization as fnet_virtualization;
 use futures::StreamExt as _;
-use log::info;
 use net_declare::fidl_subnet;
 use netstack_testing_common::{
     interfaces, ping,
@@ -26,6 +25,7 @@ use netstack_testing_common::{
 use netstack_testing_macros::variants_test;
 use packet::ParseBuffer as _;
 use test_case::test_case;
+use tracing::info;
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 enum Network {
@@ -266,7 +266,7 @@ fn create_bridged_network(
     ];
     "disable_upstream")]
 async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) {
-    let () = fuchsia_syslog::init().expect("cannot init logger");
+    diagnostics_log::init!();
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let gateway_realm = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_{}_gateway", name, sub_name))
