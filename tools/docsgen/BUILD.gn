@@ -104,7 +104,11 @@ action("invoke_fidldoc") {
       },
     ]
   }
-  inputs = []
+  inputs = [
+    "$root_build_dir/host-tools/fidldoc",
+    "$root_build_dir/host-tools/fidldoc.config.json",
+    "$root_build_dir/sdk_fidl_json.json",
+  ]
 
   outputs = [ "$target_out_dir/fidldoc.zip" ]
   depfile = "$target_out_dir/$target_name.d"
@@ -122,6 +126,7 @@ action("invoke_fidldoc") {
   deps = [
     ":${_fidldoc_transforms_script_target}",
     "//build/fidl:sdk_fidl",
+    "//tools/fidl/fidldoc:fidldoc_copy_config($host_toolchain)",
     "//tools/fidl/fidldoc($host_toolchain)",
   ]
 }
