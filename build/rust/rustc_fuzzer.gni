@@ -64,6 +64,12 @@ template("rustc_fuzzer") {
     rustfunction = invoker.rustfunction
   }
 
+  if (defined(invoker.original_target_name)) {
+    _original_target_name = invoker.original_target_name
+  } else {
+    _original_target_name = target_name
+  }
+
   config(fuzzer_cfg) {
     visibility = [ ":*" ]
     rustflags = [
@@ -100,6 +106,7 @@ template("rustc_fuzzer") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
+    original_target_name = _original_target_name
   }
 
   fuzzer(fuzzer_name) {

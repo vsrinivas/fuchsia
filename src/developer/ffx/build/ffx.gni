@@ -27,13 +27,16 @@ template("ffx") {
 
   suite_name = ffx_name + "_lib"
 
+  _original_target_name = target_name
   ffx_plugin(suite_name) {
+    original_target_name = _original_target_name
     forward_variables_from(invoker, "*", [ "test_deps" ])
     config_data = [ "data/config.json" ]
   }
 
   rustc_binary(ffx_name + "_bin_unversioned") {
     output_name = ffx_name + "_unversioned"
+    original_target_name = _original_target_name
 
     # As ffx is a tool that's used by subsequent build actions, speeding up its
     # compilation allows other tasks to be started more quickly, lowering

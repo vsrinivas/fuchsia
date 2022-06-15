@@ -26,6 +26,12 @@ template("rustc_test_internal") {
     source_root = invoker.source_root
   }
 
+  if (defined(invoker.original_target_name)) {
+    _original_target_name = invoker.original_target_name
+  } else {
+    _original_target_name = target_name
+  }
+
   # use the target name unless another name is specified
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
          "Only one of output_name and name may be specified.")
@@ -92,6 +98,8 @@ template("rustc_test_internal") {
       output_name = crate_name
     }
     crate_name = crate_name
+
+    original_target_name = _original_target_name
 
     # tell rustc to compile in the test harness
     rustflags += [ "--test" ]
@@ -244,6 +252,10 @@ template("rustc_test_internal") {
 #
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
+#
+#   original_target_name (optional)
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
 #
 # Example of usage:
 #

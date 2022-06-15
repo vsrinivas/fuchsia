@@ -84,6 +84,10 @@ import("//build/toolchain/restat.gni")
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
 #
+#   original_target_name (optional)
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
+#
 # Example of usage:
 #
 #   rustc_macro("foo") {
@@ -110,6 +114,13 @@ template("rustc_macro") {
   forward_variables_from(invoker, [ "visibility" ])
 
   proc_macro_target = "${target_name}_proc_macro"
+
+  if (defined(invoker.original_target_name)) {
+    _original_target_name = invoker.original_target_name
+  } else {
+    _original_target_name = target_name
+  }
+  not_needed([ "_original_target_name" ])
 
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
          "Only one of output_name and name may be specified.")
@@ -164,6 +175,7 @@ template("rustc_macro") {
                                ])
         output_name = crate_name
       }
+      original_target_name = _original_target_name
 
       forward_variables_from(invoker,
                              [
@@ -198,10 +210,11 @@ template("rustc_macro") {
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     if (in_host_compiler_toolchain) {
       rustc_test("${target_name}_test") {
-        name = invoker.target_name + "_test"
+        name = target_name
         if (defined(invoker.name)) {
           name = invoker.name + "_test"
         }
+        original_target_name = _original_target_name
 
         forward_variables_from(invoker, "*", [ "name" ])
         configs += [ "//build/config/rust:proc_macro_test" ]

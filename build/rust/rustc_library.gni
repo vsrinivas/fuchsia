@@ -100,6 +100,10 @@ import("//build/rust/rustc_test.gni")
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
 #
+#   original_target_name (optional)
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
+#
 # Example of usage:
 #
 #   rustc_library("foo-bar") {
@@ -128,6 +132,11 @@ import("//build/rust/rustc_test.gni")
 #
 template("rustc_library") {
   not_needed(invoker, [ "version" ])
+  if (defined(invoker.original_target_name)) {
+    _original_target_name = invoker.original_target_name
+  } else {
+    _original_target_name = target_name
+  }
 
   # if "with_unit_tests" is set to true, generate an additional rust test target
   # TODO(https://fxbug.dev/72931): accept a string.
@@ -137,6 +146,7 @@ template("rustc_library") {
       if (defined(invoker.name)) {
         name = invoker.name + "_lib_test"
       }
+      original_target_name = _original_target_name
       forward_variables_from(invoker, "*", [ "name" ])
     }
   }
@@ -159,6 +169,7 @@ template("rustc_library") {
     crate_root = source_root
     clippy_crate_type = "rlib"
     crate_name = _crate_name
+    original_target_name = _original_target_name
     pass_through = {
       forward_variables_from(invoker,
                              [

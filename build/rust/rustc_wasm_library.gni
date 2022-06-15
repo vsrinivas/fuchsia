@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_artifact.gni")
-import("//build/rust/rustc_test.gni")
 
 # Defines a Rust library that outputs a shared .wasm library file.
 #
@@ -46,9 +45,6 @@ import("//build/rust/rustc_test.gni")
 #     Third party crates can be included through paths like
 #     "//third_party/rust_crates:<cratename>",
 #
-#   test_deps (optional)
-#     List of rust_library GN targets on which this crate's tests depend.
-#
 #   source_root (optional)
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
 #     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
@@ -75,6 +71,10 @@ import("//build/rust/rustc_test.gni")
 #
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
+#
+#   original_target_name (optional)
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
 #
 # Example of usage:
 #   if (current_toolchain == unknown_wasm32_toolchain) {
@@ -114,6 +114,11 @@ template("rustc_wasm_library") {
     package_name = invoker.name
   }
   crate_name = string_replace(package_name, "-", "_")
+  if (defined(invoker.original_target_name)) {
+    _original_target_name = invoker.original_target_name
+  } else {
+    _original_target_name = target_name
+  }
 
   if (defined(invoker.source_root)) {
     source_root = invoker.source_root
@@ -126,6 +131,7 @@ template("rustc_wasm_library") {
     crate_root = source_root
     clippy_crate_type = "cdylib"
     crate_name = crate_name
+    original_target_name = _original_target_name
     pass_through = {
       forward_variables_from(invoker, [ "output_dir" ])
       output_name = crate_name

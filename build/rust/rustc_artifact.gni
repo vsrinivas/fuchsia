@@ -85,12 +85,16 @@ import("//build/toolchain/rbe.gni")
 #     for targets that generate a corresponding clippy target so that clippy has access to it.
 #     See https://doc.rust-lang.org/reference/linkage.html for possible values
 #
+#   original_target_name
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
+#
 #   testonly (optional)
 #     Standard GN meaning. Testonly option for the generated targets.
 #
 #   visibility (optional)
 #     Standard GN meaning. The visibility option for the generated targets.
-
+#
 template("rustc_artifact") {
   # rustc does not support dashes in crate names
   _crate_name = string_replace(invoker.crate_name, "-", "_")
@@ -182,9 +186,12 @@ template("rustc_artifact") {
     }
     if (!_disable_clippy) {
       _outputs = get_target_outputs(":$_clippy_name")
+      _original = get_label_info(":${invoker.original_target_name}",
+                                 "label_with_toolchain")
       metadata.rust_source_map = [
         {
           clippy = get_label_info(":$_clippy_name", "label_with_toolchain")
+          original = _original
           output = rebase_path(_outputs[0], root_build_dir)
           src = []
           foreach(s, invoker.sources) {
@@ -196,6 +203,8 @@ template("rustc_artifact") {
       if (include_clippy) {
         data_deps = [ ":$_clippy_name" ]
       }
+    } else {
+      not_needed(invoker, [ "original_target_name" ])
     }
   }
 

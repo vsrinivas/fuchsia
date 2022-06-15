@@ -91,6 +91,10 @@ import("//build/rust/rustc_test.gni")
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
 #
+#   original_target_name (optional)
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
+#
 # Example of usage:
 #
 #   rustc_staticlib("foo") {
@@ -104,6 +108,11 @@ import("//build/rust/rustc_test.gni")
 #     sources = [ "src/lib.rs" ]
 #   }
 template("rustc_staticlib") {
+  if (defined(invoker.original_target_name)) {
+    _original_target_name = invoker.original_target_name
+  } else {
+    _original_target_name = target_name
+  }
   not_needed(invoker, [ "version" ])
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
          "Only one of output_name and name may be specified.")
@@ -113,6 +122,7 @@ template("rustc_staticlib") {
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test_internal("${target_name}_test") {
       not_needed(invoker, [ "public" ])
+      original_target_name = _original_target_name
       deps = []
       forward_variables_from(invoker,
                              "*",
@@ -162,6 +172,7 @@ template("rustc_staticlib") {
       forward_variables_from(invoker, [ "output_dir" ])
       output_name = rustc_target
     }
+    original_target_name = _original_target_name
 
     deps = []
     if (defined(invoker.deps)) {

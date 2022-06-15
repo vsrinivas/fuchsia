@@ -113,6 +113,10 @@ import("//build/rust/rustc_test.gni")
 #   disable_clippy (optional)
 #     Don't run clippy on this target.
 #
+#   original_target_name (optional)
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
+#
 # Example of usage:
 #
 #   rustc_binary("foo-bar") {
@@ -154,6 +158,12 @@ import("//build/rust/rustc_test.gni")
 template("rustc_binary") {
   not_needed(invoker, [ "version" ])
 
+  if (defined(invoker.original_target_name)) {
+    _original_target_name = invoker.original_target_name
+  } else {
+    _original_target_name = target_name
+  }
+
   # use the target name unless another name is specified
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
          "Only one of output_name and name may be specified.")
@@ -172,6 +182,7 @@ template("rustc_binary") {
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test_internal("${target_name}_test") {
       output_name = "${_output_name}_bin_test"
+      original_target_name = _original_target_name
 
       if (defined(invoker.test_args)) {
         args = invoker.test_args
@@ -209,6 +220,7 @@ template("rustc_binary") {
     crate_root = source_root
     clippy_crate_type = "bin"
     crate_name = _crate_name
+    original_target_name = _original_target_name
     pass_through = {
       # pass through these variables unmodified
       forward_variables_from(invoker,

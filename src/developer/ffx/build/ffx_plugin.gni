@@ -76,6 +76,10 @@ import("plugins.gni")
 #     ffx_command attribute. Due to internal dependencies this cannot
 #     be the same file as the source_root.
 #
+#   original_target_name (optional)
+#     The name of the target as it appears in the BUILD file. Enables tooling
+#     to find the template invocation in a BUILD file where this target was defined.
+#
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
@@ -118,6 +122,7 @@ template("ffx_plugin") {
 
       sub_cmd = output_name + "_sub_command"
       rustc_library(sub_cmd) {
+        edition = "2018"
         source_root = "$target_gen_dir/cmd_args.rs"
         with_unit_tests = false
 
@@ -130,6 +135,7 @@ template("ffx_plugin") {
                                "*",
                                [
                                  "name",
+                                 "edition",
                                  "deps",
                                  "args_deps",
                                  "config_data",
@@ -140,6 +146,7 @@ template("ffx_plugin") {
                                  "enforce_source_listing",
                                  "target_name",
                                  "with_unit_tests",
+                                 "original_target_name",
                                ])
       }
 
@@ -169,6 +176,11 @@ template("ffx_plugin") {
       minify = true
     }
 
+    if (defined(invoker.original_target_name)) {
+      _original_target_name = invoker.original_target_name
+    } else {
+      _original_target_name = target_name
+    }
     rustc_library(args) {
       source_root = args_source_root
 
@@ -198,6 +210,7 @@ template("ffx_plugin") {
           test_deps = invoker.test_deps
         }
       }
+      original_target_name = _original_target_name
       forward_variables_from(invoker,
                              "*",
                              [
@@ -209,6 +222,7 @@ template("ffx_plugin") {
                                "non_rust_deps",
                                "target_name",
                                "with_unit_tests",
+                               "original_target_name",
                                "test_deps",
                              ])
     }
@@ -293,7 +307,9 @@ template("ffx_plugin") {
                                  "deps",
                                  "non_rust_deps",
                                  "target_name",
+                                 "original_target_name",
                                ])
+        original_target_name = _original_target_name
       }
       suite_deps += [ ":" + execution_lib ]
 
@@ -305,6 +321,7 @@ template("ffx_plugin") {
     suite_name = output_name + "_suite"
     rustc_library(suite_name) {
       source_root = "$target_gen_dir/plugins.rs"
+      edition = "2018"
 
       with_unit_tests = false
       sources = [ "$target_gen_dir/plugins.rs" ]
@@ -316,11 +333,13 @@ template("ffx_plugin") {
                                "name",
                                "config_data",
                                "deps",
+                               "edition",
                                "non_rust_deps",
                                "target_name",
                                "sources",
                                "enforce_source_listing",
                                "with_unit_tests",
+                               "original_target_name",
                              ])
     }
   } else {
