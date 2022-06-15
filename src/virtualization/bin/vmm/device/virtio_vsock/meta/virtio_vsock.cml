@@ -10,8 +10,8 @@
     capabilities: [
         {
             protocol: [
-                "fuchsia.virtualization.GuestVsockEndpoint",
                 "fuchsia.virtualization.hardware.VirtioVsock",
+                "fuchsia.virtualization.HostVsockEndpoint",
             ],
         },
     ],
@@ -23,8 +23,8 @@
     expose: [
         {
             protocol: [
-                "fuchsia.virtualization.GuestVsockEndpoint",
                 "fuchsia.virtualization.hardware.VirtioVsock",
+                "fuchsia.virtualization.HostVsockEndpoint",
             ],
             from: "self",
         },

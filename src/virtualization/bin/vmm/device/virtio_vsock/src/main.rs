@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod connection;
+mod connection_states;
 mod device;
 mod port_manager;
 mod wire;
@@ -11,7 +12,7 @@ use {
     crate::device::VsockDevice,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_virtualization::GuestVsockEndpointRequestStream,
+    fidl_fuchsia_virtualization::{HostVsockEndpointRequest, HostVsockEndpointRequestStream},
     fidl_fuchsia_virtualization_hardware::VirtioVsockRequestStream,
     fuchsia_component::server,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
@@ -23,7 +24,7 @@ use {
 // Services exposed by the Virtio Vsock device.
 enum Services {
     VirtioVsockStart(VirtioVsockRequestStream),
-    GuestVsockEndpoint(GuestVsockEndpointRequestStream),
+    HostVsockEndpoint(HostVsockEndpointRequestStream),
 }
 
 async fn run_virtio_vsock(
@@ -58,8 +59,7 @@ async fn run_virtio_vsock(
         &[wire::RX_QUEUE_IDX, wire::TX_QUEUE_IDX, wire::EVENT_QUEUE_IDX][..],
         &guest_mem,
     )
-    .await
-    .context("Failed to initialize device")?;
+    .await?;
 
     let tx_stream = device.take_stream(wire::TX_QUEUE_IDX)?;
 
@@ -87,86 +87,47 @@ async fn run_virtio_vsock(
     Ok(())
 }
 
-async fn handle_guest_vsock_endpoint(
-    mut guest_endpoint_fidl: GuestVsockEndpointRequestStream,
+async fn handle_host_vsock_endpoint(
+    host_endpoint_fidl: HostVsockEndpointRequestStream,
     vsock_device: Rc<VsockDevice>,
 ) -> Result<(), Error> {
-    let (guest_cid, host_conn, guest_acceptor, control_handle) = guest_endpoint_fidl
-        .try_next()
-        .await?
-        .ok_or(anyhow!("Unexpected end of stream"))?
-        .into_set_context_id()
-        .ok_or(anyhow!("Expected set context id message"))?;
-
-    vsock_device
-        .legacy_set_context_id(
-            guest_cid,
-            host_conn.into_proxy()?,
-            guest_acceptor.into_stream()?,
-            control_handle,
-        )
+    host_endpoint_fidl
+        .try_for_each_concurrent(None, |request| async {
+            match request {
+                HostVsockEndpointRequest::Listen { port, acceptor, responder } => {
+                    vsock_device.listen(port, acceptor.into_proxy()?, responder).await
+                }
+                HostVsockEndpointRequest::Connect2 { guest_port, responder } => {
+                    vsock_device.client_initiated_connect(guest_port, responder).await
+                }
+            }
+        })
         .await
+        .map_err(|err| anyhow!(err))
 }
 
-async fn serve_fidl_endpoints() -> Result<(), Error> {
+#[fuchsia::main(logging = true, threads = 1)]
+async fn main() -> Result<(), Error> {
     let vsock_device = VsockDevice::new();
 
     let mut fs = server::ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(Services::VirtioVsockStart)
-        .add_fidl_service(Services::GuestVsockEndpoint);
+        .add_fidl_service(Services::HostVsockEndpoint);
     fs.take_and_serve_directory_handle().context("Error starting server")?;
     fs.for_each_concurrent(None, |request| async {
         if let Err(err) = match request {
             Services::VirtioVsockStart(stream) => {
                 run_virtio_vsock(stream, vsock_device.clone()).await
             }
-            Services::GuestVsockEndpoint(stream) => {
-                handle_guest_vsock_endpoint(stream, vsock_device.clone()).await
+            Services::HostVsockEndpoint(stream) => {
+                handle_host_vsock_endpoint(stream, vsock_device.clone()).await
             }
         } {
-            syslog::fx_log_err!("Error running virtio vsock service: {}", err);
+            syslog::fx_log_info!("Stopping virtio vsock service: {}", err);
         }
     })
     .await;
 
     Ok(())
-}
-
-#[fuchsia::main(logging = true, threads = 1)]
-async fn main() -> Result<(), Error> {
-    serve_fidl_endpoints().await
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::*,
-        fidl::endpoints::{create_endpoints, create_proxy_and_stream},
-        fidl_fuchsia_virtualization::{
-            GuestVsockAcceptorMarker, GuestVsockEndpointMarker, HostVsockConnectorMarker,
-        },
-    };
-
-    #[fuchsia::test]
-    async fn serve_guest_vsock_endpoint() {
-        let vsock_device = VsockDevice::new();
-        let (proxy, stream) = create_proxy_and_stream::<GuestVsockEndpointMarker>()
-            .expect("Failed to create GuestVsockEndpoint proxy and stream");
-
-        let (host_conn_client, _) = create_endpoints::<HostVsockConnectorMarker>()
-            .expect("Failed to create HostVsockConnector endpoints");
-        let (_, guest_acceptor_sever) = create_endpoints::<GuestVsockAcceptorMarker>()
-            .expect("Failed to create GuestVsockAcceptor endpoints");
-
-        // Simple check to validate that device handled the GuestVsockEndpoint message by checking that
-        // the default guest CID was updated.
-        let expected_guest_cid = 12345;
-        proxy.set_context_id(expected_guest_cid, host_conn_client, guest_acceptor_sever).unwrap();
-        handle_guest_vsock_endpoint(stream, vsock_device.clone())
-            .await
-            .expect("Failed to handle guest vsock endpoint");
-
-        assert_eq!(vsock_device.clone().guest_cid(), expected_guest_cid);
-    }
 }

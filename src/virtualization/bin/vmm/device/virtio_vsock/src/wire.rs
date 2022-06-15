@@ -6,8 +6,11 @@
 #![allow(dead_code)]
 
 use {
+    anyhow::{anyhow, Error},
     bitflags::bitflags,
-    zerocopy::{LittleEndian, U16, U32, U64},
+    num_derive::FromPrimitive,
+    std::convert::TryFrom,
+    zerocopy::{AsBytes, FromBytes, LittleEndian, U16, U32, U64},
 };
 
 pub type LE16 = U16<LittleEndian>;
@@ -49,7 +52,7 @@ impl VirtioVsockConfig {
 
 // 5.10.6 Device Operation
 #[repr(C, packed)]
-#[derive(Default)]
+#[derive(Default, Debug, AsBytes, FromBytes, PartialEq)]
 pub struct VirtioVsockHeader {
     pub src_cid: LE64,
     pub dst_cid: LE64,
@@ -63,7 +66,30 @@ pub struct VirtioVsockHeader {
     pub fwd_cnt: LE32,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[repr(u16)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+pub enum VsockType {
+    Stream = 1,    // VIRTIO_VSOCK_TYPE_STREAM
+    SeqPacket = 2, // VIRTIO_VSOCK_TYPE_SEQPACKET
+}
+
+impl Into<u16> for VsockType {
+    fn into(self) -> u16 {
+        self as u16
+    }
+}
+
+impl TryFrom<u16> for VsockType {
+    type Error = Error;
+
+    fn try_from(n: u16) -> Result<Self, Self::Error> {
+        <Self as num_traits::FromPrimitive>::from_u16(n)
+            .ok_or(anyhow!("Unrecognized VsockType: {}", n))
+    }
+}
+
+#[repr(u16)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
 pub enum OpType {
     Invalid = 0,       // VIRTIO_VSOCK_OP_INVALID
     Request = 1,       // VIRTIO_VSOCK_OP_REQUEST
@@ -73,4 +99,19 @@ pub enum OpType {
     ReadWrite = 5,     // VIRTIO_VSOCK_OP_RW
     CreditUpdate = 6,  // VIRTIO_VSOCK_OP_CREDIT_UPDATE
     CreditRequest = 7, // VIRTIO_VSOCK_OP_CREDIT_REQUEST
+}
+
+impl Into<u16> for OpType {
+    fn into(self) -> u16 {
+        self as u16
+    }
+}
+
+impl TryFrom<u16> for OpType {
+    type Error = Error;
+
+    fn try_from(n: u16) -> Result<Self, Self::Error> {
+        <Self as num_traits::FromPrimitive>::from_u16(n)
+            .ok_or(anyhow!("Unrecognized OpType: {}", n))
+    }
 }
