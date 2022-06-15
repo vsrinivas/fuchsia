@@ -350,3 +350,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0166_ui_stack.md
   - title: "RFC-0167: Packages in early userspace bootstrapping"
     path: /docs/contribute/governance/rfcs/0167_early_boot_packages.md
+  - title: "RFC-0168: Exposing Inspect"
+    path: /docs/contribute/governance/rfcs/0168_exposing_inspect_through_inspectsink.md

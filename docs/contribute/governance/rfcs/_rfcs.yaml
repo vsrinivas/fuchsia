@@ -2152,7 +2152,7 @@
   reviewers: ['dschuyler@google.com', 'jamesr@google.com', 'jeremymanson@google.com', 'neelsa@google.com', 'sebmarchand@google.com', 'sethladd@google.com']
   submitted: '2022-05-13'
   reviewed: '2022-05-31'
-  
+
 - name: 'RFC-0166'
   title: 'One UI Stack'
   short_description: 'Clarifies plans and policy to move all Fuchsia Products to a single graphics and input stack.'
@@ -2180,3 +2180,15 @@
   submitted: '2022-05-10'
   reviewed: '2022-06-13'
 
+- name: 'RFC-0168'
+  title: 'Exposing Inspect through InspectSink'
+  short_description: 'Define the mechanism through which Inspect is exposed by components.'
+  authors: ['miguelfrde@google.com']
+  file: '0168_exposing_inspect_through_inspectsink.md'
+  area: ['Diagnostics', 'Component Framework']
+  issue: ['100583', '93344']
+  gerrit_change_id: ['680702']
+  status: 'Accepted'
+  reviewers: ['crjohns@google.com', 'geb@google.com', 'shayba@google.com']
+  submitted: '2022-05-17'
+  reviewed: '2022-06-15'
