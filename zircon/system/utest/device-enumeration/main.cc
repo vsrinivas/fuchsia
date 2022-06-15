@@ -585,7 +585,6 @@ TEST_F(DeviceEnumerationTest, NucTest) {
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
-// `//bundles/packages/prod:wifi_intel` is required for iwlwifi-* devices to enumerate.
 TEST_F(DeviceEnumerationTest, AtlasTest) {
   static const char* kDevicePaths[] = {
       "pci-01:00.0/iwlwifi-wlanphyimpl", "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
