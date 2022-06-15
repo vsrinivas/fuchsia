@@ -28,7 +28,6 @@ Integration tests for system logging are available in these packages:
 
 * `archivist-integration-tests`
 * `archivist-integration-tests-v2`
-* `logs-redaction`
 * `test-logs-from-crashes`
 
 ## Source layout

@@ -217,7 +217,8 @@ impl ArchiveAccessor {
                     Some(ClientSelectorConfiguration::SelectAll(_)) => None,
                     _ => return Err(AccessorError::InvalidSelectors("unrecognized selectors")),
                 };
-                let logs = pipeline.read().logs(mode, selectors);
+                let logs =
+                    pipeline.read().logs(mode, selectors).map(move |inner: _| (*inner).clone());
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
             }
         }

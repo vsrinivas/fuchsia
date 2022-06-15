@@ -3,16 +3,10 @@
 // found in the LICENSE file.
 use {
     crate::{
-        accessor::ArchiveAccessor,
-        configs, constants,
-        diagnostics::AccessorStats,
-        error::Error,
+        accessor::ArchiveAccessor, configs, constants, diagnostics::AccessorStats, error::Error,
         inspect::container::UnpopulatedInspectDataContainer,
-        lifecycle::container::LifecycleDataContainer,
-        logs::redact::{RedactedItem, Redactor},
-        moniker_rewriter::MonikerRewriter,
-        repository::DataRepo,
-        ImmutableString,
+        lifecycle::container::LifecycleDataContainer, moniker_rewriter::MonikerRewriter,
+        repository::DataRepo, ImmutableString,
     },
     diagnostics_data::LogsData,
     diagnostics_hierarchy::InspectHierarchyMatcher,
@@ -32,9 +26,6 @@ struct PipelineParameters {
     name: &'static str,
     protocol_name: &'static str,
     empty_behavior: configs::EmptyBehavior,
-    // TODO(fxbug.dev/96118): Remove Redactor from Pipeline parameters and delete its code once
-    // there's complete confidence in redaction in Feedback.
-    redactor: Redactor,
     moniker_rewriter: Option<MonikerRewriter>,
 }
 
@@ -45,9 +36,6 @@ struct PipelineParameters {
 pub struct Pipeline {
     /// Static selectors that the pipeline uses. Loaded from configuration.
     static_selectors: Option<Vec<Selector>>,
-
-    /// Log redactor that the pipeline uses.
-    log_redactor: Arc<Redactor>,
 
     /// A hierarchy matcher for any selector present in the static selectors.
     moniker_to_static_matcher_map: HashMap<ImmutableString, InspectHierarchyMatcher>,
@@ -86,7 +74,6 @@ impl Pipeline {
             has_config: true,
             name: "feedback",
             empty_behavior: configs::EmptyBehavior::DoNotFilter,
-            redactor: Redactor::noop(),
             protocol_name: constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME,
             moniker_rewriter: None,
         };
@@ -105,7 +92,6 @@ impl Pipeline {
             name: "legacy_metrics",
             empty_behavior: configs::EmptyBehavior::Disable,
             protocol_name: constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME,
-            redactor: Redactor::noop(),
             moniker_rewriter: Some(MonikerRewriter::new()),
         };
         Self::new(parameters, data_repo, pipelines_path, parent_node)
@@ -124,7 +110,6 @@ impl Pipeline {
             name: "all",
             empty_behavior: configs::EmptyBehavior::Disable,
             protocol_name: ArchiveAccessorMarker::PROTOCOL_NAME,
-            redactor: Redactor::noop(),
             moniker_rewriter: None,
         };
         Self::new(parameters, data_repo, pipelines_path, parent_node)
@@ -136,7 +121,6 @@ impl Pipeline {
             _pipeline_node: None,
             moniker_to_static_matcher_map: HashMap::new(),
             static_selectors,
-            log_redactor: Arc::new(Redactor::noop()),
             stats_node: None,
             data_repo,
             moniker_rewriter: None,
@@ -155,8 +139,6 @@ impl Pipeline {
         let mut _pipeline_node = None;
         let path = format!("{}/{}", pipelines_path.display(), parameters.name);
         let mut static_selectors = None;
-        let mut redactor = Redactor::noop();
-
         let mut has_error = false;
         if parameters.has_config {
             let node = parent_node.create_child(parameters.name);
@@ -166,14 +148,12 @@ impl Pipeline {
             _pipeline_node = Some(node);
             if !config.disable_filtering {
                 static_selectors = config.take_inspect_selectors();
-                redactor = parameters.redactor;
             }
             has_error = Path::new(&path).is_dir() && config.has_error();
         }
         Pipeline {
             moniker_to_static_matcher_map: HashMap::new(),
             static_selectors,
-            log_redactor: Arc::new(redactor),
             data_repo,
             _pipeline_node,
             stats_node: None,
@@ -215,8 +195,8 @@ impl Pipeline {
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
-    ) -> impl Stream<Item = RedactedItem<LogsData>> {
-        self.log_redactor.clone().redact_stream(self.data_repo.logs_cursor(mode, selectors))
+    ) -> impl Stream<Item = Arc<LogsData>> {
+        self.data_repo.logs_cursor(mode, selectors)
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {

@@ -12,14 +12,6 @@ import 'helpers.dart';
 void main() {
   enableLoggingOutput();
 
-  test('archivist_redaction_benchmarks', () async {
-    final helper = await PerfTestHelper.make();
-    await helper.runTestComponentV2(
-        packageName: 'archivist-redaction-benchmarks',
-        componentName: 'archivist-redaction-benchmarks.cm',
-        commandArgs: PerfTestHelper.componentV2OutputPath);
-  }, timeout: Timeout.none);
-
   test('archivist_logging_benchmarks', () async {
     final helper = await PerfTestHelper.make();
     await helper.runTestComponentV2(

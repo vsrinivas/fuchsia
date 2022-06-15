@@ -9,7 +9,6 @@ pub mod debuglog;
 pub mod error;
 pub mod listener;
 pub mod multiplex;
-pub mod redact;
 pub mod socket;
 pub mod stats;
 pub mod stored_message;
