@@ -8,8 +8,10 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/drivers/README.md
-- title: "Driver framework"
+- title: "Driver framework (DFv2)"
   path: /docs/concepts/drivers/driver_framework.md
+- title: "Comparison between DFv1 and DFv2"
+  path: /docs/concepts/drivers/comparison_between_dfv1_and_dfv2.md
 - title: "Drivers and nodes"
   path: /docs/concepts/drivers/drivers_and_nodes.md
 - title: "Driver binding"

@@ -16,12 +16,13 @@ all devices (known as [nodes][nodes]) and drivers in a Fuchsia system.
 Important: These pages contain information that is specific to the new
 version of the driver framework (DFv2).
 
-*  [Driver framework][driver-framework]
+*  [Driver framework (DFv2)][driver-framework]
    *  [Driver manager][driver-manager]
    *  [Driver host][driver-host]
    *  [Driver index][driver-index]
    *  [Driver runtime][driver-runtime]
    *  [FIDL interface][fidl-interface]
+*  [Comparison between DFv1 and DFv2][dfv1-and-dfv2]
 *  [Drivers and nodes][nodes]
    *  [Node properties][node-properties]
    *  [Node capabilities][node-capabilities]
@@ -44,6 +45,7 @@ version of the driver framework (DFv2).
 [driver-index]: driver_framework.md#driver_index
 [driver-runtime]: driver_framework.md#driver_runtime
 [fidl-interface]: driver_framework.md#fidl_interface
+[dfv1-and-dfv2]: comparison_between_dfv1_and_dfv2.md
 [nodes]: drivers_and_nodes.md
 [node-properties]: drivers_and_nodes.md#node_properties
 [node-capabilities]: drivers_and_nodes.md#node_capabilities
