@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::crypt::{
-        Crypt, KeyBytes, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeyBytes,
-        WrappedKeys, KEY_SIZE,
-    },
+    crate::crypt::{Crypt, KeyPurpose, UnwrappedKey, WrappedKey, WrappedKeyBytes, KEY_SIZE},
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     fidl_fuchsia_fxfs::{CryptProxy, KeyPurpose as FidlKeyPurpose},
@@ -38,40 +35,35 @@ impl Crypt for RemoteCrypt {
         &self,
         owner: u64,
         purpose: KeyPurpose,
-    ) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
+    ) -> Result<(WrappedKey, UnwrappedKey), Error> {
         let (wrapping_key_id, key, unwrapped_key) =
             self.client.create_key(owner, purpose.into()).await?.map_err(|e| anyhow!(e))?;
         Ok((
-            WrappedKeys(vec![WrappedKey {
+            WrappedKey {
                 wrapping_key_id,
-                // TODO(fxbug.dev/96131): For key rolling, we need to assign a key ID which doesn't
-                // already exist for the object.
-                key_id: 0,
                 key: WrappedKeyBytes(
                     key.try_into().map_err(|_| anyhow!("Unexpected wrapped key length"))?,
                 ),
-            }]),
-            vec![UnwrappedKey::new(
-                0,
+            },
+            UnwrappedKey::new(
                 unwrapped_key.try_into().map_err(|_| anyhow!("Unexpected unwrapped key length"))?,
-            )],
+            ),
         ))
     }
 
     async fn unwrap_key(
         &self,
-        wrapping_key_id: u64,
-        key: &WrappedKeyBytes,
+        wrapped_key: &WrappedKey,
         owner: u64,
-    ) -> Result<KeyBytes, Error> {
+    ) -> Result<UnwrappedKey, Error> {
         let unwrapped = self
             .client
-            .unwrap_key(wrapping_key_id, owner, &key[..])
+            .unwrap_key(wrapped_key.wrapping_key_id, owner, &wrapped_key.key[..])
             .await?
             .map_err(|e| anyhow!(e))?;
         if unwrapped.len() != KEY_SIZE {
             bail!("Unexpected key length");
         }
-        Ok(unwrapped.try_into().unwrap())
+        Ok(UnwrappedKey::new(unwrapped.try_into().unwrap()))
     }
 }

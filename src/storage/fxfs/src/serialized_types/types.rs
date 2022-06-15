@@ -5,11 +5,8 @@
 use crate::{
     lsm_tree::LayerInfo,
     object_store::{
-        journal::super_block::SuperBlockV1,
-        transaction::{Mutation, MutationV1},
-        AllocatorInfo, AllocatorInfoV1, AllocatorKey, AllocatorValue, EncryptedMutations,
-        JournalRecord, JournalRecordV1, ObjectKey, ObjectValue, StoreInfo, StoreInfoV1, SuperBlock,
-        SuperBlockRecord,
+        transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
+        JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -20,7 +17,7 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// If making a breaking change, please see EARLIEST_SUPPORTED_VERSION (below).
-pub const LATEST_VERSION: Version = Version { major: 20, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 21, minor: 0 };
 
 /// The earliest supported version of the on-disk filesystem format.
 ///
@@ -28,11 +25,10 @@ pub const LATEST_VERSION: Version = Version { major: 20, minor: 0 };
 /// 1) LATEST_VERSION should have it's major component increased (see above).
 /// 2) EARLIEST_SUPPORTED_VERSION should be set to the new LATEST_VERSION.
 /// 3) The SuperBlock version (below) should also be set to the new LATEST_VERSION.
-pub const EARLIEST_SUPPORTED_VERSION: Version = Version { major: 16, minor: 0 };
+pub const EARLIEST_SUPPORTED_VERSION: Version = Version { major: 21, minor: 0 };
 
 versioned_type! {
     18.. => AllocatorInfo,
-    16.. => AllocatorInfoV1,
 }
 versioned_type! {
     1.. => AllocatorKey,
@@ -45,14 +41,12 @@ versioned_type! {
 }
 versioned_type! {
     20.. => JournalRecord,
-    15.. => JournalRecordV1,
 }
 versioned_type! {
     1.. => LayerInfo,
 }
 versioned_type! {
     20.. => Mutation,
-    15.. => MutationV1,
 }
 versioned_type! {
     5.. => ObjectKey,
@@ -62,11 +56,9 @@ versioned_type! {
 }
 versioned_type! {
     17.. => StoreInfo,
-    8.. => StoreInfoV1,
 }
 versioned_type! {
-    19.. => SuperBlock,
-    16.. => SuperBlockV1,
+    21.. => SuperBlock,
 }
 versioned_type! {
     5.. => SuperBlockRecord,

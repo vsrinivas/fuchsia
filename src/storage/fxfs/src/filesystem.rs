@@ -16,7 +16,7 @@ use {
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint, JournalOptions},
             object_manager::ObjectManager,
             transaction::{
-                AssocObj, LockKey, LockManager, MetadataReservation, Mutation, Options, ReadGuard,
+                self, AssocObj, LockKey, LockManager, MetadataReservation, Mutation, ReadGuard,
                 Transaction, TransactionHandler, TransactionLocks, WriteGuard,
                 TRANSACTION_METADATA_MAX_AMOUNT,
             },
@@ -44,6 +44,32 @@ pub const MIN_BLOCK_SIZE: u64 = 4096;
 pub struct Info {
     pub total_bytes: u64,
     pub used_bytes: u64,
+}
+
+pub struct Options {
+    /// The metadata keys will be rolled after this many bytes.  This must be large enough such that
+    /// we can't end up with more than two live keys (so it must be bigger than the maximum possible
+    /// size of unflushed journal contents).  This is exposed for testing purposes.
+    pub roll_metadata_key_byte_count: u64,
+
+    #[cfg(test)]
+    pub after_metadata_key_roll_hook: Option<
+        Box<
+            dyn Fn(Arc<dyn Filesystem>) -> futures::future::BoxFuture<'static, Result<(), Error>>
+                + Send
+                + Sync,
+        >,
+    >,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            roll_metadata_key_byte_count: 128 * 1024 * 1024,
+            #[cfg(test)]
+            after_metadata_key_roll_hook: None,
+        }
+    }
 }
 
 #[async_trait]
@@ -77,6 +103,9 @@ pub trait Filesystem: TransactionHandler {
     fn trace(&self) -> bool {
         false
     }
+
+    /// Returns the filesystem options.
+    fn options(&self) -> &Options;
 }
 
 /// The context in which a transaction is being applied.
@@ -191,6 +220,7 @@ pub struct FxFilesystem {
     trace: bool,
     graveyard: Arc<Graveyard>,
     completed_transactions: UintMetric,
+    options: Options,
 }
 
 #[derive(Default)]
@@ -204,6 +234,9 @@ pub struct OpenOptions {
 
     /// Called each time a new store is registered with ObjectManager.
     pub on_new_store: Option<Box<dyn Fn(&ObjectStore) + Send + Sync>>,
+
+    /// Filesystem options.
+    pub filesystem_options: Options,
 }
 
 impl FxFilesystem {
@@ -225,6 +258,7 @@ impl FxFilesystem {
             trace: false,
             graveyard: Graveyard::new(objects.clone()),
             completed_transactions: UintMetric::new("completed_transactions", 0),
+            options: Default::default(),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
@@ -241,7 +275,7 @@ impl FxFilesystem {
             .clone()
             .new_transaction(
                 &[LockKey::object(root_store.store_object_id(), root_directory.object_id())],
-                Options::default(),
+                transaction::Options::default(),
             )
             .await?;
         let volume_directory =
@@ -274,6 +308,7 @@ impl FxFilesystem {
             trace: options.trace,
             graveyard: Graveyard::new(objects.clone()),
             completed_transactions: UintMetric::new("completed_transactions", 0),
+            options: options.filesystem_options,
         });
         if !options.read_only {
             // See comment in JournalRecord::DidFlushDevice for why we need to flush the device
@@ -341,7 +376,7 @@ impl FxFilesystem {
 
     async fn reservation_for_transaction<'a>(
         self: &Arc<Self>,
-        options: Options<'a>,
+        options: transaction::Options<'a>,
     ) -> Result<(MetadataReservation, Option<&'a Reservation>, Option<Hold<'a>>), Error> {
         if !options.skip_journal_checks {
             // TODO(fxbug.dev/96073): for now, we don't allow for transactions that might be
@@ -438,6 +473,10 @@ impl Filesystem for FxFilesystem {
     fn trace(&self) -> bool {
         self.trace
     }
+
+    fn options(&self) -> &Options {
+        &self.options
+    }
 }
 
 #[async_trait]
@@ -445,7 +484,7 @@ impl TransactionHandler for FxFilesystem {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
-        options: Options<'a>,
+        options: transaction::Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
         let (metadata_reservation, allocator_reservation, hold) =
             self.reservation_for_transaction(options).await?;

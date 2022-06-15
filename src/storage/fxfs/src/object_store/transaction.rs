@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        crypt::WrappedKey,
         debug_assert_not_too_long,
         log::*,
         lsm_tree::types::Item,
@@ -120,29 +121,6 @@ pub trait TransactionHandler: Send + Sync {
     async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a>;
 }
 
-#[derive(Serialize, Deserialize, Versioned)]
-pub enum MutationV1 {
-    ObjectStore(ObjectStoreMutation),
-    EncryptedObjectStore(Box<[u8]>),
-    Allocator(AllocatorMutation),
-    BeginFlush,
-    EndFlush,
-    UpdateBorrowed(u64),
-}
-
-impl From<MutationV1> for Mutation {
-    fn from(old: MutationV1) -> Self {
-        match old {
-            MutationV1::ObjectStore(m) => Mutation::ObjectStore(m),
-            MutationV1::EncryptedObjectStore(data) => Mutation::EncryptedObjectStore(data),
-            MutationV1::Allocator(a) => Mutation::Allocator(a),
-            MutationV1::BeginFlush => Mutation::BeginFlush,
-            MutationV1::EndFlush => Mutation::EndFlush,
-            MutationV1::UpdateBorrowed(bytes) => Mutation::UpdateBorrowed(bytes),
-        }
-    }
-}
-
 /// The journal consists of these records which will be replayed at mount time.  Within a
 /// transaction, these are stored as a set which allows some mutations to be deduplicated and found
 /// (and we require custom comparison functions below).  For example, we need to be able to find
@@ -160,6 +138,7 @@ pub enum Mutation {
     // Volume has been deleted.  Requires we remove it from the set of managed ObjectStore.
     DeleteVolume,
     UpdateBorrowed(u64),
+    UpdateMutationsKey(UpdateMutationsKey),
 }
 
 impl Mutation {
@@ -182,6 +161,10 @@ impl Mutation {
             item: Item::new(key, value),
             op: Operation::Merge,
         })
+    }
+
+    pub fn update_mutations_key(key: WrappedKey) -> Self {
+        Mutation::UpdateMutationsKey(UpdateMutationsKey(key))
     }
 }
 
@@ -292,6 +275,29 @@ impl Ord for AllocatorMutation {
 impl PartialOrd for AllocatorMutation {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UpdateMutationsKey(pub WrappedKey);
+
+impl Ord for UpdateMutationsKey {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self as *const UpdateMutationsKey).cmp(&(other as *const _))
+    }
+}
+
+impl PartialOrd for UpdateMutationsKey {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for UpdateMutationsKey {}
+
+impl PartialEq for UpdateMutationsKey {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
     }
 }
 
@@ -523,8 +529,10 @@ impl<'a> Transaction<'a> {
         self.handler.clone().commit_transaction(&mut self).await
     }
 
-    /// Commits and then runs the callback whilst locks are held.  The callback accepts a single
-    /// parameter which is the journal offset of the transaction.
+    /// Commits and then runs the callback whilst locks are held.  Specifically, any write locks and
+    /// upgraded transaction locks will be held, but other transactions can still be committed
+    /// whilst the callback is running.  The callback accepts a single parameter which is the
+    /// journal offset of the transaction.
     pub async fn commit_with_callback<R>(mut self, f: impl FnOnce(u64) -> R) -> Result<R, Error> {
         debug!(txn = ?&self, "Commit");
         Ok(f(self.handler.clone().commit_transaction(&mut self).await?))

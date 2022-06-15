@@ -30,23 +30,12 @@ const SECTOR_SIZE: u64 = 512;
 pub type KeyBytes = [u8; KEY_SIZE];
 
 pub struct UnwrappedKey {
-    id: u64,
     key: KeyBytes,
 }
 
-impl std::fmt::Debug for UnwrappedKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("UnwrappedKey").field("id", &self.id).finish()
-    }
-}
-
 impl UnwrappedKey {
-    pub fn new(id: u64, key: KeyBytes) -> Self {
-        UnwrappedKey { id, key }
-    }
-
-    pub fn id(&self) -> u64 {
-        self.id
+    pub fn new(key: KeyBytes) -> Self {
+        UnwrappedKey { key }
     }
 
     pub fn key(&self) -> &KeyBytes {
@@ -54,7 +43,7 @@ impl UnwrappedKey {
     }
 }
 
-pub type UnwrappedKeys = Vec<UnwrappedKey>;
+pub type UnwrappedKeys = Vec<(u64, UnwrappedKey)>;
 
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq)]
@@ -124,8 +113,6 @@ pub struct WrappedKey {
     /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
     /// unwrapping.
     pub wrapping_key_id: u64,
-    /// Each of the keys is given an identifier.  The identifier is unique to the object.
-    pub key_id: u64,
     /// AES 256 requires a 512 bit key, which is made of two 256 bit keys, one for the data and one
     /// for the tweak.  Both those keys are derived from the single 256 bit key we have here.
     /// Since the key is wrapped with AES-GCM-SIV, there are an additional 16 bytes paid per key (so
@@ -133,12 +120,13 @@ pub struct WrappedKey {
     pub key: WrappedKeyBytes,
 }
 
-/// To support key rolling and clones, a file can have more than one key.
+/// To support key rolling and clones, a file can have more than one key.  Each key has an ID that
+/// unique to the file.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct WrappedKeys(pub Vec<WrappedKey>);
+pub struct WrappedKeys(pub Vec<(u64, WrappedKey)>);
 
 impl std::ops::Deref for WrappedKeys {
-    type Target = [WrappedKey];
+    type Target = [(u64, WrappedKey)];
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -155,15 +143,15 @@ impl XtsCipherSet {
     pub fn new(keys: &UnwrappedKeys) -> Self {
         Self(
             keys.iter()
-                .map(|k| XtsCipher {
-                    id: k.id,
+                .map(|(id, k)| XtsCipher {
+                    id: *id,
                     // Note: The "128" in `Xts128` refers to the cipher block size, not the key size
                     // (and not the device sector size). AES-256, like all forms of AES, have a
                     // 128-bit block size, and so will work with `Xts128`.  The same key is used for
                     // for encrypting the data and computing the tweak.
                     xts: Xts128::<Aes256>::new(
-                        Aes256::new(GenericArray::from_slice(&k.key)),
-                        Aes256::new(GenericArray::from_slice(&k.key)),
+                        Aes256::new(GenericArray::from_slice(k.key())),
+                        Aes256::new(GenericArray::from_slice(k.key())),
                     ),
                 })
                 .collect(),
@@ -265,26 +253,17 @@ pub trait Crypt: Send + Sync {
         &self,
         owner: u64,
         purpose: KeyPurpose,
-    ) -> Result<(WrappedKeys, UnwrappedKeys), Error>;
+    ) -> Result<(WrappedKey, UnwrappedKey), Error>;
 
     // Unwraps a single key.
-    async fn unwrap_key(
-        &self,
-        wrapping_key_id: u64,
-        key: &WrappedKeyBytes,
-        owner: u64,
-    ) -> Result<KeyBytes, Error>;
+    async fn unwrap_key(&self, wrapped_key: &WrappedKey, owner: u64)
+        -> Result<UnwrappedKey, Error>;
 
     /// Unwraps the keys and stores the result in UnwrappedKeys.
     async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
         let mut futures = vec![];
-        for key in keys.iter() {
-            futures.push(async move {
-                Ok(UnwrappedKey::new(
-                    key.key_id,
-                    self.unwrap_key(key.wrapping_key_id, &key.key, owner).await?,
-                ))
-            });
+        for (key_id, key) in keys.iter() {
+            futures.push(async move { Ok((*key_id, self.unwrap_key(key, owner).await?)) });
         }
         futures::future::try_join_all(futures).await
     }
@@ -294,8 +273,8 @@ pub trait Crypt: Send + Sync {
 pub mod insecure {
     use {
         super::{
-            Crypt, KeyBytes, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeyBytes,
-            WrappedKeys, KEY_SIZE, WRAPPED_KEY_SIZE,
+            Crypt, KeyBytes, KeyPurpose, UnwrappedKey, WrappedKey, WrappedKeyBytes, KEY_SIZE,
+            WRAPPED_KEY_SIZE,
         },
         anyhow::Error,
         async_trait::async_trait,
@@ -323,7 +302,7 @@ pub mod insecure {
             &self,
             owner: u64,
             purpose: KeyPurpose,
-        ) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
+        ) -> Result<(WrappedKey, UnwrappedKey), Error> {
             let mut rng = rand::thread_rng();
             let mut key: KeyBytes = [0; KEY_SIZE];
             rng.fill_bytes(&mut key);
@@ -339,30 +318,26 @@ pub mod insecure {
                 let j = i % wrap_xor.len();
                 wrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
             }
-            Ok((
-                WrappedKeys(vec![WrappedKey { wrapping_key_id, key_id: 0, key: wrapped }]),
-                vec![UnwrappedKey::new(0, key)],
-            ))
+            Ok((WrappedKey { wrapping_key_id, key: wrapped }, UnwrappedKey::new(key)))
         }
 
         async fn unwrap_key(
             &self,
-            wrapping_key_id: u64,
-            key: &WrappedKeyBytes,
+            wrapped_key: &WrappedKey,
             owner: u64,
-        ) -> Result<KeyBytes, Error> {
+        ) -> Result<UnwrappedKey, Error> {
             let mut unwrapped: KeyBytes = [0; KEY_SIZE];
             let owner_bytes = owner.to_le_bytes();
-            let wrap_xor = match wrapping_key_id {
+            let wrap_xor = match wrapped_key.wrapping_key_id {
                 0 => &DATA_WRAP_XOR,
                 1 => &METADATA_WRAP_XOR,
-                _ => panic!("Unexpected wrapping key ID for {:?}", key),
+                _ => panic!("Unexpected wrapping key ID for {:?}", wrapped_key),
             };
             for i in 0..unwrapped.len() {
                 let j = i % wrap_xor.len();
-                unwrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
+                unwrapped[i] = wrapped_key.key[i] ^ wrap_xor[j] ^ owner_bytes[j];
             }
-            Ok(unwrapped)
+            Ok(UnwrappedKey::new(unwrapped))
         }
     }
 }
@@ -373,13 +348,10 @@ mod tests {
 
     #[test]
     fn test_stream_cipher_offset() {
-        let key = UnwrappedKey::new(
-            0,
-            [
-                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-                24, 25, 26, 27, 28, 29, 30, 31, 32,
-            ],
-        );
+        let key = UnwrappedKey::new([
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+            25, 26, 27, 28, 29, 30, 31, 32,
+        ]);
         let mut cipher1 = StreamCipher::new(&key, 0);
         let mut p1 = [1, 2, 3, 4];
         let mut c1 = p1.clone();

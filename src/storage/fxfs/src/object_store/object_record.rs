@@ -31,6 +31,8 @@ pub enum ObjectKeyData {
     /// A generic, untyped object.  This must come first and sort before all other keys for a given
     /// object because it's also used as a tombstone and it needs to merge with all following keys.
     Object,
+    /// Encryption keys for an object.
+    Keys,
     /// An attribute associated with an object.  It has a 64-bit ID.
     Attribute(u64, AttributeKey),
     /// A child of a directory.
@@ -59,6 +61,11 @@ impl ObjectKey {
     /// Creates a generic ObjectKey.
     pub fn object(object_id: u64) -> Self {
         Self { object_id: object_id, data: ObjectKeyData::Object }
+    }
+
+    /// Creates an ObjectKey for encryption keys.
+    pub fn keys(object_id: u64) -> Self {
+        Self { object_id, data: ObjectKeyData::Keys }
     }
 
     /// Creates an ObjectKey for an attribute.
@@ -231,8 +238,6 @@ pub enum ObjectKind {
         refs: u64,
         /// The number of bytes allocated to all extents across all attributes for this file.
         allocated_size: u64,
-        /// The encryption keys for the file.
-        keys: EncryptionKeys,
     },
     Directory {
         /// The number of sub-directories in this directory.
@@ -243,7 +248,6 @@ pub enum ObjectKind {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum EncryptionKeys {
-    None,
     AES256XTS(WrappedKeys),
 }
 
@@ -272,6 +276,8 @@ pub enum ObjectValue {
     Some,
     /// The value for an ObjectKey::Object record.
     Object { kind: ObjectKind, attributes: ObjectAttributes },
+    /// Encryption keys for an object.
+    Keys(EncryptionKeys),
     /// An attribute associated with a file object. |size| is the size of the attribute in bytes.
     Attribute { size: u64 },
     /// An extent associated with an object.
@@ -288,12 +294,14 @@ impl ObjectValue {
         allocated_size: u64,
         creation_time: Timestamp,
         modification_time: Timestamp,
-        keys: EncryptionKeys,
     ) -> ObjectValue {
         ObjectValue::Object {
-            kind: ObjectKind::File { refs, allocated_size, keys },
+            kind: ObjectKind::File { refs, allocated_size },
             attributes: ObjectAttributes { creation_time, modification_time },
         }
+    }
+    pub fn keys(keys: EncryptionKeys) -> ObjectValue {
+        ObjectValue::Keys(keys)
     }
     /// Creates an ObjectValue for an object attribute.
     pub fn attribute(size: u64) -> ObjectValue {

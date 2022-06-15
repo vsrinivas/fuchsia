@@ -30,7 +30,9 @@ use {
         },
         range::RangeExt,
         round::round_down,
-        serialized_types::{Version, Versioned, VersionedLatest, MAX_SERIALIZED_RECORD_SIZE},
+        serialized_types::{
+            Version, Versioned, VersionedLatest, DEFAULT_MAX_SERIALIZED_RECORD_SIZE,
+        },
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
@@ -349,22 +351,6 @@ pub enum AllocatorValue {
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 
-#[derive(Deserialize, Serialize, Versioned)]
-pub struct AllocatorInfoV1 {
-    pub layers: Vec<u64>,
-    pub allocated_bytes: BTreeMap<u64, u64>,
-}
-
-impl From<AllocatorInfoV1> for AllocatorInfo {
-    fn from(other: AllocatorInfoV1) -> Self {
-        Self {
-            layers: other.layers,
-            allocated_bytes: other.allocated_bytes,
-            marked_for_deletion: HashSet::new(),
-        }
-    }
-}
-
 #[derive(Debug, Default, Clone, Deserialize, Serialize, Versioned)]
 pub struct AllocatorInfo {
     /// Holds the set of layer file object_id for the LSM tree (newest first).
@@ -380,9 +366,10 @@ const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131_072;
 /// Computes the target maximum extent size based on the block size of the allocator.
 pub fn max_extent_size_for_block_size(block_size: u64) -> u64 {
     // Each block in an extent contains an 8-byte checksum (which due to varint encoding is 9
-    // bytes), and a given extent record must be no larger MAX_SERIALIZED_RECORD_SIZE.  We also need
-    // to leave a bit of room (arbitrarily, 64 bytes) for the rest of the extent's metadata.
-    block_size * (MAX_SERIALIZED_RECORD_SIZE - 64) / 9
+    // bytes), and a given extent record must be no larger DEFAULT_MAX_SERIALIZED_RECORD_SIZE.  We
+    // also need to leave a bit of room (arbitrarily, 64 bytes) for the rest of the extent's
+    // metadata.
+    block_size * (DEFAULT_MAX_SERIALIZED_RECORD_SIZE - 64) / 9
 }
 
 struct SimpleAllocatorStats {
@@ -1241,7 +1228,7 @@ impl JournalingObject for SimpleAllocator {
         transaction.commit_with_callback(|_| self.tree.set_layers(layers)).await?;
 
         // At this point we've committed the new layers to disk so we can start using them.
-        // This means we can also switch to the new ALlocatorInfo which clears marked_for_deletion.
+        // This means we can also switch to the new AllocatorInfo which clears marked_for_deletion.
         self.inner.lock().unwrap().info = new_info;
 
         // Now close the layers and purge them.

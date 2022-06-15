@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::crypt::UnwrappedKey,
     aes::{cipher::generic_array::GenericArray, Aes256, BlockEncrypt, NewBlockCipher},
     byteorder::{BigEndian, ByteOrder},
 };
@@ -16,8 +17,8 @@ pub struct Ff1 {
 }
 
 impl Ff1 {
-    pub fn new(key: &[u8; 32]) -> Self {
-        let cipher = Aes256::new(GenericArray::from_slice(key));
+    pub fn new(key: &UnwrappedKey) -> Self {
+        let cipher = Aes256::new(GenericArray::from_slice(key.key()));
         // See step 5 from the specification. radix = 2, u = 16, n = 32.
         let mut initial_block = [1, 2, 1, 0, 0, 2, 10, 16, 0, 0, 0, 32, 0, 0, 0, 0];
         cipher.encrypt_block(GenericArray::from_mut_slice(&mut initial_block));
@@ -77,19 +78,19 @@ impl Ff1 {
 
 #[cfg(test)]
 mod tests {
-    use {super::Ff1, rand};
+    use {super::Ff1, crate::crypt::UnwrappedKey, rand};
 
     #[test]
     fn test_ff1() {
         // These values have been compared against other ff1 implementations.
-        let ff1 = Ff1::new(&[0; 32]);
+        let ff1 = Ff1::new(&UnwrappedKey::new([0; 32]));
         assert_eq!(ff1.encrypt(1), 0x27c9468);
         assert_eq!(ff1.encrypt(999), 0x87a92dd5);
 
-        let ff1 = Ff1::new(&[
+        let ff1 = Ff1::new(&UnwrappedKey::new([
             1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
             0, 1, 2,
-        ]);
+        ]));
         assert_eq!(ff1.encrypt(1), 0x92fac14e);
         assert_eq!(ff1.encrypt(999), 0x6d2cd513);
 

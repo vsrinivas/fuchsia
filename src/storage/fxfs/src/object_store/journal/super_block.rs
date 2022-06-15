@@ -153,46 +153,6 @@ pub struct SuperBlock {
 }
 
 #[derive(Serialize, Deserialize, Versioned)]
-pub struct SuperBlockV1 {
-    guid: [u8; 16],
-    generation: u64,
-    root_parent_store_object_id: u64,
-    root_parent_graveyard_directory_object_id: u64,
-    root_store_object_id: u64,
-    allocator_object_id: u64,
-    journal_object_id: u64,
-    journal_checkpoint: JournalCheckpoint,
-    super_block_journal_file_offset: u64,
-    journal_file_offsets: HashMap<u64, u64>,
-    borrowed_metadata_space: u64,
-}
-
-impl From<SuperBlockV1> for SuperBlock {
-    fn from(old: SuperBlockV1) -> SuperBlock {
-        // The earliest version wasn't tracked before Fxfs 19.
-        // At that time, the earliest version supported was 16 so we're hard coding
-        // it as that until such time as this migration path is no longer required.
-        const EARLIEST_VERSION: Version = Version { major: 16, minor: 0 };
-
-        SuperBlock {
-            guid: old.guid,
-            generation: old.generation,
-            root_parent_store_object_id: old.root_parent_store_object_id,
-            root_parent_graveyard_directory_object_id: old
-                .root_parent_graveyard_directory_object_id,
-            root_store_object_id: old.root_store_object_id,
-            allocator_object_id: old.allocator_object_id,
-            journal_object_id: old.journal_object_id,
-            journal_checkpoint: old.journal_checkpoint,
-            super_block_journal_file_offset: old.super_block_journal_file_offset,
-            journal_file_offsets: old.journal_file_offsets,
-            borrowed_metadata_space: old.borrowed_metadata_space,
-            earliest_version: EARLIEST_VERSION,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Versioned)]
 pub enum SuperBlockRecord {
     // When reading the super-block we know the initial extent, but not subsequent extents, so these
     // records need to exist to allow us to completely read the super-block.

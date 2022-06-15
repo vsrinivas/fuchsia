@@ -27,8 +27,9 @@ pub use store_object_handle::StoreObjectHandle;
 
 use {
     crate::{
-        crypt::{Crypt, KeyPurpose, StreamCipher, WrappedKeyBytes, WrappedKeys},
+        crypt::{Crypt, KeyPurpose, StreamCipher, WrappedKey, WrappedKeys},
         data_buffer::{DataBuffer, MemDataBuffer},
+        debug_assert_not_too_long,
         errors::FxfsError,
         ff1::Ff1,
         filesystem::{ApplyContext, ApplyMode, Filesystem, FxFilesystem, JournalingObject},
@@ -44,13 +45,13 @@ use {
             journal::JournalCheckpoint,
             transaction::{
                 AssocObj, AssociatedObject, LockKey, ObjectStoreMutation, Operation, Options,
-                Transaction,
+                Transaction, UpdateMutationsKey,
             },
         },
         serialized_types::{Version, Versioned, VersionedLatest},
     },
     allocator::Allocator,
-    anyhow::{anyhow, bail, Context, Error},
+    anyhow::{anyhow, bail, ensure, Context, Error},
     async_trait::async_trait,
     once_cell::sync::OnceCell,
     serde::{Deserialize, Serialize},
@@ -67,9 +68,9 @@ use {
 };
 
 // Exposed for serialized_types.
-pub use allocator::{AllocatorInfo, AllocatorInfoV1, AllocatorKey, AllocatorValue};
+pub use allocator::{AllocatorInfo, AllocatorKey, AllocatorValue};
 pub use extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID};
-pub use journal::{JournalRecord, JournalRecordV1, SuperBlock, SuperBlockRecord};
+pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord};
 pub use object_record::{
     AttributeKey, EncryptionKeys, ObjectAttributes, ObjectKey, ObjectKeyData, ObjectKind,
     ObjectValue,
@@ -116,7 +117,7 @@ pub struct StoreInfo {
     object_count: u64,
 
     /// The (wrapped) key that encrypted mutations should use.
-    mutations_key: Option<WrappedKeys>,
+    mutations_key: Option<WrappedKey>,
 
     /// Mutations for the store are encrypted using a stream cipher.  To decrypt the mutations, we
     /// need to know the offset in the cipher stream to start it.
@@ -130,7 +131,7 @@ pub struct StoreInfo {
     /// reveal (such as the number of files in the system and the ordering of their creation in
     /// time).  Only the bottom 32 bits of the object ID are encrypted whilst the top 32 bits will
     /// increment after 2^32 object IDs have been used and this allows us to roll the key.
-    object_id_key: Option<(u64, WrappedKeyBytes)>,
+    object_id_key: Option<WrappedKey>,
 }
 
 impl StoreInfo {
@@ -141,40 +142,13 @@ impl StoreInfo {
     }
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Versioned)]
-pub struct StoreInfoV1 {
-    guid: [u8; 16],
-    last_object_id: u64,
-    layers: Vec<u64>,
-    root_directory_object_id: u64,
-    graveyard_directory_object_id: u64,
-    object_count: u64,
-    mutations_key: Option<WrappedKeys>,
-    mutations_cipher_offset: u64,
-    encrypted_mutations_object_id: u64,
-}
-
-impl From<StoreInfoV1> for StoreInfo {
-    fn from(old: StoreInfoV1) -> StoreInfo {
-        StoreInfo {
-            guid: old.guid,
-            last_object_id: old.last_object_id,
-            layers: old.layers,
-            root_directory_object_id: old.root_directory_object_id,
-            graveyard_directory_object_id: old.graveyard_directory_object_id,
-            object_count: old.object_count,
-            mutations_key: old.mutations_key,
-            mutations_cipher_offset: old.mutations_cipher_offset,
-            encrypted_mutations_object_id: old.encrypted_mutations_object_id,
-            object_id_key: None,
-        }
-    }
-}
-
 // TODO(fxbug.dev/95972): We should test or put checks in place to ensure this limit isn't exceeded.
 // It will likely involve placing limits on the maximum number of layers.
 pub const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 
+// This needs to be large enough to accommodate the maximum amount of unflushed data (data that is
+// in the journal but hasn't yet been written to layer files) for a store.  We set a limit because
+// we want to limit the amount of memory use in the case the filesystem is corrupt or under attaack.
 pub const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = 8 * journal::DEFAULT_RECLAIM_SIZE as usize;
 
 #[derive(Default)]
@@ -193,7 +167,7 @@ pub struct NewChildStoreOptions {
     pub object_id: u64,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize, Versioned)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct EncryptedMutations {
     // Information about the mutations are held here, but the actual encrypted data is held within
     // data.  For each transaction, we record the checkpoint and the count of mutations within the
@@ -204,21 +178,48 @@ pub struct EncryptedMutations {
 
     // The encrypted mutations.
     data: Vec<u8>,
+
+    // If the mutations key was rolled, this holds the amount of data in `data` encrypted using the
+    // old key, and also stores the new key.
+    mutations_key_roll: Option<(usize, WrappedKey)>,
+}
+
+impl Versioned for EncryptedMutations {
+    fn max_serialized_size() -> u64 {
+        MAX_ENCRYPTED_MUTATIONS_SIZE as u64
+    }
 }
 
 impl EncryptedMutations {
     fn is_empty(&self) -> bool {
-        self.transactions.is_empty()
+        self.transactions.is_empty() && self.mutations_key_roll.is_none()
     }
 
-    fn extend(&mut self, other: EncryptedMutations) {
+    fn extend(&mut self, other: EncryptedMutations) -> Result<(), Error> {
+        ensure!(
+            self.mutations_key_roll.is_none() || other.mutations_key_roll.is_none(),
+            FxfsError::Inconsistent
+        );
         self.transactions.extend(other.transactions);
+        if let Some((offset, key)) = other.mutations_key_roll {
+            self.mutations_key_roll = Some((self.data.len() + offset, key));
+        }
         self.data.extend(other.data);
+        Ok(())
     }
 
-    fn extend_from(&mut self, other: &EncryptedMutations) {
+    // Same as extend but with borrowed mutations, so we must copy.
+    fn extend_from(&mut self, other: &EncryptedMutations) -> Result<(), Error> {
+        ensure!(
+            self.mutations_key_roll.is_none() || other.mutations_key_roll.is_none(),
+            FxfsError::Inconsistent
+        );
         self.transactions.extend_from_slice(&other.transactions);
+        if let Some((offset, key)) = &other.mutations_key_roll {
+            self.mutations_key_roll = Some((self.data.len() + offset, key.clone()));
+        }
         self.data.extend_from_slice(&other.data);
+        Ok(())
     }
 
     fn push(&mut self, checkpoint: &JournalCheckpoint, data: Box<[u8]>) {
@@ -322,6 +323,16 @@ impl StoreOrReplayInfo {
             replay_info.front_mut().unwrap().encrypted_mutations.push(checkpoint, data);
         }
     }
+
+    fn set_mutations_key(&mut self, key: WrappedKey) {
+        match self {
+            StoreOrReplayInfo::Info(StoreInfo { mutations_key, .. }) => *mutations_key = Some(key),
+            StoreOrReplayInfo::Replay(replay_info) => {
+                let mutations = &mut replay_info.front_mut().unwrap().encrypted_mutations;
+                mutations.mutations_key_roll = Some((mutations.data.len(), key));
+            }
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -341,16 +352,12 @@ struct LastObjectId {
 
     // Encrypted stores will use a cipher to obfuscate the object ID.
     cipher: Option<Ff1>,
-
-    // If true, it means we upgraded from an older version of Fxfs and a cipher needs to be created
-    // for the next new object.
-    need_cipher: bool,
 }
 
 impl LastObjectId {
     // Returns true if a cipher is needed to generate new object IDs.
     fn should_create_cipher(&self) -> bool {
-        self.need_cipher || self.id as u32 == u32::MAX
+        self.id as u32 == u32::MAX
     }
 
     fn get_next_object_id(&mut self) -> u64 {
@@ -530,28 +537,26 @@ impl ObjectStore {
         };
         let filesystem = self.filesystem();
         let store = if let Some(crypt) = options.crypt {
-            let (wrapped_keys, unwrapped_keys) =
+            let (wrapped_key, unwrapped_key) =
                 crypt.create_key(handle.object_id(), KeyPurpose::Metadata).await?;
-            let (mut object_id_wrapped, object_id_unwrapped) =
+            let (object_id_wrapped, object_id_unwrapped) =
                 crypt.create_key(handle.object_id(), KeyPurpose::Metadata).await?;
-            let object_id_wrapped = object_id_wrapped.0.pop().unwrap();
             Self::new(
                 Some(self.clone()),
                 handle.object_id(),
                 filesystem.clone(),
                 Some(StoreInfo {
-                    mutations_key: Some(wrapped_keys),
-                    object_id_key: Some((object_id_wrapped.wrapping_key_id, object_id_wrapped.key)),
+                    mutations_key: Some(wrapped_key),
+                    object_id_key: Some(object_id_wrapped),
                     ..StoreInfo::new_with_guid()
                 }),
-                Some(StreamCipher::new(&unwrapped_keys[0], 0)),
+                Some(StreamCipher::new(&unwrapped_key, 0)),
                 LockState::Unlocked(crypt),
                 LastObjectId {
                     // We need to avoid accidentally getting INVALID_OBJECT_ID, so we set
                     // the top 32 bits to a non-zero value.
                     id: 1 << 32,
-                    cipher: Some(Ff1::new(object_id_unwrapped[0].key())),
-                    need_cipher: false,
+                    cipher: Some(Ff1::new(&object_id_unwrapped)),
                 },
             )
         } else {
@@ -696,29 +701,21 @@ impl ObjectStore {
         mut crypt: Option<&dyn Crypt>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
-        let keys = match store
-            .tree
-            .find(&ObjectKey::object(object_id))
-            .await?
-            .ok_or(FxfsError::NotFound)?
-        {
-            Item {
-                value: ObjectValue::Object { kind: ObjectKind::File { keys, .. }, .. }, ..
-            } => match keys {
-                EncryptionKeys::None => None,
-                EncryptionKeys::AES256XTS(keys) => {
-                    let store_crypt;
-                    if crypt.is_none() {
-                        store_crypt = store.crypt();
-                        crypt = store_crypt.as_deref();
-                    }
-                    Some(crypt.ok_or(FxfsError::Inconsistent)?.unwrap_keys(&keys, object_id).await?)
+        let store_crypt = store.crypt();
+        if crypt.is_none() {
+            crypt = store_crypt.as_deref();
+        }
+        let keys = if let Some(crypt) = crypt {
+            match store.tree.find(&ObjectKey::keys(object_id)).await?.ok_or(FxfsError::NotFound)? {
+                Item { value: ObjectValue::Keys(EncryptionKeys::AES256XTS(keys)), .. } => {
+                    Some(crypt.unwrap_keys(&keys, object_id).await?)
                 }
-            },
-            Item { value: ObjectValue::None, .. } => bail!(FxfsError::NotFound),
-            _ => {
-                bail!(anyhow!(FxfsError::Inconsistent).context("open_object: Expected object value"))
+                _ => {
+                    bail!(anyhow!(FxfsError::Inconsistent).context("open_object: Expected keys"))
+                }
             }
+        } else {
+            None
         };
 
         let item = store
@@ -761,20 +758,27 @@ impl ObjectStore {
             store_crypt = store.crypt();
             crypt = store_crypt.as_deref();
         }
-        let (keys, unwrapped_keys) = if let Some(crypt) = crypt {
-            let (keys, unwrapped_keys) = crypt.create_key(object_id, KeyPurpose::Data).await?;
-            (EncryptionKeys::AES256XTS(keys), Some(unwrapped_keys))
-        } else {
-            (EncryptionKeys::None, None)
-        };
         let now = Timestamp::now();
         transaction.add(
             store.store_object_id(),
             Mutation::insert_object(
                 ObjectKey::object(object_id),
-                ObjectValue::file(1, 0, now.clone(), now, keys),
+                ObjectValue::file(1, 0, now.clone(), now),
             ),
         );
+        let unwrapped_keys = if let Some(crypt) = crypt {
+            let (key, unwrapped_key) = crypt.create_key(object_id, KeyPurpose::Data).await?;
+            transaction.add(
+                store.store_object_id(),
+                Mutation::insert_object(
+                    ObjectKey::keys(object_id),
+                    ObjectValue::keys(EncryptionKeys::AES256XTS(WrappedKeys(vec![(0, key)]))),
+                ),
+            );
+            Some(vec![(0, unwrapped_key)])
+        } else {
+            None
+        };
         transaction.add(
             store.store_object_id(),
             Mutation::insert_object(
@@ -1000,13 +1004,8 @@ impl ObjectStore {
             let mut info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                 let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-                let (store_info, version) = StoreInfo::deserialize_with_version(&mut cursor)
+                let (store_info, _) = StoreInfo::deserialize_with_version(&mut cursor)
                     .context("Failed to deserialize StoreInfo")?;
-                static STORE_INFO_V2_VERSION: Version = Version { major: 17, minor: 0 };
-                if version < STORE_INFO_V2_VERSION && store_info.mutations_key.is_some() {
-                    assert!(store_info.object_id_key.is_none());
-                    self.last_object_id.lock().unwrap().need_cipher = true;
-                }
                 if store_info.object_id_key.is_none() {
                     self.update_last_object_id(store_info.last_object_id);
                 }
@@ -1029,7 +1028,7 @@ impl ObjectStore {
                     info.object_count =
                         info.object_count.saturating_add(replay_info.object_count_delta as u64);
                 }
-                encrypted_mutations.extend(std::mem::take(&mut replay_info.encrypted_mutations));
+                encrypted_mutations.extend(std::mem::take(&mut replay_info.encrypted_mutations))?;
             }
 
             let result = (
@@ -1116,8 +1115,6 @@ impl ObjectStore {
     /// Unlocks a store so that it is ready to be used.
     /// This is not thread-safe.
     pub async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
-        let store_info = self.store_info();
-
         match *self.lock_state.lock().unwrap() {
             LockState::Locked => {}
             LockState::Unencrypted => bail!(FxfsError::InvalidArgs),
@@ -1125,6 +1122,12 @@ impl ObjectStore {
             LockState::Unknown => panic!("Store was unlocked before replay"),
         }
 
+        // We must lock flushing since that can modify store_info and the encrypted mutations file.
+        let keys = [LockKey::flush(self.store_object_id())];
+        let fs = self.filesystem();
+        let guard = debug_assert_not_too_long!(fs.write_lock(&keys));
+
+        let store_info = self.store_info();
         self.tree
             .append_layers(
                 self.open_layers(store_info.layers.iter().cloned(), Some(crypt.as_ref()))
@@ -1134,26 +1137,21 @@ impl ObjectStore {
             .await
             .context("Failed to read object tree layer file contents")?;
 
-        let unwrapped_keys = crypt
-            .unwrap_keys(store_info.mutations_key.as_ref().unwrap(), self.store_object_id)
+        let unwrapped_key = crypt
+            .unwrap_key(store_info.mutations_key.as_ref().unwrap(), self.store_object_id)
             .await
             .context("Failed to unwrap mutations keys")?;
         let mut mutations_cipher =
-            StreamCipher::new(&unwrapped_keys[0], store_info.mutations_cipher_offset);
+            StreamCipher::new(&unwrapped_key, store_info.mutations_cipher_offset);
 
-        let need_cipher = self.last_object_id.lock().unwrap().need_cipher;
-        if !need_cipher {
-            let (wrapping_key_id, key_bytes) =
-                store_info.object_id_key.as_ref().ok_or(FxfsError::Inconsistent)?;
-            let object_id_cipher = Ff1::new(
-                &crypt.unwrap_key(*wrapping_key_id, key_bytes, self.store_object_id).await?,
-            );
-            {
-                let mut last_object_id = self.last_object_id.lock().unwrap();
-                last_object_id.cipher = Some(object_id_cipher);
-            }
-            self.update_last_object_id(store_info.last_object_id);
+        let wrapped_key = store_info.object_id_key.as_ref().ok_or(FxfsError::Inconsistent)?;
+        let object_id_cipher =
+            Ff1::new(&crypt.unwrap_key(wrapped_key, self.store_object_id).await?);
+        {
+            let mut last_object_id = self.last_object_id.lock().unwrap();
+            last_object_id.cipher = Some(object_id_cipher);
         }
+        self.update_last_object_id(store_info.last_object_id);
 
         // Apply the encrypted mutations.
         let mut mutations = {
@@ -1177,18 +1175,31 @@ impl ObjectStore {
                 let mut mutations = EncryptedMutations::deserialize_with_version(&mut cursor)?.0;
                 let len = cursor.get_ref().len() as u64;
                 while cursor.position() < len {
-                    mutations.extend(EncryptedMutations::deserialize_with_version(&mut cursor)?.0);
+                    mutations
+                        .extend(EncryptedMutations::deserialize_with_version(&mut cursor)?.0)?;
                 }
                 mutations
             }
         };
 
         if let Some(m) = &*self.encrypted_mutations.lock().unwrap() {
-            mutations.extend_from(m);
+            mutations.extend_from(m)?;
         }
 
-        let EncryptedMutations { transactions, mut data } = mutations;
-        mutations_cipher.decrypt(&mut data);
+        let EncryptedMutations { transactions, mut data, mutations_key_roll } = mutations;
+        if let Some((offset, key)) = mutations_key_roll {
+            let (old, new) = data.split_at_mut(offset);
+            mutations_cipher.decrypt(old);
+            let unwrapped_key = crypt
+                .unwrap_key(&key, self.store_object_id)
+                .await
+                .context("Failed to unwrap mutations keys")?;
+            mutations_cipher = StreamCipher::new(&unwrapped_key, 0);
+            mutations_cipher.decrypt(new);
+        } else {
+            mutations_cipher.decrypt(&mut data);
+        }
+
         let mut cursor = std::io::Cursor::new(data);
         for (checkpoint, count) in transactions {
             let context = ApplyContext { mode: ApplyMode::Replay, checkpoint };
@@ -1208,6 +1219,7 @@ impl ObjectStore {
         // To avoid unbounded memory growth, we should flush the encrypted mutations now. Otherwise
         // it's possible for more writes to be queued and for the store to be locked before we can
         // flush anything and that can repeat.
+        std::mem::drop(guard);
         self.flush_with_reason(flush::Reason::Unlock).await?;
 
         Ok(())
@@ -1265,16 +1277,14 @@ impl ObjectStore {
         }
 
         // Create a key.
-        let (mut object_id_wrapped, object_id_unwrapped) =
+        let (object_id_wrapped, object_id_unwrapped) =
             self.crypt().unwrap().create_key(self.store_object_id, KeyPurpose::Metadata).await?;
-        let object_id_wrapped = object_id_wrapped.0.pop().unwrap();
 
         // Update StoreInfo.
         let buf = {
             let mut store_info = self.store_info.lock().unwrap();
             let mut store_info = store_info.info_mut().unwrap();
-            store_info.object_id_key =
-                Some((object_id_wrapped.wrapping_key_id, object_id_wrapped.key));
+            store_info.object_id_key = Some(object_id_wrapped);
             let mut serialized_info = Vec::new();
             store_info.serialize_with_version(&mut serialized_info)?;
             let mut buf = self.device.allocate_buffer(serialized_info.len());
@@ -1290,8 +1300,7 @@ impl ObjectStore {
         transaction.commit().await?;
 
         let mut last_object_id = self.last_object_id.lock().unwrap();
-        last_object_id.cipher = Some(Ff1::new(object_id_unwrapped[0].key()));
-        last_object_id.need_cipher = false;
+        last_object_id.cipher = Some(Ff1::new(&object_id_unwrapped));
         last_object_id.id = (last_object_id.id + (1 << 32)) & OBJECT_ID_HI_MASK;
 
         Ok((last_object_id.id & OBJECT_ID_HI_MASK)
@@ -1416,6 +1425,9 @@ impl JournalingObject for ObjectStore {
             }
             Mutation::EncryptedObjectStore(data) => {
                 self.store_info.lock().unwrap().push_encrypted_mutation(&context.checkpoint, data);
+            }
+            Mutation::UpdateMutationsKey(UpdateMutationsKey(key)) => {
+                self.store_info.lock().unwrap().set_mutations_key(key);
             }
             // TODO(fxbug.dev/95979): ideally, we'd return an error here instead. This should only
             // be possible with a bad mutation during replay.
@@ -1936,72 +1948,6 @@ mod tests {
         for i in 0..5 {
             fs = one_iteration(fs, crypt.clone(), i).await;
         }
-    }
-
-    #[cfg(target_os = "fuchsia")]
-    #[fasync::run(10, test)]
-    async fn test_object_id_cipher_upgrade() {
-        let device = DeviceHolder::new(
-            FakeDevice::from_image(
-                zstd::Decoder::new(
-                    std::fs::File::open("/pkg/data/fxfs_golden.16.0.img.zstd")
-                        .expect("open failed"),
-                )
-                .expect("new failed"),
-                1024,
-            )
-            .expect("from_image failed"),
-        );
-
-        let fs = FxFilesystem::open(device).await.expect("FS open failed");
-        let crypt = Arc::new(InsecureCrypt::new());
-        let object_id = {
-            let root_volume = root_volume(&fs).await.expect("root_volume failed");
-            let store =
-                root_volume.volume("default", Some(crypt.clone())).await.expect("volume failed");
-            let root_directory = Directory::open(&store, store.root_directory_object_id())
-                .await
-                .expect("open failed");
-            let mut transaction = fs
-                .clone()
-                .new_transaction(&[], Options::default())
-                .await
-                .expect("new_transaction failed");
-            let object = root_directory
-                .create_child_file(&mut transaction, "test")
-                .await
-                .expect("create_child_file failed");
-            transaction.commit().await.expect("commit failed");
-
-            // Make sure the hi part of the object ID is non-zero which indicates a successful
-            // migration.
-            assert_ne!(object.object_id() & OBJECT_ID_HI_MASK, 0);
-            object.object_id()
-        };
-
-        fs.close().await.expect("Close failed");
-        let device = fs.take_device().await;
-        device.reopen();
-        let fs = FxFilesystem::open(device).await.expect("open failed");
-
-        let root_volume = root_volume(&fs).await.expect("root_volume failed");
-        let store =
-            root_volume.volume("default", Some(crypt.clone())).await.expect("volume failed");
-        let root_directory =
-            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        let object = root_directory
-            .create_child_file(&mut transaction, "test2")
-            .await
-            .expect("create_child_file failed");
-        transaction.commit().await.expect("commit failed");
-
-        // This time, there shouldn't have been a migration.
-        assert_eq!(object.object_id() & OBJECT_ID_HI_MASK, object_id & OBJECT_ID_HI_MASK);
     }
 
     #[fasync::run(10, test)]

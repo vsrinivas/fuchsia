@@ -198,19 +198,8 @@ group("fxfs-test-manifest") {
   }
 }
 
-resource("test_data") {
-  sources = [
-    # object_store::tests::test_object_id_cipher_upgrade uses this
-    "testdata/fxfs_golden.16.0.img.zstd",
-  ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
 storage_driver_test_realm_v2_component("fxfs-test") {
-  deps = [
-    ":lib_test",
-    ":test_data",
-  ]
+  deps = [ ":lib_test" ]
 }
 
 fuchsia_test_package("fxfs-tests") {

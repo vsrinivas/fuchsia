@@ -11,7 +11,7 @@ use {
             journal::JournalCheckpoint,
             object_manager::ObjectManager,
             transaction::{
-                LockKey, LockManager, MetadataReservation, Options, ReadGuard, Transaction,
+                self, LockKey, LockManager, MetadataReservation, ReadGuard, Transaction,
                 TransactionHandler, TransactionLocks, WriteGuard,
             },
             ObjectStore,
@@ -33,6 +33,7 @@ pub struct FakeFilesystem {
     lock_manager: LockManager,
     num_syncs: AtomicU64,
     graveyard: Arc<Graveyard>,
+    options: filesystem::Options,
 }
 
 impl FakeFilesystem {
@@ -45,6 +46,7 @@ impl FakeFilesystem {
             lock_manager: LockManager::new(),
             num_syncs: AtomicU64::new(0),
             graveyard,
+            options: Default::default(),
         })
     }
 }
@@ -89,6 +91,10 @@ impl Filesystem for FakeFilesystem {
     fn graveyard(&self) -> &Arc<Graveyard> {
         &self.graveyard
     }
+
+    fn options(&self) -> &filesystem::Options {
+        &self.options
+    }
 }
 
 #[async_trait]
@@ -96,7 +102,7 @@ impl TransactionHandler for FakeFilesystem {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
-        options: Options<'a>,
+        options: transaction::Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
         let reservation = if options.borrow_metadata_space {
             MetadataReservation::Borrowed

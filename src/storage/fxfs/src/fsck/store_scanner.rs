@@ -115,14 +115,10 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                         ))?;
                     }
                     ObjectValue::Object {
-                        kind: ObjectKind::File { refs, allocated_size, keys },
-                        ..
+                        kind: ObjectKind::File { refs, allocated_size }, ..
                     } => {
-                        let kind = ObjectKind::File {
-                            refs: *refs,
-                            allocated_size: *allocated_size,
-                            keys: keys.clone(),
-                        };
+                        let kind =
+                            ObjectKind::File { refs: *refs, allocated_size: *allocated_size };
                         match self.objects.get_mut(&key.object_id) {
                             Some(ScannedObject::File(ScannedFile { kind: obj_kind, .. })) => {
                                 // This should be the only Object record we encounter for this
@@ -222,6 +218,17 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                             value.into(),
                         ))?;
                     }
+                }
+            }
+            ObjectKeyData::Keys => {
+                // TODO(fxbug.dev/101467): Check encryption keys.
+                if let ObjectValue::Keys(_) = value {
+                } else {
+                    self.fsck.error(FsckError::MalformedObjectRecord(
+                        self.store_id,
+                        key.into(),
+                        value.into(),
+                    ))?;
                 }
             }
             ObjectKeyData::Attribute(attribute_id, AttributeKey::Size) => {

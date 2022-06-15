@@ -20,8 +20,8 @@ use {
             directory::Directory,
             transaction::{self, Options, TransactionHandler},
             volume::root_volume,
-            AttributeKey, EncryptionKeys, ExtentValue, HandleOptions, Mutation, ObjectAttributes,
-            ObjectDescriptor, ObjectKey, ObjectKind, ObjectStore, ObjectValue, Timestamp,
+            AttributeKey, ExtentValue, HandleOptions, Mutation, ObjectAttributes, ObjectDescriptor,
+            ObjectKey, ObjectKind, ObjectStore, ObjectValue, Timestamp,
         },
         round::round_down,
         serialized_types::VersionedLatest,
@@ -115,10 +115,14 @@ async fn install_items_in_store<K: Key, V: Value>(
         .new_transaction(&[], Options::default())
         .await
         .expect("new_transaction failed");
-    let layer_handle =
-        ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default(), None)
-            .await
-            .expect("create_object failed");
+    let layer_handle = ObjectStore::create_object(
+        &root_store,
+        &mut transaction,
+        HandleOptions::default(),
+        store.crypt().as_deref(),
+    )
+    .await
+    .expect("create_object failed");
     transaction.commit().await.expect("commit failed");
 
     {
@@ -1119,11 +1123,7 @@ async fn test_file_length_mismatch() {
             Mutation::replace_or_insert_object(
                 ObjectKey::object(handle.object_id()),
                 ObjectValue::Object {
-                    kind: ObjectKind::File {
-                        refs: 1,
-                        allocated_size: 123,
-                        keys: EncryptionKeys::None,
-                    },
+                    kind: ObjectKind::File { refs: 1, allocated_size: 123 },
                     attributes: ObjectAttributes {
                         creation_time: Timestamp::now(),
                         modification_time: Timestamp::now(),
