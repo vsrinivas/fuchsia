@@ -43,7 +43,13 @@ function fx-rbe-enabled {
     fx-error "Run \"fx set\" to create a new build directory, or specify one with --dir"
     exit 1
   }
-  grep -q "^[ \t]*enable_rbe[ ]*=[ ]*true" "${FUCHSIA_BUILD_DIR}/args.gn"
+  if grep -q -w -e "enable_rbe" "${FUCHSIA_BUILD_DIR}/args.gn" ; then
+    fx-warn "The 'enable_rbe' GN arg has been renamed to 'rust_rbe_enable'."
+    fx-warn "Please update your ${FUCHSIA_BUILD_DIR}/args.gn file (fx args)."
+  fi
+  grep -q -e "^[ \t]*rust_rbe_enable[ ]*=[ ]*true" \
+    -e "^[ \t]*enable_rbe[ ]*=[ ]*true" \
+    "${FUCHSIA_BUILD_DIR}/args.gn"
 }
 
 # At the moment, direct use of RBE uses gcloud to authenticate.

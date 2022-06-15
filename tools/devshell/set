@@ -56,8 +56,8 @@
 ##                         attempts to make builds faster using remote build
 ##                         servers. Defaults to detecting whether goma has been
 ##                         set up via `fx goma`.
-##   --rbe                 If set, use the remote backend (RBE) service during
-##                         the build.  RBE offloads work onto remote servers and
+##   --rust-rbe            If set, use the remote backend (RBE) service for building
+##                         Rust targets.  RBE offloads work onto remote servers and
 ##                         offers caching benefits to accelerate builds.
 ##                         Default: disabled
 ##   --ide                 Pass --ide=VALUE to gn when generating to create project

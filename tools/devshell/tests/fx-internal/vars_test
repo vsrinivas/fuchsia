@@ -123,6 +123,36 @@ TEST_fx-build-config-load() {
     "testvar has unexpected value (${testvar})"
 }
 
+TEST_fx-rbe-enabled() {
+  BT_ASSERT_FUNCTION_EXISTS fx-rbe-enabled
+
+  # Required build dir does not exist yet.
+  BT_EXPECT_FAIL fx-rbe-enabled
+
+  local -r BUILD_DIR="out/nondefault"
+  _create_build_dir "${BUILD_DIR}"
+  fx-change-build-dir "${BUILD_DIR}"
+
+  local -r ARGS_FILE="${BT_TEMP_DIR}/${BUILD_DIR}"/args.gn
+  local result
+
+  # Make sure check for deprecated variable name works.
+  echo "enable_rbe = false" > "${ARGS_FILE}"
+  result=$( fx-rbe-enabled 2>&1 )
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${result}" "has been renamed"
+
+  # RBE is default disabled.
+  echo "" > "${ARGS_FILE}"
+  BT_EXPECT_FAIL fx-rbe-enabled
+
+  # RBE is explicitly disabled.
+  echo "rust_rbe_enable = false" > "${ARGS_FILE}"
+  BT_EXPECT_FAIL fx-rbe-enabled
+
+  # RBE is enabled.
+  echo "rust_rbe_enable = true" > "${ARGS_FILE}"
+  BT_EXPECT fx-rbe-enabled
+}
 
 # Test parsing valid and invalid device names passed to "fx -d"
 TEST_fx-getdeviceraw-and-isvaliddevice() {
