@@ -31,7 +31,8 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
   // |a11y_view| is a pointer to the a11y view object, which has focuser
   // capabilities. Note that the focus chain manager does NOT own the a11y view.
   // |semantics_source| object must outlive FocusChainManager.
-  FocusChainManager(AccessibilityViewInterface* a11y_view, SemanticsSource* semantics_source);
+  FocusChainManager(std::shared_ptr<AccessibilityViewInterface> a11y_view,
+                    SemanticsSource* semantics_source);
   ~FocusChainManager() = default;
 
   // |fuchsia.ui.focus.FocusChainListener|
@@ -83,7 +84,7 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
   std::vector<std::unique_ptr<ViewRefWatcher>> focus_chain_;
 
   // Responsible for requesting Focus Chain updates.
-  AccessibilityViewInterface* a11y_view_;
+  std::shared_ptr<AccessibilityViewInterface> a11y_view_;
 
   // Right now, this manager only responds to Focus Chain Requests to Views that
   // are providing semantics. It uses |semantics_source_| to validate if a

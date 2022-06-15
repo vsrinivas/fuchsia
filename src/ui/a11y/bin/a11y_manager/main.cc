@@ -49,16 +49,16 @@ int run_a11y_manager(int argc, const char** argv) {
   });
 
   scenic->UsesFlatland([&](bool flatland_enabled) {
-    std::unique_ptr<a11y::AccessibilityViewInterface> a11y_view;
+    std::shared_ptr<a11y::AccessibilityViewInterface> a11y_view;
 
     if (flatland_enabled) {
       auto flatland = context->svc()->Connect<fuchsia::ui::composition::Flatland>();
       auto flatland_a11y_view =
-          std::make_unique<a11y::FlatlandAccessibilityView>(std::move(flatland));
+          std::make_shared<a11y::FlatlandAccessibilityView>(std::move(flatland));
       context->outgoing()->AddPublicService(flatland_a11y_view->GetHandler());
       a11y_view = std::move(flatland_a11y_view);
     } else {
-      a11y_view = std::make_unique<a11y::GfxAccessibilityView>(context.get());
+      a11y_view = std::make_shared<a11y::GfxAccessibilityView>(context.get());
     }
 
     view_manager = std::make_unique<a11y::ViewManager>(
@@ -67,7 +67,7 @@ int run_a11y_manager(int argc, const char** argv) {
         std::make_unique<a11y::A11yViewSemanticsFactory>(),
         std::make_unique<a11y::AnnotationViewFactory>(),
         std::make_unique<a11y::ViewInjectorFactory>(),
-        std::make_unique<a11y::A11ySemanticsEventManager>(), std::move(a11y_view), context.get(),
+        std::make_unique<a11y::A11ySemanticsEventManager>(), a11y_view, context.get(),
         context->outgoing()->debug_dir());
 
     app = std::make_unique<a11y_manager::App>(

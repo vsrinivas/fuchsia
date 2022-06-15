@@ -91,7 +91,7 @@ void SemanticsIntegrationTestV2::BuildRealm() {
       std::make_unique<MockViewSemanticsFactory>(), std::make_unique<MockAnnotationViewFactory>(),
       std::make_unique<MockViewInjectorFactory>(),
       std::make_unique<a11y::A11ySemanticsEventManager>(),
-      std::make_unique<MockAccessibilityView>(), context_.get(), context_->outgoing()->debug_dir());
+      std::make_shared<MockAccessibilityView>(), context_.get(), context_->outgoing()->debug_dir());
 
   semantics_manager_proxy_ =
       std::make_unique<SemanticsManagerProxy>(view_manager_.get(), dispatcher());

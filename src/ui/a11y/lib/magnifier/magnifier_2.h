@@ -50,7 +50,7 @@ class Magnifier2 {
   static constexpr float kMinScale = 1, kMaxScale = 20;
   static constexpr float kDefaultScale = 4;
 
-  explicit Magnifier2(std::unique_ptr<Delegate> delegate);
+  explicit Magnifier2(std::shared_ptr<Delegate> delegate);
   ~Magnifier2() = default;
 
   // Method to register recognizers in a gesture recognition arena.
@@ -163,7 +163,7 @@ class Magnifier2 {
   State state_;
 
   // Interfaces with scenic on behalf of the magnifier.
-  std::unique_ptr<Delegate> delegate_;
+  std::shared_ptr<Delegate> delegate_;
 };
 
 }  // namespace a11y

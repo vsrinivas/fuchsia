@@ -20,7 +20,7 @@ ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                          std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
                          std::unique_ptr<ViewInjectorFactoryInterface> view_injector_factory,
                          std::unique_ptr<SemanticsEventManager> semantics_event_manager,
-                         std::unique_ptr<AccessibilityViewInterface> a11y_view,
+                         std::shared_ptr<AccessibilityViewInterface> a11y_view,
                          sys::ComponentContext* context, vfs::PseudoDir* debug_dir)
     : factory_(std::move(factory)),
       view_semantics_factory_(std::move(view_semantics_factory)),

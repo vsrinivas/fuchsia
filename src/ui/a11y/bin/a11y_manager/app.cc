@@ -47,13 +47,13 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   context->outgoing()->AddPublicService(
       gesture_listener_registry_bindings_.GetHandler(gesture_listener_registry_));
 
-  if (!use_flatland) {
-    auto magnifier_delegate = std::make_unique<a11y::GfxMagnifierDelegate>();
-    context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(magnifier_delegate.get()));
-    magnifier_ = std::make_unique<a11y::Magnifier2>(std::move(magnifier_delegate));
-  } else {
+  if (use_flatland) {
     // TODO(fxbug.dev/98158): Pass a flatland delegate here.
     magnifier_ = std::make_unique<a11y::Magnifier2>(nullptr);
+  } else {
+    auto magnifier_delegate = std::make_shared<a11y::GfxMagnifierDelegate>();
+    context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(magnifier_delegate.get()));
+    magnifier_ = std::make_unique<a11y::Magnifier2>(magnifier_delegate);
   }
 
   // Inits Focus Chain focuser support / listening Focus Chain updates.

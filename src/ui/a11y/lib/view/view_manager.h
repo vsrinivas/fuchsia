@@ -13,6 +13,8 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
 #include "src/ui/a11y/lib/input_injection/injector_manager.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
@@ -42,7 +44,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                        std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
                        std::unique_ptr<ViewInjectorFactoryInterface> view_injector_factory,
                        std::unique_ptr<SemanticsEventManager> semantics_event_manager,
-                       std::unique_ptr<AccessibilityViewInterface> a11y_view,
+                       std::shared_ptr<AccessibilityViewInterface> a11y_view,
                        sys::ComponentContext* context, vfs::PseudoDir* debug_dir);
   ~ViewManager() override;
 
@@ -125,7 +127,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   bool MarkViewReadyForInjection(zx_koid_t koid, bool ready) override;
 
   // Returns a pointer to the a11y view.
-  AccessibilityViewInterface* a11y_view() { return a11y_view_.get(); }
+  std::shared_ptr<AccessibilityViewInterface> a11y_view() { return a11y_view_; }
 
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.
@@ -190,7 +192,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
 
   std::unique_ptr<SemanticsEventManager> semantics_event_manager_;
 
-  std::unique_ptr<AccessibilityViewInterface> a11y_view_;
+  std::shared_ptr<AccessibilityViewInterface> a11y_view_;
 
   fidl::Binding<fuchsia::accessibility::virtualkeyboard::Listener>
       virtualkeyboard_listener_binding_;

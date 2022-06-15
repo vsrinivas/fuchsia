@@ -8,7 +8,7 @@
 
 namespace a11y {
 
-Magnifier2::Magnifier2(std::unique_ptr<Delegate> delegate) : delegate_(std::move(delegate)) {}
+Magnifier2::Magnifier2(std::shared_ptr<Delegate> delegate) : delegate_(delegate) {}
 
 void Magnifier2::ZoomOutIfMagnified() {
   if (state_.mode != Mode::UNMAGNIFIED) {

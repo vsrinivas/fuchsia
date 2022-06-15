@@ -13,7 +13,7 @@
 
 namespace a11y {
 
-FocusChainManager::FocusChainManager(AccessibilityViewInterface* a11y_view,
+FocusChainManager::FocusChainManager(std::shared_ptr<AccessibilityViewInterface> a11y_view,
                                      SemanticsSource* semantics_source)
     : a11y_view_(a11y_view), semantics_source_(semantics_source) {
   FX_DCHECK(a11y_view_);

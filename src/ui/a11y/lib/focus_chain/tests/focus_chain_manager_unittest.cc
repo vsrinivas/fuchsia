@@ -48,13 +48,14 @@ class FocusChainManagerTest : public gtest::TestLoopFixture {
 
  protected:
   void SetUp() override {
-    manager_ = std::make_unique<FocusChainManager>(&mock_a11y_view_, &mock_semantics_source_);
+    mock_a11y_view_ = std::make_shared<accessibility_test::MockAccessibilityView>();
+    manager_ = std::make_unique<FocusChainManager>(mock_a11y_view_, &mock_semantics_source_);
   }
 
   // Test subject.
   std::unique_ptr<FocusChainManager> manager_;
 
-  accessibility_test::MockAccessibilityView mock_a11y_view_;
+  std::shared_ptr<accessibility_test::MockAccessibilityView> mock_a11y_view_;
   accessibility_test::MockSemanticsSource mock_semantics_source_;
 
   accessibility_test::ViewRefHelper root_view_;
@@ -157,11 +158,11 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewHasSemantics) 
   bool success = false;
   requester->ChangeFocusToView(view_a_.koid(), [&success](bool result) { success = result; });
   RunLoopUntilIdle();
-  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  auto requested_view_ref = mock_a11y_view_->focused_view_ref();
   ASSERT_TRUE(requested_view_ref.has_value());
   EXPECT_EQ(a11y::GetKoid(std::move(requested_view_ref.value())), view_a_.koid());
 
-  mock_a11y_view_.invoke_focus_callback({});
+  mock_a11y_view_->invoke_focus_callback({});
   EXPECT_TRUE(success);
 }
 
@@ -172,7 +173,7 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewDoesNotHaveSem
   mock_semantics_source_.set_view_has_semantics(false);
   requester->ChangeFocusToView(view_a_.koid(), [](bool /* unused */) {});
   RunLoopUntilIdle();
-  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  auto requested_view_ref = mock_a11y_view_->focused_view_ref();
   EXPECT_FALSE(requested_view_ref.has_value());
 }
 
@@ -182,10 +183,10 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterFocuserDenies) {
   bool success = true;  // Expects false later.
   requester->ChangeFocusToView(view_a_.koid(), [&success](bool result) { success = result; });
   RunLoopUntilIdle();
-  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  auto requested_view_ref = mock_a11y_view_->focused_view_ref();
   ASSERT_TRUE(requested_view_ref.has_value());
 
-  mock_a11y_view_.invoke_focus_callback(
+  mock_a11y_view_->invoke_focus_callback(
       fuchsia::ui::views::Focuser_RequestFocus_Result::WithErr(fuchsia::ui::views::Error::DENIED));
   EXPECT_FALSE(success);
 }
@@ -200,7 +201,7 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewHasVisibleVirt
   EXPECT_TRUE(success);
   // The request should be successful, but the focus chain does not update to the view with the
   // virtual keyboard.
-  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  auto requested_view_ref = mock_a11y_view_->focused_view_ref();
   EXPECT_FALSE(requested_view_ref.has_value());
 }
 
