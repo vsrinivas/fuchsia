@@ -2189,6 +2189,7 @@ go_library("gvisor.dev/gvisor") {
     "pkg/log/json.go",
     "pkg/log/json_k8s.go",
     "pkg/log/log.go",
+    "pkg/log/rate_limited.go",
     "pkg/rand/rand.go",
     "pkg/rand/rand_linux.go",
     "pkg/rand/rand_linux_state_autogen.go",
