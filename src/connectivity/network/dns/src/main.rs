@@ -1182,68 +1182,64 @@ mod tests {
         })
     }
 
-    async fn check_lookup_ip(
-        proxy: &fname::LookupProxy,
-        host: &str,
-        option: fname::LookupIpOptions,
-        expected: Result<fname::LookupResult, fname::LookupError>,
-    ) {
-        let res = proxy.lookup_ip(host, option).await.expect("failed to lookup ip");
-        assert_eq!(res, expected);
-    }
-
-    async fn check_lookup_hostname(
-        proxy: &fname::LookupProxy,
-        mut addr: fnet::IpAddress,
-        expected: Result<&str, fname::LookupError>,
-    ) {
-        let res = proxy.lookup_hostname(&mut addr).await.expect("failed to lookup hostname");
-        assert_eq!(res.as_deref(), expected.as_deref());
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip_localhost() {
         let (proxy, fut) = setup_namelookup_service().await;
         let ((), ()) = futures::future::join(fut, async move {
             // IP Lookup IPv4 and IPv6 for localhost.
-            check_lookup_ip(
-                &proxy,
-                LOCAL_HOST,
-                fname::LookupIpOptions {
-                    ipv4_lookup: Some(true),
-                    ipv6_lookup: Some(true),
-                    ..fname::LookupIpOptions::EMPTY
-                },
+            assert_eq!(
+                proxy
+                    .lookup_ip(
+                        LOCAL_HOST,
+                        fname::LookupIpOptions {
+                            ipv4_lookup: Some(true),
+                            ipv6_lookup: Some(true),
+                            ..fname::LookupIpOptions::EMPTY
+                        }
+                    )
+                    .await
+                    .expect("lookup_ip"),
                 Ok(fname::LookupResult {
                     addresses: Some(vec![IPV4_LOOPBACK, IPV6_LOOPBACK]),
                     ..fname::LookupResult::EMPTY
                 }),
-            )
-            .await;
+            );
 
             // IP Lookup IPv4 only for localhost.
-            check_lookup_ip(
-                &proxy,
-                LOCAL_HOST,
-                fname::LookupIpOptions { ipv4_lookup: Some(true), ..fname::LookupIpOptions::EMPTY },
+            assert_eq!(
+                proxy
+                    .lookup_ip(
+                        LOCAL_HOST,
+                        fname::LookupIpOptions {
+                            ipv4_lookup: Some(true),
+                            ..fname::LookupIpOptions::EMPTY
+                        }
+                    )
+                    .await
+                    .expect("lookup_ip"),
                 Ok(fname::LookupResult {
                     addresses: Some(vec![IPV4_LOOPBACK]),
                     ..fname::LookupResult::EMPTY
                 }),
-            )
-            .await;
+            );
 
             // IP Lookup IPv6 only for localhost.
-            check_lookup_ip(
-                &proxy,
-                LOCAL_HOST,
-                fname::LookupIpOptions { ipv6_lookup: Some(true), ..fname::LookupIpOptions::EMPTY },
+            assert_eq!(
+                proxy
+                    .lookup_ip(
+                        LOCAL_HOST,
+                        fname::LookupIpOptions {
+                            ipv6_lookup: Some(true),
+                            ..fname::LookupIpOptions::EMPTY
+                        }
+                    )
+                    .await
+                    .expect("lookup_ip"),
                 Ok(fname::LookupResult {
                     addresses: Some(vec![IPV6_LOOPBACK]),
                     ..fname::LookupResult::EMPTY
                 }),
-            )
-            .await;
+            );
         })
         .await;
     }
@@ -1252,7 +1248,11 @@ mod tests {
     async fn test_lookuphostname_localhost() {
         let (proxy, fut) = setup_namelookup_service().await;
         let ((), ()) = futures::future::join(fut, async move {
-            check_lookup_hostname(&proxy, IPV4_LOOPBACK, Ok(LOCAL_HOST)).await
+            let mut hostname = IPV4_LOOPBACK;
+            assert_eq!(
+                proxy.lookup_hostname(&mut hostname).await.expect("lookup_hostname").as_deref(),
+                Ok(LOCAL_HOST)
+            );
         })
         .await;
     }
@@ -1456,47 +1456,56 @@ mod tests {
         TestEnvironment::new()
             .run_lookup(|proxy| async move {
                 // IP Lookup IPv4 and IPv6 for REMOTE_IPV4_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV4_HOST,
-                    fname::LookupIpOptions {
-                        ipv4_lookup: Some(true),
-                        ipv6_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV4_HOST,
+                            fname::LookupIpOptions {
+                                ipv4_lookup: Some(true),
+                                ipv6_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Ok(fname::LookupResult {
                         addresses: Some(vec![map_ip(IPV4_HOST)]),
                         ..fname::LookupResult::EMPTY
                     }),
-                )
-                .await;
+                );
 
                 // IP Lookup IPv4 for REMOTE_IPV4_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV4_HOST,
-                    fname::LookupIpOptions {
-                        ipv4_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV4_HOST,
+                            fname::LookupIpOptions {
+                                ipv4_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Ok(fname::LookupResult {
                         addresses: Some(vec![map_ip(IPV4_HOST)]),
                         ..fname::LookupResult::EMPTY
                     }),
-                )
-                .await;
+                );
 
                 // IP Lookup IPv6 for REMOTE_IPV4_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV4_HOST,
-                    fname::LookupIpOptions {
-                        ipv6_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV4_HOST,
+                            fname::LookupIpOptions {
+                                ipv6_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Err(fname::LookupError::NotFound),
-                )
-                .await;
+                );
             })
             .await;
     }
@@ -1506,47 +1515,56 @@ mod tests {
         TestEnvironment::new()
             .run_lookup(|proxy| async move {
                 // IP Lookup IPv4 and IPv6 for REMOTE_IPV6_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV6_HOST,
-                    fname::LookupIpOptions {
-                        ipv4_lookup: Some(true),
-                        ipv6_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV6_HOST,
+                            fname::LookupIpOptions {
+                                ipv4_lookup: Some(true),
+                                ipv6_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Ok(fname::LookupResult {
                         addresses: Some(vec![map_ip(IPV6_HOST)]),
                         ..fname::LookupResult::EMPTY
                     }),
-                )
-                .await;
+                );
 
                 // IP Lookup IPv4 for REMOTE_IPV6_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV6_HOST,
-                    fname::LookupIpOptions {
-                        ipv4_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV6_HOST,
+                            fname::LookupIpOptions {
+                                ipv4_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Err(fname::LookupError::NotFound),
-                )
-                .await;
+                );
 
                 // IP Lookup IPv6 for REMOTE_IPV4_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV6_HOST,
-                    fname::LookupIpOptions {
-                        ipv6_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV6_HOST,
+                            fname::LookupIpOptions {
+                                ipv6_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Ok(fname::LookupResult {
                         addresses: Some(vec![map_ip(IPV6_HOST)]),
                         ..fname::LookupResult::EMPTY
                     }),
-                )
-                .await;
+                );
             })
             .await;
     }
@@ -1555,7 +1573,14 @@ mod tests {
     async fn test_lookup_hostname() {
         TestEnvironment::new()
             .run_lookup(|proxy| async move {
-                check_lookup_hostname(&proxy, map_ip(IPV4_HOST), Ok(REMOTE_IPV4_HOST)).await;
+                assert_eq!(
+                    proxy
+                        .lookup_hostname(&mut map_ip(IPV4_HOST))
+                        .await
+                        .expect("lookup_hostname")
+                        .as_deref(),
+                    Ok(REMOTE_IPV4_HOST)
+                );
             })
             .await;
     }
@@ -1566,7 +1591,14 @@ mod tests {
     async fn test_lookup_hostname_multi() {
         TestEnvironment::new()
             .run_lookup(|proxy| async move {
-                check_lookup_hostname(&proxy, map_ip(IPV6_HOST), Ok(REMOTE_IPV6_HOST)).await;
+                assert_eq!(
+                    proxy
+                        .lookup_hostname(&mut map_ip(IPV6_HOST))
+                        .await
+                        .expect("lookup_hostname")
+                        .as_deref(),
+                    Ok(REMOTE_IPV6_HOST)
+                );
             })
             .await;
     }
@@ -1754,34 +1786,40 @@ mod tests {
         let () = env
             .run_lookup(|proxy| async move {
                 // IP Lookup IPv4 for REMOTE_IPV4_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV4_HOST,
-                    fname::LookupIpOptions {
-                        ipv4_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV4_HOST,
+                            fname::LookupIpOptions {
+                                ipv4_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Ok(fname::LookupResult {
                         addresses: Some(vec![map_ip(IPV4_HOST)]),
                         ..fname::LookupResult::EMPTY
                     }),
-                )
-                .await;
+                );
             })
             .await;
         let () = env
             .run_lookup(|proxy| async move {
                 // IP Lookup IPv6 for REMOTE_IPV4_HOST.
-                check_lookup_ip(
-                    &proxy,
-                    REMOTE_IPV4_HOST,
-                    fname::LookupIpOptions {
-                        ipv6_lookup: Some(true),
-                        ..fname::LookupIpOptions::EMPTY
-                    },
+                assert_eq!(
+                    proxy
+                        .lookup_ip(
+                            REMOTE_IPV4_HOST,
+                            fname::LookupIpOptions {
+                                ipv6_lookup: Some(true),
+                                ..fname::LookupIpOptions::EMPTY
+                            }
+                        )
+                        .await
+                        .expect("lookup_ip"),
                     Err(fname::LookupError::NotFound),
-                )
-                .await;
+                );
             })
             .await;
         assert_data_tree!(inspector, root:{
@@ -2575,57 +2613,60 @@ mod tests {
         TestEnvironment::new()
             .run_lookup_with_routes_handler(
                 |proxy| async move {
-                    let proxy = &proxy;
-                    let lookup_ip = |hostname, options| async move {
-                        proxy.lookup_ip(hostname, options).await.expect("FIDL error")
-                    };
-
                     // All arguments unset.
                     assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fname::LookupIpOptions { ..fname::LookupIpOptions::EMPTY }
-                        )
-                        .await,
+                        proxy
+                            .lookup_ip(
+                                REMOTE_IPV4_HOST,
+                                fname::LookupIpOptions { ..fname::LookupIpOptions::EMPTY }
+                            )
+                            .await
+                            .expect("lookup_ip"),
                         Err(fname::LookupError::InvalidArgs)
                     );
                     // No IP addresses to look.
                     assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fname::LookupIpOptions {
-                                ipv4_lookup: Some(false),
-                                ipv6_lookup: Some(false),
-                                ..fname::LookupIpOptions::EMPTY
-                            }
-                        )
-                        .await,
+                        proxy
+                            .lookup_ip(
+                                REMOTE_IPV4_HOST,
+                                fname::LookupIpOptions {
+                                    ipv4_lookup: Some(false),
+                                    ipv6_lookup: Some(false),
+                                    ..fname::LookupIpOptions::EMPTY
+                                }
+                            )
+                            .await
+                            .expect("lookup_ip"),
                         Err(fname::LookupError::InvalidArgs)
                     );
                     // No results for an IPv4 only host.
                     assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fname::LookupIpOptions {
-                                ipv4_lookup: Some(false),
-                                ipv6_lookup: Some(true),
-                                ..fname::LookupIpOptions::EMPTY
-                            }
-                        )
-                        .await,
+                        proxy
+                            .lookup_ip(
+                                REMOTE_IPV4_HOST,
+                                fname::LookupIpOptions {
+                                    ipv4_lookup: Some(false),
+                                    ipv6_lookup: Some(true),
+                                    ..fname::LookupIpOptions::EMPTY
+                                }
+                            )
+                            .await
+                            .expect("lookup_ip"),
                         Err(fname::LookupError::NotFound)
                     );
                     // Successfully resolve IPv4.
                     assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fname::LookupIpOptions {
-                                ipv4_lookup: Some(true),
-                                ipv6_lookup: Some(true),
-                                ..fname::LookupIpOptions::EMPTY
-                            }
-                        )
-                        .await,
+                        proxy
+                            .lookup_ip(
+                                REMOTE_IPV4_HOST,
+                                fname::LookupIpOptions {
+                                    ipv4_lookup: Some(true),
+                                    ipv6_lookup: Some(true),
+                                    ..fname::LookupIpOptions::EMPTY
+                                }
+                            )
+                            .await
+                            .expect("lookup_ip"),
                         Ok(fname::LookupResult {
                             addresses: Some(vec![map_ip(IPV4_HOST)]),
                             ..fname::LookupResult::EMPTY
@@ -2633,15 +2674,17 @@ mod tests {
                     );
                     // Successfully resolve IPv4 + IPv6 (no sorting).
                     assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_IPV6_HOST,
-                            fname::LookupIpOptions {
-                                ipv4_lookup: Some(true),
-                                ipv6_lookup: Some(true),
-                                ..fname::LookupIpOptions::EMPTY
-                            }
-                        )
-                        .await,
+                        proxy
+                            .lookup_ip(
+                                REMOTE_IPV4_IPV6_HOST,
+                                fname::LookupIpOptions {
+                                    ipv4_lookup: Some(true),
+                                    ipv6_lookup: Some(true),
+                                    ..fname::LookupIpOptions::EMPTY
+                                }
+                            )
+                            .await
+                            .expect("lookup_ip"),
                         Ok(fname::LookupResult {
                             addresses: Some(vec![map_ip(IPV4_HOST), map_ip(IPV6_HOST)]),
                             ..fname::LookupResult::EMPTY
@@ -2649,16 +2692,18 @@ mod tests {
                     );
                     // Successfully resolve IPv4 + IPv6 (with sorting).
                     assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_IPV6_HOST,
-                            fname::LookupIpOptions {
-                                ipv4_lookup: Some(true),
-                                ipv6_lookup: Some(true),
-                                sort_addresses: Some(true),
-                                ..fname::LookupIpOptions::EMPTY
-                            }
-                        )
-                        .await,
+                        proxy
+                            .lookup_ip(
+                                REMOTE_IPV4_IPV6_HOST,
+                                fname::LookupIpOptions {
+                                    ipv4_lookup: Some(true),
+                                    ipv6_lookup: Some(true),
+                                    sort_addresses: Some(true),
+                                    ..fname::LookupIpOptions::EMPTY
+                                }
+                            )
+                            .await
+                            .expect("lookup_ip"),
                         Ok(fname::LookupResult {
                             addresses: Some(vec![map_ip(IPV6_HOST), map_ip(IPV4_HOST)]),
                             ..fname::LookupResult::EMPTY
