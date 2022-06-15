@@ -421,7 +421,7 @@ mod tests {
         cache: PmtuCache<I, DummyInstant>,
     }
 
-    type MockCtx<I> = DummyCtx<DummyPmtuContext<I>, PmtuTimerId<I>, (), (), ()>;
+    type MockCtx<I> = DummyCtx<DummyPmtuContext<I>, PmtuTimerId<I>, (), (), (), ()>;
     type MockSyncCtx<I> = DummySyncCtx<DummyPmtuContext<I>, (), ()>;
 
     impl<I: Ip> PmtuStateContext<I, DummyInstant> for MockSyncCtx<I> {

@@ -255,6 +255,7 @@ mod tests {
     type MockNonSyncCtx = DummyNonSyncCtx<
         Ipv6DiscoveredRouteTimerId<DummyDeviceId>,
         Ipv6RouteDiscoveryEvent<DummyDeviceId>,
+        (),
     >;
 
     impl Ipv6RouteDiscoveryStateContext<MockNonSyncCtx> for MockCtx {

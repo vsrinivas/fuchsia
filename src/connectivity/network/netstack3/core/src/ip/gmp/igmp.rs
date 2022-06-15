@@ -590,6 +590,7 @@ mod tests {
         IgmpPacketMetadata<DummyDeviceId>,
         (),
         DummyDeviceId,
+        (),
     >;
 
     type DummySyncCtx = crate::context::testutil::DummySyncCtx<
@@ -599,7 +600,7 @@ mod tests {
     >;
 
     type DummyNonSyncCtx =
-        crate::context::testutil::DummyNonSyncCtx<IgmpTimerId<DummyDeviceId>, ()>;
+        crate::context::testutil::DummyNonSyncCtx<IgmpTimerId<DummyDeviceId>, (), ()>;
 
     impl IgmpContext<DummyNonSyncCtx> for DummySyncCtx {
         fn get_ip_addr_subnet(&self, _device: DummyDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {

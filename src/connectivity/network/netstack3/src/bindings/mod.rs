@@ -112,10 +112,7 @@ type UdpSockets = socket::datagram::SocketCollectionPair<socket::datagram::Udp>;
 /// crate's submodules, closer to where the implementation logic makes more
 /// sense.
 #[derive(Default)]
-pub(crate) struct BindingsDispatcher {
-    icmp_echo_sockets: IcmpEchoSockets,
-    udp_sockets: UdpSockets,
-}
+pub(crate) struct BindingsDispatcher {}
 
 impl DeviceStatusNotifier for BindingsNonSyncCtxImpl {
     fn device_status_changed(&mut self, _id: u64) {
@@ -130,6 +127,8 @@ pub(crate) struct BindingsNonSyncCtxImpl {
     rng: OsRng,
     timers: timers::TimerDispatcher<TimerId>,
     devices: Devices,
+    icmp_echo_sockets: IcmpEchoSockets,
+    udp_sockets: UdpSockets,
 }
 
 impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
@@ -164,25 +163,25 @@ impl<'a> Lockable<'a, Ctx<BindingsDispatcher, BindingsNonSyncCtxImpl>> for Netst
     }
 }
 
-impl AsRef<IcmpEchoSockets> for BindingsDispatcher {
+impl AsRef<IcmpEchoSockets> for BindingsNonSyncCtxImpl {
     fn as_ref(&self) -> &IcmpEchoSockets {
         &self.icmp_echo_sockets
     }
 }
 
-impl AsMut<IcmpEchoSockets> for BindingsDispatcher {
+impl AsMut<IcmpEchoSockets> for BindingsNonSyncCtxImpl {
     fn as_mut(&mut self) -> &mut IcmpEchoSockets {
         &mut self.icmp_echo_sockets
     }
 }
 
-impl AsRef<UdpSockets> for BindingsDispatcher {
+impl AsRef<UdpSockets> for BindingsNonSyncCtxImpl {
     fn as_ref(&self) -> &UdpSockets {
         &self.udp_sockets
     }
 }
 
-impl AsMut<UdpSockets> for BindingsDispatcher {
+impl AsMut<UdpSockets> for BindingsNonSyncCtxImpl {
     fn as_mut(&mut self) -> &mut UdpSockets {
         &mut self.udp_sockets
     }
@@ -341,7 +340,7 @@ where
     }
 }
 
-impl<I> icmp::IcmpContext<I> for BindingsDispatcher
+impl<I> icmp::IcmpContext<I> for BindingsNonSyncCtxImpl
 where
     I: socket::datagram::SocketCollectionIpExt<socket::datagram::IcmpEcho> + icmp::IcmpIpExt,
 {
@@ -350,7 +349,7 @@ where
     }
 }
 
-impl<I, B: BufferMut> icmp::BufferIcmpContext<I, B> for BindingsDispatcher
+impl<I, B: BufferMut> icmp::BufferIcmpContext<I, B> for BindingsNonSyncCtxImpl
 where
     I: socket::datagram::SocketCollectionIpExt<socket::datagram::IcmpEcho> + icmp::IcmpIpExt,
     IcmpEchoReply: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
@@ -368,7 +367,7 @@ where
     }
 }
 
-impl<I> UdpContext<I> for BindingsDispatcher
+impl<I> UdpContext<I> for BindingsNonSyncCtxImpl
 where
     I: socket::datagram::SocketCollectionIpExt<socket::datagram::Udp> + icmp::IcmpIpExt,
 {
@@ -377,7 +376,7 @@ where
     }
 }
 
-impl<I, B: BufferMut> BufferUdpContext<I, B> for BindingsDispatcher
+impl<I, B: BufferMut> BufferUdpContext<I, B> for BindingsNonSyncCtxImpl
 where
     I: socket::datagram::SocketCollectionIpExt<socket::datagram::Udp> + IpExt,
 {
@@ -772,7 +771,13 @@ impl NetstackSeed {
             .expect("error adding IPv6 loopback on-link subnet route");
 
             // Start servicing timers.
-            let BindingsNonSyncCtxImpl { rng: _, timers, devices: _ } = non_sync_ctx;
+            let BindingsNonSyncCtxImpl {
+                rng: _,
+                timers,
+                devices: _,
+                icmp_echo_sockets: _,
+                udp_sockets: _,
+            } = non_sync_ctx;
             timers.spawn(netstack.clone());
         }
 

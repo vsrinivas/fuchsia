@@ -42,8 +42,7 @@ pub(crate) async fn serve<C>(
 ) -> Result<(), fidl::Error>
 where
     C: LockableContext,
-    C::Dispatcher: datagram::SocketWorkerDispatcher,
-    C::NonSyncCtx: AsRef<Devices>,
+    C::NonSyncCtx: AsRef<Devices> + datagram::SocketWorkerDispatcher,
     C: Clone + Send + Sync + 'static,
 {
     stream

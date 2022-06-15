@@ -60,7 +60,7 @@ use crate::{
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
-            BufferIcmpHandler, IcmpContext, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext,
+            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpNonSyncCtx,
             IcmpState, Icmpv4Error, Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State,
             Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder,
             InnerIcmpContext,
@@ -262,8 +262,11 @@ trait IpTransportLayerContext<I: IpExt, C>: IpDeviceIdContext<I> {
     type Udp: IpTransportContext<I, C, Self>;
 }
 
-impl<I: IpExt, C: RngContext, SC: crate::transport::udp::UdpStateContext<I, C>>
-    IpTransportLayerContext<I, C> for SC
+impl<
+        I: IpExt,
+        C: crate::transport::udp::UdpStateNonSyncContext<I>,
+        SC: crate::transport::udp::UdpStateContext<I, C>,
+    > IpTransportLayerContext<I, C> for SC
 {
     type Tcp = ();
     type Udp = crate::transport::udp::UdpIpTransportContext;
@@ -2340,9 +2343,8 @@ pub(crate) fn send_ipv6_packet_from_device<
 }
 
 impl<
-        C: IpLayerNonSyncContext<Ipv4, SC::DeviceId>,
+        C: IpLayerNonSyncContext<Ipv4, SC::DeviceId> + IcmpNonSyncCtx<Ipv4>,
         SC: IpTransportLayerContext<Ipv4, C>
-            + IcmpContext<Ipv4>
             + StateContext<C, IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, SC::DeviceId>>>
             + IpSocketHandler<Ipv4, C>
             + CounterContext,
@@ -2384,9 +2386,8 @@ impl<
 }
 
 impl<
-        C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
+        C: IpLayerNonSyncContext<Ipv6, SC::DeviceId> + IcmpNonSyncCtx<Ipv6>,
         SC: IpTransportLayerContext<Ipv6, C>
-            + IcmpContext<Ipv6>
             + StateContext<C, IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, SC::DeviceId>>>
             + IpSocketHandler<Ipv6, C>
             + CounterContext,

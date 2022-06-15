@@ -101,6 +101,12 @@ pub(crate) mod benchmarks {
     }
 }
 
+#[derive(Default)]
+pub(crate) struct DummyNonSyncCtxState {
+    icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
+    icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
+}
+
 // Use the `Never` type for the `crate::context::testutil::DummyCtx`'s frame
 // metadata type. This ensures that we don't accidentally send frames to its
 // `DummyFrameCtx`, which isn't actually used (instead, we use the
@@ -109,10 +115,9 @@ pub(crate) mod benchmarks {
 // accesses the frame contents rather than the frame metadata will still
 // compile).
 pub(crate) type DummyCtx = Ctx<DummyEventDispatcher, DummyNonSyncCtx>;
-
 pub(crate) type DummySyncCtx = SyncCtx<DummyEventDispatcher, DummyNonSyncCtx>;
 pub(crate) type DummyNonSyncCtx =
-    crate::context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent>;
+    crate::context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>;
 
 impl NonSyncContext for DummyNonSyncCtx {}
 
@@ -616,10 +621,7 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
 /// testing purposes. It provides facilities to inspect the history of what
 /// events have been emitted to the system.
 #[derive(Default)]
-pub(crate) struct DummyEventDispatcher {
-    icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
-    icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
-}
+pub(crate) struct DummyEventDispatcher {}
 
 impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyNonSyncCtx {
     fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
@@ -658,27 +660,27 @@ impl DummyNetworkContext for DummyCtx {
 
 pub(crate) trait TestutilIpExt: Ip {
     fn icmp_replies(
-        evt: &mut DummyEventDispatcher,
+        evt: &mut DummyNonSyncCtx,
     ) -> &mut HashMap<IcmpConnId<Self>, Vec<(u16, Vec<u8>)>>;
 }
 
 impl TestutilIpExt for Ipv4 {
     fn icmp_replies(
-        evt: &mut DummyEventDispatcher,
+        evt: &mut DummyNonSyncCtx,
     ) -> &mut HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>> {
-        &mut evt.icmpv4_replies
+        &mut evt.state_mut().icmpv4_replies
     }
 }
 
 impl TestutilIpExt for Ipv6 {
     fn icmp_replies(
-        evt: &mut DummyEventDispatcher,
+        evt: &mut DummyNonSyncCtx,
     ) -> &mut HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>> {
-        &mut evt.icmpv6_replies
+        &mut evt.state_mut().icmpv6_replies
     }
 }
 
-impl DummyEventDispatcher {
+impl DummyNonSyncCtx {
     /// Takes all the received ICMP replies for a given `conn`.
     pub(crate) fn take_icmp_replies<I: TestutilIpExt>(
         &mut self,
@@ -688,17 +690,17 @@ impl DummyEventDispatcher {
     }
 }
 
-impl<I: IcmpIpExt> UdpContext<I> for DummyEventDispatcher {}
+impl<I: IcmpIpExt> UdpContext<I> for DummyNonSyncCtx {}
 
-impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for DummyEventDispatcher {}
+impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for DummyNonSyncCtx {}
 
-impl<I: IcmpIpExt> IcmpContext<I> for DummyEventDispatcher {
+impl<I: IcmpIpExt> IcmpContext<I> for DummyNonSyncCtx {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
         unimplemented!()
     }
 }
 
-impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for DummyEventDispatcher {
+impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for DummyNonSyncCtx {
     fn receive_icmp_echo_reply(
         &mut self,
         conn: IcmpConnId<Ipv4>,
@@ -708,12 +710,12 @@ impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for DummyEventDispatcher {
         seq_num: u16,
         data: B,
     ) {
-        let replies = self.icmpv4_replies.entry(conn).or_insert_with(Vec::default);
+        let replies = self.state_mut().icmpv4_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.as_ref().to_owned()))
     }
 }
 
-impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyEventDispatcher {
+impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyNonSyncCtx {
     fn receive_icmp_echo_reply(
         &mut self,
         conn: IcmpConnId<Ipv6>,
@@ -723,7 +725,7 @@ impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyEventDispatcher {
         seq_num: u16,
         data: B,
     ) {
-        let replies = self.icmpv6_replies.entry(conn).or_insert_with(Vec::default);
+        let replies = self.state_mut().icmpv6_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.as_ref().to_owned()))
     }
 }

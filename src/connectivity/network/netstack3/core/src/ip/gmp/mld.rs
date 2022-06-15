@@ -507,6 +507,7 @@ mod tests {
         MldFrameMetadata<DummyDeviceId>,
         (),
         DummyDeviceId,
+        (),
     >;
     type MockSyncCtx = crate::context::testutil::DummySyncCtx<
         DummyMldCtx,
@@ -514,7 +515,7 @@ mod tests {
         DummyDeviceId,
     >;
     type MockNonSyncCtx =
-        crate::context::testutil::DummyNonSyncCtx<MldDelayedReportTimerId<DummyDeviceId>, ()>;
+        crate::context::testutil::DummyNonSyncCtx<MldDelayedReportTimerId<DummyDeviceId>, (), ()>;
 
     impl MldContext<MockNonSyncCtx> for MockSyncCtx {
         fn get_ipv6_link_local_addr(

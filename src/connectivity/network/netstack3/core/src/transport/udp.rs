@@ -22,7 +22,7 @@ use derivative::Derivative;
 use either::Either;
 use log::trace;
 use net_types::{
-    ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{Ip, IpAddress, IpVersionMarker},
     MulticastAddress as _, SpecifiedAddr, Witness,
 };
 use nonzero_ext::nonzero;
@@ -46,7 +46,7 @@ use crate::{
     device::DeviceId,
     error::{ExistsError, LocalAddressError},
     ip::{
-        icmp::{IcmpIpExt, Icmpv4ErrorCode, Icmpv6ErrorCode},
+        icmp::IcmpIpExt,
         socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocket},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
         IpTransportContext, TransportIpContext, TransportReceiveError,
@@ -59,7 +59,7 @@ use crate::{
         },
         AddrVec, Bound, BoundSocketMap, InsertError,
     },
-    BufferDispatcher, EventDispatcher, NonSyncContext, SyncCtx,
+    EventDispatcher, NonSyncContext, SyncCtx,
 };
 
 /// A builder for UDP layer state.
@@ -542,7 +542,7 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
 ///
 /// Attempts to allocate a new unused local port with the given flow identifier
 /// `id`.
-fn try_alloc_local_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+fn try_alloc_local_port<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: &ProtocolFlowId<I::Addr>,
@@ -556,7 +556,7 @@ fn try_alloc_local_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext
 /// Helper function to allocate a listen port.
 ///
 /// Finds a random ephemeral port that is not in the provided `used_ports` set.
-fn try_alloc_listen_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+fn try_alloc_listen_port<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     _sync_ctx: &mut SC,
     ctx: &mut C,
     used_ports: &HashSet<NonZeroU16>,
@@ -851,26 +851,13 @@ pub trait UdpContext<I: IcmpIpExt> {
     }
 }
 
-impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> UdpContext<Ipv4> for SyncCtx<D, NonSyncCtx> {
-    fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv4>, err: Icmpv4ErrorCode) {
-        UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
-    }
-}
-
-impl<D: EventDispatcher, NonSyncCtx: NonSyncContext> UdpContext<Ipv6> for SyncCtx<D, NonSyncCtx> {
-    fn receive_icmp_error(&mut self, id: UdpBoundId<Ipv6>, err: Icmpv6ErrorCode) {
-        UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
-    }
-}
-
 /// The non-synchronized context for UDP.
-pub trait UdpStateNonSyncContext: RngContext {}
-impl<C: RngContext> UdpStateNonSyncContext for C {}
+pub trait UdpStateNonSyncContext<I: IpExt>: RngContext + UdpContext<I> {}
+impl<I: IpExt, C: RngContext + UdpContext<I>> UdpStateNonSyncContext<I> for C {}
 
 /// An execution context for the UDP protocol which also provides access to state.
-pub trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext>:
-    UdpContext<I>
-    + CounterContext
+pub trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext<I>>:
+    CounterContext
     + TransportIpContext<I, C>
     + StateContext<C, UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
 {
@@ -878,11 +865,8 @@ pub trait UdpStateContext<I: IpExt, C: UdpStateNonSyncContext>:
 
 impl<
         I: IpExt,
-        C: UdpStateNonSyncContext,
-        SC: UdpContext<I>
-            + CounterContext
-            + TransportIpContext<I, C>
-            + StateContext<C, UdpState<I, SC::DeviceId>>,
+        C: UdpStateNonSyncContext<I>,
+        SC: CounterContext + TransportIpContext<I, C> + StateContext<C, UdpState<I, SC::DeviceId>>,
     > UdpStateContext<I, C> for SC
 {
 }
@@ -920,82 +904,28 @@ pub trait BufferUdpContext<I: IpExt, B: BufferMut>: UdpContext<I> {
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext> BufferUdpContext<Ipv4, B>
-    for SyncCtx<D, NonSyncCtx>
+/// The non-synchronized context for UDP with a buffer.
+pub trait BufferUdpStateNonSyncContext<I: IpExt, B: BufferMut>:
+    UdpStateNonSyncContext<I> + BufferUdpContext<I, B>
 {
-    fn receive_udp_from_conn(
-        &mut self,
-        conn: UdpConnId<Ipv4>,
-        src_ip: Ipv4Addr,
-        src_port: NonZeroU16,
-        body: &B,
-    ) {
-        BufferUdpContext::receive_udp_from_conn(&mut self.dispatcher, conn, src_ip, src_port, body)
-    }
-
-    fn receive_udp_from_listen(
-        &mut self,
-        listener: UdpListenerId<Ipv4>,
-        src_ip: Ipv4Addr,
-        dst_ip: Ipv4Addr,
-        src_port: Option<NonZeroU16>,
-        body: &B,
-    ) {
-        BufferUdpContext::receive_udp_from_listen(
-            &mut self.dispatcher,
-            listener,
-            src_ip,
-            dst_ip,
-            src_port,
-            body,
-        )
-    }
 }
-
-impl<B: BufferMut, D: BufferDispatcher<B>, NonSyncCtx: NonSyncContext> BufferUdpContext<Ipv6, B>
-    for SyncCtx<D, NonSyncCtx>
+impl<I: IpExt, B: BufferMut, C: UdpStateNonSyncContext<I> + BufferUdpContext<I, B>>
+    BufferUdpStateNonSyncContext<I, B> for C
 {
-    fn receive_udp_from_conn(
-        &mut self,
-        conn: UdpConnId<Ipv6>,
-        src_ip: Ipv6Addr,
-        src_port: NonZeroU16,
-        body: &B,
-    ) {
-        BufferUdpContext::receive_udp_from_conn(&mut self.dispatcher, conn, src_ip, src_port, body)
-    }
-
-    fn receive_udp_from_listen(
-        &mut self,
-        listener: UdpListenerId<Ipv6>,
-        src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
-        src_port: Option<NonZeroU16>,
-        body: &B,
-    ) {
-        BufferUdpContext::receive_udp_from_listen(
-            &mut self.dispatcher,
-            listener,
-            src_ip,
-            dst_ip,
-            src_port,
-            body,
-        )
-    }
 }
 
 /// An execution context for the UDP protocol when a buffer is provided which
 /// also provides access to state.
-pub trait BufferUdpStateContext<I: IpExt, C: UdpStateNonSyncContext, B: BufferMut>:
-    BufferUdpContext<I, B> + BufferTransportIpContext<I, C, B> + UdpStateContext<I, C>
+pub trait BufferUdpStateContext<I: IpExt, C: BufferUdpStateNonSyncContext<I, B>, B: BufferMut>:
+    BufferTransportIpContext<I, C, B> + UdpStateContext<I, C>
 {
 }
 
 impl<
         I: IpExt,
         B: BufferMut,
-        C: UdpStateNonSyncContext,
-        SC: BufferUdpContext<I, B> + BufferTransportIpContext<I, C, B> + UdpStateContext<I, C>,
+        C: BufferUdpStateNonSyncContext<I, B>,
+        SC: BufferTransportIpContext<I, C, B> + UdpStateContext<I, C>,
     > BufferUdpStateContext<I, C, B> for SC
 {
 }
@@ -1045,12 +975,12 @@ impl<I: IpExt, D: EventDispatcher, NonSyncCtx: NonSyncContext>
 /// An implementation of [`IpTransportContext`] for UDP.
 pub(crate) enum UdpIpTransportContext {}
 
-impl<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>> IpTransportContext<I, C, SC>
+impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> IpTransportContext<I, C, SC>
     for UdpIpTransportContext
 {
     fn receive_icmp_error(
         sync_ctx: &mut SC,
-        _ctx: &mut C,
+        ctx: &mut C,
         device: SC::DeviceId,
         src_ip: Option<SpecifiedAddr<I::Addr>>,
         dst_ip: SpecifiedAddr<I::Addr>,
@@ -1083,7 +1013,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>> IpTransport
                     LookupResult::Listener(id, _) => id.into(),
                     LookupResult::Conn(id, _) => id.into(),
                 };
-                sync_ctx.receive_icmp_error(id, err);
+                ctx.receive_icmp_error(id, err);
             } else {
                 trace!("UdpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent UDP socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
             }
@@ -1093,12 +1023,16 @@ impl<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>> IpTransport
     }
 }
 
-impl<I: IpExt, B: BufferMut, C: UdpStateNonSyncContext, SC: BufferUdpStateContext<I, C, B>>
-    BufferIpTransportContext<I, C, SC, B> for UdpIpTransportContext
+impl<
+        I: IpExt,
+        B: BufferMut,
+        C: BufferUdpStateNonSyncContext<I, B>,
+        SC: BufferUdpStateContext<I, C, B>,
+    > BufferIpTransportContext<I, C, SC, B> for UdpIpTransportContext
 {
     fn receive_ip_packet(
         sync_ctx: &mut SC,
-        _ctx: &mut C,
+        ctx: &mut C,
         device: SC::DeviceId,
         src_ip: I::RecvSrcAddr,
         dst_ip: SpecifiedAddr<I::Addr>,
@@ -1143,14 +1077,10 @@ impl<I: IpExt, B: BufferMut, C: UdpStateNonSyncContext, SC: BufferUdpStateContex
                                 },
                             device: _,
                         },
-                    ) => sync_ctx.receive_udp_from_conn(id, remote_ip.get(), remote_port, &buffer),
-                    LookupResult::Listener(id, _) => sync_ctx.receive_udp_from_listen(
-                        id,
-                        src_ip,
-                        dst_ip.get(),
-                        src_port,
-                        &buffer,
-                    ),
+                    ) => ctx.receive_udp_from_conn(id, remote_ip.get(), remote_port, &buffer),
+                    LookupResult::Listener(id, _) => {
+                        ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, &buffer)
+                    }
                 }
             }
             Ok(())
@@ -1200,7 +1130,7 @@ pub enum UdpSendError {
 pub fn send_udp<
     I: IpExt,
     B: BufferMut,
-    C: UdpStateNonSyncContext,
+    C: BufferUdpStateNonSyncContext<I, B>,
     SC: BufferUdpStateContext<I, C, B>,
 >(
     sync_ctx: &mut SC,
@@ -1260,7 +1190,7 @@ pub fn send_udp<
 pub fn send_udp_conn<
     I: IpExt,
     B: BufferMut,
-    C: UdpStateNonSyncContext,
+    C: BufferUdpStateNonSyncContext<I, B>,
     SC: BufferUdpStateContext<I, C, B>,
 >(
     sync_ctx: &mut SC,
@@ -1320,7 +1250,7 @@ pub enum UdpSendListenerError {
 pub fn send_udp_listener<
     I: IpExt,
     B: BufferMut,
-    C: UdpStateNonSyncContext,
+    C: BufferUdpStateNonSyncContext<I, B>,
     SC: BufferUdpStateContext<I, C, B>,
 >(
     sync_ctx: &mut SC,
@@ -1372,7 +1302,7 @@ pub fn send_udp_listener<
 /// `create_udp_unbound` creates a new unbound UDP socket and returns an
 /// identifier for it. The ID can be used to connect the socket to a remote
 /// address or to listen for incoming packets.
-pub fn create_udp_unbound<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn create_udp_unbound<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
 ) -> UdpUnboundId<I> {
     let state = sync_ctx.get_state_mut();
@@ -1385,7 +1315,7 @@ pub fn create_udp_unbound<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateConte
 /// but not bound.
 ///
 /// # Panics if `id` is not a valid [`UdpUnboundId`].
-pub fn remove_udp_unbound<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn remove_udp_unbound<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     id: UdpUnboundId<I>,
 ) {
@@ -1415,7 +1345,7 @@ pub fn remove_udp_unbound<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateConte
 /// # Panics
 ///
 /// `connect_udp` panics if `id` is not a valid [`UdpUnboundId`].
-pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpUnboundId<I>,
@@ -1445,7 +1375,7 @@ pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C
         })
 }
 
-fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -1484,7 +1414,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C
 /// # Panics
 ///
 /// `set_unbound_udp_device` panics if `id` is not a valid [`UdpUnboundId`].
-pub fn set_unbound_udp_device<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn set_unbound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpUnboundId<I>,
@@ -1503,7 +1433,7 @@ pub fn set_unbound_udp_device<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateC
 /// # Panics
 ///
 /// `set_bound_udp_device` panics if `id` is not a valid [`UdpBoundId`].
-pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpBoundId<I>,
@@ -1531,7 +1461,7 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateCon
 /// # Panics
 ///
 /// Panics if `id` is not a valid socket ID.
-pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonSyncContext>(
+pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonSyncContext<I>>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpSocketId<I>,
@@ -1567,7 +1497,11 @@ pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonS
 /// # Panics
 ///
 /// `set_udp_posix_reuse_port` panics if `id` is not a valid `UdpUnboundId`.
-pub fn set_udp_posix_reuse_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn set_udp_posix_reuse_port<
+    I: IpExt,
+    C: UdpStateNonSyncContext<I>,
+    SC: UdpStateContext<I, C>,
+>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpUnboundId<I>,
@@ -1585,7 +1519,11 @@ pub fn set_udp_posix_reuse_port<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStat
 /// # Panics
 ///
 /// Panics if `id` is not a valid `UdpSocketId`.
-pub fn get_udp_posix_reuse_port<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonSyncContext>(
+pub fn get_udp_posix_reuse_port<
+    I: IpExt,
+    SC: UdpStateContext<I, C>,
+    C: UdpStateNonSyncContext<I>,
+>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpSocketId<I>,
@@ -1626,7 +1564,7 @@ pub fn get_udp_posix_reuse_port<I: IpExt, SC: UdpStateContext<I, C>, C: UdpState
 /// # Panics
 ///
 /// `remove_udp_conn` panics if `id` is not a valid `UdpConnId`.
-pub fn remove_udp_conn<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn remove_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpConnId<I>,
@@ -1642,7 +1580,7 @@ pub fn remove_udp_conn<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<
 /// # Panics
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpConnId`.
-pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpConnId<I>,
@@ -1669,7 +1607,7 @@ pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContex
 ///
 /// `listen_udp` panics if `listener` is already in use, or if `id` is not a
 /// valid [`UdpUnboundId`].
-pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpUnboundId<I>,
@@ -1722,7 +1660,7 @@ pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>
 /// # Panics
 ///
 /// `remove_listener` panics if `id` is not a valid `UdpListenerId`.
-pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: UdpListenerId<I>,
@@ -1738,7 +1676,7 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateCont
 /// # Panics
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpListenerId`.
-pub fn get_udp_listener_info<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>>(
+pub fn get_udp_listener_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpListenerId<I>,
@@ -1789,7 +1727,7 @@ mod tests {
         context::testutil::{DummyFrameCtx, DummyInstant},
         ip::{
             device::state::IpDeviceStateIpExt,
-            icmp::Icmpv6ErrorCode,
+            icmp::{Icmpv4ErrorCode, Icmpv6ErrorCode},
             socket::{
                 testutil::DummyDeviceConfig, testutil::DummyIpSocketCtx, BufferIpSocketHandler,
                 IpSockRouteError, IpSockUnroutableError,
@@ -1826,9 +1764,6 @@ mod tests {
     struct DummyUdpCtx<I: TestIpExt, D: IpDeviceId> {
         state: UdpState<I, D>,
         ip_socket_ctx: DummyIpSocketCtx<I, D>,
-        listen_data: Vec<ListenData<I>>,
-        conn_data: Vec<ConnData<I>>,
-        icmp_errors: Vec<IcmpError<I>>,
         extra_local_addrs: Vec<I::Addr>,
     }
 
@@ -1843,32 +1778,7 @@ mod tests {
 
     impl<I: TestIpExt, D: IpDeviceId> DummyUdpCtx<I, D> {
         fn with_ip_socket_ctx(ip_socket_ctx: DummyIpSocketCtx<I, D>) -> Self {
-            DummyUdpCtx {
-                state: Default::default(),
-                ip_socket_ctx,
-                listen_data: Default::default(),
-                conn_data: Default::default(),
-                icmp_errors: Default::default(),
-                extra_local_addrs: Vec::new(),
-            }
-        }
-
-        fn listen_data(&self) -> HashMap<UdpListenerId<I>, Vec<&'_ [u8]>> {
-            let Self {
-                listen_data,
-                state: _,
-                ip_socket_ctx: _,
-                conn_data: _,
-                icmp_errors: _,
-                extra_local_addrs: _,
-            } = self;
-            listen_data.iter().fold(
-                HashMap::new(),
-                |mut map, ListenData { listener, body, src_ip: _, dst_ip: _, src_port: _ }| {
-                    map.entry(*listener).or_default().push(&body);
-                    map
-                },
-            )
+            DummyUdpCtx { state: Default::default(), ip_socket_ctx, extra_local_addrs: Vec::new() }
         }
     }
 
@@ -1915,6 +1825,7 @@ mod tests {
         SendIpPacketMeta<I, D, SpecifiedAddr<<I as Ip>::Addr>>,
         (),
         D,
+        DummyDeviceNonSyncCtxState<I>,
     >;
 
     type DummyDeviceSyncCtx<I, D> = crate::context::testutil::DummySyncCtx<
@@ -1923,58 +1834,35 @@ mod tests {
         D,
     >;
 
-    type DummyDeviceNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<(), ()>;
+    type DummyDeviceNonSyncCtx<I> =
+        crate::context::testutil::DummyNonSyncCtx<(), (), DummyDeviceNonSyncCtxState<I>>;
 
-    type DummyCtx<I> = DummyDeviceCtx<I, DummyDeviceId>;
-    type DummySyncCtx<I> = DummyDeviceSyncCtx<I, DummyDeviceId>;
-    type DummyNonSyncCtx = DummyDeviceNonSyncCtx;
-
-    /// The trait bounds required of `DummySyncCtx<I>` in tests.
-    trait DummyDeviceSyncCtxBound<I: TestIpExt, D: IpDeviceId>:
-        Default + BufferIpSocketHandler<I, DummyDeviceNonSyncCtx, Buf<Vec<u8>>, DeviceId = D>
-    {
-    }
-    impl<I: TestIpExt, D: IpDeviceId> DummyDeviceSyncCtxBound<I, D> for DummyDeviceSyncCtx<I, D> where
-        DummyDeviceSyncCtx<I, D>:
-            Default + BufferIpSocketHandler<I, DummyDeviceNonSyncCtx, Buf<Vec<u8>>, DeviceId = D>
-    {
+    #[derive(Default)]
+    struct DummyDeviceNonSyncCtxState<I: TestIpExt> {
+        listen_data: Vec<ListenData<I>>,
+        conn_data: Vec<ConnData<I>>,
+        icmp_errors: Vec<IcmpError<I>>,
     }
 
-    trait DummySyncCtxBound<I: TestIpExt>: DummyDeviceSyncCtxBound<I, DummyDeviceId> {}
-    impl<I: TestIpExt, C: DummyDeviceSyncCtxBound<I, DummyDeviceId>> DummySyncCtxBound<I> for C {}
-
-    impl<I: TestIpExt, D: IpDeviceId> TransportIpContext<I, DummyDeviceNonSyncCtx>
-        for DummyDeviceSyncCtx<I, D>
-    where
-        DummyDeviceSyncCtx<I, D>: DummyDeviceSyncCtxBound<I, D>,
-    {
-        fn is_assigned_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
-            local_ip::<I>().get() == addr || self.get_ref().extra_local_addrs.contains(&addr)
+    impl<I: TestIpExt> DummyDeviceNonSyncCtxState<I> {
+        fn listen_data(&self) -> HashMap<UdpListenerId<I>, Vec<&'_ [u8]>> {
+            self.listen_data.iter().fold(
+                HashMap::new(),
+                |mut map, ListenData { listener, body, src_ip: _, dst_ip: _, src_port: _ }| {
+                    map.entry(*listener).or_default().push(&body);
+                    map
+                },
+            )
         }
     }
 
-    impl<I: TestIpExt, D: IpDeviceId + 'static>
-        StateContext<DummyDeviceNonSyncCtx, UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
-        for DummyDeviceSyncCtx<I, D>
-    {
-        fn get_state_with(&self, _id0: ()) -> &UdpState<I, D> {
-            &self.get_ref().state
-        }
-
-        fn get_state_mut_with(&mut self, _id0: ()) -> &mut UdpState<I, D> {
-            &mut self.get_mut().state
-        }
-    }
-
-    impl<I: TestIpExt, D: IpDeviceId> UdpContext<I> for DummyDeviceSyncCtx<I, D> {
+    impl<I: TestIpExt> UdpContext<I> for DummyDeviceNonSyncCtx<I> {
         fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
-            self.get_mut().icmp_errors.push(IcmpError { id, err })
+            self.state_mut().icmp_errors.push(IcmpError { id, err })
         }
     }
 
-    impl<I: TestIpExt, B: BufferMut, D: IpDeviceId> BufferUdpContext<I, B>
-        for DummyDeviceSyncCtx<I, D>
-    {
+    impl<I: TestIpExt, B: BufferMut> BufferUdpContext<I, B> for DummyDeviceNonSyncCtx<I> {
         fn receive_udp_from_conn(
             &mut self,
             conn: UdpConnId<I>,
@@ -1982,7 +1870,7 @@ mod tests {
             _src_port: NonZeroU16,
             body: &B,
         ) {
-            self.get_mut().conn_data.push(ConnData { conn, body: body.as_ref().to_owned() })
+            self.state_mut().conn_data.push(ConnData { conn, body: body.as_ref().to_owned() })
         }
 
         fn receive_udp_from_listen(
@@ -1993,13 +1881,56 @@ mod tests {
             src_port: Option<NonZeroU16>,
             body: &B,
         ) {
-            self.get_mut().listen_data.push(ListenData {
+            self.state_mut().listen_data.push(ListenData {
                 listener,
                 src_ip,
                 dst_ip,
                 src_port,
                 body: body.as_ref().to_owned(),
             })
+        }
+    }
+
+    type DummyCtx<I> = DummyDeviceCtx<I, DummyDeviceId>;
+    type DummySyncCtx<I> = DummyDeviceSyncCtx<I, DummyDeviceId>;
+    type DummyNonSyncCtx<I> = DummyDeviceNonSyncCtx<I>;
+
+    /// The trait bounds required of `DummySyncCtx<I>` in tests.
+    trait DummyDeviceSyncCtxBound<I: TestIpExt, D: IpDeviceId>:
+        Default + BufferIpSocketHandler<I, DummyDeviceNonSyncCtx<I>, Buf<Vec<u8>>, DeviceId = D>
+    {
+    }
+    impl<I: TestIpExt, D: IpDeviceId> DummyDeviceSyncCtxBound<I, D> for DummyDeviceSyncCtx<I, D> where
+        DummyDeviceSyncCtx<I, D>: Default
+            + BufferIpSocketHandler<I, DummyDeviceNonSyncCtx<I>, Buf<Vec<u8>>, DeviceId = D>
+    {
+    }
+
+    trait DummySyncCtxBound<I: TestIpExt>: DummyDeviceSyncCtxBound<I, DummyDeviceId> {}
+    impl<I: TestIpExt, C: DummyDeviceSyncCtxBound<I, DummyDeviceId>> DummySyncCtxBound<I> for C {}
+
+    impl<I: TestIpExt, D: IpDeviceId> TransportIpContext<I, DummyDeviceNonSyncCtx<I>>
+        for DummyDeviceSyncCtx<I, D>
+    where
+        DummyDeviceSyncCtx<I, D>: DummyDeviceSyncCtxBound<I, D>,
+    {
+        fn is_assigned_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
+            local_ip::<I>().get() == addr || self.get_ref().extra_local_addrs.contains(&addr)
+        }
+    }
+
+    impl<I: TestIpExt, D: IpDeviceId + 'static>
+        StateContext<
+            DummyDeviceNonSyncCtx<I>,
+            UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>,
+        > for DummyDeviceSyncCtx<I, D>
+    {
+        fn get_state_with(&self, _id0: ()) -> &UdpState<I, D> {
+            &self.get_ref().state
+        }
+
+        fn get_state_mut_with(&mut self, _id0: ()) -> &mut UdpState<I, D> {
+            &mut self.get_mut().state
         }
     }
 
@@ -2040,7 +1971,7 @@ mod tests {
     /// Helper function to inject an UDP packet with the provided parameters.
     fn receive_udp_packet<I: TestIpExt, D: IpDeviceId + 'static>(
         sync_ctx: &mut DummyDeviceSyncCtx<I, D>,
-        ctx: &mut DummyDeviceNonSyncCtx,
+        ctx: &mut DummyDeviceNonSyncCtx<I>,
         device: D,
         src_ip: I::Addr,
         dst_ip: I::Addr,
@@ -2185,7 +2116,7 @@ mod tests {
             &body[..],
         );
 
-        let listen_data = &sync_ctx.get_ref().listen_data;
+        let listen_data = &non_sync_ctx.state().listen_data;
         assert_eq!(listen_data.len(), 1);
         let pkt = &listen_data[0];
         assert_eq!(pkt.listener, listener);
@@ -2264,8 +2195,8 @@ mod tests {
             NonZeroU16::new(100).unwrap(),
             &body[..],
         );
-        assert_empty(sync_ctx.get_ref().listen_data.iter());
-        assert_empty(sync_ctx.get_ref().conn_data.iter());
+        assert_empty(non_sync_ctx.state().listen_data.iter());
+        assert_empty(non_sync_ctx.state().conn_data.iter());
     }
 
     /// Tests that UDP connections can be created and data can be transmitted
@@ -2308,7 +2239,7 @@ mod tests {
             &body[..],
         );
 
-        let conn_data = &sync_ctx.get_ref().conn_data;
+        let conn_data = &non_sync_ctx.state().conn_data;
         assert_eq!(conn_data.len(), 1);
         let pkt = &conn_data[0];
         assert_eq!(pkt.conn, conn);
@@ -2505,7 +2436,7 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
 
-        fn connect_unbound<I: Ip + TestIpExt, C: UdpStateNonSyncContext>(
+        fn connect_unbound<I: Ip + TestIpExt, C: UdpStateNonSyncContext<I>>(
             sync_ctx: &mut impl UdpStateContext<I, C>,
             non_sync_ctx: &mut C,
             unbound: UdpUnboundId<I>,
@@ -2856,7 +2787,7 @@ mod tests {
             &body_wildcard_list[..],
         );
         // Check that we got everything in order.
-        let conn_packets = &sync_ctx.get_ref().conn_data;
+        let conn_packets = &non_sync_ctx.state().conn_data;
         assert_eq!(conn_packets.len(), 2);
         let pkt = &conn_packets[0];
         assert_eq!(pkt.conn, conn1);
@@ -2865,7 +2796,7 @@ mod tests {
         assert_eq!(pkt.conn, conn2);
         assert_eq!(pkt.body, &body_conn2[..]);
 
-        let list_packets = &sync_ctx.get_ref().listen_data;
+        let list_packets = &non_sync_ctx.state().listen_data;
         assert_eq!(list_packets.len(), 3);
         let pkt = &list_packets[0];
         assert_eq!(pkt.listener, list1);
@@ -2938,7 +2869,7 @@ mod tests {
         );
 
         // Check that we received both packets for the listener.
-        let listen_packets = &sync_ctx.get_ref().listen_data;
+        let listen_packets = &non_sync_ctx.state().listen_data;
         assert_eq!(listen_packets.len(), 2);
         let pkt = &listen_packets[0];
         assert_eq!(pkt.listener, listener);
@@ -3017,7 +2948,7 @@ mod tests {
         receive_packet(3, multicast_addr_other);
 
         assert_eq!(
-            sync_ctx.get_ref().listen_data(),
+            non_sync_ctx.state().listen_data(),
             HashMap::from([
                 (specific_listeners[0], vec![[1].as_slice(), &[2]]),
                 (specific_listeners[1], vec![&[1], &[2]]),
@@ -3062,7 +2993,7 @@ mod tests {
 
     type MultiDeviceDummyCtx<I> = DummyDeviceCtx<I, MultipleDevicesId>;
     type MultiDeviceDummySyncCtx<I> = DummyDeviceSyncCtx<I, MultipleDevicesId>;
-    type MultiDeviceDummyNonSyncCtx = DummyDeviceNonSyncCtx;
+    type MultiDeviceDummyNonSyncCtx<I> = DummyDeviceNonSyncCtx<I>;
 
     impl Default for DummyUdpCtx<Ipv4, MultipleDevicesId> {
         fn default() -> Self {
@@ -3152,7 +3083,7 @@ mod tests {
             &body[..],
         );
 
-        let conn_data = &sync_ctx.get_ref().conn_data;
+        let conn_data = &non_sync_ctx.state().conn_data;
         assert_matches!(&conn_data[..], &[ConnData {conn, body: _ }] if conn == bound_first_device);
 
         // A second packet received on `MultipleDevicesId::B` will go to the
@@ -3168,7 +3099,7 @@ mod tests {
             &body[..],
         );
 
-        let listen_data = &sync_ctx.get_ref().listen_data;
+        let listen_data = &non_sync_ctx.state().listen_data;
         assert_matches!(&listen_data[..], &[ListenData {
             listener, src_ip: _, dst_ip: _, src_port: _, body: _
         }] if listener== bound_second_device);
@@ -3234,7 +3165,7 @@ mod tests {
 
     fn receive_packet_on<I: Ip + TestIpExt>(
         sync_ctx: &mut MultiDeviceDummySyncCtx<I>,
-        ctx: &mut MultiDeviceDummyNonSyncCtx,
+        ctx: &mut MultiDeviceDummyNonSyncCtx<I>,
         device: MultipleDevicesId,
     ) where
         MultiDeviceDummySyncCtx<I>: DummyDeviceSyncCtxBound<I, MultipleDevicesId>,
@@ -3278,14 +3209,14 @@ mod tests {
 
         // Since it is bound, it does not receive a packet from another device.
         receive_packet_on(sync_ctx, &mut non_sync_ctx, MultipleDevicesId::B);
-        let listen_data = &sync_ctx.get_ref().listen_data;
+        let listen_data = &non_sync_ctx.state().listen_data;
         assert_matches!(&listen_data[..], &[]);
 
         // When unbound, the socket can receive packets on the other device.
         set_bound_udp_device(sync_ctx, &mut non_sync_ctx, socket.into(), None)
             .expect("clearing bound device failed");
         receive_packet_on(sync_ctx, &mut non_sync_ctx, MultipleDevicesId::B);
-        let listen_data = &sync_ctx.get_ref().listen_data;
+        let listen_data = &non_sync_ctx.state().listen_data;
         assert_matches!(&listen_data[..],
             &[ListenData {listener, body:_, src_ip: _, dst_ip: _, src_port: _ }] =>
             assert_eq!(listener, socket));
@@ -3375,7 +3306,7 @@ mod tests {
             receive_packet(remote_ip, device);
         }
 
-        let listen_data = sync_ctx.get_ref().listen_data();
+        let listen_data = non_sync_ctx.state().listen_data();
 
         for (device, listener) in bound_on_devices {
             let device: u8 = device.into();
@@ -3640,7 +3571,7 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
 
-        fn listen_unbound<I: Ip + TestIpExt, C: UdpStateNonSyncContext>(
+        fn listen_unbound<I: Ip + TestIpExt, C: UdpStateNonSyncContext<I>>(
             sync_ctx: &mut impl UdpStateContext<I, C>,
             non_sync_ctx: &mut C,
             unbound: UdpUnboundId<I>,
@@ -4170,10 +4101,10 @@ mod tests {
         // an ICMP error message with that packet as the original packet.
         fn receive_icmp_error<
             I: TestIpExt,
-            F: Fn(&mut DummySyncCtx<I>, &mut DummyNonSyncCtx, &[u8], I::ErrorCode),
+            F: Fn(&mut DummySyncCtx<I>, &mut DummyNonSyncCtx<I>, &[u8], I::ErrorCode),
         >(
             sync_ctx: &mut DummySyncCtx<I>,
-            ctx: &mut DummyNonSyncCtx,
+            ctx: &mut DummyNonSyncCtx<I>,
             src_ip: I::Addr,
             dst_ip: I::Addr,
             src_port: u16,
@@ -4199,7 +4130,7 @@ mod tests {
 
         fn test<
             I: TestIpExt + PartialEq,
-            F: Copy + Fn(&mut DummySyncCtx<I>, &mut DummyNonSyncCtx, &[u8], I::ErrorCode),
+            F: Copy + Fn(&mut DummySyncCtx<I>, &mut DummyNonSyncCtx<I>, &[u8], I::ErrorCode),
         >(
             err: I::ErrorCode,
             f: F,
@@ -4226,7 +4157,7 @@ mod tests {
                 f,
             );
             assert_eq!(
-                sync_ctx.get_ref().icmp_errors.as_slice(),
+                non_sync_ctx.state().icmp_errors.as_slice(),
                 [IcmpError { id: UdpConnId::new(0).into(), err }]
             );
 
@@ -4242,7 +4173,7 @@ mod tests {
                 f,
             );
             assert_eq!(
-                &sync_ctx.get_ref().icmp_errors.as_slice()[1..],
+                &non_sync_ctx.state().icmp_errors.as_slice()[1..],
                 [IcmpError { id: UdpListenerId::new(1).into(), err }]
             );
 
@@ -4258,7 +4189,7 @@ mod tests {
                 f,
             );
             assert_eq!(
-                &sync_ctx.get_ref().icmp_errors.as_slice()[2..],
+                &non_sync_ctx.state().icmp_errors.as_slice()[2..],
                 [IcmpError { id: UdpListenerId::new(0).into(), err }]
             );
 
@@ -4275,7 +4206,7 @@ mod tests {
                 f,
             );
             assert_eq!(
-                &sync_ctx.get_ref().icmp_errors.as_slice()[3..],
+                &non_sync_ctx.state().icmp_errors.as_slice()[3..],
                 [IcmpError { id: UdpListenerId::new(0).into(), err }]
             );
 
@@ -4291,13 +4222,13 @@ mod tests {
                 err,
                 f,
             );
-            assert_eq!(sync_ctx.get_ref().icmp_errors.len(), 4);
+            assert_eq!(non_sync_ctx.state().icmp_errors.len(), 4);
         }
 
         test(
             Icmpv4ErrorCode::DestUnreachable(Icmpv4DestUnreachableCode::DestNetworkUnreachable),
             |sync_ctx: &mut DummySyncCtx<Ipv4>,
-             ctx: &mut DummyNonSyncCtx,
+             ctx: &mut DummyNonSyncCtx<Ipv4>,
              mut packet,
              error_code| {
                 let packet = packet.parse::<Ipv4PacketRaw<_>>().unwrap();
@@ -4315,7 +4246,7 @@ mod tests {
         test(
             Icmpv6ErrorCode::DestUnreachable(Icmpv6DestUnreachableCode::NoRoute),
             |sync_ctx: &mut DummySyncCtx<Ipv6>,
-             ctx: &mut DummyNonSyncCtx,
+             ctx: &mut DummyNonSyncCtx<Ipv6>,
              mut packet,
              error_code| {
                 let packet = packet.parse::<Ipv6PacketRaw<_>>().unwrap();

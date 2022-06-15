@@ -236,7 +236,7 @@ mod tests {
         message: NeighborSolicitation,
     }
 
-    type MockNonSyncCtx = DummyNonSyncCtx<DadTimerId<DummyDeviceId>, DadEvent<DummyDeviceId>>;
+    type MockNonSyncCtx = DummyNonSyncCtx<DadTimerId<DummyDeviceId>, DadEvent<DummyDeviceId>, ()>;
 
     type MockCtx<'a> = DummySyncCtx<MockDadContext<'a>, DadMessageMeta, DummyDeviceId>;
 

@@ -1003,7 +1003,7 @@ mod tests {
     }
 
     type DummyNonSyncCtx =
-        crate::context::testutil::DummyNonSyncCtx<EthernetTimerId<DummyDeviceId>, ()>;
+        crate::context::testutil::DummyNonSyncCtx<EthernetTimerId<DummyDeviceId>, (), ()>;
 
     type DummyCtx =
         crate::context::testutil::DummySyncCtx<DummyEthernetCtx, DummyDeviceId, DummyDeviceId>;

@@ -74,10 +74,10 @@ pub use crate::{
             get_udp_listener_info, get_udp_posix_reuse_port, listen_udp, remove_udp_conn,
             remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
             set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device,
-            BufferUdpContext, BufferUdpStateContext, UdpBoundId, UdpConnId, UdpConnInfo,
-            UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-            UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext,
-            UdpUnboundId,
+            BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext, UdpBoundId,
+            UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
+            UdpSendListenerError, UdpSockCreationError, UdpSocketId, UdpStateContext,
+            UdpStateNonSyncContext, UdpUnboundId,
         },
         TransportStateBuilder,
     },
@@ -224,8 +224,24 @@ impl<I: Instant> Default for StackState<I> {
 }
 
 /// The non synchronized context for the stack with a buffer.
-pub trait BufferNonSyncContextInner<B: BufferMut>: DeviceLayerEventDispatcher<B> {}
-impl<B: BufferMut, C: DeviceLayerEventDispatcher<B>> BufferNonSyncContextInner<B> for C {}
+pub trait BufferNonSyncContextInner<B: BufferMut>:
+    DeviceLayerEventDispatcher<B>
+    + BufferUdpContext<Ipv4, B>
+    + BufferUdpContext<Ipv6, B>
+    + BufferIcmpContext<Ipv4, B>
+    + BufferIcmpContext<Ipv6, B>
+{
+}
+impl<
+        B: BufferMut,
+        C: DeviceLayerEventDispatcher<B>
+            + BufferUdpContext<Ipv4, B>
+            + BufferUdpContext<Ipv6, B>
+            + BufferIcmpContext<Ipv4, B>
+            + BufferIcmpContext<Ipv6, B>,
+    > BufferNonSyncContextInner<B> for C
+{
+}
 
 /// The non synchronized context for the stack with a buffer.
 pub trait BufferNonSyncContext<B: BufferMut>:
@@ -246,6 +262,10 @@ pub trait NonSyncContext:
     + EventContext<IpLayerEvent<DeviceId, Ipv6>>
     + EventContext<DadEvent<DeviceId>>
     + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>
+    + UdpContext<Ipv4>
+    + UdpContext<Ipv6>
+    + IcmpContext<Ipv4>
+    + IcmpContext<Ipv6>
 {
 }
 impl<
@@ -258,7 +278,11 @@ impl<
             + EventContext<IpLayerEvent<DeviceId, Ipv4>>
             + EventContext<IpLayerEvent<DeviceId, Ipv6>>
             + EventContext<DadEvent<DeviceId>>
-            + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>,
+            + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>
+            + UdpContext<Ipv4>
+            + UdpContext<Ipv6>
+            + IcmpContext<Ipv4>
+            + IcmpContext<Ipv6>,
     > NonSyncContext for C
 {
 }
@@ -453,24 +477,8 @@ pub trait Instant: Sized + Ord + Copy + Clone + Debug + Send + Sync {
 ///
 /// `D: BufferDispatcher<B>` is shorthand for `D: EventDispatcher +
 /// DeviceLayerEventDispatcher<B>`.
-pub trait BufferDispatcher<B: BufferMut>:
-    EventDispatcher
-    + BufferIcmpContext<Ipv4, B>
-    + BufferIcmpContext<Ipv6, B>
-    + BufferUdpContext<Ipv4, B>
-    + BufferUdpContext<Ipv6, B>
-{
-}
-impl<
-        B: BufferMut,
-        D: EventDispatcher
-            + BufferIcmpContext<Ipv4, B>
-            + BufferIcmpContext<Ipv6, B>
-            + BufferUdpContext<Ipv4, B>
-            + BufferUdpContext<Ipv6, B>,
-    > BufferDispatcher<B> for D
-{
-}
+pub trait BufferDispatcher<B: BufferMut>: EventDispatcher {}
+impl<B: BufferMut, D: EventDispatcher> BufferDispatcher<B> for D {}
 
 // TODO(joshlf): Should we add a `for<'a> DeviceLayerEventDispatcher<&'a mut
 // [u8]>` bound? Would anything get more efficient if we were able to stack
@@ -483,38 +491,9 @@ impl<
 /// provides its own event dispatcher trait which specifies the types of actions
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
-pub trait EventDispatcher:
-    IcmpContext<Ipv4>
-    + IcmpContext<Ipv6>
-    + BufferIcmpContext<Ipv4, Buf<Vec<u8>>>
-    + BufferIcmpContext<Ipv4, EmptyBuf>
-    + BufferIcmpContext<Ipv6, Buf<Vec<u8>>>
-    + BufferIcmpContext<Ipv6, EmptyBuf>
-    + UdpContext<Ipv4>
-    + UdpContext<Ipv6>
-    + BufferUdpContext<Ipv4, Buf<Vec<u8>>>
-    + BufferUdpContext<Ipv4, EmptyBuf>
-    + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
-    + BufferUdpContext<Ipv6, EmptyBuf>
-{
-}
+pub trait EventDispatcher {}
 
-impl<
-        D: IcmpContext<Ipv4>
-            + IcmpContext<Ipv6>
-            + BufferIcmpContext<Ipv4, Buf<Vec<u8>>>
-            + BufferIcmpContext<Ipv4, EmptyBuf>
-            + BufferIcmpContext<Ipv6, Buf<Vec<u8>>>
-            + BufferIcmpContext<Ipv6, EmptyBuf>
-            + UdpContext<Ipv4>
-            + UdpContext<Ipv6>
-            + BufferUdpContext<Ipv4, Buf<Vec<u8>>>
-            + BufferUdpContext<Ipv4, EmptyBuf>
-            + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
-            + BufferUdpContext<Ipv6, EmptyBuf>,
-    > EventDispatcher for D
-{
-}
+impl<D> EventDispatcher for D {}
 
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device
 pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher, NonSyncCtx: NonSyncContext>(

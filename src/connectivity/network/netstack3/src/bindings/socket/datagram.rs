@@ -37,11 +37,12 @@ use netstack3_core::{
     get_udp_listener_info, get_udp_posix_reuse_port, icmp, listen_udp, remove_udp_conn,
     remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
     set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BufferDispatcher,
-    BufferNonSyncContext, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
-    IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockSendError,
-    LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId,
-    UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-    UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
+    BufferNonSyncContext, BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext,
+    Ctx, EventDispatcher, IdMap, IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt,
+    IpSockSendError, LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId,
+    UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
+    UdpSendListenerError, UdpSockCreationError, UdpSocketId, UdpStateContext,
+    UdpStateNonSyncContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -343,7 +344,7 @@ impl OptionFromU16 for NonZeroU16 {
     }
 }
 
-impl<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>> TransportState<I, C, SC>
+impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> TransportState<I, C, SC>
     for Udp
 {
     type CreateConnError = UdpSockCreationError;
@@ -458,8 +459,12 @@ impl<I: IpExt, C: UdpStateNonSyncContext, SC: UdpStateContext<I, C>> TransportSt
     }
 }
 
-impl<I: IpExt, B: BufferMut, C: UdpStateNonSyncContext, SC: BufferUdpStateContext<I, C, B>>
-    BufferTransportState<I, B, C, SC> for Udp
+impl<
+        I: IpExt,
+        B: BufferMut,
+        C: BufferUdpStateNonSyncContext<I, B>,
+        SC: BufferUdpStateContext<I, C, B>,
+    > BufferTransportState<I, B, C, SC> for Udp
 {
     type SendError = UdpSendError;
     type SendConnError = IpSockSendError;
@@ -1142,8 +1147,7 @@ pub(super) fn spawn_worker<C>(
 ) -> Result<(), fposix::Errno>
 where
     C: LockableContext,
-    C::Dispatcher: SocketWorkerDispatcher,
-    C::NonSyncCtx: AsRef<Devices>,
+    C::NonSyncCtx: SocketWorkerDispatcher + AsRef<Devices>,
     C: Clone + Send + Sync + 'static,
 {
     match (domain, proto) {
@@ -1243,11 +1247,11 @@ where
             async move {
                 let id = {
                     let mut guard = ctx.lock().await;
-                    let Ctx { sync_ctx, non_sync_ctx: _ } = guard.deref_mut();
+                    let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                     let unbound_id = T::create_unbound(sync_ctx);
-                    let SyncCtx { state: _, dispatcher, non_sync_ctx_marker: _ } = sync_ctx;
+                    let SyncCtx { state: _, dispatcher: _, non_sync_ctx_marker: _ } = sync_ctx;
                     let SocketCollection { binding_data, conns: _, listeners: _ } =
-                        I::get_collection_mut(dispatcher);
+                        I::get_collection_mut(non_sync_ctx);
                     binding_data.push(BindingData::new(
                         unbound_id,
                         local_event,
@@ -1880,7 +1884,7 @@ where
 }
 
 pub(crate) trait RequestHandlerDispatcher<I, T>:
-    EventDispatcher + AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>
+    AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>
 where
     I: IpExt,
     T: Transport<Ipv4>,
@@ -1895,7 +1899,6 @@ where
     T: Transport<Ipv4>,
     T: Transport<Ipv6>,
     T: Transport<I>,
-    D: EventDispatcher,
     D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>,
 {
 }
@@ -1918,8 +1921,8 @@ where
     T: Transport<Ipv6>,
     T: Transport<I>,
 {
-    type Dispatcher: RequestHandlerDispatcher<I, T>;
-    type NonSyncCtx: NonSyncContext + AsRef<Devices>;
+    type Dispatcher: EventDispatcher;
+    type NonSyncCtx: RequestHandlerDispatcher<I, T> + NonSyncContext + AsRef<Devices>;
 }
 
 impl<I, T, C> RequestHandlerContext<I, T> for C
@@ -1929,8 +1932,7 @@ where
     T: Transport<Ipv6>,
     T: Transport<I>,
     C: LockableContext,
-    C::Dispatcher: RequestHandlerDispatcher<I, T>,
-    C::NonSyncCtx: AsRef<Devices>,
+    C::NonSyncCtx: RequestHandlerDispatcher<I, T> + AsRef<Devices>,
 {
     type Dispatcher = C::Dispatcher;
     type NonSyncCtx = C::NonSyncCtx;
@@ -1964,16 +1966,13 @@ where
     }
 
     fn get_state(&self) -> &BindingData<I, T> {
-        let Ctx { sync_ctx, non_sync_ctx: _ } = self.ctx.deref();
-        I::get_collection(&sync_ctx.dispatcher).binding_data.get(self.binding_id).unwrap()
+        let Ctx { sync_ctx: _, non_sync_ctx } = self.ctx.deref();
+        I::get_collection(non_sync_ctx).binding_data.get(self.binding_id).unwrap()
     }
 
     fn get_state_mut(&mut self) -> &mut BindingData<I, T> {
-        let Ctx { sync_ctx, non_sync_ctx: _ } = self.ctx.deref_mut();
-        I::get_collection_mut(&mut sync_ctx.dispatcher)
-            .binding_data
-            .get_mut(self.binding_id)
-            .unwrap()
+        let Ctx { sync_ctx: _, non_sync_ctx } = self.ctx.deref_mut();
+        I::get_collection_mut(non_sync_ctx).binding_data.get_mut(self.binding_id).unwrap()
     }
 }
 
@@ -2020,7 +2019,7 @@ where
                     T::remove_listener(sync_ctx, non_sync_ctx, listener_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
-                    I::get_collection_mut(&mut sync_ctx.dispatcher).listeners.remove(&listener_id),
+                    I::get_collection_mut(non_sync_ctx).listeners.remove(&listener_id),
                     None
                 );
 
@@ -2037,10 +2036,7 @@ where
                     T::RemoteIdentifier,
                 ) = T::remove_conn(sync_ctx, non_sync_ctx, conn_id);
                 // also remove from the EventLoop context:
-                assert_ne!(
-                    I::get_collection_mut(&mut sync_ctx.dispatcher).conns.remove(&conn_id),
-                    None
-                );
+                assert_ne!(I::get_collection_mut(non_sync_ctx).conns.remove(&conn_id), None);
                 (Some(local_ip), Some(local_port), T::create_unbound(sync_ctx))
             }
         };
@@ -2060,7 +2056,7 @@ where
         self.get_state_mut().info.state =
             SocketState::BoundConnect { conn_id, shutdown_read: false, shutdown_write: false };
         assert_eq!(
-            I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
+            I::get_collection_mut(&mut self.ctx.non_sync_ctx)
                 .conns
                 .insert(&conn_id, self.binding_id),
             None
@@ -2111,7 +2107,7 @@ where
                 .map_err(IntoErrno::into_errno)?;
         self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
         assert_eq!(
-            I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
+            I::get_collection_mut(&mut self.ctx.non_sync_ctx)
                 .listeners
                 .insert(&listener_id, self.binding_id),
             None
@@ -2202,20 +2198,14 @@ where
             SocketState::Unbound { unbound_id } => T::remove_unbound(sync_ctx, unbound_id),
             SocketState::BoundListen { listener_id } => {
                 // remove from bindings:
-                assert_ne!(
-                    I::get_collection_mut(&mut sync_ctx.dispatcher).listeners.remove(&listener_id),
-                    None
-                );
+                assert_ne!(I::get_collection_mut(ctx).listeners.remove(&listener_id), None);
                 // remove from core:
                 let _: (Option<SpecifiedAddr<I::Addr>>, T::LocalIdentifier) =
                     T::remove_listener(sync_ctx, ctx, listener_id);
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 // remove from bindings:
-                assert_ne!(
-                    I::get_collection_mut(&mut sync_ctx.dispatcher).conns.remove(&conn_id),
-                    None
-                );
+                assert_ne!(I::get_collection_mut(ctx).conns.remove(&conn_id), None);
                 // remove from core:
                 let _: (
                     SpecifiedAddr<I::Addr>,
@@ -2231,7 +2221,7 @@ where
         let inner = self.get_state_mut();
         if inner.ref_count == 1 {
             let info = assert_matches::assert_matches!(
-                I::get_collection_mut(&mut self.ctx.sync_ctx.dispatcher)
+                I::get_collection_mut(&mut self.ctx.non_sync_ctx)
                     .binding_data
                     .remove(self.binding_id),
                 Some(BindingData {
@@ -3026,7 +3016,7 @@ mod tests {
         T: Transport<Ipv4>,
         T: Transport<Ipv6>,
         T: Transport<<A::AddrType as IpAddress>::Version>,
-        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
+        crate::bindings::BindingsNonSyncCtxImpl: AsRef<SocketCollectionPair<T>>,
     {
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
@@ -3261,9 +3251,7 @@ mod tests {
             t.get(i)
                 .with_ctx(|ctx| {
                     let SocketCollection { binding_data, conns, listeners } =
-                        <A::AddrType as IpAddress>::Version::get_collection(
-                            &ctx.sync_ctx.dispatcher,
-                        );
+                        <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
                     assert_matches::assert_matches!(
                         binding_data.iter().collect::<Vec<_>>()[..],
                         [_]
@@ -3292,9 +3280,7 @@ mod tests {
             t.get(i)
                 .with_ctx(|ctx| {
                     let SocketCollection { binding_data, conns, listeners } =
-                        <A::AddrType as IpAddress>::Version::get_collection(
-                            &ctx.sync_ctx.dispatcher,
-                        );
+                        <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
                     assert_matches::assert_matches!(
                         binding_data.iter().collect::<Vec<_>>()[..],
                         []
@@ -3317,7 +3303,7 @@ mod tests {
         T: Transport<Ipv4>,
         T: Transport<Ipv6>,
         T: Transport<<A::AddrType as IpAddress>::Version>,
-        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
+        crate::bindings::BindingsNonSyncCtxImpl: AsRef<SocketCollectionPair<T>>,
     {
         // Make sure we cannot close twice from the same channel so that we
         // maintain the correct refcount.
@@ -3341,7 +3327,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
@@ -3357,7 +3343,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
@@ -3373,7 +3359,7 @@ mod tests {
         T: Transport<Ipv4>,
         T: Transport<Ipv6>,
         T: Transport<<A::AddrType as IpAddress>::Version>,
-        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
+        crate::bindings::BindingsNonSyncCtxImpl: AsRef<SocketCollectionPair<T>>,
     {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
@@ -3393,7 +3379,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
@@ -3430,7 +3416,7 @@ mod tests {
         T: Transport<Ipv4>,
         T: Transport<Ipv6>,
         T: Transport<<A::AddrType as IpAddress>::Version>,
-        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
+        crate::bindings::BindingsNonSyncCtxImpl: AsRef<SocketCollectionPair<T>>,
     {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
@@ -3456,7 +3442,7 @@ mod tests {
         test_stack
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
-                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.sync_ctx.dispatcher);
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
                 assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);

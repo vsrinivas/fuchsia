@@ -4,6 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom as _;
+use std::num::NonZeroU16;
 use std::ops::{Deref as _, DerefMut as _};
 use std::sync::{Arc, Once};
 
@@ -22,10 +23,13 @@ use net_types::{
 use netstack3_core::{
     context::{EventContext, InstantContext, RngContext, TimerContext},
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
-    update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, Ctx, DeviceId,
-    DeviceLayerEventDispatcher, EventDispatcher, NonSyncContext, TimerId,
+    icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
+    update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher, IpExt, NonSyncContext, TimerId,
+    UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
+use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 use rand::rngs::OsRng;
 
 use crate::bindings::{
@@ -34,6 +38,7 @@ use crate::bindings::{
         CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
         NetdeviceInfo,
     },
+    socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, BindingsNonSyncCtxImpl, DeviceStatusNotifier, LockableContext,
     RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU,
@@ -178,6 +183,63 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestNonSyncCtx {
 
 impl<T: 'static + Send> EventContext<T> for TestNonSyncCtx {
     fn on_event(&mut self, _event: T) {}
+}
+
+impl<I: SocketCollectionIpExt<Udp> + IcmpIpExt> UdpContext<I> for TestNonSyncCtx {
+    fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
+        UdpContext::receive_icmp_error(&mut self.ctx, id, err)
+    }
+}
+
+impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
+    for TestNonSyncCtx
+{
+    fn receive_udp_from_conn(
+        &mut self,
+        conn: netstack3_core::UdpConnId<I>,
+        src_ip: I::Addr,
+        src_port: NonZeroU16,
+        body: &B,
+    ) {
+        self.ctx.receive_udp_from_conn(conn, src_ip, src_port, body)
+    }
+
+    /// Receive a UDP packet for a listener.
+    fn receive_udp_from_listen(
+        &mut self,
+        listener: netstack3_core::UdpListenerId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        src_port: Option<NonZeroU16>,
+        body: &B,
+    ) {
+        self.ctx.receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body)
+    }
+}
+
+impl<I: SocketCollectionIpExt<IcmpEcho> + IcmpIpExt> IcmpContext<I> for TestNonSyncCtx {
+    fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
+        IcmpContext::<I>::receive_icmp_error(&mut self.ctx, conn, seq_num, err)
+    }
+}
+
+impl<I, B> BufferIcmpContext<I, B> for TestNonSyncCtx
+where
+    I: SocketCollectionIpExt<IcmpEcho> + IcmpIpExt,
+    B: BufferMut,
+    IcmpEchoReply: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
+{
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: IcmpConnId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        id: u16,
+        seq_num: u16,
+        data: B,
+    ) {
+        self.ctx.receive_icmp_echo_reply(conn, src_ip, dst_ip, id, seq_num, data)
+    }
 }
 
 #[derive(Clone)]

@@ -1476,7 +1476,7 @@ mod tests {
     }
 
     type MockCtx = DummySyncCtx<MockSlaacContext, (), DummyDeviceId>;
-    type MockNonSyncCtx = DummyNonSyncCtx<SlaacTimerId<DummyDeviceId>, ()>;
+    type MockNonSyncCtx = DummyNonSyncCtx<SlaacTimerId<DummyDeviceId>, (), ()>;
 
     impl SlaacStateContext<MockNonSyncCtx> for MockCtx {
         fn get_config(

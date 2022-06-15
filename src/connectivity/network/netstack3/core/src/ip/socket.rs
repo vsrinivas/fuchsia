@@ -852,11 +852,13 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId: IpDeviceId + 'static,
-        > IpSocketContext<I, DummyNonSyncCtx<Id, Event>> for DummySyncCtx<S, Meta, DeviceId>
+            NonSyncCtxState,
+        > IpSocketContext<I, DummyNonSyncCtx<Id, Event, NonSyncCtxState>>
+        for DummySyncCtx<S, Meta, DeviceId>
     {
         fn lookup_route(
             &self,
-            _ctx: &mut DummyNonSyncCtx<Id, Event>,
+            _ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
             device: Option<Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
@@ -906,18 +908,19 @@ pub(crate) mod testutil {
             Meta,
             Event: Debug,
             DeviceId,
-        > BufferIpSocketContext<I, DummyNonSyncCtx<Id, Event>, B>
+            NonSyncCtxState,
+        > BufferIpSocketContext<I, DummyNonSyncCtx<Id, Event, NonSyncCtxState>, B>
         for DummySyncCtx<S, Meta, DeviceId>
     where
         DummySyncCtx<S, Meta, DeviceId>: FrameContext<
-                DummyNonSyncCtx<Id, Event>,
+                DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
                 B,
                 SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
-            > + IpSocketContext<I, DummyNonSyncCtx<Id, Event>>,
+            > + IpSocketContext<I, DummyNonSyncCtx<Id, Event, NonSyncCtxState>>,
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
-            ctx: &mut DummyNonSyncCtx<Id, Event>,
+            ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
             meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
             body: SS,
         ) -> Result<(), SS> {

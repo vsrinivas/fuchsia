@@ -848,7 +848,7 @@ mod tests {
     }
 
     type MockCtx<I> =
-        DummyCtx<DummyFragmentContext<I>, FragmentCacheKey<<I as Ip>::Addr>, (), (), ()>;
+        DummyCtx<DummyFragmentContext<I>, FragmentCacheKey<<I as Ip>::Addr>, (), (), (), ()>;
     type MockSyncCtx<I> = DummySyncCtx<DummyFragmentContext<I>, (), ()>;
 
     impl<I: Ip> FragmentStateContext<I, DummyInstant> for MockSyncCtx<I> {
