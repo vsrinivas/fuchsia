@@ -33,7 +33,7 @@
 namespace ot {
 namespace lowpan_spinel_fidl = fuchsia_lowpan_spinel;
 
-constexpr uint32_t kRcpBusyPollingDelayMs = 10;
+constexpr uint32_t kRcpBusyPollingDelayMs = 3;
 constexpr uint8_t kRcpHardResetPinAssertTimeMs = 100;
 constexpr zx::duration kRcpHardResetRetryWaitTime = zx::msec(700);
 
@@ -145,11 +145,11 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
   ot_radio_obj_.inbound_allowance_ += request->number_of_frames;
   if (ot_radio_obj_.inbound_allowance_ > 0 && ot_radio_obj_.spinel_framer_.get()) {
     ot_radio_obj_.spinel_framer_->SetInboundAllowanceStatus(true);
+    ot_radio_obj_.ReadRadioPacket();
     if (ot_radio_obj_.interrupt_is_asserted_) {
       // signal the event loop thread to handle interrupt
       ot_radio_obj_.InvokeInterruptHandler();
     }
-    ot_radio_obj_.ReadRadioPacket();
   }
 }
 
@@ -463,11 +463,21 @@ zx_status_t OtRadioDevice::RadioThread() {
     } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       interrupt_.ack();
       zxlogf(DEBUG, "ot-radio: interrupt");
+
+      if (!IsInterruptAsserted()) {
+        // Interrupt is deasserted. This means we took care of the trigger for interrupt
+        // event on port (which is edge triggered as of now) in previous inner loop.
+        continue;
+      }
+
+      uint16_t polling_count = 0;
+      const uint16_t kMaxNonDelayPollingCount = 5;
       do {
         spinel_framer_->HandleInterrupt();
         ReadRadioPacket();
 
-        if (!inbound_frame_available_) {
+        polling_count++;
+        if (!inbound_frame_available_ && polling_count > kMaxNonDelayPollingCount) {
           zxlogf(DEBUG, "ot-radio: new packet unavailable, sleeping");
           zx::nanosleep(zx::deadline_after(zx::msec(kRcpBusyPollingDelayMs)));
         }
