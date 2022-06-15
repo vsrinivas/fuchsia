@@ -2161,7 +2161,7 @@
   area: ['UI']
   issue: ['100308']
   gerrit_change_id: ['676347']
-  status: 'Iterate'
+  status: 'Accepted'
   reviewers: ['jjosh@google.com', 'emircan@google.com', 'jaeheon@google.com', 'lucasradaelli@google.com', 'quiche@google.com', 'dworsham@google.com']
   consulted: ['yeg@google.com']
   submitted: '2022-05-04'
