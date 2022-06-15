@@ -33,6 +33,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/lib/fidl/cpp",
+    "//src/ui/a11y/lib/magnifier",
     "//src/ui/a11y/testing/fidl:test.accessibility",
   ]
 }

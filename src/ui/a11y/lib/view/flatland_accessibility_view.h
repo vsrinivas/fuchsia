@@ -16,16 +16,19 @@
 #include <memory>
 #include <optional>
 
+#include "src/ui/a11y/lib/magnifier/magnifier_2.h"
 #include "src/ui/a11y/lib/view/accessibility_view.h"
+#include "src/ui/a11y/lib/view/flatland_connection.h"
 
 namespace a11y {
 
 // Implements the AccessibilityViewInterface using the flatland graphics
 // composition API.
 class FlatlandAccessibilityView : public AccessibilityViewInterface,
-                                  public fuchsia::accessibility::scene::Provider {
+                                  public fuchsia::accessibility::scene::Provider,
+                                  public Magnifier2::Delegate {
  public:
-  explicit FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland);
+  explicit FlatlandAccessibilityView(sys::ComponentContext* context);
   ~FlatlandAccessibilityView() override = default;
 
   // |AccessibilityViewInterface|
@@ -44,21 +47,38 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   void CreateView(fuchsia::ui::views::ViewCreationToken a11y_view_token,
                   fuchsia::ui::views::ViewportCreationToken proxy_viewport_token) override;
 
+  // |Magnifier2::Delegate|
+  void SetMagnificationTransform(float scale, float x, float y,
+                                 SetMagnificationTransformCallback callback) override;
+
   fidl::InterfaceRequestHandler<fuchsia::accessibility::scene::Provider> GetHandler();
 
  private:
-  // Interface for the a11y view's flatland instance.
-  fuchsia::ui::composition::FlatlandPtr flatland_;
+  // Helper method to poll continuously for layout info updates.
+  void WatchLayoutInfo();
+
+  // Helper methods to handle layout changes.
+  void ResizeProxyViewport();
+  void CreateProxyViewport();
+
+  // Manages a11y view's flatland connection, and ensures that `Present` calls
+  // are enqueued safely.
+  FlatlandConnection flatland_;
 
   // Scenic focuser used to request focus chain updates in the a11y view's subtree.
   fuchsia::ui::views::FocuserPtr focuser_;
 
-  // Used to retrieve a11y view layout info. These should not change over the
-  // lifetime of the view.
+  // Used to retrieve a11y view layout info.
   fuchsia::ui::composition::ParentViewportWatcherPtr parent_watcher_;
 
   // True if the a11y view has been attached to the scene.
   bool is_initialized_ = false;
+
+  // Holds the proxy viewport creation token between the time that `CreateView`
+  // is called, and the first layout info is received from scenic.
+  //
+  // Otherwise, proxy_viewport_token_ will be std::nullopt.
+  std::optional<fuchsia::ui::views::ViewportCreationToken> proxy_viewport_token_;
 
   // Holds a copy of the view ref of the a11y view.
   // If not present, the a11y view has not yet been connected to the scene.

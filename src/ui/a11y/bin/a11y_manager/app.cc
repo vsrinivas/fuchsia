@@ -48,8 +48,10 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
       gesture_listener_registry_bindings_.GetHandler(gesture_listener_registry_));
 
   if (use_flatland) {
-    // TODO(fxbug.dev/98158): Pass a flatland delegate here.
-    magnifier_ = std::make_unique<a11y::Magnifier2>(nullptr);
+    auto magnifier_delegate =
+        std::static_pointer_cast<a11y::Magnifier2::Delegate>(view_manager->flatland_a11y_view());
+    FX_CHECK(magnifier_delegate);
+    magnifier_ = std::make_unique<a11y::Magnifier2>(magnifier_delegate);
   } else {
     auto magnifier_delegate = std::make_shared<a11y::GfxMagnifierDelegate>();
     context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(magnifier_delegate.get()));

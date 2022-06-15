@@ -16,21 +16,28 @@
 namespace a11y {
 namespace {
 
+using fuchsia::ui::composition::ContentId;
+using fuchsia::ui::composition::LayoutInfo;
+using fuchsia::ui::composition::PresentArgs;
+using fuchsia::ui::composition::TransformId;
+using fuchsia::ui::composition::ViewportProperties;
+
 // IDs for the flatland resources.
 constexpr uint64_t kRootTransformId = 1;
 constexpr uint64_t kProxyViewportTransformId = 2;
 constexpr uint64_t kProxyViewportContentId = 3;
+constexpr uint64_t kMagnifierTransformId = 4;
 
 bool InvokeViewPropertiesChangedCallback(
-    const fuchsia::ui::composition::LayoutInfo& layout_info,
+    const LayoutInfo& layout_info,
     const FlatlandAccessibilityView::ViewPropertiesChangedCallback& callback) {
-  fuchsia::ui::composition::ViewportProperties viewport_properties;
+  ViewportProperties viewport_properties;
   viewport_properties.set_logical_size(fidl::Clone(layout_info.logical_size()));
   return callback(std::move(viewport_properties));
 }
 
 void InvokeViewPropertiesChangedCallbacks(
-    const fuchsia::ui::composition::LayoutInfo& layout_info,
+    const LayoutInfo& layout_info,
     std::vector<FlatlandAccessibilityView::ViewPropertiesChangedCallback>* callbacks) {
   auto it = callbacks->begin();
   while (it != callbacks->end()) {
@@ -56,19 +63,19 @@ void InvokeSceneReadyCallbacks(
 
 }  // namespace
 
-FlatlandAccessibilityView::FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland)
-    : flatland_(std::move(flatland)) {
-  flatland_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::ui::composition::Flatland: "
-                   << zx_status_get_string(status);
-  });
-  flatland_->SetDebugName("a11y-view");
-}
+FlatlandAccessibilityView::FlatlandAccessibilityView(sys::ComponentContext* context)
+    : flatland_(context, /* debug name = */ "a11y") {}
 
 void FlatlandAccessibilityView::CreateView(
     fuchsia::ui::views::ViewCreationToken a11y_view_token,
     fuchsia::ui::views::ViewportCreationToken proxy_viewport_token) {
   FX_LOGS(INFO) << "A11y received `CreateView` request";
+
+  // We can't create the proxy viewport until we receive layout info from
+  // scenic, so we'll store the proxy viewport creation token to use later.
+  proxy_viewport_token_ = std::move(proxy_viewport_token);
+
+  // PERFORM SETUP THAT DOES NOT REQUIRE LAYOUT INFO.
 
   // Set up view-bound protocols for flatland instance.
   fuchsia::ui::composition::ViewBoundProtocols view_bound_protocols;
@@ -77,52 +84,92 @@ void FlatlandAccessibilityView::CreateView(
   // Create a11y view's ViewRef.
   auto view_identity = scenic::NewViewIdentityOnCreation();
 
-  // Set up parent watcher to retrieve layout info.
-  parent_watcher_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::ui::composition::ParentViewportWatcher: "
-                   << zx_status_get_string(status);
-  });
-
   // Create a11y view, and set it as the content for the root transform.
-  flatland_->CreateView2(std::move(a11y_view_token), std::move(view_identity),
-                         std::move(view_bound_protocols), parent_watcher_.NewRequest());
+  flatland_.flatland()->CreateView2(std::move(a11y_view_token), std::move(view_identity),
+                                    std::move(view_bound_protocols), parent_watcher_.NewRequest());
 
-  flatland_->CreateTransform(fuchsia::ui::composition::TransformId({.value = kRootTransformId}));
-  flatland_->SetRootTransform(fuchsia::ui::composition::TransformId({.value = kRootTransformId}));
+  flatland_.flatland()->CreateTransform(TransformId({.value = kRootTransformId}));
+  flatland_.flatland()->SetRootTransform(TransformId({.value = kRootTransformId}));
 
-  // Get layout info for the a11y view, which is required to build the proxy
-  // viewport.
-  parent_watcher_->GetLayout([this, proxy_viewport_token = std::move(proxy_viewport_token)](
-                                 fuchsia::ui::composition::LayoutInfo layout_info) mutable {
-    FX_LOGS(INFO) << "A11y view received layout info";
+  // Create magnifier transform, and attach as a child of the root transform.
+  // Attach proxy viewport transform as a child of magnifier transform.
+  flatland_.flatland()->CreateTransform(TransformId{.value = kMagnifierTransformId});
+  flatland_.flatland()->AddChild(TransformId{.value = kRootTransformId},
+                                 TransformId{.value = kMagnifierTransformId});
+
+  // Present changes.
+  flatland_.Present();
+
+  // Wait for layout info to create the proxy viewport.
+  WatchLayoutInfo();
+}
+
+void FlatlandAccessibilityView::WatchLayoutInfo() {
+  // Watch for next layout info change.
+  parent_watcher_->GetLayout([this](LayoutInfo layout_info) {
     layout_info_ = std::move(layout_info);
 
+    const auto& logical_size = layout_info_->logical_size();
+    FX_LOGS(INFO) << "A11y view received layout info; view has width = " << logical_size.width
+                  << ", height = " << logical_size.height;
+
+    // If the proxy viewport already exists, update its properties.
+    //
+    // Otherwise, if the new layout info is the first we've received, create the proxy
+    // viewport.
+    if (is_initialized_) {
+      ResizeProxyViewport();
+    } else {
+      CreateProxyViewport();
+    }
+
+    // Report changes in view properties to observers.
     InvokeViewPropertiesChangedCallbacks(*layout_info_, &view_properties_changed_callbacks_);
 
-    // Create proxy viewport.
-    fuchsia::ui::composition::ViewportProperties viewport_properties;
-    viewport_properties.set_logical_size(fidl::Clone(layout_info_->logical_size()));
-    fuchsia::ui::composition::ChildViewWatcherPtr child_view_watcher;
-    flatland_->CreateViewport(fuchsia::ui::composition::ContentId{.value = kProxyViewportContentId},
-                              std::move(proxy_viewport_token), std::move(viewport_properties),
-                              child_view_watcher.NewRequest());
+    // Immediately set another hanging get for layout info.
+    WatchLayoutInfo();
+  });
+}
 
-    // Create a proxy viewport transform, and attach as a child of the root
-    // transform.
-    flatland_->CreateTransform(
-        fuchsia::ui::composition::TransformId{.value = kProxyViewportTransformId});
-    flatland_->AddChild(fuchsia::ui::composition::TransformId{.value = kRootTransformId},
-                        fuchsia::ui::composition::TransformId{.value = kProxyViewportTransformId});
-    flatland_->SetContent(fuchsia::ui::composition::TransformId{.value = kProxyViewportTransformId},
-                          fuchsia::ui::composition::ContentId{.value = kProxyViewportContentId});
+void FlatlandAccessibilityView::CreateProxyViewport() {
+  FX_DCHECK(!is_initialized_);
+  FX_DCHECK(proxy_viewport_token_.has_value());
+  FX_DCHECK(layout_info_.has_value());
 
-    // Present changes.
-    flatland_->Present(fuchsia::ui::composition::PresentArgs{});
+  // Create proxy viewport.
+  fuchsia::ui::composition::ViewportProperties viewport_properties;
+  viewport_properties.set_logical_size(fidl::Clone(layout_info_->logical_size()));
+  fuchsia::ui::composition::ChildViewWatcherPtr child_view_watcher;
+  flatland_.flatland()->CreateViewport(
+      ContentId{.value = kProxyViewportContentId}, std::move(*proxy_viewport_token_),
+      std::move(viewport_properties), child_view_watcher.NewRequest());
+  proxy_viewport_token_.reset();
 
-    // We can consider the scene initialized once the a11y view is attached.
+  // Create a proxy viewport transform, and attach as a child of the
+  // magnification transform.
+  flatland_.flatland()->CreateTransform(TransformId{.value = kProxyViewportTransformId});
+  flatland_.flatland()->SetContent(TransformId{.value = kProxyViewportTransformId},
+                                   ContentId{.value = kProxyViewportContentId});
+  flatland_.flatland()->AddChild(TransformId{.value = kMagnifierTransformId},
+                                 TransformId{.value = kProxyViewportTransformId});
+
+  // Consider the scene "ready" once the proxy viewport is attached on the
+  // server side.
+  flatland_.Present(PresentArgs{}, [this](auto) {
     is_initialized_ = true;
     InvokeSceneReadyCallbacks(&scene_ready_callbacks_);
   });
+}
+
+void FlatlandAccessibilityView::ResizeProxyViewport() {
+  FX_DCHECK(is_initialized_);
+  FX_DCHECK(layout_info_.has_value());
+
+  fuchsia::ui::composition::ViewportProperties viewport_properties;
+  viewport_properties.set_logical_size(fidl::Clone(layout_info_->logical_size()));
+  flatland_.flatland()->SetViewportProperties(ContentId{.value = kProxyViewportContentId},
+                                              std::move(viewport_properties));
+  flatland_.Present();
 }
 
 std::optional<fuchsia::ui::views::ViewRef> FlatlandAccessibilityView::view_ref() {
@@ -158,6 +205,25 @@ void FlatlandAccessibilityView::RequestFocus(fuchsia::ui::views::ViewRef view_re
 fidl::InterfaceRequestHandler<fuchsia::accessibility::scene::Provider>
 FlatlandAccessibilityView::GetHandler() {
   return view_bindings_.GetHandler(this);
+}
+
+void FlatlandAccessibilityView::SetMagnificationTransform(
+    float scale, float x, float y, SetMagnificationTransformCallback callback) {
+  flatland_.flatland()->SetScale(
+      fuchsia::ui::composition::TransformId{.value = kMagnifierTransformId},
+      fuchsia::math::VecF{.x = scale, .y = scale});
+
+  // Translation arguments to this method are normalized, so we need to put them
+  // into the coordinate space of the magnifier transform.
+  auto translation_x = x * static_cast<float>(layout_info_->logical_size().width) / 2.f;
+  auto translation_y = y * static_cast<float>(layout_info_->logical_size().height) / 2.f;
+  flatland_.flatland()->SetTranslation(
+      fuchsia::ui::composition::TransformId{.value = kMagnifierTransformId},
+      fuchsia::math::Vec{.x = static_cast<int32_t>(translation_x),
+                         .y = static_cast<int32_t>(translation_y)});
+
+  flatland_.Present(fuchsia::ui::composition::PresentArgs{},
+                    [callback = std::move(callback)](auto) { callback(); });
 }
 
 }  // namespace a11y

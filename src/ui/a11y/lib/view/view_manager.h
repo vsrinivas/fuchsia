@@ -22,6 +22,7 @@
 #include "src/ui/a11y/lib/semantics/semantics_event_manager.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/accessibility_view.h"
+#include "src/ui/a11y/lib/view/flatland_accessibility_view.h"
 #include "src/ui/a11y/lib/view/view_injector_factory.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
 
@@ -128,6 +129,10 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
 
   // Returns a pointer to the a11y view.
   std::shared_ptr<AccessibilityViewInterface> a11y_view() { return a11y_view_; }
+
+  std::shared_ptr<FlatlandAccessibilityView> flatland_a11y_view() {
+    return std::static_pointer_cast<FlatlandAccessibilityView>(a11y_view_);
+  }
 
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.

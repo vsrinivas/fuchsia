@@ -34,8 +34,7 @@ int run_a11y_manager(int argc, const char** argv) {
 
   std::unique_ptr<a11y::FlatlandAccessibilityView> maybe_a11y_view;
   if (use_flatland) {
-    auto flatland = context->svc()->Connect<fuchsia::ui::composition::Flatland>();
-    maybe_a11y_view = std::make_unique<a11y::FlatlandAccessibilityView>(std::move(flatland));
+    maybe_a11y_view = std::make_unique<a11y::FlatlandAccessibilityView>(context.get());
     context->outgoing()->AddPublicService(maybe_a11y_view->GetHandler());
   }
 
