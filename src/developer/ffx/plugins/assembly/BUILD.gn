@@ -25,6 +25,7 @@ ffx_plugin("ffx_assembly") {
     "src/operations/create_update.rs",
     "src/operations/product.rs",
     "src/operations/product/assembly_builder.rs",
+    "src/operations/size_check.rs",
     "src/operations/size_check_package.rs",
     "src/operations/size_check_product.rs",
     "src/util.rs",

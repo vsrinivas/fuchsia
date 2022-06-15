@@ -7,5 +7,6 @@ pub mod create_flash_manifest;
 pub mod create_system;
 pub mod create_update;
 pub mod product;
+pub mod size_check;
 pub mod size_check_package;
 pub mod size_check_product;

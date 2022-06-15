@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::blob_json_generator::BlobJsonGenerator;
+use crate::operations::size_check::{PackageBlobSizeInfo, PackageSizeInfo};
 use crate::util::read_config;
 use crate::util::write_json_file;
 use anyhow::anyhow;
@@ -115,15 +116,7 @@ struct BudgetResult {
     /// Number of bytes used by the packages this budget applies to.
     pub used_bytes: u64,
     /// Breakdown of storage consumption by package.
-    pub package_breakdown: HashMap<PathBuf, PackageResult>,
-}
-
-#[derive(Debug, Serialize, Eq, PartialEq)]
-struct PackageResult {
-    /// Size of the package
-    pub size: u64,
-    /// Blobs in this package and their proportional size
-    blobs: HashMap<Hash, u64>,
+    pub package_breakdown: HashMap<PathBuf, PackageSizeInfo>,
 }
 
 /// Verifies that no package budget is exceeded.
@@ -227,7 +220,7 @@ fn verify_budgets_with_tools(
                     key.file_name()
                         .and_then(|name| name.to_str())
                         .ok_or(format_err!("Can't extract file name from path {:?}", key))?,
-                    value.size,
+                    value.proportional_size,
                 );
             }
         }
@@ -437,12 +430,21 @@ fn compute_budget_results(
                 blob.hash,
                 blob.package
             ))?;
-            let package_result = package_breakdown
-                .entry(blob.package.clone())
-                .or_insert(PackageResult { size: 0, blobs: HashMap::new() });
-            package_result.size += count.size / count.share_count;
-            let blob_size = package_result.blobs.entry(blob.hash).or_insert(0);
-            *blob_size += count.size / count.share_count;
+            let package_result =
+                package_breakdown.entry(blob.package.clone()).or_insert(PackageSizeInfo {
+                    name: "".to_string(),
+                    proportional_size: 0,
+                    size: 0,
+                    blobs: vec![],
+                });
+            package_result.proportional_size += count.size / count.share_count;
+            package_result.size += count.size;
+            package_result.blobs.push(PackageBlobSizeInfo {
+                merkle: blob.hash,
+                size: count.size,
+                share_count: count.share_count,
+                path_in_package: "".to_string(),
+            });
         }
 
         result.push(BudgetResult {
@@ -479,7 +481,7 @@ fn to_json_output(
 mod tests {
     use crate::operations::size_check_package::{
         compute_budget_results, verify_budgets_with_tools, BlobInstance, BlobSizeAndCount,
-        BudgetBlobs, BudgetConfig, BudgetResult, PackageResult,
+        BudgetBlobs, BudgetConfig, BudgetResult, PackageBlobSizeInfo, PackageSizeInfo,
     };
     use crate::util::read_config;
     use crate::util::write_json_file;
@@ -1096,16 +1098,30 @@ mod tests {
                   "used_bytes": 106,
                   "package_breakdown": {
                     test_fs.path("obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json").to_str().unwrap(): {
-                      "size": 53,
-                      "blobs": {
-                        "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51": 53
-                      }
+                      "proportional_size": 53,
+                      "size": 159,
+                      "name": "",
+                      "blobs": [
+                        {
+                            "merkle": "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51",
+                            "path_in_package": "",
+                            "size": 159,
+                            "share_count": 3,
+                        }
+                      ]
                     },
                     test_fs.path("obj/src/sys/pkg/bin/pkgfs/pkgfs/package_manifest.json").to_str().unwrap(): {
-                      "size": 53,
-                      "blobs": {
-                        "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51": 53
-                      }
+                      "proportional_size": 53,
+                      "size": 159,
+                      "name": "",
+                      "blobs": [
+                        {
+                            "merkle": "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51",
+                            "path_in_package": "",
+                            "size": 159,
+                            "share_count": 3,
+                        }
+                      ]
                     }
                   }
                 },
@@ -1116,10 +1132,17 @@ mod tests {
                   "used_bytes": 53,
                   "package_breakdown": {
                     test_fs.path("obj/src/connectivity/bluetooth/core/bt-gap/bt-gap/package_manifest.json").to_str().unwrap(): {
-                      "size": 53,
-                      "blobs": {
-                        "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51": 53
-                      }
+                      "proportional_size": 53,
+                      "size": 159,
+                      "name": "",
+                      "blobs": [
+                        {
+                            "merkle": "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51",
+                            "path_in_package": "",
+                            "size": 159,
+                            "share_count": 3,
+                        }
+                      ]
                     }
                   }
                 }
@@ -1435,19 +1458,38 @@ mod tests {
                 package_breakdown: HashMap::from([
                     (
                         package2_path.clone(),
-                        PackageResult {
-                            size: 70, /* 90/2 + 50/2 */
-                            blobs: HashMap::from([
-                                (blob1_hash.clone(), 45),
-                                (blob2_hash.clone(), 25),
-                            ]),
+                        PackageSizeInfo {
+                            name: "".to_string(),
+                            proportional_size: 70, /* 90/2 + 50/2 */
+                            size: 140,
+                            blobs: vec![
+                                PackageBlobSizeInfo {
+                                    merkle: blob2_hash.clone(),
+                                    size: 50,
+                                    share_count: 2,
+                                    path_in_package: "".to_string(),
+                                },
+                                PackageBlobSizeInfo {
+                                    merkle: blob1_hash.clone(),
+                                    path_in_package: "".to_string(),
+                                    size: 90,
+                                    share_count: 2,
+                                },
+                            ],
                         },
                     ),
                     (
                         package1_path.clone(),
-                        PackageResult {
-                            size: 45, /* 90/2 */
-                            blobs: HashMap::from([(blob1_hash.clone(), 45)]),
+                        PackageSizeInfo {
+                            name: "".to_string(),
+                            proportional_size: 45, /* 90/2 */
+                            size: 90,
+                            blobs: vec![PackageBlobSizeInfo {
+                                merkle: blob1_hash.clone(),
+                                path_in_package: "".to_string(),
+                                size: 90,
+                                share_count: 2,
+                            }],
                         },
                     ),
                 ]),
@@ -1459,9 +1501,16 @@ mod tests {
                 used_bytes: 31, /* 25 + 6 */
                 package_breakdown: HashMap::from([(
                     package3_path.clone(),
-                    PackageResult {
-                        size: 25, /* 50/2 */
-                        blobs: HashMap::from([(blob2_hash.clone(), 25)]),
+                    PackageSizeInfo {
+                        name: "".to_string(),
+                        proportional_size: 25, /* 50/2 */
+                        size: 50,
+                        blobs: vec![PackageBlobSizeInfo {
+                            merkle: blob2_hash.clone(),
+                            path_in_package: "".to_string(),
+                            size: 50,
+                            share_count: 2,
+                        }],
                     },
                 )]),
             },

@@ -10,5 +10,5 @@
 mod images_manifest;
 
 pub use images_manifest::{
-    BlobfsContents, Image, ImagesManifest, PackageMetadata, PackagesMetadata,
+    BlobfsContents, Image, ImagesManifest, PackageMetadata, PackageSetMetadata, PackagesMetadata,
 };

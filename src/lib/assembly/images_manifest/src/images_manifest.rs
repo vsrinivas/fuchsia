@@ -202,11 +202,13 @@ pub struct PackagesMetadata {
     pub cache: PackageSetMetadata,
 }
 
+/// Metadata for a certain package set (e.g. base or cache).
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
-pub struct PackageSetMetadata(Vec<PackageMetadata>);
+pub struct PackageSetMetadata(pub Vec<PackageMetadata>);
 
 impl PackageSetMetadata {
+    /// Add the package located at |path|.
     pub fn add_package(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
         let manifest = path.as_ref().to_owned();
         let name = PackageManifest::try_load_from(&manifest)?.name().to_string();
