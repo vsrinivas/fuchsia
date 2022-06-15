@@ -79,7 +79,7 @@ impl ChannelHandler {
                         .context("sending GetTargetList response")?;
                 }
                 ChannelControlRequest::SetTarget { channel, responder } => {
-                    self.target_channel_manager.set_target_channel(channel).await?;
+                    self.target_channel_manager.set_target_channel(channel);
                     responder.send().context("sending SetTarget response")?;
                 }
             }
@@ -119,7 +119,6 @@ mod tests {
             current_channel_manager: Arc::new(CurrentChannelManager::new(channel.to_owned())),
             target_channel_manager: Arc::new(TargetChannelManager::new(
                 crate::connect::ServiceConnector,
-                info_dir.path(),
                 info_dir.path(),
             )),
             warn_rate_limiter: RateLimiterMonotonic::from_delay(GET_CURRENT_WARN_DELAY),
@@ -182,17 +181,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_fidl_get_current_return_target_channel_if_current_channel_missing() {
-        let tempdir = create_info_dir_with_channel("target_channel.json");
-        let proxy = spawn_provider_handler(&tempdir);
-
-        let res = proxy.get_current().await;
-
-        assert_eq!(res.map_err(|e| e.to_string()), Ok("example".into()));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_fidl_get_current_return_empty_string_if_both_channel_missing() {
+    async fn test_fidl_get_current_return_empty_string_if_current_channel_missing() {
         let tempdir = TempDir::new().expect("create tempdir");
         let proxy = spawn_provider_handler_with_channel_handler(
             new_test_channel_handler_with_channel(&tempdir, ""),
@@ -204,24 +193,12 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_fidl_get_target_works() {
-        let tempdir = create_info_dir_with_channel("target_channel.json");
-        let proxy = spawn_channel_handler(&tempdir);
-        let res = proxy.get_target().await;
-
-        assert_eq!(res.map_err(|e| e.to_string()), Ok("example".into()));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_fidl_set_target_works() {
+    async fn test_fidl_set_get_target_works() {
         let tempdir = TempDir::new().expect("create tempdir");
         let proxy = spawn_channel_handler(&tempdir);
 
         proxy.set_target("target-channel").await.unwrap();
 
-        assert_eq!(
-            fs::read_to_string(tempdir.path().join("target_channel.json")).unwrap(),
-            r#"{"version":"1","content":{"legacy_amber_source_name":"target-channel"}}"#
-        );
+        assert_eq!(proxy.get_target().await.unwrap(), "target-channel");
     }
 }

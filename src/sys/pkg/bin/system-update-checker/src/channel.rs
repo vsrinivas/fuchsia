@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::connect::*;
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use fidl_fuchsia_boot::ArgumentsMarker;
 use fidl_fuchsia_cobalt::{
     SoftwareDistributionInfo, Status as CobaltStatus, SystemDataUpdaterMarker,
@@ -16,16 +16,13 @@ use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_url::AbsolutePackageUrl;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use thiserror::Error;
-
-static TARGET_CHANNEL: &'static str = "target_channel.json";
 
 static CHANNEL_PACKAGE_MAP: &'static str = "channel_package_map.json";
 
@@ -145,7 +142,6 @@ impl CurrentChannelManager {
 
 pub struct TargetChannelManager<S = ServiceConnector> {
     service_connector: S,
-    path: PathBuf,
     target_channel: Mutex<Option<String>>,
     channel_package_map: HashMap<String, AbsolutePackageUrl>,
 }
@@ -156,17 +152,9 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
     /// Arguments:
     /// * `service_connector` - used to connect to fuchsia.pkg.RepositoryManager and
     ///   fuchsia.boot.ArgumentsMarker.
-    /// * `dir` - directory containing mutable configuration files (current and target channel).
-    ///   Usually /data/misc/ota.
     /// * `config_dir` - directory containing immutable configuration, usually /config/data.
-    pub fn new(
-        service_connector: S,
-        dir: impl Into<PathBuf>,
-        config_dir: impl Into<PathBuf>,
-    ) -> Self {
-        let mut path = dir.into();
-        path.push(TARGET_CHANNEL);
-        let target_channel = Mutex::new(read_channel(&path).ok());
+    pub fn new(service_connector: S, config_dir: impl Into<PathBuf>) -> Self {
+        let target_channel = Mutex::new(None);
         let mut config_path = config_dir.into();
         config_path.push(CHANNEL_PACKAGE_MAP);
         let channel_package_map = read_channel_mappings(&config_path).unwrap_or_else(|err| {
@@ -174,7 +162,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
             HashMap::new()
         });
 
-        Self { service_connector, path, target_channel, channel_package_map }
+        Self { service_connector, target_channel, channel_package_map }
     }
 
     /// Fetch the target channel from vbmeta, if one is present.
@@ -182,23 +170,16 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
     pub async fn update(&self) -> Result<(), anyhow::Error> {
         let (target_channel, _) =
             lookup_channel_and_realm_from_vbmeta(&self.service_connector).await?;
-        if target_channel.is_some()
-            && self.target_channel.lock().as_ref() == target_channel.as_ref()
-        {
-            return Ok(());
-        }
 
+        // If the vbmeta has a channel, ensure our target channel matches and return.
         if let Some(channel) = target_channel {
-            self.set_target_channel(channel).await?;
+            self.set_target_channel(channel);
             return Ok(());
         }
 
-        let target_channel = String::new();
-        if self.target_channel.lock().as_deref() == Some(&target_channel) {
-            return Ok(());
-        }
-
-        self.set_target_channel(target_channel).await
+        // Otherwise, set the target channel to "".
+        self.set_target_channel("".to_owned());
+        Ok(())
     }
 
     pub fn get_target_channel(&self) -> Option<String> {
@@ -221,14 +202,8 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         }
     }
 
-    pub async fn set_target_channel(&self, channel: String) -> Result<(), anyhow::Error> {
-        // Write to target_channel.json
-        write_channel(&self.path, &channel)?;
-
-        // Save it to self.target_channel to be consistent with target_channel.json.
+    pub fn set_target_channel(&self, channel: String) {
         *self.target_channel.lock() = Some(channel);
-
-        Ok(())
     }
 
     pub async fn get_channel_list(&self) -> Result<Vec<String>, anyhow::Error> {
@@ -281,41 +256,6 @@ async fn lookup_channel_and_realm_from_vbmeta(
     Ok((results[0].clone(), results[1].clone()))
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "version", content = "content", deny_unknown_fields)]
-enum Channel {
-    #[serde(rename = "1")]
-    Version1 { legacy_amber_source_name: String },
-}
-
-fn read_channel(path: impl AsRef<Path>) -> Result<String, Error> {
-    let f = fs::File::open(path.as_ref())?;
-    match serde_json::from_reader(io::BufReader::new(f))? {
-        Channel::Version1 { legacy_amber_source_name } => Ok(legacy_amber_source_name),
-    }
-}
-
-fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(), anyhow::Error> {
-    let path = path.as_ref();
-    let channel = Channel::Version1 { legacy_amber_source_name: channel.into() };
-
-    let mut temp_path = path.to_owned().into_os_string();
-    temp_path.push(".new");
-    let temp_path = PathBuf::from(temp_path);
-    {
-        if let Some(dir) = temp_path.parent() {
-            fs::create_dir_all(dir).with_context(|| format!("create_dir_all {:?}", dir))?;
-        }
-        let mut f = io::BufWriter::new(
-            fs::File::create(&temp_path)
-                .with_context(|| format!("create temp file {:?}", temp_path))?,
-        );
-        serde_json::to_writer(&mut f, &channel).context("serialize config")?;
-        f.flush().context("flush")?;
-    };
-    fs::rename(&temp_path, path).with_context(|| format!("rename {:?} to {:?}", temp_path, path))
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
 pub enum ChannelPackageMap {
@@ -364,7 +304,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert_matches::assert_matches;
     use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
     use fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream};
     use fidl_fuchsia_cobalt::{SystemDataUpdaterRequest, SystemDataUpdaterRequestStream};
@@ -380,49 +319,7 @@ mod tests {
     use futures::task::Poll;
     use futures::{future::FutureExt, stream::StreamExt};
     use parking_lot::Mutex;
-    use serde_json::{json, Value};
     use std::sync::Arc;
-    use tempfile;
-
-    #[test]
-    fn test_write_channel() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("channel.json");
-
-        assert_matches!(write_channel(&path, "test"), Ok(()));
-
-        let f = fs::File::open(path).expect("file to exist");
-        let value: Value = serde_json::from_reader(f).expect("valid json");
-        assert_eq!(
-            value,
-            json!({
-                "version": "1",
-                "content": {
-                    "legacy_amber_source_name": "test",
-                }
-            })
-        );
-    }
-
-    #[test]
-    fn test_write_channel_create_subdir() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("subdir").join("channel.json");
-
-        assert_matches!(write_channel(&path, "test"), Ok(()));
-
-        let f = fs::File::open(path).expect("file to exist");
-        let value: Value = serde_json::from_reader(f).expect("valid json");
-        assert_eq!(
-            value,
-            json!({
-                "version": "1",
-                "content": {
-                    "legacy_amber_source_name": "test",
-                }
-            })
-        );
-    }
 
     fn serve_ota_channel_arguments(
         mut stream: ArgumentsRequestStream,
@@ -736,38 +633,29 @@ mod tests {
         assert_eq!(connector.call_count(), 1);
     }
 
-    async fn check_target_cnannel_manager_writes_channel(
+    async fn check_target_channel_manager_remembers_channel(
         ota_channel: Option<String>,
         initial_channel: String,
     ) {
         let dir = tempfile::tempdir().unwrap();
-        let target_channel_path = dir.path().join(TARGET_CHANNEL);
 
         let connector = ArgumentsServiceConnector::new(ota_channel.clone());
-        let channel_manager = TargetChannelManager::new(connector.clone(), dir.path(), dir.path());
+        let channel_manager = TargetChannelManager::new(connector.clone(), dir.path());
 
-        // First write of the file with the correct data.
-        assert_matches!(read_channel(&target_channel_path), Err(_));
+        // Starts with expected initial channel
         channel_manager.update().await.expect("channel update to succeed");
         assert_eq!(channel_manager.get_target_channel(), Some(initial_channel.clone()));
-        assert_eq!(read_channel(&target_channel_path).unwrap(), initial_channel);
 
-        // If the file changes while the service is running, an update doesn't know to replace it.
-        write_channel(&target_channel_path, "unique").unwrap();
-        channel_manager.update().await.expect("channel update to succeed");
-        assert_eq!(channel_manager.get_target_channel(), Some(initial_channel.clone()));
-        assert_eq!(read_channel(&target_channel_path).unwrap(), "unique");
-
-        // If the update package changes, or our vbmeta changes, the file will be updated.
+        // If the update package changes, or our vbmeta changes, the target_channel will be
+        // updated.
         connector.set(Some("world".to_owned()));
         channel_manager.update().await.expect("channel update to succeed");
         assert_eq!(channel_manager.get_target_channel(), Some("world".to_string()));
-        assert_eq!(read_channel(&target_channel_path).unwrap(), "world");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_channel_manager_writes_channel_with_vbmeta() {
-        check_target_cnannel_manager_writes_channel(
+    async fn test_target_channel_manager_remembers_channel_with_vbmeta() {
+        check_target_channel_manager_remembers_channel(
             Some("devhost".to_string()),
             "devhost".to_string(),
         )
@@ -775,36 +663,18 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_channel_manager_writes_channel_with_fallback() {
-        check_target_cnannel_manager_writes_channel(None, String::new()).await
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_channel_manager_recovers_from_corrupt_data() {
-        let dir = tempfile::tempdir().unwrap();
-        let target_channel_path = dir.path().join(TARGET_CHANNEL);
-
-        fs::write(&target_channel_path, r#"invalid json"#).unwrap();
-
-        let connector = ArgumentsServiceConnector::new(Some("b".to_string()));
-        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
-
-        assert!(read_channel(&target_channel_path).is_err());
-        channel_manager.update().await.expect("channel update to succeed");
-        assert_eq!(channel_manager.get_target_channel(), Some("b".to_string()));
-        assert_eq!(read_channel(&target_channel_path).unwrap(), "b");
+    async fn test_target_channel_manager_remembers_channel_with_fallback() {
+        check_target_channel_manager_remembers_channel(None, String::new()).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_channel_manager_set_target_channel() {
         let dir = tempfile::tempdir().unwrap();
-        let target_channel_path = dir.path().join(TARGET_CHANNEL);
 
         let connector = ArgumentsServiceConnector::new(Some("not-target-channel".to_string()));
-        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
-        channel_manager.set_target_channel("target-channel".to_string()).await.unwrap();
+        let channel_manager = TargetChannelManager::new(connector, dir.path());
+        channel_manager.set_target_channel("target-channel".to_string());
         assert_eq!(channel_manager.get_target_channel(), Some("target-channel".to_string()));
-        assert_eq!(read_channel(&target_channel_path).unwrap(), "target-channel");
     }
 
     async fn check_target_channel_manager_update(
@@ -814,7 +684,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
 
         let connector = ArgumentsServiceConnector::new(ota_channel.clone());
-        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path());
         channel_manager.update().await.unwrap();
         assert_eq!(channel_manager.get_target_channel(), Some(expected_channel));
     }
@@ -891,27 +761,27 @@ mod tests {
             r#"{"version":"1","content":[{"channel":"first","package":"fuchsia-pkg://asdfghjkl.example.com/update"}]}"#,
         ).unwrap();
 
-        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path());
         assert_eq!(channel_manager.get_target_channel_update_url(), None);
-        channel_manager.set_target_channel("first".to_owned()).await.unwrap();
+        channel_manager.set_target_channel("first".to_owned());
         assert_eq!(
             channel_manager.get_target_channel_update_url(),
             Some("fuchsia-pkg://asdfghjkl.example.com/update".to_owned())
         );
 
-        channel_manager.set_target_channel("does_not_exist".to_owned()).await.unwrap();
+        channel_manager.set_target_channel("does_not_exist".to_owned());
         assert_eq!(
             channel_manager.get_target_channel_update_url(),
             Some("fuchsia-pkg://does_not_exist/update".to_owned())
         );
 
-        channel_manager.set_target_channel("qwertyuiop.example.com".to_owned()).await.unwrap();
+        channel_manager.set_target_channel("qwertyuiop.example.com".to_owned());
         assert_eq!(
             channel_manager.get_target_channel_update_url(),
             Some("fuchsia-pkg://qwertyuiop.example.com/update".to_owned())
         );
 
-        channel_manager.set_target_channel(String::new()).await.unwrap();
+        channel_manager.set_target_channel(String::new());
         assert_eq!(channel_manager.get_target_channel_update_url(), None);
     }
 
@@ -928,7 +798,7 @@ mod tests {
             r#"{"version":"1","content":[{"channel":"first","package":"fuchsia-pkg://asdfghjkl.example.com/update"}]}"#,
         ).unwrap();
 
-        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path());
         assert_eq!(
             channel_manager.get_channel_list().await.unwrap(),
             vec!["devhost", "first", "qwertyuiop.example.com"]
@@ -940,7 +810,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let connector =
             RepoMgrServiceConnector { channels: vec!["some-channel", "target-channel"] };
-        let channel_manager = TargetChannelManager::new(connector, dir.path(), dir.path());
+        let channel_manager = TargetChannelManager::new(connector, dir.path());
         assert_eq!(
             channel_manager.get_channel_list().await.unwrap(),
             vec!["some-channel", "target-channel"]

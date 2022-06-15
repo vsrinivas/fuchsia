@@ -39,7 +39,6 @@ use {
 };
 
 struct Mounts {
-    misc_ota: TempDir,
     pkgfs_system: TempDir,
 }
 
@@ -54,10 +53,7 @@ struct Proxies {
 
 impl Mounts {
     fn new() -> Self {
-        Self {
-            misc_ota: tempfile::tempdir().expect("/tmp to exist"),
-            pkgfs_system: tempfile::tempdir().expect("/tmp to exist"),
-        }
+        Self { pkgfs_system: tempfile::tempdir().expect("/tmp to exist") }
     }
 }
 
@@ -95,17 +91,11 @@ impl TestEnvBuilder {
 
         let mut fs = ServiceFs::new();
         // Add fake directories.
-        let misc = fuchsia_fs::directory::open_in_namespace(
-            mounts.misc_ota.path().to_str().unwrap(),
-            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
-        )
-        .unwrap();
         let pkgfs_system = fuchsia_fs::directory::open_in_namespace(
             mounts.pkgfs_system.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
         .unwrap();
-        fs.dir("misc").add_remote("ota", misc);
         fs.dir("pkgfs").add_remote("system", pkgfs_system);
 
         // Setup the mock resolver service.
@@ -219,11 +209,6 @@ impl TestEnvBuilder {
                         Capability::directory("pkgfs-system")
                             .path("/pkgfs/system")
                             .rights(fio::R_STAR_DIR),
-                    )
-                    .capability(
-                        Capability::directory("deprecated-misc-storage")
-                            .path("/misc")
-                            .rights(fio::RW_STAR_DIR),
                     )
                     .from(&fake_capabilities)
                     .to(&system_update_checker),

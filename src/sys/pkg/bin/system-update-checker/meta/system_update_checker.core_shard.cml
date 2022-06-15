@@ -63,13 +63,6 @@
             from: "#system-update-committer",
             to: "#system-update-checker",
         },
-
-        // Remove once the misc directory is removed (fxbug.dev/87093)
-        {
-            storage: "tmp",
-            from: "self",
-            to: "#system-update-checker",
-        },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",

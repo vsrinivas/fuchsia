@@ -39,12 +39,6 @@
             rights: [ "r*" ],
             path: "/config/data",
         },
-
-        // Remove once the misc directory is removed (fxbug.dev/87093)
-        {
-            storage: "tmp",
-            path: "/misc",
-        },
         {
             directory: "pkgfs-system",
             from: "parent",
