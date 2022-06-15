@@ -13,12 +13,15 @@ use fuchsia_async as fasync;
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_syslog_listener::LogProcessor;
 use fuchsia_zircon as zx;
+use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 use selectors::{self, VerboseError};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process;
@@ -64,6 +67,7 @@ struct Decorator {
     regex_str_color: String,
     re_color: Option<Regex>,
     regex_grp_color: Vec<RegexGroup>,
+    color_components: bool,
 }
 
 struct RegexGroup {
@@ -81,6 +85,7 @@ impl Decorator {
             regex_str_color: String::default(),
             re_color: None,
             regex_grp_color: Vec::new(),
+            color_components: false,
         }
     }
 
@@ -182,7 +187,38 @@ impl Decorator {
                         break;
                     }
                 }
-
+                if self.color_components {
+                    lazy_static! {
+                        static ref RE: Regex = Regex::new(r"(\[([^\[\]]*)\]){1,}\s").unwrap();
+                    }
+                    if let Some(caps) = RE.captures(&line) {
+                        if let Some(name) = caps.get(2) {
+                            let mut hasher = DefaultHasher::new();
+                            name.as_str().hash(&mut hasher);
+                            // Per
+                            // https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit,
+                            // colors # 225 through # 100 appear "safe", i.e. not
+                            // too bright and not too dark. This yields a range
+                            // of 125 colors.
+                            //
+                            let index: usize = 100 + (hasher.finish() as usize % 125);
+                            line.replace_range(
+                                name.start()..name.end(),
+                                &[
+                                    // Colors here are of the form \x1B[38;5;0m - \x1B[38;5;255m
+                                    "\x1B[38;5;",
+                                    &index.to_string(),
+                                    "m",
+                                    //
+                                    name.as_str(),
+                                    ANSI_RESET,
+                                    encompassing_color,
+                                ]
+                                .concat(),
+                            );
+                        }
+                    }
+                }
                 self.colorize_words(line, &encompassing_color)
             }
         }
@@ -230,6 +266,7 @@ struct LocalOptions {
     suppress: Vec<String>,
     dump_logs: bool,
     hide_metadata: bool,
+    color_components: bool,
 }
 
 impl Default for LocalOptions {
@@ -249,6 +286,7 @@ impl Default for LocalOptions {
             suppress: vec![],
             dump_logs: false,
             hide_metadata: false,
+            color_components: false,
         }
     }
 }
@@ -391,6 +429,9 @@ fn help(name: &str) -> String {
             Activate colorization. Note, suppression features does not need this option.
             TODO(porce): Use structopt and convert this to boolean.
 
+        --color_components:
+           With --pretty, colorize logged component names.
+
         --tid <integer>:
             tid for the program to filter on.
 
@@ -446,8 +487,8 @@ fn help(name: &str) -> String {
 }
 
 // These flags don't require an additional parameter
-const PARAMETERLESS_FLAGS: [&'static str; 4] =
-    ["--pretty", "--since_now", "--dump_logs", "--hide_metadata"];
+const PARAMETERLESS_FLAGS: [&'static str; 5] =
+    ["--pretty", "--since_now", "--dump_logs", "--hide_metadata", "--color_components"];
 
 fn check_for_param(i: usize, args: &[String]) -> Result<bool, String> {
     let flag = &args[i];
@@ -689,6 +730,9 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             }
             "--hide_metadata" => {
                 options.local.hide_metadata = true;
+            }
+            "--color_components" => {
+                options.local.color_components = true;
             }
             a => {
                 return Err(format!("Invalid option {}", a));
@@ -948,6 +992,9 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
         d
     };
 
+    if local_options.color_components {
+        d.color_components = true;
+    }
     if local_options.is_pretty {
         d.activate();
     }
@@ -1893,6 +1940,33 @@ mod tests {
         let mut d = Decorator::new(DecoratorMode::ColorByKeyword);
         d.add_word("error".to_string(), RED);
         d.add_word("info".to_string(), YELLOW);
+        d.activate();
+
+        for line in syslog.split("\n") {
+            println!("{}", d.decorate(0x30, line.to_string()));
+        }
+    }
+
+    #[fuchsia::test]
+    fn test_decorate_with_color_components() {
+        let syslog = "
+            [00051.028569][1051][1054][firstComponent] INFO: bootsvc: Creating bootfs service...
+            [00052.101073][5525][5550][firstComponent] INFO: ath10k: ath10k: Probed chip QCA6174 ver: 2.1
+            [00052.190295][4979][4996][second_component] INFO: [ERROR:garnet/bin/appmgr/namespace_builder.cc(62)] Failed to migrate 'deprecated-global-persistent-storage' to new global data directory
+            [00052.687460][5525][12795][second_component] INFO: devhost: rpc:load-firmware failed: -25
+            [00055.306545][526727887][0][third component] INFO: netstack.go(363): NIC ethp001f6: DHCP acquired IP 192.168.42.193 for 24h0m0s
+            [00229.964817][1170][1263][third component] INFO: bt#02: pc 0x644746c42725 sp 0x3279d688da00 (app:/boot/bin/sh,0x1b725)
+            [00051.028569][1051][1054][fourthComponent] INFO: bootsvc: Creating bootfs service...
+            [00052.101073][5525][5550][fourthComponent] INFO: ath10k: ath10k: Probed chip QCA6174 ver: 2.1
+            [00052.190295][4979][4996][fifth_component] INFO: [ERROR:garnet/bin/appmgr/namespace_builder.cc(62)] Failed to migrate 'deprecated-global-persistent-storage' to new global data directory
+            [00052.687460][5525][12795][fifth_component] INFO: devhost: rpc:load-firmware failed: -25
+            [00055.306545][526727887][0][sixth component] INFO: netstack.go(363): NIC ethp001f6: DHCP acquired IP 192.168.42.193 for 24h0m0s
+            [00229.964817][1170][1263][sixth component] INFO: bt#02: pc 0x644746c42725 sp 0x3279d688da00 (app:/boot/bin/sh,0x1b725)";
+
+        let mut d = Decorator::new(DecoratorMode::ColorByKeyword);
+        d.add_word("error".to_string(), RED);
+        d.add_word("info".to_string(), YELLOW);
+        d.color_components = true;
         d.activate();
 
         for line in syslog.split("\n") {
