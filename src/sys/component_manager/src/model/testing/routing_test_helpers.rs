@@ -28,7 +28,7 @@ use {
     ::routing_test_helpers::{generate_storage_path, RoutingTestModel, RoutingTestModelBuilder},
     anyhow::anyhow,
     async_trait::async_trait,
-    cm_moniker::{InstancedAbsoluteMoniker, InstancedRelativeMoniker},
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::*,
     cm_task_scope::TaskScope,
     cm_types::Url,
@@ -325,12 +325,12 @@ impl FakeEventSourceFactory {
         Ok(FakeEventSourceV2::new())
     }
 
-    /// Returns an EventSource. An EventSource holds an InstancedAbsoluteMoniker that
+    /// Returns an EventSource. An EventSource holds an AbsoluteMoniker that
     /// corresponds to the component in which it will receive events.
     async fn on_capability_routed_async(
         self: Arc<Self>,
         capability_decl: &InternalCapability,
-        _target_moniker: InstancedAbsoluteMoniker,
+        _target_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability_decl {

@@ -38,10 +38,10 @@ impl NamespaceDir {
     ) -> Result<Self, ModelError> {
         let mut dir = pfs::simple();
         let tree = DirTree::build_from_uses(route_use_fn, component.clone(), decl);
-        tree.install(&component.instanced_moniker, &mut dir)?;
+        tree.install(&component.abs_moniker, &mut dir)?;
 
         if let Some(pkg_dir) = pkg_dir {
-            dir.add_node("pkg", remote_dir(pkg_dir), &component.instanced_moniker)?;
+            dir.add_node("pkg", remote_dir(pkg_dir), &component.abs_moniker)?;
         }
 
         Ok(NamespaceDir { root_dir: dir, execution_scope: scope })

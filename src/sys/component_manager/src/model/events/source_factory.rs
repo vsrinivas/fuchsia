@@ -18,9 +18,9 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
-    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::CapabilityName,
     lazy_static::lazy_static,
+    moniker::AbsoluteMoniker,
     std::sync::{Arc, Weak},
 };
 
@@ -79,10 +79,7 @@ impl EventSourceFactory {
     }
 
     /// Creates a `EventSource` for the given `target_moniker`.
-    pub async fn create(
-        &self,
-        target_moniker: InstancedAbsoluteMoniker,
-    ) -> Result<EventSource, ModelError> {
+    pub async fn create(&self, target_moniker: AbsoluteMoniker) -> Result<EventSource, ModelError> {
         EventSource::new(
             self.model.clone(),
             SubscriptionOptions::new(
@@ -100,7 +97,7 @@ impl EventSourceFactory {
     async fn on_capability_routed_async(
         self: Arc<Self>,
         capability_decl: &InternalCapability,
-        target_moniker: InstancedAbsoluteMoniker,
+        target_moniker: AbsoluteMoniker,
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         if capability_decl.matches_protocol(&EVENT_SOURCE_SERVICE_NAME) {

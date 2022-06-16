@@ -2627,10 +2627,10 @@ pub mod tests {
             .await
             .expect("couldn't susbscribe to event stream");
 
-        let a_moniker: InstancedAbsoluteMoniker = vec!["a:0"].into();
-        let b_moniker: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let a_moniker: AbsoluteMoniker = vec!["a"].into();
+        let b_moniker: AbsoluteMoniker = vec!["a", "b"].into();
 
-        let component_b = test.look_up(b_moniker.without_instance_ids()).await;
+        let component_b = test.look_up(b_moniker.clone()).await;
 
         // Start the root so it and its eager children start.
         let _root = test
@@ -2663,12 +2663,9 @@ pub mod tests {
 
         // Verify that a parent of the exited component can still be stopped
         // properly.
-        ActionSet::register(
-            test.look_up(a_moniker.without_instance_ids()).await,
-            ShutdownAction::new(),
-        )
-        .await
-        .expect("Couldn't trigger shutdown");
+        ActionSet::register(test.look_up(a_moniker.clone()).await, ShutdownAction::new())
+            .await
+            .expect("Couldn't trigger shutdown");
         // Check that we get a stop even which corresponds to the parent.
         let parent_stop = stop_event_stream
             .wait_until(EventType::Stopped, a_moniker.clone())

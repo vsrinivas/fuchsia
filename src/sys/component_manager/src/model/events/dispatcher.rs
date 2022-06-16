@@ -14,7 +14,6 @@ use {
     },
     ::routing::event::EventFilter,
     anyhow::Error,
-    cm_moniker::InstancedExtendedMoniker,
     cm_rust::{DictionaryValue, EventMode},
     futures::{
         channel::{mpsc, oneshot},
@@ -22,6 +21,7 @@ use {
         sink::SinkExt,
     },
     maplit::hashmap,
+    moniker::ExtendedMoniker,
 };
 
 /// EventDispatcher and EventStream are two ends of a channel.
@@ -114,14 +114,14 @@ impl EventDispatcher {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct EventDispatcherScope {
     /// The moniker of the realm
-    pub moniker: InstancedExtendedMoniker,
+    pub moniker: ExtendedMoniker,
 
     /// Filters for an event in that realm.
     pub filter: EventFilter,
 }
 
 impl EventDispatcherScope {
-    pub fn new(moniker: InstancedExtendedMoniker) -> Self {
+    pub fn new(moniker: ExtendedMoniker) -> Self {
         Self { moniker, filter: EventFilter::new(None) }
     }
 
@@ -200,10 +200,9 @@ mod tests {
         crate::{capability::CapabilitySource, model::events::registry::ExecutionMode},
         ::routing::capability_source::InternalCapability,
         assert_matches::assert_matches,
-        cm_moniker::InstancedAbsoluteMoniker,
         fuchsia_zircon as zx,
         futures::StreamExt,
-        moniker::AbsoluteMonikerBase,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{
             convert::TryInto,
             sync::{Arc, Weak},
@@ -234,21 +233,20 @@ mod tests {
             options: SubscriptionOptions,
             mode: EventMode,
         ) -> Arc<EventDispatcher> {
-            let scopes = vec![
-                EventDispatcherScope::new(InstancedAbsoluteMoniker::root().into()).for_debug()
-            ];
+            let scopes =
+                vec![EventDispatcherScope::new(AbsoluteMoniker::root().into()).for_debug()];
             Arc::new(EventDispatcher::new(options.clone(), mode, scopes, self.tx.clone()))
         }
     }
 
     async fn dispatch_capability_requested_event(
         dispatcher: &EventDispatcher,
-        source_moniker: &InstancedAbsoluteMoniker,
+        source_moniker: &AbsoluteMoniker,
     ) -> Option<oneshot::Receiver<()>> {
         let (_, capability_server_end) = zx::Channel::create().unwrap();
         let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
         let event = ComponentEvent::new_for_test(
-            InstancedAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
             Ok(EventPayload::CapabilityRequested {
                 source_moniker: source_moniker.clone(),
@@ -264,7 +262,7 @@ mod tests {
     ) -> Option<oneshot::Receiver<()>> {
         let empty_capability_provider = Arc::new(Mutex::new(None));
         let event = ComponentEvent::new_for_test(
-            InstancedAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
             Ok(EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin {

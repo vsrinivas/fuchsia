@@ -135,12 +135,11 @@ pub mod tests {
             },
         },
         assert_matches::assert_matches,
-        cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
         cm_rust::EventMode,
         cm_rust_testing::ComponentDeclBuilder,
         fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
-        moniker::ChildMoniker,
+        moniker::{AbsoluteMoniker, ChildMoniker},
         std::sync::atomic::Ordering,
         std::sync::Weak,
     };
@@ -182,7 +181,7 @@ pub mod tests {
                 .collect();
             assert_eq!(
                 events,
-                vec![Lifecycle::Stop(vec!["a:0"].into()), Lifecycle::Destroy(vec!["a:0"].into())],
+                vec![Lifecycle::Stop(vec!["a"].into()), Lifecycle::Destroy(vec!["a"].into())],
             );
         }
 
@@ -286,8 +285,8 @@ pub mod tests {
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0"].into()),
+                    Lifecycle::Destroy(vec!["a", "b"].into()),
+                    Lifecycle::Destroy(vec!["a"].into()),
                 ]
             );
         }
@@ -339,7 +338,7 @@ pub mod tests {
     ) where
         A: Action,
     {
-        let event = event_stream.wait_until(event_type, vec!["a:0"].into()).await.unwrap();
+        let event = event_stream.wait_until(event_type, vec!["a"].into()).await.unwrap();
 
         // Register destroy child action, while `action` is stalled.
         let component_root = test.look_up(vec![].into()).await;
@@ -450,11 +449,9 @@ pub mod tests {
 
         // Wait for Discover action, which should be registered by Destroy, followed by
         // Destroyed.
-        let event =
-            event_stream.wait_until(EventType::Discovered, vec!["a:0"].into()).await.unwrap();
+        let event = event_stream.wait_until(EventType::Discovered, vec!["a"].into()).await.unwrap();
         event.resume();
-        let event =
-            event_stream.wait_until(EventType::Destroyed, vec!["a:0"].into()).await.unwrap();
+        let event = event_stream.wait_until(EventType::Destroyed, vec!["a"].into()).await.unwrap();
         event.resume();
         nf.await.unwrap();
         assert!(is_child_deleted(&component_root, &component_a).await);
@@ -562,9 +559,9 @@ pub mod tests {
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Stop(vec!["a:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0"].into())
+                    Lifecycle::Stop(vec!["a"].into()),
+                    Lifecycle::Destroy(vec!["a", "b"].into()),
+                    Lifecycle::Destroy(vec!["a"].into())
                 ]
             );
         }
@@ -630,14 +627,12 @@ pub mod tests {
             // Expect only "x" as child of root.
             let state = component_root.lock_state().await;
             let children: Vec<_> = match *state {
-                InstanceState::Resolved(ref s) => {
-                    s.instanced_children().map(|(k, _)| k.clone()).collect()
-                }
+                InstanceState::Resolved(ref s) => s.children().map(|(k, _)| k.clone()).collect(),
                 _ => {
                     panic!("not resolved");
                 }
             };
-            assert_eq!(children, vec!["x:0".into()]);
+            assert_eq!(children, vec!["x".into()]);
         }
         {
             let mut events: Vec<_> = test
@@ -656,17 +651,14 @@ pub mod tests {
             assert_eq!(
                 first,
                 vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
-                    Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into())
+                    Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                    Lifecycle::Stop(vec!["a", "b", "d"].into())
                 ]
             );
             let next: Vec<_> = events.drain(0..2).collect();
             assert_eq!(
                 next,
-                vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into())
-                ]
+                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
             );
 
             // The leaves could be destroyed in any order.
@@ -675,15 +667,15 @@ pub mod tests {
             assert_eq!(
                 first,
                 vec![
-                    Lifecycle::Destroy(vec!["a:0", "b:0", "c:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0", "b:0", "d:0"].into())
+                    Lifecycle::Destroy(vec!["a", "b", "c"].into()),
+                    Lifecycle::Destroy(vec!["a", "b", "d"].into())
                 ]
             );
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0"].into())
+                    Lifecycle::Destroy(vec!["a", "b"].into()),
+                    Lifecycle::Destroy(vec!["a"].into())
                 ]
             );
         }
@@ -744,10 +736,10 @@ pub mod tests {
         {
             let state = component_root.lock_state().await;
             let children: Vec<_> = match *state {
-                InstanceState::Resolved(ref s) => s.instanced_children().map(|(k, _)| k).collect(),
+                InstanceState::Resolved(ref s) => s.children().map(|(k, _)| k.clone()).collect(),
                 _ => panic!("not resolved"),
             };
-            assert_eq!(children, Vec::<InstancedChildMoniker>::new());
+            assert_eq!(children, Vec::<ChildMoniker>::new());
         }
         {
             let events: Vec<_> = test
@@ -762,15 +754,15 @@ pub mod tests {
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into()),
+                    Lifecycle::Stop(vec!["a", "b", "b"].into()),
+                    Lifecycle::Stop(vec!["a", "b"].into()),
+                    Lifecycle::Stop(vec!["a"].into()),
                     // This component instance is never resolved but we still invoke the Destroy
                     // hook on it.
-                    Lifecycle::Destroy(vec!["a:0", "b:0", "b:0", "b:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0", "b:0", "b:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0"].into())
+                    Lifecycle::Destroy(vec!["a", "b", "b", "b"].into()),
+                    Lifecycle::Destroy(vec!["a", "b", "b"].into()),
+                    Lifecycle::Destroy(vec!["a", "b"].into()),
+                    Lifecycle::Destroy(vec!["a"].into())
                 ]
             );
         }
@@ -788,11 +780,11 @@ pub mod tests {
     #[fuchsia::test]
     async fn destroy_error() {
         struct DestroyErrorHook {
-            moniker: InstancedAbsoluteMoniker,
+            moniker: AbsoluteMoniker,
         }
 
         impl DestroyErrorHook {
-            fn new(moniker: InstancedAbsoluteMoniker) -> Self {
+            fn new(moniker: AbsoluteMoniker) -> Self {
                 Self { moniker }
             }
 
@@ -806,7 +798,7 @@ pub mod tests {
 
             async fn on_destroyed_async(
                 &self,
-                target_moniker: &InstancedAbsoluteMoniker,
+                target_moniker: &AbsoluteMoniker,
             ) -> Result<(), ModelError> {
                 if *target_moniker == self.moniker {
                     return Err(ModelError::unsupported("ouch"));
@@ -838,7 +830,7 @@ pub mod tests {
         // The destroy hook is invoked just after the component instance is removed from the
         // list of children. Therefore, to cause destruction of `a` to fail, fail removal of
         // `/a/b`.
-        let error_hook = Arc::new(DestroyErrorHook::new(vec!["a:0", "b:0"].into()));
+        let error_hook = Arc::new(DestroyErrorHook::new(vec!["a", "b"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let component_root = test.look_up(vec![].into()).await;
         let component_a = test.look_up(vec!["a"].into()).await;
@@ -881,14 +873,14 @@ pub mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Destroy(vec!["a:0", "b:0", "c:0"].into()),
-                Lifecycle::Destroy(vec!["a:0", "b:0", "d:0"].into()),
+                Lifecycle::Destroy(vec!["a", "b", "c"].into()),
+                Lifecycle::Destroy(vec!["a", "b", "d"].into()),
             ];
             assert_eq!(first, expected);
-            assert_eq!(events, vec![Lifecycle::Destroy(vec!["a:0", "b:0"].into())]);
+            assert_eq!(events, vec![Lifecycle::Destroy(vec!["a", "b"].into())]);
         }
 
-        // Register destroy action on "a:0" again. "b:0"'s delete succeeds, and "a:0" is deleted
+        // Register destroy action on "a" again. "b"'s delete succeeds, and "a" is deleted
         // this time.
         ActionSet::register(component_root.clone(), DestroyChildAction::new("a:0".into()))
             .await
@@ -912,15 +904,15 @@ pub mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Destroy(vec!["a:0", "b:0", "c:0"].into()),
-                Lifecycle::Destroy(vec!["a:0", "b:0", "d:0"].into()),
+                Lifecycle::Destroy(vec!["a", "b", "c"].into()),
+                Lifecycle::Destroy(vec!["a", "b", "d"].into()),
             ];
             assert_eq!(first, expected);
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Destroy(vec!["a:0"].into())
+                    Lifecycle::Destroy(vec!["a", "b"].into()),
+                    Lifecycle::Destroy(vec!["a"].into())
                 ]
             );
         }
@@ -981,8 +973,8 @@ pub mod tests {
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Stop(vec!["coll:a:1"].into()),
-                    Lifecycle::Destroy(vec!["coll:a:1"].into()),
+                    Lifecycle::Stop(vec!["coll:a"].into()),
+                    Lifecycle::Destroy(vec!["coll:a"].into()),
                 ],
             );
         }

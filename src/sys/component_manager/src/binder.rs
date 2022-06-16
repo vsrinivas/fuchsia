@@ -14,13 +14,12 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_moniker::InstancedExtendedMoniker,
     cm_rust::{CapabilityName, CapabilityPath, ProtocolDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     routing::capability_source::{ComponentCapability, InternalCapability},
     std::{
         path::PathBuf,
@@ -142,16 +141,16 @@ impl Hook for BinderCapabilityHost {
         }) = &event.result
         {
             let target_moniker = match &event.target_moniker {
-                InstancedExtendedMoniker::ComponentManager => {
+                ExtendedMoniker::ComponentManager => {
                     Err(ModelError::UnexpectedComponentManagerMoniker)
                 }
-                InstancedExtendedMoniker::ComponentInstance(moniker) => Ok(moniker),
+                ExtendedMoniker::ComponentInstance(moniker) => Ok(moniker),
             }?;
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
                     component.clone(),
-                    target_moniker.without_instance_ids(),
+                    target_moniker.clone(),
                     &capability,
                     capability_provider.take(),
                 )
@@ -189,13 +188,13 @@ mod tests {
             },
         },
         assert_matches::assert_matches,
-        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{self, CapabilityName, ComponentDecl, EventMode},
         cm_rust_testing::*,
         cm_task_scope::TaskScope,
         fidl::{client::Client, handle::AsyncChannel},
         fuchsia_zircon as zx,
         futures::{lock::Mutex, StreamExt},
+        moniker::AbsoluteMoniker,
         std::path::PathBuf,
     };
 
@@ -221,18 +220,18 @@ mod tests {
 
         async fn provider(
             &self,
-            source: InstancedAbsoluteMoniker,
-            target: InstancedAbsoluteMoniker,
+            source: AbsoluteMoniker,
+            target: AbsoluteMoniker,
         ) -> Box<BinderCapabilityProvider> {
             let builtin_environment = self.builtin_environment.lock().await;
             let source = builtin_environment
                 .model
-                .look_up(&source.without_instance_ids())
+                .look_up(&source)
                 .await
                 .expect("failed to look up source moniker");
             let target = builtin_environment
                 .model
-                .look_up(&target.without_instance_ids())
+                .look_up(&target)
                 .await
                 .expect("failed to look up target moniker");
 
@@ -265,11 +264,11 @@ mod tests {
             .await;
         let (_client_end, mut server_end) =
             zx::Channel::create().expect("failed to create channels");
-        let moniker: InstancedAbsoluteMoniker = vec!["source:0"].into();
+        let moniker: AbsoluteMoniker = vec!["source"].into();
 
         let task_scope = TaskScope::new();
         fixture
-            .provider(moniker.clone(), vec!["target:0"].into())
+            .provider(moniker.clone(), vec!["target"].into())
             .await
             .open(task_scope.clone(), fio::OpenFlags::empty(), 0, PathBuf::new(), &mut server_end)
             .await
@@ -294,7 +293,7 @@ mod tests {
         .await;
         let (client_end, mut server_end) =
             zx::Channel::create().expect("failed to create channels");
-        let moniker: InstancedAbsoluteMoniker = InstancedAbsoluteMoniker::from(vec!["foo:0"]);
+        let moniker: AbsoluteMoniker = vec!["foo"].into();
 
         let task_scope = TaskScope::new();
         fixture

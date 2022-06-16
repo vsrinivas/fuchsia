@@ -559,7 +559,7 @@ mod tests {
         // Create children "a", "b", and "<long_name>" in collection. Expect a Discovered event for each.
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
         for (name, moniker) in
-            [("a", "coll:a:1"), ("b", "coll:b:2"), (long_name, &format!("coll:{}:3", long_name))]
+            [("a", "coll:a"), ("b", "coll:b"), (long_name, &format!("coll:{}", long_name))]
         {
             let mut create = fasync::Task::spawn(test.realm_proxy.create_child(
                 &mut collection_ref,
@@ -567,7 +567,7 @@ mod tests {
                 fcomponent::CreateChildArgs::EMPTY,
             ));
             let event = event_stream
-                .wait_until(EventType::Discovered, vec!["system:0", moniker].into())
+                .wait_until(EventType::Discovered, vec!["system", moniker].into())
                 .await
                 .unwrap();
 
@@ -1048,12 +1048,12 @@ mod tests {
 
         // The component should be stopped (shut down) before it is destroyed.
         let event = event_stream
-            .wait_until(EventType::Stopped, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Stopped, vec!["system", "coll:a"].into())
             .await
             .unwrap();
         event.resume();
         let event = event_stream
-            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Destroyed, vec!["system", "coll:a"].into())
             .await
             .unwrap();
         event.resume();
@@ -1183,7 +1183,7 @@ mod tests {
             fcomponent::CreateChildArgs::EMPTY,
         ));
         let event_a = event_stream
-            .wait_until(EventType::Started, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Started, vec!["system", "coll:a"].into())
             .await
             .unwrap();
 
@@ -1203,7 +1203,7 @@ mod tests {
         child.stop_instance(false, false).await.unwrap();
 
         let event_a = event_stream
-            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Destroyed, vec!["system", "coll:a"].into())
             .await
             .unwrap();
         event_a.resume();
@@ -1289,14 +1289,14 @@ mod tests {
         res.expect("fidl call failed").expect("open_exposed_dir() failed");
 
         // Assert that child was resolved.
-        let event = event_stream.wait_until(EventType::Resolved, vec!["system:0"].into()).await;
+        let event = event_stream.wait_until(EventType::Resolved, vec!["system"].into()).await;
         assert!(event.is_some());
 
         // Assert that event stream doesn't have any outstanding messages.
-        // This ensures that EventType::Started for "system:0" has not been
+        // This ensures that EventType::Started for "system" has not been
         // registered.
         let event =
-            event_stream.wait_until(EventType::Started, vec!["system:0"].into()).now_or_never();
+            event_stream.wait_until(EventType::Started, vec!["system"].into()).now_or_never();
         assert!(event.is_none());
 
         // Now that it was asserted that "system:0" has yet to start,
@@ -1308,7 +1308,7 @@ mod tests {
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
-        let event = event_stream.wait_until(EventType::Started, vec!["system:0"].into()).await;
+        let event = event_stream.wait_until(EventType::Started, vec!["system"].into()).await;
         assert!(event.is_some());
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
         let res = echo_proxy.echo_string(Some("hippos")).await;
@@ -1372,19 +1372,17 @@ mod tests {
         res.expect("fidl call failed").expect("open_exposed_dir() failed");
 
         // Assert that child was resolved.
-        let event =
-            event_stream.wait_until(EventType::Resolved, vec!["coll:system:1"].into()).await;
+        let event = event_stream.wait_until(EventType::Resolved, vec!["coll:system"].into()).await;
         assert!(event.is_some());
 
         // Assert that event stream doesn't have any outstanding messages.
-        // This ensures that EventType::Started for "system:0" has not been
+        // This ensures that EventType::Started for "system" has not been
         // registered.
-        let event = event_stream
-            .wait_until(EventType::Started, vec!["coll:system:1"].into())
-            .now_or_never();
+        let event =
+            event_stream.wait_until(EventType::Started, vec!["coll:system"].into()).now_or_never();
         assert!(event.is_none());
 
-        // Now that it was asserted that "system:0" has yet to start,
+        // Now that it was asserted that "system" has yet to start,
         // assert that it starts after making connection below.
         let node_proxy = fuchsia_fs::open_node(
             &dir_proxy,
@@ -1393,7 +1391,7 @@ mod tests {
             fio::MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
-        let event = event_stream.wait_until(EventType::Started, vec!["coll:system:1"].into()).await;
+        let event = event_stream.wait_until(EventType::Started, vec!["coll:system"].into()).await;
         assert!(event.is_some());
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
         let res = echo_proxy.echo_string(Some("hippos")).await;

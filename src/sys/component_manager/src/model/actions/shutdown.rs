@@ -789,7 +789,6 @@ mod tests {
             },
         },
         async_trait::async_trait,
-        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
             Availability, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl, DependencyType,
             ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
@@ -802,7 +801,7 @@ mod tests {
         cm_types::AllowedOffers,
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
         maplit::{btreeset, hashmap, hashset},
-        moniker::ChildMoniker,
+        moniker::{AbsoluteMoniker, ChildMoniker},
         std::collections::{BTreeSet, HashMap},
         std::{convert::TryFrom, sync::Weak},
         test_case::test_case,
@@ -2621,9 +2620,9 @@ mod tests {
             let mut next: Vec<_> = events.drain(0..3).collect();
             next.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["container:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["container:0", "coll:a:1"].into()),
-                Lifecycle::Stop(vec!["container:0", "coll:b:2"].into()),
+                Lifecycle::Stop(vec!["container", "c"].into()),
+                Lifecycle::Stop(vec!["container", "coll:a"].into()),
+                Lifecycle::Stop(vec!["container", "coll:b"].into()),
             ];
             assert_eq!(next, expected);
 
@@ -2631,8 +2630,8 @@ mod tests {
             let mut next: Vec<_> = events.drain(0..2).collect();
             next.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Destroy(vec!["container:0", "coll:a:1"].into()),
-                Lifecycle::Destroy(vec!["container:0", "coll:b:2"].into()),
+                Lifecycle::Destroy(vec!["container", "coll:a"].into()),
+                Lifecycle::Destroy(vec!["container", "coll:b"].into()),
             ];
             assert_eq!(next, expected);
         }
@@ -2750,9 +2749,9 @@ mod tests {
 
             pretty_assertions::assert_eq!(
                 vec![
-                    Lifecycle::Stop(vec!["container:0", "coll:b:2"].into()),
-                    Lifecycle::Stop(vec!["container:0", "coll:a:1"].into()),
-                    Lifecycle::Stop(vec!["container:0", "c:0"].into()),
+                    Lifecycle::Stop(vec!["container", "coll:b"].into()),
+                    Lifecycle::Stop(vec!["container", "coll:a"].into()),
+                    Lifecycle::Stop(vec!["container", "c"].into()),
                 ],
                 events.drain(0..3).collect::<Vec<_>>()
             );
@@ -2760,15 +2759,12 @@ mod tests {
             // The order here is nondeterministic.
             pretty_assertions::assert_eq!(
                 btreeset![
-                    Lifecycle::Destroy(vec!["container:0", "coll:b:2"].into()),
-                    Lifecycle::Destroy(vec!["container:0", "coll:a:1"].into()),
+                    Lifecycle::Destroy(vec!["container", "coll:b"].into()),
+                    Lifecycle::Destroy(vec!["container", "coll:a"].into()),
                 ],
                 events.drain(0..2).collect::<BTreeSet<_>>()
             );
-            pretty_assertions::assert_eq!(
-                vec![Lifecycle::Stop(vec!["container:0"].into()),],
-                events
-            );
+            pretty_assertions::assert_eq!(vec![Lifecycle::Stop(vec!["container"].into()),], events);
         }
     }
 
@@ -2859,7 +2855,7 @@ mod tests {
                     _ => false,
                 })
                 .collect();
-            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0"].into())]);
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a"].into())]);
         }
     }
 
@@ -2921,16 +2917,13 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+                Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b", "d"].into()),
             ];
             assert_eq!(first, expected);
             assert_eq!(
                 events,
-                vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into())
-                ]
+                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
             );
         }
     }
@@ -3059,21 +3052,18 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let mut expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0", "e:0"].into()),
+                Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b", "e"].into()),
             ];
             assert_eq!(first, expected);
 
             let next: Vec<_> = events.drain(0..1).collect();
-            expected = vec![Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into())];
+            expected = vec![Lifecycle::Stop(vec!["a", "b", "d"].into())];
             assert_eq!(next, expected);
 
             assert_eq!(
                 events,
-                vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into())
-                ]
+                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
             );
         }
     }
@@ -3189,19 +3179,19 @@ mod tests {
                     .build(),
             ),
         ];
-        let moniker_a: InstancedAbsoluteMoniker = vec!["a:0"].into();
-        let moniker_b: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
-        let moniker_c: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
-        let moniker_d: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
-        let moniker_e: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
-        let moniker_f: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let moniker_a: AbsoluteMoniker = vec!["a"].into();
+        let moniker_b: AbsoluteMoniker = vec!["a", "b"].into();
+        let moniker_c: AbsoluteMoniker = vec!["a", "b", "c"].into();
+        let moniker_d: AbsoluteMoniker = vec!["a", "b", "d"].into();
+        let moniker_e: AbsoluteMoniker = vec!["a", "b", "e"].into();
+        let moniker_f: AbsoluteMoniker = vec!["a", "b", "f"].into();
         let test = ActionsTest::new("root", components, None).await;
-        let component_a = test.look_up(moniker_a.without_instance_ids()).await;
-        let component_b = test.look_up(moniker_b.without_instance_ids()).await;
-        let component_c = test.look_up(moniker_c.without_instance_ids()).await;
-        let component_d = test.look_up(moniker_d.without_instance_ids()).await;
-        let component_e = test.look_up(moniker_e.without_instance_ids()).await;
-        let component_f = test.look_up(moniker_f.without_instance_ids()).await;
+        let component_a = test.look_up(moniker_a.clone()).await;
+        let component_b = test.look_up(moniker_b.clone()).await;
+        let component_c = test.look_up(moniker_c.clone()).await;
+        let component_d = test.look_up(moniker_d.clone()).await;
+        let component_e = test.look_up(moniker_e.clone()).await;
+        let component_f = test.look_up(moniker_f.clone()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
@@ -3234,8 +3224,7 @@ mod tests {
         component_e_info.check_is_shut_down(&test.runner).await;
         component_f_info.check_is_shut_down(&test.runner).await;
 
-        let mut comes_after: HashMap<InstancedAbsoluteMoniker, Vec<InstancedAbsoluteMoniker>> =
-            HashMap::new();
+        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
         // technically we could just depend on 'D' since it is the last of b's
         // children, but we add all the children for resilence against the
@@ -3412,19 +3401,19 @@ mod tests {
                     .build(),
             ),
         ];
-        let moniker_a: InstancedAbsoluteMoniker = vec!["a:0"].into();
-        let moniker_b: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
-        let moniker_c: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
-        let moniker_d: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
-        let moniker_e: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
-        let moniker_f: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let moniker_a: AbsoluteMoniker = vec!["a"].into();
+        let moniker_b: AbsoluteMoniker = vec!["a", "b"].into();
+        let moniker_c: AbsoluteMoniker = vec!["a", "b", "c"].into();
+        let moniker_d: AbsoluteMoniker = vec!["a", "b", "d"].into();
+        let moniker_e: AbsoluteMoniker = vec!["a", "b", "e"].into();
+        let moniker_f: AbsoluteMoniker = vec!["a", "b", "f"].into();
         let test = ActionsTest::new("root", components, None).await;
-        let component_a = test.look_up(moniker_a.without_instance_ids()).await;
-        let component_b = test.look_up(moniker_b.without_instance_ids()).await;
-        let component_c = test.look_up(moniker_c.without_instance_ids()).await;
-        let component_d = test.look_up(moniker_d.without_instance_ids()).await;
-        let component_e = test.look_up(moniker_e.without_instance_ids()).await;
-        let component_f = test.look_up(moniker_f.without_instance_ids()).await;
+        let component_a = test.look_up(moniker_a.clone()).await;
+        let component_b = test.look_up(moniker_b.clone()).await;
+        let component_c = test.look_up(moniker_c.clone()).await;
+        let component_d = test.look_up(moniker_d.clone()).await;
+        let component_e = test.look_up(moniker_e.clone()).await;
+        let component_f = test.look_up(moniker_f.clone()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
@@ -3457,8 +3446,7 @@ mod tests {
         component_e_info.check_is_shut_down(&test.runner).await;
         component_f_info.check_is_shut_down(&test.runner).await;
 
-        let mut comes_after: HashMap<InstancedAbsoluteMoniker, Vec<InstancedAbsoluteMoniker>> =
-            HashMap::new();
+        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
         // technically we could just depend on 'D' since it is the last of b's
         // children, but we add all the children for resilence against the
@@ -3599,10 +3587,10 @@ mod tests {
                 })
                 .collect();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                Lifecycle::Stop(vec!["a:0"].into()),
+                Lifecycle::Stop(vec!["a", "b", "d"].into()),
+                Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b"].into()),
+                Lifecycle::Stop(vec!["a"].into()),
             ];
             assert_eq!(events, expected);
         }
@@ -3683,9 +3671,9 @@ mod tests {
                 })
                 .collect();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                Lifecycle::Stop(vec!["a", "c"].into()),
+                Lifecycle::Stop(vec!["a"].into()),
+                Lifecycle::Stop(vec!["a", "b"].into()),
             ];
             assert_eq!(events, expected);
         }
@@ -3795,9 +3783,9 @@ mod tests {
                 })
                 .collect();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a"].into()),
+                Lifecycle::Stop(vec!["a", "b"].into()),
+                Lifecycle::Stop(vec!["a", "c"].into()),
             ];
             assert_eq!(events, expected);
         }
@@ -3878,14 +3866,14 @@ mod tests {
                 })
                 .collect();
             let expected1: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                Lifecycle::Stop(vec!["a:0"].into()),
+                Lifecycle::Stop(vec!["a", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b"].into()),
+                Lifecycle::Stop(vec!["a"].into()),
             ];
             let expected2: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0"].into()),
+                Lifecycle::Stop(vec!["a", "b"].into()),
+                Lifecycle::Stop(vec!["a", "c"].into()),
+                Lifecycle::Stop(vec!["a"].into()),
             ];
             assert!(events == expected1 || events == expected2);
         }
@@ -3955,9 +3943,9 @@ mod tests {
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into())
+                    Lifecycle::Stop(vec!["a", "b", "b"].into()),
+                    Lifecycle::Stop(vec!["a", "b"].into()),
+                    Lifecycle::Stop(vec!["a"].into())
                 ]
             );
         }
@@ -3974,11 +3962,11 @@ mod tests {
     #[fuchsia::test]
     async fn shutdown_error() {
         struct StopErrorHook {
-            moniker: InstancedAbsoluteMoniker,
+            moniker: AbsoluteMoniker,
         }
 
         impl StopErrorHook {
-            fn new(moniker: InstancedAbsoluteMoniker) -> Self {
+            fn new(moniker: AbsoluteMoniker) -> Self {
                 Self { moniker }
             }
 
@@ -3992,7 +3980,7 @@ mod tests {
 
             async fn on_shutdown_instance_async(
                 &self,
-                target_moniker: &InstancedAbsoluteMoniker,
+                target_moniker: &AbsoluteMoniker,
             ) -> Result<(), ModelError> {
                 if *target_moniker == self.moniker {
                     return Err(ModelError::unsupported("ouch"));
@@ -4021,7 +4009,7 @@ mod tests {
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
         ];
-        let error_hook = Arc::new(StopErrorHook::new(vec!["a:0", "b:0"].into()));
+        let error_hook = Arc::new(StopErrorHook::new(vec!["a", "b"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let component_a = test.look_up(vec!["a"].into()).await;
         let component_b = test.look_up(vec!["a", "b"].into()).await;
@@ -4066,11 +4054,11 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+                Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b", "d"].into()),
             ];
             assert_eq!(first, expected);
-            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0", "b:0"].into())],);
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a", "b"].into())],);
         }
 
         // Register shutdown action on "a" again. "b"'s shutdown succeeds (it's a no-op), and
@@ -4096,16 +4084,13 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
-                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+                Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b", "d"].into()),
             ];
             assert_eq!(first, expected);
             assert_eq!(
                 events,
-                vec![
-                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into())
-                ]
+                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
             );
         }
     }

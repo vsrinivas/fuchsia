@@ -13,14 +13,14 @@ use {
     },
     anyhow::format_err,
     async_trait::async_trait,
-    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
+    cm_moniker::InstanceId,
     cm_rust::{CapabilityName, ComponentDecl},
     cm_util::io::clone_dir,
     config_encoder::ConfigFields,
     fidl_fuchsia_diagnostics_types as fdiagnostics, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::{channel::oneshot, lock::Mutex},
-    routing::component_instance::ComponentInstanceInterface,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         collections::HashMap,
         convert::TryFrom,
@@ -201,7 +201,7 @@ impl EventError {
 #[derive(Clone)]
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
-    CapabilityRequested { source_moniker: InstancedAbsoluteMoniker, name: String },
+    CapabilityRequested { source_moniker: AbsoluteMoniker, name: String },
     CapabilityRouted,
     DirectoryReady { name: String },
     Discovered,
@@ -280,7 +280,7 @@ impl HooksRegistration {
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityRequested {
-        source_moniker: InstancedAbsoluteMoniker,
+        source_moniker: AbsoluteMoniker,
         name: String,
         capability: Arc<Mutex<Option<zx::Channel>>>,
     },
@@ -295,7 +295,9 @@ pub enum EventPayload {
         name: String,
         node: fio::NodeProxy,
     },
-    Discovered,
+    Discovered {
+        instance_id: InstanceId,
+    },
     Destroyed,
     Resolved {
         component: WeakComponentInstance,
@@ -376,8 +378,10 @@ impl fmt::Debug for EventPayload {
                 formatter.field("config", config).finish()
             }
             EventPayload::Stopped { status } => formatter.field("status", status).finish(),
-            EventPayload::Discovered
-            | EventPayload::Unresolved
+            EventPayload::Discovered { instance_id } => {
+                formatter.field("instance_id", instance_id).finish()
+            }
+            EventPayload::Unresolved
             | EventPayload::Destroyed
             | EventPayload::Running { .. }
             | EventPayload::DebugStarted { .. } => formatter.finish(),
@@ -390,8 +394,7 @@ pub type EventResult = Result<EventPayload, EventError>;
 #[derive(Clone, Debug)]
 pub struct Event {
     /// Moniker of component that this event applies to
-    // TODO: Change to ExtendedMoniker
-    pub target_moniker: InstancedExtendedMoniker,
+    pub target_moniker: ExtendedMoniker,
 
     /// Component url of the component that this event applies to
     pub component_url: String,
@@ -407,7 +410,7 @@ impl Event {
     pub fn new(component: &Arc<ComponentInstance>, result: EventResult) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            component.instanced_moniker().clone().into(),
+            component.abs_moniker.clone().into(),
             component.component_url.clone(),
             timestamp,
             result,
@@ -417,7 +420,7 @@ impl Event {
     pub fn new_builtin(result: EventResult) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            InstancedExtendedMoniker::ComponentManager,
+            ExtendedMoniker::ComponentManager,
             "bin/component_manager".to_string(),
             timestamp,
             result,
@@ -430,7 +433,7 @@ impl Event {
         timestamp: zx::Time,
     ) -> Self {
         Self::new_internal(
-            component.instanced_moniker().clone().into(),
+            component.abs_moniker.clone().into(),
             component.component_url.clone(),
             timestamp,
             result,
@@ -439,13 +442,13 @@ impl Event {
 
     #[cfg(test)]
     pub fn new_for_test(
-        target_moniker: InstancedAbsoluteMoniker,
+        target_moniker: AbsoluteMoniker,
         component_url: impl Into<String>,
         result: EventResult,
     ) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            InstancedExtendedMoniker::ComponentInstance(target_moniker),
+            ExtendedMoniker::ComponentInstance(target_moniker),
             component_url.into(),
             timestamp,
             result,
@@ -453,7 +456,7 @@ impl Event {
     }
 
     fn new_internal(
-        target_moniker: InstancedExtendedMoniker,
+        target_moniker: ExtendedMoniker,
         component_url: String,
         timestamp: zx::Time,
         result: EventResult,
@@ -533,8 +536,8 @@ impl fmt::Display for Event {
                     EventPayload::Stopped { status } => {
                         format!("with status: {}", status.to_string())
                     }
-                    EventPayload::Discovered
-                    | EventPayload::Destroyed
+                    EventPayload::Discovered { .. }
+                    | EventPayload::Destroyed { .. }
                     | EventPayload::Resolved { .. }
                     | EventPayload::Running { .. }
                     | EventPayload::DebugStarted { .. }
@@ -730,12 +733,12 @@ mod tests {
             )])
             .await;
 
-        let root = InstancedAbsoluteMoniker::root();
+        let root = AbsoluteMoniker::root();
         let event = Event::new_for_test(
             root.clone(),
             "fuchsia-pkg://root",
             Err(EventError::new(
-                &ModelError::instance_not_found(root.without_instance_ids()),
+                &ModelError::instance_not_found(root.clone()),
                 EventErrorPayload::Resolved,
             )),
         );
@@ -758,10 +761,10 @@ mod tests {
         let (_, capability_server_end) = zx::Channel::create().unwrap();
         let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
         let event = Event::new_for_test(
-            InstancedAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRequested {
-                source_moniker: InstancedAbsoluteMoniker::root(),
+                source_moniker: AbsoluteMoniker::root(),
                 name: "foo".to_string(),
                 capability: capability_server_end,
             }),

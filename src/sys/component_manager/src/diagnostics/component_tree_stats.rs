@@ -346,7 +346,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         }
     }
 
-    async fn on_component_started<P, C>(self: &Arc<Self>, moniker: AbsoluteMoniker, runtime: &P)
+    async fn on_component_started<P, C>(self: &Arc<Self>, moniker: &AbsoluteMoniker, runtime: &P)
     where
         P: DiagnosticsReceiverProvider<C, T>,
         C: RuntimeStatsContainer<T> + Send + Sync + 'static,
@@ -354,7 +354,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         if let Some(receiver) = runtime.get_receiver().await {
             let task = fasync::Task::spawn(Self::diagnostics_waiter_task(
                 Arc::downgrade(&self),
-                moniker.into(),
+                moniker.clone().into(),
                 receiver,
             ));
             let _ = self.diagnostics_waiter_task_sender.unbounded_send(task);
@@ -447,9 +447,7 @@ impl Hook for ComponentTreeStats<DiagnosticsTask> {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         let target_moniker = event
             .target_moniker
-            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?
-            .without_instance_ids()
-            .into();
+            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match event.event_type() {
             EventType::Started => {
                 if let Some(EventPayload::Started { runtime, .. }) = event.result.as_ref().ok() {
@@ -613,7 +611,7 @@ mod tests {
             let moniker = AbsoluteMoniker::from(vec![format!("moniker-{}", i).as_ref()]);
             let fake_runtime =
                 FakeRuntime::new(FakeDiagnosticsContainer::new(component_task, None));
-            stats.on_component_started(moniker.clone(), &fake_runtime).await;
+            stats.on_component_started(&moniker, &fake_runtime).await;
 
             loop {
                 let current = stats.tree.lock().await.len();
@@ -1047,11 +1045,11 @@ mod tests {
         );
         let fake_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(parent_task.clone(), None));
-        stats.on_component_started(AbsoluteMoniker::from(vec!["parent"]), &fake_runtime).await;
+        stats.on_component_started(&AbsoluteMoniker::from(vec!["parent"]), &fake_runtime).await;
 
         let fake_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(component_task, Some(parent_task)));
-        stats.on_component_started(AbsoluteMoniker::from(vec!["child"]), &fake_runtime).await;
+        stats.on_component_started(&AbsoluteMoniker::from(vec!["child"]), &fake_runtime).await;
 
         // Wait for diagnostics data to be received since it's done in a non-blocking way on
         // started.
@@ -1132,13 +1130,13 @@ mod tests {
         let fake_parent_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(parent_task.clone(), None));
         stats
-            .on_component_started(AbsoluteMoniker::from(vec!["parent"]), &fake_parent_runtime)
+            .on_component_started(&AbsoluteMoniker::from(vec!["parent"]), &fake_parent_runtime)
             .await;
 
         let child_moniker = AbsoluteMoniker::from(vec!["child"]);
         let fake_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(component_task, Some(parent_task)));
-        stats.on_component_started(child_moniker.clone(), &fake_runtime).await;
+        stats.on_component_started(&child_moniker, &fake_runtime).await;
 
         // Wait for diagnostics data to be received since it's done in a non-blocking way on
         // started.

@@ -21,7 +21,6 @@ use {
     },
     ::routing::{config::AllowlistEntry, policy::PolicyError},
     assert_matches::assert_matches,
-    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::{
         CapabilityPath, ComponentDecl, EventMode, RegistrationSource, RunnerDecl,
         RunnerRegistration,
@@ -106,7 +105,7 @@ async fn bind_concurrent() {
     }
     .remote_handle();
     fasync::Task::spawn(f).detach();
-    let event = event_stream.wait_until(EventType::Started, vec!["system:0"].into()).await.unwrap();
+    let event = event_stream.wait_until(EventType::Started, vec!["system"].into()).await.unwrap();
     // Verify that the correct StartReason propagates to the event.
     assert_matches!(
         event.event.result,
@@ -406,7 +405,7 @@ async fn bind_action_sequence() {
         .expect("subscribe to event stream");
 
     // Child of root should start out discovered but not resolved yet.
-    let m = InstancedAbsoluteMoniker::new(vec!["system:0".into()]);
+    let m = AbsoluteMoniker::new(vec!["system".into()]);
     let start_model = model.start();
     let check_events = async {
         let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
@@ -429,13 +428,13 @@ async fn bind_action_sequence() {
 
     // Start child and check that it gets resolved, with a Resolve event and action.
     let bind = async {
-        model.start_instance(&m.without_instance_ids(), &StartReason::Root).await.unwrap();
+        model.start_instance(&m, &StartReason::Root).await.unwrap();
     };
     let check_events = async {
         let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
         // While the Resolved hook is handled, it should be possible to look up the component
         // without deadlocking.
-        let component = model.look_up(&m.without_instance_ids()).await.unwrap();
+        let component = model.look_up(&m).await.unwrap();
         {
             let actions = component.lock_actions().await;
             assert!(actions.contains(&ActionKey::Resolve));

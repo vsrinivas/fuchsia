@@ -77,7 +77,7 @@ pub mod tests {
                     _ => false,
                 })
                 .collect();
-            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0"].into())],);
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a"].into())],);
         }
 
         // Execute action again, same state and no new events.
@@ -95,7 +95,7 @@ pub mod tests {
                     _ => false,
                 })
                 .collect();
-            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0"].into())],);
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a"].into())],);
         }
     }
 
@@ -132,10 +132,7 @@ pub mod tests {
                 .collect();
             assert_eq!(
                 events,
-                vec![
-                    Lifecycle::Stop(vec!["a:0", "aa:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into()),
-                ],
+                vec![Lifecycle::Stop(vec!["a", "aa"].into()), Lifecycle::Stop(vec!["a"].into()),],
             );
         }
 
@@ -157,10 +154,7 @@ pub mod tests {
                 .collect();
             assert_eq!(
                 events,
-                vec![
-                    Lifecycle::Stop(vec!["a:0", "aa:0"].into()),
-                    Lifecycle::Stop(vec!["a:0"].into()),
-                ],
+                vec![Lifecycle::Stop(vec!["a", "aa"].into()), Lifecycle::Stop(vec!["a"].into()),],
             );
         }
     }

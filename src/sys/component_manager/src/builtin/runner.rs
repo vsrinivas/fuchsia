@@ -62,9 +62,6 @@ impl BuiltinRunner {
 #[async_trait]
 impl Hook for BuiltinRunner {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        let target_moniker = event
-            .target_moniker
-            .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         if let Ok(EventPayload::CapabilityRouted {
             source: CapabilitySource::Builtin { capability, .. },
             capability_provider,
@@ -73,11 +70,12 @@ impl Hook for BuiltinRunner {
             // If we are being asked about the runner capability we own, pass a copy back to the
             // caller.
             if let InternalCapability::Runner(runner_name) = capability {
+                let target_moniker = event
+                    .target_moniker
+                    .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
                 if *runner_name == self.name {
-                    let checker = ScopedPolicyChecker::new(
-                        self.config.clone(),
-                        target_moniker.without_instance_ids(),
-                    );
+                    let checker =
+                        ScopedPolicyChecker::new(self.config.clone(), target_moniker.clone());
                     let runner = self.runner.clone().get_scoped_runner(checker);
                     *capability_provider.lock().await =
                         Some(Box::new(RunnerCapabilityProvider::new(runner)));
@@ -141,7 +139,6 @@ mod tests {
         ::routing::config::{AllowlistEntry, JobPolicyAllowlists, SecurityPolicy},
         anyhow::Error,
         assert_matches::assert_matches,
-        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{CapabilityDecl, RunnerDecl},
         cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
@@ -162,7 +159,7 @@ mod tests {
 
     async fn start_component_through_hooks(
         hooks: &Hooks,
-        moniker: InstancedAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         url: &str,
     ) -> Result<TaskScope, Error> {
         let provider_result = Arc::new(Mutex::new(None));
@@ -224,19 +221,15 @@ mod tests {
 
         // Case 1: The started component's moniker matches the allowlist entry above.
         let url = "xxx://test";
-        let _task_scope = start_component_through_hooks(
-            &hooks,
-            InstancedAbsoluteMoniker::from(vec!["foo:0"]),
-            url,
-        )
-        .await?;
+        let _task_scope =
+            start_component_through_hooks(&hooks, AbsoluteMoniker::from(vec!["foo"]), url).await?;
         runner.wait_for_url(&url).await;
         let checker = runner.last_checker().expect("No PolicyChecker held by MockRunner");
         assert_matches!(checker.ambient_mark_vmo_exec_allowed(), Ok(()));
 
         // Case 2: Moniker does not match allowlist entry.
         let _task_scope =
-            start_component_through_hooks(&hooks, InstancedAbsoluteMoniker::root(), url).await?;
+            start_component_through_hooks(&hooks, AbsoluteMoniker::root(), url).await?;
         runner.wait_for_url(&url).await;
         let checker = runner.last_checker().expect("No PolicyChecker held by MockRunner");
         assert_matches!(checker.ambient_mark_vmo_exec_allowed(), Err(_));

@@ -16,7 +16,7 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
-    cm_moniker::InstancedAbsoluteMoniker,
+    cm_moniker::InstanceId,
     cm_rust::ComponentDecl,
     cm_task_scope::TaskScope,
     cm_util::{channel, io::clone_dir},
@@ -24,7 +24,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    moniker::{AbsoluteMonikerBase, ChildMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     rand::Rng,
     std::{
         collections::hash_map::HashMap,
@@ -42,13 +42,13 @@ use {
 type Directory = Arc<pfs::Simple>;
 
 struct HubCapabilityProvider {
-    instanced_moniker: InstancedAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     hub: Arc<Hub>,
 }
 
 impl HubCapabilityProvider {
-    pub fn new(instanced_moniker: InstancedAbsoluteMoniker, hub: Arc<Hub>) -> Self {
-        HubCapabilityProvider { instanced_moniker, hub }
+    pub fn new(moniker: AbsoluteMoniker, hub: Arc<Hub>) -> Self {
+        HubCapabilityProvider { moniker, hub }
     }
 }
 
@@ -68,13 +68,9 @@ impl CapabilityProvider for HubCapabilityProvider {
             .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?
             .to_string();
         relative_path.push('/');
-        let dir_path = pfsPath::validate_and_split(relative_path.clone()).map_err(|_| {
-            ModelError::open_directory_error(
-                self.instanced_moniker.without_instance_ids(),
-                relative_path,
-            )
-        })?;
-        self.hub.open(&self.instanced_moniker, flags, open_mode, dir_path, server_end).await?;
+        let dir_path = pfsPath::validate_and_split(relative_path.clone())
+            .map_err(|_| ModelError::open_directory_error(self.moniker.clone(), relative_path))?;
+        self.hub.open(&self.moniker, flags, open_mode, dir_path, server_end).await?;
         Ok(())
     }
 }
@@ -94,7 +90,7 @@ struct Instance {
 /// debugging and instrumentation tools can query information about component instances
 /// on the system, such as their component URLs, execution state and so on.
 pub struct Hub {
-    instances: Mutex<HashMap<InstancedAbsoluteMoniker, Instance>>,
+    instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
 }
 
@@ -102,9 +98,9 @@ impl Hub {
     /// Create a new Hub given a `component_url` for the root component
     pub fn new(component_url: String) -> Result<Self, ModelError> {
         let mut instance_map = HashMap::new();
-        let instanced_moniker = InstancedAbsoluteMoniker::root();
+        let moniker = AbsoluteMoniker::root();
 
-        Hub::add_instance_if_necessary(&instanced_moniker, component_url, &mut instance_map)?
+        Hub::add_instance_if_necessary(&moniker, component_url, 0, &mut instance_map)?
             .expect("Did not create directory.");
 
         Ok(Hub { instances: Mutex::new(instance_map), scope: ExecutionScope::new() })
@@ -115,7 +111,7 @@ impl Hub {
         flags: fio::OpenFlags,
         mut server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let root_moniker = InstancedAbsoluteMoniker::root();
+        let root_moniker = AbsoluteMoniker::root();
         self.open(&root_moniker, flags, fio::MODE_TYPE_DIRECTORY, pfsPath::dot(), &mut server_end)
             .await?;
         Ok(())
@@ -139,18 +135,17 @@ impl Hub {
 
     pub async fn open(
         &self,
-        instanced_moniker: &InstancedAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
         flags: fio::OpenFlags,
         open_mode: u32,
         relative_path: pfsPath,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let instance_map = self.instances.lock().await;
-        let instance =
-            instance_map.get(&instanced_moniker).ok_or(ModelError::open_directory_error(
-                instanced_moniker.without_instance_ids(),
-                relative_path.clone().into_string(),
-            ))?;
+        let instance = instance_map.get(moniker).ok_or(ModelError::open_directory_error(
+            moniker.clone(),
+            relative_path.clone().into_string(),
+        ))?;
         let server_end = channel::take_channel(server_end);
         instance.directory.clone().open(
             self.scope.clone(),
@@ -163,11 +158,12 @@ impl Hub {
     }
 
     fn add_instance_if_necessary(
-        instanced_moniker: &InstancedAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
         component_url: String,
-        instance_map: &mut HashMap<InstancedAbsoluteMoniker, Instance>,
+        instance_id: InstanceId,
+        instance_map: &mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<Option<(u128, Directory)>, ModelError> {
-        if instance_map.contains_key(&instanced_moniker) {
+        if instance_map.contains_key(&moniker) {
             return Ok(None);
         }
 
@@ -176,51 +172,36 @@ impl Hub {
         // Add a 'moniker' file.
         // The child moniker is stored in the `moniker` file in case it gets truncated when used as
         // the directory name. Root has an empty moniker file because it doesn't have a child moniker.
-        let moniker = if let Some(instanced) = instanced_moniker.leaf() {
-            instanced.without_instance_id().to_string()
+        let moniker_s = if let Some(instanced) = moniker.leaf() {
+            instanced.to_string()
         } else {
             "".to_string()
         };
-        instance.add_node("moniker", read_only_static(moniker.into_bytes()), &instanced_moniker)?;
+        instance.add_node("moniker", read_only_static(moniker_s.into_bytes()), moniker)?;
 
         // Add a 'url' file.
-        instance.add_node(
-            "url",
-            read_only_static(component_url.clone().into_bytes()),
-            &instanced_moniker,
-        )?;
+        instance.add_node("url", read_only_static(component_url.clone().into_bytes()), moniker)?;
 
         // Add an 'id' file.
-        // For consistency sake, the Hub assumes that the root instance also
-        // has ID 0, like any other static instance.
-        let id = if let Some(child_moniker) = instanced_moniker.leaf() {
-            child_moniker.instance()
-        } else {
-            0
-        };
-        let component_type = if id > 0 { "dynamic" } else { "static" };
-        instance.add_node(
-            "id",
-            read_only_static(id.to_string().into_bytes()),
-            &instanced_moniker,
-        )?;
+        let component_type = if instance_id > 0 { "dynamic" } else { "static" };
+        instance.add_node("id", read_only_static(instance_id.to_string().into_bytes()), moniker)?;
 
         // Add a 'component_type' file.
         instance.add_node(
             "component_type",
             read_only_static(component_type.to_string().into_bytes()),
-            &instanced_moniker,
+            moniker,
         )?;
 
         // Add a children directory.
         let children = pfs::simple();
-        instance.add_node("children", children.clone(), &instanced_moniker)?;
+        instance.add_node("children", children.clone(), moniker)?;
 
         let mut rng = rand::thread_rng();
         let instance_uuid: u128 = rng.gen();
 
         instance_map.insert(
-            instanced_moniker.clone(),
+            moniker.clone(),
             Instance {
                 has_execution_directory: false,
                 has_resolved_directory: false,
@@ -249,29 +230,28 @@ impl Hub {
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
-        instanced_moniker: &'a InstancedAbsoluteMoniker,
+        moniker: &'a AbsoluteMoniker,
         component_url: String,
-        mut instance_map: &'a mut HashMap<InstancedAbsoluteMoniker, Instance>,
+        instance_id: InstanceId,
+        mut instance_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
         let (uuid, controlled) = match Hub::add_instance_if_necessary(
-            &instanced_moniker,
+            moniker,
             component_url,
+            instance_id,
             &mut instance_map,
         )? {
             Some(c) => c,
             None => return Ok(()),
         };
 
-        if let (Some(leaf), Some(parent_moniker)) =
-            (instanced_moniker.leaf(), instanced_moniker.parent())
-        {
+        if let (Some(child_moniker), Some(parent_moniker)) = (moniker.leaf(), moniker.parent()) {
             match instance_map.get_mut(&parent_moniker) {
                 Some(instance) => {
-                    let child_moniker = leaf.without_instance_id();
                     instance.children_directory.add_node(
                         &Hub::child_dir_name(child_moniker.as_str(), uuid),
                         controlled.clone(),
-                        &instanced_moniker,
+                        moniker,
                     )?;
                 }
                 None => {
@@ -281,7 +261,7 @@ impl Hub {
                     log::warn!(
                         "Parent {} not found: could not add {} to children directory.",
                         parent_moniker,
-                        instanced_moniker
+                        moniker
                     );
                 }
             };
@@ -292,38 +272,30 @@ impl Hub {
     fn add_resolved_url_file(
         directory: Directory,
         resolved_url: String,
-        instanced_moniker: &InstancedAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        directory.add_node(
-            "resolved_url",
-            read_only_static(resolved_url.into_bytes()),
-            &instanced_moniker,
-        )?;
+        directory.add_node("resolved_url", read_only_static(resolved_url.into_bytes()), moniker)?;
         Ok(())
     }
 
     fn add_config(
         directory: Directory,
         config: &ConfigFields,
-        instanced_moniker: &InstancedAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let config_dir = pfs::simple();
         for field in &config.fields {
             let value = format!("{}", field.value);
-            config_dir.add_node(
-                &field.key,
-                read_only_static(value.into_bytes()),
-                &instanced_moniker,
-            )?;
+            config_dir.add_node(&field.key, read_only_static(value.into_bytes()), moniker)?;
         }
-        directory.add_node("config", config_dir, &instanced_moniker)?;
+        directory.add_node("config", config_dir, moniker)?;
         Ok(())
     }
 
     fn add_use_directory(
         directory: Directory,
         component_decl: ComponentDecl,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         target: WeakComponentInstance,
         pkg_dir: Option<fio::DirectoryProxy>,
     ) -> Result<(), ModelError> {
@@ -344,7 +316,7 @@ impl Hub {
         execution_directory: Directory,
         component_decl: ComponentDecl,
         package_dir: Option<fio::DirectoryProxy>,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
@@ -360,7 +332,7 @@ impl Hub {
     fn add_expose_directory(
         directory: Directory,
         component_decl: ComponentDecl,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_exposes(route_expose_fn, target, component_decl);
@@ -373,7 +345,7 @@ impl Hub {
     fn add_out_directory(
         execution_directory: Directory,
         outgoing_dir: Option<fio::DirectoryProxy>,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         if let Some(out_dir) = outgoing_dir {
             execution_directory.add_node("out", remote_dir(out_dir), target_moniker)?;
@@ -384,10 +356,10 @@ impl Hub {
     fn add_runtime_directory(
         execution_directory: Directory,
         runtime_dir: Option<fio::DirectoryProxy>,
-        instanced_moniker: &InstancedAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         if let Some(runtime_dir) = runtime_dir {
-            execution_directory.add_node("runtime", remote_dir(runtime_dir), instanced_moniker)?;
+            execution_directory.add_node("runtime", remote_dir(runtime_dir), moniker)?;
         }
         Ok(())
     }
@@ -395,7 +367,7 @@ impl Hub {
     fn add_start_reason_file(
         execution_directory: Directory,
         start_reason: &StartReason,
-        instanced_moniker: &InstancedAbsoluteMoniker,
+        instanced_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let start_reason = format!("{}", start_reason);
         execution_directory.add_node(
@@ -408,7 +380,7 @@ impl Hub {
 
     fn add_instance_id_file(
         directory: Directory,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         if let Some(instance_id) = target.upgrade()?.instance_id() {
@@ -423,7 +395,7 @@ impl Hub {
 
     async fn on_resolved_async<'a>(
         &self,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         target: &WeakComponentInstance,
         resolved_url: String,
         component_decl: &'a ComponentDecl,
@@ -434,7 +406,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.without_instance_ids()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
         // If the resolved directory already exists, report error.
         assert!(!instance.has_resolved_directory);
@@ -475,7 +447,7 @@ impl Hub {
 
     async fn on_started_async<'a>(
         &'a self,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         target: &WeakComponentInstance,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
@@ -485,7 +457,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.without_instance_ids()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
         // Don't create an execution directory if it already exists
         if instance.has_execution_directory {
@@ -537,19 +509,25 @@ impl Hub {
 
     async fn on_discovered_async(
         &self,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         component_url: String,
+        instance_id: InstanceId,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
-        Self::add_instance_to_parent_if_necessary(target_moniker, component_url, &mut instance_map)
-            .await?;
+        Self::add_instance_to_parent_if_necessary(
+            target_moniker,
+            component_url,
+            instance_id,
+            &mut instance_map,
+        )
+        .await?;
         Ok(())
     }
 
     async fn on_unresolved_async(
         &self,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         _component_url: String,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
@@ -565,14 +543,11 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_stopped_async(
-        &self,
-        target_moniker: &InstancedAbsoluteMoniker,
-    ) -> Result<(), ModelError> {
+    async fn on_stopped_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
         let mut instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.without_instance_ids()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
         instance.directory.remove_node("exec")?.ok_or_else(|| {
             log::warn!("exec directory for instance {} was already removed", target_moniker);
@@ -582,20 +557,17 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_destroyed_async(
-        &self,
-        target_moniker: &InstancedAbsoluteMoniker,
-    ) -> Result<(), ModelError> {
+    async fn on_destroyed_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
         let mut instance_map = self.instances.lock().await;
 
         let instance = instance_map
             .get(&target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.without_instance_ids()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
-        let instanced_child = target_moniker.leaf().expect("A root component cannot be destroyed");
+        let child = target_moniker.leaf().expect("A root component cannot be destroyed");
         // In the children directory, the child's instance id is not used
-        let child_name = instanced_child.without_instance_id().to_string();
+        let child_name = child.to_string();
         let child_entry = Hub::child_dir_name(&child_name, instance.uuid);
 
         let parent_instance = match instance_map.get_mut(&parent_moniker) {
@@ -618,7 +590,7 @@ impl Hub {
         })?;
         instance_map
             .remove(&target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.without_instance_ids()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.clone()))?;
 
         Ok(())
     }
@@ -645,7 +617,7 @@ impl Hub {
             let mut capability_provider = capability_provider.lock().await;
             if capability_provider.is_none() {
                 *capability_provider = Some(Box::new(HubCapabilityProvider::new(
-                    component.instanced_moniker.clone(),
+                    component.abs_moniker.clone(),
                     self.clone(),
                 )))
             }
@@ -665,8 +637,13 @@ impl Hook for Hub {
                 self.on_capability_routed_async(source.clone(), capability_provider.clone())
                     .await?;
             }
-            Ok(EventPayload::Discovered) => {
-                self.on_discovered_async(target_moniker, event.component_url.to_string()).await?;
+            Ok(EventPayload::Discovered { instance_id }) => {
+                self.on_discovered_async(
+                    target_moniker,
+                    event.component_url.to_string(),
+                    *instance_id,
+                )
+                .await?;
             }
             Ok(EventPayload::Unresolved) => {
                 self.on_unresolved_async(target_moniker, event.component_url.to_string()).await?;
@@ -1174,7 +1151,7 @@ mod tests {
         let guard = &builtin_environment.lock().await;
         let hub = guard.hub.as_ref().unwrap();
         let new_url = "test:///foo".to_string();
-        let moniker = InstancedAbsoluteMoniker::parse_str("/").unwrap();
+        let moniker = AbsoluteMoniker::parse_str("/").unwrap();
         assert_matches!(hub.on_unresolved_async(&moniker, new_url).await, Ok(()));
 
         // Confirm that the resolved directory was deleted.

@@ -11,7 +11,7 @@ use {
             routing::error::OpenResourceError,
         },
     },
-    ::routing::{component_instance::ComponentInstanceInterface, path::PathBufExt},
+    ::routing::path::PathBufExt,
     async_trait::async_trait,
     cm_rust::{self, CapabilityName, CapabilityPath},
     cm_task_scope::TaskScope,
@@ -57,7 +57,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             let event = Event::new(
                 &self.target.upgrade()?,
                 Ok(EventPayload::CapabilityRequested {
-                    source_moniker: source.instanced_moniker().clone(),
+                    source_moniker: source.abs_moniker.clone(),
                     name: self.name.to_string(),
                     capability: capability.clone(),
                 }),

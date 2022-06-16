@@ -14,7 +14,6 @@ use {
             },
         },
     },
-    cm_moniker::InstancedExtendedMoniker,
     cm_rust::{CapabilityName, EventMode},
     cm_util::io::clone_dir,
     fidl::endpoints::{ClientEnd, Proxy},
@@ -22,6 +21,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{lock::Mutex, TryStreamExt},
     log::{error, info, warn},
+    moniker::ExtendedMoniker,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::sync::Arc,
 };
@@ -293,22 +293,13 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
 /// Creates the basic FIDL Event object
 async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
     let moniker_string = match (&event.event.target_moniker, &event.scope_moniker) {
-        (moniker @ InstancedExtendedMoniker::ComponentManager, _) => moniker.to_string(),
-        (
-            InstancedExtendedMoniker::ComponentInstance(target),
-            InstancedExtendedMoniker::ComponentManager,
-        ) => {
-            RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target.without_instance_ids())
-                .to_string()
+        (moniker @ ExtendedMoniker::ComponentManager, _) => moniker.to_string(),
+        (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentManager) => {
+            RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), target).to_string()
         }
-        (
-            InstancedExtendedMoniker::ComponentInstance(target),
-            InstancedExtendedMoniker::ComponentInstance(scope),
-        ) => RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &scope.without_instance_ids(),
-            &target.without_instance_ids(),
-        )
-        .to_string(),
+        (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentInstance(scope)) => {
+            RelativeMoniker::from_absolute::<AbsoluteMoniker>(&scope, &target).to_string()
+        }
     };
     let header = Some(fsys::EventHeader {
         event_type: Some(event.event.event_type().into()),

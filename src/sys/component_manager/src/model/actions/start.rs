@@ -403,8 +403,8 @@ mod tests {
         assert_eq!(
             events,
             vec![
-                Lifecycle::Start(vec![format!("{}:0", TEST_CHILD_NAME).as_str()].into()),
-                Lifecycle::Stop(vec![format!("{}:0", TEST_CHILD_NAME).as_str()].into())
+                Lifecycle::Start(vec![format!("{}", TEST_CHILD_NAME).as_str()].into()),
+                Lifecycle::Stop(vec![format!("{}", TEST_CHILD_NAME).as_str()].into())
             ]
         );
     }

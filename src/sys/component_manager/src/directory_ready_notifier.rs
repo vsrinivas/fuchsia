@@ -12,11 +12,8 @@ use {
         },
         model::Model,
     },
-    ::routing::{
-        component_instance::ComponentInstanceInterface, event::EventFilter, rights::Rights,
-    },
+    ::routing::{event::EventFilter, rights::Rights},
     async_trait::async_trait,
-    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::{
         CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
         ExposeSource, ExposeTarget,
@@ -75,24 +72,24 @@ impl DirectoryReadyNotifier {
 
     async fn on_component_started(
         self: &Arc<Self>,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         outgoing_dir: &fio::DirectoryProxy,
         decl: ComponentDecl,
     ) -> Result<(), ModelError> {
         // Forward along errors into the new task so that dispatch can forward the
         // error as an event.
-        let outgoing_node_result = clone_outgoing_root(&outgoing_dir, &target_moniker).await;
+        let outgoing_node_result = clone_outgoing_root(&outgoing_dir, target_moniker).await;
 
         // Don't block the handling on the event on the exposed capabilities being ready
         let this = self.clone();
-        let moniker = target_moniker.without_instance_ids();
+        let target_moniker = target_moniker.clone();
         fasync::Task::spawn(async move {
             // If we can't find the component then we can't dispatch any DirectoryReady event,
             // error or otherwise. This isn't necessarily an error as the model or component might've been
             // destroyed in the intervening time, so we just exit early.
             let target = match this.model.upgrade() {
                 Some(model) => {
-                    if let Ok(component) = model.look_up(&moniker).await {
+                    if let Ok(component) = model.look_up(&target_moniker).await {
                         component
                     } else {
                         return;
@@ -119,17 +116,15 @@ impl DirectoryReadyNotifier {
     async fn wait_for_on_open(
         &self,
         node: &fio::NodeProxy,
-        target_moniker: &InstancedAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
         path: String,
     ) -> Result<(), ModelError> {
         let mut events = node.take_event_stream();
         match events.next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
-                .map_err(|_| {
-                    ModelError::open_directory_error(target_moniker.without_instance_ids(), path)
-                }),
+                .map_err(|_| ModelError::open_directory_error(moniker.clone(), path)),
             Some(Ok(fio::NodeEvent::OnConnectionInfo { .. })) => Ok(()),
-            _ => Err(ModelError::open_directory_error(target_moniker.without_instance_ids(), path)),
+            _ => Err(ModelError::open_directory_error(moniker.clone(), path)),
         }
     }
 
@@ -162,8 +157,7 @@ impl DirectoryReadyNotifier {
         // dispatch in order to propagate any potential errors as an event.
         let outgoing_dir_result = async move {
             let outgoing_node = outgoing_node_result?;
-            self.wait_for_on_open(&outgoing_node, &target.instanced_moniker(), "/".to_string())
-                .await?;
+            self.wait_for_on_open(&outgoing_node, &target.abs_moniker, "/".to_string()).await?;
             fuchsia_fs::node_to_directory(outgoing_node)
                 .map_err(|_| ModelError::open_directory_error(target.abs_moniker.clone(), "/"))
         }
@@ -365,16 +359,16 @@ fn filter_matching_exposes<'a>(
 
 async fn clone_outgoing_root(
     outgoing_dir: &fio::DirectoryProxy,
-    target_moniker: &InstancedAbsoluteMoniker,
+    target_moniker: &AbsoluteMoniker,
 ) -> Result<fio::NodeProxy, ModelError> {
     let outgoing_dir = fuchsia_fs::clone_directory(
         &outgoing_dir,
         fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE,
     )
-    .map_err(|_| ModelError::open_directory_error(target_moniker.without_instance_ids(), "/"))?;
-    let outgoing_dir_channel = outgoing_dir.into_channel().map_err(|_| {
-        ModelError::open_directory_error(target_moniker.without_instance_ids(), "/")
-    })?;
+    .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
+    let outgoing_dir_channel = outgoing_dir
+        .into_channel()
+        .map_err(|_| ModelError::open_directory_error(target_moniker.clone(), "/"))?;
     Ok(fio::NodeProxy::from_channel(outgoing_dir_channel))
 }
 
@@ -412,7 +406,7 @@ impl EventSynthesisProvider for DirectoryReadyNotifier {
                 Ok(out_dir) => out_dir,
                 Err(e) => return Some(Err(e)),
             };
-            Some(clone_outgoing_root(&out_dir, &component.instanced_moniker()).await)
+            Some(clone_outgoing_root(&out_dir, &component.abs_moniker).await)
         }
         .await;
         let outgoing_node_result = match maybe_outgoing_node_result {
@@ -496,7 +490,7 @@ mod tests {
                 &CapabilityName::from("foo"),
             )
             .await;
-        assert_eq!(event.target_moniker, InstancedAbsoluteMoniker::root().into());
+        assert_eq!(event.target_moniker, AbsoluteMoniker::root().into());
         assert_eq!(event.component_url, "test:///root");
         let payload = event.result.expect("got ok result");
 

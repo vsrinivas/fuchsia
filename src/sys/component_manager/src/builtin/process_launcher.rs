@@ -382,7 +382,6 @@ mod tests {
         crate::model::hooks::Hooks,
         anyhow::{format_err, Context},
         assert_matches::assert_matches,
-        cm_moniker::InstancedAbsoluteMoniker,
         fidl::{
             endpoints::{ClientEnd, ServerEnd},
             prelude::*,
@@ -393,7 +392,7 @@ mod tests {
         fuchsia_runtime::{job_default, HandleType},
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
-        moniker::AbsoluteMonikerBase,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{mem, sync::Weak},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -444,7 +443,7 @@ mod tests {
         let (client, mut server) = zx::Channel::create()?;
 
         let event = Event::new_for_test(
-            InstancedAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted {
                 source,

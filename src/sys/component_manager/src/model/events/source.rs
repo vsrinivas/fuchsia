@@ -21,11 +21,11 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_moniker::InstancedExtendedMoniker,
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    moniker::ExtendedMoniker,
     std::{path::PathBuf, sync::Weak},
 };
 
@@ -93,9 +93,9 @@ impl EventSource {
         target_path: String,
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
         let moniker = match &self.options.subscription_type {
-            SubscriptionType::AboveRoot => InstancedExtendedMoniker::ComponentManager,
+            SubscriptionType::AboveRoot => ExtendedMoniker::ComponentManager,
             SubscriptionType::Component(abs_moniker) => {
-                InstancedExtendedMoniker::ComponentInstance(abs_moniker.clone())
+                ExtendedMoniker::ComponentInstance(abs_moniker.clone())
             }
         };
         if let Some(stream_provider) = self.stream_provider.upgrade() {

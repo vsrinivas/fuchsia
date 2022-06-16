@@ -10,14 +10,13 @@ use {
         hooks::{Event as HookEvent, EventType},
         model::Model,
     },
-    ::routing::{component_instance::ComponentInstanceInterface, event::EventFilter},
+    ::routing::event::EventFilter,
     async_trait::async_trait,
-    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::CapabilityName,
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
     log::error,
-    moniker::AbsoluteMonikerBase,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},
@@ -165,7 +164,7 @@ impl SynthesisTask {
             // If the scope is component manager, synthesize the builtin events first and then
             // proceed to synthesize from the root and down.
             let scope_moniker = match scope.moniker {
-                InstancedExtendedMoniker::ComponentManager => {
+                ExtendedMoniker::ComponentManager => {
                     // Ignore this error. This can occur when the event stream is closed in the
                     // middle of synthesis. We can finish synthesizing if an error happens.
                     if let Err(_) = Self::send_events(
@@ -178,16 +177,14 @@ impl SynthesisTask {
                     {
                         return Ok(());
                     }
-                    InstancedAbsoluteMoniker::root()
+                    AbsoluteMoniker::root()
                 }
-                InstancedExtendedMoniker::ComponentInstance(ref scope_moniker) => {
-                    scope_moniker.clone()
-                }
+                ExtendedMoniker::ComponentInstance(ref scope_moniker) => scope_moniker.clone(),
             };
-            let root = model.look_up(&scope_moniker.without_instance_ids()).await?;
+            let root = model.look_up(&scope_moniker).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
             while let Some(component) = component_stream.next().await {
-                visited_components.insert(component.instanced_moniker().clone());
+                visited_components.insert(component.abs_moniker.clone());
                 if let Err(_) = Self::send_events(
                     &info.provider,
                     &scope,
@@ -223,7 +220,7 @@ impl SynthesisTask {
 /// branch.
 fn get_subcomponents(
     root: Arc<ComponentInstance>,
-    visited: HashSet<InstancedAbsoluteMoniker>,
+    visited: HashSet<AbsoluteMoniker>,
 ) -> stream::BoxStream<'static, Arc<ComponentInstance>> {
     let pending = vec![root];
     stream::unfold((pending, visited), move |(mut pending, mut visited)| async move {
@@ -231,7 +228,7 @@ fn get_subcomponents(
             match pending.pop() {
                 None => return None,
                 Some(curr_component) => {
-                    if visited.contains(&curr_component.instanced_moniker()) {
+                    if visited.contains(&curr_component.abs_moniker) {
                         continue;
                     }
                     let state_guard = curr_component.lock_state().await;
@@ -246,7 +243,7 @@ fn get_subcomponents(
                         }
                     }
                     drop(state_guard);
-                    visited.insert(curr_component.instanced_moniker().clone());
+                    visited.insert(curr_component.abs_moniker.clone());
                     return Some((curr_component, (pending, visited)));
                 }
             }
@@ -278,7 +275,7 @@ mod tests {
 
     struct CreateStreamArgs<'a> {
         registry: &'a EventRegistry,
-        scope_monikers: Vec<InstancedAbsoluteMoniker>,
+        scope_monikers: Vec<AbsoluteMoniker>,
         events: Vec<EventType>,
         include_builtin: bool,
     }
@@ -296,7 +293,7 @@ mod tests {
         let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(CreateStreamArgs {
             registry: &registry,
-            scope_monikers: vec![InstancedAbsoluteMoniker::root()],
+            scope_monikers: vec![AbsoluteMoniker::root()],
             events: vec![EventType::Started, EventType::Running],
             include_builtin: false,
         })
@@ -310,7 +307,7 @@ mod tests {
             let event = event_stream.next().await.expect("got running event");
             match event.event.result {
                 Ok(EventPayload::Running { .. }) => {
-                    if event.event.target_moniker.to_string() == "/c:0/f:0" {
+                    if event.event.target_moniker.to_string() == "/c/f" {
                         // There's a chance of receiving Started and Running for the instance we
                         // just bound if it happens to start while we are synthesizing. We assert
                         // that instance separately and count it once.
@@ -319,7 +316,7 @@ mod tests {
                     result_monikers.insert(event.event.target_moniker.to_string());
                 }
                 Ok(EventPayload::Started { .. }) => {
-                    assert_eq!(event.event.target_moniker.to_string(), "/c:0/f:0");
+                    assert_eq!(event.event.target_moniker.to_string(), "/c/f");
                     result_monikers.insert(event.event.target_moniker.to_string());
                 }
                 payload => panic!("Expected running. Got: {:?}", payload),
@@ -327,7 +324,7 @@ mod tests {
         }
 
         // Events might be out of order, sort them
-        let expected_monikers = vec!["/b:0", "/c:0", "/c:0/e:0", "/c:0/f:0"];
+        let expected_monikers = vec!["/b", "/c", "/c/e", "/c/f"];
         let mut result_monikers = Vec::from_iter(result_monikers.into_iter());
         result_monikers.sort();
         assert_eq!(expected_monikers, result_monikers);
@@ -351,9 +348,9 @@ mod tests {
         let mut event_stream = create_stream(CreateStreamArgs {
             registry: &registry,
             scope_monikers: vec![
-                vec!["c:0"].into(),
-                vec!["c:0", "e:0"].into(),
-                vec!["c:0", "e:0", "h:0"].into(),
+                vec!["c"].into(),
+                vec!["c", "e"].into(),
+                vec!["c", "e", "h"].into(),
             ],
             events: vec![EventType::Started, EventType::Running],
             include_builtin: false,
@@ -361,8 +358,7 @@ mod tests {
         .await;
 
         let result_monikers = get_and_sort_running_events(&mut event_stream, 5).await;
-        let expected_monikers =
-            vec!["/c:0", "/c:0/e:0", "/c:0/e:0/g:0", "/c:0/e:0/h:0", "/c:0/f:0"];
+        let expected_monikers = vec!["/c", "/c/e", "/c/e/g", "/c/e/h", "/c/f"];
         assert_eq!(expected_monikers, result_monikers);
 
         // Verify we don't get more Running events.
@@ -370,7 +366,7 @@ mod tests {
         let event = event_stream.next().await.expect("got started event");
         match event.event.result {
             Ok(EventPayload::Started { .. }) => {
-                assert_eq!("/c:0/f:0/i:0", event.event.target_moniker.to_string());
+                assert_eq!("/c/f/i", event.event.target_moniker.to_string());
             }
             payload => panic!("Expected started. Got: {:?}", payload),
         }
@@ -394,9 +390,9 @@ mod tests {
         let mut event_stream = create_stream(CreateStreamArgs {
             registry: &registry,
             scope_monikers: vec![
-                vec!["c:0"].into(),
-                vec!["c:0", "e:0"].into(),
-                vec!["c:0", "f:0", "i:0"].into(),
+                vec!["c"].into(),
+                vec!["c", "e"].into(),
+                vec!["c", "f", "i"].into(),
             ],
             events: vec![EventType::Started, EventType::Running],
             include_builtin: false,
@@ -404,8 +400,7 @@ mod tests {
         .await;
 
         let result_monikers = get_and_sort_running_events(&mut event_stream, 5).await;
-        let expected_monikers =
-            vec!["/c:0", "/c:0/e:0", "/c:0/e:0/g:0", "/c:0/e:0/h:0", "/c:0/f:0"];
+        let expected_monikers = vec!["/c", "/c/e", "/c/e/g", "/c/e/h", "/c/f"];
         assert_eq!(expected_monikers, result_monikers);
 
         // Verify we don't get more Running events.
@@ -413,7 +408,7 @@ mod tests {
         let event = event_stream.next().await.expect("got started event");
         match event.event.result {
             Ok(EventPayload::Started { .. }) => {
-                assert_eq!("/c:0/f:0/i:0", event.event.target_moniker.to_string());
+                assert_eq!("/c/f/i", event.event.target_moniker.to_string());
             }
             payload => panic!("Expected started. Got: {:?}", payload),
         }
@@ -438,7 +433,7 @@ mod tests {
         let event = event_stream.next().await.expect("got running event");
         match event.event.result {
             Ok(EventPayload::DirectoryReady { name, .. }) if name == "diagnostics" => {
-                assert_eq!(event.event.target_moniker, InstancedExtendedMoniker::ComponentManager);
+                assert_eq!(event.event.target_moniker, ExtendedMoniker::ComponentManager);
             }
             payload => panic!("Expected running or directory ready. Got: {:?}", payload),
         }
@@ -455,7 +450,7 @@ mod tests {
             .collect::<Vec<_>>();
         if args.include_builtin {
             scopes.push(EventDispatcherScope {
-                moniker: InstancedExtendedMoniker::ComponentManager,
+                moniker: ExtendedMoniker::ComponentManager,
                 filter: EventFilter::debug(),
             });
         }

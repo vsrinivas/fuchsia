@@ -58,12 +58,11 @@ mod tests {
             capability::CapabilitySource,
             model::hooks::{Event, EventPayload, Hooks},
         },
-        cm_moniker::InstancedAbsoluteMoniker,
         cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_io as fio, fidl_fuchsia_kernel as fkernel,
         futures::lock::Mutex,
-        moniker::AbsoluteMonikerBase,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::path::PathBuf,
         std::sync::Weak,
     };
@@ -81,7 +80,7 @@ mod tests {
         };
 
         let event = Event::new_for_test(
-            InstancedAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
         );
