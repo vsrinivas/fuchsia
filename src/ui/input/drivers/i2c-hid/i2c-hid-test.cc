@@ -326,12 +326,20 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   fake_hidbus_ifc::FakeHidbusIfc fake_hid_bus_;
   ddk::I2cChannel channel_;
 
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  EXPECT_OK(loop.StartThread());
+
+  auto i2c_endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  EXPECT_TRUE(i2c_endpoints.is_ok());
+
+  fidl::BindServer(loop.dispatcher(), std::move(i2c_endpoints->server), &fake_i2c_hid_);
+
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
   ASSERT_OK(endpoints.status_value());
   endpoints->server.reset();
   device_ = new I2cHidbus(fake_ddk::kFakeParent,
                           acpi::Client::Create(fidl::BindSyncClient(std::move(endpoints->client))));
-  channel_ = ddk::I2cChannel(fake_i2c_hid_.GetProto());
+  channel_ = ddk::I2cChannel(std::move(i2c_endpoints->client));
 
   fake_i2c_hid_.SetHidDescriptorFailure(ZX_ERR_TIMED_OUT);
   ASSERT_OK(device_->Bind(std::move(channel_)));
@@ -340,6 +348,8 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   EXPECT_TRUE(ddk_.Ok());
   EXPECT_TRUE(ddk_.init_reply().has_value());
   EXPECT_NOT_OK(ddk_.init_reply().value());
+
+  loop.Shutdown();
 
   device_->DdkRelease();
 }
