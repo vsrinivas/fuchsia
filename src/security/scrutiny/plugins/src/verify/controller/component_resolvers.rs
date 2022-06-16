@@ -24,7 +24,7 @@ use {
 
 /// ComponentResolversController
 ///
-/// A DataController which returns a list component node paths of all
+/// A DataController which returns a list of absolute monikers of all
 /// components that, in their environment, contain a resolver with the
 ///  given moniker for a scheme with access to a protocol.
 #[derive(Default)]
@@ -35,7 +35,7 @@ pub struct ComponentResolversController {}
 pub struct ComponentResolverRequest {
     /// `resolver` URI scheme of interest
     pub scheme: String,
-    /// Node path of the `resolver`
+    /// Absolute moniker of the `resolver`
     pub moniker: String,
     /// Filter the results to components resolved with a `resolver` with access to a protocol
     pub protocol: String,
@@ -50,10 +50,10 @@ pub struct ComponentResolverResponse {
     pub monikers: Vec<String>,
 }
 
-/// Walks the tree for component node paths of all components that, in their
-/// environment, contain a resolver with the given moniker for a scheme
-/// with access to a protocol.
-/// `monikers` contains the components which match the `request` parameters.
+/// Walks the tree for the absolute monikers of all components that,
+/// in their environment, contain a resolver with the given moniker
+/// for a scheme with access to a protocol.  `monikers` contains the
+/// components which match the `request` parameters.
 struct ComponentResolversVisitor {
     request: ComponentResolverRequest,
     monikers: Vec<String>,
@@ -156,13 +156,13 @@ impl DataController for ComponentResolversController {
     }
 
     fn usage(&self) -> String {
-        "Finds the component node paths of all components that, in their
-environment, contain a resolver with the given moniker for scheme with
-access to protocol.
+        "Finds the absolute monikers of all components that, in their environment,
+         contain a resolver for `scheme`, provided by a component with the given `moniker`
+         and with access to `protocol`.
 
 Required parameters:
 --scheme:  the resolver URI scheme to query
---moniker: the node path of the resolver
+--moniker: the absolute moniker of the component providing the resolver capability
 --resolver: filter results to components resolved with a resolver that has access to the given protocol"
             .to_string()
     }

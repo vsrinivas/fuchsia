@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        component_model::{AnalyzerModelError, BuildAnalyzerModelError},
-        node_path::NodePath,
-    },
+    crate::component_model::{AnalyzerModelError, BuildAnalyzerModelError},
     cm_rust::{CapabilityDecl, CapabilityName, ExposeDecl, OfferDecl, UseDecl},
     fuchsia_zircon_status as zx_status,
     moniker::AbsoluteMoniker,
@@ -18,7 +15,7 @@ use {
 /// A summary of a specific capability route and the outcome of verification.
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerifyRouteResult {
-    pub using_node: NodePath,
+    pub using_node: AbsoluteMoniker,
     pub capability: CapabilityName,
     pub result: Result<Vec<RouteSegment>, CapabilityRouteError>,
 }
@@ -28,55 +25,55 @@ pub struct VerifyRouteResult {
 pub enum RouteSegment {
     /// A `ComponentNode` uses the routed capability.
     UseBy {
-        /// The `NodePath` of the using `ComponentNode`.
-        node_path: NodePath,
+        /// The `AbsoluteMoniker` of the using `ComponentNode`.
+        abs_moniker: AbsoluteMoniker,
         /// The use declaration from the `ComponentNode`'s manifest.
         capability: UseDecl,
     },
 
     /// A `ComponentNode` requires a runner in its `ProgramDecl`.
     RequireRunner {
-        /// The `NodePath` of the component instance that requires the runner.
-        node_path: NodePath,
+        /// The `AbsoluteMoniker` of the component instance that requires the runner.
+        abs_moniker: AbsoluteMoniker,
         /// The name of the required runner.
         runner: CapabilityName,
     },
 
     /// A `ComponentNode` requires the resolver capability to resolve a child component URL.
     RequireResolver {
-        /// The `NodePath` of the component node that requires the resolver.
-        node_path: NodePath,
+        /// The `AbsoluteMoniker` of the component node that requires the resolver.
+        abs_moniker: AbsoluteMoniker,
         /// The URL scheme of the resolver.
         scheme: String,
     },
 
     /// A `ComponentNode` offers the routed capability.
     OfferBy {
-        /// The `NodePath` of the offering `ComponentNode`.
-        node_path: NodePath,
+        /// The `AbsoluteMoniker` of the offering `ComponentNode`.
+        abs_moniker: AbsoluteMoniker,
         /// The offer declaration from the `ComponentNode`'s manifest.
         capability: OfferDecl,
     },
 
     /// A `ComponentNode` exposes the routed capability.
     ExposeBy {
-        /// The `NodePath` of the offering `ComponentNode`.
-        node_path: NodePath,
+        /// The `AbsoluteMoniker` of the offering `ComponentNode`.
+        abs_moniker: AbsoluteMoniker,
         /// The expose declaration from the `ComponentNode`'s manifest.
         capability: ExposeDecl,
     },
 
     /// A `ComponentNode` declares the routed capability.
     DeclareBy {
-        /// The `NodePath` of the declaring `ComponentNode`.
-        node_path: NodePath,
+        /// The `AbsoluteMoniker` of the declaring `ComponentNode`.
+        abs_moniker: AbsoluteMoniker,
         /// The capability declaration from the `ComponentNode`'s manifest.
         capability: CapabilityDecl,
     },
 
     RegisterBy {
-        /// The `NodePath` of the `ComponentNode` that registered the capability.
-        node_path: NodePath,
+        /// The `AbsoluteMoniker` of the `ComponentNode` that registered the capability.
+        abs_moniker: AbsoluteMoniker,
         /// The registration declaration. For runner and resolver registrations, this
         /// appears directly in the `ComponentNode`'s manifest. For storage-backing
         /// directories, this is derived from the storage capability's `StorageDecl`.
@@ -107,15 +104,15 @@ pub enum RouteSegment {
 }
 
 impl RouteSegment {
-    pub fn node_path<'a>(&'a self) -> Option<&'a NodePath> {
+    pub fn abs_moniker<'a>(&'a self) -> Option<&'a AbsoluteMoniker> {
         match self {
-            Self::UseBy { node_path, .. }
-            | Self::RequireRunner { node_path, .. }
-            | Self::RequireResolver { node_path, .. }
-            | Self::OfferBy { node_path, .. }
-            | Self::ExposeBy { node_path, .. }
-            | Self::DeclareBy { node_path, .. }
-            | Self::RegisterBy { node_path, .. } => Some(node_path),
+            Self::UseBy { abs_moniker, .. }
+            | Self::RequireRunner { abs_moniker, .. }
+            | Self::RequireResolver { abs_moniker, .. }
+            | Self::OfferBy { abs_moniker, .. }
+            | Self::ExposeBy { abs_moniker, .. }
+            | Self::DeclareBy { abs_moniker, .. }
+            | Self::RegisterBy { abs_moniker, .. } => Some(abs_moniker),
             Self::ProvideFromFramework { .. }
             | Self::ProvideAsBuiltin { .. }
             | Self::ProvideFromNamespace { .. }
@@ -220,24 +217,15 @@ impl DebugRouteMapper for RouteMapper {
     type RouteMap = RouteMap;
 
     fn add_use(&mut self, abs_moniker: AbsoluteMoniker, use_decl: UseDecl) {
-        self.route.push(RouteSegment::UseBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: use_decl,
-        })
+        self.route.push(RouteSegment::UseBy { abs_moniker, capability: use_decl })
     }
 
     fn add_offer(&mut self, abs_moniker: AbsoluteMoniker, offer_decl: OfferDecl) {
-        self.route.push(RouteSegment::OfferBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: offer_decl,
-        })
+        self.route.push(RouteSegment::OfferBy { abs_moniker, capability: offer_decl })
     }
 
     fn add_expose(&mut self, abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl) {
-        self.route.push(RouteSegment::ExposeBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: expose_decl,
-        })
+        self.route.push(RouteSegment::ExposeBy { abs_moniker, capability: expose_decl })
     }
 
     fn add_registration(
@@ -245,10 +233,7 @@ impl DebugRouteMapper for RouteMapper {
         abs_moniker: AbsoluteMoniker,
         registration_decl: RegistrationDecl,
     ) {
-        self.route.push(RouteSegment::RegisterBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: registration_decl,
-        })
+        self.route.push(RouteSegment::RegisterBy { abs_moniker, capability: registration_decl })
     }
 
     fn add_component_capability(
@@ -256,10 +241,7 @@ impl DebugRouteMapper for RouteMapper {
         abs_moniker: AbsoluteMoniker,
         capability_decl: CapabilityDecl,
     ) {
-        self.route.push(RouteSegment::DeclareBy {
-            node_path: NodePath::from(abs_moniker),
-            capability: capability_decl,
-        })
+        self.route.push(RouteSegment::DeclareBy { abs_moniker, capability: capability_decl })
     }
 
     fn add_framework_capability(&mut self, capability_name: CapabilityName) {

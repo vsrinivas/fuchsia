@@ -10,13 +10,13 @@ use {
     anyhow::{anyhow, Context, Error, Result},
     cm_fidl_analyzer::{
         component_model::ComponentModelForAnalyzer,
-        node_path::NodePath,
         route::{CapabilityRouteError, RouteSegment, VerifyRouteResult},
     },
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
         ExposeDecl, OfferDecl, UseDecl,
     },
+    moniker::AbsoluteMoniker,
     routing::component_instance::ComponentInstanceInterface,
     scrutiny::model::{controller::DataController, model::DataModel},
     serde::{Deserialize, Serialize},
@@ -60,8 +60,9 @@ pub struct RouteSourcesConfig {
 /// Each route must be listed, either to be verified or skipped by the verifier.
 #[derive(Deserialize, Serialize)]
 pub struct RouteSourcesSpec {
-    /// Absolute path to the component instance whose routes are to be verified.
-    pub target_node_path: NodePath,
+    /// TODO(fxbug.dev/102801): rename to `target_moniker`.
+    /// `AbsoluteMoniker` of the component instance whose routes are to be verified.
+    pub target_node_path: AbsoluteMoniker,
     /// Routes that are expected to be present, but do not require verification.
     pub routes_to_skip: Vec<UseSpec>,
     /// Route specification and route source matching information for routes
@@ -113,9 +114,9 @@ pub struct RouteMatch {
 /// Input query type for matching a route source.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct SourceSpec {
-    /// Node path prefix expected at the source instance.
-    #[serde(rename = "source_node_path")]
-    node_path: NodePath,
+    /// `AbsoluteMoniker` prefix expected at the source instance.
+    #[serde(rename = "source_moniker")]
+    abs_moniker: AbsoluteMoniker,
     /// Capability declaration expected at the source instance.
     #[serde(flatten)]
     capability: SourceDeclSpec,
@@ -275,8 +276,8 @@ pub struct VerifyRouteSourcesResult {
 /// Output type: The source of a capability route.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Source {
-    /// The node path of the declaring component instance.
-    node_path: NodePath,
+    /// The `AbsoluteMoniker` of the declaring component instance.
+    abs_moniker: AbsoluteMoniker,
     /// The capability declaration.
     capability: CapabilityDecl,
 }
@@ -287,7 +288,7 @@ pub struct Source {
 pub enum RouteSourceError {
     CapabilityRouteError(CapabilityRouteError),
     RouteSegmentWithoutComponent(RouteSegment),
-    RouteSegmentNodePathNotFoundInTree(RouteSegment),
+    RouteSegmentAbsMonikerNotFoundInTree(RouteSegment),
     ComponentInstanceLookupByUrlFailed(String),
     MultipleComponentsWithSameUrl(Vec<Component>),
     RouteSegmentComponentFromUntrustedSource(RouteSegment, ComponentSource),
@@ -369,7 +370,7 @@ where
 fn gather_routes<'a>(
     component_routes: &'a RouteSourcesSpec,
     component_decl: &'a ComponentDecl,
-    node_path: &'a NodePath,
+    abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<(Vec<&'a UseDecl>, Vec<Binding<'a>>)> {
     let uses = &component_decl.uses;
     let routes_to_skip = component_routes
@@ -415,26 +416,26 @@ fn gather_routes<'a>(
             uses.iter().filter(|use_decl| !deduped_matches.contains(use_decl)).collect();
         if duped_matches.len() > 0 {
             Err(anyhow!(
-                "{}. {}; component node path: {} routes matched multiple times: {:#?}; unmatched routes: {:#?}",
+                "{}. {}; moniker: {} routes matched multiple times: {:#?}; unmatched routes: {:#?}",
                 ROUTE_LISTS_OVERLAP,
                 ROUTE_LISTS_INCOMPLETE,
-                node_path,
+                abs_moniker,
                 duped_matches,
                 missed_routes
             ))
         } else {
             Err(anyhow!(
-                "{}; component node path: {}; unmatched routes: {:#?}",
+                "{}; moniker: {}; unmatched routes: {:#?}",
                 ROUTE_LISTS_INCOMPLETE,
-                node_path,
+                abs_moniker,
                 missed_routes
             ))
         }
     } else if duped_matches.len() > 0 {
         Err(anyhow!(
-            "{}; component node path: {}; routes matched multiple times: {:#?}",
+            "{}; moniker: {}; routes matched multiple times: {:#?}",
             ROUTE_LISTS_OVERLAP,
-            node_path,
+            abs_moniker,
             duped_matches
         ))
     } else {
@@ -447,15 +448,15 @@ fn check_pkg_source(
     component_model: &Arc<ComponentModelForAnalyzer>,
     components: &Vec<Component>,
 ) -> Option<RouteSourceError> {
-    let node_path = route_segment.node_path();
-    if node_path.is_none() {
+    let abs_moniker = route_segment.abs_moniker();
+    if abs_moniker.is_none() {
         return Some(RouteSourceError::RouteSegmentWithoutComponent(route_segment.clone()));
     }
-    let node_path = node_path.unwrap();
+    let abs_moniker = abs_moniker.unwrap();
 
-    let get_instance_result = component_model.get_instance(node_path);
+    let get_instance_result = component_model.get_instance(abs_moniker);
     if get_instance_result.is_err() {
-        return Some(RouteSourceError::RouteSegmentNodePathNotFoundInTree(route_segment.clone()));
+        return Some(RouteSourceError::RouteSegmentAbsMonikerNotFoundInTree(route_segment.clone()));
     }
     let instance = get_instance_result.unwrap();
     let instance_url_str = instance.url();
@@ -506,9 +507,9 @@ fn process_verify_result<'a>(
                     json_or_unformatted(&route.route_match.target, "route target")
                 )
             })?;
-            if let RouteSegment::DeclareBy { node_path, capability } = route_source {
+            if let RouteSegment::DeclareBy { abs_moniker, capability } = route_source {
                 let source =
-                    Source { node_path: node_path.clone(), capability: capability.clone() };
+                    Source { abs_moniker: abs_moniker.clone(), capability: capability.clone() };
                 let matches_result: Result<Vec<bool>> = vec![
                     route.route_match.source.capability.matches(capability),
                     route.route_match.source.capability.matches(&route_details),
@@ -547,24 +548,20 @@ impl RouteSourcesController {
     ) -> Result<HashMap<String, Vec<VerifyRouteSourcesResult>>> {
         let mut results = HashMap::new();
         for component_routes in config.component_routes.iter() {
-            let target_node_path = &component_routes.target_node_path;
-            let target_instance =
-                component_model.get_instance(target_node_path).context(format!(
-                    "{}; target instance: {}",
-                    MISSING_TARGET_INSTANCE,
-                    target_node_path.clone()
-                ))?;
-
-            let (_, routes_to_verify) = gather_routes(
-                component_routes,
-                target_instance.decl_for_testing(),
-                target_node_path,
-            )
-            .context(format!(
+            let target_moniker = &component_routes.target_node_path;
+            let target_instance = component_model.get_instance(target_moniker).context(format!(
                 "{}; target instance: {}",
-                GATHER_FAILED,
-                target_node_path.clone()
+                MISSING_TARGET_INSTANCE,
+                target_moniker.clone()
             ))?;
+
+            let (_, routes_to_verify) =
+                gather_routes(component_routes, target_instance.decl_for_testing(), target_moniker)
+                    .context(format!(
+                        "{}; target instance: {}",
+                        GATHER_FAILED,
+                        target_moniker.clone()
+                    ))?;
 
             let mut component_results = Vec::new();
             for route in routes_to_verify.into_iter() {
@@ -581,7 +578,7 @@ impl RouteSourcesController {
                 }
             }
 
-            results.insert(format!("/{}", target_node_path.as_vec().join("/")), component_results);
+            results.insert(target_moniker.to_string(), component_results);
         }
         Ok(results)
     }
@@ -620,9 +617,7 @@ mod tests {
             verify::{collection::V2ComponentModel, collector::component_model::DEFAULT_ROOT_URL},
         },
         anyhow::Result,
-        cm_fidl_analyzer::{
-            component_model::ModelBuilderForAnalyzer, node_path::NodePath, route::RouteSegment,
-        },
+        cm_fidl_analyzer::{component_model::ModelBuilderForAnalyzer, route::RouteSegment},
         cm_rust::{
             Availability, CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl,
             ComponentDecl, DependencyType, DirectoryDecl, ExposeDirectoryDecl, ExposeSource,
@@ -632,6 +627,7 @@ mod tests {
         fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
         fuchsia_merkle::{Hash, HASH_SIZE},
         maplit::{hashmap, hashset},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         routing::{
             component_id_index::ComponentIdIndex, config::RuntimeConfig,
             environment::RunnerRegistry,
@@ -1013,7 +1009,7 @@ mod tests {
         // Vacuous request: Confirms that @root_url uses no input capabilities.
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec![]),
+                target_node_path: AbsoluteMoniker::root(),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![],
             }],
@@ -1034,7 +1030,7 @@ mod tests {
         // Request checking routes of a component instance that does not exist.
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["does:0", "not:1", "exist:2"]),
+                target_node_path: AbsoluteMoniker::parse_str("/does:0/not:1/exist:2").unwrap(),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![],
             }],
@@ -1060,7 +1056,7 @@ mod tests {
         // are listed in `routes_to_skip` + `routes_to_verify`.
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![],
             }],
@@ -1083,7 +1079,7 @@ mod tests {
         // @two_dir_user_url.
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1125,7 +1121,7 @@ mod tests {
         // the corresponding component manifest.
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1167,7 +1163,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     // Skip @root_url -> @two_dir_user_url route.
                     UseSpec {
@@ -1189,7 +1185,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -1214,7 +1210,7 @@ mod tests {
                     VerifyRouteSourcesResult{
                         query: config.component_routes[0].routes_to_verify[0].clone(),
                         result: Ok(Source {
-                            node_path: config.component_routes[0].routes_to_verify[0].source.node_path.clone(),
+                            abs_moniker: config.component_routes[0].routes_to_verify[0].source.abs_moniker.clone(),
                             capability: DirectoryDecl{
                                 name: CapabilityName("provider_dir".to_string()),
                                 source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
@@ -1239,7 +1235,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     // Skip @root_url -> @two_dir_user_url route.
                     UseSpec {
@@ -1261,7 +1257,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 // Match partial path with some (not all) routed
                                 // subdirs.
@@ -1286,7 +1282,7 @@ mod tests {
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[0].clone(),
                             result: Ok(Source {
-                                node_path: config.component_routes[0].routes_to_verify[0].source.node_path.clone(),
+                                abs_moniker: config.component_routes[0].routes_to_verify[0].source.abs_moniker.clone(),
                                 capability: DirectoryDecl{
                                     name: CapabilityName("provider_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
@@ -1311,7 +1307,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![
                     // config.component_routes[0].routes_to_verify[0]:
@@ -1323,7 +1319,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec![]),
+                            abs_moniker: AbsoluteMoniker::root(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -1348,7 +1344,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -1372,7 +1368,7 @@ mod tests {
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[0].clone(),
                             result: Ok(Source {
-                                node_path: config.component_routes[0].routes_to_verify[0].source.node_path.clone(),
+                                abs_moniker: config.component_routes[0].routes_to_verify[0].source.abs_moniker.clone(),
                                 capability: DirectoryDecl{
                                     name: CapabilityName("root_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
@@ -1383,7 +1379,7 @@ mod tests {
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[1].clone(),
                             result: Ok(Source {
-                                node_path: config.component_routes[0].routes_to_verify[1].source.node_path.clone(),
+                                abs_moniker: config.component_routes[0].routes_to_verify[1].source.abs_moniker.clone(),
                                 capability: DirectoryDecl{
                                     name: CapabilityName("provider_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
@@ -1410,13 +1406,13 @@ mod tests {
             component_routes: vec![
                 // Match empty set of routes used by @root_url.
                 RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec![]),
+                    target_node_path: AbsoluteMoniker::root(),
                     routes_to_skip: vec![],
                     routes_to_verify: vec![],
                 },
                 // Match all routes used by @two_dir_user_url.
                 RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                    target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                     routes_to_skip: vec![],
                     routes_to_verify: vec![
                         // config.component_routes[1].routes_to_verify[0]:
@@ -1428,7 +1424,7 @@ mod tests {
                                 name: None,
                             },
                             source: SourceSpec {
-                                node_path: NodePath::absolute_from_vec(vec![]),
+                                abs_moniker: AbsoluteMoniker::root(),
                                 capability: SourceDeclSpec {
                                     path_prefix: Some(
                                         CapabilityPath::from_str(
@@ -1454,7 +1450,8 @@ mod tests {
                                 name: None,
                             },
                             source: SourceSpec {
-                                node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                                abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider")
+                                    .unwrap(),
                                 capability: SourceDeclSpec {
                                     path_prefix: Some(
                                         CapabilityPath::from_str(
@@ -1479,7 +1476,7 @@ mod tests {
                         VerifyRouteSourcesResult{
                             query: config.component_routes[1].routes_to_verify[0].clone(),
                             result: Ok(Source {
-                                node_path: config.component_routes[1].routes_to_verify[0].source.node_path.clone(),
+                                abs_moniker: config.component_routes[1].routes_to_verify[0].source.abs_moniker.clone(),
                                 capability: DirectoryDecl{
                                     name: CapabilityName("root_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
@@ -1490,7 +1487,7 @@ mod tests {
                         VerifyRouteSourcesResult{
                             query: config.component_routes[1].routes_to_verify[1].clone(),
                             result: Ok(Source {
-                                node_path: config.component_routes[1].routes_to_verify[1].source.node_path.clone(),
+                                abs_moniker: config.component_routes[1].routes_to_verify[1].source.abs_moniker.clone(),
                                 capability: DirectoryDecl{
                                     name: CapabilityName("provider_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
@@ -1515,7 +1512,7 @@ mod tests {
         let source_name = "routed_from_provider";
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1564,7 +1561,7 @@ mod tests {
         let source_name = "routed_from_provider";
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1614,7 +1611,7 @@ mod tests {
         let bad_path = format!("{}/{}", bad_dirname, bad_basename);
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1656,7 +1653,7 @@ mod tests {
         let dup_name = "/data/from/root";
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1696,7 +1693,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![UseSpec {
                     type_name: CapabilityTypeName::Directory,
                     path: Some(CapabilityPath::from_str("/data/from/root").unwrap()),
@@ -1710,7 +1707,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str(
@@ -1731,7 +1728,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str("/data/to/user").unwrap(),
@@ -1760,7 +1757,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1783,7 +1780,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str(
@@ -1815,7 +1812,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![
                     // Intentional error: No match for `/data/from/root`. That
                     // way number of routes to skip + number of routes to verify
@@ -1836,7 +1833,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str(
@@ -1868,7 +1865,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![
                     // config.component_routes[0].routes_to_verify[0]:
@@ -1880,7 +1877,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec![]),
+                            abs_moniker: AbsoluteMoniker::root(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -1905,7 +1902,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -1952,7 +1949,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![
                     // config.component_routes[0].routes_to_verify[0]:
@@ -1964,7 +1961,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec![]),
+                            abs_moniker: AbsoluteMoniker::root(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -1989,7 +1986,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -2036,7 +2033,7 @@ mod tests {
         let components = &data_model.get::<Components>()?.entries;
         let config = RouteSourcesConfig {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                target_node_path: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![
                     // config.component_routes[0].routes_to_verify[0]:
@@ -2048,7 +2045,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec![]),
+                            abs_moniker: AbsoluteMoniker::root(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -2073,7 +2070,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
+                            abs_moniker: AbsoluteMoniker::parse_str("/one_dir_provider").unwrap(),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -2098,7 +2095,7 @@ mod tests {
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[0].clone(),
                             result: Err(RouteSourceError::RouteSegmentComponentFromUntrustedSource(RouteSegment::UseBy {
-                                node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                                abs_moniker: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                                 capability: UseDirectoryDecl{
                                     source: UseSource::Parent,
                                     source_name: CapabilityName("routed_from_root".to_string()),
@@ -2113,7 +2110,7 @@ mod tests {
                         VerifyRouteSourcesResult{
                             query: config.component_routes[0].routes_to_verify[1].clone(),
                             result: Err(RouteSourceError::RouteSegmentComponentFromUntrustedSource(RouteSegment::UseBy {
-                                node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
+                                abs_moniker: AbsoluteMoniker::parse_str("/two_dir_user").unwrap(),
                                 capability: UseDirectoryDecl{
                                     source: UseSource::Parent,
                                     source_name: CapabilityName("routed_from_provider".to_string()),

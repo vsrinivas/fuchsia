@@ -6,7 +6,6 @@ use {
     crate::{
         component_instance::{ComponentInstanceForAnalyzer, TopInstanceForAnalyzer},
         match_absolute_component_urls,
-        node_path::NodePath,
         route::{RouteMap, RouteSegment, VerifyRouteResult},
         PkgUrlMatch,
     },
@@ -139,27 +138,25 @@ impl ModelBuilderForAnalyzer {
     }
 
     fn load_dynamic_components(
-        input: HashMap<NodePath, (AbsoluteComponentUrl, Option<String>)>,
+        input: HashMap<AbsoluteMoniker, (AbsoluteComponentUrl, Option<String>)>,
     ) -> (HashMap<AbsoluteMoniker, Vec<Child>>, Vec<anyhow::Error>) {
         let mut errors: Vec<anyhow::Error> = vec![];
         let mut dynamic_components: HashMap<AbsoluteMoniker, Vec<Child>> = HashMap::new();
-        for (node_path, (url, environment)) in input.into_iter() {
-            let mut moniker_vec = node_path.as_vec();
-            let child_moniker_str = moniker_vec.pop();
-            if child_moniker_str.is_none() {
+        for (abs_moniker, (url, environment)) in input.into_iter() {
+            let mut moniker_vec = abs_moniker.path().clone();
+            let child_moniker = moniker_vec.pop();
+            if child_moniker.is_none() {
                 errors.push(
                     BuildAnalyzerModelError::DynamicComponentInvalidMoniker(url.to_string()).into(),
                 );
                 continue;
             }
-            let child_moniker_str = child_moniker_str.unwrap();
 
-            let abs_moniker: AbsoluteMoniker = moniker_vec.into();
-            let child_moniker: ChildMoniker = child_moniker_str.into();
+            let child_moniker = child_moniker.unwrap();
             if child_moniker.collection.is_none() {
                 errors.push(
                     BuildAnalyzerModelError::DynamicComponentWithoutCollection(
-                        node_path.to_string(),
+                        abs_moniker.to_string(),
                         url.to_string(),
                     )
                     .into(),
@@ -173,11 +170,10 @@ impl ModelBuilderForAnalyzer {
                     children.push(Child { child_moniker, url, environment });
                 }
                 Err(_) => {
-                    let node_path: NodePath = abs_moniker.into();
                     errors.push(
                         BuildAnalyzerModelError::MalformedUrl(
                             url.to_string(),
-                            node_path.to_string(),
+                            abs_moniker.to_string(),
                         )
                         .into(),
                     );
@@ -205,7 +201,7 @@ impl ModelBuilderForAnalyzer {
 
     pub fn build_with_dynamic_components(
         self,
-        dynamic_components: HashMap<NodePath, (AbsoluteComponentUrl, Option<String>)>,
+        dynamic_components: HashMap<AbsoluteMoniker, (AbsoluteComponentUrl, Option<String>)>,
         decls_by_url: HashMap<Url, ComponentDecl>,
         runtime_config: Arc<RuntimeConfig>,
         component_id_index: Arc<ComponentIdIndex>,
@@ -277,9 +273,7 @@ impl ModelBuilderForAnalyzer {
                         &mut result,
                     );
 
-                    model
-                        .instances
-                        .insert(NodePath::from(root_instance.abs_moniker().clone()), root_instance);
+                    model.instances.insert(root_instance.abs_moniker().clone(), root_instance);
 
                     result.model = Some(Arc::new(model));
                 }
@@ -330,7 +324,7 @@ impl ModelBuilderForAnalyzer {
                     if child.child_moniker.name.is_empty() {
                         result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
                             absolute_url.to_string(),
-                            NodePath::from(instance.abs_moniker().clone()).to_string(),
+                            instance.abs_moniker().to_string(),
                         )));
                         continue;
                     }
@@ -365,7 +359,7 @@ impl ModelBuilderForAnalyzer {
                                     );
 
                                     model.instances.insert(
-                                        NodePath::from(child_instance.abs_moniker().clone()),
+                                        child_instance.abs_moniker().clone(),
                                         child_instance,
                                     );
                                 }
@@ -378,7 +372,7 @@ impl ModelBuilderForAnalyzer {
                             result.errors.push(anyhow!(
                                 BuildAnalyzerModelError::ComponentDeclNotFound(
                                     absolute_url.to_string(),
-                                    NodePath::from(instance.abs_moniker().clone()).to_string(),
+                                    instance.abs_moniker().to_string(),
                                 )
                             ));
                         }
@@ -399,7 +393,7 @@ impl ModelBuilderForAnalyzer {
     ) -> Result<Url, BuildAnalyzerModelError> {
         let err = BuildAnalyzerModelError::MalformedUrl(
             instance.url().to_string(),
-            instance.node_path().to_string(),
+            instance.abs_moniker().to_string(),
         );
 
         match Url::parse(child_url) {
@@ -491,11 +485,11 @@ impl ModelBuilderForAnalyzer {
 }
 
 /// `ComponentModelForAnalyzer` owns a representation of the v2 component graph and
-/// supports lookup of component instances by `NodePath`.
+/// supports lookup of component instances by `AbsoluteMoniker`.
 #[derive(Default)]
 pub struct ComponentModelForAnalyzer {
     top_instance: Arc<TopInstanceForAnalyzer>,
-    instances: HashMap<NodePath, Arc<ComponentInstanceForAnalyzer>>,
+    instances: HashMap<AbsoluteMoniker, Arc<ComponentInstanceForAnalyzer>>,
     policy_checker: GlobalPolicyChecker,
     component_id_index: Arc<ComponentIdIndex>,
 }
@@ -509,20 +503,18 @@ impl ComponentModelForAnalyzer {
     pub fn get_root_instance(
         self: &Arc<Self>,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, ComponentInstanceError> {
-        self.get_instance(&NodePath::absolute_from_vec(vec![]))
+        self.get_instance(&AbsoluteMoniker::root())
     }
 
     /// Returns the component instance corresponding to `id` if it is present in the model, or an
     /// `InstanceNotFound` error if not.
     pub fn get_instance(
         self: &Arc<Self>,
-        id: &NodePath,
+        abs_moniker: &AbsoluteMoniker,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, ComponentInstanceError> {
-        match self.instances.get(id) {
+        match self.instances.get(abs_moniker) {
             Some(instance) => Ok(Arc::clone(instance)),
-            None => Err(ComponentInstanceError::instance_not_found(
-                AbsoluteMoniker::parse_str(&id.to_string()).unwrap(),
-            )),
+            None => Err(ComponentInstanceError::instance_not_found(abs_moniker.clone())),
         }
     }
 
@@ -690,7 +682,7 @@ impl ComponentModelForAnalyzer {
                 Ok(()) => {
                     for route in routes.into_iter() {
                         results.push(VerifyRouteResult {
-                            using_node: target.node_path(),
+                            using_node: target.abs_moniker().clone(),
                             capability: capability.clone(),
                             result: Ok(route.into()),
                         });
@@ -698,14 +690,14 @@ impl ComponentModelForAnalyzer {
                 }
                 Err(err) => {
                     results.push(VerifyRouteResult {
-                        using_node: target.node_path(),
+                        using_node: target.abs_moniker().clone(),
                         capability: capability.clone(),
                         result: Err(err.into()),
                     });
                 }
             },
             (Err(err), capability) => results.push(VerifyRouteResult {
-                using_node: target.node_path(),
+                using_node: target.abs_moniker().clone(),
                 capability: capability.clone(),
                 result: Err(err.into()),
             }),
@@ -731,7 +723,7 @@ impl ComponentModelForAnalyzer {
                     Err(err) => Err(AnalyzerModelError::from(err).into()),
                 };
                 Some(VerifyRouteResult {
-                    using_node: target.node_path(),
+                    using_node: target.abs_moniker().clone(),
                     capability: expose_decl.target_name().clone(),
                     result,
                 })
@@ -750,20 +742,20 @@ impl ComponentModelForAnalyzer {
         match program_decl.runner {
             Some(ref runner) => {
                 let mut route = RouteMap::from_segments(vec![RouteSegment::RequireRunner {
-                    node_path: target.node_path(),
+                    abs_moniker: target.abs_moniker().clone(),
                     runner: runner.clone(),
                 }]);
                 match Self::route_capability_sync(RouteRequest::Runner(runner.clone()), target) {
                     Ok((_source, mut segments)) => {
                         route.append(&mut segments);
                         Some(VerifyRouteResult {
-                            using_node: target.node_path(),
+                            using_node: target.abs_moniker().clone(),
                             capability: runner.clone(),
                             result: Ok(route.into()),
                         })
                     }
                     Err(err) => Some(VerifyRouteResult {
-                        using_node: target.node_path(),
+                        using_node: target.abs_moniker().clone(),
                         capability: runner.clone(),
                         result: Err(AnalyzerModelError::from(err).into()),
                     }),
@@ -783,7 +775,7 @@ impl ComponentModelForAnalyzer {
         let url = Url::parse(target.url()).expect("failed to parse target URL");
         let scheme = url.scheme();
         let mut route = vec![RouteSegment::RequireResolver {
-            node_path: target.node_path(),
+            abs_moniker: target.abs_moniker().clone(),
             scheme: scheme.to_string(),
         }];
 
@@ -794,12 +786,12 @@ impl ComponentModelForAnalyzer {
                     &instance,
                 ) {
                     Ok((_source, route)) => VerifyRouteResult {
-                        using_node: target.node_path(),
+                        using_node: target.abs_moniker().clone(),
                         capability: resolver.resolver,
                         result: Ok(route.into()),
                     },
                     Err(err) => VerifyRouteResult {
-                        using_node: target.node_path(),
+                        using_node: target.abs_moniker().clone(),
                         capability: resolver.resolver,
                         result: Err(AnalyzerModelError::from(err).into()),
                     },
@@ -811,25 +803,25 @@ impl ComponentModelForAnalyzer {
                         let mut route = RouteMap::new();
                         route.push(RouteSegment::ProvideAsBuiltin { capability: decl });
                         VerifyRouteResult {
-                            using_node: target.node_path(),
+                            using_node: target.abs_moniker().clone(),
                             capability: resolver.resolver,
                             result: Ok(route.into()),
                         }
                     }
                     Err(err) => VerifyRouteResult {
-                        using_node: target.node_path(),
+                        using_node: target.abs_moniker().clone(),
                         capability: resolver.resolver,
                         result: Err(err.into()),
                     },
                 }
             }
             Ok(None) => VerifyRouteResult {
-                using_node: target.node_path(),
+                using_node: target.abs_moniker().clone(),
                 capability: "".into(),
                 result: Err(AnalyzerModelError::MissingResolverForScheme(scheme.to_string()).into()),
             },
             Err(err) => VerifyRouteResult {
-                using_node: target.node_path(),
+                using_node: target.abs_moniker().clone(),
                 capability: "".into(),
                 result: Err(AnalyzerModelError::from(err).into()),
             },
@@ -843,7 +835,7 @@ impl ComponentModelForAnalyzer {
             Err(err) => Err(err.into()),
         };
         VerifyRouteResult {
-            using_node: target.node_path(),
+            using_node: target.abs_moniker().clone(),
             capability: check_route.capability,
             result: check_result,
         }
@@ -1096,7 +1088,7 @@ pub struct Child {
 mod tests {
     use {
         super::ModelBuilderForAnalyzer,
-        crate::{environment::BOOT_SCHEME, node_path::NodePath, ComponentModelForAnalyzer},
+        crate::{environment::BOOT_SCHEME, ComponentModelForAnalyzer},
         anyhow::Result,
         cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
@@ -1163,18 +1155,17 @@ mod tests {
         let model = build_model_result.model.unwrap();
         assert_eq!(model.len(), 2);
 
-        let root_instance =
-            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
+        let root_instance = model.get_instance(&AbsoluteMoniker::root()).expect("root instance");
         let child_instance = model
-            .get_instance(&NodePath::absolute_from_vec(vec!["child"]))
+            .get_instance(&AbsoluteMoniker::parse_str("/child").unwrap())
             .expect("child instance");
 
-        let other_id = NodePath::absolute_from_vec(vec!["other"]);
-        let get_other_result = model.get_instance(&other_id);
+        let other_moniker = AbsoluteMoniker::parse_str("/other").unwrap();
+        let get_other_result = model.get_instance(&other_moniker);
         assert_eq!(
             get_other_result.err().unwrap().to_string(),
             ComponentInstanceError::instance_not_found(
-                AbsoluteMoniker::parse_str(&other_id.to_string()).unwrap()
+                AbsoluteMoniker::parse_str(&other_moniker.to_string()).unwrap()
             )
             .to_string()
         );
@@ -1270,7 +1261,7 @@ mod tests {
         assert_eq!(model.len(), 2);
 
         let child_instance = model
-            .get_instance(&NodePath::absolute_from_vec(vec!["child"]))
+            .get_instance(&AbsoluteMoniker::parse_str("/child").unwrap())
             .expect("child instance");
 
         assert_eq!(child_instance.url(), absolute_child_url.as_str());
@@ -1297,8 +1288,7 @@ mod tests {
         let model = build_model_result.model.unwrap();
         assert_eq!(model.len(), 1);
 
-        let root_instance =
-            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
+        let root_instance = model.get_instance(&AbsoluteMoniker::root()).expect("root instance");
 
         // Panics if the future returned by `route_capability` was not ready immediately.
         // If no panic, discard the result.
@@ -1337,8 +1327,7 @@ mod tests {
         let model = build_model_result.model.unwrap();
         assert_eq!(model.len(), 1);
 
-        let root_instance =
-            model.get_instance(&NodePath::absolute_from_vec(vec![])).expect("root instance");
+        let root_instance = model.get_instance(&AbsoluteMoniker::root()).expect("root instance");
 
         // Panics if the future returned by `route_storage_and_backing_directory` was not ready immediately.
         // If no panic, discard the result.
@@ -1416,7 +1405,7 @@ mod tests {
         assert_eq!(model.len(), 2);
 
         let child_instance = model
-            .get_instance(&NodePath::absolute_from_vec(vec!["child"]))
+            .get_instance(&AbsoluteMoniker::parse_str("/child").unwrap())
             .expect("child instance");
 
         let get_child_runner_result = child_instance
