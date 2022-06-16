@@ -984,7 +984,7 @@ static void brcmf_sdio_rxfail(struct brcmf_sdio* bus, bool abort, bool rtx) {
   uint8_t hi, lo;
   zx_status_t err;
 
-  BRCMF_ERR_THROTTLE("%sterminate frame%s", abort ? "abort command, " : "",
+  BRCMF_WARN_THROTTLE("%sterminate frame%s", abort ? "abort command, " : "",
                      rtx ? ", send NAK" : "");
 
   if (abort) {
@@ -1174,7 +1174,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
   rx_seq = (uint8_t)(swheader & SDPCM_SEQ_MASK);
   rd->channel = (swheader & SDPCM_CHANNEL_MASK) >> SDPCM_CHANNEL_SHIFT;
   if (len > MAX_RX_DATASZ && rd->channel != SDPCM_CONTROL_CHANNEL && type != BRCMF_SDIO_FT_SUPER) {
-    BRCMF_ERR_THROTTLE("HW header length too long");
+    BRCMF_WARN_THROTTLE("HW header length too long");
     bus->sdcnt.rx_toolong++;
     brcmf_sdio_rxfail(bus, false, false);
     rd->len = 0;
@@ -1294,7 +1294,7 @@ static zx_status_t brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
       brcmf_sdio_acquire_rx_space(bus, num_entries);
   if (glom_frames.size() != num_entries) {
     // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
-    BRCMF_ERR_THROTTLE("Failed to acquire RX space for %u glom entries", num_entries);
+    BRCMF_WARN_THROTTLE("Failed to acquire RX space for %u glom entries", num_entries);
     ++bus->sdcnt.rx_outofbufs;
     return ZX_ERR_NO_RESOURCES;
   }
@@ -1614,7 +1614,7 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       frame = brcmf_sdio_acquire_single_rx_space(bus);
       if (!frame) {
       // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
-        BRCMF_ERR_THROTTLE("Failed to acquire frame for RX");
+        BRCMF_WARN_THROTTLE("Failed to acquire frame for RX");
         ++bus->sdcnt.rx_hdrfail;
         ++bus->sdcnt.rx_outofbufs;
         brcmf_sdio_rxfail(bus, false, false);
@@ -1654,7 +1654,7 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       frame = brcmf_sdio_acquire_single_rx_space(bus);
       if (!frame) {
       // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
-        BRCMF_ERR_THROTTLE("Failed to acquire rx frame");
+        BRCMF_WARN_THROTTLE("Failed to acquire rx frame");
         brcmf_sdio_rxfail(bus, false, false);
         ++bus->sdcnt.rx_outofbufs;
         break;
@@ -1721,7 +1721,7 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
         bus->rx_glom->glom_desc = std::move(*frame);
         ZX_ASSERT(frame->Size() == bus->rx_glom->glom_desc.Size());
       } else {
-        BRCMF_ERR("glom superframe without descriptor");
+        BRCMF_WARN_THROTTLE("glom superframe without descriptor");
         brcmf_sdio_rxfail(bus, false, false);
       }
       // Prepare the descriptor for the next read.
