@@ -79,14 +79,21 @@ async fn main() -> Result<(), Error> {
                         event_for_test_protocol
                             .signal_handle(zx::Signals::USER_0, zx::Signals::NONE)?;
 
-                        responder.send(&mut Ok(()))?;
+                        // Failing to send the response is fine, the pwrbtn-monitor code doesn't
+                        // wait for a reply to this call and therefore it might have closed the
+                        // channel by the time we try to send the reply.
+                        let _ = responder.send(&mut Ok(()));
 
                         if let Some(send_test_result) = send_test_result {
                             send_test_result.send(()).expect("failed to send test completion");
                         }
                     }
-                    _ => {
-                        panic!("only expecting calls to Poweroff");
+
+                    Some(other) => {
+                        panic!("only expecting calls to Poweroff, but got: {:?}", other);
+                    }
+                    None => {
+                        // the connection closed
                     }
                 }
                 Ok(())

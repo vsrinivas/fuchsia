@@ -53,7 +53,6 @@
                 "fuchsia.driver.development.DriverIndex",
                 "fuchsia.driver.index.DriverIndex",
                 "fuchsia.driver.registrar.DriverRegistrar",
-                "fuchsia.fshost.Admin",
                 "fuchsia.kernel.RootJob",
 
                 // This is only used when the kernel commandline flag devmgr.enable-ephemeral

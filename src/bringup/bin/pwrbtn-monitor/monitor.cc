@@ -54,6 +54,12 @@ zx_status_t PowerButtonMonitor::SendPoweroff() {
   }
   auto admin_client = fidl::BindSyncClient(std::move(connect_result.value()));
   auto resp = admin_client->Poweroff();
+
+  // Check if there was any transport error, note that we don't actually wait
+  // to see if the request is successful. In the success case the reboot call
+  // blocks until the device turns off. In the failure case we'll get a error,
+  // but there's nothing we can really do with it so instead we return so we
+  // can listne for more key events.
   if (!resp.ok()) {
     printf("pwrbtn-monitor: Call to statecontrol failed: %s\n", resp.FormatDescription().c_str());
     return resp.status();

@@ -156,6 +156,7 @@
                     "/bootstrap/console-launcher",
                     "/bootstrap/driver_manager",
                     "/bootstrap/netsvc",
+                    "/bootstrap/pwrbtn-monitor",
                     "/bootstrap/svchost",
                     "/core",
                     "/core/debug_agent",

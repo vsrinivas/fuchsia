@@ -50,7 +50,10 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: "#test-driver",
+            to: [
+                "#pwrbtn-monitor",
+                "#test-driver",
+            ],
         },
         {
             protocol: "fuchsia.boot.WriteOnlyLog",

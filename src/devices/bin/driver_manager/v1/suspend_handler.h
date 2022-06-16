@@ -31,13 +31,6 @@ class SuspendHandler {
 
   void Suspend(uint32_t flags, SuspendCallback callback);
 
-  // Shut down all filesystems (and fshost itself) by calling
-  // fuchsia.fshost.Admin.Shutdown(). Note that this is called from multiple
-  // different locations; during suspension, and in a low-memory situation.
-  // Currently, both of these calls happen on the same dispatcher thread, but
-  // consider thread safety when refactoring.
-  void ShutdownFilesystems(fit::callback<void(zx_status_t)> callback);
-
   // Suspend all of the devices where the device driver lives in storage. This should be called
   // by fshost as it is shutting down.
   void UnregisterSystemStorageForShutdown(SuspendCallback callback);

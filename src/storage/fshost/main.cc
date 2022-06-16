@@ -202,6 +202,9 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
 
   fs_manager.ReadyForShutdown();
 
+  // Used by //src/tests/oom/oom_tests.go as part of an E2E test
+  FX_LOGS(INFO) << "fshost: lifecycle handler ready";
+
   // If there is a ramdisk, setup the ramctl filesystems.
   zx::vmo ramdisk_vmo;
   status = get_ramdisk(&ramdisk_vmo);

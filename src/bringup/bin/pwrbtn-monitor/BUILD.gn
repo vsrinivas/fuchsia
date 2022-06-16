@@ -18,13 +18,19 @@ executable("pwrbtn-monitor") {
     "main.cc",
     "monitor.cc",
     "monitor.h",
+    "oom_watcher.cc",
+    "oom_watcher.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
+    "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/fidl/fuchsia.power.button:fuchsia.power.button_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
@@ -34,6 +40,8 @@ executable("pwrbtn-monitor") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
   ]
+
+  public_deps = [ "//zircon/system/ulib/zx" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
@@ -47,6 +55,9 @@ test("pwrbtn-monitor-unittests-bin") {
     "monitor-test.cc",
     "monitor.cc",
     "monitor.h",
+    "oom_watcher-test.cc",
+    "oom_watcher.cc",
+    "oom_watcher.h",
   ]
 
   deps = [
@@ -55,6 +66,7 @@ test("pwrbtn-monitor-unittests-bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
