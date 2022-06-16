@@ -35,7 +35,7 @@ use {
         environment::{
             component_has_relative_url, find_first_absolute_ancestor_url, RunnerRegistry,
         },
-        error::{ComponentInstanceError, RoutingError},
+        error::{AvailabilityRoutingError, ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
         route_capability, route_event_stream_capability, route_storage_and_backing_directory,
         DebugRouteMapper, RouteRequest, RouteSource,
@@ -594,6 +594,11 @@ impl ComponentModelForAnalyzer {
                     target,
                 ) {
                     Ok((source, route)) => (Ok((source, vec![route])), capability),
+                    // Ignore any route that failed due to a void offer to a target with an
+                    // optional dependency on the capability.
+                    Err(RoutingError::AvailabilityRoutingError(
+                        AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+                    )) => return vec![],
                     Err(err) => (Err(err.into()), capability),
                 }
             }
@@ -606,6 +611,11 @@ impl ComponentModelForAnalyzer {
                             target,
                         ) {
                             Ok((source, route)) => (Ok((source, vec![route])), capability),
+                            // Ignore any route that failed due to a void offer to a target with an
+                            // optional dependency on the capability.
+                            Err(RoutingError::AvailabilityRoutingError(
+                                AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+                            )) => return vec![],
                             Err(err) => (Err(err.into()), capability),
                         }
                     }
@@ -622,6 +632,11 @@ impl ComponentModelForAnalyzer {
                     target,
                 ) {
                     Ok((source, route)) => (Ok((source, vec![route])), capability),
+                    // Ignore any route that failed due to a void offer to a target with an
+                    // optional dependency on the capability.
+                    Err(RoutingError::AvailabilityRoutingError(
+                        AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+                    )) => return vec![],
                     Err(err) => (Err(err.into()), capability),
                 }
             }
@@ -632,6 +647,11 @@ impl ComponentModelForAnalyzer {
                     target,
                 ) {
                     Ok((source, route)) => (Ok((source, vec![route])), capability),
+                    // Ignore any route that failed due to a void offer to a target with an
+                    // optional dependency on the capability.
+                    Err(RoutingError::AvailabilityRoutingError(
+                        AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+                    )) => return vec![],
                     Err(err) => (Err(err.into()), capability),
                 }
             }
@@ -645,6 +665,11 @@ impl ComponentModelForAnalyzer {
                         )),
                         capability,
                     ),
+                    // Ignore any route that failed due to a void offer to a target with an
+                    // optional dependency on the capability.
+                    Err(RoutingError::AvailabilityRoutingError(
+                        AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+                    )) => return vec![],
                     Err(err) => (Err(err.into()), capability),
                 }
             }

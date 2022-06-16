@@ -2616,4 +2616,62 @@ mod tests {
             }],
         );
     }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: Offers protocol "fuchsia.examples.Echo" from void to b
+    /// b: Uses "fuchsia.examples.Echo" optionally
+    #[fuchsia::test]
+    async fn route_maps_do_not_include_valid_void_routes() {
+        let a_url = make_test_url("a");
+        let b_url = "base://b/".to_string();
+
+        let use_protocol_decl = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Parent,
+            source_name: "fuchsia.examples.Echo".into(),
+            target_path: CapabilityPath::try_from("/svc/fuchsia.examples.Echo").unwrap(),
+            dependency_type: DependencyType::Strong,
+            availability: Availability::Optional,
+        });
+        let offer_protocol_decl = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Void,
+            source_name: "fuchsia.examples.Echo".into(),
+            target_name: "fuchsia.examples.Echo".into(),
+            target: OfferTarget::static_child("b".to_string()),
+            dependency_type: DependencyType::Strong,
+            availability: Availability::Optional,
+        });
+
+        let components = vec![
+            (
+                a_url.clone(),
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new().name("b").url(&b_url))
+                    .offer(offer_protocol_decl.clone())
+                    .build(),
+            ),
+            (
+                b_url,
+                ComponentDeclBuilder::new_empty_component()
+                    .add_program("dwarf")
+                    .use_(use_protocol_decl.clone())
+                    .build(),
+            ),
+        ];
+
+        let test =
+            RoutingTestBuilderForAnalyzer::new_with_custom_urls(a_url, components).build().await;
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
+
+        let route_maps = test.model.check_routes_for_instance(
+            &b_component,
+            &HashSet::from_iter(vec![CapabilityTypeName::Protocol].into_iter()),
+        );
+        assert_eq!(route_maps.len(), 1);
+        let protocols =
+            route_maps.get(&CapabilityTypeName::Protocol).expect("expected protocol results");
+        assert_eq!(protocols, &vec![]);
+    }
 }
