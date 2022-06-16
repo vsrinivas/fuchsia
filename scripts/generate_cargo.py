@@ -182,7 +182,12 @@ def write_toml_file(
         gn_cargo_dir, for_workspace, version):
     rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
 
-    edition = "2018" if "--edition=2018" in metadata["rustflags"] else "2015"
+    editions = [
+        flag.split("=")[1]
+        for flag in metadata["rustflags"]
+        if flag.startswith("--edition=")
+    ]
+    edition = editions[0] if editions else "2015"
 
     if metadata["type"] in ["rust_library", "rust_proc_macro",
                             "static_library"]:
