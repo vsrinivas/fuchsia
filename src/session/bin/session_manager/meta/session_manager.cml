@@ -226,6 +226,20 @@
             to: "#session",
         },
         {
+            // Routed to session-manager via lowpanservice.core_shard.cml
+            protocol: [
+                "fuchsia.lowpan.device.CountersConnector",
+                "fuchsia.lowpan.device.DeviceConnector",
+                "fuchsia.lowpan.device.DeviceExtraConnector",
+                "fuchsia.lowpan.device.EnergyScanConnector",
+                "fuchsia.lowpan.DeviceWatcher",
+                "fuchsia.lowpan.thread.DatasetConnector",
+                "fuchsia.lowpan.thread.MeshcopConnector",
+            ],
+            from: "parent",
+            to: "#session",
+        },
+        {
             // Routed to session-manager via account.core_shard.cml
             protocol: [ "fuchsia.identity.account.AccountManager" ],
             from: "parent",

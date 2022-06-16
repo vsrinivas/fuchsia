@@ -56,6 +56,19 @@
     ],
     offer: [
         {
+            protocol: [
+                "fuchsia.lowpan.device.CountersConnector",
+                "fuchsia.lowpan.device.DeviceConnector",
+                "fuchsia.lowpan.device.DeviceExtraConnector",
+                "fuchsia.lowpan.device.EnergyScanConnector",
+                "fuchsia.lowpan.DeviceWatcher",
+                "fuchsia.lowpan.thread.DatasetConnector",
+                "fuchsia.lowpan.thread.MeshcopConnector",
+            ],
+            from: "#lowpanservice",
+            to: [ "#session-manager" ],
+        },
+        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [ "#lowpanservice" ],
