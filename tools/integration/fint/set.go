@@ -98,8 +98,8 @@ func setImpl(
 			TargetArch: strings.ToLower(staticSpec.TargetArch.String()),
 			Variants:   staticSpec.Variants,
 		},
-		RustRbeEnable: staticSpec.RustRbeEnable,
-		EnableRbe:     staticSpec.EnableRbe,
+		// True if any toolchain is using RBE and needs reproxy to run.
+		EnableRbe: staticSpec.RustRbeEnable || staticSpec.CxxRbeEnable || staticSpec.EnableRbe, /* deprecated */
 	}
 
 	if contextSpec.ArtifactDir != "" {
