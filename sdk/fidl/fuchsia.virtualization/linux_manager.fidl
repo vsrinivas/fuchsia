@@ -53,4 +53,13 @@ protocol LinuxManager {
         label string;
         info LinuxGuestInfo;
     });
+
+    /// Clears the stateful data. This includes any installed containers and any user data
+    /// they may contain.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if this is called while the VM is running.
+    /// Returns ZX_ERR_IO if there was an IO failure while performing the
+    /// operation.
+    @transitional
+    WipeData() -> (struct {}) error zx.status;
 };
