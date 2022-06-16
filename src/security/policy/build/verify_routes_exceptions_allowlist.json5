@@ -25,30 +25,9 @@
                                         capability_use_disallowed: {
                                             cap: "bin",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "bootstrap",
-                                                            collection: null,
-                                                            rep: "bootstrap",
-                                                        },
-                                                        {
-                                                            name: "fshost",
-                                                            collection: null,
-                                                            rep: "fshost",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/bootstrap/fshost",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap",
                                         },
                                     },
                                 },
@@ -68,30 +47,9 @@
                                         capability_use_disallowed: {
                                             cap: "build-info",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "bootstrap",
-                                                            collection: null,
-                                                            rep: "bootstrap",
-                                                        },
-                                                        {
-                                                            name: "fshost",
-                                                            collection: null,
-                                                            rep: "fshost",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/bootstrap/fshost",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap",
                                         },
                                     },
                                 },
@@ -111,30 +69,9 @@
                                         capability_use_disallowed: {
                                             cap: "deprecated-misc-storage",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "bootstrap",
-                                                            collection: null,
-                                                            rep: "bootstrap",
-                                                        },
-                                                        {
-                                                            name: "fshost",
-                                                            collection: null,
-                                                            rep: "fshost",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/bootstrap/fshost",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap",
                                         },
                                     },
                                 },
@@ -154,35 +91,9 @@
                                         capability_use_disallowed: {
                                             cap: "build-info",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "bootstrap",
-                                                            collection: null,
-                                                            rep: "bootstrap",
-                                                        },
-                                                        {
-                                                            name: "fshost",
-                                                            collection: null,
-                                                            rep: "fshost",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/bootstrap/fshost",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                    {
-                                                        name: "fshost",
-                                                        collection: null,
-                                                        rep: "fshost",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap/fshost",
                                         },
                                     },
                                 },
@@ -217,20 +128,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "full-resolver",
-                                                    collection: null,
-                                                    rep: "full-resolver",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/full-resolver",
                                         capability_id: "fuchsia.pkg.PackageResolver",
                                     },
                                 },
@@ -248,20 +146,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "full-resolver",
-                                                    collection: null,
-                                                    rep: "full-resolver",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/full-resolver",
                                         capability_id: "fuchsia.component.resolution.Resolver",
                                     },
                                 },
@@ -279,20 +164,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "full-resolver",
-                                                    collection: null,
-                                                    rep: "full-resolver",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/full-resolver",
                                         capability_id: "fuchsia.logger.LogSink",
                                     },
                                 },
@@ -312,35 +184,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageResolver",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "core",
-                                                            collection: null,
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            name: "pkg-resolver",
-                                                            collection: null,
-                                                            rep: "pkg-resolver",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-resolver",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                    {
-                                                        name: "console-launcher",
-                                                        collection: null,
-                                                        rep: "console-launcher",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap/console-launcher",
                                         },
                                     },
                                 },
@@ -360,35 +206,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageResolver",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "core",
-                                                            collection: null,
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            name: "pkg-resolver",
-                                                            collection: null,
-                                                            rep: "pkg-resolver",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-resolver",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                    {
-                                                        name: "driver_index",
-                                                        collection: null,
-                                                        rep: "driver_index",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap/driver_index",
                                         },
                                     },
                                 },
@@ -408,35 +228,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageResolver",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "core",
-                                                            collection: null,
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            name: "pkg-resolver",
-                                                            collection: null,
-                                                            rep: "pkg-resolver",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-resolver",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                    {
-                                                        name: "driver_manager",
-                                                        collection: null,
-                                                        rep: "driver_manager",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap/driver_manager",
                                         },
                                     },
                                 },
@@ -456,35 +250,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageResolver",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "core",
-                                                            collection: null,
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            name: "pkg-resolver",
-                                                            collection: null,
-                                                            rep: "pkg-resolver",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-resolver",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                    {
-                                                        name: "full_resolver",
-                                                        collection: null,
-                                                        rep: "full_resolver",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap/full_resolver",
                                         },
                                     },
                                 },
@@ -504,35 +272,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageResolver",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            name: "core",
-                                                            collection: null,
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            name: "pkg-resolver",
-                                                            collection: null,
-                                                            rep: "pkg-resolver",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-resolver",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        name: "bootstrap",
-                                                        collection: null,
-                                                        rep: "bootstrap",
-                                                    },
-                                                    {
-                                                        name: "netsvc",
-                                                        collection: null,
-                                                        rep: "netsvc",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/bootstrap/netsvc",
                                         },
                                     },
                                 },
@@ -551,30 +293,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageResolver",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            collection: null,
-                                                            name: "core",
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            collection: null,
-                                                            name: "pkg-resolver",
-                                                            rep: "pkg-resolver",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-resolver",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        collection: null,
-                                                        name: "core",
-                                                        rep: "core",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/core",
                                         },
                                     },
                                 },
@@ -592,20 +313,8 @@
                                 routing_error: {
                                     expose_from_child_expose_not_found: {
                                         capability_id: "fuchsia.amber.Control",
-                                        child_moniker: {
-                                            collection: null,
-                                            name: "appmgr",
-                                            rep: "appmgr",
-                                        },
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    collection: null,
-                                                    name: "core",
-                                                    rep: "core",
-                                                },
-                                            ],
-                                        },
+                                        child_moniker: "appmgr",
+                                        moniker: "/core",
                                     },
                                 },
                             },
@@ -622,20 +331,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "battery_manager",
-                                                    collection: null,
-                                                    rep: "battery_manager",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/battery_manager",
                                         capability_id: "fuchsia.hardware.power.Source",
                                     },
                                 },
@@ -654,20 +350,7 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.kernel.RootJobForInspect",
                                             source_moniker: "component_manager",
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        collection: null,
-                                                        name: "core",
-                                                        rep: "core",
-                                                    },
-                                                    {
-                                                        collection: null,
-                                                        name: "mem",
-                                                        rep: "mem",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/core/mem",
                                         },
                                     },
                                 },
@@ -685,20 +368,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "system-metrics-logger",
-                                                    collection: null,
-                                                    rep: "system-metrics-logger",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/system-metrics-logger",
                                         capability_id: "fuchsia.device.Controller",
                                     },
                                 },
@@ -715,20 +385,7 @@
                                 routing_error: {
                                     use_from_parent_not_found: {
                                         capability_id: "fuchsia.pkg.LocalMirror",
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    collection: null,
-                                                    name: "core",
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "pkg-resolver",
-                                                    rep: "pkg-resolver",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/pkg-resolver",
                                     },
                                 },
                             },
@@ -747,35 +404,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageCache",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            collection: null,
-                                                            name: "core",
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            collection: null,
-                                                            name: "pkg-cache",
-                                                            rep: "pkg-cache",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-cache",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        collection: null,
-                                                        name: "core",
-                                                        rep: "core",
-                                                    },
-                                                    {
-                                                        collection: null,
-                                                        name: "pkg-cache",
-                                                        rep: "pkg-cache",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/core/pkg-cache",
                                         },
                                     },
                                 },
@@ -795,35 +426,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.PackageResolver",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            collection: null,
-                                                            name: "core",
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            collection: null,
-                                                            name: "pkg-resolver",
-                                                            rep: "pkg-resolver",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-resolver",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        collection: null,
-                                                        name: "core",
-                                                        rep: "core",
-                                                    },
-                                                    {
-                                                        collection: null,
-                                                        name: "pkg-resolver",
-                                                        rep: "pkg-resolver",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/core/pkg-resolver",
                                         },
                                     },
                                 },
@@ -843,35 +448,9 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.pkg.RetainedPackages",
                                             source_moniker: {
-                                                component_instance: {
-                                                    path: [
-                                                        {
-                                                            collection: null,
-                                                            name: "core",
-                                                            rep: "core",
-                                                        },
-                                                        {
-                                                            collection: null,
-                                                            name: "pkg-cache",
-                                                            rep: "pkg-cache",
-                                                        },
-                                                    ],
-                                                },
+                                                component_instance: "/core/pkg-cache",
                                             },
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        collection: null,
-                                                        name: "core",
-                                                        rep: "core",
-                                                    },
-                                                    {
-                                                        collection: null,
-                                                        name: "pkg-cache",
-                                                        rep: "pkg-cache",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/core/pkg-cache",
                                         },
                                     },
                                 },
@@ -889,15 +468,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     offer_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core",
                                         capability_id: "fuchsia.device.Controller",
                                     },
                                 },
@@ -914,15 +485,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     offer_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core",
                                         capability_id: "fuchsia.hardware.temperature.Device",
                                     },
                                 },
@@ -939,30 +502,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "test_manager",
-                                                    collection: null,
-                                                    rep: "test_manager",
-                                                },
-                                                {
-                                                    name: "starnix_test_runner",
-                                                    collection: null,
-                                                    rep: "starnix_test_runner",
-                                                },
-                                                {
-                                                    name: "starnix_runner",
-                                                    collection: null,
-                                                    rep: "starnix_runner",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/test_manager/starnix_test_runner/starnix_runner",
                                         capability_id: "fuchsia.component.runner.ComponentRunner",
                                     },
                                 },
@@ -979,30 +519,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "test_manager",
-                                                    collection: null,
-                                                    rep: "test_manager",
-                                                },
-                                                {
-                                                    name: "starnix_test_runner",
-                                                    collection: null,
-                                                    rep: "starnix_test_runner",
-                                                },
-                                                {
-                                                    name: "starnix_runner",
-                                                    collection: null,
-                                                    rep: "starnix_runner",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/test_manager/starnix_test_runner/starnix_runner",
                                         capability_id: "fuchsia.component.Realm",
                                     },
                                 },
@@ -1021,25 +538,7 @@
                                         capability_use_disallowed: {
                                             cap: "fuchsia.kernel.VmexResource",
                                             source_moniker: "component_manager",
-                                            target_moniker: {
-                                                path: [
-                                                    {
-                                                        collection: null,
-                                                        name: "core",
-                                                        rep: "core",
-                                                    },
-                                                    {
-                                                        collection: null,
-                                                        name: "test_manager",
-                                                        rep: "test_manager",
-                                                    },
-                                                    {
-                                                        collection: null,
-                                                        name: "starnix_unit_test_runner",
-                                                        rep: "starnix_unit_test_runner",
-                                                    },
-                                                ],
-                                            },
+                                            target_moniker: "/core/test_manager/starnix_unit_test_runner",
                                         },
                                     },
                                 },
@@ -1058,20 +557,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "bt-a2dp",
-                                                    collection: null,
-                                                    rep: "bt-a2dp",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/bt-a2dp",
                                         capability_id: "fuchsia.power.battery.BatteryManager",
                                     },
                                 },
@@ -1089,20 +575,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     offer_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "bt-a2dp",
-                                                    collection: null,
-                                                    rep: "bt-a2dp",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/bt-a2dp",
                                         capability_id: "fuchsia.power.battery.BatteryManager",
                                     },
                                 },
@@ -1120,20 +593,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "bt-hfp-audio-gateway",
-                                                    collection: null,
-                                                    rep: "bt-hfp-audio-gateway",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/bt-hfp-audio-gateway",
                                         capability_id: "fuchsia.power.battery.BatteryManager",
                                     },
                                 },
@@ -1150,20 +610,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "vulkan_loader",
-                                                    collection: null,
-                                                    rep: "vulkan_loader",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/vulkan_loader",
                                         capability_id: "fuchsia.memorypressure.Provider",
                                     },
                                 },
@@ -1181,20 +628,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "wlancfg",
-                                                    collection: null,
-                                                    rep: "wlancfg",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/wlancfg",
                                         capability_id: "fuchsia.location.sensor.WlanBaseStationWatcher",
                                     },
                                 },
@@ -1212,20 +646,7 @@
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    name: "core",
-                                                    collection: null,
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    name: "omaha-client-service",
-                                                    collection: null,
-                                                    rep: "omaha-client-service",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/omaha-client-service",
                                         capability_id: "fuchsia.update.config.OptOut",
                                     },
                                 },
@@ -1236,34 +657,21 @@
                 },
                 {
                     // `ProcessorCreator` is not present in all products.
-                    "using_node": "/core/audio_core",
-                    "capability": "fuchsia.audio.effects.ProcessorCreator",
-                    "error": {
-                      "error": {
-                        "analyzer_model_error": {
-                          "routing_error": {
-                            "use_from_parent_not_found": {
-                              "moniker": {
-                                "path": [
-                                  {
-                                    "name": "core",
-                                    "collection": null,
-                                    "rep": "core"
-                                  },
-                                  {
-                                    "name": "audio_core",
-                                    "collection": null,
-                                    "rep": "audio_core"
-                                  }
-                                ]
-                              },
-                              "capability_id": "fuchsia.audio.effects.ProcessorCreator"
-                            }
-                          }
-                        }
-                      },
-                      "message": "A `use from parent` declaration was found at `/core/audio_core` for `fuchsia.audio.effects.ProcessorCreator`, but no matching `offer` declaration was found in the parent"
-                    }
+                    using_node: "/core/audio_core",
+                    capability: "fuchsia.audio.effects.ProcessorCreator",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: "/core/audio_core",
+                                        capability_id: "fuchsia.audio.effects.ProcessorCreator",
+                                    },
+                                },
+                            },
+                        },
+                        message: "A `use from parent` declaration was found at `/core/audio_core` for `fuchsia.audio.effects.ProcessorCreator`, but no matching `offer` declaration was found in the parent",
+                    },
                 },
             ],
         },
@@ -1302,25 +710,7 @@
                                 routing_error: {
                                     use_from_parent_not_found: {
                                         capability_id: "data",
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    collection: null,
-                                                    name: "core",
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "test_manager",
-                                                    rep: "test_manager",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "go_test_runner",
-                                                    rep: "go_test_runner",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/test_manager/go_test_runner",
                                     },
                                 },
                             },
@@ -1337,30 +727,7 @@
                                 routing_error: {
                                     use_from_parent_not_found: {
                                         capability_id: "data",
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    collection: null,
-                                                    name: "core",
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "test_manager",
-                                                    rep: "test_manager",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "starnix_test_runner",
-                                                    rep: "starnix_test_runner",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "starnix_test_runner",
-                                                    rep: "starnix_test_runner",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/test_manager/starnix_test_runner/starnix_test_runner",
                                     },
                                 },
                             },
@@ -1377,30 +744,7 @@
                                 routing_error: {
                                     use_from_parent_not_found: {
                                         capability_id: "tmp",
-                                        moniker: {
-                                            path: [
-                                                {
-                                                    collection: null,
-                                                    name: "core",
-                                                    rep: "core",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "test_manager",
-                                                    rep: "test_manager",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "starnix_test_runner",
-                                                    rep: "starnix_test_runner",
-                                                },
-                                                {
-                                                    collection: null,
-                                                    name: "starnix_test_runner",
-                                                    rep: "starnix_test_runner",
-                                                },
-                                            ],
-                                        },
+                                        moniker: "/core/test_manager/starnix_test_runner/starnix_test_runner",
                                     },
                                 },
                             },

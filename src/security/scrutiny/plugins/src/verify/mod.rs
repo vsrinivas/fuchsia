@@ -1075,15 +1075,7 @@ mod tests {
                                             "routing_error": {
                                                 "use_from_parent_not_found": {
                                                     "capability_id": "bad_dir",
-                                                    "moniker": {
-                                                        "path": [
-                                                            {
-                                                                "collection": null,
-                                                                "name": "child",
-                                                                "rep": "child"
-                                                            },
-                                                        ]
-                                                    }
+                                                    "moniker": "/child",
                                                 }
                                             }
                                         }
@@ -1113,14 +1105,8 @@ mod tests {
                                             "routing_error": {
                                                 "offer_from_child_instance_not_found": {
                                                     "capability_id": "protocol",
-                                                    "child_moniker": {
-                                                        "collection": null,
-                                                        "name": "missing_child",
-                                                        "rep": "missing_child",
-                                                    },
-                                                    "moniker": {
-                                                        "path": []
-                                                    }
+                                                    "child_moniker": "missing_child",
+                                                    "moniker": "/",
                                                 }
                                             }
                                         }
@@ -1166,15 +1152,7 @@ mod tests {
                                       "routing_error": {
                                           "use_from_parent_not_found": {
                                               "capability_id": "bad_dir",
-                                              "moniker": {
-                                                  "path": [
-                                                      {
-                                                          "collection": null,
-                                                          "name": "child",
-                                                          "rep": "child"
-                                                      },
-                                                  ]
-                                              }
+                                              "moniker": "/child",
                                           }
                                       }
                                   }
@@ -1250,14 +1228,8 @@ mod tests {
                                     "routing_error": {
                                         "offer_from_child_instance_not_found": {
                                             "capability_id": "protocol",
-                                            "child_moniker": {
-                                                "collection": null,
-                                                "name": "missing_child",
-                                                "rep": "missing_child",
-                                            },
-                                            "moniker": {
-                                                "path": []
-                                            }
+                                            "child_moniker": "missing_child",
+                                            "moniker": "/",
                                         }
                                     }
                                 }
@@ -1303,15 +1275,7 @@ mod tests {
                                       "routing_error": {
                                           "use_from_parent_not_found": {
                                               "capability_id": "bad_dir",
-                                              "moniker": {
-                                                  "path": [
-                                                      {
-                                                          "collection": null,
-                                                          "name": "child",
-                                                          "rep": "child"
-                                                      },
-                                                  ]
-                                              }
+                                              "moniker": "/child",
                                           }
                                       }
                                   }
@@ -1336,14 +1300,8 @@ mod tests {
                                           "routing_error": {
                                               "offer_from_child_instance_not_found": {
                                                   "capability_id": "protocol",
-                                                  "child_moniker": {
-                                                      "collection": null,
-                                                      "name": "missing_child",
-                                                      "rep": "missing_child",
-                                                  },
-                                                  "moniker": {
-                                                      "path": []
-                                                  }
+                                                  "child_moniker": "missing_child",
+                                                  "moniker": "/",
                                               }
                                           }
                                       }
@@ -1388,15 +1346,7 @@ mod tests {
                                       "routing_error": {
                                           "use_from_parent_not_found": {
                                               "capability_id": "bad_dir",
-                                              "moniker": {
-                                                  "path": [
-                                                      {
-                                                          "collection": null,
-                                                          "name": "child",
-                                                          "rep": "child"
-                                                      },
-                                                  ]
-                                              }
+                                              "moniker": "/child",
                                           }
                                       }
                                   }

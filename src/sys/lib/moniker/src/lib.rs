@@ -7,6 +7,8 @@ mod child_moniker;
 mod error;
 mod extended_moniker;
 mod relative_moniker;
+#[cfg(feature = "serde")]
+mod serde_ext;
 
 pub use self::{
     abs_moniker::{AbsoluteMoniker, AbsoluteMonikerBase},

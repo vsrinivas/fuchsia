@@ -12,9 +12,6 @@ use {
     std::{fmt, hash::Hash},
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 /// AbsoluteMonikerBase is the common trait for both InstancedAbsoluteMoniker
 /// and AbsoluteMoniker concrete types.
 ///
@@ -158,7 +155,6 @@ pub trait AbsoluteMonikerBase:
 /// instance ID of the child.
 ///
 /// Display notation: "/", "/name1", "/name1/name2", ...
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct AbsoluteMoniker {
     path: Vec<ChildMoniker>,

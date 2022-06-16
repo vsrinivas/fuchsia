@@ -9,9 +9,6 @@ use {
     std::{borrow::Cow, fmt},
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
     fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError>
     where
@@ -43,7 +40,6 @@ pub fn validate_moniker_part(name: Option<&str>, max_name_len: usize) -> Result<
 /// The child moniker does not distinguish between instances.
 ///
 /// Display notation: "name[:collection]".
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Eq, PartialEq, Debug, Clone, Hash, Default)]
 pub struct ChildMoniker {
     pub name: String,
