@@ -17,7 +17,7 @@ intel)
     magma-conformance-tests \
     msd_intel_gen_integration_tests \
     icd_load \
-    vkreadback \
+    vkreadback_test \
     vkloop \
     vkext_unprotected \
     mesa_integration_tests
@@ -28,7 +28,7 @@ mali)
     msd_arm_mali_nonhardware_tests \
     magma-conformance-tests-arm \
     icd_load \
-    vkreadback \
+    vkreadback_test \
     vkloop \
     vkext_protected \
     vkext_unprotected \
