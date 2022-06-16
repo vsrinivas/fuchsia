@@ -68,6 +68,36 @@ pub trait Resolver: std::fmt::Debug + Sync + Sized {
     ) -> Result<PackageDirectory, pkg::ResolveError>;
 }
 
+// How the package directory was resolved.
+enum PackageWithSource {
+    Base(PackageDirectory),
+    Eager(PackageDirectory),
+    Tuf(PackageDirectory),
+    Cache(PackageDirectory),
+}
+
+impl PackageWithSource {
+    fn source(&self) -> &'static str {
+        use PackageWithSource::*;
+        match self {
+            Base(_) => "base pinned",
+            Eager(_) => "eager package manager",
+            Tuf(_) => "tuf ephemeral resolution",
+            Cache(_) => "cache fallback",
+        }
+    }
+
+    fn into_package(self) -> PackageDirectory {
+        use PackageWithSource::*;
+        match self {
+            Base(pkg) => pkg,
+            Eager(pkg) => pkg,
+            Tuf(pkg) => pkg,
+            Cache(pkg) => pkg,
+        }
+    }
+}
+
 #[async_trait]
 impl Resolver for QueuedResolver {
     async fn resolve(
@@ -76,97 +106,19 @@ impl Resolver for QueuedResolver {
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
     ) -> Result<PackageDirectory, pkg::ResolveError> {
         trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
-
-        // Base pin.
-        let package_inspect = self.inspect.resolve(&pkg_url);
-        if let Some(blob) = self.base_package_index.is_unpinned_base_package(&pkg_url) {
-            let dir = self.cache.open(blob).await.map_err(|e| {
-                let error = e.to_resolve_error();
-                fx_log_err!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
-                error
-            })?;
-            fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
-            return Ok(dir);
-        }
-
-        // Rewrite the url.
-        let rewritten_url =
-            rewrite_url(&self.rewriter, &pkg_url).await.map_err(|e| e.to_resolve_error())?;
-        let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
-
-        // Attempt to use EagerPackageManager to resolve the package.
-        if let Some(eager_package_manager) = eager_package_manager {
-            if let Some(dir) =
-                eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|e| {
-                    fx_log_err!(
-                        "failed to resolve eager package at {} as {}: {:#}",
-                        pkg_url,
-                        rewritten_url,
-                        e
-                    );
-                    pkg::ResolveError::PackageNotFound
-                })?
-            {
-                fx_log_info!(
-                    "resolved {} as {} with eager package manager",
-                    pkg_url,
-                    rewritten_url,
-                );
-                return Ok(dir);
-            }
-        }
-
-        // Fetch from TUF.
-        let queued_fetch = self.queue.push(rewritten_url.clone(), ());
-        let pkg_or_status = match queued_fetch.await.expect("expected queue to be open") {
-            Ok((hash, dir)) => {
-                fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
-                Ok(dir)
-            }
-            Err(tuf_err) => {
-                match self.handle_cache_fallbacks(&*tuf_err, &pkg_url, &rewritten_url).await {
-                    Ok(Some((hash, pkg))) => {
-                        fx_log_info!(
-                            "resolved {} as {} to {} with cache_packages due to {:#}",
-                            pkg_url,
-                            rewritten_url,
-                            hash,
-                            anyhow!(tuf_err)
-                        );
-                        Ok(pkg)
-                    }
-                    Ok(None) => {
-                        let fidl_err = tuf_err.to_resolve_error();
-                        fx_log_err!(
-                            "failed to resolve {} as {} with TUF: {:#}",
-                            pkg_url,
-                            rewritten_url,
-                            anyhow!(tuf_err)
-                        );
-                        Err(fidl_err)
-                    }
-                    Err(fallback_err) => {
-                        let fidl_err = fallback_err.to_resolve_error();
-                        fx_log_err!(
-                            "failed to resolve {} as {} with cache packages fallback: {:#}. \
-                            fallback was attempted because TUF failed with {:#}",
-                            pkg_url,
-                            rewritten_url,
-                            anyhow!(fallback_err),
-                            anyhow!(tuf_err)
-                        );
-                        Err(fidl_err)
-                    }
-                }
-            }
-        };
-
-        let err_str = match pkg_or_status {
+        let resolve_res = self.resolve_with_source(pkg_url, eager_package_manager).await;
+        let err_str = match resolve_res {
             Ok(_) => "no error".to_string(),
             Err(ref e) => e.to_string(),
         };
-        trace::duration_end!("app", "resolve", "status" => err_str.as_str());
-        pkg_or_status
+        let source_str = match resolve_res {
+            Ok(ref package_with_source) => package_with_source.source(),
+            Err(_) => "no source because resolve failed",
+        };
+        trace::duration_end!(
+            "app", "resolve", "status" => err_str.as_str(), "source" => source_str
+        );
+        resolve_res.map(|pkg_with_source| pkg_with_source.into_package())
     }
 }
 
@@ -200,6 +152,96 @@ impl QueuedResolver {
         let fetcher =
             Self { queue, inspect, base_package_index, cache, rewriter, system_cache_list };
         (package_fetch_queue.into_future(), fetcher)
+    }
+
+    async fn resolve_with_source(
+        &self,
+        pkg_url: AbsolutePackageUrl,
+        eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
+    ) -> Result<PackageWithSource, pkg::ResolveError> {
+        // Base pin.
+        let package_inspect = self.inspect.resolve(&pkg_url);
+        if let Some(blob) = self.base_package_index.is_unpinned_base_package(&pkg_url) {
+            let dir = self.cache.open(blob).await.map_err(|e| {
+                let error = e.to_resolve_error();
+                fx_log_err!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
+                error
+            })?;
+            fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
+            return Ok(PackageWithSource::Base(dir));
+        }
+
+        // Rewrite the url.
+        let rewritten_url =
+            rewrite_url(&self.rewriter, &pkg_url).await.map_err(|e| e.to_resolve_error())?;
+        let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
+
+        // Attempt to use EagerPackageManager to resolve the package.
+        if let Some(eager_package_manager) = eager_package_manager {
+            if let Some(dir) =
+                eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|e| {
+                    fx_log_err!(
+                        "failed to resolve eager package at {} as {}: {:#}",
+                        pkg_url,
+                        rewritten_url,
+                        e
+                    );
+                    pkg::ResolveError::PackageNotFound
+                })?
+            {
+                fx_log_info!(
+                    "resolved {} as {} with eager package manager",
+                    pkg_url,
+                    rewritten_url,
+                );
+                return Ok(PackageWithSource::Eager(dir));
+            }
+        }
+
+        // Fetch from TUF.
+        let queued_fetch = self.queue.push(rewritten_url.clone(), ());
+        match queued_fetch.await.expect("expected queue to be open") {
+            Ok((hash, dir)) => {
+                fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
+                Ok(PackageWithSource::Tuf(dir))
+            }
+            Err(tuf_err) => {
+                match self.handle_cache_fallbacks(&*tuf_err, &pkg_url, &rewritten_url).await {
+                    Ok(Some((hash, pkg))) => {
+                        fx_log_info!(
+                            "resolved {} as {} to {} with cache_packages due to {:#}",
+                            pkg_url,
+                            rewritten_url,
+                            hash,
+                            anyhow!(tuf_err)
+                        );
+                        Ok(PackageWithSource::Cache(pkg))
+                    }
+                    Ok(None) => {
+                        let fidl_err = tuf_err.to_resolve_error();
+                        fx_log_err!(
+                            "failed to resolve {} as {} with TUF: {:#}",
+                            pkg_url,
+                            rewritten_url,
+                            anyhow!(tuf_err)
+                        );
+                        Err(fidl_err)
+                    }
+                    Err(fallback_err) => {
+                        let fidl_err = fallback_err.to_resolve_error();
+                        fx_log_err!(
+                            "failed to resolve {} as {} with cache packages fallback: {:#}. \
+                            fallback was attempted because TUF failed with {:#}",
+                            pkg_url,
+                            rewritten_url,
+                            anyhow!(fallback_err),
+                            anyhow!(tuf_err)
+                        );
+                        Err(fidl_err)
+                    }
+                }
+            }
+        }
     }
 
     // On success returns the package directory and the package's hash for easier logging (the
@@ -635,7 +677,6 @@ async fn resolve_and_reopen(
     let pkg_url =
         AbsolutePackageUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
     let pkg = package_resolver.resolve(pkg_url, eager_package_manager).await?;
-
     pkg.reopen(dir_request).map_err(|e| {
         fx_log_err!("failed to re-open directory for package url {}: {:#}", url, anyhow!(e));
         pkg::ResolveError::Internal
