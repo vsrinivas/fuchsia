@@ -136,8 +136,8 @@ uint32_t YuvBaseView::AddImage() {
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
   status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-  FX_CHECK(status == ZX_OK);
-  FX_CHECK(allocation_status == ZX_OK);
+  FX_CHECK(status == ZX_OK) << "status: " << status;
+  FX_CHECK(allocation_status == ZX_OK) << "allocation_status: " << allocation_status;
   FX_CHECK(buffer_collection_info.buffers[0].vmo != ZX_HANDLE_INVALID);
   FX_CHECK(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
            image_constraints.pixel_format.type);
