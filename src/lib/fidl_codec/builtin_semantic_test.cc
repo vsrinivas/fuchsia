@@ -110,10 +110,10 @@ TEST_F(BuiltinSemanticTest, CloneWrite) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Node", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Clone");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Node", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Clone");
   ASSERT_NE(method, nullptr);
   // Checks that the builtin semantic is defined for Clone.
   ASSERT_NE(method->semantic(), nullptr);
@@ -142,10 +142,10 @@ TEST_F(BuiltinSemanticTest, CloneRead) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Node", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Clone");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Node", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Clone");
   ASSERT_NE(method, nullptr);
   // Checks that the builtin semantic is defined for Clone.
   ASSERT_NE(method->semantic(), nullptr);
@@ -174,10 +174,10 @@ TEST_F(BuiltinSemanticTest, CloneFd) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Node", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Clone");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Node", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Clone");
   ASSERT_NE(method, nullptr);
   // Checks that the builtin semantic is defined for Clone.
   ASSERT_NE(method->semantic(), nullptr);
@@ -206,10 +206,10 @@ TEST_F(BuiltinSemanticTest, Open) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Open");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Directory", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Open");
   ASSERT_NE(method, nullptr);
   // Checks that the builtin semantic is defined for Open.
   ASSERT_NE(method->semantic(), nullptr);
@@ -238,10 +238,10 @@ TEST_F(BuiltinSemanticTest, CreateComponent) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.sys");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.sys/Launcher", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("CreateComponent");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.sys/Launcher", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("CreateComponent");
   ASSERT_NE(method, nullptr);
   // Checks that the builtin semantic is defined for CreateComponent.
   ASSERT_NE(method->semantic(), nullptr);
@@ -287,10 +287,10 @@ TEST_F(BuiltinSemanticTest, OpenShortDisplay) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Open");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Directory", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Open");
   ASSERT_NE(method, nullptr);
   // Checks that the short display is defined for Open.
   ASSERT_NE(method->short_display(), nullptr);
@@ -313,10 +313,10 @@ TEST_F(BuiltinSemanticTest, FileSeekShortDisplay) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/File", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Seek");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/File", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Seek");
   ASSERT_NE(method, nullptr);
   // Checks that the short display is defined for Seek.
   ASSERT_NE(method->short_display(), nullptr);
@@ -337,10 +337,10 @@ TEST_F(BuiltinSemanticTest, FileWriteShortDisplay) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/File", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Write");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/File", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Write");
   ASSERT_NE(method, nullptr);
   // Checks that the short display is defined for Write.
   ASSERT_NE(method->short_display(), nullptr);

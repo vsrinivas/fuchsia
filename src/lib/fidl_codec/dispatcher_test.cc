@@ -27,7 +27,7 @@
 
 namespace fidl_codec {
 
-using test::fidlcodec::examples::FidlCodecTestInterface;
+using test::fidlcodec::examples::FidlCodecTestProtocol;
 
 LibraryLoader* GetLoader();
 std::array<std::string, 2> TwoStringArrayFromVals(const std::string& v1, const std::string& v2);
@@ -53,8 +53,8 @@ class DispatcherTest : public ::testing::Test {
 TEST_F(DispatcherTest, TwoStringArrayInt) {
   fidl::IncomingMessageBuffer buffer;
   fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
-  InterceptRequest<FidlCodecTestInterface>(
-      message, [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) {
+  InterceptRequest<FidlCodecTestProtocol>(
+      message, [&](fidl::InterfacePtr<FidlCodecTestProtocol>& ptr) {
         ptr->TwoStringArrayInt(TwoStringArrayFromVals("harpo", "chico"), 1);
       });
 
@@ -73,7 +73,7 @@ TEST_F(DispatcherTest, TwoStringArrayInt) {
                         /*header_on_every_line=*/false);
   result->PrettyPrint(nullptr, printer);
   ASSERT_EQ(output.str(),
-            "sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"
+            "sent request test.fidlcodec.examples/FidlCodecTestProtocol.TwoStringArrayInt = {\n"
             "  arr: array<string> = [ \"harpo\", \"chico\" ]\n"
             "  i32: int32 = 1\n"
             "}\n");
@@ -82,8 +82,8 @@ TEST_F(DispatcherTest, TwoStringArrayInt) {
 TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
   fidl::IncomingMessageBuffer buffer;
   fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
-  InterceptRequest<FidlCodecTestInterface>(
-      message, [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) {
+  InterceptRequest<FidlCodecTestProtocol>(
+      message, [&](fidl::InterfacePtr<FidlCodecTestProtocol>& ptr) {
         ptr->TwoStringArrayInt(TwoStringArrayFromVals("harpo", "chico"), 1);
       });
 
@@ -104,7 +104,7 @@ TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
   ASSERT_EQ(output.str(),
             "sent request errors:\n"
             "  40: Not enough data to decode (needs 8, remains 7)\n"
-            "sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"
+            "sent request test.fidlcodec.examples/FidlCodecTestProtocol.TwoStringArrayInt = {\n"
             "  arr: array<string> = [ \"harpo\", \"chico\" ]\n"
             "  i32: int32 = 1\n"
             "}\n");

@@ -49,15 +49,15 @@ TEST(LibraryLoader, LoadSimple) {
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
-  Interface* found_interface = nullptr;
-  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  std::string kDesiredProtocolName = "fidl.test.frobinator/Frobinator";
+  Protocol* found_protocol = nullptr;
+  ASSERT_TRUE(library_ptr->GetProtocolByName(kDesiredProtocolName, &found_protocol));
 
-  ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
+  ASSERT_NE(found_protocol, nullptr) << "Could not find protocol " << kDesiredProtocolName;
 
   std::string kDesiredFullMethodName = "fidl.test.frobinator/Frobinator.Frob";
-  const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName(kDesiredFullMethodName, &found_method);
+  const ProtocolMethod* found_method = nullptr;
+  found_protocol->GetMethodByFullName(kDesiredFullMethodName, &found_method);
 
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
 }
@@ -75,15 +75,15 @@ TEST(LibraryLoader, LoadSimpleOneAtATime) {
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
-  Interface* found_interface = nullptr;
-  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  std::string kDesiredProtocolName = "fidl.test.frobinator/Frobinator";
+  Protocol* found_protocol = nullptr;
+  ASSERT_TRUE(library_ptr->GetProtocolByName(kDesiredProtocolName, &found_protocol));
 
-  ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
+  ASSERT_NE(found_protocol, nullptr) << "Could not find protocol " << kDesiredProtocolName;
 
   std::string kDesiredFullMethodName = "fidl.test.frobinator/Frobinator.Frob";
-  const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName(kDesiredFullMethodName, &found_method);
+  const ProtocolMethod* found_method = nullptr;
+  found_protocol->GetMethodByFullName(kDesiredFullMethodName, &found_method);
 
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
 }
@@ -136,22 +136,22 @@ TEST(LibraryLoader, FirstContentWins) {
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
-  Interface* found_interface = nullptr;
-  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  std::string kDesiredProtocolName = "fidl.test.frobinator/Frobinator";
+  Protocol* found_protocol = nullptr;
+  ASSERT_TRUE(library_ptr->GetProtocolByName(kDesiredProtocolName, &found_protocol));
 
-  ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
+  ASSERT_NE(found_protocol, nullptr) << "Could not find protocol " << kDesiredProtocolName;
 
   // We should find Frog, and not Frob.
   std::string kReplacedFullMethodName = "fidl.test.frobinator/Frobinator.Frob";
-  const InterfaceMethod* not_found_method = nullptr;
-  found_interface->GetMethodByFullName(kReplacedFullMethodName, &not_found_method);
+  const ProtocolMethod* not_found_method = nullptr;
+  found_protocol->GetMethodByFullName(kReplacedFullMethodName, &not_found_method);
 
   ASSERT_EQ(not_found_method, nullptr) << "Found replaced method " << kReplacedFullMethodName;
 
   std::string kDesiredFullMethodName = "fidl.test.frobinator/Frobinator.Frog";
-  const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName(kDesiredFullMethodName, &found_method);
+  const ProtocolMethod* found_method = nullptr;
+  found_protocol->GetMethodByFullName(kDesiredFullMethodName, &found_method);
 
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
   EXPECT_EQ("struct fidl.test.frobinator/FrobinatorFrogRequest {\n  string value;\n}",
@@ -171,18 +171,18 @@ TEST(LibraryLoader, InspectTypes) {
   Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.examples");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "test.fidlcodec.examples/FidlCodecTestInterface";
-  Interface* found_interface = nullptr;
-  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  std::string kDesiredProtocolName = "test.fidlcodec.examples/FidlCodecTestProtocol";
+  Protocol* found_protocol = nullptr;
+  ASSERT_TRUE(library_ptr->GetProtocolByName(kDesiredProtocolName, &found_protocol));
 
-  const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName(
-      "test.fidlcodec.examples/FidlCodecTestInterface.NullableXUnion", &found_method);
+  const ProtocolMethod* found_method = nullptr;
+  found_protocol->GetMethodByFullName(
+      "test.fidlcodec.examples/FidlCodecTestProtocol.NullableXUnion", &found_method);
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceNullableXUnionRequest {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolNullableXUnionRequest {\n"
       "  union test.fidlcodec.examples/IntStructXunion {\n"
       "    1: int32 variant_i;\n"
       "    2: struct test.fidlcodec.examples/TwoStringStruct {\n"
@@ -194,20 +194,20 @@ TEST(LibraryLoader, InspectTypes) {
       "}",
       found_method->request()->ToString(true));
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceNullableXUnionRequest {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolNullableXUnionRequest {\n"
       "  union test.fidlcodec.examples/IntStructXunion isu;\n"
       "  int32 i;\n"
       "}",
       found_method->request()->ToString(false));
 
   found_method = nullptr;
-  found_interface->GetMethodByFullName(
-      "test.fidlcodec.examples/FidlCodecTestInterface.I64BitsMessage", &found_method);
+  found_protocol->GetMethodByFullName(
+      "test.fidlcodec.examples/FidlCodecTestProtocol.I64BitsMessage", &found_method);
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceI64BitsMessageRequest {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolI64BitsMessageRequest {\n"
       "  bits test.fidlcodec.examples/I64Bits {\n"
       "    A = 4294967296;\n"
       "    B = 8589934592;\n"
@@ -218,13 +218,13 @@ TEST(LibraryLoader, InspectTypes) {
       found_method->request()->ToString(true));
 
   found_method = nullptr;
-  found_interface->GetMethodByFullName("test.fidlcodec.examples/FidlCodecTestInterface.Table",
-                                       &found_method);
+  found_protocol->GetMethodByFullName("test.fidlcodec.examples/FidlCodecTestProtocol.Table",
+                                      &found_method);
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceTableRequest {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolTableRequest {\n"
       "  table test.fidlcodec.examples/ValueTable {\n"
       "    1: int16 first_int16;\n"
       "    2: struct test.fidlcodec.examples/TwoStringStruct {\n"
@@ -245,13 +245,13 @@ TEST(LibraryLoader, InspectTypes) {
       found_method->request()->ToString(true));
 
   found_method = nullptr;
-  found_interface->GetMethodByFullName(
-      "test.fidlcodec.examples/FidlCodecTestInterface.DefaultEnumMessage", &found_method);
+  found_protocol->GetMethodByFullName(
+      "test.fidlcodec.examples/FidlCodecTestProtocol.DefaultEnumMessage", &found_method);
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceDefaultEnumMessageRequest {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolDefaultEnumMessageRequest {\n"
       "  enum test.fidlcodec.examples/DefaultEnum {\n"
       "    X = 23;\n"
       "  } ev;\n"
@@ -259,13 +259,13 @@ TEST(LibraryLoader, InspectTypes) {
       found_method->request()->ToString(true));
 
   found_method = nullptr;
-  found_interface->GetMethodByFullName(
-      "test.fidlcodec.examples/FidlCodecTestInterface.ShortUnionReserved", &found_method);
+  found_protocol->GetMethodByFullName(
+      "test.fidlcodec.examples/FidlCodecTestProtocol.ShortUnionReserved", &found_method);
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceShortUnionReservedRequest {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolShortUnionReservedRequest {\n"
       "  union test.fidlcodec.examples/U8U16UnionReserved {\n"
       "    1: uint8 variant_u8;\n"
       "    2: reserved;\n"
@@ -276,24 +276,24 @@ TEST(LibraryLoader, InspectTypes) {
       found_method->request()->ToString(true));
 
   found_method = nullptr;
-  found_interface->GetMethodByFullName("test.fidlcodec.examples/FidlCodecTestInterface.Array1",
-                                       &found_method);
+  found_protocol->GetMethodByFullName("test.fidlcodec.examples/FidlCodecTestProtocol.Array1",
+                                      &found_method);
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceArray1Request {\n  array<int32> "
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolArray1Request {\n  array<int32> "
       "b_1;\n}",
       found_method->request()->ToString(true));
 
   found_method = nullptr;
-  found_interface->GetMethodByFullName("test.fidlcodec.examples/FidlCodecTestInterface.Vector",
-                                       &found_method);
+  found_protocol->GetMethodByFullName("test.fidlcodec.examples/FidlCodecTestProtocol.Vector",
+                                      &found_method);
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct test.fidlcodec.examples/FidlCodecTestInterfaceVectorRequest {\n  vector<int32> "
+      "struct test.fidlcodec.examples/FidlCodecTestProtocolVectorRequest {\n  vector<int32> "
       "v_1;\n}",
       found_method->request()->ToString(true));
 }
@@ -310,19 +310,19 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.sys");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "test.fidlcodec.sys/ComponentController";
-  Interface* found_interface = nullptr;
-  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  std::string kDesiredProtocolName = "test.fidlcodec.sys/ComponentController";
+  Protocol* found_protocol = nullptr;
+  ASSERT_TRUE(library_ptr->GetProtocolByName(kDesiredProtocolName, &found_protocol));
 
-  const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName("test.fidlcodec.sys/ComponentController.OnDirectoryReady",
-                                       &found_method);
+  const ProtocolMethod* found_method = nullptr;
+  found_protocol->GetMethodByFullName("test.fidlcodec.sys/ComponentController.OnDirectoryReady",
+                                      &found_method);
 
   Ordinal64 correct_ordinal = found_method->ordinal();
-  const std::vector<const InterfaceMethod*>* ordinal_methods = loader.GetByOrdinal(correct_ordinal);
-  const InterfaceMethod* ordinal_method = (*ordinal_methods)[0];
+  const std::vector<const ProtocolMethod*>* ordinal_methods = loader.GetByOrdinal(correct_ordinal);
+  const ProtocolMethod* ordinal_method = (*ordinal_methods)[0];
   ASSERT_NE(ordinal_method, nullptr);
-  ASSERT_EQ(kDesiredInterfaceName, ordinal_method->enclosing_interface().name());
+  ASSERT_EQ(kDesiredProtocolName, ordinal_method->enclosing_protocol().name());
   ASSERT_EQ("OnDirectoryReady", ordinal_method->name());
 }
 
@@ -330,27 +330,27 @@ void OrdinalCompositionBody(LibraryLoader& loader) {
   Library* library_ptr = loader.GetLibraryFromName("test.fidlcodec.examples");
   ASSERT_NE(library_ptr, nullptr);
 
-  std::string kDesiredInterfaceName = "test.fidlcodec.examples/ParamProtocol";
-  Interface* found_interface = nullptr;
-  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  std::string kDesiredProtocolName = "test.fidlcodec.examples/ParamProtocol";
+  Protocol* found_protocol = nullptr;
+  ASSERT_TRUE(library_ptr->GetProtocolByName(kDesiredProtocolName, &found_protocol));
 
-  const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName("test.fidlcodec.examples/ParamProtocol.Method",
-                                       &found_method);
+  const ProtocolMethod* found_method = nullptr;
+  found_protocol->GetMethodByFullName("test.fidlcodec.examples/ParamProtocol.Method",
+                                      &found_method);
 
   Ordinal64 correct_ordinal = found_method->ordinal();
-  const std::vector<const InterfaceMethod*>* ordinal_methods = loader.GetByOrdinal(correct_ordinal);
+  const std::vector<const ProtocolMethod*>* ordinal_methods = loader.GetByOrdinal(correct_ordinal);
   ASSERT_EQ(2UL, ordinal_methods->size());
 
-  const InterfaceMethod* ordinal_method_base = (*ordinal_methods)[0];
+  const ProtocolMethod* ordinal_method_base = (*ordinal_methods)[0];
   ASSERT_NE(ordinal_method_base, nullptr);
-  ASSERT_EQ(kDesiredInterfaceName, ordinal_method_base->enclosing_interface().name());
+  ASSERT_EQ(kDesiredProtocolName, ordinal_method_base->enclosing_protocol().name());
   ASSERT_EQ("Method", ordinal_method_base->name());
 
-  const InterfaceMethod* ordinal_method_composed = (*ordinal_methods)[1];
+  const ProtocolMethod* ordinal_method_composed = (*ordinal_methods)[1];
   ASSERT_NE(ordinal_method_composed, nullptr);
   ASSERT_EQ("test.fidlcodec.composedinto/ComposedParamProtocol",
-            ordinal_method_composed->enclosing_interface().name());
+            ordinal_method_composed->enclosing_protocol().name());
   ASSERT_EQ("Method", ordinal_method_composed->name());
 }
 

@@ -47,7 +47,7 @@ class DecodedMessage {
   zx_txid_t txid() const { return txid_; }
   uint64_t ordinal() const { return ordinal_; }
   zx_status_t epitaph_error() const { return epitaph_error_; }
-  const InterfaceMethod* method() const { return method_; }
+  const ProtocolMethod* method() const { return method_; }
   std::unique_ptr<PayloadableValue>& decoded_request() { return decoded_request_; }
   std::stringstream& request_error_stream() { return request_error_stream_; }
   std::unique_ptr<PayloadableValue>& decoded_response() { return decoded_response_; }
@@ -67,7 +67,7 @@ class DecodedMessage {
   zx_txid_t txid_ = 0;
   uint64_t ordinal_ = 0;
   zx_status_t epitaph_error_ = ZX_OK;
-  const InterfaceMethod* method_ = nullptr;
+  const ProtocolMethod* method_ = nullptr;
   std::unique_ptr<PayloadableValue> decoded_request_;
   std::stringstream request_error_stream_;
   bool matched_request_ = false;
@@ -105,7 +105,7 @@ class MessageDecoderDispatcher {
   // Heuristic which computes the direction of a message (outgoing request, incomming response,
   // ...).
   Direction ComputeDirection(uint64_t process_koid, zx_handle_t handle, SyscallFidlType type,
-                             const InterfaceMethod* method, bool only_one_valid);
+                             const ProtocolMethod* method, bool only_one_valid);
 
   // Update the direction. Used when the heuristic was wrong.
   void UpdateDirection(uint64_t process_koid, zx_handle_t handle, Direction direction) {

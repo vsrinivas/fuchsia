@@ -40,10 +40,10 @@ TEST_F(SemanticParserTest, GlobalExample) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Open");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Directory", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Open");
   ASSERT_NE(method, nullptr);
   // Checks that we currently don't have any semantic for Open.
   ASSERT_EQ(method->semantic(), nullptr);
@@ -76,10 +76,10 @@ TEST_F(SemanticParserTest, GlobalPrintExample) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Open");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Directory", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Open");
   ASSERT_NE(method, nullptr);
 
   std::string text =
@@ -137,7 +137,7 @@ TEST_F(SemanticParserTest, CheckDisplay) {
       "  input_field: 'buffer of ' request.data.size ' bytes';\n"
       "  input_field: 'size = ' request.data.size;\n"
       "}\n";
-  InterfaceMethod method;
+  ProtocolMethod method;
   ParserErrors parser_errors;
   SemanticParser parser(&library_loader_, text, &parser_errors);
   while (!parser.IsEof()) {
@@ -719,10 +719,10 @@ TEST_F(SemanticParserTest, TypeNotDefined) {
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
-  Interface* interface = nullptr;
-  library->GetInterfaceByName("fuchsia.io/Directory", &interface);
-  ASSERT_NE(interface, nullptr);
-  InterfaceMethod* method = interface->GetMethodByName("Open");
+  Protocol* protocol = nullptr;
+  library->GetProtocolByName("fuchsia.io/Directory", &protocol);
+  ASSERT_NE(protocol, nullptr);
+  ProtocolMethod* method = protocol->GetMethodByName("Open");
   ASSERT_NE(method, nullptr);
   method->DecodeTypes();
   StructMember* mode = method->request()->AsStruct()->SearchMember("mode");

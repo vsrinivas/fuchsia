@@ -27,13 +27,13 @@ std::string ToSnakeCase(std::string_view str);
 
 class FidlCallInfo {
  public:
-  FidlCallInfo(bool crashed, std::string_view enclosing_interface_name, zx_handle_t handle_id,
+  FidlCallInfo(bool crashed, std::string_view enclosing_protocol_name, zx_handle_t handle_id,
                zx_txid_t txid, SyscallKind kind, std::string_view method_name,
                const fidl_codec::Payload* payload_input, const fidl_codec::Payload* payload_output,
                const fidl_codec::PayloadableValue* decoded_input_value,
                const fidl_codec::PayloadableValue* decoded_output_value)
       : crashed_(crashed),
-        enclosing_interface_name_(enclosing_interface_name),
+        enclosing_protocol_name_(enclosing_protocol_name),
         handle_id_(handle_id),
         txid_(txid),
         kind_(kind),
@@ -53,7 +53,7 @@ class FidlCallInfo {
 
   const std::string& method_name() const { return method_name_; }
 
-  const std::string& enclosing_interface_name() const { return enclosing_interface_name_; }
+  const std::string& enclosing_protocol_name() const { return enclosing_protocol_name_; }
 
   const fidl_codec::Payload* payload_input() const { return payload_input_; }
 
@@ -71,7 +71,7 @@ class FidlCallInfo {
   const bool crashed_ = false;
 
   // Interface name for the FIDL call (e.g. fidl.examples.echo/Echo)
-  const std::string enclosing_interface_name_;
+  const std::string enclosing_protocol_name_;
 
   // Handle id of the FIDL call, used to reconcile writes and reads
   const zx_handle_t handle_id_;
@@ -115,8 +115,8 @@ class CodeGenerator {
     call_log_[call_info->handle_id()].emplace_back(std::move(call_info));
   }
 
-  void AddFidlHeaderForInterface(std::string_view enclosing_interface_name) {
-    fidl_headers_.insert(FidlMethodToIncludePath(enclosing_interface_name));
+  void AddFidlHeaderForInterface(std::string_view enclosing_protocol_name) {
+    fidl_headers_.insert(FidlMethodToIncludePath(enclosing_protocol_name));
   }
 
   std::string AcquireUniqueName(const std::string& prefix) {

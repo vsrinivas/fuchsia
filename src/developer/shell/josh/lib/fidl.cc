@@ -133,7 +133,7 @@ JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
   auto ordinal = static_cast<fidl_codec::Ordinal64>(ordinal_signed);
 
-  const std::vector<const fidl_codec::InterfaceMethod*>* methods = loader->GetByOrdinal(ordinal);
+  const std::vector<const fidl_codec::ProtocolMethod*>* methods = loader->GetByOrdinal(ordinal);
 
   if (!methods || methods->empty()) {
     return JS_ThrowInternalError(ctx, "Method not found for ordinal %zu", ordinal);
@@ -207,10 +207,10 @@ JSValue DecodeResponse(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   }
 
   auto header = reinterpret_cast<const fidl_message_header_t*>(message_buf);
-  const std::vector<const fidl_codec::InterfaceMethod*>* methods =
+  const std::vector<const fidl_codec::ProtocolMethod*>* methods =
       loader->GetByOrdinal(header->ordinal);
   // Test method not found, but...
-  const fidl_codec::InterfaceMethod* method = (*methods)[0];
+  const fidl_codec::ProtocolMethod* method = (*methods)[0];
   std::unique_ptr<fidl_codec::PayloadableValue> object;
   std::ostringstream errors;
   if (!fidl_codec::DecodeResponse(method, message_buf, message_len, handle_buf.data(), handles_len,

@@ -32,7 +32,7 @@ class Uint32Type;
 
 // A FIDL type.  Provides methods for generating instances of this type.
 class Type {
-  friend class InterfaceMethodParameter;
+  friend class ProtocolMethodParameter;
   friend class Library;
 
  public:

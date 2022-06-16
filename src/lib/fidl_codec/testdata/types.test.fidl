@@ -17,7 +17,7 @@ type Named = struct {
     s string:200;
 };
 
-protocol FidlCodecTestInterface {
+protocol FidlCodecTestProtocol {
     Empty();
     String(struct {
         s string:100;

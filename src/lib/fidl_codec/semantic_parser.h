@@ -14,7 +14,7 @@
 
 namespace fidl_codec {
 
-class InterfaceMethod;
+class ProtocolMethod;
 class LibraryLoader;
 
 namespace semantic {
@@ -207,7 +207,7 @@ class SemanticParser {
   // Parses a library block.
   void ParseLibrary();
   // Parses a method (semantic rules and short displays).
-  void ParseMethod(InterfaceMethod* method);
+  void ParseMethod(ProtocolMethod* method);
   // Parses an expression to display.
   std::unique_ptr<DisplayExpression> ParseDisplayExpression();
   // Parses an assignment (that is a semantic rule).

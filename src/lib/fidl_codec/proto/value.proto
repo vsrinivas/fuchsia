@@ -86,7 +86,7 @@ message FidlMessage {
   bool received = 5;
   bool is_request = 6;
   bool unknown_direction = 7;
-  string interface = 8;
+  string protocol = 8;
   string method = 9;
   bytes raw_bytes = 10;
   repeated HandleInfo handle = 11;

@@ -120,9 +120,9 @@ class HandleInfo {
 // A FIDL method used by one process.
 class Method {
  public:
-  explicit Method(const fidl_codec::InterfaceMethod* method) : method_(method) {}
+  explicit Method(const fidl_codec::ProtocolMethod* method) : method_(method) {}
 
-  const fidl_codec::InterfaceMethod* method() const { return method_; }
+  const fidl_codec::ProtocolMethod* method() const { return method_; }
   size_t event_count() const { return events_.size(); }
   const std::vector<const OutputEvent*>& events() const { return events_; }
 
@@ -130,7 +130,7 @@ class Method {
 
  private:
   // The FIDL method.
-  const fidl_codec::InterfaceMethod* const method_;
+  const fidl_codec::ProtocolMethod* const method_;
   // All the vents for this method (for one process).
   std::vector<const OutputEvent*> events_;
 };
@@ -138,15 +138,15 @@ class Method {
 // A FIDL protocol (interface) used by one process.
 class Protocol {
  public:
-  explicit Protocol(const fidl_codec::Interface* interface) : interface_(interface) {}
+  explicit Protocol(const fidl_codec::Protocol* interface) : interface_(interface) {}
 
-  const fidl_codec::Interface* interface() const { return interface_; }
+  const fidl_codec::Protocol* interface() const { return interface_; }
   const std::map<fidl_codec::Ordinal64, std::unique_ptr<Method>>& methods() const {
     return methods_;
   }
   uint64_t event_count() const { return event_count_; }
 
-  Method* GetMethod(fidl_codec::Ordinal64 ordinal, const fidl_codec::InterfaceMethod* method) {
+  Method* GetMethod(fidl_codec::Ordinal64 ordinal, const fidl_codec::ProtocolMethod* method) {
     auto result = methods_.find(ordinal);
     if (result != methods_.end()) {
       return result->second.get();
@@ -161,7 +161,7 @@ class Protocol {
 
  private:
   // The FIDL interface.
-  const fidl_codec::Interface* const interface_;
+  const fidl_codec::Protocol* const interface_;
   // All the methods of this interface used by one process.
   std::map<fidl_codec::Ordinal64, std::unique_ptr<Method>> methods_;
   // The event count for this interface for one process.
@@ -178,7 +178,7 @@ class Process {
   zxdb::Process* zxdb_process() const { return zxdb_process_.get(); }
   std::vector<HandleInfo*>& handle_infos() { return handle_infos_; }
   std::map<uint32_t, HandleInfo*>& handle_info_map() { return handle_info_map_; }
-  const std::map<const fidl_codec::Interface*, std::unique_ptr<Protocol>>& protocols() const {
+  const std::map<const fidl_codec::Protocol*, std::unique_ptr<Protocol>>& protocols() const {
     return protocols_;
   }
   uint64_t event_count() const { return event_count_; }
@@ -193,7 +193,7 @@ class Process {
     return result->second;
   }
 
-  Protocol* GetProtocol(const fidl_codec::Interface* interface) {
+  Protocol* GetProtocol(const fidl_codec::Protocol* interface) {
     auto result = protocols_.find(interface);
     if (result != protocols_.end()) {
       return result->second.get();
@@ -222,7 +222,7 @@ class Process {
   // A map to quickly find a handle for a process.
   std::map<uint32_t, HandleInfo*> handle_info_map_;
   // All the protocols used by the process.
-  std::map<const fidl_codec::Interface*, std::unique_ptr<Protocol>> protocols_;
+  std::map<const fidl_codec::Protocol*, std::unique_ptr<Protocol>> protocols_;
   // The count of events (read/write/call) for this process.
   uint64_t event_count_ = 0;
 };

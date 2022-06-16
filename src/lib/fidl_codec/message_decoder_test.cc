@@ -25,7 +25,7 @@
 #include "src/lib/fidl_codec/wire_parser.h"
 
 using test::fidlcodec::examples::Echo;
-using test::fidlcodec::examples::FidlCodecTestInterface;
+using test::fidlcodec::examples::FidlCodecTestProtocol;
 
 namespace fidl_codec {
 
@@ -56,7 +56,7 @@ class MessageDecoderTest : public ::testing::Test {
   fidl::HLCPPIncomingMessage InvokeAndReceiveEpitaph(zx_status_t epitaph) {
     fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
     // The protocol doesn't matter, no methods are actually called.
-    InterceptEpitaphResponse<FidlCodecTestInterface>(message, epitaph);
+    InterceptEpitaphResponse<FidlCodecTestProtocol>(message, epitaph);
     return message;
   }
 
@@ -98,31 +98,31 @@ class MessageDecoderTest : public ::testing::Test {
   uint64_t process_koid_ = kProcessKoid;
 };
 
-#define TEST_DECODE_MESSAGE(_interface, _iface, _expected, ...)                  \
-  do {                                                                           \
-    auto message = InvokeAndIntercept<_interface>(                               \
-        [&](fidl::InterfacePtr<_interface>& ptr) { ptr->_iface(__VA_ARGS__); }); \
-    AssertDecoded(message, SyscallFidlType::kOutputMessage, _expected);          \
+#define TEST_DECODE_MESSAGE(_protocol, _iface, _expected, ...)                  \
+  do {                                                                          \
+    auto message = InvokeAndIntercept<_protocol>(                               \
+        [&](fidl::InterfacePtr<_protocol>& ptr) { ptr->_iface(__VA_ARGS__); }); \
+    AssertDecoded(message, SyscallFidlType::kOutputMessage, _expected);         \
   } while (0)
 
 TEST_F(MessageDecoderTest, TestEmptyLaunched) {
   decoder()->AddLaunchedProcess(process_koid());
-  TEST_DECODE_MESSAGE(FidlCodecTestInterface, Empty,
-                      "sent request test.fidlcodec.examples/FidlCodecTestInterface.Empty = {}\n");
+  TEST_DECODE_MESSAGE(FidlCodecTestProtocol, Empty,
+                      "sent request test.fidlcodec.examples/FidlCodecTestProtocol.Empty = {}\n");
 }
 
 TEST_F(MessageDecoderTest, TestStringLaunched) {
   decoder()->AddLaunchedProcess(process_koid());
-  TEST_DECODE_MESSAGE(FidlCodecTestInterface, String,
-                      "sent request test.fidlcodec.examples/FidlCodecTestInterface.String = {\n"
+  TEST_DECODE_MESSAGE(FidlCodecTestProtocol, String,
+                      "sent request test.fidlcodec.examples/FidlCodecTestProtocol.String = {\n"
                       "  s: string = \"Hello World\"\n"
                       "}\n",
                       "Hello World");
 }
 
 TEST_F(MessageDecoderTest, TestStringAttached) {
-  TEST_DECODE_MESSAGE(FidlCodecTestInterface, String,
-                      "sent request test.fidlcodec.examples/FidlCodecTestInterface.String = {\n"
+  TEST_DECODE_MESSAGE(FidlCodecTestProtocol, String,
+                      "sent request test.fidlcodec.examples/FidlCodecTestProtocol.String = {\n"
                       "  s: string = \"Hello World\"\n"
                       "}\n",
                       "Hello World");

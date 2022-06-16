@@ -452,7 +452,7 @@ class FidlMessageValue : public Value {
                    uint32_t num_handles);
   FidlMessageValue(zx_txid_t txid, uint64_t ordinal, const std::string& global_errors,
                    const std::string& epitaph_error, bool received, bool is_request,
-                   bool unknown_direction, const fidl_codec::InterfaceMethod* method,
+                   bool unknown_direction, const fidl_codec::ProtocolMethod* method,
                    const uint8_t* bytes, size_t byte_size, const std::string& request_errors,
                    const std::string& response_errors)
       : txid_(txid),
@@ -474,7 +474,7 @@ class FidlMessageValue : public Value {
   bool received() const { return received_; }
   bool is_request() const { return is_request_; }
   bool unknown_direction() const { return unknown_direction_; }
-  const fidl_codec::InterfaceMethod* method() const { return method_; }
+  const fidl_codec::ProtocolMethod* method() const { return method_; }
   const std::vector<uint8_t>& bytes() const { return bytes_; }
   const std::vector<zx_handle_disposition_t>& handles() const { return handles_; }
   void add_handle(const zx_handle_disposition_t& handle) { handles_.emplace_back(handle); }
@@ -527,7 +527,7 @@ class FidlMessageValue : public Value {
   // decoded).
   const bool unknown_direction_;
   // The method associated with the ordinal.
-  const fidl_codec::InterfaceMethod* const method_;
+  const fidl_codec::ProtocolMethod* const method_;
   // All the bytes of the message.
   std::vector<uint8_t> bytes_;
   // All the handles of the message.

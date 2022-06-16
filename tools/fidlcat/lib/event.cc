@@ -66,7 +66,7 @@ void Protocol::AddEvent(const OutputEvent* event, const fidl_codec::FidlMessageV
 
 void Process::AddEvent(const OutputEvent* event, const fidl_codec::FidlMessageValue* message) {
   Protocol* protocol = GetProtocol(
-      (message->method() != nullptr) ? &message->method()->enclosing_interface() : nullptr);
+      (message->method() != nullptr) ? &message->method()->enclosing_protocol() : nullptr);
   protocol->AddEvent(event, message);
   ++event_count_;
 }
@@ -279,7 +279,7 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
     default:
       return;
   }
-  const fidl_codec::InterfaceMethod* method = message->method();
+  const fidl_codec::ProtocolMethod* method = message->method();
   if (message->ordinal() == kFidlOrdinalEpitaph) {
     printer << fidl_codec::WhiteOnMagenta << "epitaph " << fidl_codec::ResetColor << ' '
             << ((message->epitaph_error() == "ZX_OK") ? fidl_codec::Green : fidl_codec::Red)
@@ -293,7 +293,7 @@ void OutputEvent::Display(FidlcatPrinter& printer, bool with_channel) const {
                       ? "request "
                       : ((method->request() != nullptr) ? "response" : "event   "))
               << fidl_codec::ResetColor << ' ' << fidl_codec::Green
-              << method->enclosing_interface().name() << '.' << method->name()
+              << method->enclosing_protocol().name() << '.' << method->name()
               << fidl_codec::ResetColor;
     }
   }

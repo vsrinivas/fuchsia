@@ -60,7 +60,7 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
     return false;
   }
 
-  const std::vector<const InterfaceMethod*>* methods = dispatcher->loader()->GetByOrdinal(ordinal_);
+  const std::vector<const ProtocolMethod*>* methods = dispatcher->loader()->GetByOrdinal(ordinal_);
   if (methods == nullptr || methods->empty()) {
     error_stream << "Protocol method with ordinal 0x" << std::hex << header_->ordinal
                  << " not found\n";
@@ -127,7 +127,7 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
 
 Direction MessageDecoderDispatcher::ComputeDirection(uint64_t process_koid, zx_handle_t handle,
                                                      SyscallFidlType type,
-                                                     const InterfaceMethod* method,
+                                                     const ProtocolMethod* method,
                                                      bool only_one_valid) {
   auto handle_direction = handle_directions_.find(std::make_tuple(handle, process_koid));
   if (handle_direction != handle_directions_.end()) {

@@ -126,7 +126,7 @@ Payloadable::Payloadable(Library* enclosing_library, const rapidjson::Value* jso
 
 Payloadable::~Payloadable() = default;
 
-Payload::Payload(Library* enclosing_library, const InterfaceMethod* method,
+Payload::Payload(Library* enclosing_library, const ProtocolMethod* method,
                  const rapidjson::Value* json_type_definition, Payloadable* payloadable)
     : enclosing_library_(enclosing_library),
       enclosing_method_(method),
@@ -444,21 +444,21 @@ std::string Table::ToString(bool expand) const {
   return type.ToString(expand);
 }
 
-InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& interface,
-                                 const rapidjson::Value* json_definition)
+ProtocolMethod::ProtocolMethod(Library* enclosing_library, const Protocol& protocol,
+                               const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library),
-      enclosing_interface_(&interface),
-      name_(interface.enclosing_library()->ExtractString(json_definition, "method", "<unknown>",
-                                                         "name")),
-      ordinal_(interface.enclosing_library()->ExtractUint64(json_definition, "method", name_,
-                                                            "ordinal")),
-      is_composed_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
-                                                              "is_composed")),
-      has_request_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
-                                                              "has_request")),
-      has_response_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
-                                                               "has_response")) {
-  if (interface.enclosing_library()->ExtractBool(json_definition, "method", name_, "has_request")) {
+      enclosing_protocol_(&protocol),
+      name_(protocol.enclosing_library()->ExtractString(json_definition, "method", "<unknown>",
+                                                        "name")),
+      ordinal_(
+          protocol.enclosing_library()->ExtractUint64(json_definition, "method", name_, "ordinal")),
+      is_composed_(protocol.enclosing_library()->ExtractBool(json_definition, "method", name_,
+                                                             "is_composed")),
+      has_request_(protocol.enclosing_library()->ExtractBool(json_definition, "method", name_,
+                                                             "has_request")),
+      has_response_(protocol.enclosing_library()->ExtractBool(json_definition, "method", name_,
+                                                              "has_response")) {
+  if (protocol.enclosing_library()->ExtractBool(json_definition, "method", name_, "has_request")) {
     if (json_definition->HasMember("maybe_request_payload")) {
       const rapidjson::Value& payload_type = (*json_definition)["maybe_request_payload"];
       if (!payload_type.HasMember("identifier")) {
@@ -472,8 +472,7 @@ InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& in
     }
   }
 
-  if (interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
-                                                 "has_response")) {
+  if (protocol.enclosing_library()->ExtractBool(json_definition, "method", name_, "has_response")) {
     if (json_definition->HasMember("maybe_response_payload")) {
       const rapidjson::Value& payload_type = (*json_definition)["maybe_response_payload"];
       if (!payload_type.HasMember("identifier")) {
@@ -488,16 +487,16 @@ InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& in
   }
 }
 
-InterfaceMethod::~InterfaceMethod() = default;
+ProtocolMethod::~ProtocolMethod() = default;
 
-std::string InterfaceMethod::fully_qualified_name() const {
-  std::string fqn(enclosing_interface_->name());
+std::string ProtocolMethod::fully_qualified_name() const {
+  std::string fqn(enclosing_protocol_->name());
   fqn.append(".");
   fqn.append(name());
   return fqn;
 }
 
-std::unique_ptr<Parameter> InterfaceMethod::FindParameter(std::string_view name) const {
+std::unique_ptr<Parameter> ProtocolMethod::FindParameter(std::string_view name) const {
   if (request_ != nullptr) {
     std::unique_ptr<Parameter> param = request_->FindParameter(name);
     if (param != nullptr) {
@@ -510,14 +509,14 @@ std::unique_ptr<Parameter> InterfaceMethod::FindParameter(std::string_view name)
   return nullptr;
 }
 
-void Interface::AddMethodsToIndex(LibraryLoader* library_loader) {
-  for (auto& interface_method : interface_methods_) {
-    library_loader->AddMethod(interface_method.get());
+void Protocol::AddMethodsToIndex(LibraryLoader* library_loader) {
+  for (auto& protocol_method : protocol_methods_) {
+    library_loader->AddMethod(protocol_method.get());
   }
 }
 
-bool Interface::GetMethodByFullName(const std::string& name,
-                                    const InterfaceMethod** method_ptr) const {
+bool Protocol::GetMethodByFullName(const std::string& name,
+                                   const ProtocolMethod** method_ptr) const {
   for (const auto& method : methods()) {
     if (method->fully_qualified_name() == name) {
       *method_ptr = method.get();
@@ -527,7 +526,7 @@ bool Interface::GetMethodByFullName(const std::string& name,
   return false;
 }
 
-InterfaceMethod* Interface::GetMethodByName(std::string_view name) const {
+ProtocolMethod* Protocol::GetMethodByName(std::string_view name) const {
   for (const auto& method : methods()) {
     if (method->name() == name) {
       return method.get();
@@ -593,12 +592,12 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_defi
     }
   }
 
-  auto interfaces_array = json_definition_["protocol_declarations"].GetArray();
-  interfaces_.reserve(interfaces_array.Size());
+  auto protocols_array = json_definition_["protocol_declarations"].GetArray();
+  protocols_.reserve(protocols_array.Size());
 
-  for (auto& decl : interfaces_array) {
-    interfaces_.emplace_back(new Interface(this, decl));
-    interfaces_.back()->AddMethodsToIndex(enclosing_loader);
+  for (auto& decl : protocols_array) {
+    protocols_.emplace_back(new Protocol(this, decl));
+    protocols_.back()->AddMethodsToIndex(enclosing_loader);
   }
 }
 
@@ -683,8 +682,8 @@ bool Library::DecodeAll() {
   for (const auto& tmp : unions_) {
     tmp.second->DecodeTypes();
   }
-  for (const auto& interface : interfaces_) {
-    for (const auto& method : interface->methods()) {
+  for (const auto& protocol : protocols_) {
+    for (const auto& method : protocol->methods()) {
       method->DecodeTypes();
     }
   }
@@ -718,17 +717,17 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, const std::s
     uni->second->DecodeTypes();
     return std::make_unique<UnionType>(std::ref(*uni->second), is_nullable);
   }
-  Interface* ifc;
-  if (GetInterfaceByName(identifier, &ifc)) {
+  Protocol* ifc;
+  if (GetProtocolByName(identifier, &ifc)) {
     return std::make_unique<HandleType>();
   }
   return std::make_unique<InvalidType>();
 }
 
-bool Library::GetInterfaceByName(std::string_view name, Interface** ptr) const {
-  for (const auto& interface : interfaces()) {
-    if (interface->name() == name) {
-      *ptr = interface.get();
+bool Library::GetProtocolByName(std::string_view name, Protocol** ptr) const {
+  for (const auto& protocol : protocols()) {
+    if (protocol->name() == name) {
+      *ptr = protocol.get();
       return true;
     }
   }
@@ -876,9 +875,9 @@ void LibraryLoader::AddContent(const std::string& content, LibraryReadError* err
   err->value = LibraryReadError::kOk;
 }
 
-void LibraryLoader::AddMethod(const InterfaceMethod* method) {
+void LibraryLoader::AddMethod(const ProtocolMethod* method) {
   if (ordinal_map_[method->ordinal()] == nullptr) {
-    ordinal_map_[method->ordinal()] = std::make_unique<std::vector<const InterfaceMethod*>>();
+    ordinal_map_[method->ordinal()] = std::make_unique<std::vector<const ProtocolMethod*>>();
   }
   // Ensure composed methods come after non-composed methods.  The fidl_codec
   // libraries pick the first one they find.

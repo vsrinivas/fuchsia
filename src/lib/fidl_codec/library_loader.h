@@ -16,11 +16,11 @@
 
 // This file contains a programmatic representation of a FIDL schema.  A
 // LibraryLoader loads a set of Libraries.  The libraries contain structs,
-// enums, interfaces, and so on.  Each element has the logic necessary to take
+// enums, protocols, and so on.  Each element has the logic necessary to take
 // wire-encoded bits of that type, and transform it to a representation of that
 // type.
 
-// A LibraryLoader object can be used to fetch a particular library or interface
+// A LibraryLoader object can be used to fetch a particular library or protocol
 // method, which can then be used for debug purposes.
 
 // An example of building a LibraryLoader can be found in
@@ -28,7 +28,7 @@
 // following, if they have a fidl::Message:
 //
 // fidl_message_header_t header = message.header();
-// const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header.ordinal);
+// const std::vector<const ProtocolMethod*>* methods = loader_->GetByOrdinal(header.ordinal);
 // rapidjson::Document actual;
 // fidl_codec::RequestToJSON(methods->at(0), message, actual);
 //
@@ -56,8 +56,8 @@ struct LibraryReadError {
   rapidjson::ParseResult parse_result;
 };
 
-class Interface;
-class InterfaceMethod;
+class Protocol;
+class ProtocolMethod;
 class Payload;
 class Library;
 class LibraryLoader;
@@ -215,14 +215,14 @@ class Payloadable {
 class Payload {
  public:
   friend class Library;
-  friend class InterfaceMethod;
+  friend class ProtocolMethod;
 
-  Payload(Library* enclosing_library, const InterfaceMethod* method,
+  Payload(Library* enclosing_library, const ProtocolMethod* method,
           const rapidjson::Value* json_type_definition, Payloadable* payloadable);
   ~Payload();
 
   Library* enclosing_library() const { return enclosing_library_; }
-  const InterfaceMethod& enclosing_method() const { return *enclosing_method_; }
+  const ProtocolMethod& enclosing_method() const { return *enclosing_method_; }
   const std::unique_ptr<Type>& type() const { return type_; }
 
   Struct* AsStruct();
@@ -243,7 +243,7 @@ class Payload {
   void DecodeTypes();
 
   Library* enclosing_library_;
-  const InterfaceMethod* enclosing_method_;
+  const ProtocolMethod* enclosing_method_;
   const rapidjson::Value* type_definition_;
   Payloadable* payloadable_;
   std::unique_ptr<Type> type_;
@@ -392,14 +392,14 @@ class Table final : public Payloadable {
   std::vector<std::unique_ptr<TableMember>> members_;
 };
 
-class InterfaceMethod {
+class ProtocolMethod {
  public:
-  friend class Interface;
+  friend class Protocol;
 
-  InterfaceMethod() = default;
-  ~InterfaceMethod();
+  ProtocolMethod() = default;
+  ~ProtocolMethod();
 
-  const Interface& enclosing_interface() const { return *enclosing_interface_; }
+  const Protocol& enclosing_protocol() const { return *enclosing_protocol_; }
   const std::string& name() const { return name_; }
   Ordinal64 ordinal() const { return ordinal_; }
   bool is_composed() const { return is_composed_; }
@@ -443,15 +443,15 @@ class InterfaceMethod {
 
   std::unique_ptr<Parameter> FindParameter(std::string_view name) const;
 
-  InterfaceMethod(const InterfaceMethod& other) = delete;
-  InterfaceMethod& operator=(const InterfaceMethod&) = delete;
+  ProtocolMethod(const ProtocolMethod& other) = delete;
+  ProtocolMethod& operator=(const ProtocolMethod&) = delete;
 
  private:
-  InterfaceMethod(Library* enclosing_library, const Interface& interface,
-                  const rapidjson::Value* json_definition);
+  ProtocolMethod(Library* enclosing_library, const Protocol& protocol,
+                 const rapidjson::Value* json_definition);
 
   Library* enclosing_library_;
-  const Interface* const enclosing_interface_ = nullptr;
+  const Protocol* const enclosing_protocol_ = nullptr;
   const std::string name_;
   const Ordinal64 ordinal_ = 0;
   const bool is_composed_ = false;
@@ -463,38 +463,36 @@ class InterfaceMethod {
   std::unique_ptr<semantic::MethodDisplay> short_display_;
 };
 
-class Interface {
+class Protocol {
  public:
   friend class Library;
 
-  Interface(const Interface& other) = delete;
-  Interface& operator=(const Interface&) = delete;
+  Protocol(const Protocol& other) = delete;
+  Protocol& operator=(const Protocol&) = delete;
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
 
   void AddMethodsToIndex(LibraryLoader* library_loader);
 
-  // Sets *|method| to the fully qualified |name|'s InterfaceMethod (protocol.method).
-  bool GetMethodByFullName(const std::string& name, const InterfaceMethod** method) const;
+  // Sets *|method| to the fully qualified |name|'s ProtocolMethod (protocol.method).
+  bool GetMethodByFullName(const std::string& name, const ProtocolMethod** method) const;
 
-  InterfaceMethod* GetMethodByName(std::string_view name) const;
+  ProtocolMethod* GetMethodByName(std::string_view name) const;
 
-  const std::vector<std::unique_ptr<InterfaceMethod>>& methods() const {
-    return interface_methods_;
-  }
+  const std::vector<std::unique_ptr<ProtocolMethod>>& methods() const { return protocol_methods_; }
 
  private:
-  Interface(Library* enclosing_library, const rapidjson::Value& json_definition)
+  Protocol(Library* enclosing_library, const rapidjson::Value& json_definition)
       : enclosing_library_(enclosing_library), name_(json_definition["name"].GetString()) {
     for (auto& method : json_definition["methods"].GetArray()) {
-      interface_methods_.emplace_back(new InterfaceMethod(enclosing_library, *this, &method));
+      protocol_methods_.emplace_back(new ProtocolMethod(enclosing_library, *this, &method));
     }
   }
 
   Library* enclosing_library_;
   std::string name_;
-  std::vector<std::unique_ptr<InterfaceMethod>> interface_methods_;
+  std::vector<std::unique_ptr<ProtocolMethod>> protocol_methods_;
 };
 
 class Library {
@@ -503,7 +501,7 @@ class Library {
 
   LibraryLoader* enclosing_loader() const { return enclosing_loader_; }
   const std::string& name() const { return name_; }
-  const std::vector<std::unique_ptr<Interface>>& interfaces() const { return interfaces_; }
+  const std::vector<std::unique_ptr<Protocol>>& protocols() const { return protocols_; }
 
   // Decode all the values from the JSON definition.
   void DecodeTypes();
@@ -517,8 +515,8 @@ class Library {
   // embedded in an array)
   size_t InlineSizeFromIdentifier(std::string& identifier) const;
 
-  // Set *ptr to the Interface called |name|
-  bool GetInterfaceByName(std::string_view name, Interface** ptr) const;
+  // Set *ptr to the Protocol called |name|
+  bool GetProtocolByName(std::string_view name, Protocol** ptr) const;
 
   // Extract a boolean field from a JSON value.
   bool ExtractBool(const rapidjson::Value* json_definition, std::string_view container_type,
@@ -577,7 +575,7 @@ class Library {
   bool decoded_ = false;
   bool has_errors_ = false;
   std::string name_;
-  std::vector<std::unique_ptr<Interface>> interfaces_;
+  std::vector<std::unique_ptr<Protocol>> protocols_;
   std::map<std::string, std::unique_ptr<Payloadable>> payloadables_;
   std::map<std::string, std::unique_ptr<Enum>> enums_;
   std::map<std::string, std::unique_ptr<Bits>> bits_;
@@ -616,7 +614,7 @@ class LibraryLoader {
   void AddContent(const std::string& content, LibraryReadError* err);
 
   // Adds a method ordinal to the ordinal map.
-  void AddMethod(const InterfaceMethod* method);
+  void AddMethod(const ProtocolMethod* method);
 
   void ParseBuiltinSemantic();
 
@@ -626,7 +624,7 @@ class LibraryLoader {
   // vector.  Returns |nullptr| if there is no such method.  The returned
   // pointer continues to be owned by the LibraryLoader, and should not be
   // deleted.
-  const std::vector<const InterfaceMethod*>* GetByOrdinal(Ordinal64 ordinal) {
+  const std::vector<const ProtocolMethod*>* GetByOrdinal(Ordinal64 ordinal) {
     auto m = ordinal_map_.find(ordinal);
     if (m != ordinal_map_.end()) {
       return m->second.get();
@@ -651,7 +649,7 @@ class LibraryLoader {
   void Delete(const Library* library) {
     // The only way to delete a library is to remove it from representations_, so we don't need to
     // do that explicitly.  However...
-    for (const auto& iface : library->interfaces()) {
+    for (const auto& iface : library->protocols()) {
       for (const auto& method : iface->methods()) {
         ordinal_map_.erase(method->ordinal());
       }
@@ -660,7 +658,7 @@ class LibraryLoader {
 
   // Because Delete() above is run whenever a Library is destructed, we want ordinal_map_ to be
   // intact when a Library is destructed.  Therefore, ordinal_map_ has to come first.
-  std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>> ordinal_map_;
+  std::map<Ordinal64, std::unique_ptr<std::vector<const ProtocolMethod*>>> ordinal_map_;
   std::map<std::string, std::unique_ptr<Library>> representations_;
 };
 

@@ -138,7 +138,7 @@ void ProtoVisitor::VisitFidlMessageValue(const fidl_codec::FidlMessageValue* nod
   fidl_message->set_is_request(node->is_request());
   fidl_message->set_unknown_direction(node->unknown_direction());
   if (node->method() != nullptr) {
-    fidl_message->set_interface(node->method()->enclosing_interface().name());
+    fidl_message->set_protocol(node->method()->enclosing_protocol().name());
     fidl_message->set_method(node->method()->name());
   }
   fidl_message->set_raw_bytes(node->bytes().data(), node->bytes().size());
@@ -348,10 +348,10 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
     }
     case proto::Value::kFidlMessageValue: {
       const proto::FidlMessage& proto_message = proto_value.fidl_message_value();
-      const fidl_codec::InterfaceMethod* method = nullptr;
+      const fidl_codec::ProtocolMethod* method = nullptr;
       // We need to check loader because some tests have a null library loader.
       if (loader != nullptr) {
-        const std::vector<const fidl_codec::InterfaceMethod*>* methods =
+        const std::vector<const fidl_codec::ProtocolMethod*>* methods =
             loader->GetByOrdinal(proto_message.ordinal());
         if ((methods != nullptr) && !methods->empty()) {
           method = (*methods)[0];

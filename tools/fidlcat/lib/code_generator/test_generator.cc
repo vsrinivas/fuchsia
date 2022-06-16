@@ -95,7 +95,7 @@ void TestGenerator::GenerateTests() {
     if (output_event) {
       auto call_info = OutputEventToFidlCallInfo(output_event);
       if (call_info) {
-        AddFidlHeaderForInterface(call_info->enclosing_interface_name());
+        AddFidlHeaderForInterface(call_info->enclosing_protocol_name());
         AddEventToLog(std::move(call_info));
       }
     }
@@ -116,7 +116,7 @@ void TestGenerator::GenerateTests() {
 
     for (const auto& call_info : calls) {
       if (interface_name.empty()) {
-        interface_name = call_info->enclosing_interface_name();
+        interface_name = call_info->enclosing_protocol_name();
       }
 
       if (method_name.empty()) {
@@ -140,7 +140,7 @@ void TestGenerator::GenerateTests() {
       if (call_info->crashed()) {
         std::cout << " (crashed)";
       }
-      std::cout << " " << call_info->enclosing_interface_name() << "." << call_info->method_name()
+      std::cout << " " << call_info->enclosing_protocol_name() << "." << call_info->method_name()
                 << '\n';
     }
 

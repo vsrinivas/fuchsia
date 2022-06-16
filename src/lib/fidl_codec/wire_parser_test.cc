@@ -91,10 +91,10 @@ TEST_F(WireParserTest, ParseSingleString) {
 
   fidl_message_header_t header = message.header();
 
-  const std::vector<const InterfaceMethod*>* methods = loader()->GetByOrdinal(header.ordinal);
+  const std::vector<const ProtocolMethod*>* methods = loader()->GetByOrdinal(header.ordinal);
   ASSERT_NE(methods, nullptr);
   ASSERT_TRUE(!methods->empty());
-  const InterfaceMethod* method = (*methods)[0];
+  const ProtocolMethod* method = (*methods)[0];
   ASSERT_NE(method, nullptr);
   ASSERT_EQ("Grob", method->name());
 
@@ -131,8 +131,8 @@ TEST_F(WireParserTest, ParseSingleString) {
 // results.  It can be generalized to a wide variety of types (and is, below).
 // It checks for successful parsing, as well as failure when parsing truncated
 // values.
-// |_iface| is the interface method name on examples::FidlCodecTestInterface
-//    (TODO: generalize which interface to use)
+// |_iface| is the protocol method name on examples::FidlCodecTestProtocol
+//    (TODO: generalize which protocol to use)
 // |_json_value| is the expected JSON representation of the message.
 // |_pretty_print| is the expected pretty print of the message.
 // The remaining parameters are the parameters to |_iface| to generate the
@@ -146,17 +146,17 @@ TEST_F(WireParserTest, ParseSingleString) {
   do {                                                                                            \
     fidl::IncomingMessageBuffer buffer;                                                           \
     fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();                     \
-    using test::fidlcodec::examples::FidlCodecTestInterface;                                      \
-    InterceptRequest<FidlCodecTestInterface>(                                                     \
+    using test::fidlcodec::examples::FidlCodecTestProtocol;                                       \
+    InterceptRequest<FidlCodecTestProtocol>(                                                      \
         message,                                                                                  \
-        [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) { ptr->_iface(__VA_ARGS__); });      \
+        [&](fidl::InterfacePtr<FidlCodecTestProtocol>& ptr) { ptr->_iface(__VA_ARGS__); });       \
                                                                                                   \
     fidl_message_header_t header = message.header();                                              \
                                                                                                   \
-    const std::vector<const InterfaceMethod*>* methods = loader()->GetByOrdinal(header.ordinal);  \
+    const std::vector<const ProtocolMethod*>* methods = loader()->GetByOrdinal(header.ordinal);   \
     ASSERT_NE(methods, nullptr);                                                                  \
     ASSERT_TRUE(!methods->empty());                                                               \
-    const InterfaceMethod* method = (*methods)[0];                                                \
+    const ProtocolMethod* method = (*methods)[0];                                                 \
     ASSERT_NE(method, nullptr);                                                                   \
     ASSERT_EQ(#_iface, method->name());                                                           \
                                                                                                   \
@@ -254,8 +254,8 @@ TEST_F(WireParserTest, ParseSingleString) {
 // This is a convenience wrapper for calling TEST_DECODE_WIRE_BODY that simply
 // executes the code in a test.
 // |_testname| is the name of the test (prepended by Parse in the output)
-// |_iface| is the interface method name on examples::FidlCodecTestInterface
-//    (TODO: generalize which interface to use)
+// |_iface| is the protocol method name on examples::FidlCodecTestProtocol
+//    (TODO: generalize which protocol to use)
 // |_json_value| is the expected JSON representation of the message.
 // |_pretty_print| is the expected pretty print of the message.
 // The remaining parameters are the parameters to |_iface| to generate the
@@ -1251,9 +1251,9 @@ class HandleSupport {
   }
   zx::channel handle() { return std::move(out2_); }
 
-  template <typename Interface>
-  fidl::InterfaceHandle<Interface> interface() {
-    return fidl::InterfaceHandle<Interface>(std::move(out2_));
+  template <typename Protocol>
+  fidl::InterfaceHandle<Protocol> protocol() {
+    return fidl::InterfaceHandle<Protocol>(std::move(out2_));
   }
 
   std::string GetJSON() { return json_; }
@@ -1279,7 +1279,7 @@ TEST_F(WireParserTest, ParseNullableHandle) {
 TEST_F(WireParserTest, ParseProtocol) {
   HandleSupport support;
   TEST_DECODE_WIRE_BODY(Protocol, support.GetJSON(), support.GetPretty(),
-                        support.interface<test::fidlcodec::examples::ParamProtocol>());
+                        support.protocol<test::fidlcodec::examples::ParamProtocol>());
 }
 
 namespace {
@@ -1513,7 +1513,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   "enum_declarations": [],
   "protocol_declarations": [
     {
-      "name": "test.fidlcodec.examples/FidlCodecTestInterface",
+      "name": "test.fidlcodec.examples/FidlCodecTestProtocol",
       "location": {
         "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
         "line": 11,
@@ -1521,7 +1521,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
       },
       "methods": [
         {
-          "ordinal": 1593056155789170713,
+          "ordinal": 8514321116834982339,
           "name": "Int32",
           "location": {
             "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
@@ -1531,7 +1531,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "test.fidlcodec.examples/FidlCodecTestInterfaceRequest",
+            "identifier": "test.fidlcodec.examples/FidlCodecTestProtocolRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1561,7 +1561,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   ],
   "struct_declarations": [
     {
-      "name": "test.fidlcodec.examples/FidlCodecTestInterfaceRequest",
+      "name": "test.fidlcodec.examples/FidlCodecTestProtocolRequest",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "Int32",
@@ -1644,8 +1644,8 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   fidl::IncomingMessageBuffer buffer;
   fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
 
-  InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
-      message, [](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestInterface>& ptr) {
+  InterceptRequest<test::fidlcodec::examples::FidlCodecTestProtocol>(
+      message, [](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestProtocol>& ptr) {
         ptr->Int32(kUninitialized);
       });
 
@@ -1663,11 +1663,11 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
     }
   }
 
-  const std::vector<const InterfaceMethod*>* methods = loader.GetByOrdinal(header.ordinal);
+  const std::vector<const ProtocolMethod*>* methods = loader.GetByOrdinal(header.ordinal);
   ASSERT_NE(methods, nullptr);
   ASSERT_TRUE(!methods->empty());
 
-  const InterfaceMethod* method = (*methods)[0];
+  const ProtocolMethod* method = (*methods)[0];
   // If this is null, you probably have to update the schema above.
   ASSERT_NE(method, nullptr);
 
@@ -1688,7 +1688,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   delete[] handle_dispositions;
   ASSERT_PRED_FORMAT2(
       ::testing::IsSubstring,
-      "Unknown type for identifier: test.fidlcodec.examples/FidlCodecTestInterfaceRequest",
+      "Unknown type for identifier: test.fidlcodec.examples/FidlCodecTestProtocolRequest",
       log_msg.str().c_str());
   ASSERT_PRED_FORMAT2(::testing::IsSubstring, "Invalid type", log_msg.str().c_str());
 }

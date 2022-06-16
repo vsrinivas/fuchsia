@@ -544,7 +544,7 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
   if (matched_request() && (is_request_ || unknown_direction_)) {
     printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " request"
             << fidl_codec::ResetColor << ' ' << fidl_codec::Green
-            << method_->enclosing_interface().name() << '.' << method_->name()
+            << method_->enclosing_protocol().name() << '.' << method_->name()
             << fidl_codec::ResetColor << " = ";
     if (printer.pretty_print()) {
       decoded_request_->PrettyPrint(nullptr, printer);
@@ -560,7 +560,7 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
   if (matched_response() && (!is_request_ || unknown_direction_)) {
     printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent")
             << (method_->has_request() ? " response" : " event") << fidl_codec::ResetColor << ' '
-            << fidl_codec::Green << method_->enclosing_interface().name() << '.' << method_->name()
+            << fidl_codec::Green << method_->enclosing_protocol().name() << '.' << method_->name()
             << fidl_codec::ResetColor << " = ";
     if (printer.pretty_print()) {
       decoded_response_->PrettyPrint(nullptr, printer);
@@ -586,7 +586,7 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
     if (decoded_request_ != nullptr) {
       printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " request"
               << fidl_codec::ResetColor << ' ' << fidl_codec::Green
-              << method_->enclosing_interface().name() << '.' << method_->name()
+              << method_->enclosing_protocol().name() << '.' << method_->name()
               << fidl_codec::ResetColor << " = ";
       decoded_request_->PrettyPrint(nullptr, printer);
       printer << '\n';
@@ -603,8 +603,8 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
     if (decoded_response_ != nullptr) {
       printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent")
               << (method_->has_request() ? " response" : " event") << fidl_codec::ResetColor << ' '
-              << fidl_codec::Green << method_->enclosing_interface().name() << '.'
-              << method_->name() << fidl_codec::ResetColor << " = ";
+              << fidl_codec::Green << method_->enclosing_protocol().name() << '.' << method_->name()
+              << fidl_codec::ResetColor << " = ";
       decoded_response_->PrettyPrint(nullptr, printer);
       printer << '\n';
     }
@@ -632,7 +632,7 @@ void FidlMessageValue::DumpMessage(PrettyPrinter& printer) const {
   if (ordinal_ != 0) {
     printer << " ordinal=" << std::hex << ordinal_ << std::dec;
     if (method_ != nullptr) {
-      printer << '(' << method_->enclosing_interface().name() << '.' << method_->name() << ')';
+      printer << '(' << method_->enclosing_protocol().name() << '.' << method_->name() << ')';
     }
   }
   printer << fidl_codec::ResetColor << '\n';

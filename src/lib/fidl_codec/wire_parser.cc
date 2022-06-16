@@ -25,7 +25,7 @@ bool DecodeMessage(const Payload* str, const uint8_t* bytes, size_t num_bytes,
 
 }  // anonymous namespace
 
-bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, size_t num_bytes,
+bool DecodeRequest(const ProtocolMethod* method, const uint8_t* bytes, size_t num_bytes,
                    const zx_handle_disposition_t* handles, size_t num_handles,
                    std::unique_ptr<PayloadableValue>* decoded_object, std::ostream& error_stream) {
   if (!method->has_request()) {
@@ -35,7 +35,7 @@ bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, size_t n
                        error_stream);
 }
 
-bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, size_t num_bytes,
+bool DecodeResponse(const ProtocolMethod* method, const uint8_t* bytes, size_t num_bytes,
                     const zx_handle_disposition_t* handles, size_t num_handles,
                     std::unique_ptr<PayloadableValue>* decoded_object, std::ostream& error_stream) {
   if (!method->has_response()) {

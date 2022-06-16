@@ -261,10 +261,10 @@ void SemanticParser::ParseLibrary() {
       NextLexicalToken();
       return;
     }
-    Interface* interface = nullptr;
+    Protocol* protocol = nullptr;
     if (library != nullptr) {
       std::string protocol_name = library->name() + "/" + std::string(current_string_);
-      if (!library->GetInterfaceByName(protocol_name, &interface)) {
+      if (!library->GetProtocolByName(protocol_name, &protocol)) {
         AddError() << "Protocol " << current_string_ << " not found in library " << library->name()
                    << '\n';
       }
@@ -281,11 +281,11 @@ void SemanticParser::ParseLibrary() {
       NextLexicalToken();
       return;
     }
-    InterfaceMethod* method = nullptr;
-    if (interface != nullptr) {
-      method = interface->GetMethodByName(current_string_);
+    ProtocolMethod* method = nullptr;
+    if (protocol != nullptr) {
+      method = protocol->GetMethodByName(current_string_);
       if (method == nullptr) {
-        AddError() << "Method " << current_string_ << " not found in protocol " << interface->name()
+        AddError() << "Method " << current_string_ << " not found in protocol " << protocol->name()
                    << '\n';
       }
     }
@@ -299,7 +299,7 @@ void SemanticParser::ParseLibrary() {
   }
 }
 
-void SemanticParser::ParseMethod(InterfaceMethod* method) {
+void SemanticParser::ParseMethod(ProtocolMethod* method) {
   while (!ConsumeRightBrace() && !IsEof()) {
     if (Is("input_field")) {
       NextLexicalToken();
