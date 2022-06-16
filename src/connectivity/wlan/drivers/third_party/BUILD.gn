@@ -7,6 +7,5 @@ group("third_party") {
   deps = [
     "atheros",
     "broadcom",
-    "intel",
   ]
 }
