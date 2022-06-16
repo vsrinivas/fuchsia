@@ -853,6 +853,7 @@ mod tests {
         let launcher = spawn_stream_handler(move |launcher_request| {
             let mut result_sender = sender.clone();
             async move {
+                let _ = &launcher_request;
                 match launcher_request {
                     fsys::LauncherRequest::CreateComponent {
                         launch_info: fsys::LaunchInfo { .. },

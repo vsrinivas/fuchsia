@@ -8,6 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 # Integration test binary for Diagnostics Persistence service.
 rustc_test("test-bin") {
+  edition = "2021"
   testonly = true
   name = "canonical-diagnostics-persistence-test-bin"
   deps = [

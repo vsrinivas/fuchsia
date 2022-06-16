@@ -431,6 +431,7 @@ fuchsia_unittest_component("annotations-test") {
 }
 
 rustc_test("basemgr_v2_test_bin") {
+  edition = "2021"
   name = "basemgr_v2_test"
   source_root = "basemgr_v2_test.rs"
   deps = [

@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_binary("bin") {
   name = "regulatory_region"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
@@ -32,7 +32,7 @@ rustc_binary("bin") {
 
 rustc_library("lib") {
   name = "regulatory_region_lib"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",

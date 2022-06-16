@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "bt_avrcp"
   with_unit_tests = true
 

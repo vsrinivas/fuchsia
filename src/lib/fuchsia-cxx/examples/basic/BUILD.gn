@@ -38,6 +38,7 @@ executable("cpp_binary") {
 
 rust_binary = "cxx_basic_example_rust_binary"
 rustc_binary("rust_binary") {
+  edition = "2021"
   output_name = rust_binary
   source_root = "main.rs"
   sources = [ "main.rs" ]
@@ -50,6 +51,7 @@ rustc_binary("rust_binary") {
 # Unit tests that accompany the Rust sources used in the rust_cxx_ffi_library() target above can be
 # built simply using a rustc_test() target.
 rustc_test("example_blobstore_test_bin") {
+  edition = "2021"
   name = "example_blobstore_test"
   sources = [ "src/lib.rs" ]
   deps = [
@@ -77,6 +79,7 @@ group("tests") {
 }
 
 rustc_binary("run_and_compare_output") {
+  edition = "2021"
   source_root = "run_and_compare_output.rs"
   sources = [ source_root ]
 }

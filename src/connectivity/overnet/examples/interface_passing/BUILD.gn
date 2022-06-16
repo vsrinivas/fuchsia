@@ -16,7 +16,7 @@ group("interface_passing") {
 
 rustc_binary("bin") {
   name = "overnet_interface_passing"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",

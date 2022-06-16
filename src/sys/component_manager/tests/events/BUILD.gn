@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("events_integration_test_bin") {
   name = "events_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

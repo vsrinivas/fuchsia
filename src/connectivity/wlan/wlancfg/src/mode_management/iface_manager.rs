@@ -838,6 +838,7 @@ impl IfaceManagerService {
             }
 
             let fut = async move {
+                let _ = &ap_container;
                 let stop_result =
                     Self::stop_and_exit_ap_state_machine(ap_container.ap_state_machine).await;
 

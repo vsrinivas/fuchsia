@@ -6,11 +6,13 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
 
 rustc_library("from-enum") {
+  edition = "2021"
   deps = [ ":from-enum-derive" ]
   sources = [ "src/lib.rs" ]
 }
 
 rustc_macro("from-enum-derive") {
+  edition = "2021"
   deps = [
     "//third_party/rust_crates:darling",
     "//third_party/rust_crates:proc-macro2",

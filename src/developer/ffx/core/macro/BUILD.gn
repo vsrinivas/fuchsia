@@ -9,7 +9,7 @@ if (is_host) {
   rustc_macro("lib") {
     name = "core_macros"
     version = "0.1.0"
-    edition = "2018"
+    edition = "2021"
 
     deps = [
       ":ffx_core_impl",
@@ -22,7 +22,7 @@ if (is_host) {
   # Implementation needs to be seperate for unit tests.
   rustc_library("ffx_core_impl") {
     version = "0.1.0"
-    edition = "2018"
+    edition = "2021"
     with_unit_tests = true
 
     source_root = "src/impl.rs"

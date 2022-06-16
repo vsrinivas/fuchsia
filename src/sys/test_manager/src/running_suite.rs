@@ -791,6 +791,7 @@ async fn run_invocations(
                     let running_test_cases = running_test_cases.clone();
                     let mut sender = sender_clone.clone();
                     let task = fasync::Task::spawn(async move {
+                        let _ = &std_handles;
                         let mut sender_stdout = sender.clone();
                         let mut sender_stderr = sender.clone();
                         let completion_fut = async {

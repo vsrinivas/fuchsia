@@ -10,7 +10,7 @@ import("//build/testing/test_spec.gni")
 rustc_binary("mock-sys-launcher-bin") {
   testonly = true
   name = "mock_sys_launcher"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

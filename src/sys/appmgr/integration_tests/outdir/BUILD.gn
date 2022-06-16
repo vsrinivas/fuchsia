@@ -12,7 +12,7 @@ group("outdir") {
 
 rustc_binary("bin") {
   name = "appmgr_out_dir_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

@@ -12,7 +12,7 @@ group("tests") {
 
 rustc_test("time-zone-info-service-test") {
   output_name = "time_zone_info_service_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/tests.rs"
   sources = [ "src/tests.rs" ]
   deps = [

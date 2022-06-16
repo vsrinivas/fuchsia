@@ -18,6 +18,7 @@ group("tests") {
 }
 
 rustc_library("dynfidl") {
+  edition = "2021"
   sources = [ "src/lib.rs" ]
 }
 

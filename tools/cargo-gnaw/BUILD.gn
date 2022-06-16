@@ -9,6 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 if (is_host) {
   rustc_binary("cargo-gnaw-bin") {
+    edition = "2021"
     output_name = "gnaw"
 
     deps = [
@@ -21,6 +22,7 @@ if (is_host) {
   }
 
   rustc_library("cargo-gnaw-lib") {
+    edition = "2021"
     name = "gnaw_lib"
 
     deps = [
@@ -55,6 +57,7 @@ if (is_host) {
   }
 
   rustc_test("cargo-gnaw-tests") {
+    edition = "2021"
     source_root = "src/lib.rs"
     deps = [
       "//third_party/rust_crates:anyhow",

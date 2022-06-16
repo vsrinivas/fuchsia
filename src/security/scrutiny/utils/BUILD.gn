@@ -69,7 +69,7 @@ if (is_host) {
   rustc_library("utils") {
     name = "scrutiny_utils"
     with_unit_tests = true
-    edition = "2018"
+    edition = "2021"
     visibility = [
       "//src/developer/ffx/plugins/scrutiny/*",
       "//src/security/scrutiny/*",

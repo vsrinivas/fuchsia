@@ -9,7 +9,7 @@ rustc_library("wlan-inspect") {
   name = "wlan_inspect"
   version = "0.1.0"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",

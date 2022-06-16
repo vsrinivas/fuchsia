@@ -11,7 +11,7 @@ rustc_binary("bin") {
   testonly = true
   with_unit_tests = true
   name = "netemul_sandbox"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",

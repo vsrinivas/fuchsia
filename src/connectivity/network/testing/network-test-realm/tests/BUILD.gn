@@ -11,6 +11,7 @@ group("tests") {
 }
 
 rustc_test("network-test-realm") {
+  edition = "2021"
   output_name = "network_test_realm_integration_test"
   deps = [
     "unreliable-echo:lib",

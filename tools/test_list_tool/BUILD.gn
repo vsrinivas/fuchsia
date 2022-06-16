@@ -6,6 +6,7 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("test_list_tool") {
+  edition = "2021"
   name = "test_list_tool"
   with_unit_tests = true
 

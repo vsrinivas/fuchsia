@@ -227,7 +227,6 @@ impl Target {
         S: Into<String>,
         I: Iterator<Item = TargetAddrEntry>,
     {
-        use std::iter::FromIterator;
         let target = Self::new();
         target.nodename.replace(nodename.map(Into::into));
         target.addrs.replace(BTreeSet::from_iter(entries));

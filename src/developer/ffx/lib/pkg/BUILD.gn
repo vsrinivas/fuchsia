@@ -21,7 +21,7 @@ host_test_data("empty-repo") {
 
 rustc_library("pkg") {
   name = "pkg"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

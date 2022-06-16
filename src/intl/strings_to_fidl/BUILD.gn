@@ -31,7 +31,7 @@ if (is_host) {
   rustc_binary("strings_to_fidl_bin") {
     name = "strings_to_fidl"
     with_unit_tests = true
-    edition = "2018"
+    edition = "2021"
     deps = [
       "//src/lib/intl/strings:lib",
       "//third_party/rust_crates:anyhow",

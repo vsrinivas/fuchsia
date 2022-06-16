@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("rust_bin") {
   name = "debug_data_rust_bin"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
 
   deps = [

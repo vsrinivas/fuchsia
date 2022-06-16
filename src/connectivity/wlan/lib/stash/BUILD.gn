@@ -9,7 +9,7 @@ rustc_library("wlan-stash") {
   name = "wlan_stash"
   version = "0.1.0"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":wlan-stash-constants",
@@ -34,7 +34,7 @@ rustc_library("wlan-stash") {
 rustc_library("wlan-stash-constants") {
   name = "wlan_stash_constants"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/constants.rs"
 
   deps = [

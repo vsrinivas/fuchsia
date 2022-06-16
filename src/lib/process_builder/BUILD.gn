@@ -14,7 +14,7 @@ group("tests") {
 
 rustc_library("process_builder") {
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -63,7 +63,7 @@ rustc_library("process_builder") {
 
 rustc_binary("root_job_test_runner") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
   source_root = "root_job_test_runner/main.rs"
 
   deps = [
@@ -93,7 +93,7 @@ fidl("test-util-fidl") {
 rustc_binary("test_util") {
   testonly = true
   name = "process_builder_test_util"
-  edition = "2018"
+  edition = "2021"
   source_root = "test/test_util.rs"
 
   deps = [

@@ -91,7 +91,7 @@ rustc_library("benchmark_suite_rust_lib") {
 rustc_binary("rust_fidl_microbenchmarks_bin") {
   testonly = true
   name = "rust_fidl_microbenchmarks"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":benchmark_suite_rust_lib",

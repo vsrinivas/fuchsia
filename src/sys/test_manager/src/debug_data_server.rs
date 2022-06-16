@@ -267,6 +267,7 @@ mod test {
                 .into_iter()
                 .flatten()
                 .map(|response| async move {
+                    let _ = &response;
                     let DebugData { name, file, .. } = response;
                     let contents =
                         fuchsia_fs::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
@@ -325,6 +326,7 @@ mod test {
                 .into_iter()
                 .flatten()
                 .map(|response| async move {
+                    let _ = &response;
                     let DebugData { name, file, .. } = response;
                     let contents =
                         fuchsia_fs::read_file_bytes(&file.expect("has file").into_proxy().unwrap())

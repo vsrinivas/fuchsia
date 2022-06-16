@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 # Build the library.
 rustc_library("ppp_packet") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/network/packet",
@@ -29,7 +29,7 @@ rustc_library("ppp_packet") {
 }
 
 rustc_test("ppp_packet_test_bin") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/network/packet",

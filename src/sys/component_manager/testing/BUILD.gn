@@ -14,7 +14,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("test_utils_lib") {
   name = "test_utils_lib"
-  edition = "2018"
+  edition = "2021"
   source_root = "lib.rs"
   testonly = true
 

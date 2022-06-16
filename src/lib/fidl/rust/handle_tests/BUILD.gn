@@ -25,7 +25,7 @@ if (is_fuchsia) {
 
 rustc_test("fidl_rust_handle_tests_bin") {
   output_name = "fidl_rust_handle_tests"
-  edition = "2018"
+  edition = "2021"
   sources = handle_test_sources
   deps = handle_test_deps
 }
@@ -36,7 +36,7 @@ fuchsia_unittest_package("fidl_rust_handle_tests") {
 
 # Also build as a library for use in overnet tests.
 rustc_library("fidl_handle_tests") {
-  edition = "2018"
+  edition = "2021"
   sources = handle_test_sources
   deps = handle_test_deps
 }

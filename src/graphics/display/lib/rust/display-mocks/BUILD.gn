@@ -11,6 +11,7 @@ group("tests") {
 }
 
 rustc_library("display-mocks") {
+  edition = "2021"
   name = "display_mocks"
   version = "0.1.0"
   with_unit_tests = true

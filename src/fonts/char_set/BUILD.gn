@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 # Library for working with collections of Unicode code points.
 rustc_library("char_set") {
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

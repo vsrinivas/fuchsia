@@ -9,7 +9,7 @@ import("//src/sys/core/build/core_shard.gni")
 rustc_binary("bin") {
   output_name = "battery_manager"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power-rustc",

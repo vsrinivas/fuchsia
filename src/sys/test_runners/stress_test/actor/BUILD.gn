@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 import("//tools/cmc/build/expect_includes.gni")
 
 rustc_library("stress-test-actor") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/actor.rs"
   deps = [
     ":actor_includes",

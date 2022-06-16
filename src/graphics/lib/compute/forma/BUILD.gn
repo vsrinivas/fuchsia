@@ -9,7 +9,7 @@ rustc_library("forma") {
   name = "forma"
   with_unit_tests = true
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/graphics/lib/compute/surpass",
     "//src/lib/trace/rust:trace",

@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("shutdown_integration_test_bin") {
   name = "shutdown_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "shutdown_integration.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -22,7 +22,7 @@ rustc_test("shutdown_integration_test_bin") {
 
 rustc_binary("system_controller_client_bin") {
   name = "system_controller_client"
-  edition = "2018"
+  edition = "2021"
   source_root = "system_controller_client.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

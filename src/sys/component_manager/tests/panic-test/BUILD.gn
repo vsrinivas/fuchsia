@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("component_manager_panic_test_bin") {
   name = "component_manager_panic_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "component_manager_panic.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",

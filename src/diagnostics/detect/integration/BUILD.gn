@@ -20,6 +20,7 @@ group("tests") {
 }
 
 rustc_test("integration_test_bin") {
+  edition = "2021"
   source_root = "integration_test.rs"
   name = "detect_integration_test"
   deps = [

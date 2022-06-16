@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("rust") {
   name = "netdevice_client"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   sources = [
     "src/client.rs",
@@ -49,6 +49,7 @@ rustc_library("rust") {
 }
 
 rustc_test("tun-test") {
+  edition = "2021"
   source_root = "tests/tun.rs"
   deps = [
     ":rust",

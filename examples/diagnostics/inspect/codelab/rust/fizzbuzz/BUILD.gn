@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "inspect_rust_codelab_fizzbuzz"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",

@@ -67,6 +67,7 @@ action("copy_clang_coverage_test_binary") {
 
 # Rust coverage test is compiled with coverage enabled.
 rustc_binary("rust_coverage_test_bin") {
+  edition = "2021"
   testonly = true
   source_root = "rust_coverage_test.rs"
   sources = [ "rust_coverage_test.rs" ]

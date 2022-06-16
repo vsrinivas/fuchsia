@@ -64,7 +64,7 @@ fuchsia_component("coverage_component-component") {
 rustc_binary("component_to_test_standard_out") {
   name = "component_to_test_standard_out"
   source_root = "./component_to_test_standard_out.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/syslog/rust:syslog",
@@ -83,7 +83,7 @@ fuchsia_component("component_to_test_standard_out-component") {
 rustc_binary("error_logging_component") {
   name = "error_logging_component"
   source_root = "./error_logging_component.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/syslog/rust:syslog",

@@ -9,7 +9,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   name = "overnetstack"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",

@@ -13,7 +13,7 @@ rustc_library("lib") {
     # We don't want this library making it to production by accident.
     testonly = true
   }
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/storage/storage_device",
@@ -35,7 +35,7 @@ rustc_library("lib") {
 
 if (is_host) {
   rustc_binary("fxfs_tool") {
-    edition = "2018"
+    edition = "2021"
     deps = [
       ":lib",
       "//src/lib/fuchsia-async",

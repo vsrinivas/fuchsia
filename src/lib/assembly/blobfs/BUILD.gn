@@ -8,6 +8,7 @@ import("//build/zircon/tools.gni")
 
 if (is_host) {
   rustc_library("blobfs") {
+    edition = "2021"
     name = "assembly_blobfs"
     version = "0.1.0"
     with_unit_tests = true

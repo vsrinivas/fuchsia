@@ -24,7 +24,7 @@ fuchsia_component("panicker") {
 
 rustc_test("panic_is_logged_bin") {
   name = "panic_is_logged"
-  edition = "2018"
+  edition = "2021"
   source_root = "panic_is_logged.rs"
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
@@ -39,7 +39,7 @@ rustc_test("panic_is_logged_bin") {
 
 rustc_binary("panicker_bin") {
   name = "panicker"
-  edition = "2018"
+  edition = "2021"
   source_root = "panicker.rs"
   deps = [ "//src/lib/syslog/rust:syslog" ]
 

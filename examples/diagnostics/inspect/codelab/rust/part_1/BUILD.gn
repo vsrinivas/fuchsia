@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_binary("bin") {
   name = "inspect_rust_codelab_part_1"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [
@@ -39,7 +39,7 @@ fuchsia_component("part_1") {
 rustc_test("integration_test") {
   name = "inspect_rust_codelab_part_1_integration_test"
   source_root = "tests/integration_test.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//examples/diagnostics/inspect/codelab/rust/testing:inspect-rust-codelab-testing",

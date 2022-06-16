@@ -16,6 +16,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "rust_logs_example"
 
   deps = [
@@ -31,6 +32,7 @@ rustc_binary("bin") {
 }
 
 rustc_test("test") {
+  edition = "2021"
   name = "rust_logs_example_tests"
   source_root = "tests/lib.rs"
 

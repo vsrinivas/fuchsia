@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("realm_builder_server_bin") {
+  edition = "2021"
   name = "realm_builder_server"
   with_unit_tests = true
   sources = [

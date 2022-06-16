@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("tcp-stream-ext") {
   name = "tcp_stream_ext"
-  edition = "2018"
+  edition = "2021"
   version = "0.1.0"
   with_unit_tests = true
   deps = [
@@ -28,7 +28,7 @@ rustc_library("tcp-stream-ext") {
 rustc_test("stub-netstack-test") {
   name = "stub_netstack_test"
   source_root = "src/stub_netstack_test.rs"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":tcp-stream-ext",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

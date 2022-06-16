@@ -45,7 +45,7 @@ if (is_host) {
 
   rustc_binary("bin") {
     name = "bindc"
-    edition = "2018"
+    edition = "2021"
 
     with_unit_tests = true
     test_environments = [ host_env ]

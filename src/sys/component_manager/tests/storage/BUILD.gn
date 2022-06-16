@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("storage_integration_test_bin") {
   name = "storage_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -22,7 +22,7 @@ rustc_test("storage_integration_test_bin") {
 
 rustc_test("storage_admin_integration_test_bin") {
   name = "storage_admin_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "admin_integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -49,7 +49,7 @@ rustc_test("storage_admin_integration_test_bin") {
 
 rustc_binary("storage_realm_coll_bin") {
   name = "storage_realm_coll"
-  edition = "2018"
+  edition = "2021"
   source_root = "storage_realm_coll.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
@@ -67,7 +67,7 @@ rustc_binary("storage_realm_coll_bin") {
 
 rustc_binary("storage_realm_coll_invalid_route_bin") {
   name = "storage_realm_coll_invalid_route"
-  edition = "2018"
+  edition = "2021"
   source_root = "storage_realm_coll_invalid_route.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
@@ -85,7 +85,7 @@ rustc_binary("storage_realm_coll_invalid_route_bin") {
 
 rustc_binary("storage_user_bin") {
   name = "storage_user"
-  edition = "2018"
+  edition = "2021"
   source_root = "storage_user.rs"
   deps = [ "//src/lib/fuchsia" ]
 
@@ -94,7 +94,7 @@ rustc_binary("storage_user_bin") {
 
 rustc_binary("only_exits_bin") {
   name = "only_exits"
-  edition = "2018"
+  edition = "2021"
   source_root = "only_exits.rs"
   deps = []
 

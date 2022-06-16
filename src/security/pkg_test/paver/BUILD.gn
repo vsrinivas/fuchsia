@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("security_pkg_paver-binary") {
   testonly = true
   output_name = "security_pkg_paver"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
 
   sources = [ "src/main.rs" ]

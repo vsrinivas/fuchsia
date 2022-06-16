@@ -306,8 +306,6 @@ impl Checksum {
     /// `add_bytes` with larger input over more calls with smaller input.
     #[inline]
     pub fn add_bytes(&mut self, mut bytes: &[u8]) {
-        use std::convert::TryInto;
-
         if bytes.len() < SMALL_BUF_THRESHOLD {
             self.add_bytes_small(bytes);
             return;

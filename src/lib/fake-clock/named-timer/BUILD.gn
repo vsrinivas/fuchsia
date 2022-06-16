@@ -15,7 +15,7 @@ rustc_library("named-timer") {
   name = "named_timer"
   with_unit_tests = true
 
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":fidl-rustc",

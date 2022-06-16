@@ -49,7 +49,7 @@ if (current_toolchain == host_toolchain) {
   }
 
   rustc_test("fidlgen_banjo_unittests") {
-    edition = "2018"
+    edition = "2021"
 
     source_root = "tests.rs"
 

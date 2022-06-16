@@ -9,7 +9,7 @@ if (is_host) {
   rustc_library("frontend") {
     name = "scrutiny_frontend"
     with_unit_tests = true
-    edition = "2018"
+    edition = "2021"
     deps = [
       "//src/lib/fuchsia-async",
       "//src/security/scrutiny/config",

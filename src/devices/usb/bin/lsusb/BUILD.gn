@@ -32,6 +32,7 @@ test("lsusb-test-bin") {
 }
 
 rustc_library("lib") {
+  edition = "2021"
   name = "lsusb"
   with_unit_tests = true
   deps = [
@@ -55,6 +56,7 @@ rustc_library("lib") {
 }
 
 rustc_binary("lsusb") {
+  edition = "2021"
   if (is_fuchsia) {
     configs += [ "//build/config/rust:bootfs" ]
   }

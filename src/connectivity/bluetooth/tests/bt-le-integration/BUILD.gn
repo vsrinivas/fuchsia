@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("bt_le_integration_tests") {
+  edition = "2021"
   source_root = "src/lib.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",

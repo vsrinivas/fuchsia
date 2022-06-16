@@ -17,7 +17,7 @@ group("tests") {
 }
 
 rustc_test("factory_reset_handler_test") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",

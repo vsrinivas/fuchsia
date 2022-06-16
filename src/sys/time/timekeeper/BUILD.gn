@@ -55,7 +55,7 @@ timekeeper_sources = [
 
 rustc_binary("bin") {
   name = "timekeeper"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = timekeeper_deps
@@ -74,7 +74,7 @@ rustc_binary("bin") {
 
 rustc_binary("bin_with_fake_time") {
   name = "timekeeper_fake_time"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = false
   testonly = true
 

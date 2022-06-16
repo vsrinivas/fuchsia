@@ -515,7 +515,7 @@ mod tests {
         Sync,
     }
 
-    type MockCallbackType = Box<Fn(&FileOperation) -> zx::Status + Sync + Send>;
+    type MockCallbackType = Box<dyn Fn(&FileOperation) -> zx::Status + Sync + Send>;
     /// A fake file that just tracks what calls `FileConnection` makes on it.
     struct MockFile {
         /// The list of operations that have been called.

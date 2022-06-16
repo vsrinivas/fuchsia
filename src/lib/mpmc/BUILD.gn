@@ -14,7 +14,7 @@ group("tests") {
 
 rustc_library("mpmc") {
   name = "mpmc"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//third_party/rust_crates:crossbeam",
     "//third_party/rust_crates:futures",
@@ -24,7 +24,7 @@ rustc_library("mpmc") {
 }
 
 rustc_test("mpmc_lib_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/test.rs"
   deps = [
     ":mpmc",

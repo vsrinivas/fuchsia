@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("tuf_lib_test") {
-  edition = "2018"
+  edition = "2021"
 
   source_root = "//third_party/rust_crates/vendor/tuf/src/lib.rs"
 

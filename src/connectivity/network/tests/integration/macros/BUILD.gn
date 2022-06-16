@@ -5,6 +5,7 @@
 import("//build/rust/rustc_macro.gni")
 
 rustc_macro("netstack_testing_macros") {
+  edition = "2021"
   source_root = "src/proc_macros.rs"
 
   deps = [

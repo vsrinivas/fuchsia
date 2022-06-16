@@ -485,7 +485,6 @@ pub async fn flush(
 fn make_buffer(contents: impl AsRef<[u8]>) -> Buffer {
     use {
         fuchsia_zircon::{Vmo, VmoOptions},
-        std::convert::TryInto,
     };
     let contents = contents.as_ref();
     let size = contents.len().try_into().unwrap();

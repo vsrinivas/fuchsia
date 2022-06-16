@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("wlan-common") {
   name = "wlan_common"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/banjo/fuchsia.hardware.wlan.associnfo:fuchsia.hardware.wlan.associnfo_banjo_rust",

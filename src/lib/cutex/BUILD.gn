@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("cutex") {
   name = "cutex"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     "//third_party/rust_crates:futures",

@@ -10,7 +10,7 @@ import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 rustc_test("lowpan-driver-provision-mock-bin") {
   name = "lowpan_driver_provision_mock"
   source_root = "mock-device/lowpan_driver_provision_mock.rs"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/lib",

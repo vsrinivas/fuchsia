@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("connect") {
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lib/net-declare",

@@ -10,7 +10,7 @@ import("//build/rust/rustc_library.gni")
 # to bundle multiple products together and save space.
 rustc_library("lib") {
   name = "sampler"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   visibility = [

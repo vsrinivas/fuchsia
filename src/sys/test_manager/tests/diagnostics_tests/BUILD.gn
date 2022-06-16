@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_binary("publisher_bin") {
+  edition = "2021"
   name = "publisher"
   source_root = "publisher.rs"
   deps = [
@@ -30,7 +31,7 @@ rustc_binary("publisher_bin") {
 rustc_test("diagnostics_test_bin") {
   name = "diagnostics_test"
   source_root = "main.rs"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/diagnostics/reader/rust",

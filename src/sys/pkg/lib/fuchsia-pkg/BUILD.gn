@@ -58,7 +58,7 @@ lib_sources = [
 
 rustc_library("fuchsia-pkg") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   deps = lib_deps
   sources = lib_sources
@@ -91,6 +91,7 @@ if (is_fuchsia) {
   }
 
   rustc_test("lib_test") {
+    edition = "2021"
     output_name = "fuchsia_pkg_lib_test"
     deps = lib_deps + test_deps
     sources = lib_sources
@@ -124,6 +125,7 @@ if (is_host) {
   }
 
   rustc_test("lib_test") {
+    edition = "2021"
     output_name = "fuchsia_pkg_lib_test"
     deps =
         lib_deps + test_deps + [ ":test_package_archive($default_toolchain)" ]

@@ -17,7 +17,7 @@ group("account_manager_integration") {
 
 rustc_test("test") {
   name = "account_manager_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "tests/lib.rs"
 

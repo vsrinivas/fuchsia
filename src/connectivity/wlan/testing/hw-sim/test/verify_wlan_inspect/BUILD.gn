@@ -5,7 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("verify_wlan_inspect") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",

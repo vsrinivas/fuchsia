@@ -8,7 +8,7 @@ import("//src/sys/pkg/bin/system-update-checker/ota_config.gni")
 
 rustc_test("driver") {
   name = "system_update_checker_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

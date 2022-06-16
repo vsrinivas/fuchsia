@@ -18,7 +18,7 @@ fidl("fidl.rust.test.external") {
 rustc_test("fidl_rust_external_tests_bin") {
   assert(is_fuchsia)
   output_name = "fidl_rust_external_tests"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":fidl.rust.test.external-rustc",
     "//sdk/testing/fidl/protocols_tests:test.unknown.interactions-rustc",

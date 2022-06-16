@@ -30,6 +30,7 @@ fuchsia_package("package") {
 }
 
 rustc_library("lib") {
+  edition = "2021"
   name = "log-stats"
   with_unit_tests = true
 
@@ -94,6 +95,7 @@ fuchsia_test_package("log-stats-tests") {
 }
 
 rustc_test("test-bin") {
+  edition = "2021"
   testonly = true
   name = "log_stats_integration_tests"
   deps = [

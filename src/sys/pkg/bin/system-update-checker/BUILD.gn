@@ -10,7 +10,7 @@ import("//src/sys/pkg/bin/system-update-checker/ota_config.gni")
 rustc_binary("bin") {
   name = "system_update_checker"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",

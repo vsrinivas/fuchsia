@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_library("pairing-delegate") {
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

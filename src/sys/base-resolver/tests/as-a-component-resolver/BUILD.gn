@@ -14,6 +14,7 @@ group("tests") {
 }
 
 rustc_test("integration_test_bin") {
+  edition = "2021"
   name = "base_resolver_integration_test_bin"
   source_root = "integration_test.rs"
   deps = [
@@ -42,6 +43,7 @@ fuchsia_component("root") {
 }
 
 rustc_binary("fake_dependencies_bin") {
+  edition = "2021"
   testonly = true
   name = "base_resolver_fake_dependencies_bin"
   source_root = "fake_dependencies.rs"
@@ -88,6 +90,7 @@ group("driver_test_realm") {
 }
 
 rustc_binary("mock_component_bin") {
+  edition = "2021"
   testonly = true
   name = "base_resolver_mock_component_bin"
   source_root = "mock_component.rs"

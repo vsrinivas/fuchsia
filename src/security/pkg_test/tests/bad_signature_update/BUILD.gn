@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 # package server for receiving OTA.
 rustc_test("bad_signature_update-test") {
   output_name = "bad_signature_update"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
   data_deps = [
     "//src/security/pkg_test/assemblies/hello_world_v0:meta_far",

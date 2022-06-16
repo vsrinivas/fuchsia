@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("test_manager_test_bin") {
-  edition = "2018"
+  edition = "2021"
   name = "test_manager_test"
   source_root = "src/tests.rs"
   deps = [

@@ -9,6 +9,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
+  edition = "2021"
   name = "bt_hfp_audio_gateway"
   with_unit_tests = true
 
@@ -188,6 +189,7 @@ fuchsia_test_package("bt-hfp-audio-gateway-tests") {
 }
 
 rustc_test("bt_hfp_a2dp_controller_bin") {
+  edition = "2021"
   output_name = "bt_hfp_a2dp_controller_tests"
   features = [ "test_a2dp_controller" ]
   source_root = "src/a2dp.rs"

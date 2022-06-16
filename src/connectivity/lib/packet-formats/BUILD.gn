@@ -9,7 +9,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("packet-formats") {
   name = "packet_formats"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   configs -= [ "//build/config/rust:no_features" ]
@@ -70,6 +70,7 @@ fuchsia_unittest_package("packet-formats-test-package") {
 }
 
 rustc_fuzzer("fuzz-parse-packet") {
+  edition = "2021"
   sources = [ "fuzz/parse_packet.rs" ]
   source_root = "fuzz/parse_packet.rs"
   rustfunction = "fuzz_parse_packet"

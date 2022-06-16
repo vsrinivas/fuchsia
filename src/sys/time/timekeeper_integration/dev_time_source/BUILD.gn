@@ -9,7 +9,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   testonly = true
   name = "dev_time_source"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",

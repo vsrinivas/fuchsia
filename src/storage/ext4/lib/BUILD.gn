@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("parser") {
   name = "ext4_parser"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

@@ -18,7 +18,7 @@ executable("getaddrinfo_test_client") {
 }
 
 rustc_test("getaddrinfo_test") {
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "src/lib.rs" ]
 

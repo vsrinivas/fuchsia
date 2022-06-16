@@ -106,7 +106,7 @@ rustc_test("ot-stack-soft-reset-mock") {
 rustc_test("ot-radio-ncp-ver-query-mock") {
   name = "ot_radio_ncp_ver_query_mock"
   source_root = "mock-device/ot_radio_ncp_ver_query_mock.rs"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/openthread/tests/lib",

@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("shutdown_shim_integration_test_bin") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
 
   deps = [

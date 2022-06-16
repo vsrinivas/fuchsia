@@ -84,6 +84,7 @@ impl TestEnvBuilder {
                 move |h: LocalComponentHandles| {
                     let proxy = spawn_vfs(usb_dir.clone());
                     async move {
+                        let _ = &h;
                         let mut fs = ServiceFs::new();
                         fs.add_remote("usb", proxy);
                         fs.serve_connection(h.outgoing_dir.into_channel())

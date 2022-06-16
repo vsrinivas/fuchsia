@@ -16,7 +16,7 @@ rustc_staticlib("bind-lib") {
   name = "bind_lib_c"
   version = "0.1.0"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   public = [ "ffi_bindings.h" ]
 
@@ -32,7 +32,7 @@ rustc_staticlib("bind-lib") {
 
 rustc_library("lib") {
   name = "bind"
-  edition = "2018"
+  edition = "2021"
 
   with_unit_tests = true
 
@@ -94,18 +94,21 @@ rustc_library("lib") {
 }
 
 rustc_fuzzer("bind_rules_bytecode_fuzzer") {
+  edition = "2021"
   source_root = "src/fuzzer/bytecode_fuzzer.rs"
   sources = [ "src/fuzzer/bytecode_fuzzer.rs" ]
   deps = [ ":lib" ]
 }
 
 rustc_fuzzer("instruction_section_fuzzer") {
+  edition = "2021"
   source_root = "src/fuzzer/bytecode_section_fuzzer.rs"
   sources = [ "src/fuzzer/bytecode_section_fuzzer.rs" ]
   deps = [ ":lib" ]
 }
 
 rustc_fuzzer("symbol_table_section_fuzzer") {
+  edition = "2021"
   source_root = "src/fuzzer/bytecode_section_fuzzer.rs"
   sources = [ "src/fuzzer/bytecode_section_fuzzer.rs" ]
   deps = [ ":lib" ]

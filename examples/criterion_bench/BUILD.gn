@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   version = "0.1.0"
   name = "criterion_bench"
-  edition = "2018"
+  edition = "2021"
   deps = [ "//src/developer/fuchsia-criterion" ]
 
   sources = [ "src/main.rs" ]

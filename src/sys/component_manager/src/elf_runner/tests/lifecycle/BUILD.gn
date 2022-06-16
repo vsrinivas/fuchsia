@@ -14,7 +14,7 @@ group("lifecycle") {
 rustc_test("lifecycle_test") {
   source_root = "lifecycle.rs"
   name = "lifecycle_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -36,7 +36,7 @@ rustc_test("lifecycle_test") {
 
 rustc_binary("immediate_exit") {
   name = "immediate_exit"
-  edition = "2018"
+  edition = "2021"
   source_root = "immediate_exit_component.rs"
 
   sources = [ "immediate_exit_component.rs" ]
@@ -44,7 +44,7 @@ rustc_binary("immediate_exit") {
 
 rustc_binary("run-indefinitely") {
   name = "run_indefinitely"
-  edition = "2018"
+  edition = "2021"
   source_root = "run_indefinitely.rs"
   sources = [ "run_indefinitely.rs" ]
   deps = [
@@ -55,7 +55,7 @@ rustc_binary("run-indefinitely") {
 
 rustc_binary("rendezvous_exit") {
   name = "rendezvous_exit"
-  edition = "2018"
+  edition = "2021"
   source_root = "rendezvous_exit_component.rs"
   deps = [
     "//src/lib/fuchsia",
@@ -72,7 +72,7 @@ rustc_binary("rendezvous_exit") {
 rustc_test("component_exit") {
   source_root = "component_exit.rs"
   name = "component_exit_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fuchsia",
@@ -93,7 +93,7 @@ rustc_test("component_exit") {
 rustc_test("lifecycle_timeout") {
   source_root = "lifecycle_timeout.rs"
   name = "lifecycle_timeout_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -116,7 +116,7 @@ rustc_test("lifecycle_timeout") {
 rustc_test("lifecycle_timeout_unresponsive") {
   source_root = "lifecycle_timeout_unresponsive.rs"
   name = "lifecycle_timeout_unresponsive_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -139,7 +139,7 @@ rustc_test("lifecycle_timeout_unresponsive") {
 rustc_test("debug_started") {
   source_root = "debug_started.rs"
   name = "debug_started_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -158,7 +158,7 @@ rustc_test("debug_started") {
 rustc_binary("unresponsive_component") {
   source_root = "unresponsive_component.rs"
   name = "unresponsive_component"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",

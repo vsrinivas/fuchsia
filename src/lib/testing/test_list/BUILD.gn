@@ -6,6 +6,7 @@ import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("lib") {
+  edition = "2021"
   name = "test_list"
 
   sources = [ "src/lib.rs" ]

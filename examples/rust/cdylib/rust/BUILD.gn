@@ -9,7 +9,7 @@ rustc_cdylib("crust-shared") {
 
   sources = [ "src/lib.rs" ]
 
-  edition = "2018"
+  edition = "2021"
   public = [ "crust.h" ]
 
   # Unlike executables, libfdio is not added as an implicit dependency to

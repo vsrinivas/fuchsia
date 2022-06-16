@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/sdk/sdk_host_tool.gni")
 
 rustc_binary("jq5") {
+  edition = "2021"
   deps = [
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",

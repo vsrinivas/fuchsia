@@ -11,6 +11,7 @@ import("//tools/configc/build/config.gni")
 
 if (is_host) {
   rustc_binary("configc") {
+    edition = "2021"
     name = "configc"
 
     deps = [

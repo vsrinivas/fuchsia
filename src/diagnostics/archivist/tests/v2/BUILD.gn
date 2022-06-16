@@ -10,7 +10,7 @@ import("//src/diagnostics/archivist/tests/v2/configs.gni")
 
 rustc_test("integration_tests_bin") {
   output_name = "archivist_integration_tests"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",

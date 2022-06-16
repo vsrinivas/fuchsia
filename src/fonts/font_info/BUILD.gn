@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
 rustc_library("font_info") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/fonts/char_set",
@@ -37,7 +37,7 @@ rustc_library("font_info") {
 
 rustc_test("font_info_test_bin") {
   name = "font_info_test"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":font_info",
     "//src/fonts/char_set",

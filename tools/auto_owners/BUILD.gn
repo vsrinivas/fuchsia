@@ -21,6 +21,7 @@ if (is_host) {
   ]
 
   rustc_binary("auto_owners_bin") {
+    edition = "2021"
     output_name = "auto_owners"
     with_unit_tests = false
     deps = crate_deps
@@ -28,6 +29,7 @@ if (is_host) {
   }
 
   rustc_test("auto_owners_test") {
+    edition = "2021"
     source_root = "src/main.rs"
     sources = [ "src/main.rs" ]
 

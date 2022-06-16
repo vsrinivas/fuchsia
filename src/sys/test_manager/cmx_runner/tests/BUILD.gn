@@ -7,6 +7,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("echo_proxy_server_bin") {
+  edition = "2021"
   output_name = "echo_proxy_server"
   testonly = true
   source_root = "echo_proxy_server.rs"

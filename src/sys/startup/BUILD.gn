@@ -55,7 +55,7 @@ fuchsia_component("test_root") {
 
 rustc_test("startup_integration_test_bin") {
   name = "startup_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/tests/integration_test.rs"
 
   deps = [

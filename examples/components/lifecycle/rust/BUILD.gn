@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("lifecycle_example") {
+  edition = "2021"
   output_name = "lifecycle_example_rust"
   source_root = "src/lifecycle.rs"
 
@@ -26,6 +27,7 @@ rustc_binary("lifecycle_example") {
 }
 
 rustc_binary("lifecycle_manager") {
+  edition = "2021"
   output_name = "lifecycle_manager_rust"
   source_root = "src/manager.rs"
 

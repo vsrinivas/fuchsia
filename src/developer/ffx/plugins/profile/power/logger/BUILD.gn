@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_power_logger") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "src/lib.rs" ]
 

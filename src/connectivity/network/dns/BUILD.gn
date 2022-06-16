@@ -9,7 +9,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("lib") {
   name = "dns"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
@@ -95,6 +95,7 @@ bin_base = {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   forward_variables_from(bin_base, "*")
 
   name = "dns_resolver"
@@ -103,6 +104,7 @@ rustc_binary("bin") {
 }
 
 rustc_binary("bin_with_fake_time") {
+  edition = "2021"
   forward_variables_from(bin_base, "*")
 
   name = "dns_resolver_with_fake_time"

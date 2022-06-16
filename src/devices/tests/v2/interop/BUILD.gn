@@ -109,6 +109,7 @@ fuchsia_driver_component("leaf") {
 }
 
 rustc_test("bin") {
+  edition = "2021"
   testonly = true
   output_name = "interop_bin"
   source_root = "test.rs"

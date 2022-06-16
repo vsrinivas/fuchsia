@@ -5,6 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("inspect") {
+  edition = "2021"
   output_name = "netstack_inspect_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",

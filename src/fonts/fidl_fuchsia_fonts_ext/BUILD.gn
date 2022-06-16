@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("fidl_fuchsia_fonts_ext") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",

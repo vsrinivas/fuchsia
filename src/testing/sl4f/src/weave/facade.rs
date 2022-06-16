@@ -189,6 +189,7 @@ mod tests {
         fn build_stack(self) -> (WeaveFacade, impl Future<Output = ()>) {
             let (proxy, mut stream) = create_proxy_and_stream::<StackMarker>().unwrap();
             let fut = async move {
+                let _ = &self;
                 for expected in self.expected_stack {
                     expected(stream.next().await.unwrap().unwrap());
                 }
@@ -205,6 +206,7 @@ mod tests {
         fn build_stack_and_pairing_state_watcher(self) -> (WeaveFacade, impl Future<Output = ()>) {
             let (proxy, mut stream) = create_proxy_and_stream::<StackMarker>().unwrap();
             let stream_fut = async move {
+                let _ = &self;
                 match stream.next().await {
                     Some(Ok(StackRequest::GetPairingStateWatcher {
                         watcher,

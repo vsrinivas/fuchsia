@@ -27,9 +27,9 @@ where
 {
     async fn rename(
         &self,
-        src_dir: Arc<Any + Sync + Send + 'static>,
+        src_dir: Arc<dyn Any + Sync + Send + 'static>,
         src: Path,
-        dst_dir: Arc<Any + Sync + Send + 'static>,
+        dst_dir: Arc<dyn Any + Sync + Send + 'static>,
         dst: Path,
     ) -> Result<(), Status> {
         let src_parent = src_dir.downcast::<T>().map_err(|_| Status::INVALID_ARGS)?;

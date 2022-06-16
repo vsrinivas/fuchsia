@@ -175,6 +175,7 @@ mod test {
 
             let actual_file_and_contents: HashMap<_, _> = futures::stream::iter(raw_results)
                 .then(|debug_data| async move {
+                    let _ = &debug_data;
                     let contents =
                         fuchsia_fs::read_file(&debug_data.file.unwrap().into_proxy().unwrap())
                             .await

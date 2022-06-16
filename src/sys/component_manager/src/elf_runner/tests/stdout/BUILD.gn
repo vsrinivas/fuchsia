@@ -11,6 +11,7 @@ group("stdout") {
 }
 
 rustc_test("test") {
+  edition = "2021"
   name = "elf_runner_stdout"
 
   deps = [

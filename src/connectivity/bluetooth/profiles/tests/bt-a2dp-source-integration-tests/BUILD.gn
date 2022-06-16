@@ -12,6 +12,7 @@ fuchsia_component("bt-a2dp-source-component-v2") {
 }
 
 rustc_test("tests_bin") {
+  edition = "2021"
   output_name = "bt_a2dp_source_integration_tests"
   source_root = "src/main.rs"
 

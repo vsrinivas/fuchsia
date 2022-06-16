@@ -23,6 +23,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "driver_index"
 
   configs += [ "//build/config/rust:bootfs" ]

@@ -29,7 +29,7 @@ group("tests") {
 if (target_cpu == "x64") {
   rustc_binary("starnix_runner_bin") {
     name = "starnix_runner"
-    edition = "2018"
+    edition = "2021"
     with_unit_tests = true
 
     source_root = "main.rs"

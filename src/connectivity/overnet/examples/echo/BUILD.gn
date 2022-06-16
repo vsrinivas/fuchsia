@@ -15,7 +15,7 @@ group("echo") {
 
 rustc_binary("bin") {
   name = "overnet_echo"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",

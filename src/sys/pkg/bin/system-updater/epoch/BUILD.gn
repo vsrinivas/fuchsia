@@ -27,12 +27,13 @@ if (is_host) {
 
   rustc_binary("generator") {
     name = "epoch_generator"
-    edition = "2018"
+    edition = "2021"
     deps = _generator_deps
     sources = _generator_sources
   }
 
   rustc_test("epoch-generator-tests") {
+    edition = "2021"
     deps = _generator_deps + _generator_test_deps
     source_root = "src/main.rs"
     sources = _generator_sources

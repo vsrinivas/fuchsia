@@ -26,7 +26,7 @@ if (is_host) {
   rustc_binary("generate_config_bin") {
     name = "generate_config"
     with_unit_tests = true
-    edition = "2018"
+    edition = "2021"
     deps = [
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",

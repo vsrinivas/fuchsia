@@ -48,7 +48,7 @@ library_sources = [
 ]
 
 rustc_library("triage") {
-  edition = "2018"
+  edition = "2021"
   version = "0.0.1"
 
   deps = lib_deps
@@ -57,6 +57,7 @@ rustc_library("triage") {
 }
 
 rustc_test("triage-lib-unittests") {
+  edition = "2021"
   deps = [
            ":triage",
            "//src/lib/fuchsia",

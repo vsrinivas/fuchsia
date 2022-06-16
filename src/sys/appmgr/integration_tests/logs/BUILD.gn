@@ -28,7 +28,7 @@ fuchsia_unittest_package("appmgr_log_integration_tests") {
 rustc_binary("log_tests_bin") {
   name = "appmgr_log_integration_tests"
   source_root = "./log_integration_test.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
@@ -46,7 +46,7 @@ rustc_binary("log_tests_bin") {
 rustc_binary("log_emitter_bin") {
   name = "log_emitter_for_test"
   source_root = "./log_emitter_for_test.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fuchsia",

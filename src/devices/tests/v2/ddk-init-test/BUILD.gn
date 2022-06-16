@@ -46,6 +46,7 @@ fuchsia_driver_component("component") {
 }
 
 rustc_test("init-test") {
+  edition = "2021"
   testonly = true
   source_root = "test.rs"
   sources = [ "test.rs" ]

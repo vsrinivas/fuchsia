@@ -46,7 +46,7 @@ fidl_rust_sources = [
 ]
 
 rustc_library("fidl") {
-  edition = "2018"
+  edition = "2021"
   deps = fidl_rust_deps
 
   if (is_fuchsia && fidl_trace_level != 0) {
@@ -58,7 +58,7 @@ rustc_library("fidl") {
 
 rustc_test("fidl_rust_lib_tests_bin") {
   output_name = "fidl_rust_lib_tests"
-  edition = "2018"
+  edition = "2021"
   deps = fidl_rust_deps + [
            "//third_party/rust_crates:futures-test",
            "//third_party/rust_crates:assert_matches",

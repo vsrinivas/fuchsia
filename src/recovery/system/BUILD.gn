@@ -62,7 +62,7 @@ resource("roboto_regular") {
 
 rustc_binary("bin") {
   name = "system_recovery"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
@@ -229,7 +229,7 @@ fuchsia_test_package("system_recovery_tests") {
 
 rustc_binary("bin_installer") {
   name = "system_recovery_installer"
-  edition = "2018"
+  edition = "2021"
   source_root = "installer/main.rs"
   with_unit_tests = true
   deps = [

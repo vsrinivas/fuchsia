@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("tests_bin") {
-  edition = "2018"
+  edition = "2021"
   source_root = "main.rs"
   name = "rust_runner_integration_test"
 
@@ -34,7 +34,7 @@ fuchsia_component("rust_runner_integration_test") {
 }
 
 rustc_test("stress_tests_bin") {
-  edition = "2018"
+  edition = "2021"
   source_root = "stress_main.rs"
   name = "rust_runner_stress_test"
 

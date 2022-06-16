@@ -15,7 +15,7 @@ group("tests") {
 
 rustc_test("security_policy_capability_allowlist_integration_test_bin") {
   name = "security_policy_capability_allowlist_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "security_policy_capability_allowlist_integration_test.rs"
   deps = [
     ":test.policy-rustc",
@@ -39,7 +39,7 @@ fidl("test.policy") {
 }
 
 rustc_binary("policy_service_bin") {
-  edition = "2018"
+  edition = "2021"
   source_root = "policy_service.rs"
   deps = [
     ":test.policy-rustc",
@@ -72,7 +72,7 @@ executable("dir_service_bin") {
 }
 
 rustc_binary("cap_getter_bin") {
-  edition = "2018"
+  edition = "2021"
   source_root = "cap_getter.rs"
   deps = [
     ":test.policy-rustc",

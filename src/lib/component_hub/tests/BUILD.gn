@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("integration_test_bin") {
   name = "component_hub_integration_test"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/component_hub",
@@ -29,6 +29,7 @@ fuchsia_component("test") {
 }
 
 rustc_binary("foo_noop") {
+  edition = "2021"
   sources = [ "src/foo.rs" ]
   source_root = "src/foo.rs"
 }

@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("machina-virtio-device") {
   name = "machina-virtio-device"
   version = "1.0.0"
-  edition = "2018"
+  edition = "2021"
 
   sources = [
     "src/bell.rs",

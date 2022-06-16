@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_binary("bin") {
   name = "pkg_local_mirror"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -30,7 +30,7 @@ rustc_library("lib") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing:*",
   ]
   name = "pkg_local_mirror"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",

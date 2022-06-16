@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("always_fail_actor_bin") {
   testonly = true
   name = "always_fail_actor"
-  edition = "2018"
+  edition = "2021"
   source_root = "actor/main.rs"
   deps = [
     "//src/lib/fuchsia",

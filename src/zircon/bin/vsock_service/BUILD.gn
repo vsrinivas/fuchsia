@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_binary("bin") {
   name = "vsock_service"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":lib",
@@ -31,7 +31,7 @@ rustc_binary("bin") {
 
 rustc_library("lib") {
   name = "vsock_service_lib"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.hardware.vsock:fuchsia.hardware.vsock-rustc",

@@ -11,6 +11,7 @@ group("tests") {
 }
 
 rustc_binary("virtio_sound_bin") {
+  edition = "2021"
   name = "virtio_sound"
   with_unit_tests = true
 

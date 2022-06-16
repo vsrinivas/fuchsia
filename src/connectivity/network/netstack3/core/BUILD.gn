@@ -107,7 +107,7 @@ lib_test_deps = [
 rustc_library("netstack3-core") {
   name = "netstack3_core"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   configs -= [ "//build/config/rust:no_features" ]
@@ -153,6 +153,7 @@ config("fuzz") {
 }
 
 rustc_fuzzer("fuzz-single-device") {
+  edition = "2021"
   rustfunction = "single_device_arbitrary_packets"
 
   sources = lib_sources

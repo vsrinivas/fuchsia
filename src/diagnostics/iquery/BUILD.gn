@@ -76,7 +76,7 @@ if (is_fuchsia) {
 
 rustc_library("lib") {
   name = "iquery"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   source_root = "src/lib.rs"
 
@@ -97,7 +97,7 @@ rustc_library("lib") {
 
 rustc_binary("bin") {
   output_name = "iquery"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
 
   if (is_fuchsia) {
@@ -115,6 +115,7 @@ rustc_binary("bin") {
 }
 
 rustc_test("iquery_test") {
+  edition = "2021"
   output_name = "iquery_test"
   source_root = "src/main.rs"
 

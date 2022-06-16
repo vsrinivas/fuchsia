@@ -5,6 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("test-battery-manager") {
+  edition = "2021"
   name = "test-battery-manager"
   testonly = true
 

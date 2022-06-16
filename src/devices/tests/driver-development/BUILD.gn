@@ -12,6 +12,7 @@ group("tests") {
 }
 
 rustc_test("driver_development_test") {
+  edition = "2021"
   testonly = true
   source_root = "test.rs"
   sources = [

@@ -28,7 +28,7 @@ fuchsia_package("tee_manager") {
 
 rustc_binary("bin") {
   name = "tee_manager"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

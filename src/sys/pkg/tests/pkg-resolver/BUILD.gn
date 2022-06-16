@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_library("lib") {
   name = "lib"
-  edition = "2018"
+  edition = "2021"
   testonly = true
 
   deps = [
@@ -68,7 +68,7 @@ rustc_library("lib") {
 
 rustc_test("dynamic_repositories_disabled") {
   name = "dynamic-repositories-disabled"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/dynamic_repositories_disabled.rs"
 
@@ -111,7 +111,7 @@ rustc_test("dynamic_repositories_disabled") {
 
 rustc_test("persists_tuf_metadata") {
   name = "persists-tuf-metadata"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/persists_tuf_metadata.rs"
 
@@ -127,7 +127,7 @@ rustc_test("persists_tuf_metadata") {
 
 rustc_test("dynamic_rewrite_disabled") {
   name = "dynamic-rewrite-disabled"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/dynamic_rewrite_disabled.rs"
 
@@ -170,7 +170,7 @@ rustc_test("dynamic_rewrite_disabled") {
 
 rustc_test("pkg_resolve_inspect") {
   name = "pkg-resolve-inspect"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/pkg_resolve_inspect.rs"
 
@@ -213,7 +213,7 @@ rustc_test("pkg_resolve_inspect") {
 
 rustc_test("resolve_fails") {
   name = "resolve-fails"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/resolve_fails.rs"
 
@@ -233,7 +233,7 @@ rustc_test("resolve_fails") {
 
 rustc_test("resolve_propagates_blobfs_failure") {
   name = "resolve-propagates-blobfs-failure"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/resolve_propagates_blobfs_failure.rs"
 
@@ -277,7 +277,7 @@ rustc_test("resolve_propagates_blobfs_failure") {
 
 rustc_test("resolve_recovers_from_http_errors") {
   name = "resolve-recovers-from-http-errors"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/resolve_recovers_from_http_errors.rs"
 
@@ -320,7 +320,7 @@ rustc_test("resolve_recovers_from_http_errors") {
 
 rustc_test("resolve_resumes_blob_gets") {
   name = "resolve-resumes-blob-gets"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/resolve_resumes_blob_gets.rs"
 
@@ -341,7 +341,7 @@ rustc_test("resolve_resumes_blob_gets") {
 
 rustc_test("resolve_succeeds_with_broken_minfs") {
   name = "resolve-succeeds-with-broken-minfs"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/resolve_succeeds_with_broken_minfs.rs"
 
@@ -384,7 +384,7 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
 
 rustc_test("resolve_succeeds") {
   name = "resolve-succeeds"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/resolve_succeeds.rs"
 
@@ -431,7 +431,7 @@ rustc_test("resolve_succeeds") {
 
 rustc_test("get_hash") {
   name = "get-hash"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/get_hash.rs"
 
@@ -474,7 +474,7 @@ rustc_test("get_hash") {
 
 rustc_test("system_cache_fallback") {
   name = "system-cache-fallback"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/system_cache_fallback.rs"
 
@@ -504,7 +504,7 @@ rustc_test("system_cache_fallback") {
 
 rustc_test("base_pinning") {
   name = "base-pinning"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/base_pinning.rs"
 
@@ -532,7 +532,7 @@ rustc_test("base_pinning") {
 
 rustc_test("metrics") {
   name = "metrics"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/metrics.rs"
 
@@ -557,7 +557,7 @@ rustc_test("metrics") {
 
 rustc_test("eager_updates") {
   name = "eager-updates"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/eager_updates.rs"
 

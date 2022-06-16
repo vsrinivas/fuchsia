@@ -10,6 +10,7 @@ if (is_host) {
   }
 
   rustc_binary("shush") {
+    edition = "2021"
     with_unit_tests = true
     deps = [
       "//third_party/rust_crates:anyhow",

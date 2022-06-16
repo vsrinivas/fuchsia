@@ -19,7 +19,7 @@ rustc_library("fuchsia-component-test-lib") {
   testonly = true
   name = "fuchsia_component_test"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   visibility = [ ":*" ]
 
   deps = [

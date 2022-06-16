@@ -383,6 +383,7 @@ async fn setup_rtc(
                 move |handles| {
                     let rtc_dir = rtc_dir.clone();
                     async move {
+                        let _ = &handles;
                         let scope = ExecutionScope::new();
                         let (client_end, server_end) =
                             fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
@@ -446,6 +447,7 @@ async fn serve_fake_rtc(
 async fn serve_test_control(puppet: &PushSourcePuppet, stream: TimeSourceControlRequestStream) {
     stream
         .try_for_each_concurrent(None, |req| async {
+            let _ = &req;
             let TimeSourceControlRequest::ConnectPushSource { push_source, .. } = req;
             puppet.serve_client(push_source);
             Ok(())

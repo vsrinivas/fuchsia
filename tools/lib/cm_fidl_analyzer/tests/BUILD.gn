@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("tests") {
   name = "cm_fidl_analyzer_tests"
-  edition = "2018"
+  edition = "2021"
   testonly = true
 
   deps = [

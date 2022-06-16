@@ -13,7 +13,7 @@ shared_deps = [
 ]
 
 rustc_test("triage_config_test_runner_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
   deps = shared_deps + [ "//src/lib/fuchsia" ]
 
@@ -21,7 +21,7 @@ rustc_test("triage_config_test_runner_test") {
 }
 
 rustc_binary("triage_config_test_runner") {
-  edition = "2018"
+  edition = "2021"
 
   deps = shared_deps
 

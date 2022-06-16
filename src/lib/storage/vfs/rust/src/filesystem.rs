@@ -17,9 +17,9 @@ pub(crate) mod simple;
 pub trait FilesystemRename: Sync + Send {
     async fn rename(
         &self,
-        src_dir: Arc<Any + Sync + Send + 'static>,
+        src_dir: Arc<dyn Any + Sync + Send + 'static>,
         src_name: Path,
-        dst_dir: Arc<Any + Sync + Send + 'static>,
+        dst_dir: Arc<dyn Any + Sync + Send + 'static>,
         dst_name: Path,
     ) -> Result<(), Status>;
 }

@@ -4,7 +4,7 @@
 
 #![deny(missing_docs)]
 
-use crate::{IcmpSocket, Ip, Ipv4, Ipv6, TryFromSockAddr as _};
+use crate::{IcmpSocket, Ip, Ipv4, Ipv6};
 use core::task::{Context, Poll};
 use fuchsia_async as fasync;
 use futures::ready;
@@ -21,10 +21,9 @@ where
         buf: &mut [u8],
         cx: &mut Context<'_>,
     ) -> Poll<std::io::Result<(usize, I::Addr)>> {
-        Poll::Ready(
-            ready!(self.async_recv_from(buf, cx))
-                .and_then(|(len, addr)| I::Addr::try_from(addr).map(|addr| (len, addr))),
-        )
+        Poll::Ready(ready!(self.async_recv_from(buf, cx)).and_then(|(len, addr)| {
+            <I::Addr as crate::TryFromSockAddr>::try_from(addr).map(|addr| (len, addr))
+        }))
     }
 
     /// Async method for sending an ICMP packet.

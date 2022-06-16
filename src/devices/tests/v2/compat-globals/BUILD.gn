@@ -26,6 +26,7 @@ fidl("fuchsia.hardware.compat") {
 }
 
 rustc_test("compat-shim-globals-test") {
+  edition = "2021"
   testonly = true
   source_root = "test.rs"
   sources = [ "test.rs" ]

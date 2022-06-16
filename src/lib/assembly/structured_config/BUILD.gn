@@ -6,6 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 if (is_host) {
   rustc_library("structured_config") {
+    edition = "2021"
     name = "assembly_structured_config"
     sources = [ "src/lib.rs" ]
     deps = [

@@ -15,7 +15,7 @@ group("rust") {
 
 rustc_binary("bin") {
   name = "prints_when_launched_rust"
-  edition = "2018"
+  edition = "2021"
 
   deps = []
 

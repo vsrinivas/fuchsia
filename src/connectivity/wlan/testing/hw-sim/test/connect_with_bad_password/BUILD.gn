@@ -5,7 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("connect_with_bad_password") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",

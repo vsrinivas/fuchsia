@@ -5,6 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("test-harness") {
+  edition = "2021"
   deps = [
     "//src/connectivity/bluetooth/testing/test-harness-macro",
     "//src/lib/fuchsia-async",

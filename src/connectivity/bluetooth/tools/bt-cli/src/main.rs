@@ -124,9 +124,15 @@ async fn set_device_class<'a>(
     let mut args = args.iter();
     println!("Setting device class of the active adapter");
     let mut device_class = DeviceClass {
-        major: args.next().map(|arg| arg.try_into()).unwrap_or(Ok(MajorClass::Uncategorized))?,
-        minor: args.next().map(|arg| arg.try_into()).unwrap_or(Ok(MinorClass::not_set()))?,
-        service: args.try_into()?,
+        major: args
+            .next()
+            .map(|arg| TryInto::try_into(&**arg))
+            .unwrap_or(Ok(MajorClass::Uncategorized))?,
+        minor: args
+            .next()
+            .map(|arg| TryInto::try_into(&**arg))
+            .unwrap_or(Ok(MinorClass::not_set()))?,
+        service: TryInto::try_into(args)?,
     }
     .into();
 

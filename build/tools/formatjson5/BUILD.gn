@@ -9,7 +9,7 @@ import("//build/sdk/sdk_host_tool.gni")
 rustc_binary("formatjson5") {
   name = "formatjson5"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//third_party/rust_crates:anyhow",

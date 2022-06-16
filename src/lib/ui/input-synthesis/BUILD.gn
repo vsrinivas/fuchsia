@@ -24,7 +24,7 @@ rustc_library("input-synthesis") {
   name = "input-synthesis"
   with_unit_tests = true
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
@@ -65,7 +65,7 @@ rustc_library("input-synthesis") {
 rustc_binary("input-synthesis-bin") {
   output_name = "input_synthesis_bin"
   testonly = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":input-synthesis",
     ":test.inputsynthesis-rustc",

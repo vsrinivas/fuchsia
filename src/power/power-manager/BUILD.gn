@@ -27,7 +27,7 @@ source_set("fake_syscalls") {
 
 rustc_binary("bin") {
   name = "power_manager"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   configs += [ "//build/config/rust:bootfs" ]

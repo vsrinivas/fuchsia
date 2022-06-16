@@ -45,6 +45,7 @@ impl TestFixture {
                 move |handles| {
                     let proxy = spawn_vfs(config_data_dir.clone());
                     async move {
+                        let _ = &handles;
                         let mut fs = ServiceFs::new();
                         fs.add_remote("config-data", proxy);
                         fs.serve_connection(handles.outgoing_dir.into_channel())
@@ -462,6 +463,7 @@ async fn basemgr_child_impl(
 
     let (mut reboot_sender, reboot_receiver) = mpsc::channel(1);
     let svc_fut = async move {
+        let _ = &handles;
         let mut fs = ServiceFs::new();
         fs.dir("svc").add_fidl_service_at(
             binder_path,

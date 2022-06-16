@@ -7,7 +7,7 @@ import("//build/rust/rustc_macro.gni")
 
 if (is_host) {
   rustc_library("transformer") {
-    edition = "2018"
+    edition = "2021"
     source_root = "src/transformer.rs"
     sources = [ "src/transformer.rs" ]
     deps = [
@@ -21,7 +21,7 @@ if (is_host) {
 
 rustc_macro("macro") {
   name = "fuchsia_macro"
-  edition = "2018"
+  edition = "2021"
   deps = [ ":transformer($host_toolchain)" ]
   sources = [ "src/lib.rs" ]
 }

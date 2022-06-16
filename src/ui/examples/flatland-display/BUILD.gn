@@ -25,7 +25,7 @@ executable("bin") {
 rustc_binary("bin-rust") {
   output_name = "flatland_display_rust"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
   sources = [ "src/main.rs" ]
 

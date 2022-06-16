@@ -30,7 +30,7 @@ fshost_integration_test_sources = [
 ]
 
 rustc_test("fshost_cpp_integration_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
   features = [ "fshost_cpp" ]
   sources = fshost_integration_test_sources
@@ -38,7 +38,7 @@ rustc_test("fshost_cpp_integration_test") {
 }
 
 rustc_test("fshost_rust_integration_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
   features = [ "fshost_rust" ]
   sources = fshost_integration_test_sources

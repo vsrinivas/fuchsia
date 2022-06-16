@@ -7,6 +7,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
 
 rustc_library("cm_rust") {
+  edition = "2021"
   with_unit_tests = true
   deps = [
     ":cm_rust_derive",
@@ -40,6 +41,7 @@ rustc_library("cm_rust") {
 }
 
 rustc_macro("cm_rust_derive") {
+  edition = "2021"
   deps = [
     "//third_party/rust_crates:darling",
     "//third_party/rust_crates:proc-macro2",

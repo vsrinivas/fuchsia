@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("testing") {
   name = "session_testing"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

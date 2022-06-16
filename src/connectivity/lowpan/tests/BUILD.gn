@@ -22,7 +22,7 @@ fuchsia_unittest_package("lowpan-integration-tests") {
 
 rustc_test("lowpan-integration-tests-bin") {
   name = "lowpan_integration_tests"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",

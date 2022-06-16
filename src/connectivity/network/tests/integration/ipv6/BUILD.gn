@@ -5,6 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("ipv6") {
+  edition = "2021"
   output_name = "netstack_ipv6_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",

@@ -12,7 +12,7 @@ import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   name = "factory_store_providers"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [
@@ -76,7 +76,7 @@ fuchsia_package("factory_store_providers") {
 }
 
 rustc_test("factory_store_providers_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "tests/factory_store_providers_test.rs"
 
   deps = [

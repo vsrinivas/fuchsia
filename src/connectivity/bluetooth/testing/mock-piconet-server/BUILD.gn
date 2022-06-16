@@ -27,6 +27,7 @@ shared_deps = [
 ]
 
 rustc_library("lib_v1") {
+  edition = "2021"
   name = "mock_piconet_client"
   testonly = true
   with_unit_tests = true
@@ -39,6 +40,7 @@ rustc_library("lib_v1") {
 }
 
 rustc_library("lib_v2") {
+  edition = "2021"
   name = "mock_piconet_client_v2"
   testonly = true
   with_unit_tests = true
@@ -63,6 +65,7 @@ fuchsia_unittest_package("mock-piconet-client-v2-tests") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "mock_piconet_server"
   with_unit_tests = true
 

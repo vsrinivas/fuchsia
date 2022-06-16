@@ -29,7 +29,7 @@ compiled_action("generate_unicode_blocks_source") {
 }
 
 rustc_binary("unicode_block_generator") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",

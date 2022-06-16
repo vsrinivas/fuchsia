@@ -8,12 +8,14 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_binary("empty") {
+  edition = "2021"
   source_root = "empty.rs"
   name = "empty"
   sources = [ "empty.rs" ]
 }
 
 rustc_binary("use-unoffered") {
+  edition = "2021"
   source_root = "use-unoffered.rs"
   output_name = "use_unoffered"
   deps = [
@@ -26,6 +28,7 @@ rustc_binary("use-unoffered") {
 }
 
 rustc_binary("archive-reader") {
+  edition = "2021"
   source_root = "archive-reader.rs"
   output_name = "archive_reader"
   deps = [

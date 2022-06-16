@@ -9,6 +9,7 @@ import("//build/rust/rustc_library.gni")
 # and validating all client configurations
 # listed in the "production sampler" sampler_configuration.
 rustc_test("config-validation") {
+  edition = "2021"
   testonly = true
   name = "config_validation_test"
   deps = [
@@ -31,6 +32,7 @@ fuchsia_unittest_component("config-validation-test") {
 
 # Integration test binary for sampler service.
 rustc_test("integration-bin") {
+  edition = "2021"
   testonly = true
   name = "sampler_integration_test"
   deps = [

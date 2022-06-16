@@ -9,7 +9,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("example_bin") {
   testonly = true
   name = "rust_example_bin"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fake-clock/examples/fidl:fuchsia.fakeclock.test-rustc",
@@ -31,7 +31,7 @@ rustc_binary("example_bin") {
 
 rustc_test("test_bin") {
   name = "integ_test_bin"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "test/test.rs" ]
 

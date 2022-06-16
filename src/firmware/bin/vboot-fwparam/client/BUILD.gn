@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("cros-nvtool") {
+  edition = "2021"
   output_name = "cros_nvtool"
   with_unit_tests = true
 

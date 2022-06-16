@@ -5,6 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("rust") {
+  edition = "2021"
   testonly = true
   deps = [
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",

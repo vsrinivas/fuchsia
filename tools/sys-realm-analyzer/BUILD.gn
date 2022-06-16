@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("sys_realm_analyzer") {
   output_name = "sys_realm_analyzer"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   visibility = [ ":*" ]
   deps = [
     "//src/security/scrutiny",

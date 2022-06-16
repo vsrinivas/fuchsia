@@ -28,6 +28,7 @@ install_host_tools("install") {
 }
 
 rustc_binary("json_validator_valico") {
+  edition = "2021"
   sources = [ "src/main.rs" ]
 
   deps = [

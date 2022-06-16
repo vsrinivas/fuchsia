@@ -6,6 +6,7 @@ if (is_host) {
   import("//build/rust/rustc_binary.gni")
 
   rustc_binary("gcs_test_client_bin") {
+    edition = "2021"
     testonly = true
     name = "gcs_test_client"
     with_unit_tests = true

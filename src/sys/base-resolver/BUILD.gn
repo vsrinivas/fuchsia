@@ -22,6 +22,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "base_resolver"
   with_unit_tests = true
 

@@ -1658,6 +1658,7 @@ mod tests {
 
         let (proxy, mut stream) = create_proxy_and_stream::<ProviderMarker>().unwrap();
         fasync::Task::local(async move {
+            let _ = &policy_engine;
             watch_ui_activity_impl(&policy_engine.ui_activity, proxy).await.unwrap();
         })
         .detach();

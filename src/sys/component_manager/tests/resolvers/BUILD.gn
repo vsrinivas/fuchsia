@@ -20,6 +20,7 @@ group("tests") {
 
 # Binary that hosts the fidl.test.components.Trigger FIDL service.
 rustc_binary("trigger-bin") {
+  edition = "2021"
   testonly = true
   output_name = "component_manager_test_trigger_bin"
   deps = [

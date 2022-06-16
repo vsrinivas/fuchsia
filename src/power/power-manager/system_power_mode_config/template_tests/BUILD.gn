@@ -7,6 +7,7 @@ import(
     "//src/power/power-manager/system_power_mode_config/system_power_mode_config.gni")
 
 rustc_test("system-power-mode-template-output-test") {
+  edition = "2021"
   deps = [
     "//src/power/power-manager/system_power_mode_config/parser",
     "//third_party/rust_crates:anyhow",

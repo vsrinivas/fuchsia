@@ -42,7 +42,7 @@ if (is_host) {
   }
 
   rustc_binary("cargo_gnaw_golden_integration_test") {
-    edition = "2018"
+    edition = "2021"
     source_root = "golden.rs"
     sources = [ "golden.rs" ]
     deps = [

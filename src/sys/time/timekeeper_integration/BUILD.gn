@@ -19,7 +19,7 @@ group("timekeeper_integration") {
 rustc_library("timekeeper_integration_lib") {
   testonly = true
   name = "timekeeper_integration_lib"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "tests/lib/lib.rs" ]
 
@@ -55,7 +55,7 @@ rustc_library("timekeeper_integration_lib") {
 
 rustc_test("integration_test_bin") {
   name = "timekeeper_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "tests/timekeeper/integration.rs" ]
 
@@ -78,7 +78,7 @@ rustc_test("integration_test_bin") {
 
 rustc_test("faketime_integration_test_bin") {
   name = "faketime_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "tests/faketime/integration.rs" ]
 

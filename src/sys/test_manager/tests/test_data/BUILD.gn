@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("no_suite_service_bin") {
   testonly = true
   name = "no_suite_service"
-  edition = "2018"
+  edition = "2021"
   source_root = "no_suite_service.rs"
 
   deps = [
@@ -25,7 +25,7 @@ rustc_binary("no_suite_service_bin") {
 rustc_test("hanging_test_bin") {
   testonly = true
   name = "hanging_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "hanging_test.rs"
 
   sources = [ "hanging_test.rs" ]
@@ -34,7 +34,7 @@ rustc_test("hanging_test_bin") {
 rustc_test("v2_test_runs_v1_component_bin") {
   testonly = true
   name = "v2_test_runs_v1_component"
-  edition = "2018"
+  edition = "2021"
   source_root = "v2_test_runs_v1_component.rs"
 
   deps = [
@@ -57,7 +57,7 @@ rustc_test("v2_test_runs_v1_component_bin") {
 rustc_test("noop_test_bin") {
   testonly = true
   name = "noop_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "noop_test.rs"
 
   sources = [ "noop_test.rs" ]
@@ -105,6 +105,7 @@ fuchsia_component("custom_artifact_realm_test") {
 }
 
 rustc_test("debug_data_test_bin") {
+  edition = "2021"
   testonly = true
   name = "debug_data_test"
   source_root = "debug_data_test.rs"
@@ -143,6 +144,7 @@ fuchsia_test_package("debug-data-test") {
 }
 
 rustc_test("debug_data_write_test_bin") {
+  edition = "2021"
   testonly = true
   name = "debug_data_write_test"
   source_root = "debug_data_write_test.rs"
@@ -167,6 +169,7 @@ fuchsia_component("debug_data_write_test") {
 }
 
 rustc_test("debug_data_spam_test_bin") {
+  edition = "2021"
   testonly = true
   name = "debug_data_spam_test"
   source_root = "debug_data_spam_test.rs"

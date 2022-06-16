@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("fidl_table_validation_tests_bin") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",

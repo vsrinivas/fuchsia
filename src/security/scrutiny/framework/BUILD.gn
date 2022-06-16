@@ -9,7 +9,7 @@ if (is_host) {
   rustc_library("framework") {
     name = "scrutiny"
     with_unit_tests = true
-    edition = "2018"
+    edition = "2021"
     visibility = [ "//src/security/scrutiny/*" ]
     deps = [
       "//src/security/scrutiny/config",

@@ -55,7 +55,7 @@ foreach(case,
 rustc_test("policy_test") {
   name = "policy_integration_test"
   source_root = "./policy_integration_test.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

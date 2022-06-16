@@ -47,6 +47,7 @@ async fn run_test(
             move |handles| {
                 let fake = fake_clone.clone();
                 async move {
+                    let _ = &handles;
                     let mut fs = ServiceFs::new();
                     fs.dir("svc").add_fidl_service_at(archive_service_name, move |req| {
                         let fake = fake.clone();

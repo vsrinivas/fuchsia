@@ -189,6 +189,7 @@ impl DiscoveryProxy {
                     .resolve_host_name(name, DEFAULT_RESOLVE_DURATION_NS)
                     .map_err(anyhow::Error::from)
                     .and_then(move |x| async move {
+                        let _ = &x;
                         if let Some(ipv6_addr_box) = x.1.as_ref() {
                             let ipv6_addr = ot::Ip6Address::from(ipv6_addr_box.addr);
                             debug!("Resolved {:?} to {:?}", &name_local_domain, ipv6_addr);

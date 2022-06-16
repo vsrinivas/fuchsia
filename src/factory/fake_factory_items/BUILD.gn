@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "fake_factory_items"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
@@ -43,7 +43,7 @@ fuchsia_package("fake_factory_items") {
 }
 
 rustc_test("fake_factory_items_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "tests/fake_factory_items_test.rs"
 
   deps = [

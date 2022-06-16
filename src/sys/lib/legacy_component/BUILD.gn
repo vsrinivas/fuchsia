@@ -5,6 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("legacy_component_lib") {
+  edition = "2021"
   source_root = "src/legacy_component.rs"
   deps = [
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",

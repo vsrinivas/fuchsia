@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 if (current_toolchain == host_toolchain) {
   rustc_binary("generator") {
     name = "generator"
-    edition = "2018"
+    edition = "2021"
     deps = [
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//third_party/rust_crates:anyhow",

@@ -20,6 +20,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "guest"
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",

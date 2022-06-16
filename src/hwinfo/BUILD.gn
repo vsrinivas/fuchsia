@@ -10,7 +10,7 @@ import("//src/hwinfo/hwinfo_config.gni")
 
 rustc_binary("hwinfo_bin") {
   name = "hwinfo"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
@@ -139,7 +139,7 @@ template("hwinfo_integration_test") {
 }
 
 rustc_test("hwinfo_positive_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "tests/hwinfo_positive_test.rs"
 
   deps = [
@@ -157,7 +157,7 @@ rustc_test("hwinfo_positive_test") {
 }
 
 rustc_test("hwinfo_negative_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "tests/hwinfo_negative_test.rs"
 
   deps = [
@@ -175,7 +175,7 @@ rustc_test("hwinfo_negative_test") {
 }
 
 rustc_test("hwinfo_retail_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "tests/hwinfo_retail_test.rs"
 
   deps = [

@@ -12,7 +12,7 @@ group("smoke") {
 
 rustc_test("font_provider_smoke_tests_bin") {
   name = "font_provider_smoke_tests"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",

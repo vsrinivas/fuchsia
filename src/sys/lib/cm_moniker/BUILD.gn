@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_library("cm_moniker") {
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   # Moniker types defined in this library are restricted to component_manager.
   # Please use Moniker types included in //src/sys/lib/moniker for development.

@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("destruction_integration_test_bin") {
   name = "destruction_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -24,7 +24,7 @@ rustc_test("destruction_integration_test_bin") {
 
 rustc_binary("destruction_collection_realm_bin") {
   name = "destruction_collection_realm"
-  edition = "2018"
+  edition = "2021"
   source_root = "collection_realm.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
@@ -46,7 +46,7 @@ rustc_binary("destruction_collection_realm_bin") {
 
 rustc_binary("destroy_and_recreate_bin") {
   name = "destroy_and_recreate"
-  edition = "2018"
+  edition = "2021"
   source_root = "destroy_and_recreate.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
@@ -68,7 +68,7 @@ rustc_binary("destroy_and_recreate_bin") {
 
 rustc_binary("destruction_trigger_bin") {
   name = "destruction_trigger"
-  edition = "2018"
+  edition = "2021"
   source_root = "trigger.rs"
   deps = [
     "//src/lib/fuchsia-async",

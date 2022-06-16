@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 rustc_test("multi-clients") {
   name = "tel_snooper_multi_clients"
   source_root = "src/multi_clients.rs"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

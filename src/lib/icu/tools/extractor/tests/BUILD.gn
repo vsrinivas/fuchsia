@@ -8,7 +8,7 @@ import("//build/testing/host_test_data.gni")
 
 if (is_host) {
   rustc_test("icu_data_extractor_tests") {
-    edition = "2018"
+    edition = "2021"
     source_root = "tests.rs"
     deps = [
       "//third_party/rust_crates:anyhow",

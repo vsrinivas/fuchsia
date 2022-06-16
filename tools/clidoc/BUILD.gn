@@ -11,12 +11,14 @@ if (is_host) {
   common_sources = [ "src/main.rs" ]
 
   rustc_binary("clidoc_bin") {
+    edition = "2021"
     name = "clidoc"
     sources = common_sources
     deps = [ ":rust_crates" ]
   }
 
   rustc_test("clidoc_bin_test") {
+    edition = "2021"
     source_root = "src/main.rs"
     deps = [
       ":clidoc_bin",

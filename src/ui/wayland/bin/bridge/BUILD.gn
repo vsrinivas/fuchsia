@@ -15,7 +15,7 @@ declare_args() {
 
 rustc_binary("bin") {
   output_name = "wayland_bridge"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -50,7 +50,7 @@ core_shard("core_shard") {
 
 rustc_test("integration_test") {
   output_name = "wayland_bridge_integration_test"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
     "//src/lib/fidl/rust/fidl",

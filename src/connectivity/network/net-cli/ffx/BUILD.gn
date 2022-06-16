@@ -5,6 +5,7 @@
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_net") {
+  edition = "2021"
   args_deps = [ "//src/connectivity/network/net-cli:lib" ]
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",

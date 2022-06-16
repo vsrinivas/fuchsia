@@ -23,7 +23,7 @@ group("tests") {
 rustc_staticlib("lib") {
   with_unit_tests = true
   name = "intl_lookup"
-  edition = "2018"
+  edition = "2021"
   public = [ "lookup.h" ]
   deps = [
     "//src/lib/icu_data/rust/icu_data",

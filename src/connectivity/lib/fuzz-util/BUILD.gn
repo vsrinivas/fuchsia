@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("fuzz-util") {
   name = "fuzz-util"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/connectivity/lib/net-types",

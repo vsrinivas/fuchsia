@@ -517,6 +517,7 @@ mod tests {
             .register_local_component(component_name.clone(), move |handles| {
                 let sender = sender.clone();
                 async move {
+                    let _ = &handles;
                     sender
                         .lock()
                         .await

@@ -5,6 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("debug") {
+  edition = "2021"
   output_name = "netstack_debug_fidl_test"
   deps = [
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",

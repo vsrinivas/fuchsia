@@ -3,7 +3,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("ergonomic_inspect_tests") {
   name = "ergonomic_inspect_tests"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/main.rs"
 

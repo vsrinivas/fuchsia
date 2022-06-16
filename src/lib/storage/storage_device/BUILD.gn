@@ -35,7 +35,7 @@ if (is_fuchsia) {
 
 rustc_library("storage_device") {
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   deps = lib_deps
   sources = lib_srcs
 }

@@ -15,7 +15,7 @@ group("tests") {
 
 rustc_binary("trigger_bin") {
   output_name = "namespace_capabilities_trigger"
-  edition = "2018"
+  edition = "2021"
   source_root = "trigger.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
@@ -39,7 +39,7 @@ fuchsia_component("trigger") {
 
 rustc_test("integration_test_bin") {
   output_name = "namespace_capabilities_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -54,7 +54,7 @@ rustc_test("integration_test_bin") {
 rustc_binary("integration_test_root_bin") {
   testonly = true
   output_name = "namespace_capabilities_integration_test_root"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test_root.rs"
   deps = [
     "//src/lib/fuchsia",

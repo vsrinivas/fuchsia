@@ -21,7 +21,7 @@ rustc_library("clonable_error") {
     "//src/sys/lib/routing:*",
   ]
 
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//third_party/rust_crates:anyhow",

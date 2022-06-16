@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_test("specialize-ip-macro_test") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]

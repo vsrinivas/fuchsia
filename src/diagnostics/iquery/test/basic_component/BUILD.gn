@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  edition = "2018"
+  edition = "2021"
   name = "iquery_basic_component"
   source_root = "main.rs"
 

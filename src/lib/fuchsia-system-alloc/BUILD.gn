@@ -5,7 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-system-alloc") {
-  edition = "2018"
+  edition = "2021"
   deps = []
 
   sources = [ "src/lib.rs" ]

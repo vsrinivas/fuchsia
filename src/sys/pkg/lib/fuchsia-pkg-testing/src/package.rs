@@ -197,8 +197,6 @@ impl Package {
 
     /// Puts all the blobs for the package in blobfs.
     pub fn write_to_blobfs_dir(&self, dir: &openat::Dir) {
-        use std::convert::TryInto;
-
         fn write_blob(
             dir: &openat::Dir,
             merkle: &fuchsia_merkle::Hash,

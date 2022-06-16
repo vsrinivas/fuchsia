@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_debug_symbolize") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]

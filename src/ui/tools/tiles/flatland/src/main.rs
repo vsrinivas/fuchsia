@@ -338,6 +338,7 @@ impl Service {
 
             // Stop watching for exit status
             fasync::Task::local(async move {
+                let _ = &tile;
                 tile.status_watcher.cancel().await;
             })
             .detach();

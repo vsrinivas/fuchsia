@@ -198,7 +198,7 @@ template("component_manager") {
 
   if (defined(invoker.is_test) && invoker.is_test) {
     rustc_test(target_name) {
-      edition = "2018"
+      edition = "2021"
       sources = _sources
       deps = _deps
 
@@ -239,7 +239,7 @@ template("component_manager") {
     not_needed([ "invoker" ])
     rustc_library(target_name) {
       name = "component_manager_lib"
-      edition = "2018"
+      edition = "2021"
 
       sources = _sources
       deps = _deps
@@ -264,7 +264,7 @@ component_manager("component_manager_boot_env_test") {
 
 rustc_binary("bin") {
   name = "component_manager"
-  edition = "2018"
+  edition = "2021"
 
   configs += [ "//build/config/rust:bootfs" ]
 

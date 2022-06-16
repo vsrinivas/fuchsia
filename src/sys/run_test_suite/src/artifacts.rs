@@ -46,6 +46,7 @@ pub(crate) async fn copy_debug_data(
                     },
                 );
             fasync::Task::spawn(async move {
+                let _ = &debug_data;
                 let mut output = output?;
                 let file = debug_data
                     .file

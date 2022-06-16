@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("fuchsia-component-v1-test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "components_v1/lib.rs"
   deps = [
     ":fuchsia.component.test-rustc",

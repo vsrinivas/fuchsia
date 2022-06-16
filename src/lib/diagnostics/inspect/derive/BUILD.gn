@@ -16,7 +16,7 @@ group("tests") {
 rustc_library("fuchsia-inspect-derive") {
   name = "fuchsia_inspect_derive"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "macro:fuchsia-inspect-derive-macro",

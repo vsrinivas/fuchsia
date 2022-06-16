@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
+  edition = "2021"
   testonly = true
   name = "configurable_netstack"
   with_unit_tests = true

@@ -9,7 +9,7 @@ import("//build/testing/test_spec.gni")
 if (is_host) {
   rustc_library("lib") {
     name = "fastboot"
-    edition = "2018"
+    edition = "2021"
 
     # TODO(fxbug.dev/78438): this library contains unit tests, but they don't build
     with_unit_tests = false

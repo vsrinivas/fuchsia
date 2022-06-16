@@ -9,7 +9,7 @@ rustc_library("wlan-hw-sim") {
   testonly = true
   with_unit_tests = true
   name = "wlan_hw_sim"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

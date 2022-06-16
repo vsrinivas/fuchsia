@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_binary("echo_test_client") {
-  edition = "2018"
+  edition = "2021"
   source_root = "echo_test_client.rs"
 
   deps = [
@@ -28,7 +28,7 @@ rustc_binary("echo_test_client") {
 
 rustc_test("temp_user_bin") {
   name = "temp_user_bin_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "temp_user.rs"
 
   deps = [ "//third_party/rust_crates:anyhow" ]
@@ -38,7 +38,7 @@ rustc_test("temp_user_bin") {
 
 rustc_test("custom_artifact_test") {
   name = "custom_artifact_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "custom_artifact_test.rs"
 
   deps = [ "//third_party/rust_crates:anyhow" ]

@@ -11,7 +11,7 @@ import("//build/testing/host_test_data.gni")
 rustc_binary("font_manifest_generator") {
   name = "font_manifest_generator"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
@@ -57,7 +57,7 @@ rustc_binary("font_manifest_generator") {
 
 if (is_host) {
   rustc_test("font_manifest_generator_integration_tests") {
-    edition = "2018"
+    edition = "2021"
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:itertools",

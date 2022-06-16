@@ -8,6 +8,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_library("lib") {
+  edition = "2021"
   name = "configurable_netstack_test"
   testonly = true
   deps = [
@@ -21,6 +22,7 @@ rustc_library("lib") {
 }
 
 rustc_test("client") {
+  edition = "2021"
   name = "configurable_netstack_test_client"
   deps = [
     ":lib",
@@ -45,6 +47,7 @@ rustc_test("client") {
 }
 
 rustc_binary("server") {
+  edition = "2021"
   testonly = true
   deps = [
     ":lib",

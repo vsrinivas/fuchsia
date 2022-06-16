@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_test("fidl") {
   output_name = "fidl_on_overnet_tests"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//src/connectivity/overnet/lib/core",

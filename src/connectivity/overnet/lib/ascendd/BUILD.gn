@@ -9,7 +9,7 @@ if (is_host) {
   import("//build/rust/rustc_library.gni")
 
   rustc_library("ascendd") {
-    edition = "2018"
+    edition = "2021"
 
     deps = [
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",

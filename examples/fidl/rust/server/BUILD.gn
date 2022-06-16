@@ -12,7 +12,7 @@ import("//build/rust/rustc_binary.gni")
 # [START server]
 rustc_binary("bin") {
   name = "fidl_echo_rust_server"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc",

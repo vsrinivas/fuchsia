@@ -5,6 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("fidl") {
+  edition = "2021"
   output_name = "netstack_fidl_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",

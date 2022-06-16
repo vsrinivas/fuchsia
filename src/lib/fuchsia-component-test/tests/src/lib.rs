@@ -1373,6 +1373,7 @@ async fn route_service() -> Result<(), Error> {
             "service_provider",
             move |handles| {
                 async move {
+                    let _ = &handles;
                     let mut fs = fserver::ServiceFs::new();
                     fs.dir("svc").add_unified_service(|req: fex_services::BankAccountRequest| req);
                     fs.serve_connection(handles.outgoing_dir.into_channel())?;

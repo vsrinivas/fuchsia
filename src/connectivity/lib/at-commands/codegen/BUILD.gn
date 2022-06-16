@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 # Common code for codegen binary and tests
 rustc_library("codegen_lib") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:pest",
@@ -35,7 +35,7 @@ rustc_library("codegen_lib") {
 if (host_toolchain == current_toolchain) {
   rustc_binary("codegen") {
     output_name = "at_command_gen"
-    edition = "2018"
+    edition = "2021"
     deps = [
       ":codegen_lib",
       "//third_party/rust_crates:anyhow",

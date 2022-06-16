@@ -6,7 +6,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("fake-qmi-query") {
   name = "tel_fake_qmi_query"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",

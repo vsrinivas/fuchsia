@@ -6,6 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("client") {
+  edition = "2021"
   name = "netemul_runner_test_driver"
   deps = [
     "//src/connectivity/network/testing/netemul/sync-manager/rust:lib",
@@ -17,6 +18,7 @@ rustc_test("client") {
 }
 
 rustc_binary("server") {
+  edition = "2021"
   name = "netemul_runner_test_server"
   testonly = true
   deps = [

@@ -7,6 +7,7 @@ import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("testing") {
+  edition = "2021"
   name = "cm_rust_testing"
 
   testonly = true

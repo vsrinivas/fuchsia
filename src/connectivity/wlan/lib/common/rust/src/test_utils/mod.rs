@@ -99,25 +99,25 @@ impl Appendable for FixedSizedTestBuffer {
 #[macro_export]
 macro_rules! assert_variant {
     // Use custom formatting when panicking.
-    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)* $(,)?) => {
+    ($test:expr, $variant:pat_param $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)* $(,)?) => {
         match $test {
             $variant $(| $others)* => $e,
             _ => panic!($fmt, $($args,)*),
         }
     };
     // Use default message when panicking.
-    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr $(,)?) => {
+    ($test:expr, $variant:pat_param $( | $others:pat)* => $e:expr $(,)?) => {
         match $test {
             $variant $(| $others)* => $e,
             other => panic!("unexpected variant: {:?}", other),
         }
     };
     // Custom error message.
-    ($test:expr, $variant:pat $( | $others:pat)* , $fmt:expr $(, $args:tt)* $(,)?) => {
+    ($test:expr, $variant:pat_param $( | $others:pat)* , $fmt:expr $(, $args:tt)* $(,)?) => {
         $crate::assert_variant!($test, $variant $( | $others)* => {}, $fmt $(, $args)*)
     };
     // Default error message.
-    ($test:expr, $variant:pat $( | $others:pat)* $(,)?) => {
+    ($test:expr, $variant:pat_param $( | $others:pat)* $(,)?) => {
         $crate::assert_variant!($test, $variant $( | $others)* => {})
     };
 }
@@ -146,21 +146,21 @@ macro_rules! assert_variant {
 #[macro_export]
 macro_rules! assert_variant_at_idx {
     // Use custom formatting when panicking.
-    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)* $(,)?) => {
+    ($indexable:expr, $idx:expr, $variant:pat_param $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)* $(,)?) => {
         $crate::assert_variant!(&$indexable[$idx], $variant $( | $others)* => { $e }, $fmt $(, $args)*)
     };
     // Use default message when panicking.
-    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)* => $e:expr $(,)?) => {{
+    ($indexable:expr, $idx:expr, $variant:pat_param $( | $others:pat)* => $e:expr $(,)?) => {{
         let indexable_name = stringify!($indexable);
         $crate::assert_variant_at_idx!($indexable, $idx, $variant $( | $others)* => { $e },
                                        "unexpected variant at {:?} in {}:\n{:#?}", $idx, indexable_name, $indexable)
     }};
     // Custom error message.
-    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)*, $fmt:expr $(, $args:tt)* $(,)?) => {
+    ($indexable:expr, $idx:expr, $variant:pat_param $( | $others:pat)*, $fmt:expr $(, $args:tt)* $(,)?) => {
         $crate::assert_variant_at_idx!($indexable, $idx, $variant $( | $others)* => {}, $fmt $(, $args)*)
     };
     // Default error message.
-    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)* $(,)?) => {
+    ($indexable:expr, $idx:expr, $variant:pat_param $( | $others:pat)* $(,)?) => {
         $crate::assert_variant_at_idx!($indexable, $idx, $variant $( | $others)* => {})
     };
 }

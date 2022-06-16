@@ -76,6 +76,7 @@ impl ReverserServer {
         F: FnOnce() -> () + 'static,
     {
         fasync::Task::local(async move {
+            let _ = &self;
             while let Some(request) = stream.try_next().await.expect("serve reverser") {
                 self.metrics.request_count.add(1);
                 self.metrics.global_request_count.add(1);

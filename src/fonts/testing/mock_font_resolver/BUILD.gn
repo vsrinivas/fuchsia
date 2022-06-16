@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("mock_font_resolver_bin") {
   testonly = true
   name = "mock_font_resolver"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",

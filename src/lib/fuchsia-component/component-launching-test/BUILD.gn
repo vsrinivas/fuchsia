@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("driver") {
   name = "component_launching_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fdio/rust:fdio",
@@ -27,7 +27,7 @@ rustc_test("driver") {
 
 rustc_binary("echo_service_checker_bin") {
   name = "echo_service_checker"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/echo_service_checker.rs"
   testonly = true
 
@@ -43,7 +43,7 @@ rustc_binary("echo_service_checker_bin") {
 
 rustc_binary("echo_service_checker_with_probe_bin") {
   name = "echo_service_checker_with_probe"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/echo_service_checker_with_probe.rs"
   testonly = true
 
@@ -59,7 +59,7 @@ rustc_binary("echo_service_checker_with_probe_bin") {
 
 rustc_binary("injected_directory_checker_bin") {
   name = "injected_directory_checker"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/injected_directory_checker.rs"
   testonly = true
 
@@ -68,7 +68,7 @@ rustc_binary("injected_directory_checker_bin") {
 
 rustc_binary("stdio_writer_bin") {
   name = "stdio_writer"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/stdio_writer.rs"
   testonly = true
 

@@ -8,7 +8,7 @@ if (is_host) {
   rustc_macro("lib") {
     name = "core_protocol_macros"
     version = "0.1.0"
-    edition = "2018"
+    edition = "2021"
 
     deps = [
       "//third_party/rust_crates:heck",

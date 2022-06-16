@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("tests_bin") {
+  edition = "2021"
   output_name = "test_harness_crate_tests"
   source_root = "src/lib.rs"
 

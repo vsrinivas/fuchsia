@@ -11,6 +11,7 @@ group("logs-connector") {
 }
 
 rustc_test("bin") {
+  edition = "2021"
   name = "test_logs_connector"
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",

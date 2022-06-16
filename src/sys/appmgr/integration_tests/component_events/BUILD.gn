@@ -53,7 +53,7 @@ fuchsia_test_package("component_events_integration_tests") {
 rustc_test("component_events_test_bin") {
   name = "component_events_integration_test"
   source_root = "./component_events_integration_test.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
@@ -80,7 +80,7 @@ rustc_test("component_events_test_bin") {
 rustc_test("observer_integration_test_bin") {
   name = "observer_integration_test"
   source_root = "./observer_integration_test.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -102,7 +102,7 @@ rustc_test("observer_integration_test_bin") {
 rustc_binary("test_component_bin") {
   name = "test_component"
   source_root = "./test_component.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -121,7 +121,7 @@ rustc_binary("test_component_bin") {
 rustc_binary("test_component_with_subrealm_bin") {
   name = "test_component_with_subrealm"
   source_root = "./test_component_with_subrealm.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

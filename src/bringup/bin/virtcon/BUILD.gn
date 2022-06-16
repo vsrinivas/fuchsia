@@ -27,7 +27,7 @@ component_manifest_resources("meta") {
 
 rustc_library("lib") {
   name = "virtual_console_lib"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   sources = [
     "src/app.rs",
@@ -116,7 +116,7 @@ resource("boot_animation") {
 
 rustc_binary("bin") {
   name = "virtual_console"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
   sources = [ "src/main.rs" ]
   deps = [

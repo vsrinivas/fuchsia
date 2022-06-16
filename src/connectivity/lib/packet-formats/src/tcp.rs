@@ -623,6 +623,7 @@ impl<B: ByteSlice> TcpSegmentRaw<B> {
         B: 'a,
     {
         self.builder(src_ip, dst_ip).map(|builder| {
+            let _ = &self;
             ByteSliceInnerPacketBuilder(self.body).into_serializer().encapsulate(builder)
         })
     }

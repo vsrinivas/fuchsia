@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("test") {
   name = "huge_rust_tests"
-  edition = "2018"
+  edition = "2021"
   deps = [ "macro:gen-tests-macro" ]
 
   sources = [ "src/lib.rs" ]

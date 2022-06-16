@@ -5,6 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("realmbuilder-mock-helpers") {
+  edition = "2021"
   name = "realmbuilder_mock_helpers"
   testonly = true
 

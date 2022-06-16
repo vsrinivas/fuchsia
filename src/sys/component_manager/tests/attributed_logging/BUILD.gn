@@ -8,6 +8,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("test-bin") {
+  edition = "2021"
   source_root = "integration-test.rs"
   name = "attributed-logging-test"
   deps = [
@@ -27,6 +28,7 @@ fuchsia_component("integration-test") {
 }
 
 rustc_test("e2e-bin") {
+  edition = "2021"
   source_root = "e2e-test.rs"
   name = "attributed-logging-e2e-test"
   deps = [

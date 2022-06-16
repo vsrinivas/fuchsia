@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_target_forward") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   plugin_deps = [ "tcp:ffx_target_forward_tcp" ]
 
   args_sources = [ "src/args.rs" ]

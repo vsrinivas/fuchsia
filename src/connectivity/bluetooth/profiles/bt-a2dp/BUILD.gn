@@ -8,6 +8,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "bt_a2dp"
   with_unit_tests = true
 
@@ -156,6 +157,7 @@ fuchsia_unittest_package("bt-a2dp-tests") {
 }
 
 rustc_test("encoding_integration_bin") {
+  edition = "2021"
   output_name = "bt_a2dp_encoding_tests"
   features = [ "test_encoding" ]
   source_root = "src/main.rs"

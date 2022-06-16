@@ -14,6 +14,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   name = "emergency"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
@@ -47,6 +48,7 @@ rustc_binary("bin") {
 }
 
 rustc_library("lib") {
+  edition = "2021"
   name = "emergency_lib"
 
   # Generates a GN target for unit-tests with the label `lib_test`, and

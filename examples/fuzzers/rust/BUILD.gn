@@ -9,12 +9,14 @@ import("//build/rust/rustc_library.gni")
 # Defaults should generally work if the fuzz target function name matches the
 # fuzzer name.
 rustc_fuzzer("toy_example_arbitrary") {
+  edition = "2021"
   sources = [ "src/lib.rs" ]
 }
 
 # If the fuzz target function name differs from the fuzzer name, provide it via
 # the `rustfunction` parameter.
 rustc_fuzzer("toy_example_raw_bytes") {
+  edition = "2021"
   rustfunction = "toy_example_u8"
 
   sources = [ "src/lib.rs" ]
@@ -24,6 +26,7 @@ rustc_fuzzer("toy_example_raw_bytes") {
 # `source_root` explicitly and conditionally exclude symbols like `main` from
 # compilation using `#[cfg(not(fuzz))]`.
 rustc_fuzzer("toy_example_with_main") {
+  edition = "2021"
   source_root = "src/main.rs"
   deps = [ ":helper" ]
 
@@ -32,6 +35,7 @@ rustc_fuzzer("toy_example_with_main") {
 
 # TODO
 rustc_library("helper") {
+  edition = "2021"
   source_root = "helper/lib.rs"
   deps = [ "//src/lib/fuzzing/rust:fuzz" ]
 
@@ -46,6 +50,7 @@ rustc_fuzzer("toy_example_same_name") {
 
 # Fake tool to demostrate that fuzzers can exist alongside Rust binaries.
 rustc_binary("toy_example_bin") {
+  edition = "2021"
   name = "toy_example"
   deps = [
     ":helper",

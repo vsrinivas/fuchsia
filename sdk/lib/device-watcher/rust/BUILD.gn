@@ -6,6 +6,7 @@ import("//build/components/fuchsia_unittest_package.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("rust") {
+  edition = "2021"
   name = "device-watcher"
   with_unit_tests = true
 

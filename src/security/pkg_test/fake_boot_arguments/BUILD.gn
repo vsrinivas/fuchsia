@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("fake_boot_arguments-binary") {
   testonly = true
   name = "fake_boot_arguments"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/fake_boot_arguments.rs"
 
   sources = [ "src/fake_boot_arguments.rs" ]

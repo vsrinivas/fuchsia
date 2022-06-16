@@ -61,6 +61,7 @@ fuchsia_structured_config_values("values") {
 }
 
 rustc_binary("shim_bin") {
+  edition = "2021"
   testonly = true
   output_name = "structured_config_cpp_driver_shim"
   source_root = "shim.rs"

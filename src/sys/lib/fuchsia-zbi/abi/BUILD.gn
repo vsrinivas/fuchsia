@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("abi") {
   name = "fuchsia_zbi_abi"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/zerocopy",

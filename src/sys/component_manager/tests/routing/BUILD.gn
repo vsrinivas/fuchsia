@@ -14,7 +14,7 @@ group("tests") {
 
 rustc_test("routing_integration_test_bin") {
   name = "routing_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",

@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 rustc_binary("unreliable_echo_server_bin") {
   testonly = true
   name = "unreliable_echo_server"
-  edition = "2018"
+  edition = "2021"
   source_root = "unreliable_echo_server.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
@@ -25,7 +25,7 @@ rustc_binary("unreliable_echo_server_bin") {
 rustc_binary("unreliable_echo_client_bin") {
   testonly = true
   name = "unreliable_echo_client"
-  edition = "2018"
+  edition = "2021"
   source_root = "unreliable_echo_client.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
@@ -41,7 +41,7 @@ rustc_binary("unreliable_echo_client_bin") {
 rustc_binary("actor-bin") {
   testonly = true
   name = "cm_actor"
-  edition = "2018"
+  edition = "2021"
   source_root = "actor/main.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",

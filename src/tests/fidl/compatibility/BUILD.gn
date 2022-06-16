@@ -120,7 +120,7 @@ fuchsia_component("llcpp-server") {
 rustc_binary("rust_server") {
   output_name = "rust_server"
   output_dir = target_out_dir
-  edition = "2018"
+  edition = "2021"
   source_root = "rust_server.rs"
 
   deps = [

@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("driver") {
   name = "far_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fuchsia-async",

@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fake-archive-accessor") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",

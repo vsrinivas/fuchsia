@@ -9,7 +9,7 @@ if (is_host) {
   rustc_library("testing") {
     name = "scrutiny_testing"
     with_unit_tests = true
-    edition = "2018"
+    edition = "2021"
     visibility = [ "//src/security/scrutiny/*" ]
     deps = [
       "//src/lib/fuchsia-url",

@@ -11,7 +11,7 @@ group("example") {
 
 rustc_binary("bin") {
   name = "soundplayer_example"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

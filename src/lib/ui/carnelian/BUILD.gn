@@ -34,7 +34,7 @@ rustc_library("carnelian") {
   name = "carnelian"
   with_unit_tests = true
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
@@ -174,7 +174,7 @@ config("carnelian-performance") {
 
 rustc_binary("button") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/button.rs"
   sources = [ "examples/button.rs" ]
   deps = [
@@ -190,7 +190,7 @@ rustc_binary("button") {
 
 rustc_binary("clockface") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/clockface.rs"
   sources = [ "examples/clockface.rs" ]
   deps = [
@@ -205,7 +205,7 @@ rustc_binary("clockface") {
 
 rustc_binary("font_metrics") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/font_metrics.rs"
   sources = [ "examples/font_metrics.rs" ]
   deps = [
@@ -221,7 +221,7 @@ rustc_binary("font_metrics") {
 
 rustc_binary("ink") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/ink.rs"
   sources = [ "examples/ink.rs" ]
   deps = [
@@ -241,7 +241,7 @@ rustc_binary("ink") {
 
 rustc_binary("shapes") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/shapes.rs"
   sources = [ "examples/shapes.rs" ]
   deps = [
@@ -258,7 +258,7 @@ rustc_binary("shapes") {
 
 rustc_binary("designer") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/designer.rs"
   sources = [ "examples/designer.rs" ]
   deps = [
@@ -274,7 +274,7 @@ rustc_binary("designer") {
 
 rustc_binary("spinning_square") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/spinning_square.rs"
   sources = [ "examples/spinning_square.rs" ]
   deps = [
@@ -292,7 +292,7 @@ rustc_binary("spinning_square") {
 
 rustc_binary("gamma") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/gamma.rs"
   sources = [ "examples/gamma.rs" ]
   deps = [
@@ -306,7 +306,7 @@ rustc_binary("gamma") {
 
 rustc_binary("layout_gallery") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/layout_gallery.rs"
   sources = [ "examples/layout_gallery.rs" ]
   deps = [
@@ -341,7 +341,7 @@ rustc_test("layout_gallery_test") {
 
 rustc_binary("png") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/png.rs"
   sources = [ "examples/png.rs" ]
   deps = [
@@ -357,7 +357,7 @@ rustc_binary("png") {
 
 rustc_binary("svg") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/svg.rs"
   sources = [ "examples/svg.rs" ]
   deps = [
@@ -371,7 +371,7 @@ rustc_binary("svg") {
 
 rustc_binary("rive") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/rive.rs"
   sources = [ "examples/rive.rs" ]
   deps = [
@@ -392,7 +392,7 @@ rustc_binary("rive") {
 
 rustc_binary("textgrid") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "examples/textgrid.rs"
   sources = [ "examples/textgrid.rs" ]
   deps = [

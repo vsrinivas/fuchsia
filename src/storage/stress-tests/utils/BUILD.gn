@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("utils") {
   name = "storage_stress_test_utils"
-  edition = "2018"
+  edition = "2021"
   source_root = "mod.rs"
   testonly = true
 

@@ -21,7 +21,7 @@ metrics_registry("wlan_metrics_registry") {
 rustc_binary("bin") {
   name = "wlanstack"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":wlan_metrics_registry_rustlib",

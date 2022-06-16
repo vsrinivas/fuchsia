@@ -14,7 +14,7 @@ group("tests") {
 
 rustc_test("elf_runner_test_bin") {
   name = "elf_runner_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "elf_runner_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -28,14 +28,14 @@ rustc_test("elf_runner_test_bin") {
 
 rustc_binary("args_reporter_bin") {
   name = "args_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "args_reporter.rs"
   sources = [ "args_reporter.rs" ]
 }
 
 rustc_binary("no_args_reporter_bin") {
   name = "no_args_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "no_args_reporter.rs"
   sources = [ "no_args_reporter.rs" ]
 }

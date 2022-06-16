@@ -48,7 +48,7 @@ common_sources = [
 if (is_fuchsia) {
   rustc_library("fuchsia-zircon") {
     version = "0.3.3"
-    edition = "2018"
+    edition = "2021"
     deps = [
       ":fuchsia-zircon-status",
       ":fuchsia-zircon-sys",
@@ -79,7 +79,7 @@ compiled_action("generate-rust-zircon-syscalls-definitions") {
 
 rustc_library("fuchsia-cprng") {
   version = "0.1.1"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   visibility = [ ":*" ]
   source_root = "fuchsia-cprng/src/lib.rs"
@@ -107,7 +107,7 @@ if (is_fuchsia) {
 
 rustc_library("fuchsia-zircon-types") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "fuchsia-zircon-types/src/lib.rs"
   deps = [ "//third_party/rust_crates:static_assertions" ]
   sources = [ "fuchsia-zircon-types/src/lib.rs" ]
@@ -115,7 +115,7 @@ rustc_library("fuchsia-zircon-types") {
 
 rustc_test("fuchsia-zircon-types-tests") {
   name = "fuchsia_zircon_types_tests"
-  edition = "2018"
+  edition = "2021"
   source_root = "fuchsia-zircon-types/src/lib.rs"
   deps = [ "//third_party/rust_crates:static_assertions" ]
   sources = [ "fuchsia-zircon-types/src/lib.rs" ]
@@ -123,7 +123,7 @@ rustc_test("fuchsia-zircon-types-tests") {
 
 rustc_library("fuchsia-zircon-status") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "fuchsia-zircon-status/src/lib.rs"
   deps = [ ":fuchsia-zircon-types" ]
 
@@ -132,7 +132,7 @@ rustc_library("fuchsia-zircon-status") {
 
 rustc_test("fuchsia-zircon-status-tests") {
   name = "fuchsia_zircon_status_tests"
-  edition = "2018"
+  edition = "2021"
   source_root = "fuchsia-zircon-status/src/lib.rs"
 
   deps = [ "//src/lib/zircon/rust:fuchsia-zircon-types" ]
@@ -152,7 +152,7 @@ rustc_test("fuchsia-zircon-status-tests") {
 #
 # TODO(https://fxbug.dev/91562): untangle this web.
 rustc_test("fuchsia-zircon-unittests") {
-  edition = "2018"
+  edition = "2021"
   output_name = "fuchsia_zircon_tests"
   deps = [
     ":fuchsia-zircon-status",
@@ -173,7 +173,7 @@ rustc_test("fuchsia-zircon-unittests") {
 }
 
 rustc_binary("exit_with_code_util") {
-  edition = "2018"
+  edition = "2021"
   source_root = "test_util/exit_with_code_util.rs"
   deps = [ ":fuchsia-zircon" ]
 
@@ -181,7 +181,7 @@ rustc_binary("exit_with_code_util") {
 }
 
 rustc_binary("sleep_forever_util") {
-  edition = "2018"
+  edition = "2021"
   source_root = "test_util/sleep_forever_util.rs"
   deps = [ ":fuchsia-zircon" ]
 

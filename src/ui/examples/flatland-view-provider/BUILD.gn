@@ -9,7 +9,7 @@ rustc_binary("bin") {
   output_name = "flatland_view_provider"
   with_unit_tests = true
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
   sources = [
     "src/internal_message.rs",

@@ -13,7 +13,7 @@ group("tests") {
 rustc_binary("input-pipeline-bin") {
   output_name = "input-pipeline"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",

@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("echo_subject_bin") {
   testonly = true
   name = "echo_subject"
-  edition = "2018"
+  edition = "2021"
   source_root = "subject/main.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
@@ -24,7 +24,7 @@ rustc_binary("echo_subject_bin") {
 rustc_binary("echo_actor_bin") {
   testonly = true
   name = "echo_actor"
-  edition = "2018"
+  edition = "2021"
   source_root = "actor/main.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",

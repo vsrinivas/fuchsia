@@ -31,7 +31,7 @@ group("tests") {
 rustc_binary("bin") {
   name = "text_manager"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
@@ -131,7 +131,7 @@ fuchsia_test_package("text_manager_test") {
 
 rustc_test("keyboard3_integration_test_bin") {
   output_name = "keyboard3_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":bin",
@@ -163,7 +163,7 @@ rustc_test("keyboard3_integration_test_bin") {
 
 rustc_test("text_manager_integration_test_bin") {
   output_name = "text_manager_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":bin",
@@ -191,7 +191,7 @@ rustc_test("text_manager_integration_test_bin") {
 
 rustc_test("legacy_ime_integration_test_bin") {
   output_name = "legacy_ime_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":bin",
@@ -217,7 +217,7 @@ rustc_test("legacy_ime_integration_test_bin") {
 
 rustc_library("test_helpers") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
 
   source_root = "tests/test_helpers.rs"
   sources = [ "tests/test_helpers.rs" ]

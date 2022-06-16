@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("async-utils") {
   name = "async_utils"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     "//src/lib/fidl/rust/fidl",

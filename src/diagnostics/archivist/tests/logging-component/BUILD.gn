@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   name = "logging_component"
   source_root = "logging_component.rs"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/diagnostics/log/rust",

@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("echo_client_compiletest") {
   name = "echo_client_compiletest"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/echo_client_test.rs"
   sources = [
     "src/echo_client_test.rs",

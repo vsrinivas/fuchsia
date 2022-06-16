@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("fuchsia_component_test_tests_bin") {
   name = "fuchsia_component_test_tests_bin"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "src/lib.rs" ]
 
@@ -73,7 +73,7 @@ fuchsia_component("echo_server_component") {
 }
 
 rustc_test("scoped-instance-test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "scoped_instance/lib.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -88,7 +88,7 @@ rustc_test("scoped-instance-test") {
 }
 
 rustc_binary("realm") {
-  edition = "2018"
+  edition = "2021"
   source_root = "scoped_instance/realm.rs"
   testonly = true
   deps = [

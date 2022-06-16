@@ -37,6 +37,7 @@ pub(crate) async fn serve(
     stream
         .err_into()
         .try_fold(sink, |mut sink, req| async move {
+            let _ = &req;
             let StateRequest::GetWatcher {
                 options: WatcherOptions { .. },
                 watcher,

@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("fshost-rust") {
   output_name = "fshost_rust"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

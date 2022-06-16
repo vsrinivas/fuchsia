@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("fuchsia_inspect_derive_tests") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/main.rs"
 
   deps = [
@@ -23,7 +23,7 @@ rustc_test("fuchsia_inspect_derive_tests") {
 }
 
 rustc_test("fuchsia_inspect_derive_import_tests") {
-  edition = "2018"
+  edition = "2021"
   source_root = "src/import.rs"
 
   deps = [

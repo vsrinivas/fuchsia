@@ -113,6 +113,7 @@ async fn run_absolute_volume_handler(stream: AbsoluteVolumeHandlerRequestStream)
 #[fixture(setup_piconet)]
 #[fuchsia::test]
 async fn avrcp_target_service_advertisement(tf: AvrcpIntegrationTest) {
+    let _ = &tf;
     let mut results_requests = tf
         .mock_peer
         .register_service_search(
@@ -132,6 +133,7 @@ async fn avrcp_target_service_advertisement(tf: AvrcpIntegrationTest) {
 #[fixture(setup_piconet)]
 #[fuchsia::test]
 async fn avrcp_controller_service_advertisement(tf: AvrcpIntegrationTest) {
+    let _ = &tf;
     let mut results_requests = tf
         .mock_peer
         .register_service_search(bredr::ServiceClassProfileIdentifier::AvRemoteControl, vec![])
@@ -148,6 +150,7 @@ async fn avrcp_controller_service_advertisement(tf: AvrcpIntegrationTest) {
 #[fixture(setup_piconet)]
 #[fuchsia::test]
 async fn avrcp_search_and_connect(mut tf: AvrcpIntegrationTest) {
+    let _ = &tf;
     // Mock peer advertises an AVRCP CT service.
     let service_defs = vec![avrcp_controller_service_definition()];
     let mut connect_requests = tf
@@ -171,6 +174,7 @@ async fn avrcp_search_and_connect(mut tf: AvrcpIntegrationTest) {
 #[fixture(setup_piconet)]
 #[fuchsia::test]
 async fn remote_initiates_connection_to_avrcp(mut tf: AvrcpIntegrationTest) {
+    let _ = &tf;
     let avrcp_profile_id = tf.avrcp_observer.peer_id();
 
     // Mock peer advertises an AVRCP CT service.
@@ -234,6 +238,7 @@ async fn remote_initiates_connection_to_avrcp(mut tf: AvrcpIntegrationTest) {
 #[fixture(setup_piconet)]
 #[fuchsia::test]
 async fn remote_initiates_browse_channel_before_control(mut tf: AvrcpIntegrationTest) {
+    let _ = &tf;
     let avrcp_profile_id = tf.avrcp_observer.peer_id();
 
     // Mock peer advertises an AVRCP CT service.

@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("test") {
   name = "regulatory_region_integration_test"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",

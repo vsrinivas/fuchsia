@@ -13,6 +13,7 @@ async fn run_server(stream: ShutdownerRequestStream) -> Result<(), Error> {
     stream
         .map(|result| result.context("failed request"))
         .try_for_each(|request| async move {
+            let _ = &request;
             match request {
                 ShutdownerRequest::Shutdown { .. } => {
                     log::info!("Received request to shutdown. Exiting.");

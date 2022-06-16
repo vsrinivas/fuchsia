@@ -5,6 +5,7 @@
 import("//build/rust/rustc_macro.gni")
 
 rustc_macro("todo_unused") {
+  edition = "2021"
   source_root = "src/proc_macro.rs"
 
   deps = [

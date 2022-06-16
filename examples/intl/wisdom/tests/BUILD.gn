@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("intl_wisdom_test_bin") {
   name = "intl_wisdom_test"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "src/lib.rs" ]
 

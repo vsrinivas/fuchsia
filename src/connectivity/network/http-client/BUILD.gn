@@ -12,7 +12,7 @@ group("tests") {
 }
 
 rustc_binary("http_client") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",

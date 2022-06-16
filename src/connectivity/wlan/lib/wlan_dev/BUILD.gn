@@ -5,7 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("wlan_dev") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",

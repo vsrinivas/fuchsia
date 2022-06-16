@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 rustc_test("chromium-routing-test-bin") {
   name = "chromium_routing_test"
   source_root = "test.rs"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "test.rs" ]
 }

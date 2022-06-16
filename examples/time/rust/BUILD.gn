@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "rust_time_example"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fuchsia",

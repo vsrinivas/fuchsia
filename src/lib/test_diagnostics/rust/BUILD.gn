@@ -36,7 +36,7 @@ shared_test_deps = [
 
 rustc_library("test_diagnostics") {
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = lib_deps
 
@@ -58,6 +58,7 @@ rustc_library("test_diagnostics") {
 
 if (!is_fuchsia) {
   rustc_test("test_diagnostics_host_unittests") {
+    edition = "2021"
     sources = lib_sources
     deps = shared_test_deps + lib_deps
   }

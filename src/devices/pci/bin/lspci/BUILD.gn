@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("lib") {
+  edition = "2021"
   name = "lspci"
   with_unit_tests = true
   deps = [
@@ -33,6 +34,7 @@ rustc_library("lib") {
 }
 
 rustc_binary("lspci") {
+  edition = "2021"
   with_unit_tests = true
   deps = [
     ":lib",

@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("stress-test") {
   name = "stress_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fidl/rust/fidl",

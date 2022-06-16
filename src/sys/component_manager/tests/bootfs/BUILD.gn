@@ -15,6 +15,7 @@ group("tests") {
 }
 
 rustc_test("bin") {
+  edition = "2021"
   name = "bootfs"
 
   deps = [

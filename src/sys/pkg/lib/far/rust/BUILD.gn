@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-archive") {
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:bincode",
@@ -32,7 +32,7 @@ rustc_library("fuchsia-archive") {
 
 rustc_test("reject-invalid-fars-test") {
   source_root = "tests/reject_invalid_fars.rs"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":fuchsia-archive",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

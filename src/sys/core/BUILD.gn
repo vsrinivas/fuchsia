@@ -71,7 +71,7 @@ fuchsia_component("fake_appmgr") {
 
 rustc_binary("fake_appmgr_bin") {
   name = "fake_appmgr"
-  edition = "2018"
+  edition = "2021"
   source_root = "test/fake_appmgr.rs"
   sources = [ "test/fake_appmgr.rs" ]
   deps = [
@@ -85,7 +85,7 @@ rustc_binary("fake_appmgr_bin") {
 
 rustc_test("core_proxy_integration_test_bin") {
   name = "core_proxy_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "test/integration_test.rs"
   sources = [ "test/integration_test.rs" ]
   deps = [

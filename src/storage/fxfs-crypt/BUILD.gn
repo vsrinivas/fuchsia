@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("lib") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -36,7 +36,7 @@ fuchsia_test_package("fxfs-crypt-tests") {
 }
 
 rustc_binary("fxfs_crypt") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":lib",
     "//src/lib/diagnostics/log/rust",

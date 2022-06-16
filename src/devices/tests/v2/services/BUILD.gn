@@ -44,6 +44,7 @@ fuchsia_driver_component("root") {
 }
 
 rustc_test("bin") {
+  edition = "2021"
   testonly = true
   output_name = "services_bin"
   source_root = "test.rs"

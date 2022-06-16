@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("driver") {
   name = "base_resolver_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/lib.rs"
   sources = [ "src/lib.rs" ]
   deps = [

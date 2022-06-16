@@ -9,7 +9,7 @@ import("//src/storage/testing/driver_test_realm.gni")
 
 rustc_binary("bin") {
   output_name = "export-ffs"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":export_ffs",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -28,7 +28,7 @@ fuchsia_shell_package("export-ffs") {
 
 rustc_library("export_ffs") {
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fdio/rust:fdio",

@@ -16,6 +16,7 @@ group("tests") {
 }
 
 rustc_test("bin") {
+  edition = "2021"
   name = "tz_version_parrot_rust"
 
   deps = [

@@ -16,6 +16,7 @@ group("tests") {
 
 # [START session_binary]
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "hello-world-session"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and

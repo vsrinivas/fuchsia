@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("hello_world_v1") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
   sources = [ "src/main.rs" ]
 }
 

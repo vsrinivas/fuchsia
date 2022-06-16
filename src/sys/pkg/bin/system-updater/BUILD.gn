@@ -18,7 +18,7 @@ generate_epoch("epoch.json") {
 rustc_binary("bin") {
   name = "system_updater"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   rustenv = [ "EPOCH_PATH=$rebased_epoch_file" ]
 
   deps = [

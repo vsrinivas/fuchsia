@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("config_encoder") {
+  edition = "2021"
   with_unit_tests = true
   sources = [ "src/lib.rs" ]
   deps = [

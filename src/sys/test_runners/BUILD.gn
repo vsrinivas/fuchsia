@@ -10,7 +10,7 @@ import("//tools/cmc/build/expect_includes.gni")
 rustc_library("lib") {
   name = "test_runners_lib"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   # Only for internal use.
   visibility = [ "./*" ]
@@ -62,7 +62,7 @@ rustc_library("test_lib") {
   testonly = true
   name = "test_runners_test_lib"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   source_root = "src/test_lib.rs"
 
   # Only for use by test runners.
@@ -98,7 +98,7 @@ rustc_library("test_lib") {
 
 rustc_binary("echo_server_for_concurrency_test_bin") {
   name = "echo_server_for_concurrency_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/echo_server_for_concurrency_test.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",

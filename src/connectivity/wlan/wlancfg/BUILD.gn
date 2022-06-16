@@ -19,6 +19,7 @@ declare_args() {
 }
 
 rustc_library("lib") {
+  edition = "2021"
   name = "wlancfg_lib"
   with_unit_tests = true
 
@@ -133,7 +134,7 @@ rustc_library("lib") {
 
 rustc_binary("bin") {
   name = "wlancfg"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":lib",
@@ -229,6 +230,7 @@ metrics_registry("wlan_metrics_registry") {
 }
 
 rustc_fuzzer("fuzz_saved_networks_manager_store") {
+  edition = "2021"
   source_root = "fuzz/src/lib.rs"
   rustfunction = "fuzz_saved_networks_manager_store"
 

@@ -7,7 +7,7 @@ import("//build/rust/rustc_staticlib.gni")
 
 rustc_staticlib("guest") {
   name = "guest"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-async-testloop",

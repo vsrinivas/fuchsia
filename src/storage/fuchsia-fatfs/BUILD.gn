@@ -40,7 +40,7 @@ fatfs_sources = [
 ]
 
 rustc_library("lib") {
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   name = "fuchsia_fatfs"
 
@@ -59,6 +59,7 @@ fuchsia_test_package("fuchsia-fatfs-tests") {
 }
 
 rustc_fuzzer("fat-fuzzer") {
+  edition = "2021"
   rustfunction = "fuzz_fatfs"
 
   corpus = "corpus"
@@ -81,7 +82,7 @@ fuzzers_package("fuchsia-fatfs-fuzzer") {
 }
 
 rustc_binary("fatfs") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":lib",

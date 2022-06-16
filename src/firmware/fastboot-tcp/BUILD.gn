@@ -29,7 +29,7 @@ rustc_binary("bin") {
   # Generates a GN target for unit-tests with the label `bin_test`, and
   # a binary named `fastboot_tcp_bin_test`.
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":fastboot-shared-lib",

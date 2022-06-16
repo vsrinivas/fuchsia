@@ -25,7 +25,7 @@ group("tests") {
 rustc_library("io_conformance_util") {
   name = "io_conformance_util"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   testonly = true
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
@@ -56,7 +56,7 @@ fuchsia_unittest_package("io_conformance_util_tests") {
 
 rustc_test("io1_conformance_test") {
   name = "io1_conformance_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "io1_tests.rs"
   deps = [
     ":io_conformance_util",

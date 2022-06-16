@@ -23,6 +23,7 @@ group("tests") {
 }
 
 rustc_test("component-time-test") {
+  edition = "2021"
   source_root = "src/test.rs"
 
   sources = [ "src/test.rs" ]

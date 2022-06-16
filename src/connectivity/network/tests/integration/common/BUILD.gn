@@ -6,6 +6,7 @@ import("//build/rust/rustc_library.gni")
 import("//tools/cmc/build/expect_includes.gni")
 
 rustc_library("netstack_testing_common") {
+  edition = "2021"
   testonly = true
   deps = [
     ":client_includes",

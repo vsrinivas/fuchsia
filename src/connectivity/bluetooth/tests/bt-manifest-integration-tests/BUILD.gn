@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("bt_rfcomm_smoke_test_bin") {
   output_name = "bt_rfcomm_smoke_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/bt_rfcomm_smoke_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
@@ -41,7 +41,7 @@ fuchsia_test_package("bt-rfcomm-smoke-test") {
 
 rustc_test("bt_avrcp_smoke_test_bin") {
   output_name = "bt_avrcp_smoke_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/bt_avrcp_smoke_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
@@ -75,7 +75,7 @@ fuchsia_test_package("bt-avrcp-smoke-test") {
 
 rustc_test("bt_avrcp_target_smoke_test_bin") {
   output_name = "bt_avrcp_target_smoke_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/bt_avrcp_target_smoke_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
@@ -112,7 +112,7 @@ fuchsia_test_package("bt-avrcp-target-smoke-test") {
 
 rustc_test("bt_hfp_audio_gateway_smoke_test_bin") {
   output_name = "bt_hfp_audio_gateway_smoke_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/bt_hfp_audio_gateway_smoke_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
@@ -163,6 +163,7 @@ fuchsia_test_package("bt-hfp-audio-gateway-smoke-test") {
 }
 
 rustc_binary("bt_a2dp_topology_fake_bin") {
+  edition = "2021"
   output_name = "bt_a2dp_topology_fake"
   with_unit_tests = true
   source_root = "src/bt_a2dp_topology_fake.rs"
@@ -204,7 +205,7 @@ fuchsia_component("bt-a2dp-topology-fake") {
 
 rustc_test("bt_a2dp_smoke_test_bin") {
   output_name = "bt_a2dp_smoke_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/bt_a2dp_smoke_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp-rustc",
@@ -254,7 +255,7 @@ fuchsia_test_package("bt-a2dp-smoke-test") {
 
 rustc_test("bt_init_smoke_test_bin") {
   output_name = "bt_init_smoke_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/bt_init_smoke_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
@@ -308,7 +309,7 @@ fuchsia_test_package("bt-init-smoke-test") {
 
 rustc_test("bt_gap_smoke_test_bin") {
   output_name = "bt_gap_smoke_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/bt_gap_smoke_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",

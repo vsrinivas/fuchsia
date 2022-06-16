@@ -496,6 +496,7 @@ impl Actor {
         }
 
         let callback = move || {
+            let _ = &actor;
             let clone = actor.inspector.clone();
             async move { Ok(clone) }.boxed()
         };

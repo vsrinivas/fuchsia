@@ -15,7 +15,7 @@ group("tests") {
 
 rustc_test("security_policy_vmex_integration_test_bin") {
   name = "security_policy_vmex_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "security_policy_vmex_integration_test.rs"
   deps = [
     ":test.policy-rustc",
@@ -42,7 +42,7 @@ fidl("test.policy") {
 }
 
 rustc_binary("protected_ops_util") {
-  edition = "2018"
+  edition = "2021"
   source_root = "protected_ops_util.rs"
   deps = [
     ":test.policy-rustc",

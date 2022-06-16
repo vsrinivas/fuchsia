@@ -5,6 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("dhcp") {
+  edition = "2021"
   output_name = "netstack_dhcp_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",

@@ -13,6 +13,7 @@ group("tests") {
 
 # [START example]
 rustc_test("driver_test_realm_example_simple_rust") {
+  edition = "2021"
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [

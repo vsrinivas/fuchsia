@@ -10,7 +10,7 @@ import("//src/ui/lib/escher/build_args.gni")
 
 rustc_test("scenic-stressor-bin") {
   name = "scenic_stressor"
-  edition = "2018"
+  edition = "2021"
   testonly = true
   source_root = "src/main.rs"
 

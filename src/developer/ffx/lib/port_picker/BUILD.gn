@@ -8,7 +8,7 @@ if (is_host) {
   rustc_library("lib") {
     name = "port_picker"
     with_unit_tests = true
-    edition = "2018"
+    edition = "2021"
     sources = [ "src/lib.rs" ]
   }
 }

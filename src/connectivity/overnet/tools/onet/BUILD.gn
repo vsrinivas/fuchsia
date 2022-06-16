@@ -9,7 +9,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_binary("bin") {
   name = "onet"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/connectivity/overnet/lib/onet_tool",

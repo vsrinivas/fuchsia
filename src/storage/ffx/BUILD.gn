@@ -8,7 +8,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 # subcommands to this by creating a new `ffx_plugin` and adding it under `plugin_deps`.
 ffx_plugin("ffx_storage") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   args_sources = [ "src/args.rs" ]
 

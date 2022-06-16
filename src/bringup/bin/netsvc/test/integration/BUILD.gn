@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("bin") {
+  edition = "2021"
   output_name = "netsvc_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",

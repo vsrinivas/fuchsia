@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_library("inspect-writable") {
   name = "inspect_writable"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/diagnostics/inspect/rust",
@@ -21,7 +21,7 @@ rustc_library("inspect-writable") {
 
 rustc_test("test_bin") {
   name = "inspect_writable_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":inspect-writable",

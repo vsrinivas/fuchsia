@@ -21,6 +21,7 @@ fidl("fuchsia.examples.services") {
 }
 
 rustc_test("branch-bin") {
+  edition = "2021"
   deps = [
     ":fuchsia.examples.services-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
@@ -38,6 +39,7 @@ rustc_test("branch-bin") {
 }
 
 rustc_binary("provider-bin") {
+  edition = "2021"
   output_name = "provider_bin"
   deps = [
     ":fuchsia.examples.services-rustc",

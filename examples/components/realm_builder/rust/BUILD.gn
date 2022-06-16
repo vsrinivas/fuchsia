@@ -5,6 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("bin") {
+  edition = "2021"
   name = "rust_sample_realm"
 
   # [START realm_builder_dep_rust]

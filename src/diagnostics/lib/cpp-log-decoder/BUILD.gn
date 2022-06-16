@@ -22,7 +22,7 @@ executable("cpp-log-decoder-unittest") {
 rustc_staticlib("lib") {
   name = "archivist_c_lib"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   sources = [ "src/lib.rs" ]
   public = [ "log_decoder.h" ]
   deps = [

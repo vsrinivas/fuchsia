@@ -16,7 +16,7 @@ group("event_pair") {
 
 rustc_binary("bin") {
   name = "overnet_event_pair"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",

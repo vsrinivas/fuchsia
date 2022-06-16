@@ -41,7 +41,7 @@ group("tests-for-dart") {
 rustc_library("lib") {
   name = "tests_intl_timezone"
   sources = [ "src/lib.rs" ]
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics-rustc",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
@@ -78,7 +78,7 @@ rustc_library("lib") {
 }
 
 rustc_test("timezone_bin_test") {
-  edition = "2018"
+  edition = "2021"
   source_root = "timezone_test.rs"
   sources = [ "timezone_test.rs" ]
   deps = [

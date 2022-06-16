@@ -13,7 +13,7 @@ import("pkg_resolver_config.gni")
 rustc_library("lib") {
   name = "pkg_resolver"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",

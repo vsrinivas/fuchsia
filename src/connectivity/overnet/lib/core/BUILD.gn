@@ -78,14 +78,14 @@ CORE_SOURCES = [
 
 rustc_library("core") {
   name = "overnet_core"
-  edition = "2018"
+  edition = "2021"
   deps = CORE_DEPS
   sources = CORE_SOURCES
 }
 
 rustc_test("core_test") {
   name = "overnet_core_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = CORE_DEPS + [
            "//third_party/rust_crates:arbitrary",

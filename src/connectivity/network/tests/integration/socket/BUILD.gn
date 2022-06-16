@@ -5,6 +5,7 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("socket") {
+  edition = "2021"
   output_name = "netstack_socket_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",

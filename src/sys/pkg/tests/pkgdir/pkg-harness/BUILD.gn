@@ -14,7 +14,7 @@ fidl("test.fidl.pkg") {
 rustc_binary("bin") {
   name = "pkg_harness"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":test.fidl.pkg-rustc",

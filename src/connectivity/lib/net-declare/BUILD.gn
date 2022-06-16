@@ -9,7 +9,7 @@ import("//build/rust/rustc_macro.gni")
 rustc_macro("net-declare-macros") {
   source_root = "src/macros.rs"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     "//src/connectivity/lib/net-types",
@@ -28,7 +28,7 @@ rustc_macro("net-declare-macros") {
 
 rustc_library("net-declare") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [ ":net-declare-macros" ]
 

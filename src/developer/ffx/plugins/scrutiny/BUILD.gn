@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_scrutiny") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   plugin_deps = [
     "extract:ffx_scrutiny_extract",
     "list:ffx_scrutiny_list",

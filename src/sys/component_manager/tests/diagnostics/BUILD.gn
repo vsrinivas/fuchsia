@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_binary("reporter_bin") {
   name = "reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "reporter.rs"
   testonly = true
   deps = [
@@ -26,7 +26,7 @@ rustc_binary("reporter_bin") {
 
 rustc_binary("child_bin") {
   name = "child"
-  edition = "2018"
+  edition = "2021"
   source_root = "child.rs"
   testonly = true
   deps = [
@@ -40,7 +40,7 @@ rustc_binary("child_bin") {
 
 rustc_binary("cleanup_bin") {
   name = "cleanup"
-  edition = "2018"
+  edition = "2021"
   source_root = "cleanup.rs"
   testonly = true
   deps = [
@@ -59,7 +59,7 @@ rustc_binary("cleanup_bin") {
 
 rustc_test("bin") {
   name = "diagnostics_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

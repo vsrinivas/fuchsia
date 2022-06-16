@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_test("test") {
   name = "tun_example"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",

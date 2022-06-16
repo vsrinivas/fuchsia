@@ -15,6 +15,7 @@ metrics_registry("bt_a2dp_metrics") {
 }
 
 rustc_library("bt-a2dp") {
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

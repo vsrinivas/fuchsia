@@ -48,7 +48,7 @@ group("tests") {
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("qmigen") {
-    edition = "2018"
+    edition = "2021"
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:serde",
@@ -64,7 +64,7 @@ if (host_toolchain == current_toolchain) {
   }
 
   rustc_library("qmigen_lib") {
-    edition = "2018"
+    edition = "2021"
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:serde",
@@ -80,7 +80,7 @@ if (host_toolchain == current_toolchain) {
   }
 
   rustc_test("qmigen_unittests") {
-    edition = "2018"
+    edition = "2021"
 
     deps = [
       ":qmigen",

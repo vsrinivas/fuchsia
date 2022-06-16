@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("base_resolver_test_bin") {
   name = "base_resolver_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "base_resolver_test.rs"
 
   deps = [
@@ -50,7 +50,7 @@ fuchsia_component("cm_disabled_resolver") {
 
 rustc_binary("root_component_bin") {
   name = "root_component"
-  edition = "2018"
+  edition = "2021"
   source_root = "root_component.rs"
 
   deps = [

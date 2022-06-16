@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("forwarding") {
+  edition = "2021"
   output_name = "netstack_forwarding_integration_test"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",

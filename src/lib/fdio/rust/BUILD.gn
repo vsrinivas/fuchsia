@@ -9,7 +9,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("fdio") {
   with_unit_tests = true
   version = "0.2.0"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -39,7 +39,7 @@ rustc_library("fdio") {
 
 rustc_binary("spawn_test_target") {
   version = "0.2.0"
-  edition = "2018"
+  edition = "2021"
   source_root = "test/spawn_test_target.rs"
   sources = [ "test/spawn_test_target.rs" ]
 
@@ -47,7 +47,7 @@ rustc_binary("spawn_test_target") {
 }
 
 rustc_binary("spawn_builder_test_target") {
-  edition = "2018"
+  edition = "2021"
   visibility = [ ":*" ]
   source_root = "test/spawn_builder_test_target.rs"
   sources = [ "test/spawn_builder_test_target.rs" ]

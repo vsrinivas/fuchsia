@@ -12,7 +12,7 @@ group("examples") {
 
 rustc_binary("example_player_bin") {
   name = "example_player"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

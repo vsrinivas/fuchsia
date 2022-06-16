@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("concurrency_test_driver_bin") {
-  edition = "2018"
+  edition = "2021"
   name = "concurrency_test_driver_rust"
   source_root = "src/main.rs"
   deps = [

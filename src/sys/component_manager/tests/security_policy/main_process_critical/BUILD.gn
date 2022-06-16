@@ -15,7 +15,7 @@ group("tests") {
 
 rustc_test("security_policy_critical_integration_test_bin") {
   name = "security_policy_critical_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "security_policy_critical_integration_test.rs"
   deps = [
     ":test.policy-rustc",
@@ -42,7 +42,7 @@ fidl("test.policy") {
 
 rustc_binary("exit_on_command_bin") {
   name = "exit_on_command"
-  edition = "2018"
+  edition = "2021"
   source_root = "exit_on_command.rs"
   deps = [
     ":test.policy-rustc",

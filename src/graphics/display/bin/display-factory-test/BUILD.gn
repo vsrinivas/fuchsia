@@ -29,6 +29,7 @@ executable("display_detect") {
 }
 
 rustc_binary("display_png") {
+  edition = "2021"
   source_root = "display-png.rs"
   with_unit_tests = true
   deps = [

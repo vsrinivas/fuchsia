@@ -9,6 +9,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("bin") {
+  edition = "2021"
   name = "different_values_integration_tests"
   testonly = true
   sources = [ "src/lib.rs" ]

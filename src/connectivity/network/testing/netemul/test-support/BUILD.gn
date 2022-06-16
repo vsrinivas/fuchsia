@@ -19,7 +19,7 @@ fidl("fidl") {
 rustc_binary("bin") {
   testonly = true
   name = "counter"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":fidl-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",

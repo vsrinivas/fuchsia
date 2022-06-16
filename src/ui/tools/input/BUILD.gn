@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("input") {
   name = "input"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/ui/input-synthesis",

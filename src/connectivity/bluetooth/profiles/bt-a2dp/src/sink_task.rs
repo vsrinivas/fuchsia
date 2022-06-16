@@ -97,6 +97,7 @@ impl ConfiguredSinkTask {
             let peer_id = self.peer_id.clone();
             let builder = self.builder.clone();
             let session_fut = async move {
+                let _ = &builder;
                 let (player_client, player_requests) = match create_request_stream() {
                     Ok((client, requests)) => (client, requests),
                     Err(e) => {

@@ -63,6 +63,7 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
             move |handles| {
                 let proxy = spawn_vfs(config_data_dir.clone());
                 async move {
+                    let _ = &handles;
                     let mut fs = ServiceFs::new();
                     fs.add_remote("config-data", proxy);
                     fs.serve_connection(handles.outgoing_dir.into_channel())

@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 # Library for working with Font Provider font manifests.
 rustc_library("manifest") {
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

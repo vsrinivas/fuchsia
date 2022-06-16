@@ -5,7 +5,7 @@
 import("//build/rust/rustc_library.gni")
 
 rustc_library("qmi") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport-rustc",
     "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop-rustc",

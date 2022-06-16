@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 
 rustc_library("fuchsia") {
   name = "fuchsia"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "macro",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
@@ -36,7 +36,7 @@ rustc_library("fuchsia") {
 
 rustc_test("fuchsia_test") {
   name = "fuchsia_test"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":fuchsia",
     "//third_party/rust_crates:anyhow",

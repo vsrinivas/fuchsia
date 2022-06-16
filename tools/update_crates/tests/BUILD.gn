@@ -35,6 +35,7 @@ if (is_host) {
   }
 
   rustc_binary("update_crates_test_bin") {
+    edition = "2021"
     source_root = "with_local_registry.rs"
     sources = [ "with_local_registry.rs" ]
 

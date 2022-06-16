@@ -11,7 +11,7 @@ import("//build/rust/rustc_test.gni")
 rustc_library("lib") {
   testonly = true
   name = "cm_stress_tests_lib"
-  edition = "2018"
+  edition = "2021"
   source_root = "lib.rs"
 
   # Only for internal use.
@@ -36,7 +36,7 @@ fidl("test.componentmanager.stresstests") {
 rustc_test("realm_with_many_children_bin") {
   testonly = true
   name = "realm_with_many_children"
-  edition = "2018"
+  edition = "2021"
   source_root = "realm_with_many_children.rs"
   deps = [
     ":lib",
@@ -52,7 +52,7 @@ rustc_test("realm_with_many_children_bin") {
 rustc_test("deep_tree_stress_test_bin") {
   testonly = true
   name = "deep_tree_stress_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "deep_tree_stress_test.rs"
   deps = [
     ":lib",
@@ -66,7 +66,7 @@ rustc_test("deep_tree_stress_test_bin") {
 rustc_binary("child_for_stress_test_bin") {
   testonly = true
   name = "child_for_stress_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "child_for_stress_test.rs"
   deps = [
     ":lib",

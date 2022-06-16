@@ -14,7 +14,7 @@ group("fable") {
 }
 
 rustc_library("fable-lib") {
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   sources = [ "src/lib.rs" ]
   test_deps = [ "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc" ]

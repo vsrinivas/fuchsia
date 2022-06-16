@@ -124,6 +124,7 @@ fuchsia_driver_component("child-driver") {
 }
 
 rustc_test("bindlib-codegen-rust-test") {
+  edition = "2021"
   testonly = true
   source_root = "rust_test.rs"
   sources = [ "rust_test.rs" ]

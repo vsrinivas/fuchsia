@@ -9,7 +9,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_library("routing") {
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   visibility = [
     "//src/lib/component_hub/*",

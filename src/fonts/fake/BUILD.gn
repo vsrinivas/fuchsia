@@ -37,7 +37,7 @@ fuchsia_component("fake-fonts-cm") {
 
 rustc_binary("bin") {
   name = "fake_fonts_bin"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
@@ -55,7 +55,7 @@ rustc_binary("bin") {
 
 rustc_test("test-bin") {
   name = "fake_fonts_test_bin"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",

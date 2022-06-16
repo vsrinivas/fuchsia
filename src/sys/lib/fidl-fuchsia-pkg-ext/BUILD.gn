@@ -18,7 +18,7 @@ measure_tape("measure_fuchsia_pkg") {
 
 rustc_library("fidl-fuchsia-pkg-ext") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

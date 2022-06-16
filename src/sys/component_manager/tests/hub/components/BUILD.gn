@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_binary("advanced_routing_reporter_bin") {
   name = "advanced_routing_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "advanced_routing/reporter.rs"
   testonly = true
   deps = [
@@ -23,7 +23,7 @@ rustc_binary("advanced_routing_reporter_bin") {
 
 rustc_binary("simple_component_bin") {
   name = "simple"
-  edition = "2018"
+  edition = "2021"
   source_root = "simple_component/main.rs"
   testonly = true
   deps = [
@@ -37,7 +37,7 @@ rustc_binary("simple_component_bin") {
 
 rustc_binary("dynamic_child_reporter_bin") {
   name = "dynamic_child_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "dynamic_child/reporter.rs"
   testonly = true
   deps = [
@@ -58,7 +58,7 @@ rustc_binary("dynamic_child_reporter_bin") {
 
 rustc_binary("visibility_reporter_bin") {
   name = "visibility_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "visibility/reporter.rs"
   testonly = true
   deps = [
@@ -71,7 +71,7 @@ rustc_binary("visibility_reporter_bin") {
 
 rustc_binary("resolver_bin") {
   name = "resolver"
-  edition = "2018"
+  edition = "2021"
   source_root = "resolver/main.rs"
   testonly = true
   deps = [
@@ -84,7 +84,7 @@ rustc_binary("resolver_bin") {
 
 rustc_binary("structured_config_reporter_bin") {
   name = "structured_config_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "structured_config/reporter.rs"
   testonly = true
   deps = [
@@ -97,7 +97,7 @@ rustc_binary("structured_config_reporter_bin") {
 
 rustc_library("hub_report_lib") {
   name = "hub_report"
-  edition = "2018"
+  edition = "2021"
   source_root = "hub_report.rs"
   testonly = true
   deps = [

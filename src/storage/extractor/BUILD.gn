@@ -9,7 +9,7 @@ rustc_library("disk_extractor_lib") {
   name = "disk_extractor_lib"
   version = "0.1.0"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/zerocopy",

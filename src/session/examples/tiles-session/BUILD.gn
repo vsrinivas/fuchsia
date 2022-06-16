@@ -28,7 +28,7 @@ fuchsia_package_with_single_component("tiles-session") {
 rustc_binary("bin") {
   output_name = "tiles-session"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",

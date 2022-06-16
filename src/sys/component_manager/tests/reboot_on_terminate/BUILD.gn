@@ -19,7 +19,7 @@ group("tests") {
 }
 
 rustc_test("reboot_on_terminate_test_bin") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -40,7 +40,7 @@ rustc_test("reboot_on_terminate_test_bin") {
 
 rustc_binary("reboot_on_terminate_success_bin") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -59,7 +59,7 @@ rustc_binary("reboot_on_terminate_success_bin") {
 
 rustc_binary("reboot_on_terminate_policy_bin") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",

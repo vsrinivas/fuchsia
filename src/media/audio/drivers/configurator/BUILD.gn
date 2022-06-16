@@ -24,6 +24,7 @@ group("tests") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "configurator"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and

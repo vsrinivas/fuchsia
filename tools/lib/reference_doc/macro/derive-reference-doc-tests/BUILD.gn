@@ -9,7 +9,7 @@ import("//build/testing/golden_file.gni")
 rustc_test("derive-reference-doc_test") {
   name = "derive-reference-doc"
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//third_party/rust_crates:pretty_assertions",

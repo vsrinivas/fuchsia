@@ -10,7 +10,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_storage_blackout_integration") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
 
   args_sources = [ "src/args.rs" ]
 
@@ -25,7 +25,7 @@ ffx_plugin("ffx_storage_blackout_integration") {
 rustc_binary("blackout-integration-target-bin") {
   output_name = "blackout_integration_target_bin"
   testonly = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/lib/fuchsia",
     "//third_party/rust_crates:anyhow",

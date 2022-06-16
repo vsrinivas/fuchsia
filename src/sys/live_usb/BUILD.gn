@@ -58,6 +58,7 @@ kernel_cmdline("live_usb_is_system") {
 }
 
 rustc_binary("bin") {
+  edition = "2021"
   output_name = "live_usb"
 
   with_unit_tests = true

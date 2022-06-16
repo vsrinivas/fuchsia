@@ -9,7 +9,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("grand-swd-binary") {
   output_name = "grand_swd_binary"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/sys/pkg/bin/omaha-client:lib",

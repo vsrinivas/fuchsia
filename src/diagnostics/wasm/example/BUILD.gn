@@ -61,7 +61,7 @@ if (current_toolchain == unknown_wasm32_toolchain) {
 }
 
 rustc_test("example_lib_tests") {
-  edition = "2018"
+  edition = "2021"
 
   sources = lib_sources
 

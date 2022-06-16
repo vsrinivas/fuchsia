@@ -8,7 +8,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_binary("mock_services") {
   name = "pwrbtn_monitor_mock_services"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/mock_services.rs"
 
   deps = [
@@ -31,7 +31,7 @@ rustc_binary("mock_services") {
 
 rustc_test("test_driver") {
   name = "pwrbtn_monitor_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/test.rs"
 
   deps = [

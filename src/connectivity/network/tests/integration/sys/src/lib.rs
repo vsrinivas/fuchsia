@@ -104,6 +104,7 @@ async fn start_with_cache_no_space() {
             move |handles: LocalComponentHandles| {
                 let cache = Clone::clone(&client);
                 Box::pin(async {
+                    let _ = &handles;
                     let mut fs = ServiceFs::new();
                     let () = fs.add_remote(CACHE_DIR_NAME, cache);
                     let _: &mut ServiceFs<_> =

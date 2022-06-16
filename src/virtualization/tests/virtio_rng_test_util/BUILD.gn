@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("virtio_rng_test_util") {
   name = "virtio_rng_test_util"
-  edition = "2018"
+  edition = "2021"
   configs += [ "//src/virtualization/tests:guest_test_util" ]
   disable_rbe = true
 

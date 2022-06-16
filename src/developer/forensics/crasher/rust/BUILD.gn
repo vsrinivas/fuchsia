@@ -23,7 +23,7 @@ fuchsia_component("crasher_v2") {
 
 rustc_binary("crasher_exe") {
   name = "rust_crasher"
-  edition = "2018"
+  edition = "2021"
 
   sources = [ "src/main.rs" ]
   deps = [

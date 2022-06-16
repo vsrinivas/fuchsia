@@ -9,7 +9,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   name = "password_authenticator"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":password_authenticator_config",

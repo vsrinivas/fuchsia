@@ -6,6 +6,7 @@ import("//build/rust/rustc_test.gni")
 import("//src/power/power-manager/thermal_config/thermal_config.gni")
 
 rustc_test("thermal-template-output-test") {
+  edition = "2021"
   deps = [
     "//src/power/power-manager/thermal_config/parser",
     "//third_party/rust_crates:anyhow",

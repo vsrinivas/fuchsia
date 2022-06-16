@@ -14,7 +14,7 @@ fidl("echos") {
 
 rustc_binary("fuchsia_component_test_outer_bin") {
   name = "fuchsia_component_test_outer"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":echos-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -41,7 +41,7 @@ fuchsia_unittest_package("fuchsia_component_test_outer") {
 
 rustc_binary("fuchsia_component_test_middle_bin") {
   name = "fuchsia_component_test_middle"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":echos-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -69,7 +69,7 @@ fuchsia_package_with_single_component("fuchsia_component_test_middle") {
 
 rustc_binary("fuchsia_component_test_middle_sibling_bin") {
   name = "fuchsia_component_test_middle_sibling"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":echos-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -93,7 +93,7 @@ fuchsia_package_with_single_component("fuchsia_component_test_middle_sibling") {
 
 rustc_binary("fuchsia_component_test_inner_bin") {
   name = "fuchsia_component_test_inner"
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":echos-rustc",
     "//src/lib/fidl/rust/fidl",

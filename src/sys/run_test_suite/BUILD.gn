@@ -9,7 +9,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("lib") {
   name = "run_test_suite_lib"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   # Only to be used by internal bin and tests.
   visibility = [
@@ -84,7 +84,7 @@ rustc_library("lib") {
 rustc_binary("bin") {
   output_name = "run-test-suite"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":lib",

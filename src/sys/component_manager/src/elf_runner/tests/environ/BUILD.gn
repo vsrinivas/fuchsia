@@ -12,7 +12,7 @@ group("environ") {
 }
 
 rustc_binary("context-bin") {
-  edition = "2018"
+  edition = "2021"
   output_name = "context"
   deps = [
     "fidl:fuchsia.elf.test-rustc",
@@ -35,6 +35,7 @@ fuchsia_component("context-component") {
 }
 
 rustc_test("test") {
+  edition = "2021"
   name = "environ"
 
   deps = [

@@ -22,7 +22,7 @@ group("tests") {
 
 rustc_library("lib") {
   name = "text-edit-controller"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.input.text:fuchsia.input.text-rustc",

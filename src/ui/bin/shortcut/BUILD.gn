@@ -29,7 +29,7 @@ config_data("ui_sysmgr.config") {
 rustc_binary("bin") {
   name = "shortcut"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
@@ -80,7 +80,7 @@ fuchsia_package("shortcut") {
 # The integration test for the shortcut manager.
 rustc_test("shortcut_integration_test_bin") {
   output_name = "shortcut_integration_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":bin",

@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("legacy_component_lib_tests_bin") {
+  edition = "2021"
   output_name = "legacy_component_lib_tests"
   testonly = true
   source_root = "legacy_component_lib_tests.rs"

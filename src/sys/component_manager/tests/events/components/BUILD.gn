@@ -6,7 +6,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("trigger_server_bin") {
   name = "static_event_stream_trigger_server"
-  edition = "2018"
+  edition = "2021"
   source_root = "static_event_stream/trigger_server.rs"
   testonly = true
   deps = [
@@ -28,7 +28,7 @@ rustc_binary("trigger_server_bin") {
 
 rustc_binary("trigger_client_bin") {
   name = "static_event_stream_trigger_client"
-  edition = "2018"
+  edition = "2021"
   source_root = "static_event_stream/trigger_client.rs"
   testonly = true
   deps = [
@@ -43,7 +43,7 @@ rustc_binary("trigger_client_bin") {
 
 rustc_binary("echo_reporter_bin") {
   name = "scoped_echo_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "scoped/echo_reporter.rs"
   testonly = true
   deps = [
@@ -65,7 +65,7 @@ rustc_binary("echo_reporter_bin") {
 
 rustc_binary("nested_reporter_bin") {
   name = "nested_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "nested/reporter.rs"
   testonly = true
   deps = [
@@ -84,7 +84,7 @@ rustc_binary("nested_reporter_bin") {
 
 rustc_binary("resolved_error_reporter_bin") {
   name = "resolved_error_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "resolved_error/reporter.rs"
   testonly = true
   deps = [
@@ -107,7 +107,7 @@ rustc_binary("resolved_error_reporter_bin") {
 
 rustc_binary("async_reporter_bin") {
   name = "async_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "async/reporter.rs"
   testonly = true
   deps = [
@@ -128,7 +128,7 @@ rustc_binary("async_reporter_bin") {
 
 rustc_binary("echo_client_for_events_bin") {
   name = "scoped_echo_client"
-  edition = "2018"
+  edition = "2021"
   source_root = "scoped/echo_client.rs"
   testonly = true
   deps = [
@@ -148,7 +148,7 @@ rustc_binary("echo_client_for_events_bin") {
 
 rustc_binary("echo_server_for_events_bin") {
   name = "scoped_echo_server"
-  edition = "2018"
+  edition = "2021"
   source_root = "scoped/echo_server.rs"
   testonly = true
   deps = [
@@ -165,7 +165,7 @@ rustc_binary("echo_server_for_events_bin") {
 
 rustc_binary("stub_component_bin") {
   name = "stub_component"
-  edition = "2018"
+  edition = "2021"
   source_root = "stub/component.rs"
   testonly = true
   deps = [
@@ -179,7 +179,7 @@ rustc_binary("stub_component_bin") {
 
 rustc_binary("realm_offered_nested") {
   name = "realm_offered_nested"
-  edition = "2018"
+  edition = "2021"
   source_root = "realm_offered/nested.rs"
   testonly = true
   deps = [
@@ -201,7 +201,7 @@ rustc_binary("realm_offered_nested") {
 
 rustc_binary("realm_offered_bin") {
   name = "realm_offered_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "realm_offered/reporter.rs"
   testonly = true
   deps = [
@@ -218,7 +218,7 @@ rustc_binary("realm_offered_bin") {
 
 rustc_binary("directory_ready_root_bin") {
   name = "directory_ready_root"
-  edition = "2018"
+  edition = "2021"
   source_root = "directory_ready/root.rs"
   testonly = true
   deps = [
@@ -242,7 +242,7 @@ rustc_binary("directory_ready_root_bin") {
 
 rustc_binary("directory_ready_child_bin") {
   name = "directory_ready_child"
-  edition = "2018"
+  edition = "2021"
   source_root = "directory_ready/child.rs"
   testonly = true
   deps = [
@@ -259,7 +259,7 @@ rustc_binary("directory_ready_child_bin") {
 
 rustc_binary("synthesis_reporter_bin") {
   name = "synthesis_reporter"
-  edition = "2018"
+  edition = "2021"
   source_root = "synthesis/reporter.rs"
   testonly = true
   deps = [

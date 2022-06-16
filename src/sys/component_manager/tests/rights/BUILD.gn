@@ -15,7 +15,7 @@ group("tests") {
 
 rustc_test("rights_integration_test_bin") {
   name = "rights_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "rights_integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -55,7 +55,7 @@ executable("expose_dir_rights_bin") {
 
 rustc_binary("use_dir_rights_bin") {
   name = "use_dir_rights"
-  edition = "2018"
+  edition = "2021"
   source_root = "use_dir_rights.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -75,7 +75,7 @@ rustc_binary("use_dir_rights_bin") {
 
 rustc_binary("use_storage_bin") {
   name = "use_storage"
-  edition = "2018"
+  edition = "2021"
   source_root = "use_storage.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

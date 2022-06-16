@@ -201,6 +201,7 @@ fn create_mock_component(
         let archive_accessor = archive_accessor.clone();
 
         async move {
+            let _ = &mock_handles;
             let mut fs = ServiceFs::new();
 
             // Serve data directory

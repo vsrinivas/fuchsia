@@ -253,6 +253,7 @@ fuchsia_unittest_component("reboot-rate-limiter-unittest") {
 }
 
 rustc_test("basemgr_v1_to_v2_test_realm_bin") {
+  edition = "2021"
   name = "basemgr_v1_to_v2_test_realm"
   source_root = "basemgr_v1_to_v2_test_realm.rs"
   deps = [

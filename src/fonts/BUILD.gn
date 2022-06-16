@@ -52,7 +52,7 @@ group("downstream_test_deps") {
 rustc_binary("font_provider") {
   name = "font_provider"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "char_set",

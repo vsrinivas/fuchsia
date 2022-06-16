@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("rust-puppet") {
+  edition = "2021"
   output_name = "sink_validator_rust_puppet"
   testonly = true
   sources = [ "src/main.rs" ]

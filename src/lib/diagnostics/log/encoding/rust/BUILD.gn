@@ -20,7 +20,7 @@ group("tests") {
 rustc_library("rust") {
   name = "diagnostics_log_encoding"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
@@ -58,6 +58,7 @@ fuchsia_unittest_package("diagnostics-stream-tests") {
 }
 
 rustc_fuzzer("parse_record_fuzzer") {
+  edition = "2021"
   deps = [
     ":rust",
     "//src/lib/fuzzing/rust:fuzz",

@@ -11,7 +11,7 @@ rustc_library("test_lib") {
   testonly = true
   name = "test_manager_test_lib"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
   source_root = "src/test_lib.rs"
 
   deps = [
@@ -36,7 +36,7 @@ rustc_library("lib") {
   testonly = true
   name = "test_manager_lib"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   # Only for internal use.
   visibility = [
@@ -123,7 +123,7 @@ rustc_binary("bin") {
   testonly = true
   name = "test_manager"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":lib",

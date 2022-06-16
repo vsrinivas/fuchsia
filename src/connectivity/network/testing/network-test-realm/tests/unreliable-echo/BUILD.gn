@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_binary("bin") {
   output_name = "unreliable_echo"
-  edition = "2018"
+  edition = "2021"
   sources = [ "src/main.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
   deps = [
@@ -23,6 +23,7 @@ rustc_binary("bin") {
 }
 
 rustc_library("lib") {
+  edition = "2021"
   name = "unreliable_echo"
   sources = [ "src/lib.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]

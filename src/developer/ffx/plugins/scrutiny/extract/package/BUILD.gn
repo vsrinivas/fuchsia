@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_scrutiny_package") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [
