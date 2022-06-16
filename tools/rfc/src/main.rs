@@ -375,10 +375,11 @@ where
 }
 
 fn filename_from_title(title: &str) -> String {
-    format!(
+    let filename = format!(
         "NNNN_{}.md",
         title.to_lowercase().split(' ').map(|s| s.trim()).collect::<Vec<_>>().join("_"),
-    )
+    );
+    filename.replace(std::path::is_separator, "_")
 }
 
 fn areas_from_numbers(valid_areas: Vec<String>, input_numbers: String) -> Result<Vec<String>> {
@@ -502,6 +503,10 @@ mod test {
             path
         }
 
+        pub fn rfc_file_exists(&self, file: &str) -> bool {
+            self.rfcs_path.join(file).exists()
+        }
+
         pub fn validate_rfcs_file(&self, file: &str, expected: &str) {
             let path = self.rfcs_path.join(file);
             let mut file = File::open(&path).expect(&format!("open: {}", path.display()));
@@ -514,6 +519,17 @@ mod test {
     fn init_file(path: PathBuf, contents: &str) {
         let mut file = File::create(path).expect("created file");
         file.write_all(contents.as_bytes()).expect("wrote file");
+    }
+
+    fn full_args() -> CreateRfcArgs {
+        CreateRfcArgs {
+            title: Some("Back to the Fuchsia".to_string()),
+            short_description: Some("Fuchsia is a modern OS".to_string()),
+            authors: vec!["foo@google.com".to_string(), "bar@google.com".to_string()],
+            areas: vec!["Pink".to_string()],
+            issues: vec!["5678".to_string(), "1234".to_string()],
+            reviewers: vec!["quux@google.com".to_string(), "baz@google.com".to_string()],
+        }
     }
 
     #[test]
@@ -563,14 +579,7 @@ mod test {
         // When the CLI receives all parameters through arguments, we don't expect any input.
         let stdin = b"";
         let mut stdout = Vec::<u8>::new();
-        let args = CreateRfcArgs {
-            title: Some("Back to the Fuchsia".to_string()),
-            short_description: Some("Fuchsia is a modern OS".to_string()),
-            authors: vec!["foo@google.com".to_string(), "bar@google.com".to_string()],
-            areas: vec!["Pink".to_string()],
-            issues: vec!["5678".to_string(), "1234".to_string()],
-            reviewers: vec!["quux@google.com".to_string(), "baz@google.com".to_string()],
-        };
+        let args = full_args();
         rfc_impl(
             CommandLine {
                 args,
@@ -704,5 +713,29 @@ mod test {
             std::str::from_utf8(&stdout).expect("valid stdout"),
             "Authors (comma-separated) [default: fuchsia-hacker@google.com]: "
         );
+    }
+
+    #[test]
+    fn accepts_a_title_with_slashes() {
+        let dir = FakeDir::new();
+
+        let stdin = vec!["Hello/There"].join("\n").into_bytes();
+
+        let mut stdout = Vec::<u8>::new();
+        let mut args = full_args();
+        args.title = None;
+        rfc_impl(
+            CommandLine {
+                args,
+                writer: &mut stdout,
+                reader: &stdin[..],
+                author_email_provider: FakeEmailProvider {},
+            },
+            dir.root.path().to_path_buf(),
+        )
+        .expect("succeeds");
+
+        assert_eq!(std::str::from_utf8(&stdout).expect("stdout bytes"), "Title: ");
+        assert!(dir.rfc_file_exists("NNNN_hello_there.md"));
     }
 }
