@@ -45,6 +45,7 @@
 // GCC's <arm_acle.h> is missing implementations of the following APIs
 // specified by ARM, so they are filled in here.  Clang's implementation
 // is already complete.
+// TODO(fxbug.dev/102847): Remove this after gcc adds these intrinsics.
 
 // From ARM ACLE spec, 8.3 Memory Barriers:
 //   "Memory barriers ensure specific ordering properties between memory
