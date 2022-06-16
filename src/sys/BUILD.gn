@@ -9,6 +9,7 @@ group("sys") {
     "component_manager:component-manager",
     "component_test_runner",
     "pkg",
+    "run_test_component",
     "time/timekeeper",
   ]
 }
@@ -28,6 +29,7 @@ group("tests") {
     "lib:tests",
     "live_usb:tests",
     "pkg:tests",
+    "run_test_component:tests",
     "run_test_suite:tests",
     "startup:tests",
     "stash:tests",
