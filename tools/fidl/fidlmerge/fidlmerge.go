@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -182,19 +183,21 @@ func NewRoot(ir fidlgen.Root, outputBase string, templates *template.Template, o
 		protocolsByName[member.Name] = &ir.Protocols[index]
 	}
 
-	// Filter out all anonymous message body structs.
+	// Store all structs in structsByName so that getParams can access them.
+	structsByName := make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct)
+	for index, member := range ir.Structs {
+		structsByName[member.Name] = &ir.Structs[index]
+	}
+
+	// But filter out anonymous message body structs in ir.Structs so that
+	// templates that range over ir.Structs don't include them.
 	allStructs := ir.Structs
-	ir.Structs = make([]fidlgen.Struct, 0)
+	ir.Structs = nil
 	for _, member := range allStructs {
 		if _, ok := mbtn[member.Name]; ok && member.IsAnonymous() {
 			continue
 		}
 		ir.Structs = append(ir.Structs, member)
-	}
-
-	structsByName := make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct)
-	for index, member := range ir.Structs {
-		structsByName[member.Name] = &ir.Structs[index]
 	}
 
 	tablesByName := make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Table)
@@ -365,6 +368,19 @@ func GenerateFidl(templatePath string, ir fidlgen.Root, outputBase *string, opti
 		// Converts a primitive subtype to its C equivalent.
 		"toCType": func(p fidlgen.PrimitiveSubtype) string {
 			return primitiveTypes[p]
+		},
+		// Gets a flat list of parameters for a request/response payload.
+		"getParams": func(t *fidlgen.Type) []fidlgen.StructMember {
+			if t == nil {
+				return nil
+			}
+			if t.Kind != fidlgen.IdentifierType {
+				panic(fmt.Sprintf("expected IdentifierType, got %s", t.Kind))
+			}
+			if s, ok := root.structsByName[t.Identifier]; ok {
+				return s.Members
+			}
+			panic(fmt.Sprintf("%s: fidlmerge only supports struct requests/responses", t.Identifier))
 		},
 	}
 

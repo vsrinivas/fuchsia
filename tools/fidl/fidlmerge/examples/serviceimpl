@@ -1,15 +1,15 @@
 {{/*
 
 This is an example fidlmerge template. It generates boilerplate .h and .cc for
-the implementation of a specific interface. Also, there are lots of useful
+the implementation of a specific protocol. Also, there are lots of useful
 templates here that can be copied into new C++-related templates.
 
 Example usage:
 
-fidlmerge -template serviceimpl \
-    -json out/x64/fidling/gen/sdk/fidl/fuchsia.media/fidl.fidl.json \
+fx fidlmerge -template tools/fidl/fidlmerge/examples/serviceimpl \
+    -json out/default/fidling/gen/sdk/fidl/fuchsia.media/fuchsia.media.fidl.json \
     -output-base audio_renderer_impl \
-    -options interface=fuchsia.media/AudioRenderer
+    -options protocol=fuchsia.media/AudioRenderer
 
 */}}
 
@@ -33,7 +33,7 @@ fidlmerge -template serviceimpl \
 {{/* Produces a C++ expression for a types.Constant. */}}
 {{- define "Constant" }}
     {{- if eq .Kind "identifier" }}
-        {{- .Identifier.Parts.Name }}
+        {{- .Identifier.Parse.Name }}
     {{- else }}
         {{- template "Literal" .Literal }}
     {{- end }}
@@ -59,11 +59,11 @@ fidlmerge -template serviceimpl \
 {{/* Produces a C++ expression for a types.EncodedCompoundIdentifier. */}}
 {{/* The expression is fully qualified. */}}
 {{- define "QualifiedId" }}
-    {{- range .Parts.Library -}}
+{{- range .Parse.Library -}}
         ::{{ . }}
     {{- end -}}
     ::
-    {{- .Parts.Name }}
+    {{- .Parse.Name }}
 {{- end }}
 
 
@@ -71,7 +71,7 @@ fidlmerge -template serviceimpl \
 {{/* The expression is qualified for use in the subject namespace. */}}
 {{- define "Id" }}
     {{- if isLocal . }}
-        {{- .Parts.Name }}
+        {{- .Parse.Name }}
     {{- else }}
         {{- template "QualifiedId" . }}
     {{- end }}
@@ -80,7 +80,7 @@ fidlmerge -template serviceimpl \
 
 {{/* Produces e.g. "fuchsia/foo/" for a types.EncodedCompoundIdentifier. */}}
 {{- define "IdPrefixDot" }}
-    {{- range .Parts.Library }}
+    {{- range .Parse.Library }}
         {{- . }}.
     {{- end }}
 {{- end }}
@@ -88,7 +88,7 @@ fidlmerge -template serviceimpl \
 
 {{/* Produces e.g. "fuchsia/foo/" for a types.EncodedCompoundIdentifier. */}}
 {{- define "IdPrefixSlash" }}
-    {{- range .Parts.Library }}
+    {{- range .Parse.Library }}
         {{- . }}/
     {{- end }}
 {{- end }}
@@ -96,7 +96,7 @@ fidlmerge -template serviceimpl \
 
 {{/* Produces e.g. "fuchsia_foo_" for a types.EncodedCompoundIdentifier. */}}
 {{- define "IdPrefixUnderscore" }}
-    {{- range .Parts.Library }}
+    {{- range .Parse.Library }}
         {{- . }}_
     {{- end }}
 {{- end }}
@@ -129,7 +129,7 @@ fidlmerge -template serviceimpl \
             TODO: Type template, identifier subtype with decl type const
         {{- else if eq $decl_type "enum" }}
             {{- template "Id" .Identifier }}
-        {{- else if eq $decl_type "interface" -}}
+        {{- else if eq $decl_type "protocol" -}}
             ::fidl::InterfaceHandle<{{ template "Id" .Identifier }}>
         {{- else -}}
             {{- if .Nullable -}}
@@ -180,9 +180,9 @@ fidlmerge -template serviceimpl \
 {{/* Produces a C++ parameter list for a types.Method, including the callback. */}}
 {{- define "AsyncMethodParams" }}
     {{- if .HasRequest }}
-        {{- template "Params" .Request }}
+        {{- template "Params" (getParams .RequestPayload) }}
         {{- if .HasResponse -}}
-            {{ if .Request }}, {{ end }}{{ .Name }}Callback callback
+            {{ if .RequestPayload }}, {{ end }}{{ .Name }}Callback callback
         {{- end }}
     {{- end }}
 {{- end }}
@@ -204,7 +204,7 @@ fidlmerge -template serviceimpl \
 {{- define "AbstractMethodDecl" }}
     {{- if .HasResponse }}
   using {{ .Name }}Callback =
-      fit::function<void({{ template "ParamTypes" .Response }})>;
+      fit::function<void({{ template "ParamTypes" (getParams .ResponsePayload) }})>;
     {{- end }}
     {{- if .HasRequest }}
   virtual void {{ .Name }}({{ template "AsyncMethodParams" . }}) = 0;
@@ -214,9 +214,9 @@ fidlmerge -template serviceimpl \
 
 {{/* Produces a sync C++ parameter list for a types.Method, including the out parameters. */}}
 {{- define "SyncMethodParams" }}
-    {{- template "Params" .Request }}
+    {{- template "Params" (getParams .RequestPayload) }}
     {{- if .HasResponse -}}
-        {{ if and .Request .Response }}, {{ end }}{{ template "SyncResponseParams" .Response }}
+        {{ if and .RequestPayload .ResponsePayload }}, {{ end }}{{ template "SyncResponseParams" (getParams .ResponsePayload) }}
     {{- end -}}
 {{- end }}
 
@@ -234,7 +234,7 @@ fidlmerge -template serviceimpl \
 {{/* abstract methods for events on a stub. */}}
 {{- define "OverrideEventDecl" }}
     {{- if not .HasRequest }}
-  void {{ .Name }}({{ template "Params" .Response }}) override;
+  void {{ .Name }}({{ template "Params" (getParams .ResponsePayload) }}) override;
     {{- end }}
 {{- end }}
 
@@ -252,7 +252,7 @@ fidlmerge -template serviceimpl \
 {{/* abstract methods on an event sender. */}}
 {{- define "AbstractEventDecl" }}
     {{- if not .HasRequest }}
-  virtual void {{ .Name }}({{ template "Params" .Response }}) = 0;
+  virtual void {{ .Name }}({{ template "Params" (getParams .ResponsePayload) }}) = 0;
     {{- end }}
 {{- end }}
 
@@ -298,8 +298,8 @@ namespace {{ . }} {
 {{ end }}
 
 
-{{/* Produces interface declarations for a C++ binding include file from a types.Interface. */}}
-{{- define "InterfaceIncludeDecls" }}
+{{/* Produces protocol declarations for a C++ binding include file from a types.Protocol. */}}
+{{- define "ProtocolIncludeDecls" }}
     {{- $name := .Name.Parse.Name -}}
 class {{ $name }}Impl {
  public:
@@ -326,8 +326,8 @@ class {{ $name }}Impl {
 
 {{/* Produces declarations for a C++ binding include file from a template.Root. */}}
 {{- define "IncludeDecls" }}
-    {{- $interface := .GetInterface (getOptionAsEncodedCompoundIdentifier "interface") }}
-    {{- template "InterfaceIncludeDecls" $interface }}
+    {{- $protocol := .GetProtocol (getOptionAsEncodedCompoundIdentifier "protocol") }}
+    {{- template "ProtocolIncludeDecls" $protocol }}
 {{- end }}
 
 
@@ -355,9 +355,9 @@ namespace {{ . }} {
 {{ end }}
 
 
-{{/* Produces interface definitions for a C++ implementation file from a types.Interface. */}}
-{{- define "InterfaceImplementationDefs" }}
-    {{- $interface := . }}
+{{/* Produces protocol definitions for a C++ implementation file from a types.Protocol. */}}
+{{- define "ProtocolImplementationDefs" }}
+    {{- $protocol := . }}
 {{ template "Id" .Name }}Impl::{{ template "Id" .Name }}Impl(sys::ComponentContext* context)
     : context_(context) {}
 
@@ -365,7 +365,7 @@ namespace {{ . }} {
 {{/* keep the newline */}}
     {{- range .Methods }}
         {{- if .HasRequest }}
-void {{ template "Id" $interface.Name }}Impl::{{ .Name }}({{ template "AsyncMethodParams" . }}) {}
+void {{ template "Id" $protocol.Name }}Impl::{{ .Name }}({{ template "AsyncMethodParams" . }}) {}
 {{/* keep the newline */}}
         {{- end }}
     {{- end }}
@@ -374,8 +374,8 @@ void {{ template "Id" $interface.Name }}Impl::{{ .Name }}({{ template "AsyncMeth
 
 {{/* Produces definitions for a C++ implementation file from a template.Root. */}}
 {{- define "ImplementationDefs" }}
-    {{- $interface := .GetInterface (getOptionAsEncodedCompoundIdentifier "interface") }}
-    {{- template "InterfaceImplementationDefs" $interface }}
+    {{- $protocol := .GetProtocol (getOptionAsEncodedCompoundIdentifier "protocol") }}
+    {{- template "ProtocolImplementationDefs" $protocol }}
 {{- end }}
 
 
