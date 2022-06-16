@@ -16,6 +16,7 @@ executable("test_bin") {
   deps = [
     "//sdk/fidl/fuchsia.gpu.magma",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.sys2",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/fdio",
     "//src/lib/fxl",

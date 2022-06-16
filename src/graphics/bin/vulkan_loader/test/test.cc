@@ -5,8 +5,10 @@
 #include <fcntl.h>
 #include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/sys2/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
@@ -14,6 +16,8 @@
 #include <filesystem>
 
 #include <gtest/gtest.h>
+
+#include "lib/fdio/namespace.h"
 
 // This is the first and only ICD loaded, so it should have a "0-" prepended.
 const char* kIcdFilename = "0-libvulkan_fake.so";
@@ -175,7 +179,20 @@ TEST(VulkanLoader, DebugFilesystems) {
   EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.vulkan.loader.Loader",
                                         loader.NewRequest().TakeChannel().release()));
   ForceWaitForIdle(loader);
-  const std::string debug_path("/parent_hub/children/vulkan_loader/exec/out/debug/");
+
+  fuchsia::sys2::RealmQuerySyncPtr query;
+  EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.sys2.RealmQuery",
+                                        query.NewRequest().TakeChannel().release()));
+
+  fuchsia::sys2::RealmQuery_GetInstanceInfo_Result result;
+  EXPECT_EQ(ZX_OK, query->GetInstanceInfo("./vulkan_loader", &result));
+
+  fdio_ns_t* ns;
+  fdio_ns_get_installed(&ns);
+  fdio_ns_bind(ns, "/loader_out", result.response().resolved->started->out_dir.channel().get());
+  auto cleanup_binding = fit::defer([&]() { fdio_ns_unbind(ns, "/loader_out"); });
+
+  const std::string debug_path("/loader_out/debug/");
 
   EXPECT_TRUE(std::filesystem::exists(debug_path + "device-fs/class/gpu/000"));
   EXPECT_TRUE(std::filesystem::exists(debug_path + "manifest-fs/" + kIcdFilename + ".json"));
