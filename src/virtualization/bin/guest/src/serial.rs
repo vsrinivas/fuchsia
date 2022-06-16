@@ -20,9 +20,9 @@ mod test {
         assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_virtualization::GuestMarker,
-        fuchsia_async::futures::StreamExt,
         fuchsia_async::{self as fasync},
         futures::future::join,
+        futures::StreamExt,
     };
 
     #[fasync::run_until_stalled(test)]

@@ -53,8 +53,9 @@ mod test {
             EnvironmentInfo, GuestInfo, GuestManagerMarker, GuestManagerRequestStream,
             InstanceInfo, ManagerMarker, ManagerRequestStream,
         },
-        fuchsia_async::{self as fasync, futures::join, futures::StreamExt},
+        fuchsia_async as fasync,
         futures::future::join,
+        futures::{join, StreamExt},
         pretty_assertions::assert_eq,
     };
 

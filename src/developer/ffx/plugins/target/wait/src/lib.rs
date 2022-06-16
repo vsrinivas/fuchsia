@@ -10,7 +10,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_ffx::{DaemonError, TargetCollectionProxy, TargetMarker, TargetQuery},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
-    fuchsia_async::futures::future::Either,
+    futures::future::Either,
     std::time::Duration,
     timeout::timeout,
 };
@@ -92,7 +92,7 @@ mod tests {
         fidl_fuchsia_developer_remotecontrol::{
             RemoteControlRequest, RemoteControlRequestStream, ServiceMatch,
         },
-        fuchsia_async::futures::TryStreamExt,
+        futures::TryStreamExt,
     };
 
     fn spawn_remote_control(mut rcs_stream: RemoteControlRequestStream) {

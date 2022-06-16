@@ -19,9 +19,10 @@ use {
     fidl_test_inputsynthesis::{
         Error, MouseRequest, MouseRequestStream, TextRequest, TextRequestStream,
     },
-    fuchsia_async::{self as fasync, futures::StreamExt},
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    futures::StreamExt,
     input_synthesis::synthesizer::InputDevice,
     std::time::Duration,
 };

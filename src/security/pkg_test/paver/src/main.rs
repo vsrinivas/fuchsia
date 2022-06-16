@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async::{futures::StreamExt, Task},
+    fuchsia_async::Task,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_info, init},
+    futures::StreamExt,
     mock_paver::MockPaverServiceBuilder,
     std::sync::Arc,
 };

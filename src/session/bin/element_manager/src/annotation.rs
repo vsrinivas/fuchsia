@@ -567,7 +567,7 @@ mod tests {
             );
         });
 
-        let (annotations, _) = fasync::futures::join!(annotations, update);
+        let (annotations, _) = futures::join!(annotations, update);
         assert_eq!(annotations?.unwrap().len(), 1);
         Ok(())
     }
@@ -600,7 +600,7 @@ mod tests {
         });
 
         let (client1_annotations, client2_annotations, _) =
-            fasync::futures::join!(client1_annotations, client2_annotations, update);
+            futures::join!(client1_annotations, client2_annotations, update);
         assert_eq!(client1_annotations?.unwrap().len(), 1);
         assert_eq!(client2_annotations?.unwrap().len(), 1);
         Ok(())
@@ -618,7 +618,7 @@ mod tests {
         // Make the initial request, so that the next one will hang.
         let annotations = proxy.watch_annotations();
         let result = handle_one_request(holder.clone(), &mut watch_subscriber, &mut stream);
-        let (_, result) = fasync::futures::join!(annotations, result);
+        let (_, result) = futures::join!(annotations, result);
         assert!(result.is_ok());
 
         // Make a request to wait for updates

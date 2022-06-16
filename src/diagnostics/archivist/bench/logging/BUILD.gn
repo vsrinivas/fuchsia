@@ -14,6 +14,7 @@ archivist_optimized_binary("bin") {
     "//src/developer/fuchsia-criterion",
     "//src/diagnostics/archivist:lib",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/main.rs" ]

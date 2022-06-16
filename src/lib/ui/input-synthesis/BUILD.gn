@@ -73,6 +73,7 @@ rustc_binary("input-synthesis-bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/main.rs" ]

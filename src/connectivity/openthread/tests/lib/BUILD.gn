@@ -20,6 +20,7 @@ rustc_library("lib") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 

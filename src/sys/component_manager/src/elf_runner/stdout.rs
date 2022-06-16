@@ -202,9 +202,8 @@ mod tests {
         async_trait::async_trait,
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_logger::LogSinkRequest,
-        fuchsia_async::futures::{channel::mpsc, try_join},
         fuchsia_zircon as zx,
-        futures::{FutureExt, SinkExt, StreamExt},
+        futures::{channel::mpsc, try_join, FutureExt, SinkExt, StreamExt},
         log::Level,
         rand::{
             distributions::{Alphanumeric, DistString as _},

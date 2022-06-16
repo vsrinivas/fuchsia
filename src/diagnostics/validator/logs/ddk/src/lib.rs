@@ -7,7 +7,8 @@ use diagnostics_log_encoding::{Argument, Record, Severity, Value};
 use diagnostics_reader::{ArchiveReader, Logs, SubscriptionResultsStream};
 use fidl_fuchsia_device::ControllerProxy;
 use fidl_fuchsia_validate_logs::{LogSinkPuppetProxy, PuppetInfo, RecordSpec};
-use fuchsia_async::{futures::StreamExt, Task};
+use fuchsia_async::Task;
+use futures::StreamExt;
 use tracing::*;
 
 struct Puppet {

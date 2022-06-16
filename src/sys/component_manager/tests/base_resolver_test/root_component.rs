@@ -34,7 +34,7 @@ async fn main() -> Result<(), Error> {
     let _ = connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir);
 
     // Wait indefinitely
-    fasync::futures::future::pending::<()>().await;
+    futures::future::pending::<()>().await;
     panic!("This is an unreachable statement!");
 }
 

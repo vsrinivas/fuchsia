@@ -112,8 +112,8 @@ mod test {
         assert_matches::assert_matches,
         fidl::endpoints::{create_proxy_and_stream, ControlHandle, RequestStream},
         fidl_fuchsia_virtualization::{BalloonControllerMarker, MemStat},
-        fuchsia_async::{self as fasync, futures::StreamExt},
-        fuchsia_zircon_status as zx_status,
+        fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
+        futures::StreamExt,
         pretty_assertions::assert_eq,
     };
 

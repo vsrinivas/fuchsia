@@ -10,7 +10,7 @@ use {
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestMarker,
-    fuchsia_async::{self as fasync, futures::select},
+    fuchsia_async as fasync,
     fuchsia_bluetooth::types::{PeerId, Uuid},
     fuchsia_component::client::connect_to_protocol,
     futures::{
@@ -19,7 +19,7 @@ use {
             oneshot,
         },
         lock::Mutex,
-        FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
+        select, FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
     },
     rustyline::{error::ReadlineError, CompletionType, Config, Editor},
     std::{convert::TryFrom, sync::Arc, thread},

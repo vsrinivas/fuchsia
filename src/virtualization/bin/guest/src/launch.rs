@@ -9,10 +9,11 @@ use {
     fidl_fuchsia_virtualization::{
         GuestConfig, GuestMarker, GuestProxy, ManagerMarker, RealmMarker, RealmProxy,
     },
-    fuchsia_async::{self as fasync, futures::TryFutureExt},
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, sys},
     fuchsia_zircon_status as zx_status,
+    futures::TryFutureExt,
     lazy_static::lazy_static,
     std::convert::TryFrom,
 };
@@ -154,9 +155,9 @@ mod test {
         super::*,
         assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
-        fuchsia_async::futures::StreamExt,
         fuchsia_zircon::{self as zx},
         futures::future::join,
+        futures::StreamExt,
     };
 
     #[fasync::run_until_stalled(test)]

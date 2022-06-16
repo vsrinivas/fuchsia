@@ -35,8 +35,9 @@ mod tests {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderRequest},
-        fuchsia_async::{self as fasync, futures::StreamExt},
+        fuchsia_async::{self as fasync},
         fuchsia_zircon::{HandleBased, Peered},
+        futures::StreamExt,
     };
 
     // Verifies that query_commit_status returns the expected CommitStatus.

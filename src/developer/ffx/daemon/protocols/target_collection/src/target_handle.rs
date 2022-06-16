@@ -12,10 +12,8 @@ use {
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_ffx::{self as ffx},
-    fuchsia_async::{
-        futures::{FutureExt, TryStreamExt},
-        TimeoutExt,
-    },
+    fuchsia_async::TimeoutExt,
+    futures::{FutureExt, TryStreamExt},
     protocols::Context,
     std::cell::RefCell,
     std::future::Future,

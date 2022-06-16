@@ -6,10 +6,10 @@ use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_hardware_display::{self as display, ControllerEvent},
     fidl_fuchsia_io as fio,
-    fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{channel::mpsc, future},
+    futures::{channel::mpsc, future, TryStreamExt},
     parking_lot::RwLock,
     std::{
         ffi::OsStr,

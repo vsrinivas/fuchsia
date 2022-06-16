@@ -22,8 +22,8 @@ use {
         TargetMarker, TargetProxy, TargetQuery, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
-    fuchsia_async::{futures::select, TimeoutExt},
-    futures::FutureExt,
+    fuchsia_async::TimeoutExt,
+    futures::{select, FutureExt},
     std::default::Default,
     std::fs::File,
     std::future::Future,
@@ -94,7 +94,7 @@ fn open_target_with_fut<'a>(
         Result::<()>::Ok(())
     };
     let fut = async move {
-        let ((), ()) = fuchsia_async::futures::try_join!(target_collection_fut, target_handle_fut)?;
+        let ((), ()) = futures::try_join!(target_collection_fut, target_handle_fut)?;
         Ok(())
     };
     Ok((target_proxy, fut))

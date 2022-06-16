@@ -336,8 +336,8 @@ impl BatteryManager {
 mod tests {
     use super::*;
     use fidl::endpoints::create_request_stream;
-    use fuchsia_async::futures::TryStreamExt;
     use futures::future::*;
+    use futures::TryStreamExt;
 
     macro_rules! cmp_fields {
         ($got:ident, $want:ident, [$($field:ident,)*], $test_no:expr) => { $(

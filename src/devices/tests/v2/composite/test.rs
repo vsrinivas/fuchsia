@@ -5,14 +5,13 @@
 use {
     anyhow::{anyhow, Error, Result},
     fidl_fuchsia_composite_test as ft, fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
-    fuchsia_async::futures::{StreamExt, TryStreamExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon as zx,
-    futures::channel::mpsc,
+    futures::{channel::mpsc, StreamExt, TryStreamExt},
 };
 
 const WAITER_NAME: &'static str = "waiter";

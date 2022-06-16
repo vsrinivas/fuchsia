@@ -14,9 +14,9 @@
 //! running tasks for either joining them or drop them.
 
 use {
-    fuchsia_async::futures::future::ready,
-    fuchsia_async::futures::FutureExt,
     fuchsia_async::Task,
+    futures::future::ready,
+    futures::FutureExt,
     std::cell::{Cell, RefCell},
     std::collections::HashMap,
     std::future::Future,
@@ -60,7 +60,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_drain() {
         let t = TaskManager::new();
-        t.spawn(fuchsia_async::futures::future::pending());
+        t.spawn(futures::future::pending());
         let v = t.drain();
         assert_eq!(v.len(), 1);
     }
@@ -68,9 +68,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_cleanup() {
         let t = TaskManager::new();
-        t.spawn(fuchsia_async::futures::future::ready(()));
-        t.spawn(fuchsia_async::futures::future::ready(()));
-        t.spawn(fuchsia_async::futures::future::ready(()));
+        t.spawn(futures::future::ready(()));
+        t.spawn(futures::future::ready(()));
+        t.spawn(futures::future::ready(()));
         fuchsia_async::Timer::new(std::time::Duration::from_millis(400)).await;
         let v = t.drain();
         assert_eq!(v.len(), 0);

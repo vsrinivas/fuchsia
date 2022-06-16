@@ -8,11 +8,10 @@ use {
     crate::registry::Registry,
     anyhow::Context as _,
     fidl::endpoints::{ControlHandle, Responder},
-    fidl_fuchsia_fuzzer as fuzz,
-    fuchsia_async::{self as fasync, futures::StreamExt},
+    fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::fx_log_err,
-    futures::TryStreamExt,
+    futures::{StreamExt, TryStreamExt},
     std::sync::Arc,
 };
 

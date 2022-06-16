@@ -6,12 +6,10 @@ use {
     argh::{from_env, FromArgs},
     fidl_fuchsia_net::{IpAddress, Ipv4Address},
     fidl_fuchsia_net_name::{LookupRequest, LookupRequestStream, LookupResult},
-    fuchsia_async::{
-        futures::{StreamExt, TryStreamExt},
-        Task,
-    },
+    fuchsia_async::Task,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_info, init},
+    futures::{StreamExt, TryStreamExt},
     security_pkg_test_util::load_config,
     std::net::Ipv4Addr,
 };

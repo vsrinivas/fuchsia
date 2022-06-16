@@ -126,7 +126,7 @@ impl InterfaceFactory<Interface> for UsbFactory {
 
 impl Drop for UsbFactory {
     fn drop(&mut self) {
-        fuchsia_async::futures::executor::block_on(async move {
+        futures::executor::block_on(async move {
             self.close().await;
         });
     }

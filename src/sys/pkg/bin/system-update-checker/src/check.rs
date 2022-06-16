@@ -279,8 +279,8 @@ pub mod test_check_for_system_update_impl {
         fidl_fuchsia_pkg::{
             PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
         },
-        fuchsia_async::{self as fasync, futures::future},
-        futures::{TryFutureExt, TryStreamExt},
+        fuchsia_async as fasync,
+        futures::{future, TryFutureExt, TryStreamExt},
         lazy_static::lazy_static,
         maplit::hashmap,
         mock_paver::MockPaverServiceBuilder,

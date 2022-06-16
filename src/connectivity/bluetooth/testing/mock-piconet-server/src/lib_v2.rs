@@ -11,7 +11,7 @@ use {
     },
     fidl_fuchsia_bluetooth_bredr as bredr, fidl_fuchsia_component_test as ftest,
     fidl_fuchsia_logger::LogSinkMarker,
-    fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{types as bt_types, util::CollectExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
@@ -19,7 +19,7 @@ use {
     },
     fuchsia_zircon as zx,
     fuchsia_zircon::{Duration, DurationNum},
-    futures::{stream::StreamExt, TryFutureExt},
+    futures::{stream::StreamExt, TryFutureExt, TryStreamExt},
     tracing::info,
 };
 

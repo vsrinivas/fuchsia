@@ -933,8 +933,7 @@ impl MetricsLoggerServer {
 
     fn purge_completed_tasks(&self) {
         self.client_tasks.borrow_mut().retain(|_n, task| {
-            task.poll_unpin(&mut Context::from_waker(fasync::futures::task::noop_waker_ref()))
-                .is_pending()
+            task.poll_unpin(&mut Context::from_waker(futures::task::noop_waker_ref())).is_pending()
         });
     }
 

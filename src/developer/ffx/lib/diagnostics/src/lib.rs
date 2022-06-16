@@ -16,7 +16,7 @@ use {
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
         DiagnosticsData, InlineData,
     },
-    fuchsia_async::futures::{stream::TryStreamExt, AsyncWriteExt},
+    futures::{stream::TryStreamExt, AsyncWriteExt},
     std::sync::Arc,
 };
 

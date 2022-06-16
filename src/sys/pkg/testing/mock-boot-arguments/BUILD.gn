@@ -14,12 +14,14 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//third_party/rust_crates:futures",
   ]
 
-  test_deps = [ "//third_party/rust_crates:maplit" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:maplit",
+  ]
 
   sources = [ "src/lib.rs" ]
 }

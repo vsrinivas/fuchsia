@@ -18,7 +18,8 @@ use {
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorProxy, DiagnosticsData,
     },
-    fuchsia_async::{futures::AsyncReadExt, Timer},
+    fuchsia_async::Timer,
+    futures::AsyncReadExt,
     std::{
         iter::Iterator,
         time::{Duration, SystemTime},
@@ -308,7 +309,7 @@ mod test {
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         fidl_fuchsia_developer_ffx::{DiagnosticsMarker, DiagnosticsRequest},
         fidl_fuchsia_developer_remotecontrol::ArchiveIteratorError,
-        fuchsia_async::futures::TryStreamExt,
+        futures::TryStreamExt,
         std::sync::Arc,
     };
 

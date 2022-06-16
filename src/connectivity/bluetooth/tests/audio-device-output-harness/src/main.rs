@@ -6,9 +6,9 @@ use {
     anyhow::Context,
     fidl_fuchsia_media::{AudioChannelId, AudioDeviceEnumeratorMarker, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
-    fuchsia_async::futures::StreamExt,
     fuchsia_audio_device_output::driver::SoftPcmOutput,
     fuchsia_zircon::DurationNum,
+    futures::StreamExt,
     tracing::info,
 };
 

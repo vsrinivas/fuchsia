@@ -7,15 +7,13 @@ use {
     // [START_EXCLUDE]
     anyhow::{self, Error},
     fidl_fidl_examples_routing_echo as fecho,
-    fuchsia_async::{
-        self as fasync,
-        futures::{StreamExt, TryStreamExt},
-    },
+    fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     // [END_EXCLUDE]
     fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
+    futures::{StreamExt, TryStreamExt},
 };
 // [END import_statement_rust]
 

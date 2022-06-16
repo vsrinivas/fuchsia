@@ -64,7 +64,7 @@ mod test {
     use super::LedControl;
     use super::*;
     use fidl_fuchsia_hardware_light::{Capability, LightRequest};
-    use fuchsia_async::futures::{future, StreamExt};
+    use futures::{future, StreamExt};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_num_lights() {

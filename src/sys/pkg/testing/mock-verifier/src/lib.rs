@@ -7,10 +7,11 @@ use {
         BlobfsVerifierMarker, BlobfsVerifierProxy, BlobfsVerifierRequestStream,
         VerifierVerifyResult, VerifyOptions,
     },
-    fuchsia_async::{futures::TryStreamExt, Task},
+    fuchsia_async::Task,
     futures::{
         future::{self, BoxFuture},
         prelude::*,
+        TryStreamExt,
     },
     std::sync::Arc,
 };

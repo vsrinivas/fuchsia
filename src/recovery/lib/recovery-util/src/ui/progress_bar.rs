@@ -18,12 +18,10 @@ use carnelian::{
     AppSender, MessageTarget, Point, Size, ViewKey,
 };
 use euclid::size2;
-use fuchsia_async::{
-    self as fasync,
-    futures::{
-        channel::mpsc::{channel as pipe, Sender},
-        StreamExt,
-    },
+use fuchsia_async as fasync;
+use futures::{
+    channel::mpsc::{channel as pipe, Sender},
+    StreamExt,
 };
 use std::{
     path::PathBuf,

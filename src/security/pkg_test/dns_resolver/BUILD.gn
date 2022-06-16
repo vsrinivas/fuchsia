@@ -20,6 +20,7 @@ rustc_binary("security_pkg_dns_resolver-binary") {
     "//src/lib/syslog/rust:syslog",
     "//src/security/pkg_test/util",
     "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
   ]
 }
 

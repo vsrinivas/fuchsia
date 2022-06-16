@@ -6,11 +6,9 @@ use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     fidl_fuchsia_bluetooth_gatt as gatt, fidl_fuchsia_power_battery as fpower,
-    fuchsia_async::{
-        self as fasync,
-        futures::{try_join, TryStreamExt},
-    },
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
+    futures::{try_join, TryStreamExt},
     parking_lot::Mutex,
     std::collections::HashSet,
 };

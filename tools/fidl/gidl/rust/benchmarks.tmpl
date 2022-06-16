@@ -13,7 +13,7 @@ use {
     },
     fidl_test_benchmarkfidl{{ .CrateSuffix }} as test_benchmarkfidl{{ .CrateSuffix }},
     fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
-    fuchsia_async::futures::{future, stream::StreamExt},
+    futures::{future, stream::StreamExt},
     fuchsia_zircon as zx,
     gidl_util::{HandleDef, HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec},
     std::mem::ManuallyDrop

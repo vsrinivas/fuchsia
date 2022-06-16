@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_wlan_policy::{
         Bss as WlanPolicyBss, ScanErrorCode, ScanResult, ScanResultIteratorProxyInterface,
     },
-    fuchsia_async::futures::{
+    futures::{
         future::BoxFuture,
         task::{Context, Poll},
         Future, FutureExt, Stream, StreamExt,
@@ -820,7 +820,7 @@ mod tests {
         use {
             super::super::*,
             fidl_fuchsia_wlan_policy::{NetworkIdentifier, SecurityType::Wpa2},
-            fuchsia_async::{self as fasync, futures},
+            fuchsia_async as fasync,
             std::convert::TryFrom,
             test_doubles::{RawStubScanResultIterator, StubScanResultIterator},
         };
@@ -911,7 +911,7 @@ mod tests {
 mod test_doubles {
     use {
         super::*,
-        fuchsia_async::futures::future::{ready, Ready},
+        futures::future::{ready, Ready},
         std::sync::RwLock,
     };
 

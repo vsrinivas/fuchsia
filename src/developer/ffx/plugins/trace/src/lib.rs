@@ -10,7 +10,7 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_developer_ffx::{self as ffx, RecordingError, TracingProxy},
     fidl_fuchsia_tracing_controller::{ControllerProxy, KnownCategory, ProviderInfo, TraceConfig},
-    fuchsia_async::futures::future::{BoxFuture, FutureExt},
+    futures::future::{BoxFuture, FutureExt},
     serde::{Deserialize, Serialize},
     std::collections::HashSet,
     std::future::Future,

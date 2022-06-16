@@ -381,7 +381,7 @@ pub mod fake {
     use anyhow::{format_err, Error};
     use async_trait::async_trait;
     use bytes::Bytes;
-    use fuchsia_async::futures::lock::Mutex;
+    use futures::lock::Mutex;
     use std::collections::VecDeque;
     use std::thread;
 

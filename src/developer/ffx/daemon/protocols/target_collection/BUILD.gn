@@ -29,6 +29,7 @@ rustc_library("ffx_daemon_protocol_target_collection") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:log",
   ]

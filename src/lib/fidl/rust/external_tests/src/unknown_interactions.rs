@@ -21,9 +21,9 @@ use {
         UnknownInteractionsProtocolRequestStream, UnknownInteractionsProtocolSynchronousProxy,
     },
     fuchsia_async as fasync,
-    fuchsia_async::futures::stream::StreamExt,
     fuchsia_zircon::{AsHandleRef, DurationNum, MessageBuf, Signals, Time},
     fuchsia_zircon_status as zx_status,
+    futures::stream::StreamExt,
     std::future::Future,
 };
 

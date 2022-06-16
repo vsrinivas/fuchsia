@@ -41,11 +41,5 @@ pub use pin_utils::pin_mut;
 
 pub use fuchsia_async_macro::{run, run_singlethreaded, run_until_stalled};
 
-// Reexport futures for use in macros;
-#[doc(hidden)]
-pub mod futures {
-    pub use futures::*;
-}
-
 /// Testing support for repeated runs
 pub mod test_support;

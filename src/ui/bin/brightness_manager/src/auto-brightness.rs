@@ -124,9 +124,9 @@ mod tests {
     use anyhow::Error;
     use async_trait::async_trait;
     use fidl_fuchsia_hardware_light::{Capability, Info, LightError};
-    use fuchsia_async::futures::lock::Mutex;
     use fuchsia_async::{self as fasync};
     use fuchsia_zircon::Duration;
+    use futures::lock::Mutex;
     use lib::sensor::AmbientLightInputRpt;
     use lib::{backlight::BacklightControl, sensor::SensorControl};
     use std::sync::Arc;

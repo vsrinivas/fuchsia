@@ -5,10 +5,9 @@
 use {
     anyhow::{anyhow, Context as _, Error},
     fidl_fuchsia_time_external::{self as ftexternal, PushSourceProxy, Status},
-    fuchsia_async::futures::Stream,
     fuchsia_component::client::{launch, launcher, App},
     fuchsia_zircon as zx,
-    futures::{stream::Select, FutureExt, StreamExt, TryFutureExt},
+    futures::{stream::Select, FutureExt, Stream, StreamExt, TryFutureExt},
     log::info,
     std::{fmt::Debug, pin::Pin, sync::Arc},
 };

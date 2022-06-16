@@ -7,7 +7,8 @@ use {
     fidl_fuchsia_hardware_power_statecontrol::{
         AdminProxy, AdminRebootResult, AdminRequest, AdminRequestStream,
     },
-    fuchsia_async::{self as fasync, futures::TryFutureExt, futures::TryStreamExt},
+    fuchsia_async as fasync,
+    futures::{TryFutureExt, TryStreamExt},
     std::sync::Arc,
 };
 

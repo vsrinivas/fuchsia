@@ -78,7 +78,7 @@ pub async fn is_active(collection_proxy: &ffx::TargetCollectionProxy, name: &str
 mod test {
     use super::*;
     use fidl_fuchsia_developer_ffx::{TargetCollectionProxy, TargetCollectionRequest};
-    use fuchsia_async::futures::TryStreamExt;
+    use futures::TryStreamExt;
 
     fn setup_fake_target_proxy<R: 'static>(mut handle_request: R) -> TargetCollectionProxy
     where

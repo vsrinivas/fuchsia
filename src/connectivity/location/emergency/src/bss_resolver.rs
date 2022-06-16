@@ -11,9 +11,9 @@ use {
     fidl_fuchsia_net_http::{
         Body as HttpBody, LoaderProxyInterface, Request as HttpRequest, Response as HttpResponse,
     },
-    fuchsia_async::futures::io::AsyncReadExt,
-    fuchsia_async::futures::Future,
     fuchsia_zircon as zx,
+    futures::io::AsyncReadExt,
+    futures::Future,
     itertools::Itertools,
     serde_json::{json, map::Map as JsonMap, value::Value as JsonValue},
     static_assertions::assert_eq_size_val,
@@ -661,7 +661,7 @@ mod test_doubles {
         super::*,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_net_http::LoaderClientMarker,
-        fuchsia_async::futures::future::{ready, Ready},
+        futures::future::{ready, Ready},
         std::sync::RwLock,
     };
 

@@ -32,12 +32,14 @@ rustc_test("ppp_protocol_test_bin") {
 
   deps = [
     "//src/connectivity/ppp/lib/ppp_packet",
-    "//src/lib/fuchsia-async",
     "//src/lib/network/packet",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//src/lib/fuchsia-async" ]
 
   sources = [
     "src/ipv4.rs",

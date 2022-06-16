@@ -75,7 +75,7 @@ mod tests {
         args::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_identity_account::{AccountManagerRequest, AccountManagerRequestStream},
-        fuchsia_async::futures::TryStreamExt as _,
+        futures::TryStreamExt as _,
         std::sync::Arc,
     };
 

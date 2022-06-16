@@ -11,7 +11,8 @@ use {
     diagnostics::{get_streaming_min_timestamp, run_diagnostics_streaming},
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     fidl_fuchsia_developer_ffx as ffx,
-    fuchsia_async::{futures::FutureExt, TimeoutExt},
+    fuchsia_async::TimeoutExt,
+    futures::FutureExt,
     protocols::prelude::*,
     std::sync::Arc,
     std::time::Duration,
@@ -316,7 +317,7 @@ mod test {
             .register_instanced_protocol_closure::<ffx::TargetCollectionMarker, _>(|_cx, req| {
                 match req {
                     ffx::TargetCollectionRequest::OpenTarget { responder, target_handle, .. } => {
-                        use fuchsia_async::futures::TryStreamExt;
+                        use futures::TryStreamExt;
                         let mut stream = target_handle.into_stream()?;
                         // Target handle task.
                         fuchsia_async::Task::local(async move {

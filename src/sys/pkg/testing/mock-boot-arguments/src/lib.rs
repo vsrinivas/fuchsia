@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async::futures::TryStreamExt as _,
     fuchsia_hash::Hash,
+    futures::TryStreamExt as _,
     std::{collections::HashMap, sync::Arc},
 };
 

@@ -24,12 +24,12 @@ use {
     fidl_fuchsia_telephony_ril::{
         RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, RadioPowerState, SetupMarker, *,
     },
-    fuchsia_async::{self as fasync, futures::select},
+    fuchsia_async as fasync,
     fuchsia_component::{
         client::{connect_to_protocol, launch, launcher},
         fuchsia_single_component_package_url,
     },
-    futures::{FutureExt, TryFutureExt},
+    futures::{select, FutureExt, TryFutureExt},
     parking_lot::Mutex,
     pin_utils::pin_mut,
     qmi,

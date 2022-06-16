@@ -5,8 +5,8 @@
 use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
-    fuchsia_async::futures::{channel::oneshot, join, TryFutureExt},
     fuchsia_zircon::DurationNum as _,
+    futures::{channel::oneshot, join, TryFutureExt},
     log::{info, warn},
     pin_utils::pin_mut,
     wlan_common::bss::Protection::Wpa2Personal,

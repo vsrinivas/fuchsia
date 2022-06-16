@@ -592,9 +592,9 @@ mod dual_state_tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_hardware_backlight::DeviceRequestStream as BacklightRequestStream;
     use fidl_fuchsia_ui_display_internal::{DisplayPowerRequest, DisplayPowerRequestStream};
-    use fuchsia_async::{self as fasync, futures::TryStreamExt, Task};
+    use fuchsia_async::{self as fasync, Task};
     use fuchsia_syslog::fx_log_warn;
-    use futures::{prelude::future, Future};
+    use futures::{prelude::future, Future, TryStreamExt};
     use std::task::Poll;
     use test_helpers::ResettableFuture;
 

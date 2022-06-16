@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_developer_ffx::{DiagnosticsProxy, StreamMode, TimeBound},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fidl_fuchsia_diagnostics::LogSettingsProxy,
-    fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
+    futures::{AsyncWrite, AsyncWriteExt},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::convert::TryFrom,
     std::{fs, iter::Iterator, time::SystemTime},

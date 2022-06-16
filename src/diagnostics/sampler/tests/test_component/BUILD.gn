@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/main.rs" ]

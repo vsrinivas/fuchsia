@@ -16,12 +16,14 @@ use {
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_host::HostRequest,
     fidl_fuchsia_bluetooth_sys::{self as sys, TechnologyType},
-    fuchsia_async::{self as fasync, futures::TryFutureExt, TimeoutExt},
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::types::{
         bonding_data::example, Address, HostData, HostId, Identity, Peer, PeerId,
     },
     fuchsia_inspect::{self as inspect, assert_data_tree},
-    futures::{channel::mpsc, future::join, stream::TryStreamExt, FutureExt, StreamExt},
+    futures::{
+        channel::mpsc, future::join, stream::TryStreamExt, FutureExt, StreamExt, TryFutureExt,
+    },
     log::info,
     std::{
         collections::{HashMap, HashSet},

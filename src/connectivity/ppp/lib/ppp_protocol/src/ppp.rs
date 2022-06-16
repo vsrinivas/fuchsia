@@ -5,7 +5,7 @@
 //! Provides a generic implementation of a PPP control protocol.
 
 use {
-    fuchsia_async::futures::future::BoxFuture,
+    futures::future::BoxFuture,
     packet::{Buf, BufferMut, Serializer},
     ppp_packet::{
         CodeRejectPacketBuilder, ConfigurationPacketBuilder, ControlProtocolPacketBuilder,

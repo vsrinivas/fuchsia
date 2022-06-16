@@ -17,7 +17,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_ffx as ffx,
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
-    fuchsia_async::futures::TryStreamExt,
+    futures::TryStreamExt,
     protocols::prelude::*,
     std::net::SocketAddr,
     std::rc::Rc,
@@ -524,7 +524,7 @@ mod tests {
             _cx: &Context,
             _req: ffx::FastbootTargetStreamRequest,
         ) -> Result<()> {
-            fuchsia_async::futures::future::pending::<()>().await;
+            futures::future::pending::<()>().await;
             Ok(())
         }
     }
@@ -629,7 +629,7 @@ mod tests {
         type StreamHandler = FidlStreamHandler<Self>;
 
         async fn handle(&self, _cx: &Context, _req: ffx::MdnsRequest) -> Result<()> {
-            fuchsia_async::futures::future::pending::<()>().await;
+            futures::future::pending::<()>().await;
             Ok(())
         }
     }

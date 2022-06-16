@@ -5,7 +5,8 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
-    fuchsia_async::{self as fasync, futures::TryStreamExt},
+    fuchsia_async::{self as fasync},
+    futures::TryStreamExt,
 };
 
 /// Same as below but provides a noop request handler to the provider `directory`.

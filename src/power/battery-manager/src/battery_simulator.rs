@@ -162,8 +162,8 @@ mod tests {
     use super::*;
     use crate::battery_manager::BatteryManager;
     use fidl::endpoints::create_request_stream;
-    use fuchsia_async::futures::TryStreamExt;
     use futures::future::*;
+    use futures::TryStreamExt;
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_observer_relationship() {

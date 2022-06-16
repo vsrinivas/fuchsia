@@ -7,8 +7,8 @@ use {
     fidl_fuchsia_lowpan_spinel::{
         DeviceEvent, DeviceEventStream, DeviceProxy, Error as SpinelError,
     },
-    fuchsia_async::futures::stream::TryStreamExt,
     fuchsia_syslog::macros::*,
+    futures::stream::TryStreamExt,
 };
 
 pub const OT_RADIO_RESET_EVENT: &[u8; 3] = &[0x80, 0x06, 0x0];

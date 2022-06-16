@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_samplertestcontroller::*;
-use fuchsia_async::{
-    self as fasync,
-    futures::{FutureExt, StreamExt, TryStreamExt},
-};
+use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::component;
+use futures::{FutureExt, StreamExt, TryStreamExt};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

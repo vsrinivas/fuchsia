@@ -4,16 +4,13 @@
 
 use {
     fdio, fidl_fuchsia_io as fio,
-    fuchsia_async::{
-        self,
-        futures::{
-            poll,
-            task::{Context, Poll},
-            Future, StreamExt,
-        },
-    },
     fuchsia_fs::directory::readdir,
     fuchsia_zircon as zx,
+    futures::{
+        poll,
+        task::{Context, Poll},
+        Future, StreamExt,
+    },
     log::info,
     pin_utils::pin_mut,
     std::{fs::File, path::Path, pin::Pin},

@@ -4,13 +4,14 @@
 
 use {
     fidl_fuchsia_feedback::{CrashReporterMarker, CrashReporterProxy, CrashReporterRequestStream},
-    fuchsia_async::{futures::TryStreamExt, Task},
+    fuchsia_async::Task,
     fuchsia_zircon::Status,
     futures::{
         channel::mpsc,
         future::{self, BoxFuture},
         lock::Mutex,
         prelude::*,
+        TryStreamExt,
     },
     std::sync::Arc,
 };

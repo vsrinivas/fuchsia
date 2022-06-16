@@ -13,8 +13,8 @@ use {
     fidl_fuchsia_device as fdevice, fidl_fuchsia_hardware_block as fblock,
     fidl_fuchsia_hardware_block_partition as fpartition,
     fidl_fuchsia_hardware_skipblock as fskipblock, fidl_fuchsia_io as fio,
-    fuchsia_async::futures::TryStreamExt,
     fuchsia_zircon_status as zx,
+    futures::TryStreamExt,
     std::fmt,
     std::path::Path,
 };

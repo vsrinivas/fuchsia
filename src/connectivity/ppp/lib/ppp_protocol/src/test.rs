@@ -12,7 +12,8 @@ use {
             PROTOCOL_IPV4_CONTROL, PROTOCOL_IPV6_CONTROL, PROTOCOL_LINK_CONTROL,
         },
     },
-    fuchsia_async::{self as fasync, futures::future::BoxFuture},
+    fuchsia_async as fasync,
+    futures::future::BoxFuture,
     packet::{Buf, ParseBuffer},
     ppp_packet::{
         ipv4::ControlOption as Ipv4ControlOption, ipv6::ControlOption as Ipv6ControlOption,

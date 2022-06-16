@@ -28,9 +28,8 @@ use {
     },
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
-    fidl_fuchsia_sys2 as fsys,
-    fuchsia_async::futures::FutureExt,
-    fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
+    futures::FutureExt,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     routing::{
         component_id_index::ComponentIdIndex,

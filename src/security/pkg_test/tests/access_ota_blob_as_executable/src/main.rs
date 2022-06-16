@@ -18,7 +18,7 @@ use {
         State,
     },
     fidl_test_security_pkg::PackageServer_Marker,
-    fuchsia_async::{futures::TryStreamExt, Task},
+    fuchsia_async::Task,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_fs::directory::readdir,
     fuchsia_fs::{
@@ -29,7 +29,7 @@ use {
     fuchsia_merkle::MerkleTree,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{AsHandleRef, Rights, Status},
-    futures::{channel::oneshot::channel, join, TryFutureExt as _},
+    futures::{channel::oneshot::channel, join, TryFutureExt as _, TryStreamExt},
     security_pkg_test_util::load_config,
     std::{convert::TryInto, fs::File},
 };

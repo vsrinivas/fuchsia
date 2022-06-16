@@ -9,7 +9,7 @@ use {
         AttemptedEvent, Enrollment, Error as ApiError, StorageUnlockMechanismRequest,
         StorageUnlockMechanismRequestStream,
     },
-    fuchsia_async::futures::lock::Mutex,
+    futures::lock::Mutex,
     futures::prelude::*,
     std::collections::VecDeque,
 };

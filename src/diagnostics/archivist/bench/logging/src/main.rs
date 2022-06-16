@@ -10,7 +10,7 @@ use fuchsia_criterion::{
 use archivist_lib::logs::buffer::{ArcList, LazyItem};
 use fidl_fuchsia_diagnostics::StreamMode;
 use fuchsia_async as fasync;
-use fuchsia_async::futures::StreamExt;
+use futures::StreamExt;
 use std::convert::TryInto;
 use std::mem;
 use std::sync::atomic::AtomicBool;

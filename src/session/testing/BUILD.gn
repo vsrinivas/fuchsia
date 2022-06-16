@@ -13,6 +13,7 @@ rustc_library("testing") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/lib.rs" ]

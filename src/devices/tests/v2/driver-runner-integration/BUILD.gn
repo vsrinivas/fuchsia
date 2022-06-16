@@ -25,6 +25,7 @@ rustc_test("driver_runner_integration_test") {
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
   ]
 }
 

@@ -18,6 +18,7 @@ rustc_binary("security_pkg_paver-binary") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/pkg/testing/mock-paver",
+    "//third_party/rust_crates:futures",
   ]
 }
 
