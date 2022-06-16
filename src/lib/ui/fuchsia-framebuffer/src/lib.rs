@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{ensure, format_err, Context as _, Error};
-use fdio::watch_directory;
 use fidl::endpoints::{self, ClientEnd};
 use fidl_fuchsia_hardware_display::{
     ConfigStamp, ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig,
@@ -16,7 +15,6 @@ use fuchsia_zircon::{
 };
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use mapped_vmo::Mapping;
-use std::fs::OpenOptions;
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
@@ -754,24 +752,37 @@ impl FrameBuffer {
             // If the caller did not supply a display index, we watch the
             // display-controller directory and use the first controller
             // that appears.
-            let mut first_path = None;
-            let dir = OpenOptions::new().read(true).open("/dev/class/display-controller")?;
-            const DEADLINE_IN_SECONDS: i64 = 10;
-            let deadline = zx::Time::after(zx::Duration::from_seconds(DEADLINE_IN_SECONDS));
-            watch_directory(&dir, deadline.into_nanos(), |event, path| {
-                if event == fdio::WatchEvent::AddFile {
-                    first_path = Some(format!("/dev/class/display-controller/{}", path.display()));
-                    Err(zx::Status::STOP)
-                } else {
-                    Ok(())
-                }
-            });
-            first_path.ok_or_else(|| format_err!("No display controller available"))?
-        };
-        let file = OpenOptions::new().read(true).write(true).open(device_path)?;
+            let dir = fuchsia_fs::open_directory_in_namespace(
+                "/dev/class/display-controller",
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            )?;
 
-        let channel = fdio::clone_channel(&file)?;
-        let provider = ProviderSynchronousProxy::new(channel);
+            let timeout = 10.seconds().after_now();
+            let watcher = fuchsia_vfs_watcher::Watcher::new(dir).await?;
+            let filename = watcher
+                .try_filter_map(|fuchsia_vfs_watcher::WatchMessage { event, filename }| {
+                    futures::future::ok(match event {
+                        fuchsia_vfs_watcher::WatchEvent::ADD_FILE
+                        | fuchsia_vfs_watcher::WatchEvent::EXISTING => Some(filename),
+                        _ => None,
+                    })
+                })
+                .next()
+                .on_timeout(timeout, || None)
+                .await;
+            let filename =
+                filename.ok_or_else(|| format_err!("No display controller available"))?;
+            let filename = filename?;
+            format!("/dev/class/display-controller/{}", filename.display())
+        };
+
+        let (client_end, server_end) = zx::Channel::create()?;
+        let () = fuchsia_fs::connect_in_namespace(
+            &device_path,
+            server_end,
+            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
+        )?;
+        let provider = ProviderSynchronousProxy::new(client_end);
 
         let (device_client, device_server) = zx::Channel::create()?;
         let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;
@@ -780,9 +791,7 @@ impl FrameBuffer {
         } else {
             provider.open_controller(device_server, dc_server, zx::Time::INFINITE)
         }?;
-        if status != zx::sys::ZX_OK {
-            return Err(format_err!("Failed to open display controller"));
-        }
+        let () = zx::Status::ok(status)?;
 
         let proxy = dc_client.into_proxy()?;
         if let Some(virtcon_mode) = virtcon_mode {
