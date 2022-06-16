@@ -3168,22 +3168,18 @@ mod tests {
         let body = body.unwrap_or_else(|| Buf::new(Vec::new(), ..));
 
         match [src_ip, dst_ip].into() {
-            IpAddr::V4([src_ip, dst_ip]) => {
-                let msg = match NonZeroU16::new(mtu) {
-                    Some(mtu) => IcmpDestUnreachable::new_for_frag_req(mtu),
-                    None => IcmpDestUnreachable::default(),
-                };
-
-                body.encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
+            IpAddr::V4([src_ip, dst_ip]) => body
+                .encapsulate(IcmpPacketBuilder::<Ipv4, &mut [u8], IcmpDestUnreachable>::new(
                     dst_ip,
                     src_ip,
                     Icmpv4DestUnreachableCode::FragmentationRequired,
-                    msg,
+                    NonZeroU16::new(mtu)
+                        .map(IcmpDestUnreachable::new_for_frag_req)
+                        .unwrap_or_else(Default::default),
                 ))
                 .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, Ipv4Proto::Icmp))
                 .serialize_vec_outer()
-                .unwrap()
-            }
+                .unwrap(),
             IpAddr::V6([src_ip, dst_ip]) => body
                 .encapsulate(IcmpPacketBuilder::<Ipv6, &mut [u8], Icmpv6PacketTooBig>::new(
                     dst_ip,
