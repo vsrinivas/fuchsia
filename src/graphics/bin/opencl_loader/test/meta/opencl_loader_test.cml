@@ -50,7 +50,7 @@
             to: [ "#opencl_loader" ],
         },
         {
-            directory: "hub",
+            protocol: "fuchsia.sys2.RealmQuery",
             from: "framework",
             to: "#test_driver",
         },

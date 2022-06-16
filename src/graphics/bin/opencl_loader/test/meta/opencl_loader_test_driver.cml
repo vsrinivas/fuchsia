@@ -11,11 +11,6 @@
     },
     use: [
         { protocol: "fuchsia.opencl.loader.Loader" },
-        {
-            directory: "hub",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/parent_hub",
-        },
+        { protocol: "fuchsia.sys2.RealmQuery" },
     ],
 }
