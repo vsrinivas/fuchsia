@@ -20,7 +20,7 @@ pub(crate) async fn test_get_ssh_address_timeout() -> Result<()> {
 pub(crate) async fn test_manual_add_get_ssh_address() -> Result<()> {
     let isolate = Isolate::new("target-add-get-ssh-address").await?;
 
-    let _ = isolate.ffx(&["target", "add", "[::1]:8022"]).await?;
+    let _ = isolate.ffx(&["target", "add", "--nowait", "[::1]:8022"]).await?;
 
     let out = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address"]).await?;
 
@@ -39,7 +39,7 @@ pub(crate) async fn test_manual_add_get_ssh_address_late_add() -> Result<()> {
     // The get-ssh-address should pick up targets added after it has started, as well as before.
     fuchsia_async::Timer::new(Duration::from_millis(500)).await;
 
-    let _ = isolate.ffx(&["target", "add", "[::1]:8022"]).await?;
+    let _ = isolate.ffx(&["target", "add", "--nowait", "[::1]:8022"]).await?;
 
     let out = task.await?;
 

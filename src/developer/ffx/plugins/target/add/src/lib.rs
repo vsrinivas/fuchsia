@@ -48,7 +48,7 @@ pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand
         .add_target(
             &mut addr,
             ffx::AddTargetConfig {
-                verify_connection: Some(cmd.wait),
+                verify_connection: Some(!cmd.nowait),
                 ..ffx::AddTargetConfig::EMPTY
             },
         )
@@ -100,7 +100,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "123.210.123.210".to_owned(), wait: false }).await.unwrap();
+        add(server, AddCommand { addr: "123.210.123.210".to_owned(), nowait: true }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -121,7 +121,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "123.210.123.210:2310".to_owned(), wait: false })
+        add(server, AddCommand { addr: "123.210.123.210:2310".to_owned(), nowait: true })
             .await
             .unwrap();
     }
@@ -139,7 +139,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "f000::1".to_owned(), wait: false }).await.unwrap();
+        add(server, AddCommand { addr: "f000::1".to_owned(), nowait: true }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -156,7 +156,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "[f000::1]:65".to_owned(), wait: false }).await.unwrap();
+        add(server, AddCommand { addr: "[f000::1]:65".to_owned(), nowait: true }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -172,7 +172,7 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "f000::1%1".to_owned(), wait: false }).await.unwrap();
+        add(server, AddCommand { addr: "f000::1%1".to_owned(), nowait: true }).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -189,6 +189,6 @@ mod test {
                 })
             )
         });
-        add(server, AddCommand { addr: "[f000::1%1]:640".to_owned(), wait: false }).await.unwrap();
+        add(server, AddCommand { addr: "[f000::1%1]:640".to_owned(), nowait: true }).await.unwrap();
     }
 }
