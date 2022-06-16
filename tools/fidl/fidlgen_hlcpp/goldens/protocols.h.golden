@@ -170,6 +170,12 @@ using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
 
 #ifdef __Fuchsia__
 
+class AnotherDiscoverableProtocol;
+using AnotherDiscoverableProtocolHandle = ::fidl::InterfaceHandle<AnotherDiscoverableProtocol>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 class WithProtocolEndsServerEndsTopResponse final {
  public:
   static const fidl_type_t* FidlType;
@@ -2251,6 +2257,17 @@ class ChannelProtocol_ResponseEncoder {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+class AnotherDiscoverableProtocol_RequestEncoder {
+ public:
+};
+
+class AnotherDiscoverableProtocol_ResponseEncoder {
+ public:
+};
+#endif  // __Fuchsia__
+
 }  // namespace protocols
 }  // namespace test
 namespace fidl {
@@ -3809,6 +3826,18 @@ constexpr ::fidl::MessageDynamicFlags kChannelProtocol_MutateSocket_DynamicFlags
 
 #ifdef __Fuchsia__
 
+using AnotherDiscoverableProtocolPtr = ::fidl::InterfacePtr<AnotherDiscoverableProtocol>;
+class AnotherDiscoverableProtocol_Proxy;
+class AnotherDiscoverableProtocol_Stub;
+class AnotherDiscoverableProtocol_EventSender;
+class AnotherDiscoverableProtocol_Sync;
+using AnotherDiscoverableProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<AnotherDiscoverableProtocol>;
+class AnotherDiscoverableProtocol_SyncProxy;
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 class WithAndWithoutRequestResponse {
  public:
   using Proxy_ = ::test::protocols::WithAndWithoutRequestResponse_Proxy;
@@ -4744,6 +4773,81 @@ class ChannelProtocol_SyncProxy : public ::test::protocols::ChannelProtocol_Sync
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class AnotherDiscoverableProtocol {
+ public:
+  using Proxy_ = ::test::protocols::AnotherDiscoverableProtocol_Proxy;
+  using Stub_ = ::test::protocols::AnotherDiscoverableProtocol_Stub;
+  using EventSender_ = ::test::protocols::AnotherDiscoverableProtocol_EventSender;
+  using Sync_ = ::test::protocols::AnotherDiscoverableProtocol_Sync;
+  static const char Name_[];
+  virtual ~AnotherDiscoverableProtocol();
+};
+
+class AnotherDiscoverableProtocol_RequestDecoder {
+ public:
+  AnotherDiscoverableProtocol_RequestDecoder() = default;
+  virtual ~AnotherDiscoverableProtocol_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+};
+
+class AnotherDiscoverableProtocol_ResponseDecoder {
+ public:
+  AnotherDiscoverableProtocol_ResponseDecoder() = default;
+  virtual ~AnotherDiscoverableProtocol_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+};
+
+class AnotherDiscoverableProtocol_EventSender {
+ public:
+  virtual ~AnotherDiscoverableProtocol_EventSender();
+};
+
+class AnotherDiscoverableProtocol_Sync {
+ public:
+  using Proxy_ = ::test::protocols::AnotherDiscoverableProtocol_SyncProxy;
+  virtual ~AnotherDiscoverableProtocol_Sync();
+};
+
+class AnotherDiscoverableProtocol_Proxy final : public ::fidl::internal::Proxy, public AnotherDiscoverableProtocol {
+ public:
+  explicit AnotherDiscoverableProtocol_Proxy(::fidl::internal::ProxyController* controller);
+  ~AnotherDiscoverableProtocol_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+
+ private:
+  AnotherDiscoverableProtocol_Proxy(const ::test::protocols::AnotherDiscoverableProtocol_Proxy&) = delete;
+  AnotherDiscoverableProtocol_Proxy& operator=(const ::test::protocols::AnotherDiscoverableProtocol_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class AnotherDiscoverableProtocol_Stub final : public ::fidl::internal::Stub, public ::test::protocols::AnotherDiscoverableProtocol_EventSender {
+ public:
+  typedef class ::test::protocols::AnotherDiscoverableProtocol AnotherDiscoverableProtocol_clazz;
+  explicit AnotherDiscoverableProtocol_Stub(::test::protocols::AnotherDiscoverableProtocol_Stub::AnotherDiscoverableProtocol_clazz* impl);
+  ~AnotherDiscoverableProtocol_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  ::test::protocols::AnotherDiscoverableProtocol_Stub::AnotherDiscoverableProtocol_clazz* impl_;
+};
+
+class AnotherDiscoverableProtocol_SyncProxy : public ::test::protocols::AnotherDiscoverableProtocol_Sync {
+ public:
+  explicit AnotherDiscoverableProtocol_SyncProxy(::zx::channel channel);
+  ~AnotherDiscoverableProtocol_SyncProxy() override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<AnotherDiscoverableProtocol>;
 };
 #endif  // __Fuchsia__
 

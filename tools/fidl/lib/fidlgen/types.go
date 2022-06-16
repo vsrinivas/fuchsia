@@ -968,16 +968,24 @@ type Protocol struct {
 // library name and protocol declaration name separated by dots and enclosed in quotes. For example,
 // "\"my.library.MyProtocol\"". This part of legacy service discovery (pre-RFC-0041).
 func (d *Protocol) GetServiceName() string {
-	if found := d.HasAttribute("discoverable"); found {
+	attr, ok := d.LookupAttribute("discoverable")
+	if !ok {
+		return ""
+	}
+	var name string
+	if arg, ok := attr.LookupArgStandalone(); ok {
+		name = arg.ValueString()
+	} else {
+		// TODO(fxbug.dev/102803): Construct this string in fidlc, not here.
 		ci := d.Name.Parse()
 		var parts []string
 		for _, i := range ci.Library {
 			parts = append(parts, string(i))
 		}
 		parts = append(parts, string(ci.Name))
-		return fmt.Sprintf("\"%s\"", strings.Join(parts, "."))
+		name = strings.Join(parts, ".")
 	}
-	return ""
+	return strconv.Quote(name)
 }
 
 // Returns true if this protocol must handle one-way unknown interactions.

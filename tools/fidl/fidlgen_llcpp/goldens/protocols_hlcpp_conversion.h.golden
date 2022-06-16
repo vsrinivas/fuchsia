@@ -293,6 +293,37 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocols::ChannelPro
     return fidl::ServerEnd<::test_protocols::ChannelProtocol>(c.TakeChannel());
   }
 };
+template <>
+struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>> {
+  using HLCPPType = fidl::InterfaceHandle<::test::protocols::AnotherDiscoverableProtocol>;
+  static inline fidl::InterfaceHandle<::test::protocols::AnotherDiscoverableProtocol> Convert(fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>&& c) {
+    return fidl::InterfaceHandle<::test::protocols::AnotherDiscoverableProtocol>(c.TakeChannel());
+  }
+};
+
+template <>
+struct NaturalToHLCPPTraits<fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol>> {
+  using HLCPPType = fidl::InterfaceRequest<::test::protocols::AnotherDiscoverableProtocol>;
+  static inline fidl::InterfaceRequest<::test::protocols::AnotherDiscoverableProtocol> Convert(fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol>&& c) {
+    return fidl::InterfaceRequest<::test::protocols::AnotherDiscoverableProtocol>(c.TakeChannel());
+  }
+};
+
+template <>
+struct HLCPPToNaturalTraits<fidl::InterfaceHandle<::test::protocols::AnotherDiscoverableProtocol>> {
+  using NaturalType = fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>;
+  static inline fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol> Convert(fidl::InterfaceHandle<::test::protocols::AnotherDiscoverableProtocol>&& c) {
+    return fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>(c.TakeChannel());
+  }
+};
+
+template <>
+struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocols::AnotherDiscoverableProtocol>> {
+  using NaturalType = fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol>;
+  static inline fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol> Convert(fidl::InterfaceRequest<::test::protocols::AnotherDiscoverableProtocol>&& c) {
+    return fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol>(c.TakeChannel());
+  }
+};
 
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse> {

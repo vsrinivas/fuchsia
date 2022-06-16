@@ -104,6 +104,11 @@ bool IsValidIdentifierComponent(std::string_view component);
 // protocol identifier, a dot, and lastly the method name.
 bool IsValidFullyQualifiedMethodIdentifier(std::string_view fq_identifier);
 
+// IsValidDiscoverableName validates a name for use in service discovery. This
+// is like a fully qualified identifier, but uses a dot instead of a slash so
+// that it can be used as a single component in a filesystem path.
+bool IsValidDiscoverableName(std::string_view discoverable_name);
+
 inline bool LineFromOffsetIsBlank(std::string_view str, size_t offset) {
   for (size_t i = offset; i < str.size() && str[i] != '\n'; i++) {
     if (!IsWhitespaceNoNewline(str[i])) {

@@ -242,5 +242,19 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::ChannelPro
     NotImplemented_("EventA");
   }
 };
+
+template <>
+class WireTestBase<::test_protocols::AnotherDiscoverableProtocol> : public ::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol> {
+ public:
+  virtual ~WireTestBase<::test_protocols::AnotherDiscoverableProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocols::AnotherDiscoverableProtocol> : public ::fidl::WireSyncEventHandler<::test_protocols::AnotherDiscoverableProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::AnotherDiscoverableProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
 }  // namespace testing
 }  // namespace fidl

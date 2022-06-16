@@ -335,6 +335,8 @@ constexpr ErrorDef<std::string_view, const flat::Attribute *> ErrAttributeArgReq
     "please use a literal instead");
 constexpr ErrorDef<const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}'");
+constexpr ErrorDef<std::string_view> ErrInvalidDiscoverableName(
+    "invalid @discoverable name '{}'; must follow the format 'the.library.name.TheProtocolName'");
 constexpr ErrorDef<flat::Name> ErrTableCannotBeSimple("union '{}' is not allowed to be simple");
 constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple("union '{}' is not allowed to be simple");
 constexpr ErrorDef<std::string_view> ErrMemberMustBeSimple("member '{}' is not simple");

@@ -3993,3 +3993,46 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_protocols::ChannelProt
 }
 
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::WireSyncEventHandler<::test_protocols::AnotherDiscoverableProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocols::AnotherDiscoverableProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocols::AnotherDiscoverableProtocol> event_storage;
+  fidl::internal::WireEventDispatcher<::test_protocols::AnotherDiscoverableProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::entries_[] = {};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::entries_end_ =
+    &entries_[0];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::TryDispatch(
+    ::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::Dispatch(::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_);
+}
+void fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

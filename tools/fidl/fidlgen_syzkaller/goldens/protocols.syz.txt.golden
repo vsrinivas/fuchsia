@@ -109,6 +109,14 @@ test_protocols_WithErrorSyntax_ResponseAsStruct_ResultHandles [
 ][varlen]
 
 
+
+resource zx_chan_test_protocols_AnotherDiscoverableProtocol_client[zx_chan]
+resource zx_chan_test_protocols_AnotherDiscoverableProtocol_server[zx_chan]
+
+zx_channel_create$test_protocols_AnotherDiscoverableProtocol(options const[0], out0 ptr[out, zx_chan_test_protocols_AnotherDiscoverableProtocol_client], out1 ptr[out, zx_chan_test_protocols_AnotherDiscoverableProtocol_server])
+fdio_service_connect$test_protocols_AnotherDiscoverableProtocol(path ptr[in, string["/svc/fake.library.FakeProtocol"]], handle zx_chan_test_protocols_AnotherDiscoverableProtocol_server)
+
+
 test_protocols_ChannelProtocolMethodARequest {
     hdr fidl_message_header[3155008840945527714]
     a int64

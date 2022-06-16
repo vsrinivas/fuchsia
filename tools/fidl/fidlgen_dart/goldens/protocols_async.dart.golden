@@ -877,6 +877,83 @@ const $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>
         inlineSize: 24,
         structDecode: WithErrorSyntaxResponseAsStructResponse._structDecode);
 
+abstract class AnotherDiscoverableProtocol extends $fidl.Service {
+  static const String $serviceName = "fake.library.FakeProtocol";
+  @override
+  $fidl.ServiceData? get $serviceData => AnotherDiscoverableProtocolData();
+} // TODO: Remove ServiceData for non-service
+
+class AnotherDiscoverableProtocolData
+    implements $fidl.ServiceData<AnotherDiscoverableProtocol> {
+  const AnotherDiscoverableProtocolData();
+
+  @override
+  String getName() {
+    return AnotherDiscoverableProtocol.$serviceName;
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return AnotherDiscoverableProtocolBinding();
+  }
+}
+
+class AnotherDiscoverableProtocolProxy
+    extends $fidl.AsyncProxy<AnotherDiscoverableProtocol>
+    implements AnotherDiscoverableProtocol {
+  AnotherDiscoverableProtocolProxy()
+      : super($fidl.AsyncProxyController<AnotherDiscoverableProtocol>(
+            $serviceName: "fake.library.FakeProtocol",
+            $interfaceName: r'AnotherDiscoverableProtocol')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  $fidl.ServiceData get $serviceData => AnotherDiscoverableProtocolData();
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        break;
+    }
+  }
+}
+
+class AnotherDiscoverableProtocolBinding
+    extends $fidl.AsyncBinding<AnotherDiscoverableProtocol> {
+  AnotherDiscoverableProtocolBinding() : super(r"AnotherDiscoverableProtocol");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for AnotherDiscoverableProtocolBinding');
+    }
+  }
+}
+
 // methodA: (int a, int b)
 const int _kChannelProtocol_MethodA_Ordinal = 0x2bc8d7d32bc66ba2;
 const $fidl.MethodType _kChannelProtocol_MethodA_Type = $fidl.MethodType(

@@ -1925,4 +1925,42 @@ const SECOND bool = false;
                 "const 'FIRST' -> const 'SECOND' -> const 'FIRST'");
 }
 
+TEST(AttributesTests, GoodDiscoverableImplicitName) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@discoverable
+protocol Foo {};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
+TEST(AttributesTests, GoodDiscoverableExplicitName) {
+  for (auto name : {"example.Foo", "notexample.NotFoo", "not.example.NotFoo"}) {
+    std::string library_str = R"FIDL(
+library example;
+
+@discoverable("%1")
+protocol Foo {};
+)FIDL";
+    library_str.replace(library_str.find("%1"), 2, name);
+    TestLibrary library(library_str);
+    ASSERT_COMPILED(library);
+  }
+}
+
+TEST(AttributesTests, BadDiscoverableInvalidName) {
+  for (auto name : {"", "example/Foo", "Foo", "not example.Not Foo"}) {
+    std::string library_str = R"FIDL(
+library example;
+
+@discoverable("%1")
+protocol Foo {};
+)FIDL";
+    library_str.replace(library_str.find("%1"), 2, name);
+    TestLibrary library(library_str);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidDiscoverableName);
+  }
+}
+
 }  // namespace

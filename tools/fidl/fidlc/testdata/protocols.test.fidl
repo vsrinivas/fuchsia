@@ -101,6 +101,9 @@ protocol DiscoverableProtocol {
     Method();
 };
 
+@discoverable("fake.library.FakeProtocol")
+protocol AnotherDiscoverableProtocol {};
+
 protocol HandleRightsProtocol {
     NoResponseMethod(resource struct {
         h zx.handle:<SOCKET, zx.rights.TRANSFER | zx.rights.DUPLICATE>;

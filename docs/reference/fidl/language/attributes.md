@@ -75,14 +75,19 @@ Note: Not implemented.
 
 ## `@discoverable` {#discoverable}
 
-**USAGE**: `@discoverable`
+**USAGE**: `@discoverable(`_name_`)`
 
 **MEANING**:
-Automatically generates a path name for the annotated protocol. That is to say,
-a `@discoverable` protocol can be served under the generated name, and clients
-that connect to that protocol can search for it under the same generated name.
-This makes it possible to have a client search for the correct name without
-manually ensuring that the lookup name matches the one passed on the server side.
+Assigns a name to use for service discovery. That is to say, a `@discoverable`
+protocol can be served under the given name, and and clients that connect to
+that protocol can search for it under the same name. This makes it possible to
+have a client search for the correct name without manually ensuring that the
+lookup name matches the one passed on the server side.
+
+If _name_ is omitted, a name is generated based on the library and protocol name
+(e.g. `some.library.SomeProtocol`). If _name_ is provided, it must follow the
+same format. Note that this is **not** the [fully qualified name], which would
+use a slash (e.g. `some.library/SomeProtocol`).
 
 ## `@doc` {#doc}
 
@@ -208,8 +213,8 @@ libraries, such as by the [driver bind compiler](/docs/development/drivers/conce
 
 **MEANING**:
 Allows you to change the hashing basis for the method ordinal, see [RFC-0020].
-The *_selector_* can be either the original method's name (e.g. `SomeMethod`),
-or the fully qualified name (e.g. `some.library/SomeProtocol.SomeMethod`).
+The _selector_ can be either the original method's name (e.g. `SomeMethod`),
+or the [fully qualified name] (e.g. `some.library/SomeProtocol.SomeMethod`).
 
 It can be used to rename a method without breaking ABI compatibility.
 For example, if we wish to rename the `Investigate` method to `Experiment`
@@ -275,3 +280,4 @@ no longer necessary.
 [RFC-0021]: /docs/contribute/governance/rfcs/0021_soft_transitions_methods_add_remove.md
 [RFC-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md
 [versioning-formalism]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md#formalism
+[fully qualified name]: /docs/contribute/governance/rfcs/0043_documentation_comment_format.md#fully-qualified-names

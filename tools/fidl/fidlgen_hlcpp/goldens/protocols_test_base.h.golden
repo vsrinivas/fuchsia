@@ -131,6 +131,12 @@ class ChannelProtocol_TestBase : public ::test::protocols::ChannelProtocol {
     NotImplemented_("MutateSocket");
   }
 };
+
+class AnotherDiscoverableProtocol_TestBase : public ::test::protocols::AnotherDiscoverableProtocol {
+ public:
+  virtual ~AnotherDiscoverableProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
 }  // namespace testing
 }  // namespace protocols
 }  // namespace test

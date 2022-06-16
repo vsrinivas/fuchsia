@@ -814,6 +814,44 @@ func WithErrorSyntaxResponseAsStructResultWithErr(err uint32) WithErrorSyntaxRes
 	return _u
 }
 
+const ()
+
+type AnotherDiscoverableProtocolWithCtxInterface _bindings.ChannelProxy
+
+type AnotherDiscoverableProtocolWithCtx interface {
+}
+
+type AnotherDiscoverableProtocolWithCtxTransitionalBase struct{}
+
+type AnotherDiscoverableProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewAnotherDiscoverableProtocolWithCtxInterfaceRequest() (AnotherDiscoverableProtocolWithCtxInterfaceRequest, *AnotherDiscoverableProtocolWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return AnotherDiscoverableProtocolWithCtxInterfaceRequest(req), (*AnotherDiscoverableProtocolWithCtxInterface)(cli), err
+}
+
+// Implements ServiceRequest.
+func (_ AnotherDiscoverableProtocolWithCtxInterfaceRequest) Name() string {
+	return "fake.library.FakeProtocol"
+}
+func (c AnotherDiscoverableProtocolWithCtxInterfaceRequest) ToChannel() _zx.Channel {
+	return c.Channel
+}
+
+const AnotherDiscoverableProtocolName = "fake.library.FakeProtocol"
+
+type AnotherDiscoverableProtocolWithCtxStub struct {
+	Impl AnotherDiscoverableProtocolWithCtx
+}
+
+func (s_ *AnotherDiscoverableProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type AnotherDiscoverableProtocolEventProxy _bindings.ChannelProxy
+
 const (
 	ChannelProtocolMethodAOrdinal      uint64 = 0x2bc8d7d32bc66ba2
 	ChannelProtocolEventAOrdinal       uint64 = 0x1ed0a220297145ce

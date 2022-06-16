@@ -300,4 +300,11 @@ class ChannelProtocol final {
     static constexpr bool kHasResponse = true;
   };
 };
+
+class AnotherDiscoverableProtocol final {
+  AnotherDiscoverableProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+};
 }  // namespace test_protocols

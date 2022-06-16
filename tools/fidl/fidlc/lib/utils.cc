@@ -41,6 +41,18 @@ bool IsValidFullyQualifiedMethodIdentifier(std::string_view fq_identifier) {
   return re2::RE2::FullMatch(fq_identifier, kPattern);
 }
 
+bool IsValidDiscoverableName(std::string_view discoverable_name) {
+  static const re2::RE2 kPattern("^" +
+                                 // library identifier
+                                 kLibraryComponentPattern + "(\\." + kLibraryComponentPattern +
+                                 ")*" +
+                                 // dot
+                                 "\\." +
+                                 // protocol
+                                 kIdentifierComponentPattern + "$");
+  return re2::RE2::FullMatch(discoverable_name, kPattern);
+}
+
 bool ends_with_underscore(std::string_view str) {
   ZX_ASSERT(!str.empty());
   return str.back() == '_';

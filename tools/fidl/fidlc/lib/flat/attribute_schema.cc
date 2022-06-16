@@ -436,6 +436,21 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
   }
 }
 
+static bool DiscoverableConstraint(Reporter* reporter, const Attribute* attr,
+                                   const Element* element) {
+  auto arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
+  if (!arg) {
+    return true;
+  }
+  ZX_ASSERT(arg->value->Value().kind == flat::ConstantValue::Kind::kString);
+  auto name = static_cast<const flat::StringConstantValue&>(arg->value->Value()).MakeContents();
+  if (!utils::IsValidDiscoverableName(name)) {
+    reporter->Fail(ErrInvalidDiscoverableName, arg->span, name);
+    return false;
+  }
+  return true;
+}
+
 static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
                                    const Element* element) {
   ZX_ASSERT(element);
@@ -724,9 +739,13 @@ static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
 // static
 AttributeSchemaMap AttributeSchema::OfficialAttributes() {
   AttributeSchemaMap map;
-  map["discoverable"].RestrictTo({
-      Element::Kind::kProtocol,
-  });
+  map["discoverable"]
+      .RestrictTo({
+          Element::Kind::kProtocol,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString,
+                                 AttributeArgSchema::Optionality::kOptional))
+      .Constrain(DiscoverableConstraint);
   map[std::string(Attribute::kDocCommentName)].AddArg(
       AttributeArgSchema(ConstantValue::Kind::kString));
   map["layout"].Deprecate();
