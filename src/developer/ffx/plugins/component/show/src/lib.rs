@@ -3,88 +3,140 @@
 // found in the LICENSE file.
 
 use {
+    ansi_term::Color,
     anyhow::{Context, Result},
-    component_hub::{
-        io::Directory,
-        show::{find_components, Component},
-    },
-    errors::ffx_bail,
-    ffx_component::COMPONENT_SHOW_HELP,
+    component_hub::new::show::{find_instances, Instance, Resolved},
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::ffx_plugin,
     ffx_writer::Writer,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon_status::Status,
+    prettytable::{cell, format::consts::FORMAT_CLEAN, row, Table},
+    std::io::Write,
 };
-
-mod new;
-
-/// The number of times the command should be retried before assuming failure.
-const NUM_ATTEMPTS: u64 = 3;
 
 #[ffx_plugin()]
 pub async fn show(
     rcs_proxy: rc::RemoteControlProxy,
-    #[ffx(machine = Vec<Component>)] writer: Writer,
+    #[ffx(machine = Vec<Instance>)] mut writer: Writer,
     cmd: ComponentShowCommand,
 ) -> Result<()> {
-    if let Ok(true) = ffx_config::get::<bool, _>("component.experimental.no_hub").await {
-        crate::new::show_impl(rcs_proxy, writer, &cmd.filter).await
-    } else {
-        show_impl(rcs_proxy, writer, &cmd.filter).await
-    }
-}
+    let ComponentShowCommand { filter } = cmd;
 
-// Attempt to get matching components `NUM_ATTEMPTS` times. If all attempts fail, return the
-// last error encountered.
-//
-// This fixes an issue (fxbug.dev/84805) where the component topology may be mutating while the
-// hub is being traversed, resulting in failures.
-pub async fn try_get_components(
-    query: String,
-    hub_dir: Directory,
-    writer: &Writer,
-) -> Result<Vec<Component>> {
-    let mut attempt_number = 1;
-    loop {
-        match find_components(query.clone(), hub_dir.clone()?).await {
-            Ok(components) => return Ok(components),
-            Err(e) => {
-                if attempt_number > NUM_ATTEMPTS {
-                    return Err(e);
-                } else {
-                    writer.error(format!("Retrying. Attempt #{} failed: {}", attempt_number, e))?;
-                }
-            }
-        }
-        attempt_number += 1;
-    }
-}
-
-async fn show_impl(rcs_proxy: rc::RemoteControlProxy, writer: Writer, filter: &str) -> Result<()> {
-    let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-        .context("creating hub root proxy")?;
+    let (explorer_proxy, explorer_server) =
+        fidl::endpoints::create_proxy::<fsys::RealmExplorerMarker>()
+            .context("creating explorer proxy")?;
+    let (query_proxy, query_server) = fidl::endpoints::create_proxy::<fsys::RealmQueryMarker>()
+        .context("creating query proxy")?;
     rcs_proxy
-        .open_hub(dir_server)
+        .root_realm_explorer(explorer_server)
         .await?
         .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening hub")?;
-    let hub_dir = Directory::from_proxy(root);
+        .context("opening realm explorer")?;
+    rcs_proxy
+        .root_realm_query(query_server)
+        .await?
+        .map_err(|i| Status::ok(i).unwrap_err())
+        .context("opening realm query")?;
 
-    let components = try_get_components(filter.to_string(), hub_dir, &writer).await?;
-
-    if components.is_empty() {
-        // machine is a no-op if the flag is not set so no need to call is_machine here.
-        writer.machine(&components)?;
-        ffx_bail!("'{}' was not found in the component tree\n{}", filter, COMPONENT_SHOW_HELP);
-    }
+    let instances = find_instances(filter, &explorer_proxy, &query_proxy).await?;
 
     if writer.is_machine() {
-        writer.machine(&components)?;
+        writer.machine(&instances)?;
     } else {
-        for component in components {
-            writer.line(component)?;
+        for instance in instances {
+            let table = create_table(instance);
+            table.print(&mut writer)?;
+            writeln!(&mut writer, "")?;
         }
     }
+
     Ok(())
+}
+
+fn create_table(instance: Instance) -> Table {
+    let mut table = Table::new();
+    table.set_format(*FORMAT_CLEAN);
+
+    add_basic_info_to_table(&mut table, &instance);
+    add_resolved_info_to_table(&mut table, &instance);
+    add_started_info_to_table(&mut table, &instance);
+
+    table
+}
+
+fn add_basic_info_to_table(table: &mut Table, instance: &Instance) {
+    table.add_row(row!(r->"Moniker:", instance.moniker));
+    table.add_row(row!(r->"URL:", instance.url));
+
+    if let Some(instance_id) = &instance.instance_id {
+        table.add_row(row!(r->"Instance ID:", instance_id));
+    } else {
+        table.add_row(row!(r->"Instance ID:", "None"));
+    }
+
+    if instance.is_cmx {
+        table.add_row(row!(r->"Type:", "CMX Component"));
+    } else {
+        table.add_row(row!(r->"Type:", "CML Component"));
+    };
+}
+
+fn add_resolved_info_to_table(table: &mut Table, instance: &Instance) {
+    if let Some(resolved) = &instance.resolved {
+        table.add_row(row!(r->"Component State:", Color::Green.paint("Resolved")));
+        let incoming_capabilities = resolved.incoming_capabilities.join("\n");
+        let exposed_capabilities = resolved.exposed_capabilities.join("\n");
+        table.add_row(row!(r->"Incoming Capabilities:", incoming_capabilities));
+        table.add_row(row!(r->"Exposed Capabilities:", exposed_capabilities));
+
+        if let Some(merkle_root) = &resolved.merkle_root {
+            table.add_row(row!(r->"Merkle root:", merkle_root));
+        }
+
+        if let Some(config) = &resolved.config {
+            if !config.is_empty() {
+                let mut config_table = Table::new();
+                let mut format = *FORMAT_CLEAN;
+                format.padding(0, 0);
+                config_table.set_format(format);
+
+                for field in config {
+                    config_table.add_row(row!(field.key, " -> ", field.value));
+                }
+
+                table.add_row(row!(r->"Configuration:", config_table));
+            }
+        }
+    } else {
+        table.add_row(row!(r->"Component State:", Color::Red.paint("Unresolved")));
+    }
+}
+
+fn add_started_info_to_table(table: &mut Table, instance: &Instance) {
+    if let Some(Resolved { started: Some(started), .. }) = &instance.resolved {
+        table.add_row(row!(r->"Execution State:", Color::Green.paint("Running")));
+        table.add_row(row!(r->"Start reason:", started.start_reason));
+
+        if let Some(runtime) = &started.elf_runtime {
+            if let Some(utc_estimate) = &runtime.process_start_time_utc_estimate {
+                table.add_row(row!(r->"Running since:", utc_estimate));
+            } else if let Some(ticks) = &runtime.process_start_time {
+                table.add_row(row!(r->"Running for:", format!("{} ticks", ticks)));
+            }
+
+            table.add_row(row!(r->"Job ID:", runtime.job_id));
+
+            if let Some(process_id) = &runtime.process_id {
+                table.add_row(row!(r->"Process ID:", process_id));
+            }
+        }
+
+        if let Some(outgoing_capabilities) = &started.outgoing_capabilities {
+            let outgoing_capabilities = outgoing_capabilities.join("\n");
+            table.add_row(row!(r->"Outgoing Capabilities:", outgoing_capabilities));
+        }
+    } else {
+        table.add_row(row!(r->"Execution State:", Color::Red.paint("Stopped")));
+    }
 }

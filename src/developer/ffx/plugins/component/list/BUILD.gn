@@ -26,8 +26,5 @@ ffx_plugin("ffx_component_list") {
 
   args_sources = [ "src/args.rs" ]
 
-  sources = [
-    "src/lib.rs",
-    "src/new.rs",
-  ]
+  sources = [ "src/lib.rs" ]
 }

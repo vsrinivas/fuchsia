@@ -24,15 +24,6 @@ Note that moniker wildcards are not recursive: 'a/*/c' will only match
 components named 'c' running in some sub-realm directly below 'a', and
 no further.";
 
-pub const COMPONENT_LIST_HELP: &str = "only format: 'cmx' / 'cml' / 'running' / 'stopped'.
-Default option is displaying all components if no argument is entered.";
-
-pub const COMPONENT_SHOW_HELP: &str = "Filter accepts a partial component name or url.
-
-Example:
-'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'
-will all return information about the appmgr component.";
-
 pub async fn connect_to_lifecycle_controller(
     rcs_proxy: &rc::RemoteControlProxy,
 ) -> Result<fsys::LifecycleControllerProxy> {
